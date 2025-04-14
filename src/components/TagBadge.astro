@@ -13,25 +13,41 @@ const {
 
 // Size classes
 const sizeClasses = {
-  sm: 'text-xs px-2 py-0.5',
-  md: 'text-sm px-3 py-1',
-  lg: 'text-base px-4 py-1.5'
+  sm: 'text-xs px-2 py-1',
+  md: 'text-sm px-3 py-1.5',
+  lg: 'text-base px-4 py-2'
 };
 
-const baseClasses = "inline-flex items-center rounded-full bg-secondary/10 text-secondary font-medium";
-const hoverClasses = clickable ? "hover:bg-secondary/20 transition-colors cursor-pointer" : "";
-const classes = `${baseClasses} ${sizeClasses[size]} ${hoverClasses}`;
+// Color variations based on tag name (for visual variety)
+const getTagColor = (tag: string) => {
+  const colors = [
+    'bg-primary/15 text-primary hover:bg-primary/25',
+    'bg-secondary/15 text-secondary hover:bg-secondary/25',
+    'bg-tertiary/15 text-tertiary hover:bg-tertiary/25',
+    'bg-accent/15 text-text-primary hover:bg-accent/25',
+    'bg-success/15 text-success hover:bg-success/25'
+  ];
+  
+  // Use the tag string to deterministically select a color
+  const index = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+  return colors[index];
+};
+
+const colorClass = getTagColor(tag);
+const baseClasses = "inline-flex items-center rounded-full font-bold transition-all duration-300";
+const hoverClasses = clickable ? "transform hover:scale-105 cursor-pointer" : "";
+const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses}`;
 
 // Format tag for URL (lowercase, replace spaces with hyphens)
 const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
 ---
 
 {clickable ? (
-  <a href={`/tags/${tagSlug}`} class={classes}>
+  <a href={`/tags/${tagSlug}`} class={classes} data-tag={tag}>
     {tag}
   </a>
 ) : (
-  <span class={classes}>
+  <span class={classes} data-tag={tag}>
     {tag}
   </span>
 )}

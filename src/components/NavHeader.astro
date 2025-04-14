@@ -15,14 +15,11 @@ const currentPath = Astro.url.pathname;
   <div class="container mx-auto px-4 flex justify-between items-center h-16">
     <!-- Logo -->
     <a href="/" class="flex items-center group">
-      <span class="text-2xl font-display font-bold relative">
-        <span class="text-primary">Stories</span>
-        <span class="text-secondary">From</span>
-        <span class="text-accent">The</span>
-        <span class="text-tertiary">Web</span>
+      <div class="relative">
+        <img src="/logo.png" alt="Stories From The Web" class="h-10 md:h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
         <!-- Decorative element -->
-        <span class="absolute -bottom-1 left-0 w-full h-2 bg-accent/30 rounded-full transform -rotate-1 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
-      </span>
+        <span class="absolute -bottom-1 left-0 w-full h-1 bg-accent/30 rounded-full transform -rotate-1 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
+      </div>
     </a>
     
     <!-- Desktop Navigation -->

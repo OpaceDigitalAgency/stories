@@ -1,0 +1,186 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/base.css';
+
+// Publishing steps
+const publishingSteps = [
+  {
+    title: "Create Your Account",
+    description: "Sign up for a free account to start sharing your stories with our community.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />'
+  },
+  {
+    title: "Write Your Story",
+    description: "Use our easy-to-use editor to write and format your story. Add images, headings, and more.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />'
+  },
+  {
+    title: "Add Details",
+    description: "Choose categories, tags, age range, and upload a cover image to help readers find your story.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />'
+  },
+  {
+    title: "Preview & Publish",
+    description: "Preview how your story will look to readers, make any final edits, and publish when ready.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />'
+  },
+  {
+    title: "Share & Connect",
+    description: "Share your published story with friends and family, and connect with other authors.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />'
+  }
+];
+
+// FAQ items
+const faqItems = [
+  {
+    question: "What types of stories can I publish?",
+    answer: "You can publish any type of children's story suitable for ages 0-13. This includes picture books, early readers, chapter books, and middle-grade stories. All content must be appropriate for children and follow our content guidelines."
+  },
+  {
+    question: "Do I retain the copyright to my stories?",
+    answer: "Yes, you retain full copyright to all stories you publish on our platform. By publishing, you grant us a non-exclusive license to display your work on our website and promote it through our channels."
+  },
+  {
+    question: "Can I include illustrations in my stories?",
+    answer: "Absolutely! You can upload images to accompany your story. Make sure you have the rights to use any images you upload. We also offer a library of free-to-use illustrations for authors."
+  }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Publish Your Story | Stories From The Web</title>
+    <meta name="description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/publish" />
+    <meta property="og:title" content="Publish Your Story | Stories From The Web" />
+    <meta property="og:description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-publish.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/publish" />
+    <meta property="twitter:title" content="Publish Your Story | Stories From The Web" />
+    <meta property="twitter:description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-publish.jpg" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-r from-primary/90 to-accent/90 text-white py-16 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
+            Share Your Story With The World
+          </h1>
+          <p class="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
+            Our simple publishing process makes it easy to reach young readers around the world.
+          </p>
+          <a href="#get-started" class="btn bg-white text-primary hover:bg-white/90 text-lg px-6 py-3 rounded-md font-medium inline-block">
+            Get Started
+          </a>
+        </div>
+      </section>
+      
+      <!-- How It Works Section -->
+      <section id="get-started" class="py-16">
+        <div class="container mx-auto px-4">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-display font-bold text-gray-800 mb-4">How to Publish Your Story</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+              Follow these simple steps to share your story with our community of young readers.
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8">
+            {publishingSteps.map((step, index) => (
+              <div class="flex flex-col items-center text-center">
+                <div class="relative mb-4">
+                  <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                      <Fragment set:html={step.icon} />
+                    </svg>
+                  </div>
+                  <div class="absolute top-0 -right-4 w-8 h-8 rounded-full bg-accent flex items-center justify-center text-gray-800 font-bold">
+                    {index + 1}
+                  </div>
+                </div>
+                <h3 class="text-xl font-display font-semibold text-gray-800 mb-2">{step.title}</h3>
+                <p class="text-gray-600">{step.description}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div class="mt-12 text-center">
+            <a href="/publish/create" class="btn btn-primary text-lg px-6 py-3 rounded-md font-medium">
+              Start Writing Now
+            </a>
+          </div>
+        </div>
+      </section>
+      
+      <!-- FAQ Section -->
+      <section class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4 max-w-4xl">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-display font-bold text-gray-800 mb-4">Frequently Asked Questions</h2>
+            <p class="text-xl text-gray-600">
+              Have questions about publishing your story? Find answers to common questions below.
+            </p>
+          </div>
+          
+          <div class="space-y-6">
+            {faqItems.map(item => (
+              <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <details class="group">
+                  <summary class="flex justify-between items-center p-6 cursor-pointer">
+                    <h3 class="text-lg font-display font-semibold text-gray-800">{item.question}</h3>
+                    <span class="text-secondary group-open:rotate-180 transition-transform">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div class="px-6 pb-6 text-gray-600">
+                    <p>{item.answer}</p>
+                  </div>
+                </details>
+              </div>
+            ))}
+          </div>
+          
+          <div class="mt-10 text-center">
+            <p class="text-gray-600 mb-4">Still have questions?</p>
+            <a href="/contact" class="btn btn-secondary px-6 py-2 rounded-md font-medium">
+              Contact Us
+            </a>
+          </div>
+        </div>
+      </section>
+      
+      <!-- CTA Section -->
+      <section class="py-16 bg-primary/10">
+        <div class="container mx-auto px-4 text-center">
+          <h2 class="text-3xl font-display font-bold text-gray-800 mb-4">Ready to Share Your Story?</h2>
+          <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            Join our community of storytellers and start sharing your stories with young readers around the world.
+          </p>
+          <a href="/publish/create" class="btn btn-primary text-lg px-8 py-3 rounded-md font-medium">
+            Start Writing Now
+          </a>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

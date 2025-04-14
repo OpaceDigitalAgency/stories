@@ -1,0 +1,303 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import '../../styles/base.css';
+
+// Mock data for stories
+const stories = [
+  {
+    title: "The Adventure of the Curious Cat",
+    excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
+    coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+    author: {
+      name: "Emma Thompson",
+      avatar: "https://i.pravatar.cc/150?img=1",
+      slug: "emma-thompson"
+    },
+    rating: 4.7,
+    tags: ["Adventure", "Animals", "Children"],
+    slug: "adventure-curious-cat",
+    publishDate: new Date('2025-03-15')
+  },
+  {
+    title: "The Magic Library",
+    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
+    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+    author: {
+      name: "Michael Johnson",
+      avatar: "https://i.pravatar.cc/150?img=2",
+      slug: "michael-johnson"
+    },
+    rating: 4.9,
+    tags: ["Fantasy", "Magic", "Books"],
+    slug: "magic-library",
+    publishDate: new Date('2025-04-02')
+  },
+  {
+    title: "Space Explorers: Journey to the Stars",
+    excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
+    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
+    author: {
+      name: "Sarah Williams",
+      avatar: "https://i.pravatar.cc/150?img=3",
+      slug: "sarah-williams"
+    },
+    rating: 4.5,
+    tags: ["Science Fiction", "Space", "Adventure"],
+    slug: "space-explorers-journey",
+    publishDate: new Date('2025-03-28')
+  },
+  {
+    title: "The Enchanted Forest",
+    excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
+    coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
+    author: {
+      name: "David Brown",
+      avatar: "https://i.pravatar.cc/150?img=4",
+      slug: "david-brown"
+    },
+    rating: 4.6,
+    tags: ["Fantasy", "Nature", "Adventure"],
+    slug: "enchanted-forest",
+    publishDate: new Date('2025-03-10')
+  },
+  {
+    title: "The Little Robot's Big Day",
+    excerpt: "Beep the robot learns about friendship and emotions when he ventures outside his factory for the first time.",
+    coverImage: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    author: {
+      name: "Jennifer Lee",
+      avatar: "https://i.pravatar.cc/150?img=5",
+      slug: "jennifer-lee"
+    },
+    rating: 4.8,
+    tags: ["Technology", "Friendship", "Children"],
+    slug: "little-robot-big-day",
+    publishDate: new Date('2025-04-05')
+  },
+  {
+    title: "Ocean Friends: The Dolphin's Secret",
+    excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
+    coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
+    author: {
+      name: "Emma Thompson",
+      avatar: "https://i.pravatar.cc/150?img=1",
+      slug: "emma-thompson"
+    },
+    rating: 4.4,
+    tags: ["Ocean", "Animals", "Adventure"],
+    slug: "ocean-friends-dolphin-secret",
+    publishDate: new Date('2025-03-22')
+  }
+];
+
+// Popular tags
+const popularTags = ["Adventure", "Fantasy", "Animals", "Children", "Science Fiction", "Nature", "Friendship", "Magic", "Ocean", "Space", "Technology", "Books"];
+
+// Filter options
+const ageGroups = ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"];
+const lengths = ["Short (< 10 min)", "Medium (10-20 min)", "Long (> 20 min)"];
+const sortOptions = ["Newest", "Highest Rated", "Most Popular"];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Explore Stories | Stories From The Web</title>
+    <meta name="description" content="Discover a wide variety of children's stories from authors around the world. Filter by age, genre, and more to find the perfect story." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/stories" />
+    <meta property="og:title" content="Explore Stories | Stories From The Web" />
+    <meta property="og:description" content="Discover a wide variety of children's stories from authors around the world. Filter by age, genre, and more to find the perfect story." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-stories.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/stories" />
+    <meta property="twitter:title" content="Explore Stories | Stories From The Web" />
+    <meta property="twitter:description" content="Discover a wide variety of children's stories from authors around the world. Filter by age, genre, and more to find the perfect story." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-stories.jpg" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Explore Stories | Stories From The Web",
+        "description": "Discover a wide variety of children's stories from authors around the world. Filter by age, genre, and more to find the perfect story.",
+        "url": "https://storiesfromtheweb.org/stories",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Stories From The Web",
+          "url": "https://storiesfromtheweb.org/"
+        }
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-r from-secondary/90 to-primary/90 text-white py-12">
+        <div class="container mx-auto px-4">
+          <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
+            Explore Stories
+          </h1>
+          <p class="text-lg md:text-xl max-w-3xl mb-6">
+            Discover a wide variety of children's stories from authors around the world. Filter by age, genre, and more to find the perfect story.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="max-w-2xl">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Search for stories..." 
+                class="w-full px-4 py-3 pl-12 rounded-md border-none focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-800"
+              />
+              <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section class="py-8">
+        <div class="container mx-auto px-4">
+          <!-- Popular Tags -->
+          <div class="mb-8">
+            <h2 class="text-lg font-display font-semibold text-gray-800 mb-3">Popular Tags</h2>
+            <div class="flex flex-wrap gap-2">
+              {popularTags.map(tag => (
+                <TagBadge tag={tag} size="sm" />
+              ))}
+            </div>
+          </div>
+          
+          <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Filters Sidebar -->
+            <div class="lg:w-1/4">
+              <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-lg font-display font-semibold text-gray-800">Filters</h2>
+                  <button class="text-sm text-secondary hover:text-secondary/80 transition-colors">
+                    Reset All
+                  </button>
+                </div>
+                
+                <!-- Age Group Filter -->
+                <div class="mb-6">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">Age Group</h3>
+                  <div class="space-y-2">
+                    {ageGroups.map(age => (
+                      <label class="flex items-center">
+                        <input type="checkbox" class="rounded text-secondary focus:ring-secondary" />
+                        <span class="ml-2 text-sm text-gray-600">{age}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <!-- Length Filter -->
+                <div class="mb-6">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">Reading Time</h3>
+                  <div class="space-y-2">
+                    {lengths.map(length => (
+                      <label class="flex items-center">
+                        <input type="checkbox" class="rounded text-secondary focus:ring-secondary" />
+                        <span class="ml-2 text-sm text-gray-600">{length}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <!-- Rating Filter -->
+                <div class="mb-6">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">Minimum Rating</h3>
+                  <div class="flex items-center">
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="5" 
+                      step="0.5" 
+                      value="4" 
+                      class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-secondary"
+                    />
+                    <span class="ml-2 text-sm font-medium text-gray-700">4.0+</span>
+                  </div>
+                </div>
+                
+                <!-- Apply Filters Button -->
+                <button class="w-full py-2 bg-secondary text-white rounded-md hover:bg-secondary/90 transition-colors font-medium">
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+            
+            <!-- Stories Grid -->
+            <div class="lg:w-3/4">
+              <div class="flex justify-between items-center mb-6">
+                <p class="text-gray-600"><span class="font-medium">{stories.length}</span> stories found</p>
+                
+                <div class="flex items-center">
+                  <label class="text-sm text-gray-600 mr-2">Sort by:</label>
+                  <select class="text-sm border-gray-300 rounded-md focus:border-secondary focus:ring focus:ring-secondary/20 focus:ring-opacity-50">
+                    {sortOptions.map(option => (
+                      <option>{option}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {stories.map(story => (
+                  <CardStory {...story} />
+                ))}
+              </div>
+              
+              <!-- Pagination -->
+              <div class="mt-10 flex justify-center">
+                <nav class="inline-flex rounded-md shadow">
+                  <a href="#" class="py-2 px-4 bg-white border border-gray-300 rounded-l-md text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Previous
+                  </a>
+                  <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-secondary">
+                    1
+                  </a>
+                  <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    2
+                  </a>
+                  <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    3
+                  </a>
+                  <span class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500">
+                    ...
+                  </span>
+                  <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    8
+                  </a>
+                  <a href="#" class="py-2 px-4 bg-white border border-gray-300 rounded-r-md text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Next
+                  </a>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

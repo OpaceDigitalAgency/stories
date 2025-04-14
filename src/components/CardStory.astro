@@ -1,0 +1,82 @@
+---
+import RatingStars from './RatingStars.astro';
+import TagBadge from './TagBadge.astro';
+
+export interface Props {
+  title: string;
+  excerpt: string;
+  coverImage: string;
+  author: {
+    name: string;
+    avatar: string;
+    slug: string;
+  };
+  rating: number;
+  tags: string[];
+  slug: string;
+  publishDate: Date;
+}
+
+const { 
+  title, 
+  excerpt, 
+  coverImage, 
+  author, 
+  rating, 
+  tags, 
+  slug,
+  publishDate 
+} = Astro.props;
+
+const formattedDate = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+}).format(publishDate);
+---
+
+<article class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+  <a href={`/stories/${slug}`} class="block">
+    <div class="relative aspect-video overflow-hidden">
+      <img 
+        src={coverImage} 
+        alt={`Cover image for ${title}`} 
+        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+      />
+    </div>
+  </a>
+  
+  <div class="p-5">
+    <div class="flex justify-between items-start mb-3">
+      <div class="flex-1">
+        <a href={`/stories/${slug}`} class="block">
+          <h3 class="text-xl font-display font-semibold text-gray-800 hover:text-primary transition-colors mb-1">{title}</h3>
+        </a>
+        <div class="flex items-center text-sm text-gray-500 mb-2">
+          <span>{formattedDate}</span>
+          <span class="mx-2">•</span>
+          <RatingStars rating={rating} />
+        </div>
+      </div>
+    </div>
+    
+    <p class="text-gray-600 mb-4 line-clamp-3">{excerpt}</p>
+    
+    <div class="flex flex-wrap gap-2 mb-4">
+      {tags.map(tag => <TagBadge tag={tag} />)}
+    </div>
+    
+    <div class="flex items-center pt-3 border-t border-gray-100">
+      <a href={`/authors/${author.slug}`} class="flex items-center group">
+        <img 
+          src={author.avatar} 
+          alt={author.name} 
+          class="w-8 h-8 rounded-full mr-2"
+        />
+        <span class="text-sm font-medium text-gray-700 group-hover:text-primary transition-colors">
+          {author.name}
+        </span>
+      </a>
+    </div>
+  </div>
+</article>

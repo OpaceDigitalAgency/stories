@@ -1,0 +1,287 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import '../../styles/base.css';
+
+export function getStaticPaths() {
+  // In a real application, this would fetch data from a CMS or API
+  // For now, we'll use mock data
+  return [
+    {
+      params: { slug: 'emma-thompson' },
+      props: {
+        author: {
+          name: "Emma Thompson",
+          avatar: "https://i.pravatar.cc/150?img=1",
+          bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness. With a background in elementary education, Emma understands how to engage young minds and foster a love of reading.",
+          joinDate: new Date('2024-09-15'),
+          location: "Portland, Oregon",
+          stats: {
+            stories: 12,
+            followers: 843,
+            likes: 2156
+          },
+          socialLinks: {
+            twitter: "https://twitter.com/emmathompson",
+            instagram: "https://instagram.com/emmathompson",
+            website: "https://emmathompsonstories.com"
+          },
+          favoriteGenres: ["Adventure", "Animals", "Nature", "Friendship"]
+        },
+        stories: [
+          {
+            title: "The Adventure of the Curious Cat",
+            excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
+            coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+            author: {
+              name: "Emma Thompson",
+              avatar: "https://i.pravatar.cc/150?img=1",
+              slug: "emma-thompson"
+            },
+            rating: 4.7,
+            tags: ["Adventure", "Animals", "Children"],
+            slug: "adventure-curious-cat",
+            publishDate: new Date('2025-03-15')
+          },
+          {
+            title: "Ocean Friends: The Dolphin's Secret",
+            excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
+            coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
+            author: {
+              name: "Emma Thompson",
+              avatar: "https://i.pravatar.cc/150?img=1",
+              slug: "emma-thompson"
+            },
+            rating: 4.4,
+            tags: ["Ocean", "Animals", "Adventure"],
+            slug: "ocean-friends-dolphin-secret",
+            publishDate: new Date('2025-03-22')
+          },
+          {
+            title: "The Talking Tree",
+            excerpt: "When Lily discovers an ancient oak tree that can speak, she learns valuable lessons about protecting nature and the environment.",
+            coverImage: "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
+            author: {
+              name: "Emma Thompson",
+              avatar: "https://i.pravatar.cc/150?img=1",
+              slug: "emma-thompson"
+            },
+            rating: 4.6,
+            tags: ["Nature", "Environment", "Magic"],
+            slug: "talking-tree",
+            publishDate: new Date('2025-02-18')
+          }
+        ]
+      }
+    },
+    // Additional static paths would be defined here for other authors
+  ];
+}
+
+const { author, stories } = Astro.props;
+
+// Format the join date
+const formattedJoinDate = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long'
+}).format(author.joinDate);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{author.name} | Stories From The Web</title>
+    <meta name="description" content={`Discover children's stories by ${author.name}. ${author.bio.substring(0, 100)}...`} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content={`https://storiesfromtheweb.org/authors/${Astro.params.slug}`} />
+    <meta property="og:title" content={`${author.name} | Stories From The Web`} />
+    <meta property="og:description" content={`Discover children's stories by ${author.name}. ${author.bio.substring(0, 100)}...`} />
+    <meta property="og:image" content={author.avatar} />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={`https://storiesfromtheweb.org/authors/${Astro.params.slug}`} />
+    <meta property="twitter:title" content={`${author.name} | Stories From The Web`} />
+    <meta property="twitter:description" content={`Discover children's stories by ${author.name}. ${author.bio.substring(0, 100)}...`} />
+    <meta property="twitter:image" content={author.avatar} />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "${author.name}",
+        "description": "${author.bio}",
+        "image": "${author.avatar}",
+        "url": "https://storiesfromtheweb.org/authors/${Astro.params.slug}",
+        "sameAs": [
+          "${author.socialLinks.twitter || ''}",
+          "${author.socialLinks.instagram || ''}",
+          "${author.socialLinks.website || ''}"
+        ]
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Author Profile Header -->
+      <section class="bg-white border-b">
+        <div class="container mx-auto px-4 py-8">
+          <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div class="w-32 h-32 md:w-40 md:h-40">
+              <img 
+                src={author.avatar} 
+                alt={author.name} 
+                class="w-full h-full rounded-full object-cover border-4 border-accent"
+              />
+            </div>
+            
+            <div class="flex-1 text-center md:text-left">
+              <h1 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-2">
+                {author.name}
+              </h1>
+              
+              <p class="text-gray-600 mb-4 max-w-3xl">
+                {author.bio}
+              </p>
+              
+              <div class="flex flex-wrap gap-2 justify-center md:justify-start mb-4">
+                {author.favoriteGenres.map(genre => (
+                  <TagBadge tag={genre} size="sm" />
+                ))}
+              </div>
+              
+              <div class="flex flex-wrap items-center text-sm text-gray-600 gap-x-6 gap-y-2 justify-center md:justify-start">
+                {author.location && (
+                  <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1 text-gray-500">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                    </svg>
+                    <span>{author.location}</span>
+                  </div>
+                )}
+                
+                <div class="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1 text-gray-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  <span>Joined {formattedJoinDate}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex flex-col items-center md:items-end gap-4">
+              <div class="flex gap-6 text-center">
+                <div>
+                  <p class="text-2xl font-bold text-gray-800">{author.stats.stories}</p>
+                  <p class="text-sm text-gray-600">Stories</p>
+                </div>
+                <div>
+                  <p class="text-2xl font-bold text-gray-800">{author.stats.followers}</p>
+                  <p class="text-sm text-gray-600">Followers</p>
+                </div>
+                <div>
+                  <p class="text-2xl font-bold text-gray-800">{author.stats.likes}</p>
+                  <p class="text-sm text-gray-600">Likes</p>
+                </div>
+              </div>
+              
+              <button class="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary/90 transition-colors font-medium">
+                Follow
+              </button>
+              
+              <div class="flex gap-3">
+                {author.socialLinks.twitter && (
+                  <a 
+                    href={author.socialLinks.twitter} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-gray-500 hover:text-primary transition-colors"
+                    aria-label={`${author.name}'s Twitter`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                      <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z" />
+                    </svg>
+                  </a>
+                )}
+                
+                {author.socialLinks.instagram && (
+                  <a 
+                    href={author.socialLinks.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-gray-500 hover:text-primary transition-colors"
+                    aria-label={`${author.name}'s Instagram`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+                    </svg>
+                  </a>
+                )}
+                
+                {author.socialLinks.website && (
+                  <a 
+                    href={author.socialLinks.website} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-gray-500 hover:text-primary transition-colors"
+                    aria-label={`${author.name}'s Website`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                      <path d="M21.721 12.752a9.711 9.711 0 00-.945-5.003 12.754 12.754 0 01-4.339 2.708 18.991 18.991 0 01-.214 4.772 17.165 17.165 0 005.498-2.477zM14.634 15.55a17.324 17.324 0 00.332-4.647c-.952.227-1.945.347-2.966.347-1.021 0-2.014-.12-2.966-.347a17.515 17.515 0 00.332 4.647 17.385 17.385 0 005.268 0zM9.772 17.119a18.963 18.963 0 004.456 0A17.182 17.182 0 0112 21.724a17.18 17.18 0 01-2.228-4.605zM7.777 15.23a18.87 18.87 0 01-.214-4.774 12.753 12.753 0 01-4.34-2.708 9.711 9.711 0 00-.944 5.004 17.165 17.165 0 005.498 2.477zM21.356 14.752a9.765 9.765 0 01-7.478 6.817 18.64 18.64 0 001.988-4.718 18.627 18.627 0 005.49-2.098zM2.644 14.752c1.682.971 3.53 1.688 5.49 2.099a18.64 18.64 0 001.988 4.718 9.765 9.765 0 01-7.478-6.816zM13.878 2.43a9.755 9.755 0 016.116 3.986 11.267 11.267 0 01-3.746 2.504 18.63 18.63 0 00-2.37-6.49zM12 2.276a17.152 17.152 0 012.805 7.121c-.897.23-1.837.353-2.805.353-.968 0-1.908-.122-2.805-.353A17.151 17.151 0 0112 2.276zM10.122 2.43a18.629 18.629 0 00-2.37 6.49 11.266 11.266 0 01-3.746-2.504 9.754 9.754 0 016.116-3.985z" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Author's Stories -->
+      <section class="py-12">
+        <div class="container mx-auto px-4">
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-display font-bold text-gray-800">Stories by {author.name}</h2>
+            
+            <div class="flex items-center">
+              <label class="text-sm text-gray-600 mr-2">Sort by:</label>
+              <select class="text-sm border-gray-300 rounded-md focus:border-secondary focus:ring focus:ring-secondary/20 focus:ring-opacity-50">
+                <option>Newest</option>
+                <option>Oldest</option>
+                <option>Most Popular</option>
+                <option>Highest Rated</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {stories.map(story => (
+              <CardStory {...story} />
+            ))}
+          </div>
+          
+          {stories.length > 6 && (
+            <div class="mt-10 text-center">
+              <button class="bg-secondary text-white px-6 py-2 rounded-md hover:bg-secondary/90 transition-colors font-medium">
+                Load More Stories
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

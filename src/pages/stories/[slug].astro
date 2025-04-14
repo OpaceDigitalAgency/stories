@@ -1,0 +1,309 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import RatingStars from '../../components/RatingStars.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import CardStory from '../../components/CardStory.astro';
+import '../../styles/base.css';
+
+export function getStaticPaths() {
+  // In a real application, this would fetch data from a CMS or API
+  // For now, we'll use mock data
+  return [
+    {
+      params: { slug: 'adventure-curious-cat' },
+      props: {
+        story: {
+          title: "The Adventure of the Curious Cat",
+          content: `
+            <p>Once upon a time, in a cozy little house at the end of Maple Street, there lived a small gray cat named Whiskers. Whiskers was not like other cats in the neighborhood. While they were content to nap in sunny spots and chase the occasional mouse, Whiskers was curious about the world beyond the garden fence.</p>
+            
+            <p>"There must be so many exciting things to discover out there," Whiskers thought as she peered through the fence slats.</p>
+            
+            <p>One bright morning, when her family had left for the day, Whiskers noticed that the garden gate had been left slightly ajar. This was her chance! With a flick of her tail and a determined gleam in her green eyes, she squeezed through the gap and stepped into the outside world.</p>
+            
+            <p>The first thing Whiskers discovered was the park across the street. It was filled with tall trees, chirping birds, and interesting smells. As she explored under a bush, she found something shiny half-buried in the dirt.</p>
+            
+            <p>"What could this be?" she wondered, pawing at the object.</p>
+            
+            <p>It was a small silver key with a blue ribbon tied to it. Whiskers decided this was a special treasure and carefully picked it up with her teeth.</p>
+            
+            <p>Just then, she heard a sad whimpering sound. Following the noise, she found a small puppy who had gotten his collar tangled in a bramble bush.</p>
+            
+            <p>"Don't worry," Whiskers meowed, though she knew the puppy couldn't understand her. "I'll help you."</p>
+            
+            <p>Using her sharp claws and nimble paws, Whiskers carefully freed the puppy from the thorny branches. The puppy was so grateful that he gave Whiskers a gentle lick on her head.</p>
+            
+            <p>"My name is Max," the puppy woofed. "Thank you for helping me! I got lost while chasing a butterfly."</p>
+            
+            <p>Whiskers was surprised that she could understand Max, but in this adventure, it seemed anything was possible. "I'm Whiskers," she replied. "I'm exploring the world today. Would you like to join me?"</p>
+            
+            <p>Max wagged his tail excitedly. "Yes, please! But first, could you help me find my way home? My family must be worried."</p>
+            
+            <p>Whiskers agreed, and together they set off to find Max's home. Along the way, they met a wise old owl who told them about the magic of friendship, helped a squirrel family gather nuts for the winter, and even found a hidden pond where fish with rainbow scales swam in crystal clear water.</p>
+            
+            <p>When they finally reached Max's house, his family was overjoyed to see him. They thanked Whiskers with a bowl of the most delicious cream she had ever tasted.</p>
+            
+            <p>As the sun began to set, Whiskers knew it was time to return to her own home. Max walked with her part of the way.</p>
+            
+            <p>"This was the best adventure," Whiskers purred. "I discovered that the world is full of wonderful things, but the most wonderful discovery of all is friendship."</p>
+            
+            <p>Max nodded in agreement. "Will you come visit me tomorrow? We could have another adventure!"</p>
+            
+            <p>Whiskers promised she would, and with the silver key still hanging from her collar, she made her way back to the garden gate. Her family was just arriving home, and they were relieved to see her waiting for them.</p>
+            
+            <p>That night, as Whiskers curled up in her favorite spot, she dreamed of all the adventures still waiting to be discovered. And she knew that with friends like Max by her side, each day would bring new treasures more precious than any silver key.</p>
+            
+            <p>The End</p>
+          `,
+          coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+          author: {
+            name: "Emma Thompson",
+            avatar: "https://i.pravatar.cc/150?img=1",
+            bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
+            slug: "emma-thompson"
+          },
+          rating: 4.7,
+          reviewCount: 42,
+          tags: ["Adventure", "Animals", "Children", "Friendship"],
+          readingTime: "8 min",
+          ageRange: "4-8 years",
+          publishDate: new Date('2025-03-15')
+        },
+        relatedStories: [
+          {
+            title: "Ocean Friends: The Dolphin's Secret",
+            excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
+            coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
+            author: {
+              name: "Emma Thompson",
+              avatar: "https://i.pravatar.cc/150?img=1",
+              slug: "emma-thompson"
+            },
+            rating: 4.4,
+            tags: ["Ocean", "Animals", "Adventure"],
+            slug: "ocean-friends-dolphin-secret",
+            publishDate: new Date('2025-03-22')
+          },
+          {
+            title: "The Enchanted Forest",
+            excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
+            coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
+            author: {
+              name: "David Brown",
+              avatar: "https://i.pravatar.cc/150?img=4",
+              slug: "david-brown"
+            },
+            rating: 4.6,
+            tags: ["Fantasy", "Nature", "Adventure"],
+            slug: "enchanted-forest",
+            publishDate: new Date('2025-03-10')
+          }
+        ]
+      }
+    },
+    // Additional static paths would be defined here for other stories
+  ];
+}
+
+const { story, relatedStories } = Astro.props;
+
+// Format the publish date
+const formattedDate = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+}).format(story.publishDate);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{story.title} | Stories From The Web</title>
+    <meta name="description" content={story.content.substring(0, 160).replace(/<[^>]*>/g, '')} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={`https://storiesfromtheweb.org/stories/${Astro.params.slug}`} />
+    <meta property="og:title" content={`${story.title} | Stories From The Web`} />
+    <meta property="og:description" content={story.content.substring(0, 160).replace(/<[^>]*>/g, '')} />
+    <meta property="og:image" content={story.coverImage} />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={`https://storiesfromtheweb.org/stories/${Astro.params.slug}`} />
+    <meta property="twitter:title" content={`${story.title} | Stories From The Web`} />
+    <meta property="twitter:description" content={story.content.substring(0, 160).replace(/<[^>]*>/g, '')} />
+    <meta property="twitter:image" content={story.coverImage} />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        "name": "${story.title}",
+        "author": {
+          "@type": "Person",
+          "name": "${story.author.name}"
+        },
+        "datePublished": "${story.publishDate.toISOString()}",
+        "image": "${story.coverImage}",
+        "description": "${story.content.substring(0, 160).replace(/<[^>]*>/g, '')}",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "${story.rating}",
+          "reviewCount": "${story.reviewCount}"
+        }
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Story Header -->
+      <div class="relative">
+        <div class="absolute inset-0 bg-gradient-to-b from-black/70 to-transparent z-10"></div>
+        <img 
+          src={story.coverImage} 
+          alt={`Cover image for ${story.title}`} 
+          class="w-full h-64 md:h-96 object-cover"
+        />
+        <div class="container mx-auto px-4 relative z-20 -mt-32 md:-mt-40 pb-6">
+          <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4">
+              <div>
+                <div class="flex flex-wrap gap-2 mb-3">
+                  {story.tags.map(tag => (
+                    <TagBadge tag={tag} size="sm" />
+                  ))}
+                </div>
+                <h1 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-2">
+                  {story.title}
+                </h1>
+              </div>
+              <div class="flex items-center mt-3 md:mt-0">
+                <RatingStars rating={story.rating} size="lg" />
+                <span class="ml-2 text-gray-600">({story.reviewCount} reviews)</span>
+              </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row sm:items-center text-sm text-gray-600 mb-6 gap-y-2 sm:gap-x-6">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1 text-gray-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{story.readingTime} read</span>
+              </div>
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1 text-gray-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <span>Age: {story.ageRange}</span>
+              </div>
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1 text-gray-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                <span>Published: {formattedDate}</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center border-t border-b border-gray-100 py-4 mb-6">
+              <a href={`/authors/${story.author.slug}`} class="flex items-center group">
+                <img 
+                  src={story.author.avatar} 
+                  alt={story.author.name} 
+                  class="w-10 h-10 rounded-full mr-3"
+                />
+                <div>
+                  <p class="font-medium text-gray-800 group-hover:text-primary transition-colors">
+                    {story.author.name}
+                  </p>
+                  <p class="text-sm text-gray-600 line-clamp-1">
+                    {story.author.bio}
+                  </p>
+                </div>
+              </a>
+            </div>
+            
+            <!-- Story Content -->
+            <div class="prose prose-lg max-w-none mb-8">
+              <Fragment set:html={story.content} />
+            </div>
+            
+            <!-- Story Actions -->
+            <div class="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 pt-6">
+              <div class="flex items-center mb-4 sm:mb-0">
+                <button class="flex items-center text-gray-600 hover:text-primary transition-colors mr-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                  </svg>
+                  Like
+                </button>
+                <button class="flex items-center text-gray-600 hover:text-primary transition-colors mr-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                  </svg>
+                  Comment
+                </button>
+                <button class="flex items-center text-gray-600 hover:text-primary transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                  </svg>
+                  Share
+                </button>
+              </div>
+              <div>
+                <button class="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors font-medium">
+                  Rate This Story
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Related Stories -->
+      <section class="py-12 bg-gray-50">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-display font-bold text-gray-800 mb-8">You Might Also Enjoy</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {relatedStories.map(story => (
+              <CardStory {...story} />
+            ))}
+            
+            <div class="bg-white rounded-lg overflow-hidden shadow-md p-6 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+              <div class="bg-accent/10 text-accent w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              </div>
+              
+              <h3 class="text-xl font-display font-semibold text-gray-800 mb-2">
+                Discover More Stories
+              </h3>
+              
+              <p class="text-gray-600 mb-6">
+                Explore our collection of children's stories from authors around the world.
+              </p>
+              
+              <a 
+                href="/stories" 
+                class="block w-full text-center py-2 px-4 bg-secondary text-white rounded-md hover:bg-secondary/90 transition-colors font-medium"
+              >
+                Browse Stories
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

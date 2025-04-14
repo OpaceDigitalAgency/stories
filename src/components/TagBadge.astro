@@ -1,0 +1,37 @@
+---
+export interface Props {
+  tag: string;
+  size?: 'sm' | 'md' | 'lg';
+  clickable?: boolean;
+}
+
+const { 
+  tag, 
+  size = 'md',
+  clickable = true
+} = Astro.props;
+
+// Size classes
+const sizeClasses = {
+  sm: 'text-xs px-2 py-0.5',
+  md: 'text-sm px-3 py-1',
+  lg: 'text-base px-4 py-1.5'
+};
+
+const baseClasses = "inline-flex items-center rounded-full bg-secondary/10 text-secondary font-medium";
+const hoverClasses = clickable ? "hover:bg-secondary/20 transition-colors cursor-pointer" : "";
+const classes = `${baseClasses} ${sizeClasses[size]} ${hoverClasses}`;
+
+// Format tag for URL (lowercase, replace spaces with hyphens)
+const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
+---
+
+{clickable ? (
+  <a href={`/tags/${tagSlug}`} class={classes}>
+    {tag}
+  </a>
+) : (
+  <span class={classes}>
+    {tag}
+  </span>
+)}

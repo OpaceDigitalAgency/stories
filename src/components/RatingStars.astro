@@ -1,0 +1,71 @@
+---
+export interface Props {
+  rating: number;
+  maxRating?: number;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { 
+  rating, 
+  maxRating = 5,
+  size = 'md'
+} = Astro.props;
+
+// Calculate the number of full, half, and empty stars
+const fullStars = Math.floor(rating);
+const hasHalfStar = rating % 1 >= 0.5;
+const emptyStars = maxRating - fullStars - (hasHalfStar ? 1 : 0);
+
+// Size classes
+const sizeClasses = {
+  sm: 'w-3 h-3',
+  md: 'w-4 h-4',
+  lg: 'w-5 h-5'
+};
+
+const starClass = sizeClasses[size];
+---
+
+<div class="flex items-center" aria-label={`Rating: ${rating} out of ${maxRating} stars`}>
+  {/* Full stars */}
+  {Array.from({ length: fullStars }).map((_, i) => (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="currentColor" 
+      class={`text-accent ${starClass}`}
+      aria-hidden="true"
+    >
+      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" />
+    </svg>
+  ))}
+  
+  {/* Half star */}
+  {hasHalfStar && (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="currentColor" 
+      class={`text-accent ${starClass}`}
+      aria-hidden="true"
+    >
+      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" style="clip-path: inset(0 50% 0 0);" />
+      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" style="clip-path: inset(0 0 0 50%); fill: #e2e8f0;" />
+    </svg>
+  )}
+  
+  {/* Empty stars */}
+  {Array.from({ length: emptyStars }).map((_, i) => (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      fill="currentColor" 
+      class={`text-gray-200 ${starClass}`}
+      aria-hidden="true"
+    >
+      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" />
+    </svg>
+  ))}
+  
+  <span class="ml-1 text-xs text-gray-600">{rating.toFixed(1)}</span>
+</div>

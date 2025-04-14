@@ -1,0 +1,285 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import CardStory from '../components/CardStory.astro';
+import CardAuthor from '../components/CardAuthor.astro';
+import '../styles/base.css';
+
+// Mock data for featured stories
+const featuredStories = [
+  {
+    title: "The Adventure of the Curious Cat",
+    excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
+    coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+    author: {
+      name: "Emma Thompson",
+      avatar: "https://i.pravatar.cc/150?img=1",
+      slug: "emma-thompson"
+    },
+    rating: 4.7,
+    tags: ["Adventure", "Animals", "Children"],
+    slug: "adventure-curious-cat",
+    publishDate: new Date('2025-03-15')
+  },
+  {
+    title: "The Magic Library",
+    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
+    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+    author: {
+      name: "Michael Johnson",
+      avatar: "https://i.pravatar.cc/150?img=2",
+      slug: "michael-johnson"
+    },
+    rating: 4.9,
+    tags: ["Fantasy", "Magic", "Books"],
+    slug: "magic-library",
+    publishDate: new Date('2025-04-02')
+  },
+  {
+    title: "Space Explorers: Journey to the Stars",
+    excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
+    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
+    author: {
+      name: "Sarah Williams",
+      avatar: "https://i.pravatar.cc/150?img=3",
+      slug: "sarah-williams"
+    },
+    rating: 4.5,
+    tags: ["Science Fiction", "Space", "Adventure"],
+    slug: "space-explorers-journey",
+    publishDate: new Date('2025-03-28')
+  }
+];
+
+// Mock data for featured authors
+const featuredAuthors = [
+  {
+    name: "Emma Thompson",
+    avatar: "https://i.pravatar.cc/150?img=1",
+    bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
+    slug: "emma-thompson",
+    storyCount: 12,
+    socialLinks: {
+      twitter: "https://twitter.com/emmathompson",
+      instagram: "https://instagram.com/emmathompson"
+    }
+  },
+  {
+    name: "Michael Johnson",
+    avatar: "https://i.pravatar.cc/150?img=2",
+    bio: "Michael is a former librarian who creates magical worlds where books and imagination come to life. His stories encourage a love of reading in children of all ages.",
+    slug: "michael-johnson",
+    storyCount: 8,
+    socialLinks: {
+      twitter: "https://twitter.com/michaeljohnson",
+      website: "https://michaeljohnsonstories.com"
+    }
+  }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Stories From The Web | Share and Discover Children's Stories</title>
+    <meta name="description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/" />
+    <meta property="og:title" content="Stories From The Web | Share and Discover Children's Stories" />
+    <meta property="og:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/" />
+    <meta property="twitter:title" content="Stories From The Web | Share and Discover Children's Stories" />
+    <meta property="twitter:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image.jpg" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Stories From The Web",
+        "url": "https://storiesfromtheweb.org/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://storiesfromtheweb.org/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        },
+        "description": "A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling."
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-r from-primary/90 to-secondary/90 text-white py-16 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
+            Every Child Has a Story Worth Sharing
+          </h1>
+          <p class="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
+            Discover magical tales from around the world or share your own story with our community.
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="/stories" class="btn bg-white text-primary hover:bg-white/90 text-lg px-6 py-3 rounded-md font-medium">
+              Explore Stories
+            </a>
+            <a href="/publish" class="btn bg-accent text-gray-800 hover:bg-accent/90 text-lg px-6 py-3 rounded-md font-medium">
+              Share Your Story
+            </a>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Featured Stories Section -->
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-gray-800">Featured Stories</h2>
+            <a href="/stories" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+              View All Stories →
+            </a>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredStories.map(story => (
+              <CardStory {...story} />
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      <!-- How It Works Section -->
+      <section class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-gray-800 text-center mb-12">How It Works</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="text-center">
+              <div class="bg-primary/10 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-display font-semibold mb-2">Create Your Story</h3>
+              <p class="text-gray-600">Write your story using our easy-to-use editor. Add images, format text, and make it your own.</p>
+            </div>
+            
+            <div class="text-center">
+              <div class="bg-secondary/10 text-secondary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m0-3l-3-3m0 0l-3 3m3-3v11.25m6-2.25h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-display font-semibold mb-2">Publish & Share</h3>
+              <p class="text-gray-600">Publish your story to our platform and share it with friends, family, and our community.</p>
+            </div>
+            
+            <div class="text-center">
+              <div class="bg-accent/10 text-accent w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-display font-semibold mb-2">Inspire Others</h3>
+              <p class="text-gray-600">Get feedback, inspire readers, and connect with other storytellers around the world.</p>
+            </div>
+          </div>
+          
+          <div class="text-center mt-12">
+            <a href="/publish" class="btn btn-primary text-lg px-6 py-3 rounded-md font-medium">
+              Start Writing Today
+            </a>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Featured Authors Section -->
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-gray-800">Featured Authors</h2>
+            <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+              View All Authors →
+            </a>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredAuthors.map(author => (
+              <CardAuthor author={author} />
+            ))}
+            
+            <!-- Become an Author Card -->
+            <div class="bg-white rounded-lg overflow-hidden shadow-md p-6 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+              <div class="bg-accent/10 text-accent w-24 h-24 rounded-full flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              
+              <h3 class="text-xl font-display font-semibold text-gray-800 mb-2">
+                Become an Author
+              </h3>
+              
+              <p class="text-gray-600 mb-6">
+                Share your stories with our community and inspire young readers around the world.
+              </p>
+              
+              <a 
+                href="/publish" 
+                class="block w-full text-center py-2 px-4 bg-accent text-gray-800 rounded-md hover:bg-accent/90 transition-colors font-medium"
+              >
+                Get Started
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Newsletter Section -->
+      <section class="py-16 bg-secondary/10">
+        <div class="container mx-auto px-4 max-w-4xl">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-gray-800 mb-4">Stay Updated</h2>
+            <p class="text-gray-600 text-lg">
+              Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
+            </p>
+          </div>
+          
+          <form class="max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input 
+                type="email" 
+                placeholder="Your email address" 
+                class="flex-grow px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                required
+              />
+              <button 
+                type="submit" 
+                class="btn bg-secondary text-white hover:bg-secondary/90 px-6 py-3 rounded-md font-medium whitespace-nowrap"
+              >
+                Subscribe
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

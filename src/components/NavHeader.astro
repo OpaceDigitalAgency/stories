@@ -1,0 +1,100 @@
+---
+// Define the navigation items
+const navItems = [
+  { text: 'Home', href: '/' },
+  { text: 'Stories', href: '/stories' },
+  { text: 'Authors', href: '/authors' },
+  { text: 'Publish', href: '/publish' },
+];
+
+// Determine the current path to highlight the active nav item
+const currentPath = Astro.url.pathname;
+---
+
+<header class="bg-white shadow-sm sticky top-0 z-50">
+  <div class="container mx-auto px-4 flex justify-between items-center h-16">
+    <!-- Logo -->
+    <a href="/" class="flex items-center">
+      <span class="text-2xl font-display font-bold text-primary">Stories<span class="text-secondary">From</span><span class="text-accent">The</span><span class="text-gray-800">Web</span></span>
+    </a>
+    
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex items-center space-x-6">
+      {navItems.map(item => {
+        const isActive = currentPath === item.href || 
+                         (item.href !== '/' && currentPath.startsWith(item.href));
+        return (
+          <a 
+            href={item.href} 
+            class={`font-medium transition-colors ${
+              isActive 
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-gray-600 hover:text-primary'
+            }`}
+          >
+            {item.text}
+          </a>
+        );
+      })}
+      
+      <a 
+        href="/publish" 
+        class="btn btn-primary ml-2"
+      >
+        Share Your Story
+      </a>
+    </nav>
+    
+    <!-- Mobile menu button -->
+    <button 
+      id="mobile-menu-button" 
+      class="md:hidden flex items-center p-2 rounded-md text-gray-600 hover:text-primary hover:bg-gray-100"
+      aria-label="Toggle menu"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+      </svg>
+    </button>
+  </div>
+  
+  <!-- Mobile Navigation (hidden by default) -->
+  <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-gray-100">
+    <div class="container mx-auto px-4 py-3 space-y-1">
+      {navItems.map(item => {
+        const isActive = currentPath === item.href || 
+                         (item.href !== '/' && currentPath.startsWith(item.href));
+        return (
+          <a 
+            href={item.href} 
+            class={`block py-2 px-3 rounded-md ${
+              isActive 
+                ? 'bg-primary/10 text-primary font-medium' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+            }`}
+          >
+            {item.text}
+          </a>
+        );
+      })}
+      
+      <a 
+        href="/publish" 
+        class="block py-2 px-3 mt-2 bg-primary text-white rounded-md font-medium"
+      >
+        Share Your Story
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Toggle mobile menu
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+  
+  if (mobileMenuButton && mobileMenu) {
+    mobileMenuButton.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+  }
+</script>

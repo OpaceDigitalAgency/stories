@@ -165,12 +165,57 @@ const featuredAuthors = [
             <!-- Animated illustration -->
             <div class="lg:w-1/2 relative">
               <div class="relative w-full max-w-md mx-auto">
-                <!-- Main illustration - using a placeholder until we have a real illustration -->
-                <img
-                  src="https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&auto=format&fit=crop"
-                  alt="Children reading stories"
-                  class="w-full rounded-2xl shadow-playful float-animation"
-                />
+                <!-- Colorful illustration for hero section -->
+                <div class="relative w-full h-full rounded-2xl shadow-playful overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-tertiary/10 p-6 float-animation">
+                  <!-- Colorful background elements -->
+                  <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
+                  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
+                  
+                  <!-- Illustrated elements -->
+                  <div class="relative z-10 flex items-center justify-center h-full">
+                    <!-- Book -->
+                    <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
+                      <!-- Book spine -->
+                      <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
+                      
+                      <!-- Book pages -->
+                      <div class="absolute left-6 top-0 right-0 bottom-0 bg-neutral-light p-4">
+                        <!-- Book content -->
+                        <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
+                        <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
+                        <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
+                        
+                        <!-- Book characters -->
+                        <div class="absolute bottom-4 right-4 w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+                          <div class="w-8 h-8 bg-white rounded-full relative">
+                            <!-- Simple smiley face -->
+                            <div class="absolute top-2 left-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                            <div class="absolute top-2 right-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                            <div class="absolute bottom-2 left-0 right-0 mx-auto w-4 h-1 bg-text-primary rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Floating elements -->
+                    <div class="absolute top-6 right-6 w-12 h-12 bg-tertiary rounded-full flex items-center justify-center pulse-animation">
+                      <div class="w-6 h-6 text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <div class="absolute bottom-8 left-8 w-14 h-14 bg-success rounded-full flex items-center justify-center float-animation" style="animation-delay: 0.5s;">
+                      <div class="w-8 h-8 text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
                 <!-- Animated elements -->
                 <div class="absolute top-10 right-0 transform rotate-12 pulse-animation" style="animation-delay: 1s;">
@@ -270,10 +315,16 @@ const featuredAuthors = [
             </div>
           </div>
           
-          <div class="text-center mt-12">
-            <a href="/publish" class="btn btn-primary text-lg px-8 py-4 shadow-playful btn-playful">
-              <span class="flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+          <div class="text-center mt-12 relative z-10">
+            <!-- Decorative elements -->
+            <div class="absolute -z-10 w-40 h-40 bg-primary/20 rounded-full blur-xl left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+            
+            <a href="/publish" class="inline-block bg-gradient-to-r from-primary to-tertiary text-white text-lg font-bold px-10 py-4 rounded-xl shadow-playful transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative overflow-hidden group">
+              <!-- Animated background effect -->
+              <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+              
+              <span class="flex items-center justify-center relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 group-hover:animate-pulse">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
                 Start Writing Today

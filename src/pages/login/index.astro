@@ -1,0 +1,260 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/base.css';
+
+// User types
+const userTypes = [
+  {
+    type: "reader",
+    title: "Reader",
+    description: "Discover and read stories tailored to your interests",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
+    color: "primary"
+  },
+  {
+    type: "author",
+    title: "Author",
+    description: "Share your stories and connect with readers",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />',
+    color: "secondary"
+  },
+  {
+    type: "parent",
+    title: "Parent",
+    description: "Monitor your child's reading and find appropriate content",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />',
+    color: "tertiary"
+  },
+  {
+    type: "teacher",
+    title: "Teacher",
+    description: "Access educational resources and track student progress",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />',
+    color: "accent"
+  }
+];
+
+// Social login options
+const socialLogins = [
+  {
+    name: "Google",
+    icon: '<path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />',
+    color: "bg-white hover:bg-gray-100 text-gray-800 border border-gray-300"
+  },
+  {
+    name: "Apple",
+    icon: '<path d="M14.884 12.003c-.1-1.147.355-2.266 1.09-3.02.733-.753 1.898-1.278 2.914-1.328-.236-.836-.618-1.593-1.173-2.204-.554-.61-1.28-1.08-2.434-1.23-1.153-.15-2.05.276-2.71.627-.66.35-1.23.627-1.23.627s-.613-.33-1.323-.703c-.71-.374-1.617-.703-2.65-.576-1.035.127-1.93.576-2.65 1.328-.72.752-1.274 1.93-1.578 3.273-.304 1.344-.203 2.858.203 4.228.406 1.37.914 2.69 1.73 3.273.815.584 1.12.854 1.933.854.812 0 1.32-.33 1.828-.33.508 0 .914.33 1.828.33.914 0 1.422-.33 1.93-.584.507-.254 1.218-1.04 1.828-2.204.61-1.164.813-2.18.813-2.18s-1.218-.33-1.218-1.93c0-1.164.914-1.83 1.117-1.93z" /><path d="M12.5 6.067c.508-.61 1.218-1.05 1.93-1.05.71 0 1.117.33 1.726.33.203-1.194-.61-2.448-1.32-3.172-.71-.724-1.93-1.16-2.944-.978-.304 1.194.203 2.448.812 3.273.61.825 1.117 1.328 1.117 1.328s-.914.127-1.32.27z" />',
+    color: "bg-black hover:bg-gray-900 text-white"
+  },
+  {
+    name: "Facebook",
+    icon: '<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />',
+    color: "bg-blue-600 hover:bg-blue-700 text-white"
+  }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Login or Sign Up | Stories From The Web</title>
+    <meta name="description" content="Join our community of readers, authors, parents, and teachers. Sign up for free to access personalized stories and educational resources." />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <div class="container mx-auto px-4 py-12 md:py-16">
+        <div class="max-w-4xl mx-auto">
+          <!-- Tabs -->
+          <div class="flex border-b border-gray-200 mb-8">
+            <button class="py-3 px-6 font-bold text-primary border-b-2 border-primary">
+              Login
+            </button>
+            <button class="py-3 px-6 font-medium text-gray-500 hover:text-gray-700">
+              Sign Up
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Login Form -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+              <h2 class="text-2xl font-display font-bold text-text-primary mb-6">Welcome Back</h2>
+              
+              <form class="space-y-4">
+                <div>
+                  <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <a href="/forgot-password" class="text-xs text-primary hover:text-primary/80">Forgot password?</a>
+                  </div>
+                  <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                
+                <div class="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    id="remember" 
+                    name="remember" 
+                    class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  />
+                  <label for="remember" class="ml-2 block text-sm text-gray-700">
+                    Remember me
+                  </label>
+                </div>
+                
+                <button 
+                  type="submit" 
+                  class="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                >
+                  Login
+                </button>
+              </form>
+              
+              <div class="mt-6">
+                <div class="relative">
+                  <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                  </div>
+                </div>
+                
+                <div class="mt-6 grid grid-cols-3 gap-3">
+                  {socialLogins.map(social => (
+                    <button 
+                      type="button" 
+                      class={`w-full inline-flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium ${social.color}`}
+                    >
+                      <span class="sr-only">Sign in with {social.name}</span>
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <Fragment set:html={social.icon} />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <!-- User Type Selection -->
+            <div>
+              <h2 class="text-2xl font-display font-bold text-text-primary mb-6">Choose Your Profile</h2>
+              <p class="text-gray-600 mb-6">Select the profile type that best describes you. You can switch between profiles later.</p>
+              
+              <div class="space-y-4">
+                {userTypes.map(userType => (
+                  <div class={`border-2 border-${userType.color}/50 rounded-lg p-4 cursor-pointer hover:bg-${userType.color}/5 transition-colors`}>
+                    <div class="flex items-center">
+                      <div class={`w-10 h-10 rounded-full bg-${userType.color}/20 flex items-center justify-center mr-4`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`w-6 h-6 text-${userType.color}`}>
+                          <Fragment set:html={userType.icon} />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 class="text-lg font-medium text-gray-900">{userType.title}</h3>
+                        <p class="text-sm text-gray-500">{userType.description}</p>
+                      </div>
+                      <div class="ml-auto">
+                        <input 
+                          type="radio" 
+                          name="user-type" 
+                          id={userType.type} 
+                          value={userType.type} 
+                          class={`h-5 w-5 text-${userType.color} focus:ring-${userType.color} border-gray-300`}
+                          checked={userType.type === "reader"}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div class="mt-8">
+                <p class="text-sm text-gray-500 mb-2">
+                  By signing up, you agree to our <a href="/terms" class="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a>.
+                </p>
+                <p class="text-sm text-gray-500">
+                  Already have an account? <a href="/login" class="text-primary hover:underline">Login</a>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Profile Switcher Demo -->
+          <div class="mt-16 bg-white rounded-xl shadow-md p-8">
+            <h2 class="text-2xl font-display font-bold text-text-primary mb-6">Profile Switcher</h2>
+            <p class="text-gray-600 mb-6">Once logged in, you can easily switch between different profiles without logging out.</p>
+            
+            <div class="flex items-center justify-center space-x-6">
+              {userTypes.map((userType, index) => (
+                <div class={`text-center ${index === 0 ? 'relative' : ''}`}>
+                  <div class={`w-16 h-16 rounded-full bg-${userType.color}/20 flex items-center justify-center mx-auto ${index === 0 ? 'ring-2 ring-primary ring-offset-2' : 'opacity-70 hover:opacity-100 transition-opacity'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`w-8 h-8 text-${userType.color}`}>
+                      <Fragment set:html={userType.icon} />
+                    </svg>
+                  </div>
+                  <p class="mt-2 text-sm font-medium text-gray-700">{userType.title}</p>
+                  
+                  {index === 0 && (
+                    <span class="absolute top-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white bg-green-400"></span>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div class="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400 mr-2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                </svg>
+                <p class="text-sm text-gray-600">
+                  Each profile type provides access to different features and tools tailored to your needs. You can create multiple profiles under one account.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Moderation Notice -->
+          <div class="mt-8 p-4 bg-tertiary/10 rounded-lg">
+            <div class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-tertiary mr-2 mt-0.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <div>
+                <h3 class="text-md font-medium text-tertiary">Content Moderation</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  All user-generated content is subject to moderation to ensure a safe and appropriate environment for children. Content that violates our guidelines will be removed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

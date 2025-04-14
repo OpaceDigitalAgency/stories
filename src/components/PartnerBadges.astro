@@ -1,0 +1,52 @@
+---
+// Partner Badges Component for Footer
+// This component displays badges for charity and education partners
+
+// Mock data for partner organizations
+const partners = [
+  {
+    name: "Reading First Foundation",
+    logo: "https://placehold.co/100x40/e9ecef/495057?text=Reading+First",
+    href: "#"
+  },
+  {
+    name: "Kids Literacy Initiative",
+    logo: "https://placehold.co/100x40/e9ecef/495057?text=Kids+Literacy",
+    href: "#"
+  },
+  {
+    name: "Global Education Alliance",
+    logo: "https://placehold.co/100x40/e9ecef/495057?text=Education+Alliance",
+    href: "#"
+  },
+  {
+    name: "Children's Book Trust",
+    logo: "https://placehold.co/100x40/e9ecef/495057?text=Book+Trust",
+    href: "#"
+  }
+];
+---
+
+<div class="mt-8 pt-6 border-t border-gray-700">
+  <h3 class="text-sm font-medium text-gray-400 mb-4">Our Partners</h3>
+  <div class="flex flex-wrap gap-4 items-center justify-center md:justify-start">
+    {partners.map(partner => (
+      <a 
+        href={partner.href}
+        class="bg-gray-700 hover:bg-gray-600 p-2 rounded-md transition-colors duration-300 flex items-center justify-center"
+        title={partner.name}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img 
+          src={partner.logo} 
+          alt={partner.name} 
+          class="h-8 w-auto opacity-80 hover:opacity-100 transition-opacity"
+        />
+      </a>
+    ))}
+  </div>
+  <p class="text-xs text-gray-500 mt-3">
+    We're proud to partner with organizations that share our mission of promoting literacy and education.
+  </p>
+</div>

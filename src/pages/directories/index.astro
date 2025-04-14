@@ -1,0 +1,364 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/base.css';
+
+// Directory categories
+const directories = [
+  {
+    title: "Books Directory",
+    description: "Browse our extensive collection of children's books, categorized by age, genre, and reading level.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
+    link: "/stories",
+    color: "primary"
+  },
+  {
+    title: "Authors & Illustrators Directory",
+    description: "Discover talented authors and illustrators from around the world. Filter by genre, age group, and more.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />',
+    link: "/authors",
+    color: "secondary"
+  },
+  {
+    title: "Educational Resources Directory",
+    description: "Access a wide range of educational resources, including lesson plans, worksheets, and teaching guides.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />',
+    link: "/resources",
+    color: "tertiary"
+  },
+  {
+    title: "Local Libraries & Events Directory",
+    description: "Find libraries, bookstores, and reading events in your area. Connect with your local reading community.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />',
+    link: "/events",
+    color: "accent"
+  }
+];
+
+// Filter categories for Books Directory
+const bookFilters = [
+  {
+    name: "Age Group",
+    options: ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"]
+  },
+  {
+    name: "Genre",
+    options: ["Adventure", "Fantasy", "Science Fiction", "Mystery", "Educational", "Poetry", "Fairy Tales", "Animals", "Nature", "History"]
+  },
+  {
+    name: "Reading Level",
+    options: ["Early Reader", "Chapter Books", "Middle Grade", "Young Adult"]
+  },
+  {
+    name: "Type",
+    options: ["Classic", "AI-Generated", "User-Published", "Award-Winning"]
+  }
+];
+
+// Filter categories for Authors Directory
+const authorFilters = [
+  {
+    name: "Specialization",
+    options: ["Picture Books", "Chapter Books", "Middle Grade", "Young Adult", "Educational", "Poetry"]
+  },
+  {
+    name: "Genre",
+    options: ["Adventure", "Fantasy", "Science Fiction", "Mystery", "Educational", "Poetry", "Fairy Tales"]
+  },
+  {
+    name: "Target Age",
+    options: ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"]
+  }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Directories | Stories From The Web</title>
+    <meta name="description" content="Browse our comprehensive directories of books, authors, educational resources, and local events. Find exactly what you're looking for with our powerful search and filter tools." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/directories" />
+    <meta property="og:title" content="Directories | Stories From The Web" />
+    <meta property="og:description" content="Browse our comprehensive directories of books, authors, educational resources, and local events. Find exactly what you're looking for with our powerful search and filter tools." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-directories.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/directories" />
+    <meta property="twitter:title" content="Directories | Stories From The Web" />
+    <meta property="twitter:description" content="Browse our comprehensive directories of books, authors, educational resources, and local events. Find exactly what you're looking for with our powerful search and filter tools." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-directories.jpg" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-r from-primary/90 to-secondary/90 text-white py-16 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
+            Directories
+          </h1>
+          <p class="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
+            Browse our comprehensive directories to find books, authors, educational resources, and local events.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="max-w-2xl mx-auto">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Search across all directories..." 
+                class="w-full px-4 py-3 pl-12 rounded-md border-none focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-800"
+              />
+              <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Directories Grid -->
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-12 fancy-underline">Our Directories</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {directories.map(directory => (
+              <div class={`bg-${directory.color}/10 rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300`}>
+                <!-- Decorative elements -->
+                <div class={`absolute -top-10 -right-10 w-40 h-40 bg-${directory.color}/10 rounded-full blur-xl`}></div>
+                
+                <div class="relative z-10">
+                  <div class="flex items-center mb-4">
+                    <div class={`w-12 h-12 bg-${directory.color}/20 rounded-full flex items-center justify-center mr-3 group-hover:scale-110 transition-transform duration-300`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`w-6 h-6 text-${directory.color}`}>
+                        <Fragment set:html={directory.icon} />
+                      </svg>
+                    </div>
+                    <h3 class="text-xl font-display font-bold text-text-primary">{directory.title}</h3>
+                  </div>
+                  
+                  <p class="text-text-secondary mb-6">
+                    {directory.description}
+                  </p>
+                  
+                  <a href={directory.link} class={`btn btn-${directory.color} py-2 px-6 shadow-playful btn-playful`}>
+                    <span class="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
+                      Browse Directory
+                    </span>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      <!-- Books Directory Preview -->
+      <section class="py-16 bg-neutral-dark">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Books Directory</h2>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Filters Sidebar -->
+            <div class="lg:col-span-1">
+              <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-lg font-display font-semibold text-gray-800">Filters</h3>
+                  <button class="text-sm text-primary hover:text-primary/80 transition-colors">
+                    Reset All
+                  </button>
+                </div>
+                
+                {bookFilters.map(filter => (
+                  <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">{filter.name}</h4>
+                    <div class="space-y-2">
+                      {filter.options.slice(0, 4).map(option => (
+                        <label class="flex items-center">
+                          <input type="checkbox" class="rounded text-primary focus:ring-primary" />
+                          <span class="ml-2 text-sm text-gray-600">{option}</span>
+                        </label>
+                      ))}
+                      {filter.options.length > 4 && (
+                        <button class="text-xs text-primary hover:text-primary/80 transition-colors mt-1">
+                          Show more...
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                <button class="w-full py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors font-medium">
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+            
+            <!-- Directory Preview -->
+            <div class="lg:col-span-3">
+              <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-lg font-display font-semibold text-gray-800">Featured Books</h3>
+                  <div class="flex items-center">
+                    <label class="text-sm text-gray-600 mr-2">Sort by:</label>
+                    <select class="text-sm border-gray-300 rounded-md focus:border-primary focus:ring focus:ring-primary/20 focus:ring-opacity-50">
+                      <option>Newest</option>
+                      <option>Most Popular</option>
+                      <option>Highest Rated</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <!-- Directory Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map(item => (
+                    <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                      <div class="h-40 bg-gray-200"></div>
+                      <div class="p-4">
+                        <h4 class="font-medium text-gray-800 mb-1">Book Title {item}</h4>
+                        <p class="text-sm text-gray-500 mb-2">Author Name</p>
+                        <div class="flex items-center text-yellow-400 text-sm">
+                          <span>★★★★☆</span>
+                          <span class="text-gray-600 ml-1">(4.0)</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div class="mt-6 text-center">
+                  <a href="/stories" class="inline-block text-primary hover:text-primary/80 font-medium">
+                    View All Books →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Authors Directory Preview -->
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Authors & Illustrators Directory</h2>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Filters Sidebar -->
+            <div class="lg:col-span-1">
+              <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-lg font-display font-semibold text-gray-800">Filters</h3>
+                  <button class="text-sm text-secondary hover:text-secondary/80 transition-colors">
+                    Reset All
+                  </button>
+                </div>
+                
+                {authorFilters.map(filter => (
+                  <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">{filter.name}</h4>
+                    <div class="space-y-2">
+                      {filter.options.slice(0, 4).map(option => (
+                        <label class="flex items-center">
+                          <input type="checkbox" class="rounded text-secondary focus:ring-secondary" />
+                          <span class="ml-2 text-sm text-gray-600">{option}</span>
+                        </label>
+                      ))}
+                      {filter.options.length > 4 && (
+                        <button class="text-xs text-secondary hover:text-secondary/80 transition-colors mt-1">
+                          Show more...
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                <button class="w-full py-2 bg-secondary text-white rounded-md hover:bg-secondary/90 transition-colors font-medium">
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+            
+            <!-- Directory Preview -->
+            <div class="lg:col-span-3">
+              <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-lg font-display font-semibold text-gray-800">Featured Authors</h3>
+                  <div class="flex items-center">
+                    <label class="text-sm text-gray-600 mr-2">Sort by:</label>
+                    <select class="text-sm border-gray-300 rounded-md focus:border-secondary focus:ring focus:ring-secondary/20 focus:ring-opacity-50">
+                      <option>Most Popular</option>
+                      <option>Most Stories</option>
+                      <option>Recently Active</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <!-- Directory Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map(item => (
+                    <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow p-4">
+                      <div class="flex items-center mb-3">
+                        <div class="w-12 h-12 bg-gray-200 rounded-full mr-3"></div>
+                        <div>
+                          <h4 class="font-medium text-gray-800">Author Name {item}</h4>
+                          <p class="text-xs text-gray-500">12 Stories</p>
+                        </div>
+                      </div>
+                      <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+                        Author bio preview with a brief description of their writing style and preferred genres...
+                      </p>
+                      <div class="flex flex-wrap gap-1">
+                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Fantasy</span>
+                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Adventure</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div class="mt-6 text-center">
+                  <a href="/authors" class="inline-block text-secondary hover:text-secondary/80 font-medium">
+                    View All Authors →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- CTA Section -->
+      <section class="py-16 bg-gradient-to-r from-primary/20 to-secondary/20">
+        <div class="container mx-auto px-4 text-center">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Find Your Next Favorite Story</h2>
+          <p class="text-xl text-text-secondary max-w-3xl mx-auto mb-8">
+            Our directories make it easy to discover new books, authors, and resources tailored to your interests.
+          </p>
+          <div class="flex flex-wrap justify-center gap-4">
+            <a href="/stories" class="btn btn-primary text-lg px-6 py-3 rounded-md font-medium">
+              Browse Books
+            </a>
+            <a href="/authors" class="btn btn-secondary text-lg px-6 py-3 rounded-md font-medium">
+              Discover Authors
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

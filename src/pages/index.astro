@@ -3,6 +3,10 @@ import NavHeader from '../components/NavHeader.astro';
 import Footer from '../components/Footer.astro';
 import CardStory from '../components/CardStory.astro';
 import CardAuthor from '../components/CardAuthor.astro';
+import StoryCarousel from '../components/StoryCarousel.astro';
+import AIRecommendationBox from '../components/AIRecommendationBox.astro';
+import EducatorSection from '../components/EducatorSection.astro';
+import SignUpPrompts from '../components/SignUpPrompts.astro';
 import '../styles/base.css';
 
 // Mock data for featured stories
@@ -48,6 +52,184 @@ const featuredStories = [
     tags: ["Science Fiction", "Space", "Adventure"],
     slug: "space-explorers-journey",
     publishDate: new Date('2025-03-28')
+  }
+];
+
+// Mock data for story carousels
+const mostLovedStories = [
+  {
+    title: "The Magic Library",
+    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
+    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+    author: {
+      name: "Michael Johnson",
+      avatar: "https://i.pravatar.cc/150?img=2",
+      slug: "michael-johnson"
+    },
+    rating: 4.9,
+    tags: ["Fantasy", "Magic", "Books"],
+    slug: "magic-library",
+    publishDate: new Date('2025-04-02')
+  },
+  {
+    title: "The Enchanted Forest",
+    excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
+    coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
+    author: {
+      name: "David Brown",
+      avatar: "https://i.pravatar.cc/150?img=4",
+      slug: "david-brown"
+    },
+    rating: 4.6,
+    tags: ["Fantasy", "Nature", "Adventure"],
+    slug: "enchanted-forest",
+    publishDate: new Date('2025-03-10')
+  },
+  {
+    title: "The Little Robot's Big Day",
+    excerpt: "Beep the robot learns about friendship and emotions when he ventures outside his factory for the first time.",
+    coverImage: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    author: {
+      name: "Jennifer Lee",
+      avatar: "https://i.pravatar.cc/150?img=5",
+      slug: "jennifer-lee"
+    },
+    rating: 4.8,
+    tags: ["Technology", "Friendship", "Children"],
+    slug: "little-robot-big-day",
+    publishDate: new Date('2025-04-05')
+  },
+  {
+    title: "Ocean Friends: The Dolphin's Secret",
+    excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
+    coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
+    author: {
+      name: "Emma Thompson",
+      avatar: "https://i.pravatar.cc/150?img=1",
+      slug: "emma-thompson"
+    },
+    rating: 4.4,
+    tags: ["Ocean", "Animals", "Adventure"],
+    slug: "ocean-friends-dolphin-secret",
+    publishDate: new Date('2025-03-22')
+  }
+];
+
+const latestSelfPublishedStories = [
+  {
+    title: "The Brave Little Turtle",
+    excerpt: "Tommy the turtle is afraid of the water, but when his friend needs help, he must overcome his fears to save the day.",
+    coverImage: "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f",
+    author: {
+      name: "Alex Rivera",
+      avatar: "https://i.pravatar.cc/150?img=6",
+      slug: "alex-rivera"
+    },
+    rating: 4.3,
+    tags: ["Self-Published", "Animals", "Courage"],
+    slug: "brave-little-turtle",
+    publishDate: new Date('2025-04-10')
+  },
+  {
+    title: "The Moon and Me",
+    excerpt: "A beautifully illustrated bedtime story about a child's imaginary journey to the moon and back.",
+    coverImage: "https://images.unsplash.com/photo-1532386236358-a33d8a9434e3",
+    author: {
+      name: "Sophia Chen",
+      avatar: "https://i.pravatar.cc/150?img=7",
+      slug: "sophia-chen"
+    },
+    rating: 4.7,
+    tags: ["Self-Published", "Bedtime", "Space"],
+    slug: "moon-and-me",
+    publishDate: new Date('2025-04-08')
+  },
+  {
+    title: "The Magical Paintbrush",
+    excerpt: "When Lily discovers a paintbrush that brings her drawings to life, she learns that with great power comes great responsibility.",
+    coverImage: "https://images.unsplash.com/photo-1513364776144-60967b0f800f",
+    author: {
+      name: "Marcus Johnson",
+      avatar: "https://i.pravatar.cc/150?img=8",
+      slug: "marcus-johnson"
+    },
+    rating: 4.5,
+    tags: ["Self-Published", "Magic", "Art"],
+    slug: "magical-paintbrush",
+    publishDate: new Date('2025-04-07')
+  },
+  {
+    title: "The Secret Garden Club",
+    excerpt: "Four friends start a gardening club and discover the joys of growing their own vegetables and flowers.",
+    coverImage: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735",
+    author: {
+      name: "Olivia Martinez",
+      avatar: "https://i.pravatar.cc/150?img=9",
+      slug: "olivia-martinez"
+    },
+    rating: 4.2,
+    tags: ["Self-Published", "Friendship", "Nature"],
+    slug: "secret-garden-club",
+    publishDate: new Date('2025-04-05')
+  }
+];
+
+const aiEnhancedStories = [
+  {
+    title: "The Time-Traveling Twins",
+    excerpt: "When twins Max and Mia find a mysterious pocket watch, they embark on adventures through different time periods.",
+    coverImage: "https://images.unsplash.com/photo-1501139083538-0139583c060f",
+    author: {
+      name: "AI Stories",
+      avatar: "https://i.pravatar.cc/150?img=10",
+      slug: "ai-stories"
+    },
+    rating: 4.6,
+    tags: ["AI-Enhanced", "Time Travel", "Adventure"],
+    slug: "time-traveling-twins",
+    publishDate: new Date('2025-04-01')
+  },
+  {
+    title: "The Talking Animals of Willow Creek",
+    excerpt: "After a magical storm, the animals in Willow Creek can talk, and they have a lot to say about how humans treat the environment.",
+    coverImage: "https://images.unsplash.com/photo-1425082661705-1834bfd09dca",
+    author: {
+      name: "AI Stories",
+      avatar: "https://i.pravatar.cc/150?img=10",
+      slug: "ai-stories"
+    },
+    rating: 4.8,
+    tags: ["AI-Enhanced", "Animals", "Environment"],
+    slug: "talking-animals-willow-creek",
+    publishDate: new Date('2025-03-25')
+  },
+  {
+    title: "The Robot Who Wanted to Be Human",
+    excerpt: "In a future world, a robot named Byte dreams of becoming human and sets out on a journey to find what it means to have a heart.",
+    coverImage: "https://images.unsplash.com/photo-1535378620166-273708d44e4c",
+    author: {
+      name: "AI Stories",
+      avatar: "https://i.pravatar.cc/150?img=10",
+      slug: "ai-stories"
+    },
+    rating: 4.7,
+    tags: ["AI-Enhanced", "Robots", "Identity"],
+    slug: "robot-wanted-to-be-human",
+    publishDate: new Date('2025-03-20')
+  },
+  {
+    title: "The Cloud Sailors",
+    excerpt: "A group of children discover how to sail on clouds and explore the wonders of the sky, but they must be home before sunset.",
+    coverImage: "https://images.unsplash.com/photo-1499346030926-9a72daac6c63",
+    author: {
+      name: "AI Stories",
+      avatar: "https://i.pravatar.cc/150?img=10",
+      slug: "ai-stories"
+    },
+    rating: 4.5,
+    tags: ["AI-Enhanced", "Fantasy", "Adventure"],
+    slug: "cloud-sailors",
+    publishDate: new Date('2025-03-15')
   }
 ];
 
@@ -251,28 +433,27 @@ const featuredAuthors = [
           });
         </script>
       </section>
+      <!-- Story Carousels -->
+      <StoryCarousel
+        title="Most Loved Stories"
+        viewAllLink="/stories?sort=highest-rated"
+        stories={mostLovedStories}
+        carouselId="most-loved"
+      />
       
-      <!-- Featured Stories Section -->
-      <section class="py-16 relative overflow-hidden">
-        <!-- Decorative blob -->
-        <div class="blob-shape bg-secondary/20 w-72 h-72 top-40 right-20"></div>
-        <div class="container mx-auto px-4 relative z-10">
-          <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline">Featured Stories</h2>
-            <a href="/stories" class="text-secondary font-bold hover:text-secondary/80 transition-all duration-300 hover:translate-x-1 flex items-center group">
-              <span>View All Stories</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredStories.map(story => (
-              <CardStory {...story} />
-            ))}
-          </div>
-        </div>
+      <StoryCarousel
+        title="Latest Self-Published"
+        viewAllLink="/stories?type=self-published"
+        stories={latestSelfPublishedStories}
+        carouselId="self-published"
+      />
+      
+      <StoryCarousel
+        title="AI-Enhanced Picks"
+        viewAllLink="/stories?type=ai-enhanced"
+        stories={aiEnhancedStories}
+        carouselId="ai-enhanced"
+      />
       </section>
       
       <!-- How It Works Section -->
@@ -384,6 +565,30 @@ const featuredAuthors = [
               </a>
             </div>
           </div>
+        </div>
+      </section>
+      
+      <!-- Parent & Teacher Areas -->
+      <section class="py-16 relative overflow-hidden">
+        <div class="container mx-auto px-4 relative z-10">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
+          <EducatorSection />
+        </div>
+      </section>
+      
+      <!-- Sign-Up Prompts -->
+      <section class="py-16 bg-neutral-dark relative overflow-hidden">
+        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
+        <div class="container mx-auto px-4 relative z-10">
+          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
+          <SignUpPrompts />
+        </div>
+      </section>
+      
+      <!-- AI Recommendation Box -->
+      <section class="py-16 relative overflow-hidden">
+        <div class="container mx-auto px-4 relative z-10">
+          <AIRecommendationBox />
         </div>
       </section>
       

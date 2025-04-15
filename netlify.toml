@@ -6,13 +6,9 @@
   NODE_VERSION = "18"
   STRAPI_URL = "https://your-strapi-url.com"  # This will be overridden by Netlify UI settings
 
-[functions]
-  directory = "netlify/functions"
+# Removed functions directory setting
 
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/entry"
-  status = 200
+# Removed redirects to non-existent functions
 
 [[headers]]
   for = "/*"

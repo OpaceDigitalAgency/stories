@@ -1,12 +1,38 @@
-const STRAPI_URL = 'http://localhost:1337';
+const STRAPI_URL = import.meta.env.STRAPI_URL || 'http://localhost:1337';
+const STRAPI_TOKEN = import.meta.env.STRAPI_TOKEN;
 
-export const getMediaUrl = (url: string) => `${STRAPI_URL}${url}`;
+export const getMediaUrl = (url: string) => {
+  if (url.startsWith('http')) {
+    return url;
+  }
+  return `${STRAPI_URL}${url}`;
+};
 
 export const fetchFromStrapi = async (endpoint: string, params = {}) => {
-  const queryString = new URLSearchParams(params).toString();
-  const url = `${STRAPI_URL}/api/${endpoint}${queryString ? `?${queryString}` : ''}`;
-  const res = await fetch(url);
-  return res.json();
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${STRAPI_URL}/api/${endpoint}${queryString ? `?${queryString}` : ''}`;
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (STRAPI_TOKEN) {
+      headers['Authorization'] = `Bearer ${STRAPI_TOKEN}`;
+    }
+    
+    const res = await fetch(url, { headers });
+    
+    if (!res.ok) {
+      console.error(`Error fetching from Strapi: ${res.status} ${res.statusText}`);
+      return { data: [] };
+    }
+    
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching from Strapi:', error);
+    return { data: [] };
+  }
 };
 
 // Strapi response interfaces

@@ -8,6 +8,8 @@ import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import { fetchFromStrapi, type StrapiResponse, type Author, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
+export const prerender = true;
+
 export async function getStaticPaths() {
   const authorsResponse = await fetchFromStrapi('authors', {
     populate: '*'

@@ -4,8 +4,20 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  STRAPI_URL = "https://your-strapi-url.com"  # This will be overridden by Netlify UI settings
+
+[functions]
+  directory = "netlify/functions"
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/entry"
   status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

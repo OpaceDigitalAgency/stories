@@ -8,7 +8,7 @@ import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
-import { fetchFromStrapi } from '../lib/api';
+import { fetchFromStrapi, type StrapiResponse, type Story, type Author } from '../lib/api';
 import '../styles/base.css';
 
 // Fetch featured stories
@@ -18,19 +18,45 @@ const featuredStoriesResponse = await fetchFromStrapi('stories', {
   },
   populate: '*',
   sort: 'publishedAt:desc',
-  limit: 3
-});
+  pagination: { limit: 3 }
+}) as StrapiResponse<Story>;
 
-const featuredStories = featuredStoriesResponse.data || [];
+const featuredStories = featuredStoriesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    slug: item.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: item.attributes.averageRating || 0,
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
 
 // Fetch most loved stories
 const mostLovedStoriesResponse = await fetchFromStrapi('stories', {
-  sort: 'rating:desc',
+  sort: 'averageRating:desc',
   populate: '*',
-  limit: 6
-});
+  pagination: { limit: 6 }
+}) as StrapiResponse<Story>;
 
-const mostLovedStories = mostLovedStoriesResponse.data || [];
+const mostLovedStories = mostLovedStoriesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    slug: item.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: item.attributes.averageRating || 0,
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
 
 // Fetch latest self-published stories
 const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
@@ -39,10 +65,23 @@ const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
   },
   populate: '*',
   sort: 'publishedAt:desc',
-  limit: 6
-});
+  pagination: { limit: 6 }
+}) as StrapiResponse<Story>;
 
-const latestSelfPublishedStories = selfPublishedStoriesResponse.data || [];
+const latestSelfPublishedStories = selfPublishedStoriesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    slug: item.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: item.attributes.averageRating || 0,
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
 
 // Fetch AI-enhanced stories
 const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
@@ -51,10 +90,23 @@ const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
   },
   populate: '*',
   sort: 'publishedAt:desc',
-  limit: 6
-});
+  pagination: { limit: 6 }
+}) as StrapiResponse<Story>;
 
-const aiEnhancedStories = aiEnhancedStoriesResponse.data || [];
+const aiEnhancedStories = aiEnhancedStoriesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    slug: item.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: item.attributes.averageRating || 0,
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
 
 // Fetch featured authors
 const featuredAuthorsResponse = await fetchFromStrapi('authors', {
@@ -62,10 +114,21 @@ const featuredAuthorsResponse = await fetchFromStrapi('authors', {
     featured: true
   },
   populate: '*',
-  limit: 2
-});
+  pagination: { limit: 2 }
+}) as StrapiResponse<Author>;
 
-const featuredAuthors = featuredAuthorsResponse.data || [];
+const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
+  name: item.attributes.name,
+  avatar: item.attributes.avatar?.data?.attributes?.url || '',
+  bio: item.attributes.bio || '',
+  slug: item.attributes.slug,
+  storyCount: item.attributes.storyCount || 0,
+  socialLinks: {
+    twitter: item.attributes.twitter || '',
+    instagram: item.attributes.instagram || '',
+    website: item.attributes.website || ''
+  }
+}));
 ---
 
 <html lang="en">
@@ -356,49 +419,3 @@ const featuredAuthors = featuredAuthorsResponse.data || [];
                 </svg>
                 
                 <!-- Decorative elements -->
-                <span class="absolute w-6 h-6 bg-tertiary/20 rounded-full -top-2 -right-2 animate-ping"></span>
-                <span class="absolute w-4 h-4 bg-primary/20 rounded-full -bottom-1 -left-1 animate-ping" style="animation-delay: 0.5s;"></span>
-              </div>
-              
-              <h3 class="text-2xl font-display font-bold text-text-primary mb-3 group-hover:text-primary transition-colors">
-                Become an Author
-              </h3>
-              
-              <p class="text-text-secondary mb-8">
-                Share your stories with our community and inspire young readers around the world.
-              </p>
-              
-              <a
-                href="/publish"
-                class="btn btn-accent w-full py-3 px-6 shadow-playful btn-playful"
-              >
-                <span class="flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                  </svg>
-                  Get Started
-                </span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <!-- Parent & Teacher Areas -->
-      <section class="py-16 relative overflow-hidden">
-        <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
-          <EducatorSection />
-        </div>
-      </section>
-      
-      <!-- Sign-Up Prompts -->
-      <section class="py-16 bg-neutral-dark relative overflow-hidden">
-        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
-        <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
-          <SignUpPrompts />
-        </div>
-      </section>
-      
-      <!-- AI Recommendation Box -->

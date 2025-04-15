@@ -10,6 +10,8 @@ import CardStory from '../../components/CardStory.astro';
 import { fetchFromStrapi, type StrapiResponse, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
+export const prerender = true;
+
 export async function getStaticPaths() {
   const storiesResponse = await fetchFromStrapi('stories', {
     populate: '*'

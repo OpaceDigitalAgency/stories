@@ -30,10 +30,11 @@ try {
 }
 ---
 
-<article class={`card group h-full flex flex-col ${className}`}>
-  <a href={`/stories/${story.slug}`} class="block relative overflow-hidden rounded-t-2xl">
-    <div class="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
-    <div class="relative aspect-video overflow-hidden">
+<article class={`group h-full flex flex-col ${className}`}>
+  <a href={`/stories/${story.slug}`} class="block relative overflow-hidden rounded-2xl">
+    <!-- Image overlay gradient -->
+    <div class="absolute inset-0 bg-gradient-to-t from-primary/40 via-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 z-10"></div>
+    <div class="relative aspect-video overflow-hidden rounded-2xl">
       <img
         src={typeof story.coverImage === 'string' ? story.coverImage : story.coverImage?.url || '/images/default-cover.jpg'}
         alt={`Cover image for ${story.title}`}
@@ -48,8 +49,11 @@ try {
     </div>
   </a>
   
-  <div class="p-6 flex-grow flex flex-col">
-    <div class="flex justify-between items-start mb-3">
+  <div class="p-6 flex-grow flex flex-col relative">
+    <!-- Content background gradient -->
+    <div class="absolute inset-0 bg-gradient-to-br from-white to-neutral-50/80 rounded-2xl"></div>
+    
+    <div class="relative flex justify-between items-start mb-4">
       <div class="flex-1">
         <a href={`/stories/${story.slug}`} class="block group">
           <h3 class="text-xl font-display font-bold text-text-primary group-hover:text-primary transition-colors mb-1">{story.title}</h3>
@@ -69,7 +73,7 @@ try {
     </div>
     
     {story.author && (
-      <div class="flex items-center pt-3 border-t border-neutral-dark mt-auto">
+      <div class="flex items-center pt-4 border-t border-neutral-100 mt-auto relative">
         <a href={`/authors/${story.author.slug || '#'}`} class="flex items-center group">
           <div class="relative">
             <img

@@ -19,8 +19,14 @@ const navItems = [
 const currentPath = Astro.url.pathname;
 ---
 
-<header class="bg-white shadow-soft sticky top-0 z-50 py-2">
-  <div class="container mx-auto px-4 flex justify-between items-center h-16">
+<header class="sticky top-0 z-50 py-2">
+  <!-- Background with blur effect -->
+  <div class="absolute inset-0 bg-white/80 backdrop-blur-md"></div>
+  
+  <!-- Decorative gradient -->
+  <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5"></div>
+  
+  <div class="container mx-auto px-4 flex justify-between items-center h-16 relative">
     <!-- Logo -->
     <a href="/" class="flex items-center group">
       <div class="relative">
@@ -90,8 +96,14 @@ const currentPath = Astro.url.pathname;
   </div>
   
   <!-- Mobile Navigation (hidden by default) -->
-  <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-neutral-dark overflow-hidden" style="max-height: 0; transition: max-height 0.3s ease-in-out;">
-    <div class="container mx-auto px-4 py-3 space-y-1">
+  <div id="mobile-menu" class="md:hidden hidden overflow-hidden relative" style="max-height: 0; transition: max-height 0.3s ease-in-out;">
+    <!-- Background with blur effect -->
+    <div class="absolute inset-0 bg-white/90 backdrop-blur-md"></div>
+    
+    <!-- Decorative gradient -->
+    <div class="absolute inset-0 bg-gradient-to-b from-white/50 to-neutral-50/50"></div>
+    
+    <div class="container mx-auto px-4 py-4 space-y-2 relative">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
@@ -112,7 +124,7 @@ const currentPath = Astro.url.pathname;
       <!-- Login Button -->
       <a
         href="/login"
-        class="block py-3 px-4 mt-2 bg-white border border-gray-300 text-text-primary rounded-xl font-bold flex items-center justify-center"
+        class="block py-3 px-4 mt-4 bg-gradient-to-r from-white to-neutral-50 text-text-primary rounded-xl font-bold flex items-center justify-center hover:from-neutral-50 hover:to-white transition-all duration-300"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -128,7 +140,7 @@ const currentPath = Astro.url.pathname;
       
       <a
         href="/publish"
-        class="block py-3 px-4 mt-2 bg-primary text-white rounded-xl font-bold shadow-playful"
+        class="block py-3 px-4 mt-4 bg-gradient-to-r from-primary to-primary/90 text-white rounded-xl font-bold shadow-playful hover:from-primary/90 hover:to-primary transition-all duration-300"
       >
         Share Your Story
       </a>

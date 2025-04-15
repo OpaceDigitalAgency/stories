@@ -31,23 +31,23 @@
 /* Custom component styles */
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-playful;
+    @apply px-8 py-4 rounded-xl font-bold transition-all duration-700 transform hover:scale-110 hover:shadow-xl backdrop-blur-xl relative overflow-hidden group;
   }
   
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary/90;
+    @apply bg-gradient-to-r from-primary via-primary/90 to-primary text-white hover:from-primary-600 hover:via-primary-500 hover:to-primary-600;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary/90;
+    @apply bg-gradient-to-r from-secondary via-secondary/90 to-secondary text-white hover:from-secondary-600 hover:via-secondary-500 hover:to-secondary-600;
   }
   
   .btn-accent {
-    @apply bg-accent text-text-primary hover:bg-accent/90;
+    @apply bg-gradient-to-r from-accent via-accent/90 to-accent text-text-primary hover:from-accent-400 hover:via-accent-300 hover:to-accent-400;
   }
   
   .btn-tertiary {
-    @apply bg-tertiary text-white hover:bg-tertiary/90;
+    @apply bg-gradient-to-r from-tertiary via-tertiary/90 to-tertiary text-white hover:from-tertiary-600 hover:via-tertiary-500 hover:to-tertiary-600;
   }
   
   .container {
@@ -56,11 +56,16 @@
   
   /* Card styles */
   .card {
-    @apply relative rounded-2xl overflow-hidden transition-all duration-300 bg-gradient-to-br from-white to-neutral-50;
+    @apply relative rounded-2xl overflow-hidden transition-all duration-700 bg-gradient-to-br from-white via-white/90 to-neutral-50 shadow-playful hover:shadow-xl backdrop-blur-xl transform-style-3d hover:translate-z-8 group;
   }
 
   .card:hover {
-    @apply bg-gradient-to-br from-white via-neutral-50 to-neutral-100;
+    @apply bg-gradient-to-br from-white via-neutral-50/90 to-neutral-100;
+  }
+
+  .card::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700;
   }
 
   /* Story card specific styles */
@@ -152,13 +157,15 @@
   
   /* Animated elements */
   .float-animation {
-    animation: float 6s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite;
   }
   
   @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0px); }
+    0% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-15px) rotate(2deg); }
+    50% { transform: translateY(-25px) rotate(-2deg); }
+    75% { transform: translateY(-15px) rotate(1deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
   }
   
   .pulse-animation {
@@ -166,9 +173,9 @@
   }
   
   @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.1) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
   }
   
   .wiggle-animation {
@@ -195,31 +202,40 @@
 
   @keyframes blob {
     0% {
-      transform: translate(0px, 0px) scale(1);
+      transform: translate(0px, 0px) scale(1) rotate(0deg);
     }
     33% {
-      transform: translate(30px, -50px) scale(1.1);
+      transform: translate(30px, -50px) scale(1.2) rotate(10deg);
     }
     66% {
-      transform: translate(-20px, 20px) scale(0.9);
+      transform: translate(-20px, 20px) scale(0.8) rotate(-10deg);
     }
     100% {
-      transform: translate(0px, 0px) scale(1);
+      transform: translate(0px, 0px) scale(1) rotate(0deg);
     }
   }
   
-  /* Playful button interactions */
+  /* Enhanced button interactions */
   .btn-playful {
     @apply relative overflow-hidden;
   }
   
-  .btn-playful::after {
+  .btn-playful::before {
     content: '';
-    @apply absolute inset-0 bg-white opacity-0 transition-opacity duration-300;
+    @apply absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 transition-opacity duration-700;
   }
   
-  .btn-playful:active::after {
-    @apply opacity-20;
+  .btn-playful::after {
+    content: '';
+    @apply absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-700 blur-sm;
+  }
+  
+  .btn-playful:hover::before {
+    @apply opacity-100;
+  }
+  
+  .btn-playful:hover::after {
+    @apply opacity-100;
   }
   
   .btn-playful:active {
@@ -302,7 +318,17 @@
 
   /* Shadow glow effect */
   .shadow-glow {
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.7);
+  }
+
+  .shadow-playful {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15),
+                0 5px 20px -5px rgba(0, 0, 0, 0.1),
+                0 0 15px rgba(255, 255, 255, 0.5);
+  }
+
+  .drop-shadow-glow {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
   }
 
   /* Translate Z utilities */

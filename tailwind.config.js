@@ -96,28 +96,34 @@ module.exports = {
         display: ['Poppins', 'sans-serif'],
         body: ['Nunito', 'sans-serif'],
       },
-      // Add enhanced box shadow variations for depth and glow effects
+      // Enhanced box shadow variations for depth, glow, and playful effects
       boxShadow: {
-        'soft': '0 4px 12px rgba(0, 0, 0, 0.05)',
-        'playful': '0 8px 24px rgba(123, 97, 255, 0.15)',
-        'card': '0 10px 20px rgba(0, 0, 0, 0.08)',
-        'hover': '0 15px 30px rgba(0, 0, 0, 0.12)',
-        'glow': '0 0 15px rgba(255, 255, 255, 0.5)',
-        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        'soft': '0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02), 0 0 10px rgba(255, 255, 255, 0.1)',
+        'playful': '0 20px 40px -20px rgba(123, 97, 255, 0.3), 0 10px 20px -10px rgba(123, 97, 255, 0.2), 0 0 15px rgba(123, 97, 255, 0.1)',
+        'card': '0 25px 50px -25px rgba(0, 0, 0, 0.15), 0 15px 30px -15px rgba(0, 0, 0, 0.07), 0 0 20px rgba(255, 255, 255, 0.1)',
+        'hover': '0 30px 60px -15px rgba(0, 0, 0, 0.2), 0 20px 40px -20px rgba(0, 0, 0, 0.1), 0 0 25px rgba(255, 255, 255, 0.1)',
+        'glow': '0 0 30px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.6), 0 0 10px rgba(255, 255, 255, 0.4)',
+        'glow-color': '0 0 30px rgba(var(--glow-color), 0.8), 0 0 20px rgba(var(--glow-color), 0.6), 0 0 10px rgba(var(--glow-color), 0.4)',
+        '2xl': '0 40px 70px -20px rgba(0, 0, 0, 0.3), 0 30px 50px -25px rgba(0, 0, 0, 0.2), 0 0 30px rgba(255, 255, 255, 0.1)',
       },
-      // Add border radius variations
+      // Enhanced border radius variations for playful shapes
       borderRadius: {
         'xl': '1rem',
         '2xl': '1.5rem',
         '3xl': '2rem',
+        '4xl': '3rem',
         'blob': '60% 40% 40% 60% / 60% 30% 70% 40%',
+        'blob-2': '40% 60% 70% 30% / 50% 60% 40% 50%',
+        'blob-3': '70% 30% 50% 50% / 40% 40% 60% 60%',
       },
-      // Add 3D transform utilities
+      // Enhanced 3D transform utilities
       transformStyle: {
         '3d': 'preserve-3d',
       },
       perspective: {
+        '500': '500px',
         '1000': '1000px',
+        '2000': '2000px',
       },
       translate: {
         'z-2': '2px',
@@ -125,8 +131,107 @@ module.exports = {
         'z-8': '8px',
         'z-12': '12px',
         'z-16': '16px',
+        'z-24': '24px',
+        'z-32': '32px',
+        'z-48': '48px',
+        'z-64': '64px',
       },
+      rotate: {
+        '3d-0': 'rotateY(0deg)',
+        '3d-15': 'rotateY(15deg)',
+        '3d-30': 'rotateY(30deg)',
+        '3d-45': 'rotateY(45deg)',
+        '3d-60': 'rotateY(60deg)',
+        '3d-90': 'rotateY(90deg)',
+        '3d-x-15': 'rotateX(15deg)',
+        '3d-x-30': 'rotateX(30deg)',
+        '3d-x-45': 'rotateX(45deg)',
+        '3d-x-60': 'rotateX(60deg)',
+      },
+      // Add backdrop blur variations
+      backdropBlur: {
+        'xs': '2px',
+        'sm': '4px',
+        DEFAULT: '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '24px',
+        '2xl': '40px',
+        '3xl': '64px',
+      },
+      // Add gradient color stops
+      gradientColorStops: theme => ({
+        ...theme('colors'),
+        'white-fade': 'rgba(255, 255, 255, 0)',
+      }),
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/line-clamp'),
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.animation-delay-100': {
+          'animation-delay': '100ms',
+        },
+        '.animation-delay-200': {
+          'animation-delay': '200ms',
+        },
+        '.animation-delay-300': {
+          'animation-delay': '300ms',
+        },
+        '.animation-delay-400': {
+          'animation-delay': '400ms',
+        },
+        '.animation-delay-500': {
+          'animation-delay': '500ms',
+        },
+        '.animation-delay-600': {
+          'animation-delay': '600ms',
+        },
+        '.animation-delay-700': {
+          'animation-delay': '700ms',
+        },
+        '.animation-delay-800': {
+          'animation-delay': '800ms',
+        },
+        '.animation-delay-900': {
+          'animation-delay': '900ms',
+        },
+        '.animation-delay-1000': {
+          'animation-delay': '1000ms',
+        },
+        '.animation-duration-100': {
+          'animation-duration': '100ms',
+        },
+        '.animation-duration-200': {
+          'animation-duration': '200ms',
+        },
+        '.animation-duration-300': {
+          'animation-duration': '300ms',
+        },
+        '.animation-duration-400': {
+          'animation-duration': '400ms',
+        },
+        '.animation-duration-500': {
+          'animation-duration': '500ms',
+        },
+        '.animation-duration-600': {
+          'animation-duration': '600ms',
+        },
+        '.animation-duration-700': {
+          'animation-duration': '700ms',
+        },
+        '.animation-duration-800': {
+          'animation-duration': '800ms',
+        },
+        '.animation-duration-900': {
+          'animation-duration': '900ms',
+        },
+        '.animation-duration-1000': {
+          'animation-duration': '1000ms',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }

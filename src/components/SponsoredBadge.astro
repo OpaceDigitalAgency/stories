@@ -11,14 +11,14 @@ type BadgeType = 'featured' | 'sponsored';
 const type: BadgeType = sponsor ? 'sponsored' : 'featured';
 
 const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'text-xs px-1.5 py-0.5',
-  md: 'text-sm px-2 py-1',
-  lg: 'text-base px-3 py-1.5'
+  sm: 'text-xs px-4 py-2',
+  md: 'text-sm px-5 py-2.5',
+  lg: 'text-base px-6 py-3'
 };
 
 const typeClasses: Record<BadgeType, string> = {
-  featured: 'bg-accent-100/80 text-accent-800 border-accent-200/50',
-  sponsored: 'bg-tertiary-100/80 text-tertiary-800 border-tertiary-200/50'
+  featured: 'bg-gradient-to-r from-accent-100/90 via-accent-200/90 to-accent-100/90 text-accent-800 border-accent-200/60 hover:from-accent-200/90 hover:via-accent-300/90 hover:to-accent-200/90',
+  sponsored: 'bg-gradient-to-r from-tertiary-100/90 via-tertiary-200/90 to-tertiary-100/90 text-tertiary-800 border-tertiary-200/60 hover:from-tertiary-200/90 hover:via-tertiary-300/90 hover:to-tertiary-200/90'
 };
 
 const typeIcons: Record<BadgeType, string> = {
@@ -32,26 +32,32 @@ const labels: Record<BadgeType, string> = {
 };
 ---
 
-<span class={`inline-flex items-center rounded-full border backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 transform-style-3d hover:translate-z-2 hover:scale-105 ${typeClasses[type]} ${sizeClasses[size]} font-medium ${className}`}>
+<span
+  class={`inline-flex items-center gap-3 rounded-full border backdrop-blur-xl shadow-playful hover:shadow-xl transition-all duration-700 transform-style-3d hover:translate-z-8 hover:scale-110 group ${typeClasses[type]} ${sizeClasses[size]} font-bold ${className}`}
+>
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="currentColor"
-    class="w-3.5 h-3.5 mr-1 animate-pulse-subtle"
+    class="w-5 h-5 animate-pulse-subtle transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-700"
   >
     <Fragment set:html={typeIcons[type]} />
   </svg>
   <span class="relative">
     {labels[type]}
-    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/20 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/30 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+    <div class="absolute inset-0 bg-white/10 rounded-full scale-0 group-hover:scale-125 opacity-0 group-hover:opacity-100 transition-all duration-700 blur-sm"></div>
+    <div class="absolute inset-0 bg-current/5 rounded-full scale-0 group-hover:scale-150 opacity-0 group-hover:opacity-100 transition-all duration-700 blur-lg"></div>
   </span>
 </span>
 
 <style>
   @keyframes pulse-subtle {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.05) rotate(3deg); }
+    50% { transform: scale(1.1) rotate(-3deg); }
+    75% { transform: scale(1.05) rotate(2deg); }
+    100% { transform: scale(1) rotate(0deg); }
   }
   .animate-pulse-subtle {
     animation: pulse-subtle 2s ease-in-out infinite;

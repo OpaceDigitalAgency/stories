@@ -1,5 +1,4 @@
 ---
-import PartnerBadges from './PartnerBadges.astro';
 const currentYear = new Date().getFullYear();
 
 // Partner data
@@ -71,22 +70,20 @@ const socialLinks = [
 ];
 ---
 
-<footer class="bg-neutral-dark text-white pt-10 pb-6">
-  <div class="container relative">
-    <!-- Decorative gradient overlay -->
-    <div class="absolute inset-0 bg-gradient-to-b from-primary-900/10 via-secondary-900/10 to-tertiary-900/10 opacity-50"></div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+<footer class="bg-slate-900 text-white py-10 relative">
+  <div class="container mx-auto px-4 relative z-10">
+    <!-- Top row: logo + nav links -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
       <!-- Logo and description -->
-      <div class="lg:col-span-2">
-        <a href="/" class="inline-block mb-4 group transform-style-3d">
+      <div>
+        <a href="/" class="inline-block mb-4">
           <img
             src="/logo.png"
             alt="Stories From The Web"
-            class="h-14 w-auto transform group-hover:scale-110 transition-transform duration-300 float-animation"
+            class="h-16 w-auto"
           />
-          <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
         </a>
-        <p class="text-gray-300 mb-6 max-w-md">
+        <p class="text-gray-300 mb-6 text-sm">
           A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling.
         </p>
         <div class="flex space-x-4">
@@ -95,15 +92,12 @@ const socialLinks = [
               href={social.href}
               target="_blank"
               rel="noopener noreferrer"
-              class="text-gray-400 hover:text-white transition-all duration-300 transform hover:scale-110 hover:shadow-glow"
+              class="text-gray-400 hover:text-pink-300 transition"
               aria-label={social.name}
             >
-              <div class="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                  <Fragment set:html={social.icon} />
-                </svg>
-                <div class="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300"></div>
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                <Fragment set:html={social.icon} />
+              </svg>
             </a>
           ))}
         </div>
@@ -112,13 +106,13 @@ const socialLinks = [
       <!-- Footer navigation -->
       {footerSections.map(section => (
         <div>
-          <h3 class="text-lg font-display font-semibold mb-4 text-white">{section.title}</h3>
+          <h3 class="text-lg font-bold mb-4 text-white">{section.title}</h3>
           <ul class="space-y-2">
             {section.links.map(link => (
               <li>
-                <a 
-                  href={link.href} 
-                  class="text-gray-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-flex items-center group"
+                <a
+                  href={link.href}
+                  class="text-sm text-gray-300 hover:text-pink-300 transition"
                 >
                   {link.text}
                 </a>
@@ -128,19 +122,48 @@ const socialLinks = [
         </div>
       ))}
     </div>
-    <!-- Partner Badges -->
-    <PartnerBadges partners={partners} />
     
-    <div class="border-t border-neutral-700 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
-      <p class="text-neutral-400 text-sm mb-4 md:mb-0">
-        &copy; {currentYear} StoriesFromTheWeb.org. All rights reserved.
-      </p>
-      <div class="flex space-x-6">
-        <a href="/privacy" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Privacy Policy</a>
-        <a href="/terms" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Terms of Service</a>
-        <a href="/cookies" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Cookie Policy</a>
+    <!-- Bottom row: partners + right -->
+    <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+      <!-- Partners section -->
+      <div class="mb-6 md:mb-0">
+        <h3 class="text-sm font-bold text-white mb-4">Our Partners</h3>
+        <div class="flex flex-wrap gap-6 items-center">
+          {partners.map(partner => (
+            <a
+              href={partner.href}
+              class="bg-slate-800 p-3 rounded-lg flex items-center justify-center"
+              title={partner.name}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src={partner.logo.url}
+                alt={partner.logo.alternativeText || partner.name}
+                class="h-8 w-auto"
+              />
+            </a>
+          ))}
+        </div>
       </div>
-    </div>
+      
+      <!-- Copyright and links -->
+      <div class="text-center md:text-right">
+        <p class="text-gray-400 text-sm mb-2">
+          &copy; {currentYear} StoriesFromTheWeb.org. All rights reserved.
+        </p>
+        <div class="flex flex-wrap justify-center md:justify-end gap-4">
+          <a href="/privacy" class="text-sm text-gray-400 hover:text-pink-300 transition">
+            Privacy Policy
+          </a>
+          <a href="/terms" class="text-sm text-gray-400 hover:text-pink-300 transition">
+            Terms of Service
+          </a>
+          <a href="/cookies" class="text-sm text-gray-400 hover:text-pink-300 transition">
+            Cookie Policy
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 </footer>

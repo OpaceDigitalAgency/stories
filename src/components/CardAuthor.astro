@@ -16,7 +16,7 @@ interface ExtendedAuthor extends CardAuthorProps['author'] {
 const extendedAuthor = author as ExtendedAuthor;
 ---
 
-<div class={`bg-white rounded-xl overflow-hidden shadow-playful p-6 transform-style-3d hover:translate-z-2 transition-all duration-300 ${className}`}>
+<div class={`bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl p-5 transform-style-3d hover:translate-z-2 transition-all duration-300 ${className}`}>
   <div class="flex flex-col items-center text-center mb-6">
     <a href={`/authors/${author.slug}`} class="block group perspective-1000">
       <div class="relative transform-style-3d hover:translate-z-4 transition-transform duration-300">
@@ -94,10 +94,10 @@ const extendedAuthor = author as ExtendedAuthor;
     </div>
   )}
   
-  <div class="mt-6">
+  <div class="mt-4">
     <a
       href={`/authors/${author.slug}`}
-      class="block w-full text-center py-3 px-4 bg-secondary text-white rounded-xl shadow-playful hover:shadow-xl transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300 font-medium group"
+      class="block w-full text-center py-3 px-4 bg-blue-600 text-white rounded-xl shadow-md hover:shadow-xl transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300 font-medium group btn-blue"
     >
       <span class="flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:translate-x-1 transition-transform">

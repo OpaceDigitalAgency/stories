@@ -196,48 +196,31 @@ try {
     
     <main class="flex-grow">
       <!-- Hero Section -->
-      <section class="section section-hero">
+      <section class="section section-hero py-16 md:py-20">
         <!-- Decorative blobs -->
-        <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary/30 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-48 -right-48 w-[32rem] h-[32rem] bg-secondary/30 rounded-full blur-3xl"></div>
-        <div class="absolute top-40 right-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl"></div>
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary/30 rounded-full blur-3xl animate-blob"></div>
+        <div class="absolute -bottom-48 -right-48 w-[32rem] h-[32rem] bg-secondary/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div class="absolute top-40 right-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
         
         <div class="container mx-auto px-4 relative z-10">
-          <div class="flex flex-col lg:flex-row items-center">
-            <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
-              <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight text-text-primary">
-                <span class="relative inline-block">
-                  Every Child
-                  <span class="absolute -bottom-2 left-0 w-full h-4 bg-accent/40 -z-10 rounded-full transform -rotate-1"></span>
-                </span>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center justify-between">
+            <div class="text-center lg:text-left mb-12 lg:mb-0">
+              <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 leading-tight">
+                Every Child
                 <br />
                 Has a Story Worth Sharing
               </h1>
-              <p class="text-xl md:text-2xl text-text-secondary max-w-xl mx-auto lg:mx-0 mb-8">
+              <p class="text-slate-600 max-w-xl mx-auto lg:mx-0 mb-3">
                 Discover magical tales from around the world or share your own story with our community.
               </p>
-              <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                <a href="/stories" class="btn btn-primary text-lg px-6 py-3 shadow-playful btn-playful">
-                  <span class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                    </svg>
-                    Explore Stories
-                  </span>
-                </a>
-                <a href="/publish" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful">
-                  <span class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                    </svg>
-                    Share Your Story
-                  </span>
-                </a>
+              <div class="flex gap-3 flex-wrap mt-4">
+                <a href="/stories" class="btn-pink">Explore Stories</a>
+                <a href="/publish" class="btn-yellow">Share Your Story</a>
               </div>
             </div>
             <!-- Animated illustration -->
-            <div class="lg:w-1/2 relative">
-              <div class="relative w-full max-w-md mx-auto">
+            <div class="lg:w-1/2 relative perspective-1000">
+              <div class="relative w-full max-w-lg mx-auto transform-style-3d hover:translate-z-8 transition-transform duration-700">
                 <!-- Animated illustration container -->
                 <div class="relative w-full h-full rounded-3xl overflow-hidden perspective-1000">
                   <!-- Dynamic background gradient with depth -->
@@ -251,9 +234,9 @@ try {
                   <!-- Illustrated elements with enhanced 3D animations -->
                   <div class="relative z-10 flex items-center justify-center h-full p-12 transform-style-3d">
                     <!-- Floating book with dynamic 3D effects -->
-                    <div class="relative w-72 h-56 float-animation transform translate-z-16">
+                    <div class="relative w-[32rem] h-96 float-animation transform translate-z-16 group">
                       <!-- Book with glass morphism -->
-                      <div class="absolute inset-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl rounded-2xl shadow-2xl transform rotate-3 hover:rotate-6 transition-all duration-700 overflow-hidden">
+                      <div class="absolute inset-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl rounded-2xl shadow-2xl transform rotate-3 group-hover:rotate-6 transition-all duration-700 overflow-hidden">
                         <!-- Animated gradient overlay -->
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"></div>
                         <!-- Subtle rainbow edge -->
@@ -263,16 +246,16 @@ try {
                       <div class="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-b from-primary-400 via-primary-500 to-primary-400 rounded-l-xl shadow-lg transform origin-left hover:scale-x-110 hover:translate-z-4 transition-all duration-500"></div>
                       
                       <!-- Animated 3D book pages -->
-                      <div class="absolute left-8 top-0 right-0 bottom-0 bg-gradient-to-br from-white to-neutral-50 p-6 transform origin-left hover:translate-x-2 hover:translate-z-2 transition-all duration-500">
+                      <div class="absolute left-8 top-0 right-0 bottom-0 bg-gradient-to-br from-white to-neutral-50 p-6 transform origin-left group-hover:translate-x-2 group-hover:translate-z-2 transition-all duration-500">
                         <!-- Book content -->
                         <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
                         <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
                         <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
                         
                         <!-- Animated 3D book character -->
-                        <div class="absolute bottom-6 right-6 wiggle-animation transform translate-z-8">
-                          <div class="w-20 h-20 bg-gradient-to-br from-accent-300 to-accent-400 rounded-full flex items-center justify-center shadow-xl transform hover:scale-110 hover:rotate-12 transition-all duration-500">
-                            <div class="w-10 h-10 bg-white rounded-full relative pulse-animation">
+                        <div class="absolute bottom-8 right-8 wiggle-animation transform translate-z-12">
+                          <div class="w-24 h-24 bg-gradient-to-br from-accent-300 to-accent-400 rounded-full flex items-center justify-center shadow-xl transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-700">
+                            <div class="w-12 h-12 bg-white rounded-full relative pulse-animation">
                               <!-- Animated smiley face with glow -->
                               <div class="absolute top-3 left-3 w-1.5 h-1.5 bg-text-primary rounded-full shadow-glow"></div>
                               <div class="absolute top-3 right-3 w-1.5 h-1.5 bg-text-primary rounded-full shadow-glow"></div>
@@ -286,16 +269,16 @@ try {
                     </div>
                     
                     <!-- Floating elements -->
-                    <div class="absolute top-6 right-6 w-12 h-12 bg-tertiary rounded-full flex items-center justify-center pulse-animation">
-                      <div class="w-6 h-6 text-white">
+                    <div class="absolute top-8 right-8 w-16 h-16 bg-tertiary rounded-full flex items-center justify-center pulse-animation transform hover:scale-110 hover:rotate-12 transition-all duration-500">
+                      <div class="w-8 h-8 text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
                         </svg>
                       </div>
                     </div>
                     
-                    <div class="absolute bottom-8 left-8 w-14 h-14 bg-success rounded-full flex items-center justify-center float-animation" style="animation-delay: 0.5s;">
-                      <div class="w-8 h-8 text-white">
+                    <div class="absolute bottom-10 left-10 w-16 h-16 bg-success rounded-full flex items-center justify-center float-animation transform hover:scale-110 hover:rotate-12 transition-all duration-500" style="animation-delay: 0.5s;">
+                      <div class="w-10 h-10 text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
                         </svg>
@@ -322,40 +305,30 @@ try {
         </div>
       </section>
       
-      <!-- Story Carousels -->
-      {mostLovedStories.length > 0 ? (
-        <StoryCarousel
-          title="Most Loved Stories"
-          viewAllLink="/stories?sort=highest-rated"
-          stories={mostLovedStories}
-          carouselId="most-loved"
-        />
+      <!-- Sponsored Stories -->
+      {sponsoredStories.length > 0 ? (
+        <section class="section section-sponsored py-16 md:py-20 bg-gradient-to-br from-[#fdf0ff] to-[#f1f9ff]">
+          <SponsoredCarousel
+            title="Sponsored Stories"
+            viewAllLink="/stories?type=sponsored"
+            stories={sponsoredStories}
+            carouselId="sponsored"
+          />
+        </section>
       ) : (
-        <section class="section section-stories">
+        <section class="section section-sponsored py-16 md:py-20 bg-gradient-to-br from-[#fdf0ff] to-[#f1f9ff]">
           <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-3xl font-display font-bold text-text-primary">Most Loved Stories</h2>
+            <div class="flex justify-between items-center mb-6 sm:mb-10">
+              <div class="flex items-center">
+                <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mr-3">Sponsored Stories</h2>
+                <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Sponsored</span>
+              </div>
               <a href="/stories?sort=highest-rated" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
                 View All →
               </a>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div class="relative overflow-hidden rounded-2xl animate-pulse">
-                <!-- Background gradient -->
-                <div class="absolute inset-0 bg-gradient-to-br from-neutral-100 to-white"></div>
-                
-                <!-- Content with softer edges -->
-                <div class="relative p-6">
-                  <div class="w-full h-40 bg-neutral-200/60 rounded-xl mb-4"></div>
-                  <div class="h-6 bg-neutral-200/60 rounded-full w-3/4 mb-2"></div>
-                  <div class="h-4 bg-neutral-200/60 rounded-full w-1/2 mb-4"></div>
-                  <div class="flex items-center">
-                    <div class="w-8 h-8 bg-neutral-200/60 rounded-full mr-2"></div>
-                    <div class="h-4 bg-neutral-200/60 rounded-full w-1/3"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="skeleton">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div class="card shadow-playful">
                 <div class="p-6">
                   <div class="skeleton-image mb-4"></div>
                   <div class="skeleton-title w-3/4 mb-2"></div>
@@ -366,13 +339,82 @@ try {
                   </div>
                 </div>
               </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="card shadow-playful">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card shadow-playful">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      
+      <!-- Story Carousels -->
+      {mostLovedStories.length > 0 ? (
+        <StoryCarousel
+          title="Most Loved Stories"
+          viewAllLink="/stories?sort=highest-rated"
+          stories={mostLovedStories}
+          carouselId="most-loved"
+        />
+      ) : (
+        <section class="section section-stories py-16 md:py-20">
+          <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center mb-6 sm:mb-10">
+              <h2 class="text-2xl sm:text-3xl font-bold text-text-primary">Most Loved Stories</h2>
+              <a href="/stories?sort=highest-rated" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+                View All →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -388,16 +430,16 @@ try {
           carouselId="self-published"
         />
       ) : (
-        <section class="section section-stories">
+        <section class="section section-stories py-16 md:py-20">
           <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-3xl font-display font-bold text-text-primary">Latest Self-Published</h2>
+            <div class="flex justify-between items-center mb-6 sm:mb-10">
+              <h2 class="text-2xl sm:text-3xl font-bold text-text-primary">Latest Self-Published</h2>
               <a href="/stories?type=self-published" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
                 View All →
               </a>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div class="skeleton">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
                 <div class="p-6">
                   <div class="skeleton-image mb-4"></div>
                   <div class="skeleton-title w-3/4 mb-2"></div>
@@ -408,22 +450,26 @@ try {
                   </div>
                 </div>
               </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
                 </div>
               </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -439,16 +485,16 @@ try {
           carouselId="ai-enhanced"
         />
       ) : (
-        <section class="section section-ai">
+        <section class="section section-ai py-16 md:py-20">
           <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-3xl font-display font-bold text-text-primary">AI-Enhanced Picks</h2>
+            <div class="flex justify-between items-center mb-6 sm:mb-10">
+              <h2 class="text-2xl sm:text-3xl font-bold text-text-primary">AI-Enhanced Picks</h2>
               <a href="/stories?type=ai-enhanced" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
                 View All →
               </a>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div class="skeleton">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
                 <div class="p-6">
                   <div class="skeleton-image mb-4"></div>
                   <div class="skeleton-title w-3/4 mb-2"></div>
@@ -459,22 +505,26 @@ try {
                   </div>
                 </div>
               </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
                 </div>
               </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div class="card rounded-xl shadow-md hover:shadow-lg transition">
+                <div class="p-6">
+                  <div class="skeleton-image mb-4"></div>
+                  <div class="skeleton-title w-3/4 mb-2"></div>
+                  <div class="skeleton-text w-1/2 mb-4"></div>
+                  <div class="flex items-center">
+                    <div class="skeleton-avatar mr-2"></div>
+                    <div class="skeleton-text w-1/3"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -482,78 +532,47 @@ try {
         </section>
       )}
 
-      <!-- Sponsored Stories -->
-      {sponsoredStories.length > 0 ? (
-        <SponsoredCarousel
-          title="Sponsored Stories"
-          viewAllLink="/stories?type=sponsored"
-          stories={sponsoredStories}
-          carouselId="sponsored"
-        />
-      ) : (
-        <section class="section section-sponsored">
-          <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center mb-6">
-              <div class="flex items-center">
-                <h2 class="text-3xl font-display font-bold text-text-primary mr-3">Sponsored Stories</h2>
-                <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Sponsored</span>
-              </div>
-              <a href="/stories?type=sponsored" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
-                View All →
-              </a>
+      <!-- How It Works Section -->
+      <section class="py-16 md:py-20 bg-gradient-to-br from-[#fdf0ff] to-[#f1f9ff]">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-6 sm:mb-10">How It Works</h2>
+          <div class="flex flex-col md:flex-row gap-10 justify-around items-start text-center">
+            <div class="flex flex-col items-center">
+              <div class="bg-pink-100 p-4 rounded-full text-pink-600 text-2xl">📖</div>
+              <h3 class="text-xl font-bold mb-3">Discover Stories</h3>
+              <p class="text-slate-600 text-sm mt-2 max-w-xs">Browse our collection of children's stories from authors around the world.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div class="skeleton">
-                <div class="p-6">
-                  <div class="skeleton-image mb-4"></div>
-                  <div class="skeleton-title w-3/4 mb-2"></div>
-                  <div class="skeleton-text w-1/2 mb-4"></div>
-                  <div class="flex items-center">
-                    <div class="skeleton-avatar mr-2"></div>
-                    <div class="skeleton-text w-1/3"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </div>
-              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
-                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </div>
+            <div class="flex flex-col items-center">
+              <div class="bg-pink-100 p-4 rounded-full text-pink-600 text-2xl">✏️</div>
+              <h3 class="text-xl font-bold mb-3">Create Your Own</h3>
+              <p class="text-slate-600 text-sm mt-2 max-w-xs">Write and publish your own stories to share with our community.</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="bg-pink-100 p-4 rounded-full text-pink-600 text-2xl">👥</div>
+              <h3 class="text-xl font-bold mb-3">Join the Community</h3>
+              <p class="text-slate-600 text-sm mt-2 max-w-xs">Connect with other authors, readers, and educators who love children's stories.</p>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
       
       <!-- Featured Authors Section -->
-      <section class="py-16 relative overflow-hidden">
+      <section class="py-16 md:py-20 relative overflow-hidden">
         <div class="container mx-auto px-4 relative z-10">
-          <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Featured Authors</h2>
+          <div class="flex justify-between items-center mb-6 sm:mb-10">
+            <h2 class="text-2xl sm:text-3xl font-bold text-text-primary fancy-underline relative z-10">Featured Authors</h2>
             <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
               View All Authors →
             </a>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredAuthors.map(author => (
               <CardAuthor author={author} />
             ))}
             
             <!-- Become an Author Card -->
-            <div class="card p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
+            <div class="card rounded-xl shadow-md hover:shadow-xl p-5 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
               <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -568,7 +587,7 @@ try {
                 Share your stories with our growing community of readers and inspire young minds.
               </p>
               
-              <a href="/publish" class="w-full bg-accent text-white py-3 px-6 rounded-md hover:bg-accent/90 transition-colors font-medium flex items-center justify-center group-hover:bg-accent">
+              <a href="/publish" class="mt-4 w-full bg-blue-600 text-white py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center group-hover:bg-blue-600 btn-blue">
                 <span class="flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -582,27 +601,120 @@ try {
       </section>
       
       <!-- Educator Section -->
-      <section class="py-16 relative overflow-hidden">
+      <section class="py-16 md:py-20 relative overflow-hidden">
         <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
-          <EducatorSection
-            educator={{
-              name: "For Parents",
-              title: "Reading Companion",
-              institution: "Home Learning",
-              avatar: {
-                url: "/stories_from_the_web_transparent.png"
-              }
-            }}
-          />
+          <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-6 sm:mb-10 fancy-underline">Resources for Parents & Teachers</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Parent Resources -->
+            <div class="bg-gradient-to-br from-pink-100 to-white rounded-xl shadow-sm p-6">
+              <div class="flex items-center mb-6">
+                <div class="w-14 h-14 bg-primary/20 rounded-full flex items-center justify-center mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-display font-bold text-text-primary">For Parents</h3>
+              </div>
+              
+              <div class="flex items-center mb-6">
+                <div class="relative">
+                  <img
+                    src="/stories_from_the_web_transparent.png"
+                    alt="For Parents"
+                    class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-playful"
+                  />
+                </div>
+                <div class="ml-6">
+                  <p class="text-xl font-bold text-text-primary mb-1">Reading Companion</p>
+                  <p class="text-base text-text-secondary">Home Learning</p>
+                </div>
+              </div>
+              
+              <ul class="space-y-4 mb-8">
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-primary mr-3 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Create reading lists for different age groups</span>
+                </li>
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary mr-2 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Monitor reading time and comprehension</span>
+                </li>
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary mr-2 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Get personalized story recommendations</span>
+                </li>
+              </ul>
+              
+              <a href="/parents" class="btn btn-primary py-3 px-6 shadow-playful btn-playful">
+                <span class="relative z-10 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                  Parent Resources
+                </span>
+              </a>
+            </div>
+            
+            <!-- Teacher Resources -->
+            <div class="bg-gradient-to-br from-cyan-100 to-white rounded-xl shadow-sm p-6">
+              <div class="flex items-center mb-6">
+                <div class="w-14 h-14 bg-secondary/20 rounded-full flex items-center justify-center mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-secondary">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-display font-bold text-text-primary">For Teachers</h3>
+              </div>
+              
+              <p class="text-text-secondary mb-4">
+                Access classroom-ready stories and educational resources. Create reading assignments and track student progress.
+              </p>
+              
+              <ul class="space-y-4 mb-8">
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-secondary mr-3 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Curated reading lists by grade level</span>
+                </li>
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-secondary mr-2 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Lesson plans and discussion guides</span>
+                </li>
+                <li class="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-secondary mr-2 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-text-secondary">Reading comprehension activities</span>
+                </li>
+              </ul>
+              
+              <a href="/teachers" class="btn btn-secondary py-3 px-6 shadow-playful btn-playful">
+                <span class="relative z-10 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                  Teacher Resources
+                </span>
+              </a>
+            </div>
+          </div>
         </div>
       </section>
       
       <!-- Sign-Up Prompts -->
-      <section class="py-16 bg-neutral-dark relative overflow-hidden">
-        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
+      <section class="py-16 md:py-20 bg-neutral-dark relative overflow-hidden">
+        <!-- Removed empty decorative blob that was causing visual issues -->
         <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
+          <h2 class="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-6 sm:mb-10 fancy-underline">Join Our Community</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <SignUpPrompts type="author" />
             <SignUpPrompts type="reader" />
@@ -612,14 +724,15 @@ try {
       </section>
       
       <!-- AI Recommendation Box -->
-      <section class="py-16 relative overflow-hidden">
+      <section class="py-8 md:py-12 relative overflow-hidden">
         <div class="container mx-auto px-4 relative z-10">
+          <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-6 sm:mb-10">AI Recommendations</h2>
           <AIRecommendationBox
             story={{
-              title: "Loading...",
-              slug: "#",
+              title: "The Magic Garden",
+              slug: "the-magic-garden",
               author: {
-                name: "Loading..."
+                name: "Emma Johnson"
               }
             }}
             recommendationText="Our AI-powered recommendation system will suggest stories based on your reading preferences and history."
@@ -628,12 +741,12 @@ try {
       </section>
       
       <!-- Newsletter Section -->
-      <section class="py-16 bg-secondary/10 relative overflow-hidden">
+      <section class="py-16 md:py-20 bg-secondary/10 relative overflow-hidden">
         <!-- Decorative blob -->
-        <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
+        <!-- Removed empty decorative blob that was causing visual issues -->
         <div class="container mx-auto px-4 max-w-4xl relative z-10">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
+          <div class="text-center mb-6 sm:mb-10">
+            <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
             <p class="text-text-secondary text-lg">
               Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
             </p>

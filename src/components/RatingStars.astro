@@ -22,23 +22,23 @@ const emptyStars = maxRating - fullStars - (hasHalfStar ? 1 : 0);
 
 // Size classes
 const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'w-4 h-4',
-  md: 'w-5 h-5',
-  lg: 'w-6 h-6'
+  sm: 'w-5 h-5 gap-1',
+  md: 'w-6 h-6 gap-1.5',
+  lg: 'w-8 h-8 gap-2'
 };
 
-const starClass = `${sizeClasses[size]} ${interactive ? 'cursor-pointer transform-style-3d transition-all duration-300 hover:scale-125 hover:translate-z-2 hover:shadow-glow' : ''}`;
+const starClass = `${sizeClasses[size]} ${interactive ? 'cursor-pointer transform-style-3d transition-all duration-500 hover:scale-125 hover:translate-z-4 hover:shadow-glow hover:rotate-12' : ''}`;
 const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`;
 ---
 
-<div class={`flex items-center ${className}`} aria-label={`Rating: ${rating} out of ${maxRating} stars`} id={componentId}>
+<div class={`inline-flex items-center gap-1 ${className}`} aria-label={`Rating: ${rating} out of ${maxRating} stars`} id={componentId}>
   {/* Full stars */}
   {Array.from({ length: fullStars }).map((_, i) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      class={`text-accent animate-pulse-subtle ${starClass}`}
+      class={`text-accent animate-pulse-subtle ${starClass} drop-shadow-glow transform-style-3d hover:translate-z-4 transition-transform duration-500`}
       aria-hidden="true"
       data-value={i + 1}
       style="filter: drop-shadow(0 0 2px var(--tw-shadow-color));"
@@ -53,7 +53,7 @@ const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      class={`text-accent ${starClass}`}
+      class={`text-accent ${starClass} drop-shadow-glow transform-style-3d hover:translate-z-4 transition-transform duration-500`}
       aria-hidden="true"
       data-value={fullStars + 0.5}
     >
@@ -68,7 +68,7 @@ const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      class={`text-neutral-200/50 ${starClass}`}
+      class={`text-neutral-200/80 ${starClass} hover:text-accent/50 transform-style-3d hover:translate-z-4 transition-transform duration-500`}
       aria-hidden="true"
       data-value={fullStars + (hasHalfStar ? 1 : 0) + i + 1}
     >
@@ -76,7 +76,13 @@ const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`
     </svg>
   ))}
   
-  <span class="ml-2 text-sm font-medium text-text-secondary bg-neutral-100/50 px-2 py-0.5 rounded-full">{rating.toFixed(1)}</span>
+  <span class="ml-3 text-base font-bold text-text-secondary bg-white/90 backdrop-blur-xl px-4 py-2 rounded-full shadow-playful transform-style-3d hover:translate-z-4 hover:scale-110 transition-all duration-500 group">
+    <span class="relative">
+      {rating.toFixed(1)}
+      <span class="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/20 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></span>
+      <span class="absolute inset-0 bg-white/10 scale-0 group-hover:scale-125 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-sm rounded-full"></span>
+    </span>
+  </span>
 </div>
 
 {interactive && (
@@ -153,9 +159,11 @@ const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`
       const style = document.createElement('style');
       style.textContent = `
         @keyframes pulse-subtle {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
+          0% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.05) rotate(3deg); }
+          50% { transform: scale(1.1) rotate(-3deg); }
+          75% { transform: scale(1.05) rotate(2deg); }
+          100% { transform: scale(1) rotate(0deg); }
         }
         .animate-pulse-subtle {
           animation: pulse-subtle 2s ease-in-out infinite;

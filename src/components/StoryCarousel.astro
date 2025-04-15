@@ -11,28 +11,79 @@ interface Props {
 const { title, viewAllLink, stories = [], carouselId } = Astro.props;
 ---
 
-<section class="section section-stories py-12">
+<section class="section section-stories py-20 md:py-32 overflow-hidden">
+  <!-- Enhanced decorative blobs -->
+  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+  
   <div class="container relative z-10">
-    <div class="flex justify-between items-center mb-8">
-      <h2 class="text-2xl md:text-3xl font-display font-bold text-text-primary">{title}</h2>
-      <a href={viewAllLink} class="text-secondary font-medium hover:text-secondary/80 transition-colors flex items-center group">
-        View All
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
+    <div class="flex justify-between items-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-display font-bold text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">{title}</h2>
+      <a
+        href={viewAllLink}
+        class="text-secondary font-medium hover:text-secondary transition-all duration-500 flex items-center group transform-style-3d hover:translate-z-4 hover:scale-105 px-6 py-3 rounded-xl hover:bg-secondary-50/80"
+      >
+        <span class="relative">
+          View All
+          <span class="absolute bottom-0 left-0 w-full h-0.5 bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+        </span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          class="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform duration-300"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
         </svg>
       </a>
     </div>
 
     {stories.length > 0 ? (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stories.map(story => (
-          <CardStory story={story} />
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 perspective-1000">
+        {stories.map((story, index) => (
+          <div
+            class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+            style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+          >
+            <CardStory story={story} className="rounded-xl shadow-md hover:shadow-lg transition" />
+          </div>
         ))}
       </div>
     ) : (
-      <div class="text-center py-8 text-gray-500">
-        No stories available at the moment.
+      <div class="text-center py-24 bg-white/70 backdrop-blur-xl rounded-3xl border border-neutral-200/50 shadow-playful transform-style-3d hover:translate-z-4 transition-transform duration-500">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-16 h-16 mx-auto mb-6 text-text-secondary/50 animate-pulse-subtle"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+        <p class="text-text-secondary font-bold text-xl mb-3">No stories available at the moment.</p>
+        <p class="text-text-secondary/70 text-lg">Check back soon for new stories!</p>
       </div>
     )}
   </div>
 </section>
+
+<style>
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px) scale(0.95);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateY(20px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+</style>

@@ -13,31 +13,17 @@ const {
   clickable = true
 } = Astro.props as ExtendedTagBadgeProps;
 
-// Size classes
+// Size classes with better padding
 const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
   sm: 'text-xs px-2 py-1',
-  md: 'text-sm px-3 py-1.5',
-  lg: 'text-base px-4 py-2'
+  md: 'text-xs px-2 py-1',
+  lg: 'text-xs px-2 py-1'
 };
 
-// Color variations based on tag name (for visual variety)
-const getTagColor = (tag: string) => {
-  const colors = [
-    'bg-primary/20 text-primary hover:bg-primary/30 shadow-primary/20',
-    'bg-secondary/20 text-secondary hover:bg-secondary/30 shadow-secondary/20',
-    'bg-tertiary/20 text-tertiary hover:bg-tertiary/30 shadow-tertiary/20',
-    'bg-accent/20 text-text-primary hover:bg-accent/30 shadow-accent/20',
-    'bg-success/20 text-success hover:bg-success/30 shadow-success/20'
-  ];
-  
-  // Use the tag string to deterministically select a color
-  const index = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-  return colors[index];
-};
-
-const colorClass = getTagColor(tag);
-const baseClasses = "inline-flex items-center rounded-full font-bold transition-all duration-300 shadow-sm hover:shadow-md";
-const hoverClasses = clickable ? "transform hover:scale-110 hover:translate-z-2 cursor-pointer group" : "";
+// Use consistent purple styling for all tags
+const colorClass = 'bg-purple-100 text-purple-700';
+const baseClasses = "inline-flex items-center rounded-full font-semibold transition-all duration-500 transform-style-3d";
+const hoverClasses = clickable ? "hover:translate-z-4 hover:scale-110 hover:shadow-xl cursor-pointer group" : "";
 const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses} ${className}`;
 
 // Format tag for URL (lowercase, replace spaces with hyphens)
@@ -47,7 +33,9 @@ const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
 {clickable ? (
   <a href={`/tags/${tagSlug}`} class={classes} data-tag={tag}>
     <span class="relative z-10">{tag}</span>
-    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/20 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/30 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full animate-shimmer"></div>
+    <div class="absolute inset-0 bg-white/10 rounded-full scale-0 group-hover:scale-125 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-sm"></div>
+    <div class="absolute inset-0 bg-current/5 rounded-full scale-0 group-hover:scale-150 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-lg"></div>
   </a>
 ) : (
   <span class={classes} data-tag={tag}>

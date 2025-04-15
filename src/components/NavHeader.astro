@@ -19,9 +19,9 @@ const navItems = [
 const currentPath = Astro.url.pathname;
 ---
 
-<header class="sticky top-0 z-50 py-2">
+<header class="sticky top-0 z-50 py-4">
   <!-- Background with enhanced blur effect -->
-  <div class="absolute inset-0 bg-white/80 backdrop-blur-xl"></div>
+  <div class="absolute inset-0 bg-white/90 backdrop-blur-2xl"></div>
   
   <!-- Enhanced decorative gradients -->
   <div class="absolute inset-0 bg-gradient-to-r from-primary-100 via-transparent to-secondary-100 opacity-50 animate-gradient"></div>
@@ -32,11 +32,11 @@ const currentPath = Astro.url.pathname;
   <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
   <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000 transform translate-z-4"></div>
   
-  <div class="container mx-auto px-4 flex justify-between items-center h-16 relative">
+  <div class="container mx-auto px-6 flex justify-between items-center h-20 relative">
     <!-- Enhanced Logo -->
     <a href="/" class="flex items-center group relative perspective-1000">
-      <div class="relative overflow-hidden transform-style-3d">
-        <img src="/logo.png" alt="Stories From The Web" class="h-12 md:h-14 w-auto transition-all duration-500 group-hover:scale-110 float-animation" />
+      <div class="relative overflow-hidden transform-style-3d hover:translate-z-8 transition-transform duration-500">
+        <img src="/logo.png" alt="Stories From The Web" class="h-14 md:h-16 w-auto transition-all duration-700 group-hover:scale-110 float-animation" />
         <!-- Enhanced animated decorative elements -->
         <div class="absolute inset-0 bg-gradient-to-r from-primary-200/0 via-primary-200/30 to-primary-200/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
         <span class="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-accent-300 via-accent-500 to-accent-300 rounded-full transform -rotate-1 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left shadow-glow"></span>
@@ -46,17 +46,17 @@ const currentPath = Astro.url.pathname;
     </a>
     
     <!-- Desktop Navigation -->
-    <nav class="hidden md:flex items-center space-x-8">
+    <nav class="hidden md:flex items-center space-x-10">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
         return (
           <a
             href={item.href}
-            class={`font-bold transition-all duration-500 relative group py-2 ${
+            class={`font-bold transition-all duration-500 relative group py-3 px-4 rounded-xl transform-style-3d hover:translate-z-4 ${
               isActive
-                ? 'text-primary'
-                : 'text-text-primary hover:text-primary hover:scale-105'
+                ? 'text-primary bg-primary-50/50'
+                : 'text-text-primary hover:text-primary hover:scale-105 hover:bg-neutral-50/80'
             }`}
           >
             {item.text}
@@ -72,9 +72,9 @@ const currentPath = Astro.url.pathname;
       })}
       
       <!-- Login/Profile Button -->
-      <div class="flex items-center ml-4">
-        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-2">
+      <div class="flex items-center ml-6">
+        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-all duration-500 transform-style-3d hover:translate-z-4 hover:scale-105 group px-4 py-2 rounded-xl hover:bg-neutral-50/80">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
           <span>Login</span>
@@ -88,10 +88,10 @@ const currentPath = Astro.url.pathname;
       
       <a
         href="/publish"
-        class="btn btn-primary ml-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group"
+        class="btn btn-primary ml-6 px-6 py-3 shadow-playful btn-playful transform-style-3d hover:translate-z-4 group"
       >
         <span class="relative z-10 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
           </svg>
           Share Your Story
@@ -127,10 +127,10 @@ const currentPath = Astro.url.pathname;
         return (
           <a
             href={item.href}
-            class={`block py-3 px-4 rounded-xl transition-all duration-300 ${
+            class={`block py-4 px-6 rounded-xl transition-all duration-500 transform-style-3d hover:translate-z-4 ${
               isActive
-                ? 'bg-primary/10 text-primary font-bold'
-                : 'text-text-primary hover:bg-neutral-dark hover:text-primary'
+                ? 'bg-primary-50/80 text-primary font-bold shadow-playful'
+                : 'text-text-primary hover:bg-neutral-50/80 hover:text-primary hover:shadow-playful'
             }`}
           >
             {item.text}
@@ -141,9 +141,9 @@ const currentPath = Astro.url.pathname;
       <!-- Login Button -->
       <a
         href="/login"
-        class="block py-3 px-4 mt-4 bg-gradient-to-r from-white to-neutral-50 text-text-primary rounded-xl font-bold flex items-center justify-center hover:from-neutral-50 hover:to-white transition-all duration-300"
+        class="block py-4 px-6 mt-6 bg-gradient-to-r from-white to-neutral-50 text-text-primary rounded-xl font-bold flex items-center justify-center hover:from-neutral-50 hover:to-white transition-all duration-500 transform-style-3d hover:translate-z-4 shadow-playful hover:shadow-xl"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
         Login
@@ -157,9 +157,15 @@ const currentPath = Astro.url.pathname;
       
       <a
         href="/publish"
-        class="block py-3 px-4 mt-4 bg-gradient-to-r from-primary to-primary/90 text-white rounded-xl font-bold shadow-playful hover:from-primary/90 hover:to-primary transition-all duration-300"
+        class="block py-4 px-6 mt-6 bg-gradient-to-r from-primary to-primary/90 text-white rounded-xl font-bold shadow-playful hover:shadow-xl transform-style-3d hover:translate-z-4 transition-all duration-500 group"
       >
-        Share Your Story
+        <span class="flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg>
+          Share Your Story
+        </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
       </a>
     </div>
   </div>

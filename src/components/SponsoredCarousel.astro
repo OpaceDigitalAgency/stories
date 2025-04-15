@@ -64,20 +64,37 @@ const sponsoredStories = stories.length > 0 ? stories : [
 ];
 ---
 
-<section class="section section-sponsored py-12 relative overflow-hidden">
+<section class="section section-sponsored py-20 md:py-32 relative overflow-hidden">
   <!-- Enhanced background elements -->
-  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-tertiary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
-  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-tertiary-100/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
+  <div class="absolute -top-32 -right-32 w-[40rem] h-[40rem] bg-tertiary-200/40 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
+  <div class="absolute -bottom-32 -left-32 w-[40rem] h-[40rem] bg-tertiary-100/40 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
+  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[40rem] h-[40rem] bg-tertiary-300/30 rounded-full blur-3xl animate-blob animation-delay-4000 transform translate-z-4"></div>
+  <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-white/50 backdrop-blur-sm"></div>
   
   <div class="container relative z-10">
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center">
-        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-primary mr-3">{title}</h2>
-        <SponsoredBadge type="sponsored" />
+    <div class="flex justify-between items-center mb-16">
+      <div class="flex items-center gap-4">
+        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-primary fancy-underline transform-style-3d hover:translate-z-4 transition-transform duration-500">{title}</h2>
+        <div class="transform-style-3d hover:translate-z-4 transition-transform duration-500">
+          <SponsoredBadge type="sponsored" />
+        </div>
       </div>
-      <a href={viewAllLink} class="text-secondary font-bold hover:text-secondary/80 transition-all duration-300 hover:translate-x-1 flex items-center group">
-        <span>View All</span>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
+      <a
+        href={viewAllLink}
+        class="text-secondary font-bold hover:text-secondary transition-all duration-300 flex items-center group transform-style-3d hover:translate-z-4 hover:scale-105"
+      >
+        <span class="relative">
+          View All
+          <span class="absolute bottom-0 left-0 w-full h-0.5 bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+        </span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          class="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform duration-300"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
         </svg>
       </a>
@@ -88,23 +105,27 @@ const sponsoredStories = stories.length > 0 ? stories : [
       <!-- Carousel navigation buttons -->
       <button
         id={`${carouselId}-prev`}
-        class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-2 z-10 bg-white/90 hover:bg-white text-tertiary w-12 h-12 rounded-full flex items-center justify-center shadow-playful focus:outline-none focus:ring-2 focus:ring-tertiary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110"
+        class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-6 z-10 bg-white/90 backdrop-blur-xl hover:bg-white text-tertiary w-16 h-16 rounded-full flex items-center justify-center shadow-playful focus:outline-none focus:ring-2 focus:ring-tertiary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-500 hover:scale-110 transform-style-3d hover:translate-z-8 hover:rotate-12 group"
         aria-label="Previous stories"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+        <div class="absolute inset-0 bg-gradient-to-r from-tertiary/0 via-tertiary/20 to-tertiary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 transform group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </button>
       
       <div 
         id={carouselId} 
-        class="carousel-container overflow-x-auto pb-4 hide-scrollbar"
+        class="carousel-container overflow-x-auto pb-8 hide-scrollbar"
       >
-        <div class="carousel-track flex gap-4 transition-transform duration-500 ease-out">
-          {sponsoredStories.map(story => (
-            <div class="carousel-item flex-shrink-0 w-full sm:w-1/2 md:w-1/3 lg:w-1/4">
+        <div class="carousel-track flex gap-12 transition-transform duration-1000 ease-out">
+          {sponsoredStories.map((story, index) => (
+            <div
+              class="carousel-item flex-shrink-0 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 transform-style-3d hover:translate-z-4 transition-transform duration-500"
+              style={`animation: fadeInUp 0.5s ease-out forwards ${index * 0.1}s;`}
+            >
               <div class="relative">
-                <div class="absolute top-2 right-2 z-10">
+                <div class="absolute top-4 right-4 z-10 transform-style-3d hover:translate-z-4 transition-transform duration-500">
                   <SponsoredBadge type="sponsored" size="sm" />
                 </div>
                 <CardStory {...story} />
@@ -116,10 +137,11 @@ const sponsoredStories = stories.length > 0 ? stories : [
       
       <button
         id={`${carouselId}-next`}
-        class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-2 z-10 bg-white/90 hover:bg-white text-tertiary w-12 h-12 rounded-full flex items-center justify-center shadow-playful focus:outline-none focus:ring-2 focus:ring-tertiary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110"
+        class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-6 z-10 bg-white/90 backdrop-blur-xl hover:bg-white text-tertiary w-16 h-16 rounded-full flex items-center justify-center shadow-playful focus:outline-none focus:ring-2 focus:ring-tertiary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-500 hover:scale-110 transform-style-3d hover:translate-z-8 hover:rotate-12 group"
         aria-label="Next stories"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+        <div class="absolute inset-0 bg-gradient-to-r from-tertiary/0 via-tertiary/20 to-tertiary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 transform group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
       </button>
@@ -135,6 +157,21 @@ const sponsoredStories = stories.length > 0 ? stories : [
   
   .hide-scrollbar::-webkit-scrollbar {
     display: none;  /* Chrome, Safari and Opera */
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px) scale(0.95);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateY(20px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>
 

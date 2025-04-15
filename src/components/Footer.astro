@@ -2,6 +2,26 @@
 import PartnerBadges from './PartnerBadges.astro';
 const currentYear = new Date().getFullYear();
 
+// Partner data
+const partners = [
+  {
+    name: 'Example Partner 1',
+    href: 'https://example1.com',
+    logo: {
+      url: '/logo.png',
+      alternativeText: 'Example Partner 1 Logo'
+    }
+  },
+  {
+    name: 'Example Partner 2',
+    href: 'https://example2.com',
+    logo: {
+      url: '/logo.png',
+      alternativeText: 'Example Partner 2 Logo'
+    }
+  }
+];
+
 // Footer navigation sections
 const footerSections = [
   {
@@ -99,7 +119,7 @@ const socialLinks = [
       ))}
     </div>
     <!-- Partner Badges -->
-    <PartnerBadges />
+    <PartnerBadges partners={partners} />
     
     <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
       <p class="text-gray-400 text-sm mb-4 md:mb-0">

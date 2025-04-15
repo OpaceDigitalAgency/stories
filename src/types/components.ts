@@ -181,3 +181,17 @@ export interface ModerationCTAProps {
   /** Optional class names to apply */
   className?: string;
 }
+
+export interface PartnerBadgesProps {
+  /** Array of partner data */
+  partners: Array<{
+    name: string;
+    href: string;
+    logo: {
+      url: string;
+      alternativeText?: string;
+    };
+  }>;
+  /** Optional class names to apply */
+  className?: string;
+}

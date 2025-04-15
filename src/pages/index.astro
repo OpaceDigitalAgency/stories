@@ -8,257 +8,64 @@ import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
+import { fetchFromStrapi } from '../lib/api';
 import '../styles/base.css';
 
-// Mock data for featured stories
-const featuredStories = [
-  {
-    title: "The Adventure of the Curious Cat",
-    excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
-    coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
-    author: {
-      name: "Emma Thompson",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      slug: "emma-thompson"
-    },
-    rating: 4.7,
-    tags: ["Adventure", "Animals", "Children"],
-    slug: "adventure-curious-cat",
-    publishDate: new Date('2025-03-15')
+// Fetch featured stories
+const featuredStoriesResponse = await fetchFromStrapi('stories', {
+  filters: {
+    featured: true
   },
-  {
-    title: "The Magic Library",
-    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
-    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-    author: {
-      name: "Michael Johnson",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      slug: "michael-johnson"
-    },
-    rating: 4.9,
-    tags: ["Fantasy", "Magic", "Books"],
-    slug: "magic-library",
-    publishDate: new Date('2025-04-02')
-  },
-  {
-    title: "Space Explorers: Journey to the Stars",
-    excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
-    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
-    author: {
-      name: "Sarah Williams",
-      avatar: "https://i.pravatar.cc/150?img=3",
-      slug: "sarah-williams"
-    },
-    rating: 4.5,
-    tags: ["Science Fiction", "Space", "Adventure"],
-    slug: "space-explorers-journey",
-    publishDate: new Date('2025-03-28')
-  }
-];
+  populate: '*',
+  sort: 'publishedAt:desc',
+  limit: 3
+});
 
-// Mock data for story carousels
-const mostLovedStories = [
-  {
-    title: "The Magic Library",
-    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
-    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-    author: {
-      name: "Michael Johnson",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      slug: "michael-johnson"
-    },
-    rating: 4.9,
-    tags: ["Fantasy", "Magic", "Books"],
-    slug: "magic-library",
-    publishDate: new Date('2025-04-02')
-  },
-  {
-    title: "The Enchanted Forest",
-    excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
-    coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
-    author: {
-      name: "David Brown",
-      avatar: "https://i.pravatar.cc/150?img=4",
-      slug: "david-brown"
-    },
-    rating: 4.6,
-    tags: ["Fantasy", "Nature", "Adventure"],
-    slug: "enchanted-forest",
-    publishDate: new Date('2025-03-10')
-  },
-  {
-    title: "The Little Robot's Big Day",
-    excerpt: "Beep the robot learns about friendship and emotions when he ventures outside his factory for the first time.",
-    coverImage: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
-    author: {
-      name: "Jennifer Lee",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      slug: "jennifer-lee"
-    },
-    rating: 4.8,
-    tags: ["Technology", "Friendship", "Children"],
-    slug: "little-robot-big-day",
-    publishDate: new Date('2025-04-05')
-  },
-  {
-    title: "Ocean Friends: The Dolphin's Secret",
-    excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
-    coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
-    author: {
-      name: "Emma Thompson",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      slug: "emma-thompson"
-    },
-    rating: 4.4,
-    tags: ["Ocean", "Animals", "Adventure"],
-    slug: "ocean-friends-dolphin-secret",
-    publishDate: new Date('2025-03-22')
-  }
-];
+const featuredStories = featuredStoriesResponse.data || [];
 
-const latestSelfPublishedStories = [
-  {
-    title: "The Brave Little Turtle",
-    excerpt: "Tommy the turtle is afraid of the water, but when his friend needs help, he must overcome his fears to save the day.",
-    coverImage: "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f",
-    author: {
-      name: "Alex Rivera",
-      avatar: "https://i.pravatar.cc/150?img=6",
-      slug: "alex-rivera"
-    },
-    rating: 4.3,
-    tags: ["Self-Published", "Animals", "Courage"],
-    slug: "brave-little-turtle",
-    publishDate: new Date('2025-04-10')
-  },
-  {
-    title: "The Moon and Me",
-    excerpt: "A beautifully illustrated bedtime story about a child's imaginary journey to the moon and back.",
-    coverImage: "https://images.unsplash.com/photo-1532386236358-a33d8a9434e3",
-    author: {
-      name: "Sophia Chen",
-      avatar: "https://i.pravatar.cc/150?img=7",
-      slug: "sophia-chen"
-    },
-    rating: 4.7,
-    tags: ["Self-Published", "Bedtime", "Space"],
-    slug: "moon-and-me",
-    publishDate: new Date('2025-04-08')
-  },
-  {
-    title: "The Magical Paintbrush",
-    excerpt: "When Lily discovers a paintbrush that brings her drawings to life, she learns that with great power comes great responsibility.",
-    coverImage: "https://images.unsplash.com/photo-1513364776144-60967b0f800f",
-    author: {
-      name: "Marcus Johnson",
-      avatar: "https://i.pravatar.cc/150?img=8",
-      slug: "marcus-johnson"
-    },
-    rating: 4.5,
-    tags: ["Self-Published", "Magic", "Art"],
-    slug: "magical-paintbrush",
-    publishDate: new Date('2025-04-07')
-  },
-  {
-    title: "The Secret Garden Club",
-    excerpt: "Four friends start a gardening club and discover the joys of growing their own vegetables and flowers.",
-    coverImage: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735",
-    author: {
-      name: "Olivia Martinez",
-      avatar: "https://i.pravatar.cc/150?img=9",
-      slug: "olivia-martinez"
-    },
-    rating: 4.2,
-    tags: ["Self-Published", "Friendship", "Nature"],
-    slug: "secret-garden-club",
-    publishDate: new Date('2025-04-05')
-  }
-];
+// Fetch most loved stories
+const mostLovedStoriesResponse = await fetchFromStrapi('stories', {
+  sort: 'rating:desc',
+  populate: '*',
+  limit: 6
+});
 
-const aiEnhancedStories = [
-  {
-    title: "The Time-Traveling Twins",
-    excerpt: "When twins Max and Mia find a mysterious pocket watch, they embark on adventures through different time periods.",
-    coverImage: "https://images.unsplash.com/photo-1501139083538-0139583c060f",
-    author: {
-      name: "AI Stories",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      slug: "ai-stories"
-    },
-    rating: 4.6,
-    tags: ["AI-Enhanced", "Time Travel", "Adventure"],
-    slug: "time-traveling-twins",
-    publishDate: new Date('2025-04-01')
-  },
-  {
-    title: "The Talking Animals of Willow Creek",
-    excerpt: "After a magical storm, the animals in Willow Creek can talk, and they have a lot to say about how humans treat the environment.",
-    coverImage: "https://images.unsplash.com/photo-1425082661705-1834bfd09dca",
-    author: {
-      name: "AI Stories",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      slug: "ai-stories"
-    },
-    rating: 4.8,
-    tags: ["AI-Enhanced", "Animals", "Environment"],
-    slug: "talking-animals-willow-creek",
-    publishDate: new Date('2025-03-25')
-  },
-  {
-    title: "The Robot Who Wanted to Be Human",
-    excerpt: "In a future world, a robot named Byte dreams of becoming human and sets out on a journey to find what it means to have a heart.",
-    coverImage: "https://images.unsplash.com/photo-1535378620166-273708d44e4c",
-    author: {
-      name: "AI Stories",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      slug: "ai-stories"
-    },
-    rating: 4.7,
-    tags: ["AI-Enhanced", "Robots", "Identity"],
-    slug: "robot-wanted-to-be-human",
-    publishDate: new Date('2025-03-20')
-  },
-  {
-    title: "The Cloud Sailors",
-    excerpt: "A group of children discover how to sail on clouds and explore the wonders of the sky, but they must be home before sunset.",
-    coverImage: "https://images.unsplash.com/photo-1499346030926-9a72daac6c63",
-    author: {
-      name: "AI Stories",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      slug: "ai-stories"
-    },
-    rating: 4.5,
-    tags: ["AI-Enhanced", "Fantasy", "Adventure"],
-    slug: "cloud-sailors",
-    publishDate: new Date('2025-03-15')
-  }
-];
+const mostLovedStories = mostLovedStoriesResponse.data || [];
 
-// Mock data for featured authors
-const featuredAuthors = [
-  {
-    name: "Emma Thompson",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
-    slug: "emma-thompson",
-    storyCount: 12,
-    socialLinks: {
-      twitter: "https://twitter.com/emmathompson",
-      instagram: "https://instagram.com/emmathompson"
-    }
+// Fetch latest self-published stories
+const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
+  filters: {
+    isSelfPublished: true
   },
-  {
-    name: "Michael Johnson",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    bio: "Michael is a former librarian who creates magical worlds where books and imagination come to life. His stories encourage a love of reading in children of all ages.",
-    slug: "michael-johnson",
-    storyCount: 8,
-    socialLinks: {
-      twitter: "https://twitter.com/michaeljohnson",
-      website: "https://michaeljohnsonstories.com"
-    }
-  }
-];
+  populate: '*',
+  sort: 'publishedAt:desc',
+  limit: 6
+});
+
+const latestSelfPublishedStories = selfPublishedStoriesResponse.data || [];
+
+// Fetch AI-enhanced stories
+const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
+  filters: {
+    isAIEnhanced: true
+  },
+  populate: '*',
+  sort: 'publishedAt:desc',
+  limit: 6
+});
+
+const aiEnhancedStories = aiEnhancedStoriesResponse.data || [];
+
+// Fetch featured authors
+const featuredAuthorsResponse = await fetchFromStrapi('authors', {
+  filters: {
+    featured: true
+  },
+  populate: '*',
+  limit: 2
+});
+
+const featuredAuthors = featuredAuthorsResponse.data || [];
 ---
 
 <html lang="en">
@@ -434,6 +241,7 @@ const featuredAuthors = [
           });
         </script>
       </section>
+      
       <!-- Sponsored Carousel -->
       <SponsoredCarousel
         title="Sponsored Stories"
@@ -463,7 +271,6 @@ const featuredAuthors = [
         stories={aiEnhancedStories}
         carouselId="ai-enhanced"
       />
-      </section>
       
       <!-- How It Works Section -->
       <section class="py-16 bg-neutral-dark relative overflow-hidden">
@@ -595,52 +402,3 @@ const featuredAuthors = [
       </section>
       
       <!-- AI Recommendation Box -->
-      <section class="py-16 relative overflow-hidden">
-        <div class="container mx-auto px-4 relative z-10">
-          <AIRecommendationBox />
-        </div>
-      </section>
-      
-      <!-- Newsletter Section -->
-      <section class="py-16 bg-secondary/10 relative overflow-hidden">
-        <!-- Decorative blob -->
-        <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
-        <div class="container mx-auto px-4 max-w-4xl relative z-10">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
-            <p class="text-text-secondary text-lg">
-              Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
-            </p>
-          </div>
-          
-          <form class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                placeholder="Your email address"
-                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
-                required
-              />
-              <button
-                type="submit"
-                class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
-              >
-                <span class="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                  Subscribe
-                </span>
-              </button>
-            </div>
-            <p class="text-sm text-gray-500 mt-3">
-              We respect your privacy. Unsubscribe at any time.
-            </p>
-          </form>
-        </div>
-      </section>
-    </main>
-    
-    <Footer />
-  </body>
-</html>

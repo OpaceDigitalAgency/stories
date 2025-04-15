@@ -10,6 +10,7 @@
   html {
     font-family: 'Nunito', sans-serif;
     color: theme('colors.text-primary');
+    @apply bg-neutral;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -57,6 +58,69 @@
   /* Card styles */
   .card {
     @apply bg-white rounded-2xl overflow-hidden shadow-card transition-all duration-300 hover:shadow-hover border-2 border-transparent hover:border-neutral-dark;
+  }
+
+  /* Story card specific styles */
+  .story-card {
+    @apply card p-4 flex flex-col gap-4;
+  }
+
+  .story-card-image {
+    @apply w-full aspect-[4/3] rounded-xl overflow-hidden;
+  }
+
+  .story-card-content {
+    @apply flex flex-col gap-2;
+  }
+
+  .story-card-title {
+    @apply text-xl font-bold font-display text-text-primary line-clamp-2 hover:text-primary transition-colors;
+  }
+
+  .story-card-excerpt {
+    @apply text-text-secondary line-clamp-3;
+  }
+
+  /* Author card specific styles */
+  .author-card {
+    @apply card p-6 flex flex-col items-center text-center;
+  }
+
+  .author-avatar {
+    @apply w-24 h-24 rounded-full overflow-hidden mb-4 border-4 border-neutral-dark;
+  }
+
+  /* Section styles */
+  .section-hero {
+    @apply relative py-16 md:py-24 overflow-hidden;
+  }
+
+  .section-stories {
+    @apply py-16 bg-neutral-light;
+  }
+
+  .section-sponsored {
+    @apply py-16 bg-neutral;
+  }
+
+  .section-authors {
+    @apply py-16 bg-neutral-light relative overflow-hidden;
+  }
+
+  .section-educator {
+    @apply py-16 bg-neutral relative overflow-hidden;
+  }
+
+  .section-signup {
+    @apply py-16 bg-neutral-dark relative overflow-hidden;
+  }
+
+  .section-ai {
+    @apply py-16 bg-neutral-light relative overflow-hidden;
+  }
+
+  .section-newsletter {
+    @apply py-16 bg-secondary/10 relative overflow-hidden;
   }
   
   /* Blob shapes for decorative elements */
@@ -110,5 +174,26 @@
   
   .btn-playful:active {
     @apply transform scale-95;
+  }
+
+  /* Loading skeleton styles */
+  .skeleton {
+    @apply animate-pulse bg-neutral-dark rounded;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 rounded-full;
+  }
+
+  .skeleton-title {
+    @apply skeleton h-6 rounded-full;
+  }
+
+  .skeleton-image {
+    @apply skeleton rounded-xl aspect-[4/3];
+  }
+
+  .skeleton-avatar {
+    @apply skeleton w-12 h-12 rounded-full;
   }
 }

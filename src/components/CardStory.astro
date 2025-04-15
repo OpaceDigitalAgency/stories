@@ -5,11 +5,13 @@ import type { CardStoryProps } from '../types/components';
 
 const { story, className = '' } = Astro.props as CardStoryProps;
 
+// Handle both publishedAt and publishDate for compatibility
+const publishDate = story.publishedAt || story.publishDate || new Date();
 const formattedDate = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'long',
   day: 'numeric'
-}).format(new Date(story.publishedAt));
+}).format(new Date(publishDate));
 ---
 
 <article class={`card group h-full flex flex-col ${className}`}>

@@ -200,6 +200,18 @@ export const fetchFromStrapi = async (endpoint: string, params: StrapiParams = {
         }
       }
       
+      // Check if endpoint is for a specific story (stories/1, stories/2, etc.)
+      if (endpoint.startsWith('stories/')) {
+        const storyId = parseInt(endpoint.split('/')[1]);
+        const story = mockStories.data.find(story => story.id === storyId);
+        if (story) {
+          return { data: story };
+        } else {
+          console.warn(`No mock data available for endpoint: ${endpoint}`);
+          return { data: null };
+        }
+      }
+      
       switch (endpoint) {
         case 'authors':
           return mockAuthors;
@@ -289,6 +301,18 @@ export const fetchFromStrapi = async (endpoint: string, params: StrapiParams = {
       const author = mockAuthors.data.find(author => author.id === authorId);
       if (author) {
         return { data: author };
+      } else {
+        console.warn(`No mock data available for endpoint: ${endpoint}`);
+        return { data: null };
+      }
+    }
+    
+    // Check if endpoint is for a specific story (stories/1, stories/2, etc.)
+    if (endpoint.startsWith('stories/')) {
+      const storyId = parseInt(endpoint.split('/')[1]);
+      const story = mockStories.data.find(story => story.id === storyId);
+      if (story) {
+        return { data: story };
       } else {
         console.warn(`No mock data available for endpoint: ${endpoint}`);
         return { data: null };

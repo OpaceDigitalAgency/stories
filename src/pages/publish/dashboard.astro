@@ -1,0 +1,278 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import '../../styles/base.css';
+
+// Mock data for user's stories
+const userStories = [
+  {
+    id: 1,
+    title: "The Magic Library",
+    status: "published",
+    publishDate: new Date('2025-04-10'),
+    lastEdited: new Date('2025-04-10'),
+    views: 245,
+    likes: 32,
+    comments: 8,
+    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66"
+  },
+  {
+    id: 2,
+    title: "The Brave Little Turtle",
+    status: "draft",
+    publishDate: null,
+    lastEdited: new Date('2025-04-12'),
+    views: 0,
+    likes: 0,
+    comments: 0,
+    coverImage: "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f"
+  },
+  {
+    id: 3,
+    title: "Space Explorers: Journey to the Stars",
+    status: "review",
+    publishDate: null,
+    lastEdited: new Date('2025-04-14'),
+    views: 0,
+    likes: 0,
+    comments: 0,
+    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa"
+  }
+];
+
+// User stats
+const userStats = {
+  totalStories: 3,
+  publishedStories: 1,
+  totalViews: 245,
+  totalLikes: 32,
+  totalComments: 8,
+  followers: 15
+};
+
+// Format date
+function formatDate(date) {
+  if (!date) return 'N/A';
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date);
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Author Dashboard | Stories From The Web</title>
+    <meta name="description" content="Manage your stories, track performance, and create new content." />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow py-8">
+      <div class="container mx-auto px-4">
+        <div class="max-w-6xl mx-auto">
+          <!-- Dashboard Header -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <div>
+              <h1 class="text-3xl font-display font-bold text-gray-800 mb-2">Author Dashboard</h1>
+              <p class="text-gray-600">Manage your stories, track performance, and create new content.</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+              <a href="/publish/create" class="btn btn-primary px-4 py-2 rounded-md">
+                <span class="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Create New Story
+                </span>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+              <h3 class="text-sm font-medium text-gray-500 mb-1">Published Stories</h3>
+              <p class="text-3xl font-bold text-gray-800">{userStats.publishedStories}</p>
+              <div class="mt-2 flex items-center text-sm text-gray-600">
+                <span>{userStats.totalStories} total stories</span>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+              <h3 class="text-sm font-medium text-gray-500 mb-1">Total Views</h3>
+              <p class="text-3xl font-bold text-gray-800">{userStats.totalViews}</p>
+              <div class="mt-2 flex items-center text-sm text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1 text-green-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                </svg>
+                <span>+24 this week</span>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+              <h3 class="text-sm font-medium text-gray-500 mb-1">Engagement</h3>
+              <p class="text-3xl font-bold text-gray-800">{userStats.totalLikes}</p>
+              <div class="mt-2 flex items-center text-sm text-gray-600">
+                <span>{userStats.totalComments} comments • {userStats.followers} followers</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Stories Table -->
+          <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-xl font-display font-bold text-gray-800">Your Stories</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Story</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Edited</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Views</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  {userStories.map(story => (
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div class="h-10 w-10 flex-shrink-0">
+                            <img class="h-10 w-10 rounded-md object-cover" src={story.coverImage} alt={story.title} />
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">{story.title}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        {story.status === 'published' && (
+                          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Published
+                          </span>
+                        )}
+                        {story.status === 'draft' && (
+                          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Draft
+                          </span>
+                        )}
+                        {story.status === 'review' && (
+                          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            In Review
+                          </span>
+                        )}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(story.publishDate)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(story.lastEdited)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {story.views}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex space-x-2">
+                          {story.status === 'published' && (
+                            <a href={`/stories/${story.id}`} class="text-secondary hover:text-secondary/80">
+                              View
+                            </a>
+                          )}
+                          <a href={`/publish/edit/${story.id}`} class="text-primary hover:text-primary/80">
+                            Edit
+                          </a>
+                          <button class="text-gray-500 hover:text-gray-700">
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Profile Section -->
+          <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-xl font-display font-bold text-gray-800">Author Profile</h2>
+            </div>
+            
+            <div class="p-6">
+              <div class="flex flex-col md:flex-row md:items-start gap-6">
+                <div class="md:w-1/4">
+                  <div class="bg-gray-100 rounded-lg p-6 text-center">
+                    <div class="w-24 h-24 rounded-full bg-gray-300 mx-auto mb-4 overflow-hidden">
+                      <img src="https://i.pravatar.cc/150?img=3" alt="Author avatar" class="w-full h-full object-cover" />
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-800 mb-1">Sarah Williams</h3>
+                    <p class="text-sm text-gray-500 mb-4">Author since April 2025</p>
+                    <button class="w-full btn bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50">
+                      Edit Profile
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="md:w-3/4">
+                  <div class="space-y-6">
+                    <div>
+                      <h3 class="text-lg font-medium text-gray-800 mb-2">Bio</h3>
+                      <p class="text-gray-600">
+                        Sarah writes heartwarming stories about space exploration and adventure. Her tales inspire children to dream big and explore the wonders of the universe.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 class="text-lg font-medium text-gray-800 mb-2">Favorite Genres</h3>
+                      <div class="flex flex-wrap gap-2">
+                        <TagBadge tag="Science Fiction" />
+                        <TagBadge tag="Adventure" />
+                        <TagBadge tag="Space" />
+                        <TagBadge tag="Fantasy" />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 class="text-lg font-medium text-gray-800 mb-2">Social Links</h3>
+                      <div class="flex space-x-4">
+                        <a href="#" class="text-gray-500 hover:text-primary">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                            <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z" />
+                          </svg>
+                        </a>
+                        <a href="#" class="text-gray-500 hover:text-primary">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+                          </svg>
+                        </a>
+                        <a href="#" class="text-gray-500 hover:text-primary">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                            <path d="M21.721 12.752a9.711 9.711 0 00-.945-5.003 12.754 12.754 0 01-4.339 2.708 18.991 18.991 0 01-.214 4.772 17.165 17.165 0 005.498-2.477zM14.634 15.55a17.324 17.324 0 00.332-4.647c-.952.227-1.945.347-2.966.347-1.021 0-2.014-.12-2.966-.347a17.515 17.515 0 00.332 4.647 17.385 17.385 0 005.268 0zM9.772 17.119a18.963 18.963 0 004.456 0A17.182 17.182 0 0112 21.724a17.18 17.18 0 01-2.228-4.605zM7.777 15.23a18.87 18.87 0 01-.214-4.774 12.753 12.753 0 01-4.34-2.708 9.711 9.711 0 00-.944 5.004 17.165 17.165 0 005.498 2.477zM21.356 14.752a9.765 9.765 0 01-7.478 6.817 18.64 18.64 0 001.988-4.718 18.627 18.627 0 005.49-2.098zM2.644 14.752c1.682.971 3.53 1.688 5.49 2.099a18.64 18.64 0 001.988 4.718 9.765 9.765 0 01-7.478-6.816zM13.878 2.43a9.755 9.755 0 016.116 3.986 11.267 11.267 0 01-3.746 2.504 18.63 18.63 0 00-2.37-6.49zM12 2.276a17.152 17.152 0 012.805 7.121c-.897.23-1.837.353-2.805.353-.968 0-1.908-.122-2.805-.353A17.151 17.151 0 0112 2.276zM10.122 2.43a18.629 18.629 0 00-2.37 6.49 11.266 11.266 0 01-3.746-2.504 9.754 9.754 0 016.116-3.985z" />
+                          </svg>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

@@ -1,0 +1,205 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import '../../styles/base.css';
+
+// Available genres/tags
+const availableTags = [
+  "Adventure", "Fantasy", "Animals", "Friendship", "Family", 
+  "School", "Magic", "Science Fiction", "Mystery", "Humor"
+];
+
+// Age groups
+const ageGroups = [
+  { id: "0-3", label: "0-3 years (Toddlers)" },
+  { id: "4-6", label: "4-6 years (Early Readers)" },
+  { id: "7-9", label: "7-9 years (Chapter Books)" },
+  { id: "10-12", label: "10-12 years (Middle Grade)" },
+  { id: "13+", label: "13+ years (Young Teen)" }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Create Your Story | Stories From The Web</title>
+    <meta name="description" content="Use our story creation wizard to write, format, and publish your children's story." />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow py-8">
+      <div class="container mx-auto px-4">
+        <div class="max-w-5xl mx-auto">
+          <!-- Wizard Header -->
+          <div class="mb-8">
+            <h1 class="text-3xl font-display font-bold text-gray-800 mb-4">Create Your Story</h1>
+            <p class="text-gray-600">Follow the steps below to create and publish your story. You can save your progress at any time and come back later.</p>
+          </div>
+          
+          <!-- Progress Tracker -->
+          <div class="mb-8">
+            <div class="flex items-center justify-between">
+              <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div class="bg-primary h-2.5 rounded-full" style="width: 20%"></div>
+              </div>
+            </div>
+            <div class="flex justify-between mt-2 text-sm text-gray-600">
+              <span class="font-medium text-primary">Step 1: Basic Info</span>
+              <span>Step 2: Write</span>
+              <span>Step 3: Details</span>
+              <span>Step 4: Preview</span>
+              <span>Step 5: Publish</span>
+            </div>
+          </div>
+          
+          <!-- Wizard Content -->
+          <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Step 1: Basic Info (visible) -->
+            <div id="step-1" class="p-6 md:p-8">
+              <h2 class="text-2xl font-display font-bold text-gray-800 mb-6">Basic Information</h2>
+              
+              <form class="space-y-6">
+                <!-- Title -->
+                <div>
+                  <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Story Title <span class="text-red-500">*</span></label>
+                  <input 
+                    type="text" 
+                    id="title" 
+                    name="title" 
+                    required 
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Enter a catchy title for your story"
+                  />
+                </div>
+                
+                <!-- Short Description -->
+                <div>
+                  <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Short Description <span class="text-red-500">*</span></label>
+                  <textarea 
+                    id="description" 
+                    name="description" 
+                    rows="3" 
+                    required 
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Write a brief description of your story (100-150 characters)"
+                  ></textarea>
+                  <p class="mt-1 text-sm text-gray-500">This will appear in search results and story cards.</p>
+                </div>
+                
+                <!-- Cover Image -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
+                  <div class="flex items-center justify-center w-full">
+                    <label class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                        <p class="text-xs text-gray-500">PNG, JPG or GIF (MAX. 2MB)</p>
+                      </div>
+                      <input id="cover-image" type="file" class="hidden" accept="image/*" />
+                    </label>
+                  </div>
+                  <p class="mt-1 text-sm text-gray-500">A good cover image helps attract readers to your story.</p>
+                </div>
+                
+                <!-- Age Group -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Age Group <span class="text-red-500">*</span></label>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {ageGroups.map(age => (
+                      <label class="relative flex items-center p-3 rounded-lg border border-gray-300 cursor-pointer hover:border-primary">
+                        <input type="radio" name="age-group" value={age.id} class="h-4 w-4 text-primary focus:ring-primary border-gray-300" />
+                        <span class="ml-3 text-sm font-medium text-gray-700">{age.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between pt-4">
+                  <button type="button" class="btn bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50">
+                    Save Draft
+                  </button>
+                  <button type="button" id="next-to-step-2" class="btn btn-primary px-6 py-2 rounded-md">
+                    Next: Write Your Story
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          
+          <!-- Author Dashboard Preview -->
+          <div class="mt-12 bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-6 md:p-8">
+              <h2 class="text-2xl font-display font-bold text-gray-800 mb-6">Author Dashboard</h2>
+              <p class="text-gray-600 mb-6">After publishing your story, you'll be able to manage it from your author dashboard.</p>
+              
+              <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                  <h3 class="font-medium text-gray-700">Your Stories</h3>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg mb-4">
+                    <div>
+                      <h4 class="font-medium text-gray-800">The Magic Library</h4>
+                      <div class="flex items-center text-sm text-gray-500 mt-1">
+                        <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full mr-2">Published</span>
+                        <span>Published on April 10, 2025</span>
+                      </div>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button class="p-2 text-gray-500 hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </button>
+                      <button class="p-2 text-gray-500 hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div>
+                      <h4 class="font-medium text-gray-800">The Brave Little Turtle</h4>
+                      <div class="flex items-center text-sm text-gray-500 mt-1">
+                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full mr-2">Draft</span>
+                        <span>Last edited on April 12, 2025</span>
+                      </div>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button class="p-2 text-gray-500 hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // This would contain the wizard navigation logic in a real implementation
+        console.log('Story creation wizard loaded');
+      });
+    </script>
+  </body>
+</html>

@@ -3,79 +3,149 @@ import NavHeader from '../components/NavHeader.astro';
 import Footer from '../components/Footer.astro';
 import CardStory from '../components/CardStory.astro';
 import CardAuthor from '../components/CardAuthor.astro';
+import StoryCarousel from '../components/StoryCarousel.astro';
+import SponsoredCarousel from '../components/SponsoredCarousel.astro';
+import AIRecommendationBox from '../components/AIRecommendationBox.astro';
+import EducatorSection from '../components/EducatorSection.astro';
+import SignUpPrompts from '../components/SignUpPrompts.astro';
+import { fetchFromStrapi } from '../lib/api';
 import '../styles/base.css';
 
-// Mock data for featured stories
-const featuredStories = [
-  {
-    title: "The Adventure of the Curious Cat",
-    excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
-    coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+// Initialize empty arrays for data
+let featuredStories = [];
+let mostLovedStories = [];
+let latestSelfPublishedStories = [];
+let aiEnhancedStories = [];
+let featuredAuthors = [];
+
+try {
+  // Fetch featured stories
+  const featuredStoriesResponse = await fetchFromStrapi('stories', {
+    filters: {
+      featured: true
+    },
+    populate: '*',
+    sort: 'publishedAt:desc',
+    pagination: { limit: 3 }
+  });
+
+  featuredStories = featuredStoriesResponse.data?.map(item => ({
+    title: item.attributes?.title || '',
+    excerpt: item.attributes?.excerpt || '',
+    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
     author: {
+      name: item.attributes?.author?.data?.attributes?.name || '',
+      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes?.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes?.averageRating || 0,
+    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
+    slug: item.attributes?.slug || '',
+    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  })) || [];
+
+  // Fetch featured authors
+  const featuredAuthorsResponse = await fetchFromStrapi('authors', {
+    filters: {
+      featured: true
+    },
+    populate: '*',
+    pagination: { limit: 2 }
+  });
+
+  featuredAuthors = featuredAuthorsResponse.data?.map(item => ({
+    name: item.attributes?.name || '',
+    avatar: item.attributes?.avatar?.data?.attributes?.url || '',
+    bio: item.attributes?.bio || '',
+    slug: item.attributes?.slug || '',
+    storyCount: item.attributes?.storyCount || 0,
+    socialLinks: {
+      twitter: item.attributes?.twitter || '',
+      instagram: item.attributes?.instagram || '',
+      website: item.attributes?.website || ''
+    }
+  })) || [];
+} catch (error) {
+  console.error('Error fetching data from Strapi:', error);
+}
+
+// If no data from Strapi, use mock data
+if (featuredStories.length === 0) {
+  // Mock data for featured stories
+  featuredStories = [
+    {
+      title: "The Adventure of the Curious Cat",
+      excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
+      coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+      author: {
+        name: "Emma Thompson",
+        avatar: "https://i.pravatar.cc/150?img=1",
+        slug: "emma-thompson"
+      },
+      rating: 4.7,
+      tags: ["Adventure", "Animals", "Children"],
+      slug: "adventure-curious-cat",
+      publishDate: new Date('2025-03-15')
+    },
+    {
+      title: "The Magic Library",
+      excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
+      coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+      author: {
+        name: "Michael Johnson",
+        avatar: "https://i.pravatar.cc/150?img=2",
+        slug: "michael-johnson"
+      },
+      rating: 4.9,
+      tags: ["Fantasy", "Magic", "Books"],
+      slug: "magic-library",
+      publishDate: new Date('2025-04-02')
+    },
+    {
+      title: "Space Explorers: Journey to the Stars",
+      excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
+      coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
+      author: {
+        name: "Sarah Williams",
+        avatar: "https://i.pravatar.cc/150?img=3",
+        slug: "sarah-williams"
+      },
+      rating: 4.5,
+      tags: ["Science Fiction", "Space", "Adventure"],
+      slug: "space-explorers-journey",
+      publishDate: new Date('2025-03-28')
+    }
+  ];
+}
+
+// If no data from Strapi, use mock data
+if (featuredAuthors.length === 0) {
+  // Mock data for featured authors
+  featuredAuthors = [
+    {
       name: "Emma Thompson",
       avatar: "https://i.pravatar.cc/150?img=1",
-      slug: "emma-thompson"
+      bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
+      slug: "emma-thompson",
+      storyCount: 12,
+      socialLinks: {
+        twitter: "https://twitter.com/emmathompson",
+        instagram: "https://instagram.com/emmathompson"
+      }
     },
-    rating: 4.7,
-    tags: ["Adventure", "Animals", "Children"],
-    slug: "adventure-curious-cat",
-    publishDate: new Date('2025-03-15')
-  },
-  {
-    title: "The Magic Library",
-    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
-    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-    author: {
+    {
       name: "Michael Johnson",
       avatar: "https://i.pravatar.cc/150?img=2",
-      slug: "michael-johnson"
-    },
-    rating: 4.9,
-    tags: ["Fantasy", "Magic", "Books"],
-    slug: "magic-library",
-    publishDate: new Date('2025-04-02')
-  },
-  {
-    title: "Space Explorers: Journey to the Stars",
-    excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
-    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
-    author: {
-      name: "Sarah Williams",
-      avatar: "https://i.pravatar.cc/150?img=3",
-      slug: "sarah-williams"
-    },
-    rating: 4.5,
-    tags: ["Science Fiction", "Space", "Adventure"],
-    slug: "space-explorers-journey",
-    publishDate: new Date('2025-03-28')
-  }
-];
-
-// Mock data for featured authors
-const featuredAuthors = [
-  {
-    name: "Emma Thompson",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
-    slug: "emma-thompson",
-    storyCount: 12,
-    socialLinks: {
-      twitter: "https://twitter.com/emmathompson",
-      instagram: "https://instagram.com/emmathompson"
+      bio: "Michael is a former librarian who creates magical worlds where books and imagination come to life. His stories encourage a love of reading in children of all ages.",
+      slug: "michael-johnson",
+      storyCount: 8,
+      socialLinks: {
+        twitter: "https://twitter.com/michaeljohnson",
+        website: "https://michaeljohnsonstories.com"
+      }
     }
-  },
-  {
-    name: "Michael Johnson",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    bio: "Michael is a former librarian who creates magical worlds where books and imagination come to life. His stories encourage a love of reading in children of all ages.",
-    slug: "michael-johnson",
-    storyCount: 8,
-    socialLinks: {
-      twitter: "https://twitter.com/michaeljohnson",
-      website: "https://michaeljohnsonstories.com"
-    }
-  }
-];
+  ];
+}
 ---
 
 <html lang="en">

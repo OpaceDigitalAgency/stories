@@ -28,6 +28,19 @@ const stories = storiesResponse.data.map(item => ({
   tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || []
 }));
 
+// Fetch featured blocks from Strapi
+const featuredBlocksResponse = await fetchFromStrapi('featured-blocks', {
+  populate: '*'
+}) as StrapiResponse<any>;
+
+const featuredBlocks = featuredBlocksResponse.data.map(block => ({
+  type: block.attributes.type,
+  title: block.attributes.title,
+  description: block.attributes.description,
+  image: block.attributes.image?.data?.attributes?.url || '',
+  link: block.attributes.link
+}));
+
 // Filter options
 const ageGroups = ['0-2 years', '3-5 years', '6-8 years', '9-12 years'];
 const lengths = ['Short (< 5 min)', 'Medium (5-15 min)', 'Long (> 15 min)'];
@@ -194,35 +207,25 @@ const popularTags = [...new Set(stories.flatMap(story => story.tags))].slice(0, 
                   </select>
                 </div>
               </div>
-              <!-- Premium/Sponsored Blocks -->
-              <div class="mb-10">
-                <h3 class="text-xl font-display font-bold text-gray-800 mb-6">Featured Content</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <PremiumBlock
-                    type="sponsored"
-                    title="Discover the Magic of Reading"
-                    description="Explore our collection of premium stories curated by expert educators and children's literature specialists."
-                    image="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8"
-                    link="/stories?type=premium"
-                  />
-                  <PremiumBlock
-                    type="editor-pick"
-                    title="Editor's Choice: April 2025"
-                    description="Our editors have selected the best new stories for young readers this month. Don't miss these amazing tales!"
-                    image="https://images.unsplash.com/photo-1512820790803-83ca734da794"
-                    link="/stories?editor-picks=true"
-                  />
-                  <PremiumBlock
-                    type="sponsored"
-                    title="Spring Reading Challenge"
-                    description="Join our Spring Reading Challenge and win exciting prizes! Read 10 stories by May 31st to qualify."
-                    image="https://images.unsplash.com/photo-1551029506-0807df4e2031"
-                    link="/challenges/spring-2025"
-                  />
-                </div>
-              </div>
               
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Premium/Sponsored Blocks -->
+              {featuredBlocks.length > 0 && (
+                <div class="mb-10">
+                  <h3 class="text-xl font-display font-bold text-gray-800 mb-6">Featured Content</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {featuredBlocks.map(block => (
+                      <PremiumBlock
+                        type={block.type}
+                        title={block.title}
+                        description={block.description}
+                        image={block.image}
+                        link={block.link}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stories.map(story => (
                   <CardStory {...story} />

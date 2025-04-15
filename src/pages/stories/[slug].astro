@@ -43,13 +43,13 @@ const story = {
     bio: storyResponse.data.attributes.author?.data?.attributes?.bio || '',
     slug: storyResponse.data.attributes.author?.data?.attributes?.slug || ''
   },
-  rating: 4.7, // TODO: Implement rating system
-  reviewCount: 42, // TODO: Implement review system
+  rating: storyResponse.data.attributes.averageRating || 0,
+  reviewCount: storyResponse.data.attributes.reviewCount || 0,
   tags: storyResponse.data.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  readingTime: '8 min', // TODO: Calculate reading time
-  sponsored: false,
-  ageRange: storyResponse.data.attributes.ageRange || '',
-  needsModeration: false,
+  readingTime: storyResponse.data.attributes.estimatedReadingTime || 'unknown',
+  sponsored: storyResponse.data.attributes.isSponsored || false,
+  ageRange: storyResponse.data.attributes.ageGroup || '',
+  needsModeration: storyResponse.data.attributes.needsModeration || false,
   publishDate: new Date(storyResponse.data.attributes.publishedAt)
 };
 
@@ -60,7 +60,7 @@ const relatedStoriesResponse = await fetchFromStrapi('stories', {
     tags: { $contains: story.tags[0] }
   },
   populate: '*',
-  pagination: { limit: 2 }
+  pagination: { limit: 3 }
 }) as StrapiResponse<Story>;
 
 const relatedStories = relatedStoriesResponse.data.map(item => ({
@@ -72,104 +72,11 @@ const relatedStories = relatedStoriesResponse.data.map(item => ({
     avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
     slug: item.attributes.author?.data?.attributes?.slug || ''
   },
-  rating: 4.5, // TODO: Implement rating system
+  rating: item.attributes.averageRating || 0,
   tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
   slug: item.attributes.slug,
   publishDate: new Date(item.attributes.publishedAt)
 }));
-            <p>Once upon a time, in a cozy little house at the end of Maple Street, there lived a small gray cat named Whiskers. Whiskers was not like other cats in the neighborhood. While they were content to nap in sunny spots and chase the occasional mouse, Whiskers was curious about the world beyond the garden fence.</p>
-            
-            <p>"There must be so many exciting things to discover out there," Whiskers thought as she peered through the fence slats.</p>
-            
-            <p>One bright morning, when her family had left for the day, Whiskers noticed that the garden gate had been left slightly ajar. This was her chance! With a flick of her tail and a determined gleam in her green eyes, she squeezed through the gap and stepped into the outside world.</p>
-            
-            <p>The first thing Whiskers discovered was the park across the street. It was filled with tall trees, chirping birds, and interesting smells. As she explored under a bush, she found something shiny half-buried in the dirt.</p>
-            
-            <p>"What could this be?" she wondered, pawing at the object.</p>
-            
-            <p>It was a small silver key with a blue ribbon tied to it. Whiskers decided this was a special treasure and carefully picked it up with her teeth.</p>
-            
-            <p>Just then, she heard a sad whimpering sound. Following the noise, she found a small puppy who had gotten his collar tangled in a bramble bush.</p>
-            
-            <p>"Don't worry," Whiskers meowed, though she knew the puppy couldn't understand her. "I'll help you."</p>
-            
-            <p>Using her sharp claws and nimble paws, Whiskers carefully freed the puppy from the thorny branches. The puppy was so grateful that he gave Whiskers a gentle lick on her head.</p>
-            
-            <p>"My name is Max," the puppy woofed. "Thank you for helping me! I got lost while chasing a butterfly."</p>
-            
-            <p>Whiskers was surprised that she could understand Max, but in this adventure, it seemed anything was possible. "I'm Whiskers," she replied. "I'm exploring the world today. Would you like to join me?"</p>
-            
-            <p>Max wagged his tail excitedly. "Yes, please! But first, could you help me find my way home? My family must be worried."</p>
-            
-            <p>Whiskers agreed, and together they set off to find Max's home. Along the way, they met a wise old owl who told them about the magic of friendship, helped a squirrel family gather nuts for the winter, and even found a hidden pond where fish with rainbow scales swam in crystal clear water.</p>
-            
-            <p>When they finally reached Max's house, his family was overjoyed to see him. They thanked Whiskers with a bowl of the most delicious cream she had ever tasted.</p>
-            
-            <p>As the sun began to set, Whiskers knew it was time to return to her own home. Max walked with her part of the way.</p>
-            
-            <p>"This was the best adventure," Whiskers purred. "I discovered that the world is full of wonderful things, but the most wonderful discovery of all is friendship."</p>
-            
-            <p>Max nodded in agreement. "Will you come visit me tomorrow? We could have another adventure!"</p>
-            
-            <p>Whiskers promised she would, and with the silver key still hanging from her collar, she made her way back to the garden gate. Her family was just arriving home, and they were relieved to see her waiting for them.</p>
-            
-            <p>That night, as Whiskers curled up in her favorite spot, she dreamed of all the adventures still waiting to be discovered. And she knew that with friends like Max by her side, each day would bring new treasures more precious than any silver key.</p>
-            
-            <p>The End</p>
-          `,
-          coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
-          author: {
-            name: "Emma Thompson",
-            avatar: "https://i.pravatar.cc/150?img=1",
-            bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness.",
-            slug: "emma-thompson"
-          },
-          rating: 4.7,
-          reviewCount: 42,
-          tags: ["Adventure", "Animals", "Children", "Friendship"],
-          readingTime: "8 min",
-          sponsored: false,
-          ageRange: "4-8 years",
-          needsModeration: true,
-          publishDate: new Date('2025-03-15')
-        },
-        relatedStories: [
-          {
-            title: "Ocean Friends: The Dolphin's Secret",
-            excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
-            coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
-            author: {
-              name: "Emma Thompson",
-              avatar: "https://i.pravatar.cc/150?img=1",
-              slug: "emma-thompson"
-            },
-            rating: 4.4,
-            tags: ["Ocean", "Animals", "Adventure"],
-            slug: "ocean-friends-dolphin-secret",
-            publishDate: new Date('2025-03-22')
-          },
-          {
-            title: "The Enchanted Forest",
-            excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
-            coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
-            author: {
-              name: "David Brown",
-              avatar: "https://i.pravatar.cc/150?img=4",
-              slug: "david-brown"
-            },
-            rating: 4.6,
-            tags: ["Fantasy", "Nature", "Adventure"],
-            slug: "enchanted-forest",
-            publishDate: new Date('2025-03-10')
-          }
-        ]
-      }
-    },
-    // Additional static paths would be defined here for other stories
-  ];
-}
-
-const { story, relatedStories } = Astro.props;
 
 // Format the publish date
 const formattedDate = new Intl.DateTimeFormat('en-US', {
@@ -297,7 +204,7 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
             {story.needsModeration && (
               <ModerationCTA
                 contentType="story"
-                contentId={Astro.params.slug}
+                contentId={story.id}
                 reason="Potentially inappropriate content for children"
               />
             )}
@@ -380,7 +287,7 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
         <div class="container mx-auto px-4">
           <ReviewSection
             itemType="story"
-            itemId={Astro.params.slug}
+            itemId={story.id}
             itemName={story.title}
           />
         </div>

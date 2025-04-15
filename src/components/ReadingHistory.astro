@@ -1,0 +1,178 @@
+---
+// Reading History Component
+// This component displays a user's reading history and saved preferences
+
+interface Props {
+  userId?: string;
+  limit?: number;
+  showPreferences?: boolean;
+}
+
+const { 
+  userId = "current-user", 
+  limit = 5,
+  showPreferences = true
+} = Astro.props;
+
+// Mock data for reading history
+const readingHistory = [
+  {
+    id: 1,
+    title: "The Magic Library",
+    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+    author: "Michael Johnson",
+    readDate: new Date('2025-04-12'),
+    progress: 100, // percentage
+    timeSpent: 15 // minutes
+  },
+  {
+    id: 2,
+    title: "Space Explorers: Journey to the Stars",
+    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
+    author: "Sarah Williams",
+    readDate: new Date('2025-04-10'),
+    progress: 100,
+    timeSpent: 22
+  },
+  {
+    id: 3,
+    title: "The Enchanted Forest",
+    coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
+    author: "David Brown",
+    readDate: new Date('2025-04-08'),
+    progress: 75,
+    timeSpent: 12
+  },
+  {
+    id: 4,
+    title: "Ocean Friends: The Dolphin's Secret",
+    coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
+    author: "Emma Thompson",
+    readDate: new Date('2025-04-05'),
+    progress: 100,
+    timeSpent: 18
+  },
+  {
+    id: 5,
+    title: "The Little Robot's Big Day",
+    coverImage: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    author: "Jennifer Lee",
+    readDate: new Date('2025-04-03'),
+    progress: 50,
+    timeSpent: 8
+  }
+];
+
+// Mock data for user preferences
+const userPreferences = {
+  favoriteGenres: ["Adventure", "Fantasy", "Science Fiction"],
+  ageRange: "7-9 years",
+  readingLevel: "Intermediate",
+  themes: ["Space", "Animals", "Magic"],
+  avoidTopics: ["Scary", "Violence"]
+};
+
+// Format date
+function formatDate(date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric'
+  }).format(date);
+}
+---
+
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+    <h2 class="text-xl font-display font-bold text-gray-800">Your Reading History</h2>
+    <a href="/profile/reading-history" class="text-sm text-secondary hover:text-secondary/80">View All</a>
+  </div>
+  
+  <div class="p-6">
+    <!-- Reading History List -->
+    <div class="space-y-4 mb-6">
+      {readingHistory.slice(0, limit).map(item => (
+        <div class="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+          <div class="w-12 h-16 flex-shrink-0 rounded-md overflow-hidden">
+            <img src={item.coverImage} alt={item.title} class="w-full h-full object-cover" />
+          </div>
+          
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-medium text-gray-800 truncate">{item.title}</h3>
+            <p class="text-xs text-gray-500">by {item.author}</p>
+            
+            <div class="mt-1 flex items-center">
+              <div class="w-full bg-gray-200 rounded-full h-1.5 mr-2">
+                <div class="bg-primary h-1.5 rounded-full" style={`width: ${item.progress}%`}></div>
+              </div>
+              <span class="text-xs text-gray-500 whitespace-nowrap">{item.progress}%</span>
+            </div>
+          </div>
+          
+          <div class="text-right text-xs text-gray-500 whitespace-nowrap">
+            <div>{formatDate(item.readDate)}</div>
+            <div>{item.timeSpent} min</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {showPreferences && (
+      <div>
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Your Reading Preferences</h3>
+        
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-1">Favorite Genres</h4>
+            <div class="flex flex-wrap gap-2">
+              {userPreferences.favoriteGenres.map(genre => (
+                <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  {genre}
+                </span>
+              ))}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-1">Age Range</h4>
+              <p class="text-sm text-gray-600">{userPreferences.ageRange}</p>
+            </div>
+            
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-1">Reading Level</h4>
+              <p class="text-sm text-gray-600">{userPreferences.readingLevel}</p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-1">Favorite Themes</h4>
+            <div class="flex flex-wrap gap-2">
+              {userPreferences.themes.map(theme => (
+                <span class="inline-flex items-center rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">
+                  {theme}
+                </span>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-medium text-gray-700 mb-1">Topics to Avoid</h4>
+            <div class="flex flex-wrap gap-2">
+              {userPreferences.avoidTopics.map(topic => (
+                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+          <button class="text-sm text-secondary hover:text-secondary/80 font-medium">
+            Edit Preferences
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+</div>

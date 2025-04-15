@@ -56,16 +56,11 @@
   
   /* Card styles */
   .card {
-    @apply relative rounded-2xl overflow-hidden transition-all duration-300;
+    @apply relative rounded-2xl overflow-hidden transition-all duration-300 bg-gradient-to-br from-white to-neutral-50;
   }
 
-  .card::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-white to-neutral-50/80 transition-all duration-300;
-  }
-
-  .card:hover::before {
-    @apply from-white/90 to-neutral-100/90;
+  .card:hover {
+    @apply bg-gradient-to-br from-white via-neutral-50 to-neutral-100;
   }
 
   /* Story card specific styles */
@@ -114,31 +109,31 @@
   }
 
   .section-stories::before {
-    @apply bg-gradient-to-br from-neutral-50 via-white to-neutral-50;
+    @apply bg-gradient-to-br from-neutral-50 via-white to-neutral-100;
   }
 
   .section-sponsored::before {
-    @apply bg-gradient-to-br from-purple-50 via-white to-purple-50/50;
+    @apply bg-gradient-to-br from-purple-50 via-white to-purple-100;
   }
 
   .section-authors::before {
-    @apply bg-gradient-to-br from-secondary/10 via-white to-primary/5;
+    @apply bg-gradient-to-br from-secondary-100 via-white to-primary-50;
   }
 
   .section-educator::before {
-    @apply bg-gradient-to-br from-accent/10 via-white to-secondary/5;
+    @apply bg-gradient-to-br from-accent-100 via-white to-secondary-50;
   }
 
   .section-signup::before {
-    @apply bg-gradient-to-br from-tertiary/10 via-white to-primary/5;
+    @apply bg-gradient-to-br from-tertiary-100 via-white to-primary-50;
   }
 
   .section-ai::before {
-    @apply bg-gradient-to-br from-purple-100/20 via-white to-purple-50/10;
+    @apply bg-gradient-to-br from-purple-100 via-white to-purple-50;
   }
 
   .section-newsletter::before {
-    @apply bg-gradient-to-br from-secondary/20 via-white to-secondary/5;
+    @apply bg-gradient-to-br from-secondary-100 via-white to-secondary-50;
   }
   
   /* Blob shapes for decorative elements */
@@ -197,22 +192,22 @@
   /* Loading skeleton styles */
   /* Loading skeleton styles with softer edges */
   .skeleton {
-    @apply animate-pulse bg-gradient-to-r from-neutral-200/60 to-neutral-100/60 rounded-2xl;
+    @apply animate-pulse bg-gradient-to-r from-neutral-200 to-neutral-100 rounded-2xl opacity-60;
   }
 
   .skeleton-text {
-    @apply h-4 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
+    @apply h-4 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
   }
 
   .skeleton-title {
-    @apply h-6 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
+    @apply h-6 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
   }
 
   .skeleton-image {
-    @apply rounded-2xl aspect-[4/3] bg-gradient-to-br from-neutral-200/60 to-neutral-100/60;
+    @apply rounded-2xl aspect-[4/3] bg-gradient-to-br from-neutral-200 to-neutral-100 opacity-60;
   }
 
   .skeleton-avatar {
-    @apply w-12 h-12 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
+    @apply w-12 h-12 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
   }
 }

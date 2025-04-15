@@ -170,6 +170,34 @@
     0%, 100% { transform: rotate(-3deg); }
     50% { transform: rotate(3deg); }
   }
+
+  /* Blob animations */
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
   
   /* Playful button interactions */
   .btn-playful {
@@ -189,25 +217,63 @@
     @apply transform scale-95;
   }
 
-  /* Loading skeleton styles */
-  /* Loading skeleton styles with softer edges */
+  /* Loading skeleton styles with shimmer effect */
   .skeleton {
-    @apply animate-pulse bg-gradient-to-r from-neutral-200 to-neutral-100 rounded-2xl opacity-60;
+    @apply relative overflow-hidden rounded-2xl;
+  }
+
+  .skeleton::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-neutral-100 via-neutral-200 to-neutral-100;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50;
+    animation: shimmer 2s infinite;
   }
 
   .skeleton-text {
-    @apply h-4 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
+    @apply h-4 rounded-full skeleton;
   }
 
   .skeleton-title {
-    @apply h-6 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
+    @apply h-6 rounded-full skeleton;
   }
 
   .skeleton-image {
-    @apply rounded-2xl aspect-[4/3] bg-gradient-to-br from-neutral-200 to-neutral-100 opacity-60;
+    @apply aspect-[4/3] rounded-2xl skeleton;
   }
 
   .skeleton-avatar {
-    @apply w-12 h-12 rounded-full bg-gradient-to-r from-neutral-200 to-neutral-100 opacity-60;
+    @apply w-12 h-12 rounded-full skeleton;
+  }
+
+  /* Shimmer animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Gradient animation */
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+    background-size: 200% 200%;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
 }

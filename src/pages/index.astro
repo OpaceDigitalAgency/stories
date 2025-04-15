@@ -170,7 +170,12 @@ try {
     <main class="flex-grow">
       <!-- Hero Section -->
       <section class="relative py-16 md:py-24 overflow-hidden">
-        <div class="container mx-auto px-4">
+        <!-- Decorative blobs -->
+        <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
+        <div class="blob-shape bg-secondary/30 w-96 h-96 -bottom-40 -right-20"></div>
+        <div class="blob-shape bg-accent/20 w-80 h-80 top-40 right-20"></div>
+        
+        <div class="container mx-auto px-4 relative z-10">
           <div class="flex flex-col lg:flex-row items-center">
             <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
               <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight text-text-primary">
@@ -203,13 +208,74 @@ try {
                 </a>
               </div>
             </div>
-            <!-- Hero image -->
+            <!-- Animated illustration -->
             <div class="lg:w-1/2 relative">
-              <img
-                src="/stories_from_the_web_transparent.png"
-                alt="Stories From The Web"
-                class="w-full h-auto object-contain rounded-xl"
-              />
+              <div class="relative w-full max-w-md mx-auto">
+                <!-- Colorful illustration for hero section -->
+                <div class="relative w-full h-full rounded-2xl shadow-playful overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-tertiary/10 p-6 float-animation">
+                  <!-- Colorful background elements -->
+                  <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
+                  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
+                  
+                  <!-- Illustrated elements -->
+                  <div class="relative z-10 flex items-center justify-center h-full">
+                    <!-- Book -->
+                    <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
+                      <!-- Book spine -->
+                      <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
+                      
+                      <!-- Book pages -->
+                      <div class="absolute left-6 top-0 right-0 bottom-0 bg-neutral-light p-4">
+                        <!-- Book content -->
+                        <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
+                        <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
+                        <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
+                        
+                        <!-- Book characters -->
+                        <div class="absolute bottom-4 right-4 w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+                          <div class="w-8 h-8 bg-white rounded-full relative">
+                            <!-- Simple smiley face -->
+                            <div class="absolute top-2 left-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                            <div class="absolute top-2 right-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                            <div class="absolute bottom-2 left-0 right-0 mx-auto w-4 h-1 bg-text-primary rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Floating elements -->
+                    <div class="absolute top-6 right-6 w-12 h-12 bg-tertiary rounded-full flex items-center justify-center pulse-animation">
+                      <div class="w-6 h-6 text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <div class="absolute bottom-8 left-8 w-14 h-14 bg-success rounded-full flex items-center justify-center float-animation" style="animation-delay: 0.5s;">
+                      <div class="w-8 h-8 text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Animated elements -->
+                <div class="absolute top-10 right-0 transform rotate-12 pulse-animation" style="animation-delay: 1s;">
+                  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFD166" stroke="#FFD166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                
+                <div class="absolute bottom-10 left-0 transform -rotate-6 float-animation" style="animation-delay: 0.5s; animation-duration: 5s;">
+                  <svg width="50" height="50" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" stroke="#FF5E78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -407,26 +473,10 @@ try {
         </div>
       </section>
       
-      <!-- AI Recommendation Box -->
-      <section class="py-12">
-        <div class="container mx-auto px-4">
-          <AIRecommendationBox
-            story={{
-              title: "Loading...",
-              slug: "#",
-              author: {
-                name: "Loading..."
-              }
-            }}
-            recommendationText="Our AI-powered recommendation system will suggest stories based on your reading preferences and history."
-          />
-        </div>
-      </section>
-      
       <!-- Educator Section -->
-      <section class="py-12 bg-neutral-50">
-        <div class="container mx-auto px-4">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 text-center">Resources for Teachers & Parents</h2>
+      <section class="py-16 relative overflow-hidden">
+        <div class="container mx-auto px-4 relative z-10">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
           <EducatorSection
             educator={{
               name: "For Parents",
@@ -440,15 +490,71 @@ try {
         </div>
       </section>
       
-      <!-- Join Our Community -->
-      <section class="py-12">
-        <div class="container mx-auto px-4">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 text-center">Join Our Community</h2>
+      <!-- Sign-Up Prompts -->
+      <section class="py-16 bg-neutral-dark relative overflow-hidden">
+        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
+        <div class="container mx-auto px-4 relative z-10">
+          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <SignUpPrompts type="author" />
             <SignUpPrompts type="reader" />
             <SignUpPrompts type="educator" />
           </div>
+        </div>
+      </section>
+      
+      <!-- AI Recommendation Box -->
+      <section class="py-16 relative overflow-hidden">
+        <div class="container mx-auto px-4 relative z-10">
+          <AIRecommendationBox
+            story={{
+              title: "Loading...",
+              slug: "#",
+              author: {
+                name: "Loading..."
+              }
+            }}
+            recommendationText="Our AI-powered recommendation system will suggest stories based on your reading preferences and history."
+          />
+        </div>
+      </section>
+      
+      <!-- Newsletter Section -->
+      <section class="py-16 bg-secondary/10 relative overflow-hidden">
+        <!-- Decorative blob -->
+        <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
+        <div class="container mx-auto px-4 max-w-4xl relative z-10">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
+            <p class="text-text-secondary text-lg">
+              Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
+            </p>
+          </div>
+          
+          <form class="max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="Your email address"
+                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
+              >
+                <span class="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                  Subscribe
+                </span>
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
+          </form>
         </div>
       </section>
     </main>

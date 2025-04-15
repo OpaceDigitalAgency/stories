@@ -1,0 +1,317 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import '../../styles/base.css';
+
+// Blog post categories
+const categories = [
+  "Storytime Events",
+  "Competitions",
+  "New Releases",
+  "AI Tools",
+  "Author Interviews",
+  "Teacher Insights",
+  "Reading Tips"
+];
+
+// Mock data for blog posts
+const blogPosts = [
+  {
+    title: "Upcoming Storytime Events for Summer 2025",
+    excerpt: "Join us for a series of exciting storytime events happening across the country this summer. Meet authors, participate in interactive readings, and enjoy fun activities for the whole family.",
+    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
+    category: "Storytime Events",
+    author: "Sarah Williams",
+    date: new Date('2025-04-05'),
+    slug: "storytime-events-summer-2025"
+  },
+  {
+    title: "Spring Writing Competition: Share Your Adventure",
+    excerpt: "Calling all young writers! Our Spring Writing Competition is now open for submissions. This year's theme is 'Adventure', and we're looking for stories that take readers on exciting journeys.",
+    image: "https://images.unsplash.com/photo-1455390582262-044cdead277a",
+    category: "Competitions",
+    author: "Michael Johnson",
+    date: new Date('2025-04-02'),
+    slug: "spring-writing-competition"
+  },
+  {
+    title: "New AI Story Generator Tool Released",
+    excerpt: "We're excited to announce the release of our new AI Story Generator tool. This innovative feature helps young writers overcome writer's block and develop creative storylines.",
+    image: "https://images.unsplash.com/photo-1677442135136-760c813a743d",
+    category: "AI Tools",
+    author: "Tech Team",
+    date: new Date('2025-03-28'),
+    slug: "new-ai-story-generator"
+  },
+  {
+    title: "Interview with Award-Winning Author Emma Thompson",
+    excerpt: "In this exclusive interview, we chat with Emma Thompson about her creative process, inspiration for her popular animal stories, and tips for aspiring young authors.",
+    image: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e",
+    category: "Author Interviews",
+    author: "Editorial Team",
+    date: new Date('2025-03-25'),
+    slug: "interview-emma-thompson"
+  },
+  {
+    title: "How Teachers Are Using Stories to Enhance Learning",
+    excerpt: "Discover how educators are incorporating storytelling into their curriculum to improve literacy, critical thinking, and emotional intelligence in the classroom.",
+    image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b",
+    category: "Teacher Insights",
+    author: "Education Team",
+    date: new Date('2025-03-20'),
+    slug: "teachers-using-stories"
+  },
+  {
+    title: "April's Featured New Releases for Young Readers",
+    excerpt: "Check out our curated selection of the best new children's books released this month, including fantasy adventures, educational stories, and heartwarming tales.",
+    image: "https://images.unsplash.com/photo-1512820790803-83ca734da794",
+    category: "New Releases",
+    author: "Book Review Team",
+    date: new Date('2025-03-15'),
+    slug: "april-new-releases"
+  }
+];
+
+// Featured post (first post)
+const featuredPost = blogPosts[0];
+// Regular posts (remaining posts)
+const regularPosts = blogPosts.slice(1);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Blog & News | Stories From The Web</title>
+    <meta name="description" content="Stay updated with the latest news, events, competitions, and author interviews from Stories From The Web." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/blog" />
+    <meta property="og:title" content="Blog & News | Stories From The Web" />
+    <meta property="og:description" content="Stay updated with the latest news, events, competitions, and author interviews from Stories From The Web." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-blog.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/blog" />
+    <meta property="twitter:title" content="Blog & News | Stories From The Web" />
+    <meta property="twitter:description" content="Stay updated with the latest news, events, competitions, and author interviews from Stories From The Web." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-blog.jpg" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-r from-primary/90 to-accent/90 text-white py-16 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
+            Blog & News
+          </h1>
+          <p class="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
+            Stay updated with the latest news, events, competitions, and author interviews.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="max-w-2xl mx-auto">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Search blog posts..." 
+                class="w-full px-4 py-3 pl-12 rounded-md border-none focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-800"
+              />
+              <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Categories Section -->
+      <section class="py-8 bg-white border-b">
+        <div class="container mx-auto px-4">
+          <div class="flex flex-wrap gap-2 justify-center">
+            <a href="/blog" class="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium">
+              All Posts
+            </a>
+            {categories.map(category => (
+              <a href={`/blog/category/${category.toLowerCase().replace(/\s+/g, '-')}`} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-medium transition-colors">
+                {category}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      <!-- Featured Post Section -->
+      <section class="py-12">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Featured Post</h2>
+          
+          <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="md:flex">
+              <div class="md:w-1/2">
+                <div class="h-64 md:h-full bg-gray-200">
+                  <img 
+                    src={featuredPost.image} 
+                    alt={featuredPost.title} 
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              
+              <div class="md:w-1/2 p-6 md:p-8">
+                <div class="flex items-center mb-4">
+                  <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                    {featuredPost.category}
+                  </span>
+                  <span class="text-gray-500 text-sm ml-4">
+                    {new Date(featuredPost.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                
+                <h3 class="text-2xl font-display font-bold text-text-primary mb-4">
+                  <a href={`/blog/${featuredPost.slug}`} class="hover:text-primary transition-colors">
+                    {featuredPost.title}
+                  </a>
+                </h3>
+                
+                <p class="text-text-secondary mb-6">
+                  {featuredPost.excerpt}
+                </p>
+                
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-600">By {featuredPost.author}</span>
+                  
+                  <a href={`/blog/${featuredPost.slug}`} class="text-primary hover:text-primary/80 font-medium flex items-center">
+                    Read More
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Latest Posts Section -->
+      <section class="py-12 bg-neutral-dark">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Latest Posts</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {regularPosts.map(post => (
+              <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <a href={`/blog/${post.slug}`} class="block">
+                  <div class="h-48 bg-gray-200">
+                    <img 
+                      src={post.image} 
+                      alt={post.title} 
+                      class="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  <div class="p-6">
+                    <div class="flex items-center mb-3">
+                      <span class="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                        {post.category}
+                      </span>
+                      <span class="text-gray-500 text-xs ml-3">
+                        {new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                    
+                    <h3 class="text-xl font-display font-bold text-text-primary mb-3 hover:text-primary transition-colors">
+                      {post.title}
+                    </h3>
+                    
+                    <p class="text-text-secondary text-sm mb-4 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+                    
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-gray-600">By {post.author}</span>
+                      
+                      <span class="text-primary hover:text-primary/80 text-sm font-medium flex items-center">
+                        Read More
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 ml-1">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            ))}
+          </div>
+          
+          <!-- Pagination -->
+          <div class="mt-12 flex justify-center">
+            <nav class="inline-flex rounded-md shadow">
+              <a href="#" class="py-2 px-4 bg-white border border-gray-300 rounded-l-md text-sm font-medium text-gray-500 hover:bg-gray-50">
+                Previous
+              </a>
+              <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-primary">
+                1
+              </a>
+              <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50">
+                2
+              </a>
+              <a href="#" class="py-2 px-4 bg-white border-t border-b border-gray-300 text-sm font-medium text-gray-500 hover:bg-gray-50">
+                3
+              </a>
+              <a href="#" class="py-2 px-4 bg-white border border-gray-300 rounded-r-md text-sm font-medium text-gray-500 hover:bg-gray-50">
+                Next
+              </a>
+            </nav>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Newsletter Section -->
+      <section class="py-16 bg-gradient-to-r from-primary/10 to-accent/10">
+        <div class="container mx-auto px-4 max-w-4xl text-center">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Subscribe to Our Newsletter</h2>
+          <p class="text-text-secondary text-lg mb-8">
+            Get the latest news, events, and stories delivered straight to your inbox.
+          </p>
+          
+          <form class="max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="Your email address"
+                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-primary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
+              >
+                <span class="flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                  Subscribe
+                </span>
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

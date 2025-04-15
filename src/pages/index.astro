@@ -4,6 +4,7 @@ import Footer from '../components/Footer.astro';
 import CardStory from '../components/CardStory.astro';
 import CardAuthor from '../components/CardAuthor.astro';
 import StoryCarousel from '../components/StoryCarousel.astro';
+import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
@@ -433,6 +434,14 @@ const featuredAuthors = [
           });
         </script>
       </section>
+      <!-- Sponsored Carousel -->
+      <SponsoredCarousel
+        title="Sponsored Stories"
+        viewAllLink="/stories?type=sponsored"
+        stories={[]}
+        carouselId="sponsored-stories"
+      />
+      
       <!-- Story Carousels -->
       <StoryCarousel
         title="Most Loved Stories"

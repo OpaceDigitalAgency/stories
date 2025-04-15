@@ -1,0 +1,207 @@
+---
+// Moderation CTA Component
+// This component displays a call-to-action for content moderation (admin review)
+
+interface Props {
+  contentType: 'story' | 'comment' | 'author' | 'profile';
+  contentId: string;
+  reason?: string;
+}
+
+const { contentType, contentId, reason = '' } = Astro.props;
+
+// Content type specific labels
+const contentTypeLabels = {
+  story: 'Story',
+  comment: 'Comment',
+  author: 'Author',
+  profile: 'User Profile'
+};
+
+// Predefined reasons for reporting
+const reportReasons = [
+  'Inappropriate content',
+  'Copyright violation',
+  'Spam or misleading',
+  'Offensive language',
+  'Safety concerns',
+  'Other'
+];
+---
+
+<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+  <div class="flex items-start">
+    <div class="flex-shrink-0">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-red-600">
+        <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+      </svg>
+    </div>
+    
+    <div class="ml-3 flex-1">
+      <h3 class="text-sm font-medium text-red-800">This {contentTypeLabels[contentType]} requires moderation</h3>
+      
+      {reason && (
+        <div class="mt-2 text-sm text-red-700">
+          <p>Reason: {reason}</p>
+        </div>
+      )}
+      
+      <div class="mt-4">
+        <div class="flex space-x-3">
+          <button 
+            type="button"
+            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            id="reject-btn"
+            data-content-type={contentType}
+            data-content-id={contentId}
+          >
+            Reject
+          </button>
+          <button 
+            type="button"
+            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            id="approve-btn"
+            data-content-type={contentType}
+            data-content-id={contentId}
+          >
+            Approve
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal (hidden by default) -->
+<div id="report-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-lg max-w-md w-full mx-4 overflow-hidden shadow-xl transform transition-all">
+    <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+      <div class="sm:flex sm:items-start">
+        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-red-600">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        </div>
+        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+          <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+            Report this {contentTypeLabels[contentType]}
+          </h3>
+          <div class="mt-2">
+            <p class="text-sm text-gray-500">
+              Please select a reason for reporting this content. This will send it for review by our moderation team.
+            </p>
+          </div>
+          
+          <div class="mt-4">
+            <label for="report-reason" class="block text-sm font-medium text-gray-700">Reason</label>
+            <select id="report-reason" name="reason" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md">
+              {reportReasons.map(reason => (
+                <option value={reason}>{reason}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div class="mt-4">
+            <label for="report-details" class="block text-sm font-medium text-gray-700">Additional details (optional)</label>
+            <textarea
+              id="report-details"
+              name="details"
+              rows="3"
+              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+              placeholder="Please provide any additional information that might help our moderation team."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+      <button type="button" id="submit-report" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+        Submit Report
+      </button>
+      <button type="button" id="cancel-report" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ contentType, contentId }}>
+  document.addEventListener('DOMContentLoaded', () => {
+    // For demo purposes only - in a real app, these would call API endpoints
+    const rejectBtn = document.getElementById('reject-btn');
+    const approveBtn = document.getElementById('approve-btn');
+    const reportModal = document.getElementById('report-modal');
+    const cancelReport = document.getElementById('cancel-report');
+    const submitReport = document.getElementById('submit-report');
+    
+    if (rejectBtn) {
+      rejectBtn.addEventListener('click', () => {
+        reportModal.classList.remove('hidden');
+      });
+    }
+    
+    if (approveBtn) {
+      approveBtn.addEventListener('click', () => {
+        // Simulate API call to approve content
+        console.log(`Approving ${contentType} with ID: ${contentId}`);
+        
+        // Show success message
+        const parent = approveBtn.closest('.bg-red-50');
+        if (parent) {
+          parent.innerHTML = `
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-600">
+                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
+              </svg>
+              <span class="ml-2 text-green-700 font-medium">Content approved and published</span>
+            </div>
+          `;
+          
+          // Remove the message after 3 seconds
+          setTimeout(() => {
+            parent.remove();
+          }, 3000);
+        }
+      });
+    }
+    
+    if (cancelReport) {
+      cancelReport.addEventListener('click', () => {
+        reportModal.classList.add('hidden');
+      });
+    }
+    
+    if (submitReport) {
+      submitReport.addEventListener('click', () => {
+        const reason = document.getElementById('report-reason').value;
+        const details = document.getElementById('report-details').value;
+        
+        // Simulate API call to reject content
+        console.log(`Rejecting ${contentType} with ID: ${contentId}`);
+        console.log(`Reason: ${reason}`);
+        console.log(`Details: ${details}`);
+        
+        // Hide modal
+        reportModal.classList.add('hidden');
+        
+        // Show success message
+        const parent = rejectBtn.closest('.bg-red-50');
+        if (parent) {
+          parent.innerHTML = `
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-600">
+                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
+              </svg>
+              <span class="ml-2 text-green-700 font-medium">Content rejected and removed</span>
+            </div>
+          `;
+          
+          // Remove the message after 3 seconds
+          setTimeout(() => {
+            parent.remove();
+          }, 3000);
+        }
+      });
+    }
+  });
+</script>

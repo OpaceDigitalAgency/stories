@@ -3,6 +3,9 @@ import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import RatingStars from '../../components/RatingStars.astro';
 import TagBadge from '../../components/TagBadge.astro';
+import ReviewSection from '../../components/ReviewSection.astro';
+import SponsoredBadge from '../../components/SponsoredBadge.astro';
+import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
 import '../../styles/base.css';
 
@@ -67,7 +70,9 @@ export function getStaticPaths() {
           reviewCount: 42,
           tags: ["Adventure", "Animals", "Children", "Friendship"],
           readingTime: "8 min",
+          sponsored: false,
           ageRange: "4-8 years",
+          needsModeration: true,
           publishDate: new Date('2025-03-15')
         },
         relatedStories: [
@@ -230,6 +235,15 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
               </a>
             </div>
             
+            <!-- Moderation CTA (only visible to admins or when content is flagged) -->
+            {story.needsModeration && (
+              <ModerationCTA
+                contentType="story"
+                contentId={Astro.params.slug}
+                reason="Potentially inappropriate content for children"
+              />
+            )}
+            
             <!-- Story Content -->
             <div class="prose prose-lg max-w-none mb-8">
               <Fragment set:html={story.content} />
@@ -300,6 +314,17 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
               </a>
             </div>
           </div>
+        </div>
+      </section>
+      
+      <!-- Reviews Section -->
+      <section class="py-12 bg-white">
+        <div class="container mx-auto px-4">
+          <ReviewSection
+            itemType="story"
+            itemId={Astro.params.slug}
+            itemName={story.title}
+          />
         </div>
       </section>
     </main>

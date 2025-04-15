@@ -2,32 +2,69 @@
  * Common interfaces for story-related data from Strapi
  */
 export interface StrapiImage {
-  url: string;
-  alternativeText?: string;
-  width: number;
-  height: number;
+  data?: {
+    attributes: {
+      url: string;
+      alternativeText?: string;
+      width: number;
+      height: number;
+      formats?: {
+        thumbnail?: { url: string; width: number; height: number; };
+        small?: { url: string; width: number; height: number; };
+        medium?: { url: string; width: number; height: number; };
+        large?: { url: string; width: number; height: number; };
+      };
+    };
+  };
 }
 
 export interface StrapiAuthor {
-  id: number;
-  name: string;
-  bio?: string;
-  avatar?: StrapiImage;
-  slug: string;
+  data?: {
+    id: number;
+    attributes: {
+      name: string;
+      bio?: string;
+      avatar?: StrapiImage;
+      slug: string;
+      storyCount?: number;
+      twitter?: string;
+      instagram?: string;
+      website?: string;
+    };
+  };
+}
+
+export interface StrapiTag {
+  data?: Array<{
+    id: number;
+    attributes: {
+      name: string;
+      slug: string;
+    };
+  }>;
 }
 
 export interface StrapiStory {
   id: number;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  content: string;
-  coverImage?: StrapiImage;
-  author: StrapiAuthor;
-  publishedAt: string;
-  tags: string[];
-  rating?: number;
-  readingTime?: number;
+  attributes: {
+    title: string;
+    slug: string;
+    excerpt?: string;
+    content: string;
+    cover?: StrapiImage;
+    author?: StrapiAuthor;
+    publishedAt: string;
+    tags?: StrapiTag;
+    averageRating?: number;
+    reviewCount?: number;
+    estimatedReadingTime?: string;
+    isSponsored?: boolean;
+    ageGroup?: string;
+    needsModeration?: boolean;
+    featured?: boolean;
+    isSelfPublished?: boolean;
+    isAIEnhanced?: boolean;
+  };
 }
 
 /**
@@ -35,15 +72,39 @@ export interface StrapiStory {
  */
 
 export interface CardStoryProps {
-  /** The story data from Strapi */
-  story: StrapiStory;
+  /** The story data */
+  story: {
+    title: string;
+    slug: string;
+    excerpt?: string;
+    coverImage?: string;
+    author?: {
+      name: string;
+      avatar?: string;
+      slug: string;
+    };
+    rating?: number;
+    tags?: string[];
+    publishDate?: Date;
+  };
   /** Optional class names to apply to the card */
   className?: string;
 }
 
 export interface CardAuthorProps {
-  /** The author data from Strapi */
-  author: StrapiAuthor;
+  /** The author data */
+  author: {
+    name: string;
+    avatar?: string;
+    bio?: string;
+    slug: string;
+    storyCount?: number;
+    socialLinks?: {
+      twitter?: string;
+      instagram?: string;
+      website?: string;
+    };
+  };
   /** Optional class names to apply to the card */
   className?: string;
 }
@@ -51,6 +112,8 @@ export interface CardAuthorProps {
 export interface TagBadgeProps {
   /** The tag text to display */
   tag: string;
+  /** Optional size variant */
+  size?: 'sm' | 'md' | 'lg';
   /** Optional class names to apply to the badge */
   className?: string;
 }
@@ -58,76 +121,63 @@ export interface TagBadgeProps {
 export interface RatingStarsProps {
   /** The rating value (0-5) */
   rating: number;
-  /** Optional class names to apply to the container */
-  className?: string;
-}
-
-export interface AIRecommendationBoxProps {
-  /** The recommended story data */
-  story: StrapiStory;
-  /** The AI-generated recommendation text */
-  recommendationText: string;
-  /** Optional class names to apply to the box */
-  className?: string;
-}
-
-export interface EducatorSectionProps {
-  /** The educator's profile data */
-  educator: {
-    name: string;
-    title: string;
-    institution: string;
-    avatar?: StrapiImage;
-  };
-  /** Optional class names to apply to the section */
-  className?: string;
-}
-
-export interface PartnerBadgesProps {
-  /** Array of partner data */
-  partners: Array<{
-    name: string;
-    logo: StrapiImage;
-    url: string;
-  }>;
+  /** Optional size variant */
+  size?: 'sm' | 'md' | 'lg';
   /** Optional class names to apply to the container */
   className?: string;
 }
 
 export interface StoryCarouselProps {
+  /** Title for the carousel */
+  title: string;
+  /** Link for "View All" button */
+  viewAllLink: string;
   /** Array of stories to display */
-  stories: StrapiStory[];
-  /** Optional title for the carousel */
-  title?: string;
+  stories: CardStoryProps['story'][];
+  /** Unique ID for the carousel */
+  carouselId: string;
   /** Optional class names to apply to the container */
   className?: string;
 }
 
-export interface SignUpPromptsProps {
-  /** The type of prompt to show */
-  type: 'author' | 'reader' | 'educator';
+export interface SponsoredCarouselProps {
+  /** Title for the carousel */
+  title: string;
+  /** Link for "View All" button */
+  viewAllLink: string;
+  /** Array of sponsored stories */
+  stories: CardStoryProps['story'][];
+  /** Unique ID for the carousel */
+  carouselId: string;
   /** Optional class names to apply to the container */
   className?: string;
 }
 
 export interface ReviewSectionProps {
-  /** The story being reviewed */
-  story: StrapiStory;
-  /** Array of reviews */
-  reviews: Array<{
-    id: number;
-    author: StrapiAuthor;
-    content: string;
-    rating: number;
-    createdAt: string;
-  }>;
+  /** Type of content being reviewed */
+  itemType: 'story' | 'author';
+  /** ID of the content */
+  itemId: number | string;
+  /** Name of the content */
+  itemName: string;
   /** Optional class names to apply to the section */
   className?: string;
 }
 
 export interface SponsoredBadgeProps {
-  /** Optional sponsor name */
-  sponsor?: string;
+  /** Type of badge */
+  type: 'sponsored' | 'featured';
   /** Optional class names to apply to the badge */
+  className?: string;
+}
+
+export interface ModerationCTAProps {
+  /** Type of content */
+  contentType: 'story' | 'author' | 'comment';
+  /** ID of the content */
+  contentId: number | string;
+  /** Reason for moderation */
+  reason: string;
+  /** Optional class names to apply */
   className?: string;
 }

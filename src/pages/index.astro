@@ -8,127 +8,137 @@ import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
-import { fetchFromStrapi, type StrapiResponse, type Story, type Author } from '../lib/api';
-import '../styles/base.css';
+import { fetchFromStrapi } from '../lib/api';
 
-// Fetch featured stories
-const featuredStoriesResponse = await fetchFromStrapi('stories', {
-  filters: {
-    featured: true
-  },
-  populate: '*',
-  sort: 'publishedAt:desc',
-  pagination: { limit: 3 }
-}) as StrapiResponse<Story>;
+// Initialize empty arrays for data
+let featuredStories = [];
+let mostLovedStories = [];
+let latestSelfPublishedStories = [];
+let aiEnhancedStories = [];
+let featuredAuthors = [];
 
-const featuredStories = featuredStoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-    slug: item.attributes.author?.data?.attributes?.slug || ''
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+try {
+  // Fetch featured stories
+  const featuredStoriesResponse = await fetchFromStrapi('stories', {
+    filters: {
+      featured: true
+    },
+    populate: '*',
+    sort: 'publishedAt:desc',
+    pagination: { limit: 3 }
+  });
 
-// Fetch most loved stories
-const mostLovedStoriesResponse = await fetchFromStrapi('stories', {
-  sort: 'averageRating:desc',
-  populate: '*',
-  pagination: { limit: 6 }
-}) as StrapiResponse<Story>;
+  featuredStories = featuredStoriesResponse.data?.map(item => ({
+    title: item.attributes?.title || '',
+    excerpt: item.attributes?.excerpt || '',
+    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes?.author?.data?.attributes?.name || '',
+      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes?.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes?.averageRating || 0,
+    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
+    slug: item.attributes?.slug || '',
+    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  })) || [];
 
-const mostLovedStories = mostLovedStoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-    slug: item.attributes.author?.data?.attributes?.slug || ''
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+  // Fetch most loved stories
+  const mostLovedStoriesResponse = await fetchFromStrapi('stories', {
+    sort: 'averageRating:desc',
+    populate: '*',
+    pagination: { limit: 6 }
+  });
 
-// Fetch latest self-published stories
-const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
-  filters: {
-    isSelfPublished: true
-  },
-  populate: '*',
-  sort: 'publishedAt:desc',
-  pagination: { limit: 6 }
-}) as StrapiResponse<Story>;
+  mostLovedStories = mostLovedStoriesResponse.data?.map(item => ({
+    title: item.attributes?.title || '',
+    excerpt: item.attributes?.excerpt || '',
+    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes?.author?.data?.attributes?.name || '',
+      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes?.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes?.averageRating || 0,
+    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
+    slug: item.attributes?.slug || '',
+    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  })) || [];
 
-const latestSelfPublishedStories = selfPublishedStoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-    slug: item.attributes.author?.data?.attributes?.slug || ''
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+  // Fetch latest self-published stories
+  const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
+    filters: {
+      isSelfPublished: true
+    },
+    populate: '*',
+    sort: 'publishedAt:desc',
+    pagination: { limit: 6 }
+  });
 
-// Fetch AI-enhanced stories
-const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
-  filters: {
-    isAIEnhanced: true
-  },
-  populate: '*',
-  sort: 'publishedAt:desc',
-  pagination: { limit: 6 }
-}) as StrapiResponse<Story>;
+  latestSelfPublishedStories = selfPublishedStoriesResponse.data?.map(item => ({
+    title: item.attributes?.title || '',
+    excerpt: item.attributes?.excerpt || '',
+    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes?.author?.data?.attributes?.name || '',
+      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes?.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes?.averageRating || 0,
+    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
+    slug: item.attributes?.slug || '',
+    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  })) || [];
 
-const aiEnhancedStories = aiEnhancedStoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-    slug: item.attributes.author?.data?.attributes?.slug || ''
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+  // Fetch AI-enhanced stories
+  const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
+    filters: {
+      isAIEnhanced: true
+    },
+    populate: '*',
+    sort: 'publishedAt:desc',
+    pagination: { limit: 6 }
+  });
 
-// Fetch featured authors
-const featuredAuthorsResponse = await fetchFromStrapi('authors', {
-  filters: {
-    featured: true
-  },
-  populate: '*',
-  pagination: { limit: 2 }
-}) as StrapiResponse<Author>;
+  aiEnhancedStories = aiEnhancedStoriesResponse.data?.map(item => ({
+    title: item.attributes?.title || '',
+    excerpt: item.attributes?.excerpt || '',
+    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes?.author?.data?.attributes?.name || '',
+      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes?.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes?.averageRating || 0,
+    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
+    slug: item.attributes?.slug || '',
+    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  })) || [];
 
-const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
-  name: item.attributes.name,
-  avatar: item.attributes.avatar?.data?.attributes?.url || '',
-  bio: item.attributes.bio || '',
-  slug: item.attributes.slug,
-  storyCount: item.attributes.storyCount || 0,
-  socialLinks: {
-    twitter: item.attributes.twitter || '',
-    instagram: item.attributes.instagram || '',
-    website: item.attributes.website || ''
-  }
-}));
+  // Fetch featured authors
+  const featuredAuthorsResponse = await fetchFromStrapi('authors', {
+    filters: {
+      featured: true
+    },
+    populate: '*',
+    pagination: { limit: 2 }
+  });
+
+  featuredAuthors = featuredAuthorsResponse.data?.map(item => ({
+    name: item.attributes?.name || '',
+    avatar: item.attributes?.avatar?.data?.attributes?.url || '',
+    bio: item.attributes?.bio || '',
+    slug: item.attributes?.slug || '',
+    storyCount: item.attributes?.storyCount || 0,
+    socialLinks: {
+      twitter: item.attributes?.twitter || '',
+      instagram: item.attributes?.instagram || '',
+      website: item.attributes?.website || ''
+    }
+  })) || [];
+} catch (error) {
+  console.error('Error fetching data from Strapi:', error);
+}
 ---
 
 <html lang="en">
@@ -153,22 +163,6 @@ const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
     <meta property="twitter:title" content="Stories From The Web | Share and Discover Children's Stories" />
     <meta property="twitter:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
     <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image.jpg" />
-    
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Stories From The Web",
-        "url": "https://storiesfromtheweb.org/",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://storiesfromtheweb.org/search?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        },
-        "description": "A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling."
-      }
-    </script>
   </head>
   <body class="min-h-screen flex flex-col bg-neutral">
     <NavHeader />
@@ -176,12 +170,7 @@ const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
     <main class="flex-grow">
       <!-- Hero Section -->
       <section class="relative py-16 md:py-24 overflow-hidden">
-        <!-- Decorative blobs -->
-        <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
-        <div class="blob-shape bg-secondary/30 w-96 h-96 -bottom-40 -right-20"></div>
-        <div class="blob-shape bg-accent/20 w-80 h-80 top-40 right-20"></div>
-        
-        <div class="container mx-auto px-4 relative z-10">
+        <div class="container mx-auto px-4">
           <div class="flex flex-col lg:flex-row items-center">
             <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
               <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight text-text-primary">
@@ -214,190 +203,40 @@ const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
                 </a>
               </div>
             </div>
-            
-            <!-- Animated illustration -->
-            <div class="lg:w-1/2 relative">
-              <div class="relative w-full max-w-md mx-auto">
-                <!-- Colorful illustration for hero section -->
-                <div class="relative w-full h-full rounded-2xl shadow-playful overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-tertiary/10 p-6 float-animation">
-                  <!-- Colorful background elements -->
-                  <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
-                  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
-                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
-                  
-                  <!-- Illustrated elements -->
-                  <div class="relative z-10 flex items-center justify-center h-full">
-                    <!-- Book -->
-                    <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
-                      <!-- Book spine -->
-                      <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
-                      
-                      <!-- Book pages -->
-                      <div class="absolute left-6 top-0 right-0 bottom-0 bg-neutral-light p-4">
-                        <!-- Book content -->
-                        <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
-                        <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
-                        <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
-                        
-                        <!-- Book characters -->
-                        <div class="absolute bottom-4 right-4 w-16 h-16 bg-accent rounded-full flex items-center justify-center">
-                          <div class="w-8 h-8 bg-white rounded-full relative">
-                            <!-- Simple smiley face -->
-                            <div class="absolute top-2 left-2 w-1 h-1 bg-text-primary rounded-full"></div>
-                            <div class="absolute top-2 right-2 w-1 h-1 bg-text-primary rounded-full"></div>
-                            <div class="absolute bottom-2 left-0 right-0 mx-auto w-4 h-1 bg-text-primary rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Floating elements -->
-                    <div class="absolute top-6 right-6 w-12 h-12 bg-tertiary rounded-full flex items-center justify-center pulse-animation">
-                      <div class="w-6 h-6 text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
-                        </svg>
-                      </div>
-                    </div>
-                    
-                    <div class="absolute bottom-8 left-8 w-14 h-14 bg-success rounded-full flex items-center justify-center float-animation" style="animation-delay: 0.5s;">
-                      <div class="w-8 h-8 text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Animated elements -->
-                <div class="absolute top-10 right-0 transform rotate-12 pulse-animation" style="animation-delay: 1s;">
-                  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFD166" stroke="#FFD166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
-                
-                <div class="absolute bottom-10 left-0 transform -rotate-6 float-animation" style="animation-delay: 0.5s; animation-duration: 5s;">
-                  <svg width="50" height="50" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" stroke="#FF5E78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-        
-        <script>
-          // Add parallax effect to the blobs
-          document.addEventListener('mousemove', (e) => {
-            const blobs = document.querySelectorAll('.blob-shape');
-            const mouseX = e.clientX / window.innerWidth;
-            const mouseY = e.clientY / window.innerHeight;
-            
-            blobs.forEach((blob, index) => {
-              const speed = (index + 1) * 20;
-              const x = (mouseX - 0.5) * speed;
-              const y = (mouseY - 0.5) * speed;
-              
-              blob.style.transform = `translate(${x}px, ${y}px)`;
-            });
-          });
-        </script>
       </section>
-      
-      <!-- Sponsored Carousel -->
-      <SponsoredCarousel
-        title="Sponsored Stories"
-        viewAllLink="/stories?type=sponsored"
-        stories={[]}
-        carouselId="sponsored-stories"
-      />
       
       <!-- Story Carousels -->
-      <StoryCarousel
-        title="Most Loved Stories"
-        viewAllLink="/stories?sort=highest-rated"
-        stories={mostLovedStories}
-        carouselId="most-loved"
-      />
+      {mostLovedStories.length > 0 && (
+        <StoryCarousel
+          title="Most Loved Stories"
+          viewAllLink="/stories?sort=highest-rated"
+          stories={mostLovedStories}
+          carouselId="most-loved"
+        />
+      )}
       
-      <StoryCarousel
-        title="Latest Self-Published"
-        viewAllLink="/stories?type=self-published"
-        stories={latestSelfPublishedStories}
-        carouselId="self-published"
-      />
+      {latestSelfPublishedStories.length > 0 && (
+        <StoryCarousel
+          title="Latest Self-Published"
+          viewAllLink="/stories?type=self-published"
+          stories={latestSelfPublishedStories}
+          carouselId="self-published"
+        />
+      )}
       
-      <StoryCarousel
-        title="AI-Enhanced Picks"
-        viewAllLink="/stories?type=ai-enhanced"
-        stories={aiEnhancedStories}
-        carouselId="ai-enhanced"
-      />
-      
-      <!-- How It Works Section -->
-      <section class="py-16 bg-neutral-dark relative overflow-hidden">
-        <!-- Decorative blob -->
-        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
-        <div class="container mx-auto px-4">
-          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-12 fancy-underline relative z-10">How It Works</h2>
-          
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="text-center">
-              <div class="bg-primary/15 text-primary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Create Your Story</h3>
-              <p class="text-text-secondary">Write your story using our easy-to-use editor. Add images, format text, and make it your own.</p>
-            </div>
-            
-            <div class="text-center">
-              <div class="bg-secondary/15 text-secondary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation" style="animation-delay: 0.3s;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m0-3l-3-3m0 0l-3 3m3-3v11.25m6-2.25h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75" />
-                </svg>
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Publish & Share</h3>
-              <p class="text-text-secondary">Publish your story to our platform and share it with friends, family, and our community.</p>
-            </div>
-            
-            <div class="text-center">
-              <div class="bg-accent/15 text-text-primary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation" style="animation-delay: 0.6s;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
-                </svg>
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Inspire Others</h3>
-              <p class="text-text-secondary">Get feedback, inspire readers, and connect with other storytellers around the world.</p>
-            </div>
-          </div>
-          
-          <div class="text-center mt-12 relative z-10">
-            <!-- Decorative elements -->
-            <div class="absolute -z-10 w-40 h-40 bg-primary/20 rounded-full blur-xl left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-            
-            <a href="/publish" class="inline-block bg-gradient-to-r from-primary to-tertiary text-white text-lg font-bold px-10 py-4 rounded-xl shadow-playful transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative overflow-hidden group">
-              <!-- Animated background effect -->
-              <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-              
-              <span class="flex items-center justify-center relative">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 group-hover:animate-pulse">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                </svg>
-                Start Writing Today
-              </span>
-            </a>
-          </div>
-        </div>
-      </section>
+      {aiEnhancedStories.length > 0 && (
+        <StoryCarousel
+          title="AI-Enhanced Picks"
+          viewAllLink="/stories?type=ai-enhanced"
+          stories={aiEnhancedStories}
+          carouselId="ai-enhanced"
+        />
+      )}
       
       <!-- Featured Authors Section -->
       <section class="py-16 relative overflow-hidden">
-        <!-- Decorative blob -->
-        <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
         <div class="container mx-auto px-4 relative z-10">
           <div class="flex justify-between items-center mb-8">
             <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Featured Authors</h2>
@@ -413,9 +252,34 @@ const featuredAuthors = featuredAuthorsResponse.data.map(item => ({
             
             <!-- Become an Author Card -->
             <div class="card p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
-              <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful pulse-animation relative">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-14 h-14 group-hover:scale-110 transition-transform duration-300">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
-                
-                <!-- Decorative elements -->
+              </div>
+              
+              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">
+                Become an Author
+              </h3>
+              
+              <p class="text-gray-600 mb-6">
+                Share your stories with our growing community of readers and inspire young minds.
+              </p>
+              
+              <a href="/publish" class="w-full bg-accent text-white py-3 px-6 rounded-md hover:bg-accent/90 transition-colors font-medium flex items-center justify-center group-hover:bg-accent">
+                <span class="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Start Writing
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

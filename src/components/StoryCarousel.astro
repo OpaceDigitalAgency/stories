@@ -1,142 +1,92 @@
 ---
-import CardStory from './CardStory.astro';
-import type { StoryCarouselProps } from '../types/components';
-
-interface ExtendedStoryCarouselProps extends StoryCarouselProps {
-  viewAllLink?: string;
+interface Props {
+  title: string;
+  viewAllLink: string;
+  stories: any[];
   carouselId: string;
 }
 
-const { stories, title = 'Featured Stories', className = '', viewAllLink, carouselId } = Astro.props as ExtendedStoryCarouselProps;
+const { title, viewAllLink, stories = [], carouselId } = Astro.props;
 ---
 
-<div class={`py-8 relative overflow-hidden ${className}`}>
-  <!-- Decorative blob -->
-  <div class="blob-shape bg-secondary/20 w-72 h-72 top-40 right-20"></div>
-  
-  <div class="container mx-auto px-4 relative z-10">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl md:text-3xl font-display font-bold text-text-primary fancy-underline">{title}</h2>
-      {viewAllLink && (
-        <a href={viewAllLink} class="text-secondary font-bold hover:text-secondary/80 transition-all duration-300 hover:translate-x-1 flex items-center group">
-          <span>View All</span>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-        </a>
-      )}
+<section class="py-12">
+  <div class="container mx-auto px-4">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-2xl font-display font-bold text-gray-800">{title}</h2>
+      <a href={viewAllLink} class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+        View All →
+      </a>
     </div>
-    
-    <!-- Carousel container -->
-    <div class="relative">
-      <!-- Carousel navigation buttons -->
-      <button 
-        id={`${carouselId}-prev`}
-        class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 z-10 bg-white/80 hover:bg-white text-primary w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Previous stories"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-      </button>
-      
-      <div 
-        id={carouselId} 
-        class="carousel-container overflow-x-auto pb-4 hide-scrollbar"
-      >
-        <div class="carousel-track flex gap-6 transition-transform duration-300 ease-in-out">
-          {stories.map(story => (
-            <div class="carousel-item flex-shrink-0 w-full sm:w-1/2 md:w-1/3 lg:w-1/4">
-              <CardStory story={story} />
-            </div>
-          ))}
-        </div>
+
+    {stories.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {stories.map(story => (
+          <article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <a href={`/stories/${story.slug}`} class="block">
+              {story.coverImage && (
+                <div class="h-48 bg-gray-200">
+                  <img 
+                    src={story.coverImage} 
+                    alt={story.title} 
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
+              <div class="p-6">
+                <div class="flex items-center mb-3">
+                  {story.tags?.length > 0 && (
+                    <span class="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                      {story.tags[0]}
+                    </span>
+                  )}
+                  {story.publishDate && (
+                    <span class="text-gray-500 text-xs ml-3">
+                      {new Date(story.publishDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+                
+                <h3 class="text-xl font-display font-bold text-gray-800 mb-3 hover:text-primary transition-colors">
+                  {story.title}
+                </h3>
+                
+                {story.excerpt && (
+                  <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                    {story.excerpt}
+                  </p>
+                )}
+                
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    {story.author?.avatar && (
+                      <img 
+                        src={story.author.avatar} 
+                        alt={story.author.name} 
+                        class="w-6 h-6 rounded-full mr-2"
+                      />
+                    )}
+                    <span class="text-xs text-gray-600">
+                      {story.author?.name || 'Anonymous'}
+                    </span>
+                  </div>
+                  
+                  <span class="text-primary hover:text-primary/80 text-sm font-medium flex items-center">
+                    Read More
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 ml-1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </a>
+          </article>
+        ))}
       </div>
-      
-      <button 
-        id={`${carouselId}-next`}
-        class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 z-10 bg-white/80 hover:bg-white text-primary w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Next stories"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-        </svg>
-      </button>
-    </div>
+    ) : (
+      <div class="text-center py-12 text-gray-500">
+        No stories available at the moment.
+      </div>
+    )}
   </div>
-</div>
-
-<style>
-  .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
-  }
-</style>
-
-<script define:vars={{ carouselId }}>
-  document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById(carouselId);
-    const track = container.querySelector('.carousel-track');
-    const items = container.querySelectorAll('.carousel-item');
-    const prevButton = document.getElementById(`${carouselId}-prev`);
-    const nextButton = document.getElementById(`${carouselId}-next`);
-    
-    let currentIndex = 0;
-    const itemsPerView = window.innerWidth < 640 ? 1 : 
-                         window.innerWidth < 768 ? 2 : 
-                         window.innerWidth < 1024 ? 3 : 4;
-    
-    const maxIndex = Math.max(0, items.length - itemsPerView);
-    
-    // Initial button state
-    updateButtonState();
-    
-    // Event listeners for buttons
-    prevButton.addEventListener('click', () => {
-      if (currentIndex > 0) {
-        currentIndex--;
-        updateCarousel();
-      }
-    });
-    
-    nextButton.addEventListener('click', () => {
-      if (currentIndex < maxIndex) {
-        currentIndex++;
-        updateCarousel();
-      }
-    });
-    
-    // Update carousel position
-    function updateCarousel() {
-      const itemWidth = items[0].offsetWidth + 24; // width + gap
-      track.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
-      updateButtonState();
-    }
-    
-    // Update button disabled state
-    function updateButtonState() {
-      prevButton.disabled = currentIndex === 0;
-      nextButton.disabled = currentIndex >= maxIndex;
-      
-      prevButton.style.opacity = currentIndex === 0 ? '0.5' : '1';
-      nextButton.style.opacity = currentIndex >= maxIndex ? '0.5' : '1';
-    }
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      const newItemsPerView = window.innerWidth < 640 ? 1 : 
-                             window.innerWidth < 768 ? 2 : 
-                             window.innerWidth < 1024 ? 3 : 4;
-      
-      if (newItemsPerView !== itemsPerView) {
-        // Reset position if the number of visible items changes
-        currentIndex = 0;
-        updateCarousel();
-      }
-    });
-  });
-</script>
+</section>

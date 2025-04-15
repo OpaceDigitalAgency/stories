@@ -56,7 +56,16 @@
   
   /* Card styles */
   .card {
-    @apply bg-white rounded-2xl overflow-hidden shadow-card transition-all duration-300 hover:shadow-hover border-2 border-transparent hover:border-neutral-dark;
+    @apply relative rounded-2xl overflow-hidden transition-all duration-300;
+  }
+
+  .card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-white to-neutral-50/80 transition-all duration-300;
+  }
+
+  .card:hover::before {
+    @apply from-white/90 to-neutral-100/90;
   }
 
   /* Story card specific styles */
@@ -90,36 +99,46 @@
   }
 
   /* Section styles */
-  .section-hero {
-    @apply relative py-16 md:py-24 overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10;
+  /* Section styles with flowing gradients */
+  .section {
+    @apply relative py-16 md:py-24 overflow-hidden;
   }
 
-  .section-stories {
-    @apply py-16 bg-neutral-light;
+  .section::before {
+    content: '';
+    @apply absolute inset-0 transition-opacity duration-500;
   }
 
-  .section-sponsored {
-    @apply py-16 bg-neutral;
+  .section-hero::before {
+    @apply bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/5;
   }
 
-  .section-authors {
-    @apply py-16 bg-neutral-light relative overflow-hidden;
+  .section-stories::before {
+    @apply bg-gradient-to-br from-neutral-50 via-white to-neutral-50;
   }
 
-  .section-educator {
-    @apply py-16 bg-neutral relative overflow-hidden;
+  .section-sponsored::before {
+    @apply bg-gradient-to-br from-purple-50 via-white to-purple-50/50;
   }
 
-  .section-signup {
-    @apply py-16 bg-neutral-dark relative overflow-hidden;
+  .section-authors::before {
+    @apply bg-gradient-to-br from-secondary/10 via-white to-primary/5;
   }
 
-  .section-ai {
-    @apply py-16 bg-neutral-light relative overflow-hidden;
+  .section-educator::before {
+    @apply bg-gradient-to-br from-accent/10 via-white to-secondary/5;
   }
 
-  .section-newsletter {
-    @apply py-16 bg-secondary/10 relative overflow-hidden;
+  .section-signup::before {
+    @apply bg-gradient-to-br from-tertiary/10 via-white to-primary/5;
+  }
+
+  .section-ai::before {
+    @apply bg-gradient-to-br from-purple-100/20 via-white to-purple-50/10;
+  }
+
+  .section-newsletter::before {
+    @apply bg-gradient-to-br from-secondary/20 via-white to-secondary/5;
   }
   
   /* Blob shapes for decorative elements */
@@ -176,23 +195,24 @@
   }
 
   /* Loading skeleton styles */
+  /* Loading skeleton styles with softer edges */
   .skeleton {
-    @apply animate-pulse bg-neutral-dark rounded;
+    @apply animate-pulse bg-gradient-to-r from-neutral-200/60 to-neutral-100/60 rounded-2xl;
   }
 
   .skeleton-text {
-    @apply skeleton h-4 rounded-full;
+    @apply h-4 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
   }
 
   .skeleton-title {
-    @apply skeleton h-6 rounded-full;
+    @apply h-6 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
   }
 
   .skeleton-image {
-    @apply skeleton rounded-xl aspect-[4/3];
+    @apply rounded-2xl aspect-[4/3] bg-gradient-to-br from-neutral-200/60 to-neutral-100/60;
   }
 
   .skeleton-avatar {
-    @apply skeleton w-12 h-12 rounded-full;
+    @apply w-12 h-12 rounded-full bg-gradient-to-r from-neutral-200/60 to-neutral-100/60;
   }
 }

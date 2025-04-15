@@ -56,7 +56,7 @@
   
   /* Card styles */
   .card {
-    @apply relative rounded-2xl overflow-hidden transition-all duration-700 bg-gradient-to-br from-white via-white/90 to-neutral-50 shadow-playful hover:shadow-xl backdrop-blur-xl transform-style-3d hover:translate-z-8 group;
+    @apply relative rounded-2xl overflow-hidden transition-all duration-700 bg-gradient-to-br from-white via-white/90 to-neutral-50 shadow-playful hover:shadow-xl backdrop-blur-xl transform-style-3d hover:translate-z-8;
   }
 
   .card:hover {

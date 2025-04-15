@@ -203,36 +203,164 @@ try {
                 </a>
               </div>
             </div>
+            <!-- Hero image -->
+            <div class="lg:w-1/2 relative">
+              <img
+                src="/logo.png"
+                alt="Children reading stories"
+                class="w-full h-auto object-cover rounded-xl shadow-playful"
+              />
+            </div>
           </div>
         </div>
       </section>
       
       <!-- Story Carousels -->
-      {mostLovedStories.length > 0 && (
+      {mostLovedStories.length > 0 ? (
         <StoryCarousel
           title="Most Loved Stories"
           viewAllLink="/stories?sort=highest-rated"
           stories={mostLovedStories}
           carouselId="most-loved"
         />
+      ) : (
+        <section class="py-12 bg-neutral-50">
+          <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-3xl font-display font-bold text-text-primary">Most Loved Stories</h2>
+              <a href="/stories?sort=highest-rated" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+                View All →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
       
-      {latestSelfPublishedStories.length > 0 && (
+      {latestSelfPublishedStories.length > 0 ? (
         <StoryCarousel
           title="Latest Self-Published"
           viewAllLink="/stories?type=self-published"
           stories={latestSelfPublishedStories}
           carouselId="self-published"
         />
+      ) : (
+        <section class="py-12">
+          <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-3xl font-display font-bold text-text-primary">Latest Self-Published</h2>
+              <a href="/stories?type=self-published" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+                View All →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
       
-      {aiEnhancedStories.length > 0 && (
+      {aiEnhancedStories.length > 0 ? (
         <StoryCarousel
           title="AI-Enhanced Picks"
           viewAllLink="/stories?type=ai-enhanced"
           stories={aiEnhancedStories}
           carouselId="ai-enhanced"
         />
+      ) : (
+        <section class="py-12 bg-neutral-50">
+          <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-3xl font-display font-bold text-text-primary">AI-Enhanced Picks</h2>
+              <a href="/stories?type=ai-enhanced" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+                View All →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+                <div class="w-full h-40 bg-gray-200 rounded-md mb-4"></div>
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
       
       <!-- Featured Authors Section -->
@@ -275,6 +403,51 @@ try {
                 </span>
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- AI Recommendation Box -->
+      <section class="py-12">
+        <div class="container mx-auto px-4">
+          <AIRecommendationBox
+            story={{
+              title: "Loading...",
+              slug: "#",
+              author: {
+                name: "Loading..."
+              }
+            }}
+            recommendationText="Our AI-powered recommendation system will suggest stories based on your reading preferences and history."
+          />
+        </div>
+      </section>
+      
+      <!-- Educator Section -->
+      <section class="py-12 bg-neutral-50">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 text-center">Resources for Teachers & Parents</h2>
+          <EducatorSection
+            educator={{
+              name: "For Parents",
+              title: "Reading Companion",
+              institution: "Home Learning",
+              avatar: {
+                url: "/logo.png"
+              }
+            }}
+          />
+        </div>
+      </section>
+      
+      <!-- Join Our Community -->
+      <section class="py-12">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 text-center">Join Our Community</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <SignUpPrompts type="author" />
+            <SignUpPrompts type="reader" />
+            <SignUpPrompts type="educator" />
           </div>
         </div>
       </section>

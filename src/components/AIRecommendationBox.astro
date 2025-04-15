@@ -4,10 +4,10 @@ import type { AIRecommendationBoxProps } from '../types/components';
 const { story, recommendationText, className = '' } = Astro.props as AIRecommendationBoxProps;
 ---
 
-<div class={`bg-gradient-to-br from-tertiary/20 to-primary/20 rounded-xl p-6 shadow-playful relative overflow-hidden ${className}`}>
+<div class={`bg-gradient-to-br from-tertiary/30 to-primary/30 rounded-xl p-6 shadow-playful relative overflow-hidden ${className}`}>
   <!-- Decorative elements -->
-  <div class="absolute -top-10 -right-10 w-40 h-40 bg-tertiary/10 rounded-full blur-xl"></div>
-  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-xl"></div>
+  <div class="absolute -top-10 -right-10 w-40 h-40 bg-tertiary/20 rounded-full blur-xl"></div>
+  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-xl"></div>
   
   <div class="relative z-10">
     <div class="flex items-center mb-4">
@@ -22,7 +22,7 @@ const { story, recommendationText, className = '' } = Astro.props as AIRecommend
     <p class="text-text-secondary mb-4">{recommendationText}</p>
     
     <a href={`/stories/${story.slug}`} class="block">
-      <div class="bg-white/80 backdrop-blur-sm rounded-lg p-4 mb-4 shadow-sm hover:shadow-md transition-shadow">
+      <div class="bg-white/90 backdrop-blur-md rounded-lg p-4 mb-4 shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-start gap-3">
           <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary">

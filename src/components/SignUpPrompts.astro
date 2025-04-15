@@ -5,8 +5,8 @@ const { type, className = '' } = Astro.props as SignUpPromptsProps;
 
 const prompts = {
   author: {
-    gradient: 'from-primary/10 to-primary/5',
-    iconBg: 'bg-primary/20',
+    gradient: 'from-primary/20 to-primary/10',
+    iconBg: 'bg-primary/30',
     iconColor: 'text-primary',
     buttonClass: 'btn-primary',
     title: 'For Authors',
@@ -20,8 +20,8 @@ const prompts = {
     linkText: 'Join as Author'
   },
   reader: {
-    gradient: 'from-secondary/10 to-secondary/5',
-    iconBg: 'bg-secondary/20',
+    gradient: 'from-secondary/20 to-secondary/10',
+    iconBg: 'bg-secondary/30',
     iconColor: 'text-secondary',
     buttonClass: 'btn-secondary',
     title: 'For Readers',
@@ -35,8 +35,8 @@ const prompts = {
     linkText: 'Join as Reader'
   },
   educator: {
-    gradient: 'from-tertiary/10 to-tertiary/5',
-    iconBg: 'bg-tertiary/20',
+    gradient: 'from-tertiary/20 to-tertiary/10',
+    iconBg: 'bg-tertiary/30',
     iconColor: 'text-tertiary',
     buttonClass: 'btn-tertiary',
     title: 'For Educators',
@@ -56,7 +56,7 @@ const selectedPrompt = prompts[type];
 
 <div class={`bg-gradient-to-br ${prompts[type].gradient} rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300 ${className}`}>
   <!-- Decorative elements -->
-  <div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-xl"></div>
+  <div class={`absolute -top-10 -right-10 w-40 h-40 ${prompts[type].iconBg} rounded-full blur-xl`}></div>
   
   <div class="relative z-10">
     <div class={`w-16 h-16 ${prompts[type].iconBg} rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300`}>

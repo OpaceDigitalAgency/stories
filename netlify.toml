@@ -4,7 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  STRAPI_URL = "https://your-strapi-url.com"  # This will be overridden by Netlify UI settings
+  STRAPI_URL = ""  # Empty string will cause fetchFromStrapi to fail gracefully and fall back to mock data
 
 # Removed functions directory setting
 

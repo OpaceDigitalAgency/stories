@@ -38,9 +38,9 @@ const author = {
   location: authorResponse.data.attributes.location || '',
   featured: authorResponse.data.attributes.featured || false,
   stats: {
-    stories: 0, // TODO: Implement stats
-    followers: 0,
-    likes: 0
+    stories: authorResponse.data.attributes.storyCount || 0,
+    followers: authorResponse.data.attributes.followerCount || 0,
+    likes: authorResponse.data.attributes.likeCount || 0
   },
   socialLinks: {
     twitter: authorResponse.data.attributes.twitter || '',
@@ -68,61 +68,11 @@ const stories = storiesResponse.data.map(item => ({
     avatar: author.avatar,
     slug: authorResponse.data.attributes.slug
   },
-  rating: 4.5, // TODO: Implement rating system
+  rating: item.attributes.averageRating || 0,
   tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
   slug: item.attributes.slug,
   publishDate: new Date(item.attributes.publishedAt)
 }));
-          {
-            title: "The Adventure of the Curious Cat",
-            excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
-            coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
-            author: {
-              name: "Emma Thompson",
-              avatar: "https://i.pravatar.cc/150?img=1",
-              slug: "emma-thompson"
-            },
-            rating: 4.7,
-            tags: ["Adventure", "Animals", "Children"],
-            slug: "adventure-curious-cat",
-            publishDate: new Date('2025-03-15')
-          },
-          {
-            title: "Ocean Friends: The Dolphin's Secret",
-            excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
-            coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
-            author: {
-              name: "Emma Thompson",
-              avatar: "https://i.pravatar.cc/150?img=1",
-              slug: "emma-thompson"
-            },
-            rating: 4.4,
-            tags: ["Ocean", "Animals", "Adventure"],
-            slug: "ocean-friends-dolphin-secret",
-            publishDate: new Date('2025-03-22')
-          },
-          {
-            title: "The Talking Tree",
-            excerpt: "When Lily discovers an ancient oak tree that can speak, she learns valuable lessons about protecting nature and the environment.",
-            coverImage: "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
-            author: {
-              name: "Emma Thompson",
-              avatar: "https://i.pravatar.cc/150?img=1",
-              slug: "emma-thompson"
-            },
-            rating: 4.6,
-            tags: ["Nature", "Environment", "Magic"],
-            slug: "talking-tree",
-            publishDate: new Date('2025-02-18')
-          }
-        ]
-      }
-    },
-    // Additional static paths would be defined here for other authors
-  ];
-}
-
-const { author, stories } = Astro.props;
 
 // Format the join date
 const formattedJoinDate = new Intl.DateTimeFormat('en-US', {
@@ -335,7 +285,7 @@ const formattedJoinDate = new Intl.DateTimeFormat('en-US', {
         <div class="container mx-auto px-4">
           <ReviewSection
             itemType="author"
-            itemId={Astro.params.slug}
+            itemId={authorId}
             itemName={author.name}
           />
         </div>

@@ -36,7 +36,7 @@ const author = {
   name: authorResponse.data.attributes.name,
   avatar: authorResponse.data.attributes.avatar?.data?.attributes?.url || '',
   bio: authorResponse.data.attributes.bio || '',
-  joinDate: new Date(authorResponse.data.attributes.createdAt),
+  joinDate: new Date(authorResponse.data.attributes.createdAt || new Date().toISOString()),
   location: authorResponse.data.attributes.location || '',
   featured: authorResponse.data.attributes.featured || false,
   stats: {

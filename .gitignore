@@ -29,4 +29,4 @@ pnpm-debug.log*
 .DS_Store
 
 # Embedded git repository
-storiesfromtheweb/
+storiesfromtheweb/.DS_Store

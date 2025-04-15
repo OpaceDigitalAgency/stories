@@ -1,55 +1,14 @@
 ---
-// Review Section Component
-// This component displays reviews for stories, books, or authors
-
 import RatingStars from './RatingStars.astro';
+import type { ReviewSectionProps } from '../types/components';
 
-interface Props {
-  itemType: 'story' | 'book' | 'author';
-  itemId: string;
-  itemName: string;
-}
+const { story, reviews, className = '' } = Astro.props as ReviewSectionProps;
 
-const { itemType, itemId, itemName } = Astro.props;
-
-// Mock data for reviews
-const reviews = [
-  {
-    id: 1,
-    author: {
-      name: "Parent of 7-year-old",
-      avatar: "https://i.pravatar.cc/150?img=32",
-      verified: true
-    },
-    rating: 5,
-    title: "Sparked my child's imagination!",
-    content: "This book has become my daughter's favorite bedtime story. The characters are relatable and the illustrations are beautiful. It's sparked so many conversations about the magic of reading and the importance of libraries. Highly recommended for children who love books and adventure!",
-    helpfulCount: 24,
-    date: new Date('2025-03-15'),
-    ageGroup: "7-9 years"
-  },
-  {
-    id: 2,
-    author: {
-      name: "Elementary School Teacher",
-      avatar: "https://i.pravatar.cc/150?img=29",
-      verified: true
-    },
-    rating: 4,
-    title: "Great for classroom discussions",
-    content: "I used this with my 3rd-grade class. The students were engaged and asked thoughtful questions. The only reason I'm giving 4 stars instead of 5 is that some of the vocabulary was challenging for a few students, but it provided good learning opportunities.",
-    helpfulCount: 18,
-    date: new Date('2025-03-20'),
-    ageGroup: "8-10 years"
-  }
-];
-
-// Filter options
-const ageGroups = ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"];
-const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
+// Calculate average rating
+const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
 ---
 
-<div class="bg-white rounded-lg shadow-md overflow-hidden mt-8">
+<div class={`bg-white rounded-lg shadow-md overflow-hidden mt-8 ${className}`}>
   <div class="p-6">
     <h2 class="text-2xl font-display font-bold text-text-primary mb-6">Reviews</h2>
     
@@ -66,10 +25,10 @@ const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
       </div>
       
       <div class="flex items-center">
-        <a href={`/reviews?${itemType}=${itemId}`} class="btn btn-secondary py-2 px-4 rounded-md text-sm">
+        <a href={`/reviews/${story.slug}`} class="btn btn-secondary py-2 px-4 rounded-md text-sm">
           View All Reviews
         </a>
-        <a href={`/reviews/write?${itemType}=${itemId}`} class="btn btn-primary py-2 px-4 rounded-md text-sm ml-2">
+        <a href={`/reviews/${story.slug}/write`} class="btn btn-primary py-2 px-4 rounded-md text-sm ml-2">
           Write a Review
         </a>
       </div>
@@ -81,9 +40,9 @@ const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
         <div class="border-b border-gray-100 pb-6 last:border-b-0">
           <div class="flex items-start">
             <div class="hidden sm:block w-10 h-10 rounded-full overflow-hidden mr-4 flex-shrink-0">
-              <img 
-                src={review.author.avatar} 
-                alt={review.author.name} 
+              <img
+                src={review.author.avatar?.url || '/images/default-avatar.jpg'}
+                alt={review.author.name}
                 class="w-full h-full object-cover"
               />
             </div>
@@ -140,7 +99,7 @@ const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
     
     <!-- View more link -->
     <div class="mt-6 text-center">
-      <a href={`/reviews?${itemType}=${itemId}`} class="text-secondary hover:text-secondary/80 font-medium text-sm">
+      <a href={`/reviews/${story.slug}`} class="text-secondary hover:text-secondary/80 font-medium text-sm">
         View all {reviews.length} reviews →
       </a>
     </div>

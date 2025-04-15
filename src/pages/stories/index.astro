@@ -5,103 +5,36 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import PremiumBlock from '../../components/PremiumBlock.astro';
 import SponsoredCarousel from '../../components/SponsoredCarousel.astro';
+import { fetchFromStrapi, type StrapiResponse, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
-// Mock data for stories
-const stories = [
-  {
-    title: "The Adventure of the Curious Cat",
-    excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",
-    coverImage: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
-    author: {
-      name: "Emma Thompson",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      slug: "emma-thompson"
-    },
-    rating: 4.7,
-    tags: ["Adventure", "Animals", "Children"],
-    slug: "adventure-curious-cat",
-    publishDate: new Date('2025-03-15')
-  },
-  {
-    title: "The Magic Library",
-    excerpt: "When books come to life at night, young Alex discovers a world of imagination and learns important lessons about courage and friendship.",
-    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-    author: {
-      name: "Michael Johnson",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      slug: "michael-johnson"
-    },
-    rating: 4.9,
-    tags: ["Fantasy", "Magic", "Books"],
-    slug: "magic-library",
-    publishDate: new Date('2025-04-02')
-  },
-  {
-    title: "Space Explorers: Journey to the Stars",
-    excerpt: "Join the crew of the Starship Explorer as they embark on a mission to discover new planets and encounter fascinating alien species.",
-    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
-    author: {
-      name: "Sarah Williams",
-      avatar: "https://i.pravatar.cc/150?img=3",
-      slug: "sarah-williams"
-    },
-    rating: 4.5,
-    tags: ["Science Fiction", "Space", "Adventure"],
-    slug: "space-explorers-journey",
-    publishDate: new Date('2025-03-28')
-  },
-  {
-    title: "The Enchanted Forest",
-    excerpt: "Discover the magical creatures that live in the Enchanted Forest and follow Emma's quest to save their home from destruction.",
-    coverImage: "https://images.unsplash.com/photo-1448375240586-882707db888b",
-    author: {
-      name: "David Brown",
-      avatar: "https://i.pravatar.cc/150?img=4",
-      slug: "david-brown"
-    },
-    rating: 4.6,
-    tags: ["Fantasy", "Nature", "Adventure"],
-    slug: "enchanted-forest",
-    publishDate: new Date('2025-03-10')
-  },
-  {
-    title: "The Little Robot's Big Day",
-    excerpt: "Beep the robot learns about friendship and emotions when he ventures outside his factory for the first time.",
-    coverImage: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
-    author: {
-      name: "Jennifer Lee",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      slug: "jennifer-lee"
-    },
-    rating: 4.8,
-    tags: ["Technology", "Friendship", "Children"],
-    slug: "little-robot-big-day",
-    publishDate: new Date('2025-04-05')
-  },
-  {
-    title: "Ocean Friends: The Dolphin's Secret",
-    excerpt: "Dive into an underwater adventure with Maya as she befriends a dolphin who shows her the wonders of the ocean.",
-    coverImage: "https://images.unsplash.com/photo-1547054728-ea081f1f795f",
-    author: {
-      name: "Emma Thompson",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      slug: "emma-thompson"
-    },
-    rating: 4.4,
-    tags: ["Ocean", "Animals", "Adventure"],
-    slug: "ocean-friends-dolphin-secret",
-    publishDate: new Date('2025-03-22')
-  }
-];
+// Fetch stories from Strapi
+const storiesResponse = await fetchFromStrapi('stories', {
+  populate: '*',
+  sort: 'publishedAt:desc'
+}) as StrapiResponse<Story>;
 
-// Popular tags
-const popularTags = ["Adventure", "Fantasy", "Animals", "Children", "Science Fiction", "Nature", "Friendship", "Magic", "Ocean", "Space", "Technology", "Books"];
+const stories = storiesResponse.data.map(item => ({
+  id: item.id,
+  title: item.attributes.title,
+  slug: item.attributes.slug,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || ''
+  },
+  publishedAt: new Date(item.attributes.publishedAt).toLocaleDateString(),
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || []
+}));
 
 // Filter options
-const ageGroups = ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"];
-const lengths = ["Short (< 10 min)", "Medium (10-20 min)", "Long (> 20 min)"];
-const sortOptions = ["Newest", "Highest Rated", "Most Popular"];
+const ageGroups = ['0-2 years', '3-5 years', '6-8 years', '9-12 years'];
+const lengths = ['Short (< 5 min)', 'Medium (5-15 min)', 'Long (> 15 min)'];
+const sortOptions = ['Most Recent', 'Most Popular', 'Highest Rated'];
+
+// Get unique tags from stories for the popular tags section
+const popularTags = [...new Set(stories.flatMap(story => story.tags))].slice(0, 8);
 ---
 
 <html lang="en">

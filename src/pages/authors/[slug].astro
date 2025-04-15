@@ -5,35 +5,74 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
+import { fetchFromStrapi, type StrapiResponse, type Author, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
-export function getStaticPaths() {
-  // In a real application, this would fetch data from a CMS or API
-  // For now, we'll use mock data
-  return [
-    {
-      params: { slug: 'emma-thompson' },
-      props: {
-        author: {
-          name: "Emma Thompson",
-          avatar: "https://i.pravatar.cc/150?img=1",
-          bio: "Emma writes heartwarming stories about animals and nature. Her tales inspire children to explore the world around them with curiosity and kindness. With a background in elementary education, Emma understands how to engage young minds and foster a love of reading.",
-          joinDate: new Date('2024-09-15'),
-          location: "Portland, Oregon",
-          featured: true,
-          stats: {
-            stories: 12,
-            followers: 843,
-            likes: 2156
-          },
-          socialLinks: {
-            twitter: "https://twitter.com/emmathompson",
-            instagram: "https://instagram.com/emmathompson",
-            website: "https://emmathompsonstories.com"
-          },
-          favoriteGenres: ["Adventure", "Animals", "Nature", "Friendship"]
-        },
-        stories: [
+export async function getStaticPaths() {
+  const authorsResponse = await fetchFromStrapi('authors', {
+    populate: '*'
+  }) as StrapiResponse<Author>;
+
+  return authorsResponse.data.map(item => ({
+    params: { slug: item.attributes.slug },
+    props: { authorId: item.id }
+  }));
+}
+
+const { authorId } = Astro.props;
+
+// Fetch full author data
+const authorResponse = await fetchFromStrapi(`authors/${authorId}`, {
+  populate: '*'
+}) as { data: { id: number; attributes: Author } };
+
+if (!authorResponse.data) {
+  return new Response('Author not found', { status: 404 });
+}
+
+const author = {
+  name: authorResponse.data.attributes.name,
+  avatar: authorResponse.data.attributes.avatar?.data?.attributes?.url || '',
+  bio: authorResponse.data.attributes.bio || '',
+  joinDate: new Date(authorResponse.data.attributes.createdAt),
+  location: authorResponse.data.attributes.location || '',
+  featured: authorResponse.data.attributes.featured || false,
+  stats: {
+    stories: 0, // TODO: Implement stats
+    followers: 0,
+    likes: 0
+  },
+  socialLinks: {
+    twitter: authorResponse.data.attributes.twitter || '',
+    instagram: authorResponse.data.attributes.instagram || '',
+    website: authorResponse.data.attributes.website || ''
+  },
+  favoriteGenres: authorResponse.data.attributes.favoriteGenres || []
+};
+
+// Fetch author's stories
+const storiesResponse = await fetchFromStrapi('stories', {
+  filters: {
+    author: { id: { $eq: authorId } }
+  },
+  populate: '*',
+  sort: 'publishedAt:desc'
+}) as StrapiResponse<Story>;
+
+const stories = storiesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: author.name,
+    avatar: author.avatar,
+    slug: authorResponse.data.attributes.slug
+  },
+  rating: 4.5, // TODO: Implement rating system
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
           {
             title: "The Adventure of the Curious Cat",
             excerpt: "Follow Whiskers on an exciting journey through the neighborhood as she discovers hidden treasures and makes new friends.",

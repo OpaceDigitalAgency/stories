@@ -4,9 +4,10 @@ import Footer from '../../components/Footer.astro';
 import '../../styles/base.css';
 
 // Filter options
-const ageGroups = ["0-3 years", "4-6 years", "7-9 years", "10-12 years", "13+ years"];
-const reviewerTypes = ["Parents", "Teachers", "Librarians", "Children"];
-const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
+// Filter options will be fetched from API
+const ageGroups = [];
+const reviewerTypes = [];
+const sortOptions = [];
 ---
 
 <html lang="en">
@@ -130,60 +131,7 @@ const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
               
               <!-- Reviews Placeholder -->
               <div class="space-y-6">
-                {[1, 2, 3].map(i => (
-                  <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="p-6">
-                      <div class="flex items-start">
-                        <!-- Book Cover -->
-                        <div class="hidden sm:block w-20 h-28 bg-gray-200 rounded overflow-hidden mr-4 flex-shrink-0"></div>
-                        
-                        <div class="flex-1">
-                          <!-- Review Header -->
-                          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
-                            <h3 class="text-lg font-medium text-gray-900 hover:text-secondary transition-colors">
-                              <a href="#">Sample Book Title {i}</a>
-                            </h3>
-                            <div class="flex items-center mt-1 sm:mt-0">
-                              <div class="flex text-yellow-400">
-                                ★★★★★
-                              </div>
-                              <span class="text-xs text-gray-500 ml-2">April 10, 2025</span>
-                            </div>
-                          </div>
-                          
-                          <!-- Review Title & Content -->
-                          <h4 class="font-medium text-gray-800 mb-2">Great book for children!</h4>
-                          <p class="text-gray-600 mb-4">This is a sample review content. The actual reviews will contain detailed feedback from parents, teachers, and young readers.</p>
-                          
-                          <!-- Review Footer -->
-                          <div class="flex flex-wrap items-center justify-between">
-                            <div class="flex items-center">
-                              <div class="w-8 h-8 rounded-full bg-gray-300 mr-2"></div>
-                              <div>
-                                <div class="flex items-center">
-                                  <span class="text-sm font-medium text-gray-700">Parent of 7-year-old</span>
-                                  <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full flex items-center">
-                                    ✓ Verified
-                                  </span>
-                                </div>
-                                <span class="text-xs text-gray-500">For ages: 7-9 years</span>
-                              </div>
-                            </div>
-                            
-                            <div class="flex items-center mt-2 sm:mt-0">
-                              <button class="flex items-center text-sm text-gray-500 hover:text-gray-700">
-                                👍 Helpful (24)
-                              </button>
-                              <button class="flex items-center text-sm text-gray-500 hover:text-gray-700 ml-4">
-                                🚩 Report
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {/* Reviews will be fetched from API */}
               </div>
               
               <!-- Pagination -->
@@ -229,9 +177,7 @@ const sortOptions = ["Most Helpful", "Highest Rated", "Newest", "Oldest"];
                     required
                   >
                     <option value="" disabled selected>Select a story</option>
-                    <option value="magic-library">The Magic Library</option>
-                    <option value="space-explorers">Space Explorers: Journey to the Stars</option>
-                    <option value="little-robot">The Little Robot's Big Day</option>
+                    {/* Story options will be fetched from API */}
                   </select>
                 </div>
                 

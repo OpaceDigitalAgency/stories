@@ -1,28 +1,27 @@
 ---
-export interface Props {
-  author: {
-    name: string;
-    avatar: string;
-    bio: string;
-    slug: string;
-    storyCount: number;
-    socialLinks?: {
-      twitter?: string;
-      instagram?: string;
-      website?: string;
-    };
+import type { CardAuthorProps } from '../types/components';
+
+const { author, className = '' } = Astro.props as CardAuthorProps;
+
+// Extend author interface with additional social/stats data
+interface ExtendedAuthor extends CardAuthorProps['author'] {
+  storyCount?: number;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    website?: string;
   };
 }
 
-const { author } = Astro.props;
+const extendedAuthor = author as ExtendedAuthor;
 ---
 
-<div class="bg-white rounded-lg overflow-hidden shadow-md p-6">
+<div class={`bg-white rounded-lg overflow-hidden shadow-md p-6 ${className}`}>
   <div class="flex flex-col items-center text-center mb-4">
     <a href={`/authors/${author.slug}`} class="block">
-      <img 
-        src={author.avatar} 
-        alt={author.name} 
+      <img
+        src={author.avatar?.url || '/images/default-avatar.jpg'}
+        alt={author.name}
         class="w-24 h-24 rounded-full object-cover border-4 border-accent mb-4"
       />
     </a>
@@ -33,18 +32,22 @@ const { author } = Astro.props;
       </h3>
     </a>
     
-    <p class="text-sm text-secondary font-medium mt-1">
-      {author.storyCount} {author.storyCount === 1 ? 'Story' : 'Stories'}
-    </p>
+    {extendedAuthor.storyCount !== undefined && (
+      <p class="text-sm text-secondary font-medium mt-1">
+        {extendedAuthor.storyCount} {extendedAuthor.storyCount === 1 ? 'Story' : 'Stories'}
+      </p>
+    )}
   </div>
   
-  <p class="text-gray-600 text-sm mb-4 line-clamp-3">
-    {author.bio}
-  </p>
+  {author.bio && (
+    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+      {author.bio}
+    </p>
+  )}
   
-  {author.socialLinks && (
+  {extendedAuthor.socialLinks && (
     <div class="flex justify-center gap-4 mt-4">
-      {author.socialLinks.twitter && (
+      {extendedAuthor.socialLinks.twitter && (
         <a 
           href={author.socialLinks.twitter} 
           target="_blank" 
@@ -58,7 +61,7 @@ const { author } = Astro.props;
         </a>
       )}
       
-      {author.socialLinks.instagram && (
+      {extendedAuthor.socialLinks.instagram && (
         <a 
           href={author.socialLinks.instagram} 
           target="_blank" 
@@ -72,7 +75,7 @@ const { author } = Astro.props;
         </a>
       )}
       
-      {author.socialLinks.website && (
+      {extendedAuthor.socialLinks.website && (
         <a 
           href={author.socialLinks.website} 
           target="_blank" 

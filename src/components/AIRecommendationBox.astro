@@ -1,8 +1,10 @@
 ---
-// AI Recommendation Box Component
+import type { AIRecommendationBoxProps } from '../types/components';
+
+const { story, recommendationText, className = '' } = Astro.props as AIRecommendationBoxProps;
 ---
 
-<div class="bg-gradient-to-br from-tertiary/20 to-primary/20 rounded-xl p-6 shadow-playful relative overflow-hidden">
+<div class={`bg-gradient-to-br from-tertiary/20 to-primary/20 rounded-xl p-6 shadow-playful relative overflow-hidden ${className}`}>
   <!-- Decorative elements -->
   <div class="absolute -top-10 -right-10 w-40 h-40 bg-tertiary/10 rounded-full blur-xl"></div>
   <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-xl"></div>
@@ -17,23 +19,23 @@
       <h3 class="text-xl font-display font-bold text-text-primary">AI Story Recommendations</h3>
     </div>
     
-    <p class="text-text-secondary mb-4">
-      Our AI assistant Roo can suggest stories based on your interests and reading history.
-    </p>
+    <p class="text-text-secondary mb-4">{recommendationText}</p>
     
-    <div class="bg-white/80 backdrop-blur-sm rounded-lg p-4 mb-4 shadow-sm">
-      <div class="flex items-start gap-3">
-        <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-          </svg>
-        </div>
-        <div>
-          <p class="text-sm text-text-primary font-medium">Based on your interest in adventure stories:</p>
-          <p class="text-sm text-text-secondary mt-1">You might enjoy "The Magic Library" by Michael Johnson</p>
+    <a href={`/stories/${story.slug}`} class="block">
+      <div class="bg-white/80 backdrop-blur-sm rounded-lg p-4 mb-4 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-text-primary font-medium">{story.title}</p>
+            <p class="text-sm text-text-secondary mt-1">by {story.author.name}</p>
+          </div>
         </div>
       </div>
-    </div>
+    </a>
     
     <div class="flex flex-col sm:flex-row gap-3">
       <button class="btn btn-tertiary flex-1 py-2 shadow-playful btn-playful">

@@ -1,53 +1,23 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
+import { fetchFromStrapi, type StrapiResponse, type AiTool } from '../../lib/api';
 import '../../styles/base.css';
 
-// AI Tool categories
-const aiTools = [
-  {
-    title: "Story Starter Generator",
-    description: "Get creative prompts and story starters to inspire your next tale. Choose a genre, age group, and theme to generate custom story ideas.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />',
-    comingSoon: false,
-    color: "primary"
-  },
-  {
-    title: "Poem Maker",
-    description: "Create beautiful poems with AI assistance. Choose a style, theme, and length, and our AI will help craft a poem that you can edit and refine.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />',
-    comingSoon: false,
-    color: "secondary"
-  },
-  {
-    title: "AI Illustrator",
-    description: "Generate custom illustrations for your stories. Describe the scene you want to visualize, and our AI will create unique artwork to bring your story to life.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />',
-    comingSoon: true,
-    color: "tertiary"
-  },
-  {
-    title: "Reading Level Checker",
-    description: "Analyze your story to determine its reading level and age appropriateness. Get suggestions to adjust vocabulary and sentence complexity for your target audience.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />',
-    comingSoon: false,
-    color: "accent"
-  },
-  {
-    title: "Character Creator",
-    description: "Develop rich, memorable characters for your stories. Define personality traits, backgrounds, and goals to generate detailed character profiles.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />',
-    comingSoon: true,
-    color: "success"
-  },
-  {
-    title: "Plot Developer",
-    description: "Structure your story with AI assistance. Map out your plot points, build tension, and create satisfying story arcs with guided prompts and suggestions.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />',
-    comingSoon: true,
-    color: "primary"
-  }
-];
+// Fetch AI tools from Strapi
+const aiToolsResponse = await fetchFromStrapi('ai-tools', {
+  populate: '*',
+  sort: 'title:asc'
+}) as StrapiResponse<AiTool>;
+
+const aiTools = aiToolsResponse.data.map(tool => ({
+  title: tool.attributes.name,
+  description: tool.attributes.description,
+  icon: tool.attributes.icon || '',
+  color: tool.attributes.color || 'primary',
+  comingSoon: tool.attributes.comingSoon || false,
+  url: tool.attributes.url
+}));
 ---
 
 <html lang="en">

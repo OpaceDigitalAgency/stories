@@ -1,47 +1,24 @@
 ---
 import RatingStars from './RatingStars.astro';
 import TagBadge from './TagBadge.astro';
+import type { CardStoryProps } from '../types/components';
 
-export interface Props {
-  title: string;
-  excerpt: string;
-  coverImage: string;
-  author: {
-    name: string;
-    avatar: string;
-    slug: string;
-  };
-  rating: number;
-  tags: string[];
-  slug: string;
-  publishDate: Date;
-}
-
-const { 
-  title, 
-  excerpt, 
-  coverImage, 
-  author, 
-  rating, 
-  tags, 
-  slug,
-  publishDate 
-} = Astro.props;
+const { story, className = '' } = Astro.props as CardStoryProps;
 
 const formattedDate = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'long',
   day: 'numeric'
-}).format(publishDate);
+}).format(new Date(story.publishedAt));
 ---
 
-<article class="card group h-full flex flex-col">
-  <a href={`/stories/${slug}`} class="block relative overflow-hidden rounded-t-2xl">
+<article class={`card group h-full flex flex-col ${className}`}>
+  <a href={`/stories/${story.slug}`} class="block relative overflow-hidden rounded-t-2xl">
     <div class="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
     <div class="relative aspect-video overflow-hidden">
       <img
-        src={coverImage}
-        alt={`Cover image for ${title}`}
+        src={story.coverImage?.url || '/images/default-cover.jpg'}
+        alt={`Cover image for ${story.title}`}
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
       />
       <!-- Decorative elements -->
@@ -56,36 +33,36 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
   <div class="p-6 flex-grow flex flex-col">
     <div class="flex justify-between items-start mb-3">
       <div class="flex-1">
-        <a href={`/stories/${slug}`} class="block group">
-          <h3 class="text-xl font-display font-bold text-text-primary group-hover:text-primary transition-colors mb-1">{title}</h3>
+        <a href={`/stories/${story.slug}`} class="block group">
+          <h3 class="text-xl font-display font-bold text-text-primary group-hover:text-primary transition-colors mb-1">{story.title}</h3>
         </a>
         <div class="flex items-center text-sm text-text-light mb-2">
           <span>{formattedDate}</span>
           <span class="mx-2">•</span>
-          <RatingStars rating={rating} />
+          <RatingStars rating={story.rating || 0} />
         </div>
       </div>
     </div>
     
-    <p class="text-text-secondary mb-4 line-clamp-3 flex-grow">{excerpt}</p>
+    <p class="text-text-secondary mb-4 line-clamp-3 flex-grow">{story.excerpt}</p>
     
     <div class="flex flex-wrap gap-2 mb-4">
-      {tags.map(tag => <TagBadge tag={tag} />)}
+      {story.tags.map(tag => <TagBadge tag={tag} />)}
     </div>
     
     <div class="flex items-center pt-3 border-t border-neutral-dark mt-auto">
-      <a href={`/authors/${author.slug}`} class="flex items-center group">
+      <a href={`/authors/${story.author.slug}`} class="flex items-center group">
         <div class="relative">
           <img
-            src={author.avatar}
-            alt={author.name}
+            src={story.author.avatar?.url || '/images/default-avatar.jpg'}
+            alt={story.author.name}
             class="w-10 h-10 rounded-full border-2 border-white shadow-soft object-cover"
           />
           <!-- Decorative element -->
           <span class="absolute inset-0 rounded-full border-2 border-primary scale-0 group-hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
         </div>
         <span class="ml-2 font-medium text-text-secondary group-hover:text-primary transition-colors">
-          {author.name}
+          {story.author.name}
         </span>
       </a>
     </div>

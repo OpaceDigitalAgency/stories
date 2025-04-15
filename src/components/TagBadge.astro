@@ -1,18 +1,20 @@
 ---
-export interface Props {
-  tag: string;
+import type { TagBadgeProps } from '../types/components';
+
+interface ExtendedTagBadgeProps extends TagBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   clickable?: boolean;
 }
 
-const { 
-  tag, 
+const {
+  tag,
+  className = '',
   size = 'md',
   clickable = true
-} = Astro.props;
+} = Astro.props as ExtendedTagBadgeProps;
 
 // Size classes
-const sizeClasses = {
+const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
   sm: 'text-xs px-2 py-1',
   md: 'text-sm px-3 py-1.5',
   lg: 'text-base px-4 py-2'
@@ -36,7 +38,7 @@ const getTagColor = (tag: string) => {
 const colorClass = getTagColor(tag);
 const baseClasses = "inline-flex items-center rounded-full font-bold transition-all duration-300";
 const hoverClasses = clickable ? "transform hover:scale-105 cursor-pointer" : "";
-const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses}`;
+const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses} ${className}`;
 
 // Format tag for URL (lowercase, replace spaces with hyphens)
 const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');

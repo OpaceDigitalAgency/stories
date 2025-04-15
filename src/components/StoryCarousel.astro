@@ -1,32 +1,30 @@
 ---
-// Story Carousel Component
-// This component displays a carousel of stories with a title and "View All" link
-
 import CardStory from './CardStory.astro';
+import type { StoryCarouselProps } from '../types/components';
 
-interface Props {
-  title: string;
-  viewAllLink: string;
-  stories: any[];
+interface ExtendedStoryCarouselProps extends StoryCarouselProps {
+  viewAllLink?: string;
   carouselId: string;
 }
 
-const { title, viewAllLink, stories, carouselId } = Astro.props;
+const { stories, title = 'Featured Stories', className = '', viewAllLink, carouselId } = Astro.props as ExtendedStoryCarouselProps;
 ---
 
-<div class="py-8 relative overflow-hidden">
+<div class={`py-8 relative overflow-hidden ${className}`}>
   <!-- Decorative blob -->
   <div class="blob-shape bg-secondary/20 w-72 h-72 top-40 right-20"></div>
   
   <div class="container mx-auto px-4 relative z-10">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl md:text-3xl font-display font-bold text-text-primary fancy-underline">{title}</h2>
-      <a href={viewAllLink} class="text-secondary font-bold hover:text-secondary/80 transition-all duration-300 hover:translate-x-1 flex items-center group">
-        <span>View All</span>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-        </svg>
-      </a>
+      {viewAllLink && (
+        <a href={viewAllLink} class="text-secondary font-bold hover:text-secondary/80 transition-all duration-300 hover:translate-x-1 flex items-center group">
+          <span>View All</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 ml-1 transform group-hover:translate-x-1 transition-transform">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </a>
+      )}
     </div>
     
     <!-- Carousel container -->
@@ -49,7 +47,7 @@ const { title, viewAllLink, stories, carouselId } = Astro.props;
         <div class="carousel-track flex gap-6 transition-transform duration-300 ease-in-out">
           {stories.map(story => (
             <div class="carousel-item flex-shrink-0 w-full sm:w-1/2 md:w-1/3 lg:w-1/4">
-              <CardStory {...story} />
+              <CardStory story={story} />
             </div>
           ))}
         </div>

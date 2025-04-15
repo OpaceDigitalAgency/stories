@@ -1,33 +1,10 @@
 ---
-// Partner Badges Component for Footer
-// This component displays badges for charity and education partners
+import type { PartnerBadgesProps } from '../types/components';
 
-// Mock data for partner organizations
-const partners = [
-  {
-    name: "Reading First Foundation",
-    logo: "https://placehold.co/100x40/e9ecef/495057?text=Reading+First",
-    href: "#"
-  },
-  {
-    name: "Kids Literacy Initiative",
-    logo: "https://placehold.co/100x40/e9ecef/495057?text=Kids+Literacy",
-    href: "#"
-  },
-  {
-    name: "Global Education Alliance",
-    logo: "https://placehold.co/100x40/e9ecef/495057?text=Education+Alliance",
-    href: "#"
-  },
-  {
-    name: "Children's Book Trust",
-    logo: "https://placehold.co/100x40/e9ecef/495057?text=Book+Trust",
-    href: "#"
-  }
-];
+const { partners, className = '' } = Astro.props as PartnerBadgesProps;
 ---
 
-<div class="mt-8 pt-6 border-t border-gray-700">
+<div class={`mt-8 pt-6 border-t border-gray-700 ${className}`}>
   <h3 class="text-sm font-medium text-gray-400 mb-4">Our Partners</h3>
   <div class="flex flex-wrap gap-4 items-center justify-center md:justify-start">
     {partners.map(partner => (
@@ -38,9 +15,9 @@ const partners = [
         target="_blank"
         rel="noopener noreferrer"
       >
-        <img 
-          src={partner.logo} 
-          alt={partner.name} 
+        <img
+          src={partner.logo.url}
+          alt={partner.logo.alternativeText || partner.name}
           class="h-8 w-auto opacity-80 hover:opacity-100 transition-opacity"
         />
       </a>

@@ -1,56 +1,30 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
+import { fetchFromStrapi, type StrapiResponse, type Game } from '../../lib/api';
 import '../../styles/base.css';
 
-// Game categories
-const games = [
-  {
-    title: "Vocabulary Builder",
-    description: "Expand your vocabulary through fun word games. Match words to definitions, complete sentences, and learn new words in context.",
-    image: "https://images.unsplash.com/photo-1591492654773-6756035a0e66?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: false,
-    color: "primary"
-  },
-  {
-    title: "Story Puzzles",
-    description: "Arrange story elements in the correct order to create a coherent narrative. Learn about plot structure, character development, and storytelling.",
-    image: "https://images.unsplash.com/photo-1605870445919-838d190e8e1b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: false,
-    color: "secondary"
-  },
-  {
-    title: "Reading Comprehension Quest",
-    description: "Read short stories and answer questions to test your understanding. Earn points and unlock new levels as you improve your reading skills.",
-    image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: true,
-    color: "tertiary"
-  },
-  {
-    title: "Character Creator",
-    description: "Design and customize your own story characters. Choose physical traits, personality attributes, and backstories to create unique characters.",
-    image: "https://images.unsplash.com/photo-1560830889-96266c6dbe8c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: true,
-    color: "accent"
-  },
-  {
-    title: "Word Explorer",
-    description: "Embark on a journey through different worlds, each representing a different genre. Solve word puzzles to progress and learn about literary genres.",
-    image: "https://images.unsplash.com/photo-1614332287897-cdc485fa562d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: true,
-    color: "success"
-  },
-  {
-    title: "Rhyme Time",
-    description: "Practice rhyming skills with this fast-paced game. Find words that rhyme with the target word before time runs out.",
-    image: "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80",
-    comingSoon: true,
-    color: "primary"
-  }
-];
+// Fetch games from Strapi
+const gamesResponse = await fetchFromStrapi('games', {
+  populate: '*',
+  sort: 'title:asc'
+}) as StrapiResponse<Game>;
 
-// Age groups
-const ageGroups = ["5-7 years", "8-10 years", "11-13 years"];
+const games = gamesResponse.data.map(game => ({
+  title: game.attributes.title,
+  description: game.attributes.description,
+  image: game.attributes.thumbnail?.data?.attributes?.url || '',
+  color: game.attributes.color || 'primary',
+  comingSoon: game.attributes.comingSoon || false,
+  url: game.attributes.url
+}));
+
+// Fetch age groups from Strapi
+const ageGroupsResponse = await fetchFromStrapi('game-age-groups', {
+  sort: 'order:asc'
+}) as StrapiResponse<{ name: string }>;
+
+const ageGroups = ageGroupsResponse.data.map(group => group.attributes.name);
 ---
 
 <html lang="en">

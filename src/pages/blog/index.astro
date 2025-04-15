@@ -1,21 +1,31 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
+import { fetchFromStrapi, type StrapiResponse, type BlogPost } from '../../lib/api';
 import '../../styles/base.css';
 
-// Blog post categories
-const categories = [
-  "Storytime Events",
-  "Competitions",
-  "New Releases",
-  "AI Tools",
-  "Author Interviews",
-  "Teacher Insights",
-  "Reading Tips"
-];
+// Fetch blog post categories
+const categoriesResponse = await fetchFromStrapi('blog-categories', {
+  sort: 'name:asc'
+}) as StrapiResponse<{ name: string }>;
 
-// Mock data for blog posts
-const blogPosts = [
+const categories = categoriesResponse.data.map(category => category.attributes.name);
+
+// Fetch blog posts
+const blogPostsResponse = await fetchFromStrapi('blog-posts', {
+  populate: '*',
+  sort: 'publishedAt:desc'
+}) as StrapiResponse<BlogPost>;
+
+const blogPosts = blogPostsResponse.data.map(post => ({
+  title: post.attributes.title,
+  excerpt: post.attributes.excerpt,
+  image: post.attributes.cover?.data?.attributes?.url || '',
+  category: post.attributes.category?.data?.attributes?.name || '',
+  author: post.attributes.author?.data?.attributes?.name || '',
+  date: new Date(post.attributes.publishedAt),
+  slug: post.attributes.slug
+}));
   {
     title: "Upcoming Storytime Events for Summer 2025",
     excerpt: "Join us for a series of exciting storytime events happening across the country this summer. Meet authors, participate in interactive readings, and enjoy fun activities for the whole family.",
@@ -72,10 +82,9 @@ const blogPosts = [
   }
 ];
 
-// Featured post (first post)
-const featuredPost = blogPosts[0];
-// Regular posts (remaining posts)
-const regularPosts = blogPosts.slice(1);
+// Get featured and regular posts
+const featuredPost = blogPosts.find(post => post.featured) || blogPosts[0];
+const regularPosts = blogPosts.filter(post => post !== featuredPost);
 ---
 
 <html lang="en">

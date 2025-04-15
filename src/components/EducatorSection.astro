@@ -1,8 +1,10 @@
 ---
-// Educator Section Component for Parents and Teachers
+import type { EducatorSectionProps } from '../types/components';
+
+const { educator, className = '' } = Astro.props as EducatorSectionProps;
 ---
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class={`grid grid-cols-1 md:grid-cols-2 gap-6 ${className}`}>
   <!-- Parent Area -->
   <div class="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300">
     <!-- Decorative elements -->
@@ -16,12 +18,22 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
           </svg>
         </div>
-        <h3 class="text-xl font-display font-bold text-text-primary">For Parents</h3>
+        <h3 class="text-xl font-display font-bold text-text-primary">{educator.name}</h3>
       </div>
       
-      <p class="text-text-secondary mb-4">
-        Discover age-appropriate stories for your children and track their reading progress. Get recommendations based on their interests and reading level.
-      </p>
+      <div class="flex items-center mb-4">
+        {educator.avatar && (
+          <img
+            src={educator.avatar.url}
+            alt={educator.name}
+            class="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md mr-4"
+          />
+        )}
+        <div>
+          <p class="text-lg font-medium text-text-primary">{educator.title}</p>
+          <p class="text-sm text-text-secondary">{educator.institution}</p>
+        </div>
+      </div>
       
       <ul class="space-y-2 mb-6">
         <li class="flex items-start">

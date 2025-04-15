@@ -7,18 +7,76 @@ import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
+import { fetchFromStrapi, type StrapiResponse, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
-export function getStaticPaths() {
-  // In a real application, this would fetch data from a CMS or API
-  // For now, we'll use mock data
-  return [
-    {
-      params: { slug: 'adventure-curious-cat' },
-      props: {
-        story: {
-          title: "The Adventure of the Curious Cat",
-          content: `
+export async function getStaticPaths() {
+  const storiesResponse = await fetchFromStrapi('stories', {
+    populate: '*'
+  }) as StrapiResponse<Story>;
+
+  return storiesResponse.data.map(item => ({
+    params: { slug: item.attributes.slug },
+    props: { storyId: item.id }
+  }));
+}
+
+const { storyId } = Astro.props;
+
+// Fetch full story data
+const storyResponse = await fetchFromStrapi(`stories/${storyId}`, {
+  populate: '*'
+}) as { data: { id: number; attributes: Story } };
+
+if (!storyResponse.data) {
+  return new Response('Story not found', { status: 404 });
+}
+
+const story = {
+  id: storyResponse.data.id,
+  title: storyResponse.data.attributes.title,
+  content: storyResponse.data.attributes.content,
+  coverImage: storyResponse.data.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: storyResponse.data.attributes.author?.data?.attributes?.name || '',
+    avatar: storyResponse.data.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    bio: storyResponse.data.attributes.author?.data?.attributes?.bio || '',
+    slug: storyResponse.data.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: 4.7, // TODO: Implement rating system
+  reviewCount: 42, // TODO: Implement review system
+  tags: storyResponse.data.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  readingTime: '8 min', // TODO: Calculate reading time
+  sponsored: false,
+  ageRange: storyResponse.data.attributes.ageRange || '',
+  needsModeration: false,
+  publishDate: new Date(storyResponse.data.attributes.publishedAt)
+};
+
+// Fetch related stories
+const relatedStoriesResponse = await fetchFromStrapi('stories', {
+  filters: {
+    id: { $ne: storyId },
+    tags: { $contains: story.tags[0] }
+  },
+  populate: '*',
+  pagination: { limit: 2 }
+}) as StrapiResponse<Story>;
+
+const relatedStories = relatedStoriesResponse.data.map(item => ({
+  title: item.attributes.title,
+  excerpt: item.attributes.excerpt,
+  coverImage: item.attributes.cover?.data?.attributes?.url || '',
+  author: {
+    name: item.attributes.author?.data?.attributes?.name || '',
+    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+    slug: item.attributes.author?.data?.attributes?.slug || ''
+  },
+  rating: 4.5, // TODO: Implement rating system
+  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+  slug: item.attributes.slug,
+  publishDate: new Date(item.attributes.publishedAt)
+}));
             <p>Once upon a time, in a cozy little house at the end of Maple Street, there lived a small gray cat named Whiskers. Whiskers was not like other cats in the neighborhood. While they were content to nap in sunny spots and chase the occasional mouse, Whiskers was curious about the world beyond the garden fence.</p>
             
             <p>"There must be so many exciting things to discover out there," Whiskers thought as she peered through the fence slats.</p>

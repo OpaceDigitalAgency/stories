@@ -1,10 +1,84 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
+import { fetchFromStrapi, type StrapiResponse, type DirectoryItem, type Story, type Author } from '../../lib/api';
 import '../../styles/base.css';
 
-// Directory categories
-const directories = [
+// Fetch directory categories
+const directoriesResponse = await fetchFromStrapi('directory-categories', {
+  populate: '*'
+}) as StrapiResponse<{
+  title: string;
+  description: string;
+  icon: string;
+  link: string;
+  color: string;
+}>;
+
+const directories = directoriesResponse.data.map(dir => ({
+  title: dir.attributes.title,
+  description: dir.attributes.description,
+  icon: dir.attributes.icon,
+  link: dir.attributes.link,
+  color: dir.attributes.color
+}));
+
+// Fetch filter categories
+const bookFiltersResponse = await fetchFromStrapi('book-filters', {
+  populate: '*'
+}) as StrapiResponse<{
+  name: string;
+  options: string[];
+}>;
+
+const bookFilters = bookFiltersResponse.data.map(filter => ({
+  name: filter.attributes.name,
+  options: filter.attributes.options
+}));
+
+const authorFiltersResponse = await fetchFromStrapi('author-filters', {
+  populate: '*'
+}) as StrapiResponse<{
+  name: string;
+  options: string[];
+}>;
+
+const authorFilters = authorFiltersResponse.data.map(filter => ({
+  name: filter.attributes.name,
+  options: filter.attributes.options
+}));
+
+// Fetch featured books
+const featuredBooksResponse = await fetchFromStrapi('stories', {
+  filters: { featured: true },
+  populate: '*',
+  pagination: { limit: 6 }
+}) as StrapiResponse<Story>;
+
+const featuredBooks = featuredBooksResponse.data.map(book => ({
+  id: book.id,
+  title: book.attributes.title,
+  author: book.attributes.author?.data?.attributes?.name || '',
+  coverImage: book.attributes.cover?.data?.attributes?.url || '',
+  rating: 4.5, // TODO: Implement rating system
+  slug: book.attributes.slug
+}));
+
+// Fetch featured authors
+const featuredAuthorsResponse = await fetchFromStrapi('authors', {
+  filters: { featured: true },
+  populate: '*',
+  pagination: { limit: 6 }
+}) as StrapiResponse<Author>;
+
+const featuredAuthors = featuredAuthorsResponse.data.map(author => ({
+  id: author.id,
+  name: author.attributes.name,
+  avatar: author.attributes.avatar?.data?.attributes?.url || '',
+  bio: author.attributes.bio || '',
+  storyCount: 0, // TODO: Implement count
+  genres: author.attributes.favoriteGenres || []
+}));
   {
     title: "Books Directory",
     description: "Browse our extensive collection of children's books, categorized by age, genre, and reading level.",
@@ -225,15 +299,23 @@ const authorFilters = [
                 
                 <!-- Directory Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map(item => (
+                  {featuredBooks.map(book => (
                     <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                      <div class="h-40 bg-gray-200"></div>
+                      <div class="h-40 bg-gray-200">
+                        {book.coverImage && (
+                          <img
+                            src={book.coverImage}
+                            alt={book.title}
+                            class="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
                       <div class="p-4">
-                        <h4 class="font-medium text-gray-800 mb-1">Book Title {item}</h4>
-                        <p class="text-sm text-gray-500 mb-2">Author Name</p>
+                        <h4 class="font-medium text-gray-800 mb-1">{book.title}</h4>
+                        <p class="text-sm text-gray-500 mb-2">{book.author}</p>
                         <div class="flex items-center text-yellow-400 text-sm">
                           <span>★★★★☆</span>
-                          <span class="text-gray-600 ml-1">(4.0)</span>
+                          <span class="text-gray-600 ml-1">({book.rating})</span>
                         </div>
                       </div>
                     </div>
@@ -309,21 +391,30 @@ const authorFilters = [
                 
                 <!-- Directory Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map(item => (
+                  {featuredAuthors.map(author => (
                     <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow p-4">
                       <div class="flex items-center mb-3">
-                        <div class="w-12 h-12 bg-gray-200 rounded-full mr-3"></div>
+                        <div class="w-12 h-12 bg-gray-200 rounded-full mr-3">
+                          {author.avatar && (
+                            <img
+                              src={author.avatar}
+                              alt={author.name}
+                              class="w-full h-full rounded-full object-cover"
+                            />
+                          )}
+                        </div>
                         <div>
-                          <h4 class="font-medium text-gray-800">Author Name {item}</h4>
-                          <p class="text-xs text-gray-500">12 Stories</p>
+                          <h4 class="font-medium text-gray-800">{author.name}</h4>
+                          <p class="text-xs text-gray-500">{author.storyCount} Stories</p>
                         </div>
                       </div>
                       <p class="text-sm text-gray-600 mb-3 line-clamp-2">
-                        Author bio preview with a brief description of their writing style and preferred genres...
+                        {author.bio}
                       </p>
                       <div class="flex flex-wrap gap-1">
-                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Fantasy</span>
-                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Adventure</span>
+                        {author.genres.map(genre => (
+                          <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{genre}</span>
+                        ))}
                       </div>
                     </div>
                   ))}

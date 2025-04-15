@@ -52,7 +52,8 @@ const story = {
   sponsored: storyResponse.data.attributes.isSponsored || false,
   ageRange: storyResponse.data.attributes.ageGroup || '',
   needsModeration: storyResponse.data.attributes.needsModeration || false,
-  publishDate: new Date(storyResponse.data.attributes.publishedAt)
+  // Add null check for publishedAt
+  publishDate: storyResponse.data.attributes.publishedAt ? new Date(storyResponse.data.attributes.publishedAt) : new Date()
 };
 
 // Fetch related stories
@@ -65,20 +66,29 @@ const relatedStoriesResponse = await fetchFromStrapi('stories', {
   pagination: { limit: 3 }
 }) as StrapiResponse<Story>;
 
-const relatedStories = relatedStoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-    slug: item.attributes.author?.data?.attributes?.slug || ''
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+const relatedStories = relatedStoriesResponse.data.map(item => {
+  // Ensure item and attributes exist before accessing properties
+  if (!item || !item.attributes) {
+    console.error('Invalid related story item structure:', item);
+    return null;
+  }
+  
+  return {
+    title: item.attributes.title || 'Untitled Story',
+    excerpt: item.attributes.excerpt || '',
+    coverImage: item.attributes.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes.author?.data?.attributes?.name || '',
+      avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
+      slug: item.attributes.author?.data?.attributes?.slug || ''
+    },
+    rating: item.attributes.averageRating || 0,
+    tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+    slug: item.attributes.slug || '',
+    // Add null check for publishedAt
+    publishDate: item.attributes.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  };
+}).filter(Boolean); // Remove any null items
 
 // Format the publish date
 const formattedDate = new Intl.DateTimeFormat('en-US', {

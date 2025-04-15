@@ -61,20 +61,29 @@ const storiesResponse = await fetchFromStrapi('stories', {
   sort: 'publishedAt:desc'
 }) as StrapiResponse<Story>;
 
-const stories = storiesResponse.data.map(item => ({
-  title: item.attributes.title,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: author.name,
-    avatar: author.avatar,
-    slug: authorResponse.data.attributes.slug
-  },
-  rating: item.attributes.averageRating || 0,
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
-  slug: item.attributes.slug,
-  publishDate: new Date(item.attributes.publishedAt)
-}));
+const stories = storiesResponse.data.map(item => {
+  // Ensure item and attributes exist before accessing properties
+  if (!item || !item.attributes) {
+    console.error('Invalid story item structure:', item);
+    return null;
+  }
+  
+  return {
+    title: item.attributes.title || 'Untitled Story',
+    excerpt: item.attributes.excerpt || '',
+    coverImage: item.attributes.cover?.data?.attributes?.url || '',
+    author: {
+      name: author.name,
+      avatar: author.avatar,
+      slug: authorResponse.data.attributes.slug
+    },
+    rating: item.attributes.averageRating || 0,
+    tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || [],
+    slug: item.attributes.slug || '',
+    // Add null check for publishedAt
+    publishDate: item.attributes.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+  };
+}).filter(Boolean); // Remove any null items
 
 // Format the join date
 const formattedJoinDate = new Intl.DateTimeFormat('en-US', {

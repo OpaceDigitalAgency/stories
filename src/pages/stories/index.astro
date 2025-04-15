@@ -14,19 +14,28 @@ const storiesResponse = await fetchFromStrapi('stories', {
   sort: 'publishedAt:desc'
 }) as StrapiResponse<Story>;
 
-const stories = storiesResponse.data.map(item => ({
-  id: item.id,
-  title: item.attributes.title,
-  slug: item.attributes.slug,
-  excerpt: item.attributes.excerpt,
-  coverImage: item.attributes.cover?.data?.attributes?.url || '',
-  author: {
-    name: item.attributes.author?.data?.attributes?.name || '',
-    avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || ''
-  },
-  publishedAt: new Date(item.attributes.publishedAt).toLocaleDateString(),
-  tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || []
-}));
+const stories = storiesResponse.data.map(item => {
+  // Ensure item and attributes exist before accessing properties
+  if (!item || !item.attributes) {
+    console.error('Invalid story item structure:', item);
+    return null;
+  }
+  
+  return {
+    id: item.id,
+    title: item.attributes.title || 'Untitled Story',
+    slug: item.attributes.slug || '',
+    excerpt: item.attributes.excerpt || '',
+    coverImage: item.attributes.cover?.data?.attributes?.url || '',
+    author: {
+      name: item.attributes.author?.data?.attributes?.name || '',
+      avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || ''
+    },
+    // Add null check for publishedAt
+    publishedAt: item.attributes.publishedAt ? new Date(item.attributes.publishedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+    tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || []
+  };
+}).filter(Boolean); // Remove any null items
 
 // Fetch featured blocks from Strapi
 const featuredBlocksResponse = await fetchFromStrapi('featured-blocks', {

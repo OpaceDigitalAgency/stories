@@ -5,17 +5,25 @@ import type { CardStoryProps } from '../types/components';
 
 const { story, className = '' } = Astro.props as CardStoryProps;
 
+// Ensure story object exists
+if (!story) {
+  console.error('Story object is undefined or null');
+  return;
+}
+
 // Handle both publishedAt and publishDate for compatibility
+// Ensure we have a valid date or default to current date
 const publishDate = story.publishedAt || story.publishDate || new Date();
 
 // Safely format the date with error handling
 let formattedDate = '';
 try {
+  // Ensure publishDate is a valid date string or object before formatting
   formattedDate = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
-  }).format(new Date(publishDate));
+  }).format(publishDate instanceof Date ? publishDate : new Date(publishDate));
 } catch (error) {
   console.error('Error formatting date:', error);
   formattedDate = 'Publication date unavailable';

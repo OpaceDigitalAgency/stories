@@ -96,12 +96,14 @@ module.exports = {
         display: ['Poppins', 'sans-serif'],
         body: ['Nunito', 'sans-serif'],
       },
-      // Add box shadow variations for depth
+      // Add enhanced box shadow variations for depth and glow effects
       boxShadow: {
         'soft': '0 4px 12px rgba(0, 0, 0, 0.05)',
         'playful': '0 8px 24px rgba(123, 97, 255, 0.15)',
         'card': '0 10px 20px rgba(0, 0, 0, 0.08)',
         'hover': '0 15px 30px rgba(0, 0, 0, 0.12)',
+        'glow': '0 0 15px rgba(255, 255, 255, 0.5)',
+        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
       },
       // Add border radius variations
       borderRadius: {
@@ -109,6 +111,20 @@ module.exports = {
         '2xl': '1.5rem',
         '3xl': '2rem',
         'blob': '60% 40% 40% 60% / 60% 30% 70% 40%',
+      },
+      // Add 3D transform utilities
+      transformStyle: {
+        '3d': 'preserve-3d',
+      },
+      perspective: {
+        '1000': '1000px',
+      },
+      translate: {
+        'z-2': '2px',
+        'z-4': '4px',
+        'z-8': '8px',
+        'z-12': '12px',
+        'z-16': '16px',
       },
     },
   },

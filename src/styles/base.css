@@ -136,9 +136,18 @@
     @apply bg-gradient-to-br from-secondary-100 via-white to-secondary-100;
   }
   
-  /* Blob shapes for decorative elements */
+  /* 3D transform utilities */
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  /* Enhanced blob shapes */
   .blob-shape {
-    @apply absolute -z-10 rounded-blob opacity-70 blur-2xl;
+    @apply absolute -z-10 rounded-blob opacity-70 blur-2xl transition-all duration-700;
   }
   
   /* Animated elements */
@@ -217,19 +226,30 @@
     @apply transform scale-95;
   }
 
-  /* Loading skeleton styles with shimmer effect */
+  /* Loading skeleton styles with enhanced shimmer effect */
   .skeleton {
     @apply relative overflow-hidden rounded-2xl;
-  }
-
-  .skeleton::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-neutral-100 via-neutral-200 to-neutral-100;
+    background: linear-gradient(
+      110deg,
+      #f0ebff 0%,
+      #f5f2ff 25%,
+      #f9f7ff 50%,
+      #f5f2ff 75%,
+      #f0ebff 100%
+    );
+    background-size: 200% 100%;
   }
 
   .skeleton::after {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50;
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
     animation: shimmer 2s infinite;
   }
 
@@ -254,15 +274,18 @@
     0% {
       transform: translateX(-100%);
     }
-    100% {
+    50% {
       transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
     }
   }
 
-  /* Gradient animation */
+  /* Enhanced gradient animations */
   .animate-gradient {
     animation: gradient 8s ease infinite;
-    background-size: 200% 200%;
+    background-size: 400% 400%;
   }
 
   @keyframes gradient {
@@ -275,5 +298,31 @@
     100% {
       background-position: 0% 50%;
     }
+  }
+
+  /* Shadow glow effect */
+  .shadow-glow {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  }
+
+  /* Translate Z utilities */
+  .translate-z-2 {
+    transform: translateZ(2px);
+  }
+  
+  .translate-z-4 {
+    transform: translateZ(4px);
+  }
+  
+  .translate-z-8 {
+    transform: translateZ(8px);
+  }
+  
+  .translate-z-12 {
+    transform: translateZ(12px);
+  }
+  
+  .translate-z-16 {
+    transform: translateZ(16px);
   }
 }

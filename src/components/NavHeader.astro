@@ -20,42 +20,53 @@ const currentPath = Astro.url.pathname;
 ---
 
 <header class="sticky top-0 z-50 py-2">
-  <!-- Background with blur effect -->
-  <div class="absolute inset-0 bg-white/80 backdrop-blur-md"></div>
+  <!-- Background with enhanced blur effect -->
+  <div class="absolute inset-0 bg-white/80 backdrop-blur-xl"></div>
   
-  <!-- Decorative gradient -->
-  <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5"></div>
+  <!-- Enhanced decorative gradients -->
+  <div class="absolute inset-0 bg-gradient-to-r from-primary-100 via-transparent to-secondary-100 opacity-50 animate-gradient"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent"></div>
+  
+  <!-- Enhanced animated decorative elements -->
+  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
+  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
+  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000 transform translate-z-4"></div>
   
   <div class="container mx-auto px-4 flex justify-between items-center h-16 relative">
-    <!-- Logo -->
-    <a href="/" class="flex items-center group">
-      <div class="relative">
-        <img src="/logo.png" alt="Stories From The Web" class="h-14 md:h-16 w-auto transition-transform duration-300 group-hover:scale-105" />
-        <!-- Decorative element -->
-        <span class="absolute -bottom-1 left-0 w-full h-1 bg-accent/30 rounded-full transform -rotate-1 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
+    <!-- Enhanced Logo -->
+    <a href="/" class="flex items-center group relative perspective-1000">
+      <div class="relative overflow-hidden transform-style-3d">
+        <img src="/logo.png" alt="Stories From The Web" class="h-12 md:h-14 w-auto transition-all duration-500 group-hover:scale-110 float-animation" />
+        <!-- Enhanced animated decorative elements -->
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-200/0 via-primary-200/30 to-primary-200/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+        <span class="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-accent-300 via-accent-500 to-accent-300 rounded-full transform -rotate-1 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left shadow-glow"></span>
       </div>
+      <!-- Enhanced hover effect ripple -->
+      <div class="absolute -inset-4 bg-primary-200/30 rounded-2xl scale-0 group-hover:scale-100 transition-transform duration-500 blur-sm"></div>
     </a>
     
     <!-- Desktop Navigation -->
-    <nav class="hidden md:flex items-center space-x-6">
+    <nav class="hidden md:flex items-center space-x-8">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
         return (
           <a
             href={item.href}
-            class={`font-bold transition-all duration-300 relative group ${
+            class={`font-bold transition-all duration-500 relative group py-2 ${
               isActive
                 ? 'text-primary'
-                : 'text-text-primary hover:text-primary'
+                : 'text-text-primary hover:text-primary hover:scale-105'
             }`}
           >
             {item.text}
-            <span class={`absolute bottom-0 left-0 w-full h-2 rounded-full transform transition-all duration-300 ${
+            <span class={`absolute bottom-0 left-0 w-full h-1 rounded-full transform transition-all duration-500 ${
               isActive
-                ? 'bg-primary/30 scale-100'
-                : 'bg-primary/30 scale-0 group-hover:scale-100'
+                ? 'bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200 scale-x-100'
+                : 'bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200 scale-x-0 group-hover:scale-x-100'
             }`}></span>
+            <!-- Hover glow effect -->
+            <span class="absolute inset-0 -z-10 bg-primary-100/0 rounded-full blur-lg transition-colors duration-500 group-hover:bg-primary-100/20"></span>
           </a>
         );
       })}
@@ -77,9 +88,15 @@ const currentPath = Astro.url.pathname;
       
       <a
         href="/publish"
-        class="btn btn-primary ml-4 shadow-playful btn-playful"
+        class="btn btn-primary ml-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group"
       >
-        Share Your Story
+        <span class="relative z-10 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg>
+          Share Your Story
+        </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </a>
     </nav>
     

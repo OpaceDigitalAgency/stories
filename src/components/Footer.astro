@@ -71,29 +71,39 @@ const socialLinks = [
 ];
 ---
 
-<footer class="bg-gray-800 text-white pt-12 pb-8">
-  <div class="container mx-auto px-4">
+<footer class="bg-neutral-dark text-white pt-10 pb-6">
+  <div class="container relative">
+    <!-- Decorative gradient overlay -->
+    <div class="absolute inset-0 bg-gradient-to-b from-primary-900/10 via-secondary-900/10 to-tertiary-900/10 opacity-50"></div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
       <!-- Logo and description -->
       <div class="lg:col-span-2">
-        <a href="/" class="inline-block mb-4">
-          <img src="/logo.png" alt="Stories From The Web" class="h-16 w-auto" />
+        <a href="/" class="inline-block mb-4 group transform-style-3d">
+          <img
+            src="/logo.png"
+            alt="Stories From The Web"
+            class="h-14 w-auto transform group-hover:scale-110 transition-transform duration-300 float-animation"
+          />
+          <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
         </a>
         <p class="text-gray-300 mb-6 max-w-md">
           A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling.
         </p>
         <div class="flex space-x-4">
           {socialLinks.map(social => (
-            <a 
-              href={social.href} 
-              target="_blank" 
+            <a
+              href={social.href}
+              target="_blank"
               rel="noopener noreferrer"
-              class="text-gray-400 hover:text-white transition-colors"
+              class="text-gray-400 hover:text-white transition-all duration-300 transform hover:scale-110 hover:shadow-glow"
               aria-label={social.name}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                <Fragment set:html={social.icon} />
-              </svg>
+              <div class="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                  <Fragment set:html={social.icon} />
+                </svg>
+                <div class="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300"></div>
+              </div>
             </a>
           ))}
         </div>
@@ -108,7 +118,7 @@ const socialLinks = [
               <li>
                 <a 
                   href={link.href} 
-                  class="text-gray-300 hover:text-white transition-colors"
+                  class="text-gray-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-flex items-center group"
                 >
                   {link.text}
                 </a>
@@ -121,14 +131,14 @@ const socialLinks = [
     <!-- Partner Badges -->
     <PartnerBadges partners={partners} />
     
-    <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-      <p class="text-gray-400 text-sm mb-4 md:mb-0">
+    <div class="border-t border-neutral-700 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+      <p class="text-neutral-400 text-sm mb-4 md:mb-0">
         &copy; {currentYear} StoriesFromTheWeb.org. All rights reserved.
       </p>
       <div class="flex space-x-6">
-        <a href="/privacy" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
-        <a href="/terms" class="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</a>
-        <a href="/cookies" class="text-gray-400 hover:text-white text-sm transition-colors">Cookie Policy</a>
+        <a href="/privacy" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Privacy Policy</a>
+        <a href="/terms" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Terms of Service</a>
+        <a href="/cookies" class="text-neutral-400 hover:text-white text-sm transition-all duration-300 hover:translate-x-1">Cookie Policy</a>
       </div>
     </div>
     </div>

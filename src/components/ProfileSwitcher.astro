@@ -70,24 +70,27 @@ const sizeClass = sizeClasses[size];
 ---
 
 <div class="profile-switcher">
-  <div class={`flex ${showLabels ? 'flex-col space-y-2' : 'flex-row space-x-3'} items-center`}>
+  <div class={`flex ${showLabels ? 'flex-col space-y-3' : 'flex-row space-x-4'} items-center`}>
     {profiles.map((profile) => (
-      <div class={`flex ${showLabels ? 'flex-row items-center' : 'flex-col items-center'} ${showLabels ? 'space-x-2' : 'space-y-1'}`}>
+      <div class={`flex ${showLabels ? 'flex-row items-center' : 'flex-col items-center'} ${showLabels ? 'space-x-3' : 'space-y-2'}`}>
         <button
-          class={`${sizeClass.button} bg-${profile.color}/${currentProfile === profile.id ? '20' : '10'} 
-                 text-${profile.color} hover:bg-${profile.color}/30 transition-colors
-                 ${currentProfile === profile.id ? 'ring-2 ring-' + profile.color + '/50' : ''}`}
+          class={`${sizeClass.button} transform-style-3d hover:translate-z-2 hover:scale-110
+                 bg-${profile.color}/${currentProfile === profile.id ? '20' : '10'}
+                 text-${profile.color} hover:bg-${profile.color}/30 transition-all duration-300
+                 shadow-sm hover:shadow-md
+                 ${currentProfile === profile.id ? 'ring-2 ring-' + profile.color + '/50 shadow-glow-' + profile.color : ''}`}
           data-profile={profile.id}
           aria-label={`Switch to ${profile.name} profile`}
           aria-pressed={currentProfile === profile.id}
         >
-          <div class={sizeClass.icon}>
+          <div class={`${sizeClass.icon} ${currentProfile === profile.id ? 'animate-pulse-subtle' : ''}`}>
             <Fragment set:html={profile.icon} />
           </div>
+          <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/20 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
         </button>
         
         {showLabels && (
-          <span class={`${sizeClass.label} font-medium ${currentProfile === profile.id ? 'text-' + profile.color : 'text-gray-500'}`}>
+          <span class={`${sizeClass.label} font-medium transition-colors duration-300 ${currentProfile === profile.id ? 'text-' + profile.color : 'text-text-secondary hover:text-' + profile.color}`}>
             {profile.name}
           </span>
         )}
@@ -95,6 +98,26 @@ const sizeClass = sizeClasses[size];
     ))}
   </div>
 </div>
+
+<style>
+  @keyframes pulse-subtle {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+  .shadow-glow-primary {
+    box-shadow: 0 0 10px theme('colors.primary.500/20');
+  }
+  .shadow-glow-secondary {
+    box-shadow: 0 0 10px theme('colors.secondary.500/20');
+  }
+  .shadow-glow-accent {
+    box-shadow: 0 0 10px theme('colors.accent.500/20');
+  }
+</style>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -111,31 +134,30 @@ const sizeClass = sizeClasses[size];
         profileButtons.forEach(btn => {
           const btnProfile = btn.getAttribute('data-profile');
           const color = btnProfile === 'child' ? 'primary' : btnProfile === 'parent' ? 'secondary' : 'accent';
+          const icon = btn.querySelector(`.${sizeClasses[size].icon}`);
           
           if (btnProfile === profileId) {
             btn.setAttribute('aria-pressed', 'true');
-            btn.classList.add(`ring-2`);
-            btn.classList.add(`ring-${color}/50`);
+            btn.classList.add(`ring-2`, `ring-${color}/50`, `shadow-glow-${color}`, `bg-${color}/20`);
             btn.classList.remove(`bg-${color}/10`);
-            btn.classList.add(`bg-${color}/20`);
+            icon?.classList.add('animate-pulse-subtle');
             
             // Update label color if labels are shown
             const label = btn.parentElement?.querySelector('span');
             if (label) {
-              label.classList.remove('text-gray-500');
+              label.classList.remove('text-text-secondary');
               label.classList.add(`text-${color}`);
             }
           } else {
             btn.setAttribute('aria-pressed', 'false');
-            btn.classList.remove(`ring-2`);
-            btn.classList.remove(`ring-${color}/50`);
+            btn.classList.remove(`ring-2`, `ring-${color}/50`, `shadow-glow-${color}`, `bg-${color}/20`);
             btn.classList.add(`bg-${color}/10`);
-            btn.classList.remove(`bg-${color}/20`);
+            icon?.classList.remove('animate-pulse-subtle');
             
             // Update label color if labels are shown
             const label = btn.parentElement?.querySelector('span');
             if (label) {
-              label.classList.add('text-gray-500');
+              label.classList.add('text-text-secondary');
               label.classList.remove(`text-${color}`);
             }
           }

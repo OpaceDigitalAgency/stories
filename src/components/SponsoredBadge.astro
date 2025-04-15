@@ -17,8 +17,8 @@ const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
 };
 
 const typeClasses: Record<BadgeType, string> = {
-  featured: 'bg-amber-100 text-amber-800 border-amber-300',
-  sponsored: 'bg-purple-100 text-purple-800 border-purple-300'
+  featured: 'bg-accent-100/80 text-accent-800 border-accent-200/50',
+  sponsored: 'bg-tertiary-100/80 text-tertiary-800 border-tertiary-200/50'
 };
 
 const typeIcons: Record<BadgeType, string> = {
@@ -32,9 +32,28 @@ const labels: Record<BadgeType, string> = {
 };
 ---
 
-<span class={`inline-flex items-center rounded-full border ${typeClasses[type]} ${sizeClasses[size]} font-medium ${className}`}>
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 mr-1">
+<span class={`inline-flex items-center rounded-full border backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 transform-style-3d hover:translate-z-2 hover:scale-105 ${typeClasses[type]} ${sizeClasses[size]} font-medium ${className}`}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    class="w-3.5 h-3.5 mr-1 animate-pulse-subtle"
+  >
     <Fragment set:html={typeIcons[type]} />
   </svg>
-  {labels[type]}
+  <span class="relative">
+    {labels[type]}
+    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/20 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+  </span>
 </span>
+
+<style>
+  @keyframes pulse-subtle {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+</style>

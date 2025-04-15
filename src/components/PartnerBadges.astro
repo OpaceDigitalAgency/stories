@@ -4,13 +4,13 @@ import type { PartnerBadgesProps } from '../types/components';
 const { partners, className = '' } = Astro.props as PartnerBadgesProps;
 ---
 
-<div class={`mt-8 pt-6 border-t border-gray-700 ${className}`}>
-  <h3 class="text-sm font-medium text-gray-400 mb-4">Our Partners</h3>
-  <div class="flex flex-wrap gap-4 items-center justify-center md:justify-start">
+<div class={`mt-6 pt-6 border-t border-neutral-700 ${className}`}>
+  <h3 class="text-sm font-medium text-neutral-300 mb-4">Our Partners</h3>
+  <div class="flex flex-wrap gap-6 items-center justify-center md:justify-start">
     {partners.map(partner => (
-      <a 
+      <a
         href={partner.href}
-        class="bg-gray-700 hover:bg-gray-600 p-2 rounded-md transition-colors duration-300 flex items-center justify-center"
+        class="bg-neutral-800/50 hover:bg-neutral-700/50 p-3 rounded-xl transition-all duration-300 flex items-center justify-center transform hover:scale-105 hover:shadow-glow group"
         title={partner.name}
         target="_blank"
         rel="noopener noreferrer"
@@ -18,12 +18,13 @@ const { partners, className = '' } = Astro.props as PartnerBadgesProps;
         <img
           src={partner.logo.url}
           alt={partner.logo.alternativeText || partner.name}
-          class="h-8 w-auto opacity-80 hover:opacity-100 transition-opacity"
+          class="h-8 w-auto opacity-80 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-z-2"
         />
+        <div class="absolute inset-0 bg-gradient-to-r from-neutral-700/0 via-neutral-700/30 to-neutral-700/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
       </a>
     ))}
   </div>
-  <p class="text-xs text-gray-500 mt-3">
+  <p class="text-xs text-neutral-500 mt-4">
     We're proud to partner with organizations that share our mission of promoting literacy and education.
   </p>
 </div>

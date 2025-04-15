@@ -23,11 +23,11 @@ const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
 // Color variations based on tag name (for visual variety)
 const getTagColor = (tag: string) => {
   const colors = [
-    'bg-primary/15 text-primary hover:bg-primary/25',
-    'bg-secondary/15 text-secondary hover:bg-secondary/25',
-    'bg-tertiary/15 text-tertiary hover:bg-tertiary/25',
-    'bg-accent/15 text-text-primary hover:bg-accent/25',
-    'bg-success/15 text-success hover:bg-success/25'
+    'bg-primary/20 text-primary hover:bg-primary/30 shadow-primary/20',
+    'bg-secondary/20 text-secondary hover:bg-secondary/30 shadow-secondary/20',
+    'bg-tertiary/20 text-tertiary hover:bg-tertiary/30 shadow-tertiary/20',
+    'bg-accent/20 text-text-primary hover:bg-accent/30 shadow-accent/20',
+    'bg-success/20 text-success hover:bg-success/30 shadow-success/20'
   ];
   
   // Use the tag string to deterministically select a color
@@ -36,8 +36,8 @@ const getTagColor = (tag: string) => {
 };
 
 const colorClass = getTagColor(tag);
-const baseClasses = "inline-flex items-center rounded-full font-bold transition-all duration-300";
-const hoverClasses = clickable ? "transform hover:scale-105 cursor-pointer" : "";
+const baseClasses = "inline-flex items-center rounded-full font-bold transition-all duration-300 shadow-sm hover:shadow-md";
+const hoverClasses = clickable ? "transform hover:scale-110 hover:translate-z-2 cursor-pointer group" : "";
 const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses} ${className}`;
 
 // Format tag for URL (lowercase, replace spaces with hyphens)
@@ -46,10 +46,11 @@ const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
 
 {clickable ? (
   <a href={`/tags/${tagSlug}`} class={classes} data-tag={tag}>
-    {tag}
+    <span class="relative z-10">{tag}</span>
+    <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/20 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
   </a>
 ) : (
   <span class={classes} data-tag={tag}>
-    {tag}
+    <span class="relative z-10">{tag}</span>
   </span>
 )}

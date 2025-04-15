@@ -5,8 +5,8 @@ const { type, className = '' } = Astro.props as SignUpPromptsProps;
 
 const prompts = {
   author: {
-    gradient: 'from-primary/20 to-primary/10',
-    iconBg: 'bg-primary/30',
+    gradient: 'from-primary-100 via-primary-50 to-white',
+    iconBg: 'bg-primary-200/40',
     iconColor: 'text-primary',
     buttonClass: 'btn-primary',
     title: 'For Authors',
@@ -20,8 +20,8 @@ const prompts = {
     linkText: 'Join as Author'
   },
   reader: {
-    gradient: 'from-secondary/20 to-secondary/10',
-    iconBg: 'bg-secondary/30',
+    gradient: 'from-secondary-100 via-secondary-50 to-white',
+    iconBg: 'bg-secondary-200/40',
     iconColor: 'text-secondary',
     buttonClass: 'btn-secondary',
     title: 'For Readers',
@@ -35,8 +35,8 @@ const prompts = {
     linkText: 'Join as Reader'
   },
   educator: {
-    gradient: 'from-tertiary/20 to-tertiary/10',
-    iconBg: 'bg-tertiary/30',
+    gradient: 'from-tertiary-100 via-tertiary-50 to-white',
+    iconBg: 'bg-tertiary-200/40',
     iconColor: 'text-tertiary',
     buttonClass: 'btn-tertiary',
     title: 'For Educators',
@@ -54,12 +54,15 @@ const prompts = {
 const selectedPrompt = prompts[type];
 ---
 
-<div class={`bg-gradient-to-br ${prompts[type].gradient} rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300 ${className}`}>
-  <!-- Decorative elements -->
-  <div class={`absolute -top-10 -right-10 w-40 h-40 ${prompts[type].iconBg} rounded-full blur-xl`}></div>
+<div class={`relative px-6 py-8 rounded-3xl overflow-hidden transform-style-3d ${className}`}>
+  <!-- Enhanced background gradient -->
+  <div class={`absolute inset-0 bg-gradient-to-br ${prompts[type].gradient} animate-gradient`}></div>
+  <!-- Enhanced animated decorative blobs -->
+  <div class={`absolute -top-32 -right-32 w-[32rem] h-[32rem] ${prompts[type].iconBg} rounded-full blur-3xl animate-blob transform translate-z-12`}></div>
+  <div class={`absolute -bottom-32 -left-32 w-[32rem] h-[32rem] ${prompts[type].iconBg} rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8`}></div>
   
   <div class="relative z-10">
-    <div class={`w-16 h-16 ${prompts[type].iconBg} rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300`}>
+    <div class={`w-16 h-16 ${prompts[type].iconBg} rounded-full flex items-center justify-center mb-4 mx-auto transform-style-3d hover:translate-z-2 hover:scale-110 transition-all duration-300 shadow-playful`}>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`w-8 h-8 ${prompts[type].iconColor}`}>
         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
       </svg>
@@ -82,13 +85,14 @@ const selectedPrompt = prompts[type];
       ))}
     </ul>
     
-    <a href={selectedPrompt.link} class={`btn ${selectedPrompt.buttonClass} w-full py-2 shadow-playful btn-playful`}>
-      <span class="flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+    <a href={selectedPrompt.link} class={`btn ${selectedPrompt.buttonClass} w-full py-2 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group`}>
+      <span class="relative z-10 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
         </svg>
         {selectedPrompt.linkText}
       </span>
+      <div class={`absolute inset-0 bg-gradient-to-r from-${type}-600/0 via-${type}-600/30 to-${type}-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
     </a>
   </div>
 </div>

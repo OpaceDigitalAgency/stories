@@ -8,28 +8,47 @@ const { story, reviews, className = '' } = Astro.props as ReviewSectionProps;
 const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
 ---
 
-<div class={`bg-white rounded-lg shadow-md overflow-hidden mt-8 ${className}`}>
-  <div class="p-6">
+<div class={`bg-white rounded-2xl shadow-playful overflow-hidden mt-8 transform-style-3d ${className}`}>
+  <div class="p-6 relative">
+    <!-- Subtle gradient background -->
+    <div class="absolute inset-0 bg-gradient-to-br from-neutral-50 via-white to-neutral-50/50"></div>
     <h2 class="text-2xl font-display font-bold text-text-primary mb-6">Reviews</h2>
     
     <!-- Reviews summary -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 pb-6 border-b border-gray-200">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 pb-6 border-b border-neutral-200 relative">
       <div class="flex items-center mb-4 md:mb-0">
-        <div class="text-4xl font-bold text-gray-800 mr-4">4.7</div>
+        <div class="text-4xl font-bold text-text-primary mr-4 font-display">{averageRating.toFixed(1)}</div>
         <div>
-          <div class="flex text-yellow-400 mb-1">
-            <RatingStars rating={4.7} />
+          <div class="flex mb-1">
+            <RatingStars rating={averageRating} />
           </div>
-          <div class="text-sm text-gray-500">Based on {reviews.length} reviews</div>
+          <div class="text-sm text-text-secondary">Based on {reviews.length} reviews</div>
         </div>
       </div>
       
-      <div class="flex items-center">
-        <a href={`/reviews/${story.slug}`} class="btn btn-secondary py-2 px-4 rounded-md text-sm">
-          View All Reviews
+      <div class="flex items-center space-x-3">
+        <a
+          href={`/reviews/${story.slug}`}
+          class="btn btn-secondary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group"
+        >
+          <span class="relative z-10 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2 transform group-hover:scale-110 transition-transform">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            View All
+          </span>
         </a>
-        <a href={`/reviews/${story.slug}/write`} class="btn btn-primary py-2 px-4 rounded-md text-sm ml-2">
-          Write a Review
+        <a
+          href={`/reviews/${story.slug}/write`}
+          class="btn btn-primary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group"
+        >
+          <span class="relative z-10 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2 transform group-hover:scale-110 transition-transform">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+            </svg>
+            Write Review
+          </span>
         </a>
       </div>
     </div>
@@ -37,9 +56,9 @@ const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / 
     <!-- Reviews list -->
     <div class="space-y-6">
       {reviews.map(review => (
-        <div class="border-b border-gray-100 pb-6 last:border-b-0">
+        <div class="border-b border-neutral-100 pb-6 last:border-b-0 hover:bg-neutral-50/50 transition-colors p-4 -mx-4 rounded-xl">
           <div class="flex items-start">
-            <div class="hidden sm:block w-10 h-10 rounded-full overflow-hidden mr-4 flex-shrink-0">
+            <div class="hidden sm:block w-10 h-10 rounded-full overflow-hidden mr-4 flex-shrink-0 border-2 border-white shadow-md">
               <img
                 src={review.author.avatar?.url || '/images/default-avatar.jpg'}
                 alt={review.author.name}
@@ -54,7 +73,7 @@ const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / 
                   <div class="flex items-center">
                     <span class="text-sm font-medium text-gray-700">{review.author.name}</span>
                     {review.author.verified && (
-                      <span class="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full flex items-center">
+                      <span class="ml-1 bg-success-100/80 text-success-800 text-xs px-2 py-0.5 rounded-full flex items-center shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3 mr-1">
                           <path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
                         </svg>
@@ -78,17 +97,17 @@ const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / 
               
               <!-- Review Footer -->
               <div class="flex items-center text-sm">
-                <button class="flex items-center text-gray-500 hover:text-gray-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                <button class="flex items-center text-text-secondary hover:text-primary transition-colors group">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 transform group-hover:scale-110 transition-transform">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M14.25 9h2.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 01-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 00-1.302 4.665c0 1.194.232 2.333.654 3.375z" />
                   </svg>
-                  Helpful ({review.helpfulCount})
+                  <span>Helpful ({review.helpfulCount})</span>
                 </button>
-                <button class="flex items-center text-gray-500 hover:text-gray-700 ml-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                <button class="flex items-center text-text-secondary hover:text-tertiary transition-colors ml-4 group">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 transform group-hover:scale-110 transition-transform">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
                   </svg>
-                  Report
+                  <span>Report</span>
                 </button>
               </div>
             </div>
@@ -99,8 +118,11 @@ const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / 
     
     <!-- View more link -->
     <div class="mt-6 text-center">
-      <a href={`/reviews/${story.slug}`} class="text-secondary hover:text-secondary/80 font-medium text-sm">
-        View all {reviews.length} reviews →
+      <a href={`/reviews/${story.slug}`} class="text-secondary hover:text-secondary/80 font-medium text-sm inline-flex items-center group">
+        <span>View all {reviews.length} reviews</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </svg>
       </a>
     </div>
   </div>

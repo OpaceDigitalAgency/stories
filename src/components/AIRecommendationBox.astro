@@ -4,10 +4,12 @@ import type { AIRecommendationBoxProps } from '../types/components';
 const { story, recommendationText, className = '' } = Astro.props as AIRecommendationBoxProps;
 ---
 
-<div class={`bg-gradient-to-br from-tertiary/30 to-primary/30 rounded-xl p-6 shadow-playful relative overflow-hidden ${className}`}>
-  <!-- Decorative elements -->
-  <div class="absolute -top-10 -right-10 w-40 h-40 bg-tertiary/20 rounded-full blur-xl"></div>
-  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-xl"></div>
+<div class={`relative px-6 py-8 rounded-3xl overflow-hidden transform-style-3d ${className}`}>
+  <!-- Enhanced background gradient -->
+  <div class="absolute inset-0 bg-gradient-to-br from-tertiary-100 via-tertiary-50 to-white animate-gradient"></div>
+  <!-- Enhanced animated decorative blobs -->
+  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-tertiary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
+  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-tertiary-100/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
   
   <div class="relative z-10">
     <div class="flex items-center mb-4">
@@ -22,7 +24,7 @@ const { story, recommendationText, className = '' } = Astro.props as AIRecommend
     <p class="text-text-secondary mb-4">{recommendationText}</p>
     
     <a href={`/stories/${story.slug}`} class="block">
-      <div class="bg-white/90 backdrop-blur-md rounded-lg p-4 mb-4 shadow-sm hover:shadow-md transition-shadow">
+      <div class="bg-white/90 backdrop-blur-xl rounded-xl p-4 mb-6 shadow-playful hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] hover:translate-z-2">
         <div class="flex items-start gap-3">
           <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-primary">
@@ -38,22 +40,24 @@ const { story, recommendationText, className = '' } = Astro.props as AIRecommend
     </a>
     
     <div class="flex flex-col sm:flex-row gap-3">
-      <button class="btn btn-tertiary flex-1 py-2 shadow-playful btn-playful">
-        <span class="flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+      <button class="btn btn-tertiary flex-1 py-2 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
+        <span class="relative z-10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
           </svg>
           Get Recommendations
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-tertiary-600/0 via-tertiary-600/30 to-tertiary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </button>
-      <button class="btn btn-outline flex-1 py-2 border-2 border-tertiary/50 text-tertiary hover:bg-tertiary/10">
-        <span class="flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+      <button class="btn btn-outline flex-1 py-2 border-2 border-tertiary/50 text-tertiary hover:bg-tertiary/10 transform-style-3d hover:translate-z-2 group">
+        <span class="relative z-10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           Preferences
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-tertiary/0 via-tertiary/10 to-tertiary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </button>
     </div>
   </div>

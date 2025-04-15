@@ -4,12 +4,14 @@ import type { EducatorSectionProps } from '../types/components';
 const { educator, className = '' } = Astro.props as EducatorSectionProps;
 ---
 
-<div class={`grid grid-cols-1 md:grid-cols-2 gap-6 ${className}`}>
+<div class={`grid grid-cols-1 md:grid-cols-2 gap-8 ${className}`}>
   <!-- Parent Area -->
-  <div class="bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-    <!-- Decorative elements -->
-    <div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-xl"></div>
-    <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-accent/20 rounded-full blur-xl"></div>
+  <div class="relative px-6 py-8 rounded-3xl overflow-hidden transform-style-3d">
+    <!-- Enhanced background gradient -->
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-100 via-primary-50 to-white animate-gradient"></div>
+    <!-- Enhanced animated decorative blobs -->
+    <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
+    <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-primary-100/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
     
     <div class="relative z-10">
       <div class="flex items-center mb-4">
@@ -56,22 +58,25 @@ const { educator, className = '' } = Astro.props as EducatorSectionProps;
         </li>
       </ul>
       
-      <a href="/parents" class="btn btn-primary py-2 px-4 shadow-playful btn-playful">
-        <span class="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+      <a href="/parents" class="btn btn-primary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
+        <span class="relative z-10 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
           Parent Resources
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </a>
     </div>
   </div>
   
   <!-- Teacher Area -->
-  <div class="bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-    <!-- Decorative elements -->
-    <div class="absolute -top-10 -right-10 w-40 h-40 bg-secondary/20 rounded-full blur-xl"></div>
-    <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-tertiary/20 rounded-full blur-xl"></div>
+  <div class="relative px-6 py-8 rounded-3xl overflow-hidden transform-style-3d">
+    <!-- Enhanced background gradient -->
+    <div class="absolute inset-0 bg-gradient-to-br from-secondary-100 via-secondary-50 to-white animate-gradient"></div>
+    <!-- Enhanced animated decorative blobs -->
+    <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
+    <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-100/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
     
     <div class="relative z-10">
       <div class="flex items-center mb-4">
@@ -108,13 +113,14 @@ const { educator, className = '' } = Astro.props as EducatorSectionProps;
         </li>
       </ul>
       
-      <a href="/teachers" class="btn btn-secondary py-2 px-4 shadow-playful btn-playful">
-        <span class="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+      <a href="/teachers" class="btn btn-secondary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
+        <span class="relative z-10 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
           Teacher Resources
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-secondary-600/0 via-secondary-600/30 to-secondary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </a>
     </div>
   </div>

@@ -29,10 +29,10 @@ const reportReasons = [
 ];
 ---
 
-<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+<div class="bg-error-50/80 border border-error-200/50 rounded-xl p-4 mb-6 shadow-sm backdrop-blur-sm">
   <div class="flex items-start">
     <div class="flex-shrink-0">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-red-600">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-error-600 animate-pulse-subtle">
         <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
       </svg>
     </div>
@@ -48,22 +48,28 @@ const reportReasons = [
       
       <div class="mt-4">
         <div class="flex space-x-3">
-          <button 
+          <button
             type="button"
-            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-playful text-white bg-error-600 hover:bg-error-700 transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300"
             id="reject-btn"
             data-content-type={contentType}
             data-content-id={contentId}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
             Reject
           </button>
-          <button 
+          <button
             type="button"
-            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-playful text-error-700 bg-error-100 hover:bg-error-200 transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300"
             id="approve-btn"
             data-content-type={contentType}
             data-content-id={contentId}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
             Approve
           </button>
         </div>
@@ -73,8 +79,8 @@ const reportReasons = [
 </div>
 
 <!-- Report Modal (hidden by default) -->
-<div id="report-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-lg max-w-md w-full mx-4 overflow-hidden shadow-xl transform transition-all">
+<div id="report-modal" class="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl max-w-md w-full mx-4 overflow-hidden shadow-xl transform transition-all duration-300">
     <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
       <div class="sm:flex sm:items-start">
         <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -94,7 +100,7 @@ const reportReasons = [
           
           <div class="mt-4">
             <label for="report-reason" class="block text-sm font-medium text-gray-700">Reason</label>
-            <select id="report-reason" name="reason" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md">
+            <select id="report-reason" name="reason" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-neutral-200 focus:outline-none focus:ring-error-500 focus:border-error-500 sm:text-sm rounded-xl shadow-sm">
               {reportReasons.map(reason => (
                 <option value={reason}>{reason}</option>
               ))}
@@ -107,18 +113,32 @@ const reportReasons = [
               id="report-details"
               name="details"
               rows="3"
-              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+              class="mt-1 block w-full border border-neutral-200 rounded-xl shadow-sm py-2 px-3 focus:outline-none focus:ring-error-500 focus:border-error-500 sm:text-sm resize-none"
               placeholder="Please provide any additional information that might help our moderation team."
             ></textarea>
           </div>
         </div>
       </div>
     </div>
-    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-      <button type="button" id="submit-report" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+    <div class="bg-neutral-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+      <button
+        type="button"
+        id="submit-report"
+        class="w-full inline-flex justify-center items-center rounded-xl border border-transparent shadow-playful px-4 py-2 bg-error-600 text-base font-medium text-white hover:bg-error-700 transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300 sm:ml-3 sm:w-auto sm:text-sm"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
         Submit Report
       </button>
-      <button type="button" id="cancel-report" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+      <button
+        type="button"
+        id="cancel-report"
+        class="mt-3 w-full inline-flex justify-center items-center rounded-xl border border-neutral-200 shadow-sm px-4 py-2 bg-white text-base font-medium text-neutral-700 hover:bg-neutral-50 transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
         Cancel
       </button>
     </div>
@@ -149,11 +169,11 @@ const reportReasons = [
         const parent = approveBtn.closest('.bg-red-50');
         if (parent) {
           parent.innerHTML = `
-            <div class="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-600">
+            <div class="flex items-center bg-success-50/80 p-4 rounded-xl shadow-sm backdrop-blur-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-success-600 animate-bounce">
                 <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
               </svg>
-              <span class="ml-2 text-green-700 font-medium">Content approved and published</span>
+              <span class="ml-2 text-success-700 font-medium">Content approved and published</span>
             </div>
           `;
           
@@ -188,11 +208,11 @@ const reportReasons = [
         const parent = rejectBtn.closest('.bg-red-50');
         if (parent) {
           parent.innerHTML = `
-            <div class="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-600">
+            <div class="flex items-center bg-success-50/80 p-4 rounded-xl shadow-sm backdrop-blur-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-success-600 animate-bounce">
                 <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
               </svg>
-              <span class="ml-2 text-green-700 font-medium">Content rejected and removed</span>
+              <span class="ml-2 text-success-700 font-medium">Content rejected and removed</span>
             </div>
           `;
           

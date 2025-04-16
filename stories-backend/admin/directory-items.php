@@ -15,6 +15,7 @@ require_once __DIR__ . '/includes/Auth.php';
 require_once __DIR__ . '/includes/ApiClient.php';
 require_once __DIR__ . '/includes/Validator.php';
 require_once __DIR__ . '/includes/FileUpload.php';
+require_once __DIR__ . '/includes/AdminPage.php';
 require_once __DIR__ . '/includes/CrudPage.php';
 
 /**

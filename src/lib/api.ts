@@ -110,65 +110,83 @@ export interface Tag {
   slug: string;
 }
 
-const STRAPI_URL = import.meta.env.STRAPI_URL || '';
-const STRAPI_TOKEN = import.meta.env.STRAPI_TOKEN || '';
+// API URL for the custom backend
+const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
 
 export const getMediaUrl = (url: string) => {
   if (url.startsWith('http')) {
     return url;
   }
-  return `${STRAPI_URL}${url}`;
+  return `${API_URL}/uploads/${url}`;
 };
 
 // Define params interface
-interface StrapiParams {
+interface ApiParams {
   filters?: Record<string, any>;
-  populate?: string | Record<string, any>;
   sort?: string;
-  pagination?: {
-    page?: number;
-    pageSize?: number;
-    limit?: number;
-  };
+  page?: number;
+  pageSize?: number;
   [key: string]: any;
 }
 
-export const fetchFromStrapi = async (endpoint: string, params: StrapiParams = {}) => {
+export const fetchFromStrapi = async (endpoint: string, params: ApiParams = {}) => {
   try {
-    // If STRAPI_URL is empty, return empty data
-    if (!STRAPI_URL) {
-      console.log(`No Strapi URL configured. Returning empty data for endpoint: ${endpoint}`);
-      return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) {
+      queryParams.append('page', params.page.toString());
     }
-
-    // Make the actual API call
-    const queryString = new URLSearchParams(params).toString();
-    const url = `${STRAPI_URL}/api/${endpoint}${queryString ? `?${queryString}` : ''}`;
+    
+    if (params.pageSize) {
+      queryParams.append('pageSize', params.pageSize.toString());
+    }
+    
+    if (params.sort) {
+      queryParams.append('sort', params.sort);
+    }
+    
+    // Add any filters
+    if (params.filters) {
+      Object.entries(params.filters).forEach(([key, value]) => {
+        queryParams.append(key, value.toString());
+      });
+    }
+    
+    // Make the API call
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/${endpoint}${queryString ? `?${queryString}` : ''}`;
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json'
     };
     
-    if (STRAPI_TOKEN) {
-      headers['Authorization'] = `Bearer ${STRAPI_TOKEN}`;
+    // Get auth token from cookie if available
+    const authToken = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth_token='))
+      ?.split('=')[1];
+    
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
     }
     
     const res = await fetch(url, { headers });
     
     if (!res.ok) {
-      console.error(`Error fetching from Strapi: ${res.status} ${res.statusText}`);
-      throw new Error(`Failed to fetch from Strapi: ${res.status} ${res.statusText}`);
+      console.error(`Error fetching from API: ${res.status} ${res.statusText}`);
+      throw new Error(`Failed to fetch from API: ${res.status} ${res.statusText}`);
     }
     
     return res.json();
   } catch (error) {
-    console.error('Error fetching from Strapi:', error);
+    console.error('Error fetching from API:', error);
     
     // On error, return empty data
-    console.log(`Error fetching from Strapi. Returning empty data for endpoint: ${endpoint}`);
+    console.log(`Error fetching from API. Returning empty data for endpoint: ${endpoint}`);
     
     // Return empty data structure
-    if (endpoint.startsWith('authors/') || endpoint.startsWith('stories/')) {
+    if (endpoint.includes('/') && endpoint.split('/').length > 1) {
       return { data: null };
     } else {
       return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };

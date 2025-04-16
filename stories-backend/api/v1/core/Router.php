@@ -1,0 +1,214 @@
+<?php
+/**
+ * API Router Class
+ * 
+ * This class handles routing API requests to the appropriate controllers.
+ * 
+ * @package Stories API
+ * @version 1.0.0
+ */
+
+namespace StoriesAPI\Core;
+
+use StoriesAPI\Utils\Response;
+use StoriesAPI\Middleware\CorsMiddleware;
+
+class Router {
+    /**
+     * @var array Routes configuration
+     */
+    private $routes = [];
+    
+    /**
+     * @var array Configuration
+     */
+    private $config;
+    
+    /**
+     * @var array Middleware to apply to all routes
+     */
+    private $globalMiddleware = [];
+    
+    /**
+     * Constructor
+     * 
+     * @param array $config Configuration
+     */
+    public function __construct($config) {
+        $this->config = $config;
+        
+        // Add CORS middleware by default
+        $this->addGlobalMiddleware(new CorsMiddleware($config['security']['cors']));
+    }
+    
+    /**
+     * Add a route
+     * 
+     * @param string $method HTTP method
+     * @param string $path Route path
+     * @param string $controller Controller class
+     * @param string $action Controller method
+     * @param array $middleware Middleware to apply to this route
+     * @return Router This router instance for method chaining
+     */
+    public function addRoute($method, $path, $controller, $action, $middleware = []) {
+        $this->routes[] = [
+            'method' => strtoupper($method),
+            'path' => $path,
+            'controller' => $controller,
+            'action' => $action,
+            'middleware' => $middleware
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * Add a GET route
+     * 
+     * @param string $path Route path
+     * @param string $controller Controller class
+     * @param string $action Controller method
+     * @param array $middleware Middleware to apply to this route
+     * @return Router This router instance for method chaining
+     */
+    public function get($path, $controller, $action, $middleware = []) {
+        return $this->addRoute('GET', $path, $controller, $action, $middleware);
+    }
+    
+    /**
+     * Add a POST route
+     * 
+     * @param string $path Route path
+     * @param string $controller Controller class
+     * @param string $action Controller method
+     * @param array $middleware Middleware to apply to this route
+     * @return Router This router instance for method chaining
+     */
+    public function post($path, $controller, $action, $middleware = []) {
+        return $this->addRoute('POST', $path, $controller, $action, $middleware);
+    }
+    
+    /**
+     * Add a PUT route
+     * 
+     * @param string $path Route path
+     * @param string $controller Controller class
+     * @param string $action Controller method
+     * @param array $middleware Middleware to apply to this route
+     * @return Router This router instance for method chaining
+     */
+    public function put($path, $controller, $action, $middleware = []) {
+        return $this->addRoute('PUT', $path, $controller, $action, $middleware);
+    }
+    
+    /**
+     * Add a DELETE route
+     * 
+     * @param string $path Route path
+     * @param string $controller Controller class
+     * @param string $action Controller method
+     * @param array $middleware Middleware to apply to this route
+     * @return Router This router instance for method chaining
+     */
+    public function delete($path, $controller, $action, $middleware = []) {
+        return $this->addRoute('DELETE', $path, $controller, $action, $middleware);
+    }
+    
+    /**
+     * Add global middleware
+     * 
+     * @param object $middleware Middleware instance
+     * @return Router This router instance for method chaining
+     */
+    public function addGlobalMiddleware($middleware) {
+        $this->globalMiddleware[] = $middleware;
+        return $this;
+    }
+    
+    /**
+     * Handle the request
+     */
+    public function handle() {
+        // Get request method and path
+        $method = $_SERVER['REQUEST_METHOD'];
+        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        
+        // Remove API prefix from path
+        $apiPrefix = "/api/{$this->config['api']['version']}/";
+        if (strpos($path, $apiPrefix) === 0) {
+            $path = substr($path, strlen($apiPrefix));
+        }
+        
+        // Apply global middleware
+        foreach ($this->globalMiddleware as $middleware) {
+            if (!$middleware->handle()) {
+                return;
+            }
+        }
+        
+        // Find matching route
+        $matchedRoute = null;
+        $params = [];
+        
+        foreach ($this->routes as $route) {
+            if ($route['method'] !== $method) {
+                continue;
+            }
+            
+            $pattern = $this->pathToPattern($route['path']);
+            if (preg_match($pattern, $path, $matches)) {
+                $matchedRoute = $route;
+                
+                // Extract named parameters
+                foreach ($matches as $key => $value) {
+                    if (is_string($key)) {
+                        $params[$key] = $value;
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        // If no route matches, return 404
+        if (!$matchedRoute) {
+            Response::sendError('Route not found', 404);
+            return;
+        }
+        
+        // Apply route middleware
+        foreach ($matchedRoute['middleware'] as $middleware) {
+            if (!$middleware->handle()) {
+                return;
+            }
+        }
+        
+        // Create controller instance
+        $controllerClass = $matchedRoute['controller'];
+        $controller = new $controllerClass($this->config);
+        
+        // Set URL parameters
+        $controller->params = $params;
+        
+        // Call controller action
+        $action = $matchedRoute['action'];
+        $controller->$action();
+    }
+    
+    /**
+     * Convert a path to a regex pattern
+     * 
+     * @param string $path Path with placeholders
+     * @return string Regex pattern
+     */
+    private function pathToPattern($path) {
+        // Replace placeholders with regex patterns
+        $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?<$1>[^/]+)', $path);
+        
+        // Add start and end anchors
+        $pattern = '#^' . $pattern . '$#';
+        
+        return $pattern;
+    }
+}

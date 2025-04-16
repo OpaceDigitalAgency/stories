@@ -1,0 +1,99 @@
+# Stories Admin UI .htaccess
+# This file handles URL rewriting and security for the admin UI
+
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory
+RewriteBase /admin/
+
+# Prevent directory listing
+Options -Indexes
+
+# Deny access to hidden files and directories
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to sensitive files
+<FilesMatch "^(config\.php|.*\.log)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect includes directory
+<IfModule mod_rewrite.c>
+    RewriteRule ^includes/ - [F,L]
+</IfModule>
+
+# Protect uploads directory from PHP execution
+<Directory "uploads">
+    <FilesMatch "\.php$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+# Set default character set
+AddDefaultCharset UTF-8
+
+# Set default document
+DirectoryIndex index.php
+
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json
+</IfModule>
+
+# Set caching headers for static files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php7.c>
+    # Maximum upload file size
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    
+    # Maximum execution time
+    php_value max_execution_time 300
+    
+    # Maximum input time
+    php_value max_input_time 300
+    
+    # Memory limit
+    php_value memory_limit 256M
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Prevent MIME-type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Enable XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Disable content caching for dynamic content
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "private, no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+# Error documents
+ErrorDocument 404 /admin/index.php
+ErrorDocument 403 /admin/index.php

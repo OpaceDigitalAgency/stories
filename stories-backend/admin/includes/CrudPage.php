@@ -1,0 +1,450 @@
+<?php
+/**
+ * CRUD Page Base Class
+ * 
+ * This class serves as the base for all CRUD pages, providing
+ * common functionality for handling CRUD operations.
+ * 
+ * @package Stories Admin
+ * @version 1.0.0
+ */
+
+class CrudPage extends AdminPage {
+    /**
+     * @var string API endpoint
+     */
+    protected $endpoint;
+    
+    /**
+     * @var string Entity name (singular)
+     */
+    protected $entityName;
+    
+    /**
+     * @var string Entity name (plural)
+     */
+    protected $entityNamePlural;
+    
+    /**
+     * @var array Entity fields
+     */
+    protected $fields = [];
+    
+    /**
+     * @var array Required fields
+     */
+    protected $requiredFields = [];
+    
+    /**
+     * @var array Searchable fields
+     */
+    protected $searchableFields = [];
+    
+    /**
+     * @var array Sortable fields
+     */
+    protected $sortableFields = [];
+    
+    /**
+     * @var string Default sort field
+     */
+    protected $defaultSortField = 'id';
+    
+    /**
+     * @var string Default sort direction
+     */
+    protected $defaultSortDirection = 'desc';
+    
+    /**
+     * @var int Items per page
+     */
+    protected $itemsPerPage = 10;
+    
+    /**
+     * @var ApiClient API client
+     */
+    protected $apiClient;
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        parent::__construct();
+        
+        // Initialize API client
+        $this->apiClient = new ApiClient(API_URL, isset($_COOKIE['auth_token']) ? $_COOKIE['auth_token'] : null);
+        
+        // Get session messages
+        $this->getSessionErrors();
+        $this->getSessionSuccess();
+    }
+    
+    /**
+     * Get page data
+     */
+    protected function getData() {
+        // Get current action
+        $action = $this->getParam('action', 'list');
+        
+        // Call appropriate method based on action
+        switch ($action) {
+            case 'create':
+                $this->getCreateData();
+                break;
+            case 'edit':
+                $this->getEditData();
+                break;
+            case 'view':
+                $this->getViewData();
+                break;
+            case 'delete':
+                $this->getDeleteData();
+                break;
+            default:
+                $this->getListData();
+                break;
+        }
+    }
+    
+    /**
+     * Handle POST request
+     */
+    protected function handlePost() {
+        // Get current action
+        $action = $this->getParam('action', 'list');
+        
+        // Call appropriate method based on action
+        switch ($action) {
+            case 'create':
+                $this->handleCreate();
+                break;
+            case 'edit':
+                $this->handleEdit();
+                break;
+            case 'delete':
+                $this->handleDelete();
+                break;
+            default:
+                // No action needed for list and view
+                break;
+        }
+    }
+    
+    /**
+     * Get content template name
+     * 
+     * @return string Template name
+     */
+    protected function getContentTemplate() {
+        // Get current action
+        $action = $this->getParam('action', 'list');
+        
+        // Get template name based on action
+        switch ($action) {
+            case 'create':
+                return strtolower($this->entityName) . '/create';
+            case 'edit':
+                return strtolower($this->entityName) . '/edit';
+            case 'view':
+                return strtolower($this->entityName) . '/view';
+            case 'delete':
+                return strtolower($this->entityName) . '/delete';
+            default:
+                return strtolower($this->entityName) . '/list';
+        }
+    }
+    
+    /**
+     * Get list data
+     */
+    protected function getListData() {
+        // Get pagination parameters
+        $page = $this->getParam('page', 1);
+        $pageSize = $this->getParam('pageSize', $this->itemsPerPage);
+        
+        // Get sort parameters
+        $sortField = $this->getParam('sort', $this->defaultSortField);
+        $sortDirection = $this->getParam('direction', $this->defaultSortDirection);
+        
+        // Validate sort field
+        if (!in_array($sortField, $this->sortableFields)) {
+            $sortField = $this->defaultSortField;
+        }
+        
+        // Validate sort direction
+        if (!in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = $this->defaultSortDirection;
+        }
+        
+        // Build sort parameter
+        $sort = ($sortDirection === 'desc' ? '-' : '') . $sortField;
+        
+        // Get search parameter
+        $search = $this->getParam('search', '');
+        
+        // Build query parameters
+        $params = [
+            'page' => $page,
+            'pageSize' => $pageSize,
+            'sort' => $sort
+        ];
+        
+        // Add search parameter if provided
+        if ($search) {
+            // Add search to each searchable field
+            foreach ($this->searchableFields as $field) {
+                $params[$field] = ['like' => $search];
+            }
+        }
+        
+        // Get items from API
+        $response = $this->apiClient->get($this->endpoint, $params);
+        
+        // Set data
+        $this->data['items'] = $response ? $response['data'] : [];
+        $this->data['pagination'] = $response ? $response['meta']['pagination'] : [
+            'page' => $page,
+            'pageSize' => $pageSize,
+            'pageCount' => 0,
+            'total' => 0
+        ];
+        $this->data['sort'] = [
+            'field' => $sortField,
+            'direction' => $sortDirection
+        ];
+        $this->data['search'] = $search;
+        $this->data['fields'] = $this->fields;
+        $this->data['entityName'] = $this->entityName;
+        $this->data['entityNamePlural'] = $this->entityNamePlural;
+    }
+    
+    /**
+     * Get create data
+     */
+    protected function getCreateData() {
+        $this->data['fields'] = $this->fields;
+        $this->data['requiredFields'] = $this->requiredFields;
+        $this->data['entityName'] = $this->entityName;
+        $this->data['entityNamePlural'] = $this->entityNamePlural;
+        $this->data['item'] = [];
+        
+        // Set default values
+        foreach ($this->fields as $field) {
+            $this->data['item'][$field['name']] = $field['default'] ?? '';
+        }
+    }
+    
+    /**
+     * Get edit data
+     */
+    protected function getEditData() {
+        // Get item ID
+        $id = $this->getParam('id');
+        
+        if (!$id) {
+            $this->setError('Invalid ID');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        // Get item from API
+        $response = $this->apiClient->get($this->endpoint . '/' . $id);
+        
+        if (!$response) {
+            $this->setError('Item not found');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        $this->data['fields'] = $this->fields;
+        $this->data['requiredFields'] = $this->requiredFields;
+        $this->data['entityName'] = $this->entityName;
+        $this->data['entityNamePlural'] = $this->entityNamePlural;
+        $this->data['item'] = $response['data'];
+    }
+    
+    /**
+     * Get view data
+     */
+    protected function getViewData() {
+        // Get item ID
+        $id = $this->getParam('id');
+        
+        if (!$id) {
+            $this->setError('Invalid ID');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        // Get item from API
+        $response = $this->apiClient->get($this->endpoint . '/' . $id);
+        
+        if (!$response) {
+            $this->setError('Item not found');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        $this->data['fields'] = $this->fields;
+        $this->data['entityName'] = $this->entityName;
+        $this->data['entityNamePlural'] = $this->entityNamePlural;
+        $this->data['item'] = $response['data'];
+    }
+    
+    /**
+     * Get delete data
+     */
+    protected function getDeleteData() {
+        // Get item ID
+        $id = $this->getParam('id');
+        
+        if (!$id) {
+            $this->setError('Invalid ID');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        // Get item from API
+        $response = $this->apiClient->get($this->endpoint . '/' . $id);
+        
+        if (!$response) {
+            $this->setError('Item not found');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        $this->data['entityName'] = $this->entityName;
+        $this->data['entityNamePlural'] = $this->entityNamePlural;
+        $this->data['item'] = $response['data'];
+    }
+    
+    /**
+     * Handle create
+     */
+    protected function handleCreate() {
+        // Validate required fields
+        if (!Validator::required($_POST, $this->requiredFields)) {
+            $this->errors = Validator::getErrors();
+            return;
+        }
+        
+        // Prepare data
+        $data = $this->prepareData($_POST);
+        
+        // Create item
+        $response = $this->apiClient->post($this->endpoint, $data);
+        
+        if ($response) {
+            $this->setSuccess($this->entityName . ' created successfully');
+            $this->redirect($this->entityName . '.php');
+        } else {
+            $this->setError('Failed to create ' . $this->entityName);
+        }
+    }
+    
+    /**
+     * Handle edit
+     */
+    protected function handleEdit() {
+        // Get item ID
+        $id = $this->getParam('id');
+        
+        if (!$id) {
+            $this->setError('Invalid ID');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        // Validate required fields
+        if (!Validator::required($_POST, $this->requiredFields)) {
+            $this->errors = Validator::getErrors();
+            return;
+        }
+        
+        // Prepare data
+        $data = $this->prepareData($_POST);
+        
+        // Update item
+        $response = $this->apiClient->put($this->endpoint . '/' . $id, $data);
+        
+        if ($response) {
+            $this->setSuccess($this->entityName . ' updated successfully');
+            $this->redirect($this->entityName . '.php');
+        } else {
+            $this->setError('Failed to update ' . $this->entityName);
+        }
+    }
+    
+    /**
+     * Handle delete
+     */
+    protected function handleDelete() {
+        // Get item ID
+        $id = $this->getParam('id');
+        
+        if (!$id) {
+            $this->setError('Invalid ID');
+            $this->redirect($this->entityName . '.php');
+            return;
+        }
+        
+        // Delete item
+        $response = $this->apiClient->delete($this->endpoint . '/' . $id);
+        
+        if ($response) {
+            $this->setSuccess($this->entityName . ' deleted successfully');
+        } else {
+            $this->setError('Failed to delete ' . $this->entityName);
+        }
+        
+        $this->redirect($this->entityName . '.php');
+    }
+    
+    /**
+     * Prepare data for API request
+     * 
+     * @param array $data Form data
+     * @return array Prepared data
+     */
+    protected function prepareData($data) {
+        $prepared = [];
+        
+        // Process each field
+        foreach ($this->fields as $field) {
+            $name = $field['name'];
+            
+            // Skip if field is not in the form data
+            if (!isset($data[$name])) {
+                continue;
+            }
+            
+            // Get field value
+            $value = $data[$name];
+            
+            // Process based on field type
+            switch ($field['type']) {
+                case 'boolean':
+                    $prepared[$name] = (bool)$value;
+                    break;
+                case 'number':
+                    $prepared[$name] = (float)$value;
+                    break;
+                case 'integer':
+                    $prepared[$name] = (int)$value;
+                    break;
+                case 'date':
+                case 'datetime':
+                    $prepared[$name] = $value;
+                    break;
+                case 'array':
+                    $prepared[$name] = is_array($value) ? $value : explode(',', $value);
+                    break;
+                default:
+                    $prepared[$name] = $value;
+                    break;
+            }
+        }
+        
+        return $prepared;
+    }
+}

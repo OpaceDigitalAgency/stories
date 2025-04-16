@@ -1,0 +1,30 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.CPANEL_SSH_KEY }}
+        
+    - name: Deploy to cPanel
+      run: |
+        # Add cPanel host to known hosts
+        mkdir -p ~/.ssh
+        ssh-keyscan -H api.storiesfromtheweb.org >> ~/.ssh/known_hosts
+        
+        # Deploy backend files
+        echo "Deploying backend files to cPanel..."
+        rsync -avz --delete stories-backend/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+        
+        echo "Deployment completed successfully!"

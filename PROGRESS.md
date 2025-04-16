@@ -15,5 +15,5 @@
   - Implementation of advanced CSS techniques
   - Fixed three small issues on the website:
     - Created src/pages/authors/index.astro to fix the 404 error on the authors page
-    - Fixed styling for "Parent Resources" and "Teacher Resources" buttons with improved contrast, stronger borders, and better hover effects
-    - Enhanced the "Join as Author" button with better contrast, stronger borders, darker background colors, and more prominent shadow effects
+    - Fixed styling for "Parent Resources" and "Teacher Resources" buttons to match provided examples with light blue background and white text
+    - Fixed styling for the "Subscribe" button to match provided example with teal background and white text

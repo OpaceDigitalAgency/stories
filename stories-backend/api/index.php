@@ -19,8 +19,8 @@ ini_set('display_errors', 1);
 // Define the base path
 define('BASE_PATH', __DIR__);
 
-// Define debug mode (should be true for debugging)
-define('DEBUG_MODE', true);
+// Define debug mode (should be false for production)
+define('DEBUG_MODE', false);
 
 // Enable CORS for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -52,7 +52,58 @@ spl_autoload_register(function ($class) {
     // If the file exists, require it
     if (file_exists($file)) {
         require $file;
+        return;
     }
+    
+    // Case-insensitive approach - try lowercase path
+    $lowercase_path = strtolower($base_dir . str_replace('\\', '/', $relative_class)) . '.php';
+    $actual_path = '';
+    
+    // Get the actual path with correct case
+    $parts = explode('/', str_replace('\\', '/', $relative_class));
+    $current_path = $base_dir;
+    
+    foreach ($parts as $part) {
+        if (!is_dir($current_path)) {
+            break;
+        }
+        
+        $found = false;
+        $items = scandir($current_path);
+        
+        foreach ($items as $item) {
+            if (strtolower($item) === strtolower($part)) {
+                $current_path .= $item . '/';
+                $found = true;
+                break;
+            }
+        }
+        
+        if (!$found) {
+            break;
+        }
+    }
+    
+    // Remove trailing slash and add .php
+    $actual_path = substr($current_path, 0, -1) . '.php';
+    
+    // If the file exists with the correct case, require it
+    if (file_exists($actual_path)) {
+        require $actual_path;
+        return;
+    }
+    
+    // Direct approach - try to find the file in the utils directory
+    if (strpos($relative_class, 'Utils') === 0) {
+        $utils_file = $base_dir . 'utils/' . substr($relative_class, 6) . '.php';
+        if (file_exists($utils_file)) {
+            require $utils_file;
+            return;
+        }
+    }
+    
+    // Log the error
+    error_log("Failed to load class: $class. Tried paths: $file, $lowercase_path, $actual_path");
 });
 
 // Load configuration
@@ -60,6 +111,9 @@ $config = require __DIR__ . '/v1/config/config.php';
 
 // Initialize Auth utility
 \StoriesAPI\Utils\Auth::init($config['security']);
+
+// Set debug mode for Response class
+\StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;
 
 // Create router
 $router = new \StoriesAPI\Core\Router($config);

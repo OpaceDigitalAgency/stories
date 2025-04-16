@@ -1,0 +1,162 @@
+---
+import ProfileSwitcher from './ProfileSwitcher.astro';
+
+// Define the navigation items
+const navItems = [
+  { text: 'Home', href: '/' },
+  { text: 'Stories', href: '/stories' },
+  { text: 'Authors', href: '/authors' },
+  { text: 'Publish', href: '/publish' },
+  { text: 'AI Tools', href: '/ai-tools' },
+  { text: 'Games', href: '/games' },
+  { text: 'Directories', href: '/directories' },
+  { text: 'Reviews', href: '/reviews' },
+  { text: 'Blog', href: '/blog' },
+  { text: 'Reviews', href: '/reviews' },
+];
+
+// Determine the current path to highlight the active nav item
+const currentPath = Astro.url.pathname;
+---
+
+<header class="bg-white shadow-soft sticky top-0 z-50 py-2">
+  <div class="container mx-auto px-4 flex justify-between items-center h-16">
+    <!-- Logo -->
+    <a href="/" class="flex items-center group">
+      <div class="relative">
+        <img src="/logo.png" alt="Stories From The Web" class="h-14 md:h-16 w-auto transition-transform duration-300 group-hover:scale-105" />
+        <!-- Decorative element -->
+        <span class="absolute -bottom-1 left-0 w-full h-1 bg-accent/30 rounded-full transform -rotate-1 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
+      </div>
+    </a>
+    
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex items-center space-x-6">
+      {navItems.map(item => {
+        const isActive = currentPath === item.href ||
+                         (item.href !== '/' && currentPath.startsWith(item.href));
+        return (
+          <a
+            href={item.href}
+            class={`font-bold transition-all duration-300 relative group ${
+              isActive
+                ? 'text-primary'
+                : 'text-text-primary hover:text-primary'
+            }`}
+          >
+            {item.text}
+            <span class={`absolute bottom-0 left-0 w-full h-2 rounded-full transform transition-all duration-300 ${
+              isActive
+                ? 'bg-primary/30 scale-100'
+                : 'bg-primary/30 scale-0 group-hover:scale-100'
+            }`}></span>
+          </a>
+        );
+      })}
+      
+      <!-- Login/Profile Button -->
+      <div class="flex items-center ml-4">
+        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          <span>Login</span>
+        </a>
+      </div>
+      
+      <!-- Profile Switcher (only visible when logged in) -->
+      <div class="ml-4 hidden">
+        <ProfileSwitcher currentProfile="child" showLabels={false} size="sm" />
+      </div>
+      
+      <a
+        href="/publish"
+        class="btn btn-primary ml-4 shadow-playful btn-playful"
+      >
+        Share Your Story
+      </a>
+    </nav>
+    
+    <!-- Mobile menu button -->
+    <button
+      id="mobile-menu-button"
+      class="md:hidden flex items-center p-2 rounded-xl text-text-primary hover:text-primary hover:bg-neutral-dark transition-all duration-300"
+      aria-label="Toggle menu"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+      </svg>
+    </button>
+  </div>
+  
+  <!-- Mobile Navigation (hidden by default) -->
+  <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-neutral-dark overflow-hidden" style="max-height: 0; transition: max-height 0.3s ease-in-out;">
+    <div class="container mx-auto px-4 py-3 space-y-1">
+      {navItems.map(item => {
+        const isActive = currentPath === item.href ||
+                         (item.href !== '/' && currentPath.startsWith(item.href));
+        return (
+          <a
+            href={item.href}
+            class={`block py-3 px-4 rounded-xl transition-all duration-300 ${
+              isActive
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-text-primary hover:bg-neutral-dark hover:text-primary'
+            }`}
+          >
+            {item.text}
+          </a>
+        );
+      })}
+      
+      <!-- Login Button -->
+      <a
+        href="/login"
+        class="block py-3 px-4 mt-2 bg-white border border-gray-300 text-text-primary rounded-xl font-bold flex items-center justify-center"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+        Login
+      </a>
+      
+      <!-- Profile Switcher (only visible when logged in) -->
+      <div class="px-4 py-3 mt-2 hidden">
+        <p class="text-sm text-gray-600 mb-2">Switch Profile:</p>
+        <ProfileSwitcher currentProfile="child" showLabels={true} size="sm" />
+      </div>
+      
+      <a
+        href="/publish"
+        class="block py-3 px-4 mt-2 bg-primary text-white rounded-xl font-bold shadow-playful"
+      >
+        Share Your Story
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Toggle mobile menu with animation
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+  
+  if (mobileMenuButton && mobileMenu) {
+    mobileMenuButton.addEventListener('click', () => {
+      if (mobileMenu.classList.contains('hidden')) {
+        // Show menu with animation
+        mobileMenu.classList.remove('hidden');
+        mobileMenu.style.maxHeight = '0';
+        setTimeout(() => {
+          mobileMenu.style.maxHeight = mobileMenu.scrollHeight + 'px';
+        }, 10);
+      } else {
+        // Hide menu with animation
+        mobileMenu.style.maxHeight = '0';
+        setTimeout(() => {
+          mobileMenu.classList.add('hidden');
+        }, 300); // Match the transition duration
+      }
+    });
+  }
+</script>

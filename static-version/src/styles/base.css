@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts Import - Add font weights */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: 'Nunito', sans-serif;
+    color: theme('colors.text-primary');
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    color: theme('colors.text-primary');
+  }
+  
+  /* Add playful underlines for headings */
+  h2.fancy-underline {
+    @apply relative inline-block;
+  }
+  
+  h2.fancy-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-3 bg-accent/30 -z-10 rounded-full transform -rotate-1;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-playful;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary/90;
+  }
+  
+  .btn-accent {
+    @apply bg-accent text-text-primary hover:bg-accent/90;
+  }
+  
+  .btn-tertiary {
+    @apply bg-tertiary text-white hover:bg-tertiary/90;
+  }
+  
+  .container {
+    @apply mx-auto px-4 max-w-7xl;
+  }
+  
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl overflow-hidden shadow-card transition-all duration-300 hover:shadow-hover border-2 border-transparent hover:border-neutral-dark;
+  }
+  
+  /* Blob shapes for decorative elements */
+  .blob-shape {
+    @apply absolute -z-10 rounded-blob opacity-70 blur-2xl;
+  }
+  
+  /* Animated elements */
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+  }
+  
+  .pulse-animation {
+    animation: pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .wiggle-animation {
+    animation: wiggle 2s ease-in-out infinite;
+  }
+  
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+  
+  /* Playful button interactions */
+  .btn-playful {
+    @apply relative overflow-hidden;
+  }
+  
+  .btn-playful::after {
+    content: '';
+    @apply absolute inset-0 bg-white opacity-0 transition-opacity duration-300;
+  }
+  
+  .btn-playful:active::after {
+    @apply opacity-20;
+  }
+  
+  .btn-playful:active {
+    @apply transform scale-95;
+  }
+}

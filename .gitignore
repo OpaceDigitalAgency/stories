@@ -31,3 +31,6 @@ pnpm-debug.log*
 # Embedded git repository
 storiesfromtheweb/.DS_Store
 storiesfromtheweb/
+
+# Local Netlify folder
+.netlify

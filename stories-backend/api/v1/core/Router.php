@@ -134,18 +134,26 @@ class Router {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
+        // Debug log
+        error_log("Router handling request: {$method} {$path}");
+        
         // Remove API prefix from path
         $apiPrefix = "/api/{$this->config['api']['version']}/";
+        $originalPath = $path;
         
         // Handle both full URL and relative path formats
         if (strpos($path, $apiPrefix) === 0) {
             // Format: /api/v1/endpoint
             $path = substr($path, strlen($apiPrefix));
+            error_log("Path after prefix removal (direct match): {$path}");
         } else {
             // Try to match the end of the path
             $pattern = "#/api/{$this->config['api']['version']}/(.*)$#";
             if (preg_match($pattern, $path, $matches)) {
                 $path = $matches[1];
+                error_log("Path after prefix removal (regex match): {$path}");
+            } else {
+                error_log("WARNING: Could not extract API path from {$originalPath}");
             }
         }
         
@@ -160,14 +168,20 @@ class Router {
         $matchedRoute = null;
         $params = [];
         
-        foreach ($this->routes as $route) {
+        error_log("Looking for route matching: {$method} {$path}");
+        error_log("Available routes: " . count($this->routes));
+        
+        foreach ($this->routes as $index => $route) {
             if ($route['method'] !== $method) {
                 continue;
             }
             
             $pattern = $this->pathToPattern($route['path']);
+            error_log("Checking route #{$index}: {$route['method']} {$route['path']} (pattern: {$pattern})");
+            
             if (preg_match($pattern, $path, $matches)) {
                 $matchedRoute = $route;
+                error_log("Route matched: {$route['controller']}::{$route['action']}");
                 
                 // Extract named parameters
                 foreach ($matches as $key => $value) {
@@ -176,12 +190,14 @@ class Router {
                     }
                 }
                 
+                error_log("Route parameters: " . print_r($params, true));
                 break;
             }
         }
         
         // If no route matches, return 404
         if (!$matchedRoute) {
+            error_log("No route matched for {$method} {$path}");
             Response::sendError('Route not found', 404);
             return;
         }
@@ -195,14 +211,23 @@ class Router {
         
         // Create controller instance
         $controllerClass = $matchedRoute['controller'];
-        $controller = new $controllerClass($this->config);
+        error_log("Creating controller instance: {$controllerClass}");
         
-        // Set URL parameters
-        $controller->params = $params;
-        
-        // Call controller action
-        $action = $matchedRoute['action'];
-        $controller->$action();
+        try {
+            $controller = new $controllerClass($this->config);
+            
+            // Set URL parameters
+            $controller->params = $params;
+            
+            // Call controller action
+            $action = $matchedRoute['action'];
+            error_log("Calling controller action: {$action}");
+            $controller->$action();
+        } catch (\Exception $e) {
+            error_log("Exception in controller: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            Response::sendError('Internal server error: ' . $e->getMessage(), 500);
+        }
     }
     
     /**

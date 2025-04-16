@@ -118,9 +118,58 @@ class Response {
         // Set content type header
         header('Content-Type: application/json; charset=UTF-8');
         
+        // Debug: Log the data being encoded
+        error_log("Response data before encoding: " . print_r($data, true));
+        
+        // Encode the data
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        
+        // Check for JSON encoding errors
+        if ($json === false) {
+            error_log("JSON encoding error: " . json_last_error_msg());
+            
+            // Try to identify problematic data
+            $cleanData = self::sanitizeDataForJson($data);
+            $json = json_encode($cleanData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            
+            if ($json === false) {
+                // If still failing, return a simple error response
+                error_log("JSON encoding still failing after sanitization");
+                echo '{"error":true,"message":"Internal server error: Unable to encode response","statusCode":500}';
+                exit;
+            }
+        }
+        
         // Output the JSON response
-        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        echo $json;
         exit;
+    }
+    
+    /**
+     * Sanitize data for JSON encoding
+     *
+     * @param mixed $data The data to sanitize
+     * @return mixed Sanitized data
+     */
+    private static function sanitizeDataForJson($data) {
+        if (is_array($data)) {
+            $clean = [];
+            foreach ($data as $key => $value) {
+                $clean[$key] = self::sanitizeDataForJson($value);
+            }
+            return $clean;
+        } elseif (is_object($data)) {
+            $clean = new \stdClass();
+            foreach (get_object_vars($data) as $key => $value) {
+                $clean->$key = self::sanitizeDataForJson($value);
+            }
+            return $clean;
+        } elseif (is_string($data)) {
+            // Remove invalid UTF-8 characters
+            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+        } else {
+            return $data;
+        }
     }
     
     /**

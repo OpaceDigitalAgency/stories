@@ -19,8 +19,8 @@ ini_set('display_errors', 1);
 // Define the base path
 define('BASE_PATH', __DIR__);
 
-// Define debug mode (should be false in production)
-define('DEBUG_MODE', false);
+// Define debug mode (should be true for debugging)
+define('DEBUG_MODE', true);
 
 // Enable CORS for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -134,6 +134,21 @@ if (!empty($output)) {
             'status' => 'error',
             'message' => 'Unexpected output occurred. Please check the server logs.',
             'debug' => DEBUG_MODE ? $output : null
+        ]);
+        exit;
+    }
+} else {
+    // If no output, the router didn't handle the request properly
+    if (!headers_sent()) {
+        error_log('No output from router. Request URI: ' . $_SERVER['REQUEST_URI']);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'API request not properly handled',
+            'debug' => DEBUG_MODE ? [
+                'uri' => $_SERVER['REQUEST_URI'],
+                'method' => $_SERVER['REQUEST_METHOD']
+            ] : null
         ]);
         exit;
     }

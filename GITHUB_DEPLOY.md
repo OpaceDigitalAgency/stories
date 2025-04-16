@@ -1,4 +1,4 @@
-# Automatic Deployment to cPanel with GitHub Actions (FTP Method)
+# Automatic Deployment to cPanel with GitHub Actions (FTPS Method)
 
 This guide explains how to set up automatic deployment to your cPanel server whenever you push to GitHub.
 
@@ -6,7 +6,7 @@ This guide explains how to set up automatic deployment to your cPanel server whe
 
 1. You push changes to GitHub
 2. GitHub Actions automatically runs the deployment workflow
-3. Your changes are deployed to cPanel via FTP
+3. Your changes are deployed to cPanel via FTPS (secure FTP)
 4. Netlify automatically deploys frontend changes
 
 ## Understanding the File Structure
@@ -39,9 +39,13 @@ api.storiesfromtheweb.org/
 
 The GitHub Action workflow is configured to handle this difference by deploying files to the correct locations.
 
-## Why FTP Instead of SSH?
+## Why FTPS Instead of SSH?
 
-We're using FTP deployment because your cPanel hosting doesn't allow shell access, which is required for SSH/rsync deployment. FTP is a widely supported alternative that works with most hosting providers.
+We're using FTPS deployment for two reasons:
+1. Your cPanel hosting doesn't allow shell access, which is required for SSH/rsync deployment
+2. Your server requires secure connections and doesn't accept plain FTP connections
+
+FTPS adds encryption to protect your credentials and data during transfer.
 
 ## Setup Instructions
 
@@ -76,7 +80,7 @@ Make a small change to any file in your repository and push it to GitHub:
 
 ```bash
 git add .
-git commit -m "Test FTP deployment"
+git commit -m "Test FTPS deployment"
 git push origin main
 ```
 
@@ -86,7 +90,7 @@ Then check the Actions tab to see if the workflow runs successfully.
 
 Now, whenever you push changes to the `main` branch:
 
-1. GitHub Actions will automatically deploy your backend files to cPanel via FTP
+1. GitHub Actions will automatically deploy your backend files to cPanel via FTPS
 2. Netlify will automatically deploy your frontend files
 
 You don't need to run any manual commands. Just:
@@ -101,7 +105,7 @@ git push origin main
 
 The GitHub Action workflow (`.github/workflows/deploy.yml`) uses the FTP-Deploy-Action to:
 
-1. Connect to your cPanel server via FTP
+1. Connect to your cPanel server via FTPS (secure FTP)
 2. Upload all files from the `stories-backend` directory to your server
 3. Maintain the same directory structure on the server
 
@@ -113,7 +117,7 @@ If the deployment fails, check:
 
 1. GitHub Actions logs (in your repository under "Actions" tab)
 2. Make sure the FTP credentials are correctly added to GitHub Secrets
-3. Verify that your hosting provider allows FTP connections
+3. Verify that your hosting provider supports FTPS connections
 
 ### Files Not Updating on cPanel
 
@@ -127,7 +131,7 @@ If files aren't updating on cPanel:
 
 If you need to deploy manually, you can use an FTP client like FileZilla:
 
-1. Connect to your server using your FTP credentials
+1. Connect to your server using your FTP credentials and enable "Require explicit FTP over TLS"
 2. Upload the files from your `stories-backend` directory to your server
 
 ## For More Information

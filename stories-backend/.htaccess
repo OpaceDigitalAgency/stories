@@ -16,12 +16,13 @@ RewriteRule ^api/(.*)$ api/index.php [QSA,L]
     Deny from all
 </FilesMatch>
 
-<FilesMatch "\.(php|sql|log|ini|json)$">
+<FilesMatch "\.(sql|log|ini|json)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-<FilesMatch "^(index\.php)$">
+# Allow specific PHP files in the root directory
+<FilesMatch "^(index\.php|direct_login\.php|check_auth_status\.php|go_to_dashboard\.php|logout\.php)$">
     Order allow,deny
     Allow from all
 </FilesMatch>

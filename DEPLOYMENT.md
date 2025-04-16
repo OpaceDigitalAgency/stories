@@ -1,6 +1,6 @@
 # Deployment Guide for Stories from the Web
 
-This guide explains how to keep your local repository, GitHub, Netlify frontend, and cPanel backend in sync.
+This guide explains the current deployment process for the Stories from the Web project.
 
 ## Overview
 
@@ -9,64 +9,14 @@ The project consists of two main parts:
 1. **Frontend**: Astro.js application hosted on Netlify
 2. **Backend**: PHP/MySQL application hosted on cPanel
 
-The deployment script (`deploy.sh`) helps you keep everything in sync by:
+## Current Deployment Method
 
-1. Downloading any files added directly to the cPanel server
-2. Ensuring all direct login scripts are included in your local repository
-3. Committing and pushing changes to GitHub
-4. Uploading any local changes to the cPanel server
+We use cPanel's Git Version Control feature for backend deployment:
 
-## Prerequisites
-
-- SSH access to your cPanel server
-- Git installed on your local machine
-- Bash shell (Linux, macOS, or WSL on Windows)
-
-## Setup
-
-1. Edit the `deploy.sh` script to update the configuration variables:
-
-```bash
-CPANEL_HOST="api.storiesfromtheweb.org"
-CPANEL_USER="stories"  # Replace with your cPanel username
-CPANEL_PATH="/home/stories/api.storiesfromtheweb.org"
-LOCAL_BACKEND_PATH="./stories-backend"
-```
-
-2. Make the script executable:
-
-```bash
-chmod +x deploy.sh
-```
-
-## Usage
-
-### Regular Workflow
-
-1. Make changes to your local files
-2. Run the deployment script:
-
-```bash
-./deploy.sh
-```
-
-3. The script will:
-   - Download any files added directly to the server
-   - Commit and push changes to GitHub
-   - Upload changes to the cPanel server
-   - Netlify will automatically deploy frontend changes from GitHub
-
-### After Making Direct Changes on the Server
-
-If you've made changes directly on the server (e.g., adding direct login scripts):
-
-1. Run the deployment script:
-
-```bash
-./deploy.sh
-```
-
-2. The script will download the changes to your local repository and commit them to GitHub
+1. Changes are pushed to the GitHub repository
+2. The repository is cloned/updated in cPanel's Git Version Control
+3. The `.cpanel.yml` file defines what files to deploy and where
+4. Deployment is triggered manually in cPanel
 
 ## File Structure
 
@@ -76,64 +26,112 @@ If you've made changes directly on the server (e.g., adding direct login scripts
 ├── stories-backend/      # Backend PHP code
 │   ├── admin/            # Admin UI
 │   ├── api/              # API endpoints
-│   └── direct login scripts (e.g., direct_login.php)
-├── deploy.sh             # Deployment script
+│   ├── direct_login.php  # Direct login script
+│   ├── check_auth_status.php # Auth status check
+│   ├── go_to_dashboard.php # Dashboard redirect
+│   ├── logout.php        # Logout script
+│   └── .htaccess         # Apache configuration
+├── .cpanel.yml           # cPanel deployment configuration
 └── DEPLOYMENT.md         # This file
 ```
 
-## Direct Login Scripts
+## Setting Up Git Version Control in cPanel
 
-The following direct login scripts are automatically synced:
+1. Log in to cPanel
+2. Go to "Git Version Control"
+3. Click "Create" to create a new repository
+4. Enter the following details:
+   - Clone URL: `https://github.com/OpaceDigitalAgency/stories.git`
+   - Repository Path: `/home/stories/repositories/stories`
+   - Repository Name: `stories`
+5. Click "Create"
 
-- `direct_login.php`: Main direct login script
-- `auth_test.php`: Authentication test script
-- `check_auth_status.php`: Check authentication status
-- `go_to_dashboard.php`: Direct access to admin dashboard
-- `simple_login_form.php`: Simple login form
-- `logout.php`: Logout script
+## Deploying Changes
+
+After pushing changes to GitHub:
+
+1. Log in to cPanel
+2. Go to "Git Version Control"
+3. Find your repository in the list
+4. Click "Manage"
+5. Click "Update from Remote" to pull the latest changes
+6. Click "Deploy HEAD Commit" to deploy the changes
+
+The `.cpanel.yml` file defines what files to deploy and where:
+
+```yaml
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - /bin/cp -R stories-backend/check_auth_status.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/direct_login.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/go_to_dashboard.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/logout.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/.htaccess $DEPLOYPATH
+    - /bin/cp -R stories-backend/database.sql $DEPLOYPATH
+    - /bin/cp -R stories-backend/README.md $DEPLOYPATH
+    - /bin/cp -R stories-backend/admin $DEPLOYPATH
+    - /bin/cp -R stories-backend/api $DEPLOYPATH
+    - /bin/cp -R stories-backend/test_folder $DEPLOYPATH
+```
+
+## Accessing the Admin Interface
+
+After deployment, you can access the admin interface using:
+
+1. **Direct Login URL**:
+   ```
+   https://api.storiesfromtheweb.org/direct_login.php
+   ```
+
+2. **Regular Admin Login**:
+   ```
+   https://api.storiesfromtheweb.org/admin/login.php
+   ```
+
+## Important .htaccess Configuration
+
+The `.htaccess` file has been configured to allow access to the direct login scripts while maintaining security:
+
+```apache
+<FilesMatch "\.(sql|log|ini|json)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^(index\.php|direct_login\.php|check_auth_status\.php|go_to_dashboard\.php|logout\.php)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+```
 
 ## Troubleshooting
 
-### SSH Connection Issues
+### Deployment Issues
 
-If you encounter SSH connection issues:
+If deployment fails:
 
-1. Verify your SSH credentials
-2. Check if you can manually SSH into the server:
+1. Check if the `.cpanel.yml` file is properly formatted
+2. Verify that the repository is correctly set up in cPanel
+3. Check for any error messages in the deployment logs
 
-```bash
-ssh stories@api.storiesfromtheweb.org
-```
+### Access Issues
 
-### File Permission Issues
+If you can't access the admin interface:
 
-If you encounter permission issues when uploading files:
+1. Check the `.htaccess` file to ensure it allows access to the necessary PHP files
+2. Verify file permissions (755 for directories, 644 for files)
+3. Check the error logs in cPanel
 
-1. Check the file permissions on the server
-2. You may need to adjust permissions:
+## Frontend Deployment
 
-```bash
-ssh stories@api.storiesfromtheweb.org "chmod 755 /path/to/file"
-```
-
-### Git Issues
-
-If you encounter Git issues:
-
-1. Check if you have uncommitted changes:
-
-```bash
-git status
-```
-
-2. Resolve any merge conflicts if they occur
+The frontend is automatically deployed to Netlify when changes are pushed to the GitHub repository.
 
 ## Keeping Everything in Sync
 
 To ensure everything stays in sync:
 
-1. Always use the deployment script after making changes
-2. If you make changes directly on the server, run the script to download those changes
-3. Commit and push regularly to keep GitHub and Netlify up to date
-
-By following this workflow, your local repository, GitHub, Netlify frontend, and cPanel backend will stay in sync.
+1. Push changes to GitHub
+2. Deploy backend changes using cPanel's Git Version Control
+3. Netlify will automatically deploy frontend changes

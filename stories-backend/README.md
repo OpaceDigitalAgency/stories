@@ -1,11 +1,12 @@
-# Stories API
+# Stories API and Admin UI
 
-A secure PHP API layer for connecting an Astro site to a MySQL/MariaDB database. This API provides endpoints for all content types (stories, authors, blog posts, directory items, games, AI tools, tags) with proper security measures, CORS support, and pagination.
+A secure PHP API layer and admin interface for connecting an Astro site to a MySQL/MariaDB database. This API provides endpoints for all content types (stories, authors, blog posts, directory items, games, AI tools, tags) with proper security measures, CORS support, and pagination.
 
 ## Features
 
 - **Secure Authentication**: JWT-based authentication with role-based access control
 - **Content Endpoints**: Full CRUD operations for all content types
+- **Admin UI**: Browser-based interface for managing all content
 - **Security Measures**: Input validation, prepared statements, and XSS protection
 - **CORS Support**: Configured for Netlify-hosted Astro frontend
 - **Pagination**: Support for paginated responses with metadata
@@ -26,8 +27,8 @@ A secure PHP API layer for connecting an Astro site to a MySQL/MariaDB database.
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/stories-api.git
-cd stories-api
+git clone https://github.com/OpaceDigitalAgency/stories.git
+cd stories
 ```
 
 2. **Set up the database**
@@ -35,12 +36,12 @@ cd stories-api
 Create a new MySQL/MariaDB database and import the schema:
 
 ```bash
-mysql -u username -p database_name < database.sql
+mysql -u username -p database_name < stories-backend/database.sql
 ```
 
 3. **Configure the API**
 
-Edit the configuration file at `api/v1/config/config.php`:
+Edit the configuration file at `stories-backend/api/v1/config/config.php`:
 
 ```php
 // Database configuration
@@ -68,13 +69,56 @@ $config['security'] = [
 ];
 ```
 
-4. **Upload to your server**
+4. **Configure the Admin UI**
 
-Upload the files to your cPanel/PHP hosting environment.
+Edit the configuration file at `stories-backend/admin/includes/config.php`:
 
-5. **Set up the .htaccess file**
+```php
+// Database configuration
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'stories_db');
+define('DB_USER', 'stories_user');
+define('DB_PASS', 'your_secure_password');
 
-Make sure the `.htaccess` file is properly configured for your server.
+// API configuration
+define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
+define('API_TOKEN', ''); // Leave empty, will be set during login
+
+// Admin configuration
+define('ADMIN_EMAIL', 'admin@storiesfromtheweb.org');
+define('ADMIN_PASSWORD', 'admin123'); // Change this after first login
+```
+
+5. **Deployment**
+
+The project is deployed using cPanel's Git Version Control feature. See the `DEPLOYMENT.md` file in the root directory for detailed instructions.
+
+## Accessing the Admin UI
+
+After deployment, you can access the admin interface using:
+
+1. **Direct Login URL**:
+   ```
+   https://api.storiesfromtheweb.org/direct_login.php
+   ```
+
+2. **Regular Admin Login**:
+   ```
+   https://api.storiesfromtheweb.org/admin/login.php
+   ```
+
+## Admin UI Features
+
+The admin UI provides a user-friendly interface for managing:
+
+- **Stories**: Create, edit, and delete stories
+- **Authors**: Manage author profiles
+- **Blog Posts**: Create and manage blog content
+- **Directory Items**: Manage directory listings
+- **Games**: Add and edit game listings
+- **AI Tools**: Manage AI tool listings
+- **Tags**: Create and assign tags to content
+- **Media**: Upload and manage images
 
 ## API Endpoints
 
@@ -263,7 +307,7 @@ Update your Astro frontend's API configuration to point to this API:
 
 ```typescript
 // src/lib/api.ts
-const API_URL = 'https://your-api-domain.com/api/v1';
+const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
 const API_TOKEN = 'your_jwt_token';
 
 export const fetchFromAPI = async (endpoint, params = {}) => {
@@ -295,4 +339,4 @@ export const fetchFromAPI = async (endpoint, params = {}) => {
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.# Test change
+This project is licensed under the MIT License - see the LICENSE file for details.

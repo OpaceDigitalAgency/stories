@@ -1,150 +1,190 @@
 # Stories Admin UI
 
-This is the admin UI for managing content in the Stories API database. It provides a user-friendly interface for performing CRUD operations on all content types.
+This is the admin interface for the Stories from the Web project. It provides a user-friendly way to manage all content types in the database.
 
 ## Features
 
-- User authentication with JWT integration
-- Dashboard with content statistics
-- CRUD operations for all content types:
-  - Stories
-  - Authors
-  - Blog Posts
-  - Directory Items
-  - Games
-  - AI Tools
-  - Tags
-- Media upload and management
-- Responsive design for mobile and desktop
-- Input validation and error handling
+- **Dashboard**: Overview of content statistics
+- **Content Management**: CRUD operations for all content types
+- **Media Upload**: Upload and manage images
+- **User Authentication**: Secure login with JWT integration
+- **Responsive Design**: Works on mobile and desktop
+- **Input Validation**: Client and server-side validation
 
-## Requirements
+## Accessing the Admin UI
 
-- PHP 7.4 or higher
-- MySQL/MariaDB database
-- Apache web server with mod_rewrite enabled
-- cPanel hosting environment
+You can access the admin interface using:
 
-## Installation Guide for cPanel
-
-Follow these steps to install the Stories Admin UI on your cPanel hosting:
-
-### 1. Upload Files
-
-1. Log in to your cPanel account.
-2. Navigate to the File Manager.
-3. Go to the directory where you want to install the admin UI (e.g., `public_html`).
-4. Create a new directory called `admin` (or any name you prefer).
-5. Upload all the admin UI files to this directory.
-
-### 2. Configure Database Connection
-
-1. Open the file `includes/config.php`.
-2. Update the database configuration with your database credentials:
-   ```php
-   $config['db'] = [
-       'host'     => 'localhost',      // Database host
-       'name'     => 'your_db_name',   // Database name
-       'user'     => 'your_db_user',   // Database username
-       'password' => 'your_db_password', // Database password
-       'charset'  => 'utf8mb4',        // Character set
-       'port'     => 3306              // Database port
-   ];
+1. **Direct Login URL**:
    ```
-3. Update the JWT secret key to match the one used in your API:
-   ```php
-   $config['security'] = [
-       'jwt_secret'   => 'your_jwt_secret_key', // JWT secret key
-       'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
-       // ...
-   ];
+   https://api.storiesfromtheweb.org/direct_login.php
    ```
+   This bypasses the regular login process for quick access.
 
-### 3. Configure Base URLs
-
-1. In the same `includes/config.php` file, update the base URLs:
-   ```php
-   // Define base paths
-   define('BASE_PATH', dirname(__DIR__));
-   define('ADMIN_URL', '/admin'); // Update if you installed in a different directory
-   define('API_URL', '/api/v1');  // Update to match your API URL
+2. **Regular Admin Login**:
    ```
-
-### 4. Set Up Upload Directory
-
-1. Create a directory called `uploads` in the admin directory.
-2. Set the appropriate permissions:
+   https://api.storiesfromtheweb.org/admin/login.php
    ```
-   chmod 755 uploads
-   ```
-3. Make sure the web server has write permissions to this directory:
-   ```
-   chown www-data:www-data uploads
-   ```
+   Use the default credentials:
+   - Email: `admin@storiesfromtheweb.org`
+   - Password: `admin123` (change this after first login)
 
-### 5. Configure .htaccess
+## Content Types
 
-1. Make sure the `.htaccess` file is present in the admin directory.
-2. If your admin UI is installed in a different directory than `/admin/`, update the RewriteBase in the `.htaccess` file:
-   ```
-   RewriteBase /your-admin-path/
-   ```
+The admin UI allows you to manage:
 
-### 6. Set Up Database (if not already done)
+### Stories
+- Create, edit, and delete stories
+- Upload cover images
+- Assign authors and tags
+- Set featured status
 
-If you haven't already set up the database for the API, you need to import the database schema:
+### Authors
+- Manage author profiles
+- Upload author photos
+- Edit author bios
 
-1. Go to phpMyAdmin in your cPanel.
-2. Select your database.
-3. Click on the "Import" tab.
-4. Upload and import the `database.sql` file from the API directory.
+### Blog Posts
+- Create and manage blog content
+- Format content with rich text editor
+- Schedule publication
 
-### 7. Create Admin User (if not already done)
+### Directory Items
+- Manage directory listings
+- Categorize listings
+- Add contact information
 
-If you haven't already created an admin user, you can do so by running the following SQL query:
+### Games
+- Add and edit game listings
+- Upload game screenshots
+- Set age ratings and categories
 
-```sql
-INSERT INTO users (name, email, password, role, active, created_at, updated_at)
-VALUES ('Admin', 'your-email@example.com', '$2y$12$1234567890123456789012uQFWnzxixQx.8RqMZ8hQXyGkTjrsZBW', 'admin', 1, NOW(), NOW());
+### AI Tools
+- Manage AI tool listings
+- Set tool categories
+- Add pricing information
+
+### Tags
+- Create and manage tags
+- Assign tags to content
+
+## Media Management
+
+The media section allows you to:
+- Upload images
+- Organize images in folders
+- Reuse images across content
+- Delete unused media
+
+## Technical Details
+
+The admin UI is built with:
+- PHP for server-side logic
+- JavaScript for client-side interactions
+- Bootstrap for responsive design
+- API integration with the backend API
+
+## Configuration
+
+The admin UI is configured in `includes/config.php`:
+
+```php
+// Database configuration
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'stories_db');
+define('DB_USER', 'stories_user');
+define('DB_PASS', 'your_secure_password');
+
+// API configuration
+define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
+define('API_TOKEN', ''); // Leave empty, will be set during login
+
+// Admin configuration
+define('ADMIN_EMAIL', 'admin@storiesfromtheweb.org');
+define('ADMIN_PASSWORD', 'admin123'); // Change this after first login
 ```
 
-Replace `'your-email@example.com'` with your email address. The default password is `password`. You should change this after your first login.
+## File Structure
 
-### 8. Test the Installation
+```
+admin/
+├── assets/              # CSS, JS, and images
+│   ├── css/             # Stylesheets
+│   ├── js/              # JavaScript files
+│   └── img/             # Admin UI images
+├── controllers/         # Controller logic
+├── includes/            # Shared PHP files
+│   ├── AdminPage.php    # Base admin page class
+│   ├── ApiClient.php    # API client for backend communication
+│   ├── Auth.php         # Authentication logic
+│   ├── config.php       # Configuration
+│   ├── CrudPage.php     # Base CRUD page class
+│   ├── Database.php     # Database connection
+│   ├── FileUpload.php   # File upload handling
+│   ├── Pagination.php   # Pagination logic
+│   └── Validator.php    # Input validation
+├── uploads/             # Uploaded media files
+├── views/               # HTML templates
+│   ├── ai-tools/        # AI tools templates
+│   ├── auth/            # Login/logout templates
+│   ├── authors/         # Authors templates
+│   ├── blog-posts/      # Blog posts templates
+│   ├── dashboard/       # Dashboard templates
+│   ├── directory-items/ # Directory items templates
+│   ├── games/           # Games templates
+│   ├── generic/         # Shared templates
+│   ├── media/           # Media management templates
+│   ├── stories/         # Stories templates
+│   ├── tags/            # Tags templates
+│   ├── footer.php       # Footer template
+│   └── header.php       # Header template
+├── ai-tools.php         # AI tools page
+├── authors.php          # Authors page
+├── blog-posts.php       # Blog posts page
+├── directory-items.php  # Directory items page
+├── games.php            # Games page
+├── index.php            # Dashboard
+├── login.php            # Login page
+├── logout.php           # Logout script
+├── media.php            # Media management
+├── stories.php          # Stories page
+├── tags.php             # Tags page
+└── README.md            # This file
+```
 
-1. Open your web browser and navigate to your admin UI (e.g., `https://yourdomain.com/admin/`).
-2. You should see the login page.
-3. Log in with the admin credentials you created.
-4. You should be redirected to the dashboard.
+## Security
 
-## Security Considerations
+The admin UI implements several security measures:
 
-1. Always use HTTPS for your admin UI.
-2. Change the default admin password immediately after installation.
-3. Keep your PHP and database software up to date.
-4. Consider implementing IP restrictions for the admin area in your `.htaccess` file.
-5. Regularly backup your database.
+1. **Authentication**: JWT-based authentication
+2. **CSRF Protection**: CSRF tokens for form submissions
+3. **Input Validation**: All input is validated and sanitized
+4. **XSS Protection**: Output is sanitized to prevent cross-site scripting
+5. **Password Hashing**: Passwords are hashed using bcrypt
 
 ## Troubleshooting
 
 ### Login Issues
 
-- Make sure the JWT secret key in the admin UI matches the one in your API.
-- Check that the user has the correct role (admin or editor).
-- Verify that the user is marked as active in the database.
+If you can't log in:
+1. Check that the API is running and accessible
+2. Verify the API URL in `includes/config.php`
+3. Try using the direct login script at `/direct_login.php`
 
-### File Upload Issues
+### Content Not Showing
 
-- Check that the `uploads` directory has the correct permissions.
-- Verify that the PHP settings for file uploads are correct in your `.htaccess` file.
-- Make sure the file size is within the allowed limit.
+If content isn't showing:
+1. Check the database connection settings
+2. Verify that the API endpoints are working
+3. Check for JavaScript errors in the browser console
 
-### API Connection Issues
+### Upload Issues
 
-- Verify that the API URL is correct in the config file.
-- Check that the API is running and accessible.
-- Look for CORS issues if the API is on a different domain.
+If file uploads aren't working:
+1. Check the permissions on the `uploads` directory
+2. Verify that the file size is within limits
+3. Check for PHP configuration issues (upload_max_filesize, post_max_size)
 
-## Support
+## Deployment
 
-If you encounter any issues or have questions, please contact the development team.
+The admin UI is deployed using cPanel's Git Version Control feature. See the `GIT_DEPLOYMENT.md` file in the root directory for detailed instructions.

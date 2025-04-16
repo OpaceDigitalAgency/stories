@@ -9,7 +9,9 @@
  */
 
 // Define the environment (development, testing, production)
-define('ENVIRONMENT', 'development');
+if (!defined('ENVIRONMENT')) {
+    define('ENVIRONMENT', 'development');
+}
 
 // Set error reporting based on environment
 if (ENVIRONMENT === 'development') {
@@ -21,9 +23,15 @@ if (ENVIRONMENT === 'development') {
 }
 
 // Define base paths
-define('BASE_PATH', dirname(__DIR__));
-define('ADMIN_URL', '/admin');
-define('API_URL', '/api/v1');
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(__DIR__));
+}
+if (!defined('ADMIN_URL')) {
+    define('ADMIN_URL', '/admin');
+}
+if (!defined('API_URL')) {
+    define('API_URL', '/api/v1');
+}
 
 // Database configuration
 $config['db'] = [

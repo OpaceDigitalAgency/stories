@@ -1,40 +1,15 @@
-# StoriesFromTheWeb.org
+# Stories from the Web - Project Overview
 
-A platform for sharing and discovering children's stories from around the world.
+This repository contains the code for the Stories from the Web platform.
 
-## Tech Stack
+## Project Structure
+- Frontend: Astro.js-based website
+- Backend: PHP-based API and admin panel
 
-- **Frontend**: Astro with Tailwind CSS
-- **Deployment**: Netlify
+## Memory Files
+- [PLANNING.md](PLANNING.md) - Project architecture, goals, and constraints
+- [TASK.md](TASK.md) - Active tasks and backlog
+- [PROGRESS.md](PROGRESS.md) - Log of completed work
 
-## Features
-
-- Responsive design for all devices
-- SEO-optimized pages
-- Child-friendly UI with colorful theme
-- Story rating system
-- Author profiles
-- Publishing platform
-
-## Development
-
-To run this project locally:
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-## Deployment
-
-This project is automatically deployed to Netlify when changes are pushed to the main branch.
-
-## Project Documentation
-
-- [Planning](PLANNING.md) - Project goals, architecture, tools, naming conventions, and constraints
-- [Tasks](TASK.md) - Active tasks, backlog, and subtasks
-- [Progress](PROGRESS.md) - Chronological log of completed subtasks and summaries# Test FTP deployment
-# Testing FTPS deployment
+## Current Focus
+Fixing admin panel styling and PHP errors.

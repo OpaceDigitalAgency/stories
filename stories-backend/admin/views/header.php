@@ -18,7 +18,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tagsinput/0.8.0/bootstrap-tagsinput.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link href="<?php echo ADMIN_URL; ?>/assets/css/admin.css" rel="stylesheet">
+    <link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 <body>
     <!-- Navbar -->

@@ -37,3 +37,4 @@ This project is automatically deployed to Netlify when changes are pushed to the
 - [Planning](PLANNING.md) - Project goals, architecture, tools, naming conventions, and constraints
 - [Tasks](TASK.md) - Active tasks, backlog, and subtasks
 - [Progress](PROGRESS.md) - Chronological log of completed subtasks and summaries# Test FTP deployment
+# Testing FTPS deployment

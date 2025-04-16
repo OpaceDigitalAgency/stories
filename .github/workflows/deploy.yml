@@ -21,4 +21,4 @@ jobs:
         local-dir: ./stories-backend/
         server-dir: /home/stories/api.storiesfromtheweb.org/
         protocol: ftps
-        security: strict
+        security: loose  # Changed from 'strict' to 'loose' to disable certificate validation

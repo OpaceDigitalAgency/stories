@@ -5,246 +5,217 @@
 
     <!-- Content Statistics -->
     <div class="row">
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-primary">
-                        <i class="fas fa-book"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Stories</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['stories'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-book fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['stories']; ?></div>
-                    <div class="stats-title">Stories</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/stories.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-success text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-success">
-                        <i class="fas fa-users"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Authors</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['authors'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-user-edit fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['authors']; ?></div>
-                    <div class="stats-title">Authors</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/authors.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-info">
-                        <i class="fas fa-newspaper"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Blog Posts</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['blog_posts'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-newspaper fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['blog_posts']; ?></div>
-                    <div class="stats-title">Blog Posts</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/blog-posts.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-danger text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-warning">
-                        <i class="fas fa-tags"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Tags</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['tags'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-tags fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['tags']; ?></div>
-                    <div class="stats-title">Tags</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/tags.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="row">
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        <div class="col-md-3 mb-4">
+            <div class="card bg-info text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-danger">
-                        <i class="fas fa-folder"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Directory Items</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['directory_items'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-list fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['directory_items']; ?></div>
-                    <div class="stats-title">Directory Items</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/directory-items.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-secondary text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-secondary">
-                        <i class="fas fa-gamepad"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Games</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['games'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-gamepad fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['games']; ?></div>
-                    <div class="stats-title">Games</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/games.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-dark text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-dark">
-                        <i class="fas fa-robot"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">AI Tools</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['ai_tools'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-robot fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['ai_tools']; ?></div>
-                    <div class="stats-title">AI Tools</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/ai-tools.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card stats-card">
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white h-100">
                 <div class="card-body">
-                    <div class="stats-icon text-primary">
-                        <i class="fas fa-star"></i>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="text-white-75 small">Media Files</div>
+                            <div class="text-lg fw-bold">
+                                <?php echo $stats['media'] ?? 0; ?>
+                            </div>
+                        </div>
+                        <i class="fas fa-images fa-2x text-white-50"></i>
                     </div>
-                    <div class="stats-number"><?php echo $stats['featured_stories']; ?></div>
-                    <div class="stats-title">Featured Stories</div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="<?php echo ADMIN_URL; ?>/media.php">View Details</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Recent Content -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Recent Stories</h5>
-                    <a href="<?php echo ADMIN_URL; ?>/stories.php" class="btn btn-sm btn-primary">View All</a>
-                </div>
-                <div class="card-body">
-                    <?php if (empty($recentStories)): ?>
-                        <p class="text-muted">No stories found.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Author</th>
-                                        <th>Published</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($recentStories as $story): ?>
-                                        <tr>
-                                            <td>
-                                                <a href="<?php echo ADMIN_URL; ?>/stories-edit.php?id=<?php echo $story['id']; ?>">
-                                                    <?php echo htmlspecialchars($story['attributes']['title']); ?>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                    if (isset($story['attributes']['author']['data'][0])) {
-                                                        echo htmlspecialchars($story['attributes']['author']['data'][0]['attributes']['name']);
-                                                    } else {
-                                                        echo 'Unknown';
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td><?php echo date('M d, Y', strtotime($story['attributes']['publishedAt'])); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-table me-1"></i>
+            Recent Stories
         </div>
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Recent Blog Posts</h5>
-                    <a href="<?php echo ADMIN_URL; ?>/blog-posts.php" class="btn btn-sm btn-primary">View All</a>
+        <div class="card-body">
+            <?php if (isset($recentStories) && !empty($recentStories)): ?>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recentStories as $story): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($story['attributes']['title']); ?></td>
+                                    <td>
+                                        <?php 
+                                            if (isset($story['attributes']['author']['data']['attributes']['name'])) {
+                                                echo htmlspecialchars($story['attributes']['author']['data']['attributes']['name']);
+                                            } else {
+                                                echo '<em>No author</em>';
+                                            }
+                                        ?>
+                                    </td>
+                                    <td><?php echo date('M d, Y', strtotime($story['attributes']['publishedAt'])); ?></td>
+                                    <td>
+                                        <a href="<?php echo ADMIN_URL; ?>/stories.php?action=view&id=<?php echo $story['id']; ?>" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="<?php echo ADMIN_URL; ?>/stories.php?action=edit&id=<?php echo $story['id']; ?>" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    <?php if (empty($recentBlogPosts)): ?>
-                        <p class="text-muted">No blog posts found.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Author</th>
-                                        <th>Published</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($recentBlogPosts as $post): ?>
-                                        <tr>
-                                            <td>
-                                                <a href="<?php echo ADMIN_URL; ?>/blog-posts-edit.php?id=<?php echo $post['id']; ?>">
-                                                    <?php echo htmlspecialchars($post['attributes']['title']); ?>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                    if (isset($post['attributes']['author']['data'][0])) {
-                                                        echo htmlspecialchars($post['attributes']['author']['data'][0]['attributes']['name']);
-                                                    } else {
-                                                        echo 'Unknown';
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td><?php echo date('M d, Y', strtotime($post['attributes']['publishedAt'])); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Moderation Queue -->
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Moderation Queue</h5>
-                    <span class="badge bg-danger"><?php echo $stats['moderation_stories']; ?> Pending</span>
-                </div>
-                <div class="card-body">
-                    <?php if (empty($moderationStories)): ?>
-                        <p class="text-muted">No stories pending moderation.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Author</th>
-                                        <th>Submitted</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($moderationStories as $story): ?>
-                                        <tr>
-                                            <td>
-                                                <a href="<?php echo ADMIN_URL; ?>/stories-edit.php?id=<?php echo $story['id']; ?>">
-                                                    <?php echo htmlspecialchars($story['attributes']['title']); ?>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                    if (isset($story['attributes']['author']['data'][0])) {
-                                                        echo htmlspecialchars($story['attributes']['author']['data'][0]['attributes']['name']);
-                                                    } else {
-                                                        echo 'Unknown';
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td><?php echo date('M d, Y', strtotime($story['attributes']['createdAt'])); ?></td>
-                                            <td>
-                                                <a href="<?php echo ADMIN_URL; ?>/stories-edit.php?id=<?php echo $story['id']; ?>" class="btn btn-sm btn-primary">Review</a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+            <?php else: ?>
+                <div class="alert alert-info">No recent stories found.</div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

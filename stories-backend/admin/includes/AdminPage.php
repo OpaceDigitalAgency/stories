@@ -2,8 +2,7 @@
 /**
  * Admin Page Base Class
  * 
- * This class serves as the base for all admin pages, providing
- * common functionality for handling authentication, layout, and error handling.
+ * This class serves as the base class for all admin pages.
  * 
  * @package Stories Admin
  * @version 1.0.0
@@ -11,19 +10,14 @@
 
 class AdminPage {
     /**
-     * @var array Configuration
+     * @var string Page title
      */
-    protected $config;
+    protected $pageTitle = 'Admin';
     
     /**
-     * @var Database Database instance
+     * @var string Active menu item
      */
-    protected $db;
-    
-    /**
-     * @var array Current authenticated user
-     */
-    protected $user;
+    protected $activeMenu = '';
     
     /**
      * @var array Page data
@@ -41,24 +35,9 @@ class AdminPage {
     protected $success = [];
     
     /**
-     * @var string Page title
+     * @var array Config
      */
-    protected $pageTitle = 'Admin';
-    
-    /**
-     * @var string Active menu item
-     */
-    protected $activeMenu = '';
-    
-    /**
-     * @var bool Whether the page requires authentication
-     */
-    protected $requireAuth = true;
-    
-    /**
-     * @var array|string Required roles for the page
-     */
-    protected $requiredRoles = ['admin', 'editor'];
+    protected $config;
     
     /**
      * Constructor
@@ -72,44 +51,15 @@ class AdminPage {
         // Load configuration
         $this->config = require __DIR__ . '/config.php';
         
-        // Initialize database
-        $this->db = Database::getInstance($this->config['db']);
-        
-        // Initialize Auth
-        Auth::init($this->config['security']);
-        
         // Check authentication
-        if ($this->requireAuth) {
-            $this->checkAuth();
-        }
+        $this->checkAuth();
     }
     
     /**
-     * Check if user is authenticated
-     */
-    protected function checkAuth() {
-        $this->user = Auth::checkAuth();
-        
-        if (!$this->user) {
-            // Redirect to login page
-            $this->redirect('login.php');
-        }
-        
-        // Check if user has required role
-        if ($this->requiredRoles && !Auth::hasRole($this->user, $this->requiredRoles)) {
-            // Set error message
-            $this->setError('You do not have permission to access this page.');
-            
-            // Redirect to dashboard
-            $this->redirect('index.php');
-        }
-    }
-    
-    /**
-     * Process the page request
+     * Process the page
      */
     public function process() {
-        // Handle form submission
+        // Handle POST request
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handlePost();
         }
@@ -122,10 +72,26 @@ class AdminPage {
     }
     
     /**
-     * Handle POST request
+     * Check if user is authenticated
      */
-    protected function handlePost() {
-        // To be implemented by child classes
+    protected function checkAuth() {
+        // Include Auth class
+        require_once __DIR__ . '/Auth.php';
+        
+        // Initialize Auth
+        Auth::init($this->config['security']);
+        
+        // Check if user is authenticated
+        $user = Auth::checkAuth();
+        
+        if (!$user) {
+            // Redirect to login page
+            $this->redirect('login.php');
+            exit;
+        }
+        
+        // Store user in data
+        $this->data['user'] = $user;
     }
     
     /**
@@ -136,27 +102,44 @@ class AdminPage {
     }
     
     /**
+     * Handle POST request
+     */
+    protected function handlePost() {
+        // To be implemented by child classes
+    }
+    
+    /**
      * Render the page
      */
     protected function render() {
-        // Include header
-        $this->includeTemplate('header', [
-            'pageTitle' => $this->pageTitle,
-            'activeMenu' => $this->activeMenu,
-            'user' => $this->user
-        ]);
+        // Set page title
+        $this->data['pageTitle'] = $this->pageTitle;
         
-        // Include page content
-        $this->includeTemplate($this->getContentTemplate(), array_merge(
-            $this->data,
-            [
-                'errors' => $this->errors,
-                'success' => $this->success
-            ]
-        ));
+        // Set active menu
+        $this->data['activeMenu'] = $this->activeMenu;
+        
+        // Set errors
+        $this->data['errors'] = $this->errors;
+        
+        // Set success messages
+        $this->data['success'] = $this->success;
+        
+        // Extract data to variables
+        extract($this->data);
+        
+        // Include header
+        include __DIR__ . '/../views/header.php';
+        
+        // Include content template
+        $contentTemplate = $this->getContentTemplate();
+        if (file_exists(__DIR__ . '/../views/' . $contentTemplate . '.php')) {
+            include __DIR__ . '/../views/' . $contentTemplate . '.php';
+        } else {
+            echo '<div class="container-fluid"><div class="alert alert-danger">Template not found: ' . $contentTemplate . '</div></div>';
+        }
         
         // Include footer
-        $this->includeTemplate('footer');
+        include __DIR__ . '/../views/footer.php';
     }
     
     /**
@@ -165,31 +148,28 @@ class AdminPage {
      * @return string Template name
      */
     protected function getContentTemplate() {
-        // Default to class name without 'Page' suffix
-        $className = get_class($this);
-        $templateName = str_replace('Page', '', $className);
-        
-        return strtolower($templateName);
+        return 'dashboard/dashboard';
     }
     
     /**
-     * Include a template file
+     * Redirect to a URL
      * 
-     * @param string $template Template name
-     * @param array $data Data to pass to the template
+     * @param string $url URL to redirect to
      */
-    protected function includeTemplate($template, $data = []) {
-        // Extract data to make variables available in the template
-        extract($data);
-        
-        // Include the template file
-        $templateFile = __DIR__ . '/../views/' . $template . '.php';
-        
-        if (file_exists($templateFile)) {
-            include $templateFile;
-        } else {
-            echo "Template not found: $template";
-        }
+    protected function redirect($url) {
+        header('Location: ' . ADMIN_URL . '/' . $url);
+        exit;
+    }
+    
+    /**
+     * Get a request parameter
+     * 
+     * @param string $name Parameter name
+     * @param mixed $default Default value
+     * @return mixed Parameter value
+     */
+    protected function getParam($name, $default = null) {
+        return $_GET[$name] ?? $default;
     }
     
     /**
@@ -199,13 +179,7 @@ class AdminPage {
      */
     protected function setError($message) {
         $this->errors[] = $message;
-        
-        // Store in session for redirects
-        if (!isset($_SESSION['errors'])) {
-            $_SESSION['errors'] = [];
-        }
-        
-        $_SESSION['errors'][] = $message;
+        $_SESSION['errors'] = $this->errors;
     }
     
     /**
@@ -215,87 +189,26 @@ class AdminPage {
      */
     protected function setSuccess($message) {
         $this->success[] = $message;
-        
-        // Store in session for redirects
-        if (!isset($_SESSION['success'])) {
-            $_SESSION['success'] = [];
-        }
-        
-        $_SESSION['success'][] = $message;
+        $_SESSION['success'] = $this->success;
     }
     
     /**
-     * Get error messages from session
+     * Get session errors
      */
     protected function getSessionErrors() {
         if (isset($_SESSION['errors'])) {
-            $this->errors = array_merge($this->errors, $_SESSION['errors']);
+            $this->errors = $_SESSION['errors'];
             unset($_SESSION['errors']);
         }
     }
     
     /**
-     * Get success messages from session
+     * Get session success messages
      */
     protected function getSessionSuccess() {
         if (isset($_SESSION['success'])) {
-            $this->success = array_merge($this->success, $_SESSION['success']);
+            $this->success = $_SESSION['success'];
             unset($_SESSION['success']);
         }
-    }
-    
-    /**
-     * Redirect to another page
-     * 
-     * @param string $url URL to redirect to
-     */
-    protected function redirect($url) {
-        header('Location: ' . $url);
-        exit;
-    }
-    
-    /**
-     * Get a GET parameter
-     * 
-     * @param string $name Parameter name
-     * @param mixed $default Default value
-     * @return mixed Parameter value
-     */
-    protected function getParam($name, $default = null) {
-        return isset($_GET[$name]) ? $_GET[$name] : $default;
-    }
-    
-    /**
-     * Get a POST parameter
-     * 
-     * @param string $name Parameter name
-     * @param mixed $default Default value
-     * @return mixed Parameter value
-     */
-    protected function getPostParam($name, $default = null) {
-        return isset($_POST[$name]) ? $_POST[$name] : $default;
-    }
-    
-    /**
-     * Check if a POST parameter exists
-     * 
-     * @param string $name Parameter name
-     * @return bool True if parameter exists
-     */
-    protected function hasPostParam($name) {
-        return isset($_POST[$name]);
-    }
-    
-    /**
-     * Get current page URL
-     * 
-     * @return string Current page URL
-     */
-    protected function getCurrentUrl() {
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'];
-        $uri = $_SERVER['REQUEST_URI'];
-        
-        return "$protocol://$host$uri";
     }
 }

@@ -36,16 +36,43 @@ spl_autoload_register(function ($class) {
     // Convert namespace separators to directory separators
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
     
+    // Debug output for file loading
+    error_log("Attempting to load class: $class from file: $file");
+    
     // If the file exists, require it
     if (file_exists($file)) {
         require $file;
+        error_log("Successfully loaded: $file");
+    } else {
+        error_log("File not found: $file");
     }
 });
 
 // Load configuration
-$config = require __DIR__ . '/v1/config/config.php';
+$configPath = __DIR__ . '/v1/config/config.php';
+if (!file_exists($configPath)) {
+    // Try alternative config path
+    $configPath = __DIR__ . '/v1/config.php';
+    if (!file_exists($configPath)) {
+        echo "<div style='color: red; margin-bottom: 20px;'>";
+        echo "<strong>❌ Configuration file not found!</strong><br>";
+        echo "<p>Paths checked: " . htmlspecialchars(__DIR__ . '/v1/config/config.php') . " and " . htmlspecialchars(__DIR__ . '/v1/config.php') . "</p>";
+        echo "</div>";
+        exit;
+    }
+}
+
+$config = require $configPath;
 
 echo "<h1>Database Connection Test</h1>";
+
+// Debug information
+echo "<h2>Debug Information</h2>";
+echo "<pre>";
+echo "PHP Version: " . phpversion() . "\n";
+echo "Autoloader Path: " . __DIR__ . '/v1/' . "\n";
+echo "Database Class: " . (class_exists('\\StoriesAPI\\Core\\Database') ? 'Found' : 'Not Found') . "\n";
+echo "</pre>";
 
 // Function to test a database query
 function testQuery($db, $query, $params = [], $description = "Query") {
@@ -72,6 +99,32 @@ function testQuery($db, $query, $params = [], $description = "Query") {
 // Test database connection
 try {
     echo "<h2>Connection Test</h2>";
+    
+    // Check if the Database class exists
+    if (!class_exists('\\StoriesAPI\\Core\\Database')) {
+        echo "<div style='color: red; margin-bottom: 20px;'>";
+        echo "<strong>❌ Database class not found!</strong><br>";
+        echo "<p>Make sure the class file exists at: " . htmlspecialchars(__DIR__ . '/v1/core/Database.php') . "</p>";
+        
+        // Try to include the file directly
+        $databaseClassFile = __DIR__ . '/v1/core/Database.php';
+        if (file_exists($databaseClassFile)) {
+            echo "<p>File exists, attempting to include directly...</p>";
+            require_once $databaseClassFile;
+            
+            if (class_exists('\\StoriesAPI\\Core\\Database')) {
+                echo "<p style='color: green;'>Successfully loaded Database class!</p>";
+            } else {
+                echo "<p>Still unable to load Database class after direct inclusion.</p>";
+                echo "<p>Check for namespace issues or PHP errors in the file.</p>";
+                throw new Exception("Database class could not be loaded");
+            }
+        } else {
+            echo "<p>Database class file does not exist!</p>";
+            throw new Exception("Database class file not found");
+        }
+    }
+    
     $db = \StoriesAPI\Core\Database::getInstance($config['db']);
     echo "<div style='color: green; margin-bottom: 20px;'>";
     echo "<strong>✅ Database connection successful!</strong>";

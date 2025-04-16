@@ -4,8 +4,26 @@
  * This file contains JavaScript functions for the admin UI.
  */
 
+// Check if jQuery is loaded
+function jQueryLoaded() {
+    return (typeof jQuery !== 'undefined');
+}
+
+// Initialize jQuery-dependent features
+function initJQueryFeatures() {
+    console.log("Initializing jQuery-dependent features");
+    
+    // Ensure we wait a moment for jQuery plugins to load
+    setTimeout(function() {
+        initTagInputs();
+        // Add any other jQuery-dependent initializations here
+    }, 100);
+}
+
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, initializing non-jQuery features");
+    
     // Initialize tooltips
     initTooltips();
     
@@ -21,11 +39,39 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize delete confirmations
     initDeleteConfirmations();
     
-    // Initialize tag inputs
-    initTagInputs();
-    
     // Initialize date pickers
     initDatePickers();
+    
+    // Check if jQuery is loaded before initializing jQuery-dependent features
+    if (jQueryLoaded()) {
+        console.log("jQuery already loaded on DOM ready");
+        // Delay initialization slightly to ensure all jQuery plugins are loaded
+        setTimeout(function() {
+            initJQueryFeatures();
+        }, 200);
+    } else {
+        console.warn("jQuery is not loaded on DOM ready. Waiting for jQuery...");
+        
+        // Listen for the custom jqueryLoaded event from the fallback loader
+        document.addEventListener('jqueryLoaded', function() {
+            console.log("jQuery loaded event received");
+            // Delay initialization slightly to ensure all jQuery plugins are loaded
+            setTimeout(function() {
+                initJQueryFeatures();
+            }, 200);
+        });
+        
+        // Also set up a fallback timer in case the event doesn't fire
+        setTimeout(function checkJQuery() {
+            if (jQueryLoaded()) {
+                console.log("jQuery detected by timer. Initializing jQuery-dependent features.");
+                initJQueryFeatures();
+            } else {
+                console.warn("jQuery still not loaded. Trying again...");
+                setTimeout(checkJQuery, 500);
+            }
+        }, 1000);
+    }
 });
 
 /**
@@ -133,15 +179,31 @@ function initDeleteConfirmations() {
  * Initialize tag inputs
  */
 function initTagInputs() {
-    // Check if Bootstrap Tags Input is loaded
-    if (typeof $.fn.tagsinput !== 'undefined') {
-        // Initialize Bootstrap Tags Input
-        $('.tags-input').tagsinput({
-            trimValue: true,
-            confirmKeys: [13, 44, 32], // Enter, comma, space
-            tagClass: 'badge bg-primary'
-        });
+    // First check if jQuery is loaded
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded. Cannot initialize tag inputs.');
+        return;
     }
+    
+    // Use jQuery safely with a local $ variable to avoid reference errors
+    jQuery(function($) {
+        try {
+            // Check if Bootstrap Tags Input is loaded
+            if (typeof $.fn.tagsinput !== 'undefined') {
+                // Initialize Bootstrap Tags Input
+                $('.tags-input').tagsinput({
+                    trimValue: true,
+                    confirmKeys: [13, 44, 32], // Enter, comma, space
+                    tagClass: 'badge bg-primary'
+                });
+                console.log('Tag inputs initialized successfully');
+            } else {
+                console.warn('Bootstrap Tags Input plugin is not loaded');
+            }
+        } catch (e) {
+            console.error('Error initializing tag inputs:', e);
+        }
+    });
 }
 
 /**

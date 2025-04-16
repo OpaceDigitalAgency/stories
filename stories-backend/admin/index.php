@@ -51,49 +51,74 @@ class DashboardPage extends AdminPage {
             'media' => 0
         ];
         
-        // Get stories count
-        $storiesResponse = $apiClient->get('stories', ['pageSize' => 1]);
-        if ($storiesResponse && isset($storiesResponse['meta']['pagination']['total'])) {
-            $stats['stories'] = $storiesResponse['meta']['pagination']['total'];
-        }
+        // Debug information
+        $apiErrors = [];
         
-        // Get authors count
-        $authorsResponse = $apiClient->get('authors', ['pageSize' => 1]);
-        if ($authorsResponse && isset($authorsResponse['meta']['pagination']['total'])) {
-            $stats['authors'] = $authorsResponse['meta']['pagination']['total'];
-        }
+        // Function to safely get count from API response
+        $getCountFromApi = function($endpoint, $params = ['pageSize' => 1]) use ($apiClient, &$apiErrors) {
+            try {
+                $response = $apiClient->get($endpoint, $params);
+                
+                if ($response) {
+                    // Check for different response formats
+                    if (isset($response['meta']['pagination']['total'])) {
+                        return $response['meta']['pagination']['total'];
+                    } elseif (isset($response['meta']['total'])) {
+                        return $response['meta']['total'];
+                    } elseif (isset($response['total'])) {
+                        return $response['total'];
+                    } elseif (isset($response['data']) && is_array($response['data'])) {
+                        // If we have data but no count, return the count of data items
+                        return count($response['data']);
+                    }
+                }
+                
+                // Store error information for debugging
+                $error = $apiClient->getLastError();
+                if ($error) {
+                    $apiErrors[$endpoint] = $apiClient->getFormattedError();
+                } else {
+                    $apiErrors[$endpoint] = "Unknown error or unexpected response format";
+                }
+            } catch (Exception $apiEx) {
+                $apiErrors[$endpoint] = "API Exception: " . $apiEx->getMessage();
+            }
+            
+            // Fallback to direct database count if API fails
+            try {
+                $db = Database::getInstance($this->config['db']);
+                $tableName = str_replace('-', '_', $endpoint);
+                // Handle special cases for table names
+                if ($tableName == 'blog_posts') {
+                    $tableName = 'blog';
+                } elseif ($tableName == 'ai_tools') {
+                    $tableName = 'ai_tool';
+                } elseif ($tableName == 'directory_items') {
+                    $tableName = 'directory';
+                }
+                
+                $query = "SELECT COUNT(*) as count FROM {$tableName}";
+                $stmt = $db->query($query);
+                $result = $stmt->fetch();
+                return $result['count'];
+            } catch (Exception $e) {
+                // Log the database error
+                error_log("Database count error for {$endpoint}: " . $e->getMessage());
+                // If both API and direct DB fail, return 0
+                return 0;
+            }
+        };
         
-        // Get blog posts count
-        $blogPostsResponse = $apiClient->get('blog-posts', ['pageSize' => 1]);
-        if ($blogPostsResponse && isset($blogPostsResponse['meta']['pagination']['total'])) {
-            $stats['blog_posts'] = $blogPostsResponse['meta']['pagination']['total'];
-        }
+        // Get counts for all content types
+        $stats['stories'] = $getCountFromApi('stories');
+        $stats['authors'] = $getCountFromApi('authors');
+        $stats['blog_posts'] = $getCountFromApi('blog-posts');
+        $stats['tags'] = $getCountFromApi('tags');
+        $stats['directory_items'] = $getCountFromApi('directory-items');
+        $stats['games'] = $getCountFromApi('games');
+        $stats['ai_tools'] = $getCountFromApi('ai-tools');
         
-        // Get tags count
-        $tagsResponse = $apiClient->get('tags', ['pageSize' => 1]);
-        if ($tagsResponse && isset($tagsResponse['meta']['pagination']['total'])) {
-            $stats['tags'] = $tagsResponse['meta']['pagination']['total'];
-        }
-        
-        // Get directory items count
-        $directoryItemsResponse = $apiClient->get('directory-items', ['pageSize' => 1]);
-        if ($directoryItemsResponse && isset($directoryItemsResponse['meta']['pagination']['total'])) {
-            $stats['directory_items'] = $directoryItemsResponse['meta']['pagination']['total'];
-        }
-        
-        // Get games count
-        $gamesResponse = $apiClient->get('games', ['pageSize' => 1]);
-        if ($gamesResponse && isset($gamesResponse['meta']['pagination']['total'])) {
-            $stats['games'] = $gamesResponse['meta']['pagination']['total'];
-        }
-        
-        // Get AI tools count
-        $aiToolsResponse = $apiClient->get('ai-tools', ['pageSize' => 1]);
-        if ($aiToolsResponse && isset($aiToolsResponse['meta']['pagination']['total'])) {
-            $stats['ai_tools'] = $aiToolsResponse['meta']['pagination']['total'];
-        }
-        
-        // Get media count
+        // Get media count directly from database
         try {
             $db = Database::getInstance($this->config['db']);
             $query = "SELECT COUNT(*) as count FROM media";
@@ -101,8 +126,12 @@ class DashboardPage extends AdminPage {
             $result = $stmt->fetch();
             $stats['media'] = $result['count'];
         } catch (Exception $e) {
-            // Ignore errors
+            // Log the error but continue
+            error_log("Error getting media count: " . $e->getMessage());
         }
+        
+        // Store API errors for debugging
+        $this->data['apiErrors'] = $apiErrors;
         
         // Set statistics
         $this->data['stats'] = $stats;

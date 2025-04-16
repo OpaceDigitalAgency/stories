@@ -33,17 +33,9 @@ const currentPath = Astro.url.pathname;
   <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000 transform translate-z-4"></div>
   
   <div class="container mx-auto px-6 flex justify-between items-center h-20 relative">
-    <!-- Enhanced Logo -->
-    <a href="/" class="flex items-center group relative perspective-1000">
-      <div class="relative overflow-hidden transform-style-3d hover:translate-z-8 transition-transform duration-500">
-        <!-- Image logo -->
-        <img src="/stories_from_the_web_transparent.png" alt="Stories From The Web" class="h-14 md:h-16 w-auto transition-all duration-700 group-hover:scale-110 float-animation" />
-        <!-- Enhanced animated decorative elements -->
-        <div class="absolute inset-0 bg-gradient-to-r from-primary-200/0 via-primary-200/30 to-primary-200/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-        <span class="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-accent-300 via-accent-500 to-accent-300 rounded-full transform -rotate-1 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left shadow-glow"></span>
-      </div>
-      <!-- Enhanced hover effect ripple -->
-      <div class="absolute -inset-4 bg-primary-200/30 rounded-2xl scale-0 group-hover:scale-100 transition-transform duration-500 blur-sm"></div>
+    <!-- Simple Logo -->
+    <a href="/" class="flex items-center">
+      <img src="/logo.svg" alt="Stories From The Web" class="h-16 w-auto" />
     </a>
     
     <!-- Desktop Navigation -->

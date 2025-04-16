@@ -25,8 +25,8 @@ if (ENVIRONMENT === 'development') {
 $config['db'] = [
     'host'     => 'localhost',      // Database host
     'name'     => 'stories_db',     // Database name
-    'user'     => 'stories_prod_user',   // Production database username
-    'password' => 'Str0ng_Pr0d_P@ssw0rd!', // Production database password
+    'user'     => 'stories_user',   // Database username
+    'password' => '$tw1cac3*sOt',   // Database password - found in direct_login.php
     'charset'  => 'utf8mb4',        // Character set
     'port'     => 3306              // Database port
 ];

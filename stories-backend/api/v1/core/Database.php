@@ -72,8 +72,12 @@ class Database {
             PDO::ATTR_PERSISTENT         => true,
         ];
         
+        // Enhanced logging for connection debugging
+        error_log("[DB CONNECTION ATTEMPT] Host: {$this->config['host']} | DB: {$this->config['name']} | User: {$this->config['user']} | Port: {$this->config['port']}");
+        
         try {
             $this->connection = new PDO($dsn, $this->config['user'], $this->config['password'], $options);
+            error_log("[DB CONNECTION SUCCESS] Connected to database {$this->config['name']} as user {$this->config['user']}");
         } catch (PDOException $e) {
             // Log detailed error information for debugging
             $errorMessage = "Database connection failed: " . $e->getMessage();
@@ -82,6 +86,7 @@ class Database {
             $errorLine = $e->getLine();
             
             error_log("[DB ERROR] Code: $errorCode | Message: $errorMessage | File: $errorFile | Line: $errorLine");
+            error_log("[DB CONFIG USED] Host: {$this->config['host']} | DB: {$this->config['name']} | User: {$this->config['user']} | Port: {$this->config['port']}");
             
             // Check for specific error conditions to provide more helpful messages
             if (strpos($e->getMessage(), "Access denied") !== false) {

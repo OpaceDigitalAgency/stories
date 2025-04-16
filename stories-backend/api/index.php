@@ -1,13 +1,16 @@
 <?php
 /**
  * Stories API - Main Entry Point
- * 
+ *
  * This file serves as the entry point for the Stories API.
  * It loads the configuration, sets up the router, and handles the request.
- * 
+ *
  * @package Stories API
  * @version 1.0.0
  */
+
+// Start output buffering to capture any unexpected output
+ob_start();
 
 // Set error reporting
 error_reporting(E_ALL);
@@ -15,6 +18,9 @@ ini_set('display_errors', 1);
 
 // Define the base path
 define('BASE_PATH', __DIR__);
+
+// Define debug mode (should be false in production)
+define('DEBUG_MODE', false);
 
 // Enable CORS for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -114,3 +120,21 @@ $router->delete('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'delete', [
 
 // Handle the request
 $router->handle();
+
+// Clean the output buffer and ensure only JSON is sent
+$output = ob_get_clean();
+if (!empty($output)) {
+    // Log unexpected output for debugging
+    error_log('Unexpected output before JSON response: ' . $output);
+    
+    // If headers haven't been sent yet, we can still send a proper JSON response
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Unexpected output occurred. Please check the server logs.',
+            'debug' => DEBUG_MODE ? $output : null
+        ]);
+        exit;
+    }
+}

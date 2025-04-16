@@ -136,8 +136,17 @@ class Router {
         
         // Remove API prefix from path
         $apiPrefix = "/api/{$this->config['api']['version']}/";
+        
+        // Handle both full URL and relative path formats
         if (strpos($path, $apiPrefix) === 0) {
+            // Format: /api/v1/endpoint
             $path = substr($path, strlen($apiPrefix));
+        } else {
+            // Try to match the end of the path
+            $pattern = "#/api/{$this->config['api']['version']}/(.*)$#";
+            if (preg_match($pattern, $path, $matches)) {
+                $path = $matches[1];
+            }
         }
         
         // Apply global middleware

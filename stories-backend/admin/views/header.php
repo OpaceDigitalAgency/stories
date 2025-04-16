@@ -6,19 +6,19 @@
     <title><?php echo isset($pageTitle) ? $pageTitle . ' - Stories Admin' : 'Stories Admin'; ?></title>
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/all.min.css" rel="stylesheet">
     
     <!-- Flatpickr CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/flatpickr.min.css" rel="stylesheet">
     
     <!-- Bootstrap Tags Input CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tagsinput/0.8.0/bootstrap-tagsinput.css" rel="stylesheet">
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/bootstrap-tagsinput.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link href="../assets/css/admin.css" rel="stylesheet">
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/admin.css" rel="stylesheet">
 </head>
 <body>
     <!-- Navbar -->

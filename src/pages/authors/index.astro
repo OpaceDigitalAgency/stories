@@ -1,0 +1,237 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardAuthor from '../../components/CardAuthor.astro';
+import { fetchFromStrapi, type StrapiResponse, type Author } from '../../lib/api';
+import '../../styles/base.css';
+
+export const prerender = true;
+
+// Fetch all authors from Strapi
+const authorsResponse = await fetchFromStrapi('authors', {
+  populate: '*',
+  sort: 'name:asc'
+}) as StrapiResponse<Author>;
+
+// Process authors data
+const authors = authorsResponse.data.map(item => {
+  return {
+    id: item.id,
+    name: item.attributes.name || '',
+    avatar: item.attributes.avatar?.data?.attributes?.url || '',
+    bio: item.attributes.bio || '',
+    slug: item.attributes.slug || '',
+    storyCount: item.attributes.storyCount || 0,
+    featured: item.attributes.featured || false,
+    socialLinks: {
+      twitter: item.attributes.twitter || '',
+      instagram: item.attributes.instagram || '',
+      website: item.attributes.website || ''
+    }
+  };
+});
+
+// Get featured authors
+const featuredAuthors = authors.filter(author => author.featured);
+
+// Get regular authors (non-featured)
+const regularAuthors = authors.filter(author => !author.featured);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Authors | Stories From The Web</title>
+    <meta name="description" content="Discover talented authors sharing children's stories on Stories From The Web. Find your next favorite storyteller." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://storiesfromtheweb.org/authors" />
+    <meta property="og:title" content="Authors | Stories From The Web" />
+    <meta property="og:description" content="Discover talented authors sharing children's stories on Stories From The Web. Find your next favorite storyteller." />
+    <meta property="og:image" content="https://storiesfromtheweb.org/og-image.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://storiesfromtheweb.org/authors" />
+    <meta property="twitter:title" content="Authors | Stories From The Web" />
+    <meta property="twitter:description" content="Discover talented authors sharing children's stories on Stories From The Web. Find your next favorite storyteller." />
+    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image.jpg" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Authors | Stories From The Web",
+        "description": "Discover talented authors sharing children's stories on Stories From The Web. Find your next favorite storyteller.",
+        "url": "https://storiesfromtheweb.org/authors",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Stories From The Web",
+          "url": "https://storiesfromtheweb.org"
+        }
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Page Header -->
+      <section class="bg-white border-b">
+        <div class="container mx-auto px-4 py-12">
+          <div class="text-center max-w-3xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-display font-bold text-gray-800 mb-4">
+              <span class="relative inline-block">
+                Our Authors
+                <span class="absolute -bottom-2 left-0 w-full h-4 bg-accent/40 -z-10 rounded-full transform -rotate-1"></span>
+              </span>
+            </h1>
+            <p class="text-xl text-gray-600">
+              Meet the talented storytellers who bring imagination to life. From established writers to emerging voices, discover your next favorite author.
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Featured Authors Section (if any) -->
+      {featuredAuthors.length > 0 && (
+        <section class="py-12">
+          <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-display font-bold text-gray-800 mb-8 fancy-underline">Featured Authors</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredAuthors.map(author => (
+                <CardAuthor author={author} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+      
+      <!-- All Authors Section -->
+      <section class="py-12 bg-neutral-light">
+        <div class="container mx-auto px-4">
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-gray-800 fancy-underline">All Authors</h2>
+            
+            <div class="flex items-center">
+              <label class="text-sm text-gray-600 mr-2">Sort by:</label>
+              <select class="text-sm border-gray-300 rounded-md focus:border-secondary focus:ring focus:ring-secondary/20 focus:ring-opacity-50">
+                <option>Name (A-Z)</option>
+                <option>Name (Z-A)</option>
+                <option>Most Stories</option>
+                <option>Recently Joined</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Authors Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {regularAuthors.map(author => (
+              <CardAuthor author={author} />
+            ))}
+            
+            <!-- Become an Author Card -->
+            <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl p-5 transform-style-3d hover:translate-z-2 transition-all duration-300 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
+              <div class="bg-accent/15 text-text-primary w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-playful pulse-animation relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <h3 class="text-xl font-display font-semibold text-gray-800 group-hover:text-primary transition-colors mb-3">
+                Become an Author
+              </h3>
+              <p class="text-gray-600 text-sm mb-6">
+                Share your stories with our community and inspire young readers around the world.
+              </p>
+              <a
+                href="/publish"
+                class="block w-full text-center py-3 px-4 bg-accent text-white rounded-xl shadow-md hover:shadow-xl transform-style-3d hover:translate-z-2 hover:scale-105 transition-all duration-300 font-medium group"
+              >
+                <span class="flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:translate-x-1 transition-transform">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                  Get Started
+                </span>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Pagination (if needed) -->
+          {authors.length > 20 && (
+            <div class="mt-12 flex justify-center">
+              <nav class="flex items-center space-x-2">
+                <a href="#" class="px-3 py-2 rounded-md bg-white text-gray-500 hover:bg-primary hover:text-white transition-colors">
+                  <span class="sr-only">Previous</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </a>
+                <a href="#" class="px-4 py-2 rounded-md bg-primary text-white font-medium">1</a>
+                <a href="#" class="px-4 py-2 rounded-md bg-white text-gray-700 hover:bg-primary hover:text-white transition-colors">2</a>
+                <a href="#" class="px-4 py-2 rounded-md bg-white text-gray-700 hover:bg-primary hover:text-white transition-colors">3</a>
+                <span class="px-4 py-2 text-gray-700">...</span>
+                <a href="#" class="px-4 py-2 rounded-md bg-white text-gray-700 hover:bg-primary hover:text-white transition-colors">8</a>
+                <a href="#" class="px-3 py-2 rounded-md bg-white text-gray-500 hover:bg-primary hover:text-white transition-colors">
+                  <span class="sr-only">Next</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </a>
+              </nav>
+            </div>
+          )}
+        </div>
+      </section>
+      
+      <!-- Join as Author CTA -->
+      <section class="py-16 bg-gradient-to-r from-primary/10 to-secondary/10 relative overflow-hidden">
+        <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
+        <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
+        
+        <div class="container mx-auto px-4 relative z-10">
+          <div class="max-w-3xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-6">
+              Have Stories to Share?
+            </h2>
+            <p class="text-xl text-gray-600 mb-8">
+              Join our community of storytellers and share your imagination with children around the world. It's free to get started!
+            </p>
+            <a href="/publish" class="inline-block bg-gradient-to-r from-primary-600 to-tertiary-600 text-white text-lg font-bold px-10 py-4 rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-glow relative overflow-hidden group border-2 border-white">
+              <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+              <span class="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+                Become an Author
+              </span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+    
+    <script>
+      // Parallax effect for blobs
+      document.addEventListener('mousemove', (e) => {
+        const blobs = document.querySelectorAll('.blob-shape');
+        const mouseX = e.clientX / window.innerWidth;
+        const mouseY = e.clientY / window.innerHeight;
+        
+        blobs.forEach((blob, index) => {
+          const speed = (index + 1) * 20;
+          const x = (mouseX - 0.5) * speed;
+          const y = (mouseY - 0.5) * speed;
+          blob.style.transform = `translate(${x}px, ${y}px)`;
+        });
+      });
+    </script>
+  </body>
+</html>

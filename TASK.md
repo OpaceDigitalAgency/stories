@@ -7,6 +7,10 @@
 - Document findings and recommendations
 
 ## Completed Tasks
+- Fix small issues on the website
+  - Create authors index page to fix 404 error
+  - Fix styling for "Parent Resources" and "Teacher Resources" buttons with improved contrast, stronger borders, and better hover effects
+  - Enhance "Join as Author" button with better contrast, stronger borders, darker background colors, and more prominent shadow effects
 - Compare homepage files between static version and current version
   - Compare `static-version/src/pages/index.astro` vs `src/pages/index.astro`
   - Identified evolution from static mock data to dynamic API integration

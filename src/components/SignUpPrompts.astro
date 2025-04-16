@@ -87,13 +87,14 @@ const selectedPrompt = prompts[type];
       ))}
     </ul>
     
-    <a href={selectedPrompt.link} class={`btn ${type === 'author' ? 'btn-pink' : type === 'reader' ? 'btn-blue' : 'btn-yellow'} w-full py-3 shadow-md hover:shadow-lg transition-all duration-300 group`}>
+    <a href={selectedPrompt.link} class={`btn ${type === 'author' ? 'bg-primary-600 hover:bg-primary-700 text-white border-3 border-primary-800' : type === 'reader' ? 'btn-blue' : 'btn-yellow'} w-full py-3 shadow-xl hover:shadow-2xl transition-all duration-300 group font-bold`}>
       <span class="relative z-10 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2 transform group-hover:scale-110 transition-transform">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
         </svg>
         {selectedPrompt.linkText}
       </span>
+      {type === 'author' && <div class="absolute inset-0 bg-gradient-to-r from-primary-800/20 via-primary-800/40 to-primary-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>}
     </a>
   </div>
 </div>

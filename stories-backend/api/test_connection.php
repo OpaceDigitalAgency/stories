@@ -37,9 +37,15 @@ spl_autoload_register(function ($class) {
 });
 
 // Load configuration
-$config = require __DIR__ . '/v1/config/config.php';
-
-echo "<h1>API Connection Test</h1>";
+try {
+    $config = require __DIR__ . '/v1/config/config.php';
+    echo "<h1>API Connection Test</h1>";
+} catch (Exception $e) {
+    echo "<h1>API Connection Test</h1>";
+    echo "<p style='color: red;'>❌ Failed to load configuration: " . $e->getMessage() . "</p>";
+    echo "<p>Please check that the configuration file exists at: " . __DIR__ . '/v1/config/config.php' . "</p>";
+    exit;
+}
 
 // Test database connection
 echo "<h2>Database Connection Test</h2>";
@@ -70,8 +76,14 @@ $_SERVER['REQUEST_URI'] = '/api/v1/stories';
 
 // Initialize Router
 try {
-    $router = new \StoriesAPI\Core\Router($config);
-    echo "<p style='color: green;'>✅ Router initialized successfully!</p>";
+    // Just check if the Router class exists and can be instantiated
+    // Don't try to handle routes in the test script
+    if (class_exists('\StoriesAPI\Core\Router')) {
+        $router = new \StoriesAPI\Core\Router($config);
+        echo "<p style='color: green;'>✅ Router class exists and can be instantiated!</p>";
+    } else {
+        echo "<p style='color: red;'>❌ Router class not found!</p>";
+    }
 } catch (Exception $e) {
     echo "<p style='color: red;'>❌ Router initialization failed: " . $e->getMessage() . "</p>";
 }

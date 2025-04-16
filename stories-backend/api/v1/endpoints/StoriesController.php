@@ -146,22 +146,12 @@ class StoriesController extends BaseController {
                 if ($author) {
                     $formattedAuthor = [
                         'data' => [
-                            [
-                                'id' => $author['id'],
-                                'attributes' => [
-                                    'name' => $author['name'],
-                                    'slug' => $author['slug'],
-                                    'bio' => $author['bio'],
-                                    'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                                ]
-                            ]
-                        ],
-                        'meta' => [
-                            'pagination' => [
-                                'page' => 1,
-                                'pageSize' => 1,
-                                'pageCount' => 1,
-                                'total' => 1
+                            'id' => $author['id'],
+                            'attributes' => [
+                                'name' => $author['name'],
+                                'slug' => $author['slug'],
+                                'bio' => $author['bio'],
+                                'avatar' => isset($author['avatar']) ? $author['avatar'] : null
                             ]
                         ]
                     ];
@@ -320,22 +310,12 @@ class StoriesController extends BaseController {
             if ($author) {
                 $formattedAuthor = [
                     'data' => [
-                        [
-                            'id' => $author['id'],
-                            'attributes' => [
-                                'name' => $author['name'],
-                                'slug' => $author['slug'],
-                                'bio' => $author['bio'],
-                                'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                            ]
-                        ]
-                    ],
-                    'meta' => [
-                        'pagination' => [
-                            'page' => 1,
-                            'pageSize' => 1,
-                            'pageCount' => 1,
-                            'total' => 1
+                        'id' => $author['id'],
+                        'attributes' => [
+                            'name' => $author['name'],
+                            'slug' => $author['slug'],
+                            'bio' => $author['bio'],
+                            'avatar' => isset($author['avatar']) ? $author['avatar'] : null
                         ]
                     ]
                 ];

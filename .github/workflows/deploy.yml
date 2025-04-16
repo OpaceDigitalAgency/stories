@@ -1,4 +1,4 @@
-name: Debug Deploy to cPanel
+name: Deploy to cPanel via FTP
 
 on:
   push:
@@ -12,57 +12,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
       
-    - name: Debug SSH key
-      run: |
-        echo "SSH key length: ${{ secrets.CPANEL_SSH_KEY != '' && 'Key exists' || 'Key is empty' }}"
-        
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.4
+    - name: FTP Deploy
+      uses: SamKirkland/FTP-Deploy-Action@4.3.0
       with:
-        ssh-private-key: ${{ secrets.CPANEL_SSH_KEY }}
-        
-    - name: Debug SSH connection
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -H api.storiesfromtheweb.org >> ~/.ssh/known_hosts
-        echo "Testing SSH connection..."
-        ssh -v stories@api.storiesfromtheweb.org 'echo "SSH connection successful"'
-        
-    - name: List files to deploy
-      run: |
-        echo "Files in stories-backend:"
-        ls -la stories-backend/
-        echo "Files in stories-backend/test_folder:"
-        ls -la stories-backend/test_folder/ || echo "test_folder not found"
-        
-    - name: Deploy test file
-      run: |
-        echo "Creating test file..."
-        echo "Test file from GitHub Actions" > test_file.txt
-        echo "Deploying test file..."
-        scp -v test_file.txt stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
-        echo "Test file deployed."
-        
-    - name: Deploy to cPanel
-      if: success()
-      run: |
-        echo "Deploying direct login scripts to cPanel root..."
-        rsync -avz --delete stories-backend/check_auth_status.php stories-backend/direct_login.php stories-backend/go_to_dashboard.php stories-backend/logout.php stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
-        
-        echo "Deploying admin directory to cPanel..."
-        rsync -avz --delete stories-backend/admin/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/admin/
-        
-        echo "Deploying api directory to cPanel..."
-        rsync -avz --delete stories-backend/api/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/api/
-        
-        echo "Deploying test_folder directory..."
-        if [ -d "stories-backend/test_folder" ]; then
-          rsync -avz --delete stories-backend/test_folder/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/test_folder/
-        else
-          echo "test_folder not found, skipping..."
-        fi
-        
-        echo "Deploying other files to cPanel..."
-        rsync -avz --delete stories-backend/.htaccess stories-backend/database.sql stories-backend/README.md stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
-        
-        echo "Deployment completed successfully!"
+        server: api.storiesfromtheweb.org
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./stories-backend/
+        server-dir: /home/stories/api.storiesfromtheweb.org/

@@ -1,4 +1,4 @@
-# Automatic Deployment to cPanel with GitHub Actions
+# Automatic Deployment to cPanel with GitHub Actions (FTP Method)
 
 This guide explains how to set up automatic deployment to your cPanel server whenever you push to GitHub.
 
@@ -6,7 +6,7 @@ This guide explains how to set up automatic deployment to your cPanel server whe
 
 1. You push changes to GitHub
 2. GitHub Actions automatically runs the deployment workflow
-3. Your changes are deployed to cPanel
+3. Your changes are deployed to cPanel via FTP
 4. Netlify automatically deploys frontend changes
 
 ## Understanding the File Structure
@@ -39,58 +39,54 @@ api.storiesfromtheweb.org/
 
 The GitHub Action workflow is configured to handle this difference by deploying files to the correct locations.
 
+## Why FTP Instead of SSH?
+
+We're using FTP deployment because your cPanel hosting doesn't allow shell access, which is required for SSH/rsync deployment. FTP is a widely supported alternative that works with most hosting providers.
+
 ## Setup Instructions
 
-### 1. Generate an SSH Key Pair
-
-On your Mac, open Terminal and run:
-
-```bash
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -f ~/.ssh/cpanel_deploy
-```
-
-This creates:
-- Private key: `~/.ssh/cpanel_deploy`
-- Public key: `~/.ssh/cpanel_deploy.pub`
-
-### 2. Add the Public Key to cPanel
+### 1. Create FTP Credentials in cPanel
 
 1. Log in to cPanel
-2. Go to "SSH Access" or "SSH/Shell Access"
-3. Click "Manage SSH Keys"
-4. Click "Import Key" or "Add Key"
-5. Copy the content of `~/.ssh/cpanel_deploy.pub` (run `cat ~/.ssh/cpanel_deploy.pub` in Terminal)
-6. Paste it into the "Public Key" field
-7. Give it a name like "GitHub Deploy"
-8. Click "Import" or "Add Key"
-9. Click "Manage" next to the key
-10. Click "Authorize" to authorize the key
+2. Go to "FTP Accounts" (usually under the "Files" section)
+3. Create a new FTP account:
+   - Username: Choose a username (e.g., `stories_deploy`)
+   - Domain: Select your domain (`api.storiesfromtheweb.org`)
+   - Password: Generate a strong password
+   - Directory: Set to `/home/stories/api.storiesfromtheweb.org/` (or leave blank for root)
+   - Quota: Set as needed (or unlimited)
+4. Click "Create" or "Add FTP Account"
+5. Note down the FTP username, password, and host
 
-### 3. Add the Private Key to GitHub Secrets
+### 2. Add FTP Credentials to GitHub Secrets
 
 1. Go to your GitHub repository
 2. Click "Settings"
 3. Click "Secrets and variables" → "Actions"
-4. Click "New repository secret"
-5. Name: `CPANEL_SSH_KEY`
-6. Value: Copy the entire content of your private key (run `cat ~/.ssh/cpanel_deploy` in Terminal)
-7. Click "Add secret"
+4. Add two new repository secrets:
+   - Name: `FTP_USERNAME`
+   - Value: Your FTP username (e.g., `stories_deploy@api.storiesfromtheweb.org`)
+   
+   - Name: `FTP_PASSWORD`
+   - Value: Your FTP password
 
-### 4. Test the Connection
+### 3. Test the Deployment
 
-To test if your SSH key works:
+Make a small change to any file in your repository and push it to GitHub:
 
 ```bash
-ssh -i ~/.ssh/cpanel_deploy stories@api.storiesfromtheweb.org
+git add .
+git commit -m "Test FTP deployment"
+git push origin main
 ```
 
-If it connects without asking for a password, the setup is correct.
+Then check the Actions tab to see if the workflow runs successfully.
 
 ## How to Use
 
 Now, whenever you push changes to the `main` branch:
 
-1. GitHub Actions will automatically deploy your backend files to cPanel
+1. GitHub Actions will automatically deploy your backend files to cPanel via FTP
 2. Netlify will automatically deploy your frontend files
 
 You don't need to run any manual commands. Just:
@@ -103,14 +99,11 @@ git push origin main
 
 ## What the GitHub Action Does
 
-The GitHub Action workflow (`.github/workflows/deploy.yml`) does the following:
+The GitHub Action workflow (`.github/workflows/deploy.yml`) uses the FTP-Deploy-Action to:
 
-1. Deploys direct login scripts to the root of your cPanel domain
-2. Deploys the admin directory to the admin directory on your server
-3. Deploys the api directory to the api directory on your server
-4. Deploys other files (.htaccess, database.sql, README.md) to the root
-
-This ensures that all files are placed in the correct locations on your server.
+1. Connect to your cPanel server via FTP
+2. Upload all files from the `stories-backend` directory to your server
+3. Maintain the same directory structure on the server
 
 ## Troubleshooting
 
@@ -119,8 +112,8 @@ This ensures that all files are placed in the correct locations on your server.
 If the deployment fails, check:
 
 1. GitHub Actions logs (in your repository under "Actions" tab)
-2. Make sure the SSH key is correctly added to cPanel and GitHub Secrets
-3. Verify the cPanel username and path in the workflow file
+2. Make sure the FTP credentials are correctly added to GitHub Secrets
+3. Verify that your hosting provider allows FTP connections
 
 ### Files Not Updating on cPanel
 
@@ -132,20 +125,11 @@ If files aren't updating on cPanel:
 
 ## Manual Deployment
 
-If you need to deploy manually, you can use these commands:
+If you need to deploy manually, you can use an FTP client like FileZilla:
 
-```bash
-# Deploy direct login scripts
-rsync -avz --delete stories-backend/check_auth_status.php stories-backend/direct_login.php stories-backend/go_to_dashboard.php stories-backend/logout.php stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+1. Connect to your server using your FTP credentials
+2. Upload the files from your `stories-backend` directory to your server
 
-# Deploy admin directory
-rsync -avz --delete stories-backend/admin/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/admin/
+## For More Information
 
-# Deploy api directory
-rsync -avz --delete stories-backend/api/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/api/
-
-# Deploy other files
-rsync -avz --delete stories-backend/.htaccess stories-backend/database.sql stories-backend/README.md stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
-```
-
-These are the same commands that the GitHub Action uses.
+See the `FTP_DEPLOYMENT.md` file for more detailed instructions and troubleshooting tips.

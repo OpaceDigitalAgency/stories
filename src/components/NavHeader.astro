@@ -21,32 +21,30 @@ const currentPath = Astro.url.pathname;
 
 <header class="sticky top-0 z-50 py-4">
   <!-- Background with enhanced blur effect -->
-  <div class="absolute inset-0 bg-white/90 backdrop-blur-2xl"></div>
+  <!-- Removed blur effect div that was covering the logo -->
   
-  <!-- Enhanced decorative gradients -->
-  <div class="absolute inset-0 bg-gradient-to-r from-primary-100 via-transparent to-secondary-100 opacity-50 animate-gradient"></div>
-  <div class="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent"></div>
+  <!-- Removed decorative elements that were potentially covering the logo -->
   
-  <!-- Enhanced animated decorative elements -->
-  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob transform translate-z-12"></div>
-  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000 transform translate-z-8"></div>
-  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000 transform translate-z-4"></div>
-  
-  <div class="container mx-auto px-6 flex justify-between items-center h-20 relative">
-    <!-- Simple Logo -->
-    <a href="/" class="flex items-center">
-      <img src="/logo.svg" alt="Stories From The Web" class="h-16 w-auto" />
+  <div class="container mx-auto px-4 flex items-center h-20 relative" style="display:flex;">
+    <!-- Logo -->
+    <a href="/" class="inline-block" style="display:inline-block">
+      <img
+        src="/logo-new2.png"
+        alt="Stories From The Web"
+        class="h-20 w-auto"
+        style="display:inline-block; margin-right:40px"
+      />
     </a>
     
     <!-- Desktop Navigation -->
-    <nav class="hidden md:flex items-center space-x-4">
+    <nav class="flex items-center space-x-4" style="display:flex">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
         return (
           <a
             href={item.href}
-            class={`font-bold transition-all duration-500 relative group py-3 px-4 rounded-xl transform-style-3d hover:translate-z-4 ${
+            class={`font-bold transition-all duration-500 relative group py-1 px-1 rounded-xl transform-style-3d hover:translate-z-4 ${
               isActive
                 ? 'text-primary bg-primary-50/50'
                 : 'text-text-primary hover:text-primary hover:scale-105 hover:bg-neutral-50/80'
@@ -66,7 +64,7 @@ const currentPath = Astro.url.pathname;
       
       <!-- Login/Profile Button -->
       <div class="flex items-center ml-6">
-        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-all duration-500 transform-style-3d hover:translate-z-4 hover:scale-105 group px-4 py-2 rounded-xl hover:bg-neutral-50/80">
+        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-all duration-500 transform-style-3d hover:translate-z-4 hover:scale-105 group px-1 py-1 rounded-xl hover:bg-neutral-50/80">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
@@ -81,13 +79,13 @@ const currentPath = Astro.url.pathname;
       
       <a
         href="/publish"
-        class="btn btn-primary ml-1 px-3 py-2 shadow-playful btn-playful transform-style-3d hover:translate-z-4 group"
+        class="btn btn-primary ml-1 px-1 py-1 shadow-playful btn-playful transform-style-3d hover:translate-z-4 group"
       >
-        <span class="relative z-10 flex items-center">
+        <span class="relative z-10 flex items-center" style="padding:5px">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
           </svg>
-          Share Your Story
+          Share Your <br/>Story
         </span>
         <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </a>
@@ -188,3 +186,4 @@ const currentPath = Astro.url.pathname;
     });
   }
 </script>
+

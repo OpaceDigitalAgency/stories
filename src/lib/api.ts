@@ -110,17 +110,6 @@ export interface Tag {
   slug: string;
 }
 
-// Import mock data
-import {
-  mockStories,
-  mockAuthors,
-  mockTags,
-  mockBlogPosts,
-  mockDirectoryItems,
-  mockGames,
-  mockAiTools
-} from './mockData';
-
 const STRAPI_URL = import.meta.env.STRAPI_URL || '';
 const STRAPI_TOKEN = import.meta.env.STRAPI_TOKEN || '';
 
@@ -146,92 +135,13 @@ interface StrapiParams {
 
 export const fetchFromStrapi = async (endpoint: string, params: StrapiParams = {}) => {
   try {
-    // If STRAPI_URL is empty, return mock data
+    // If STRAPI_URL is empty, return empty data
     if (!STRAPI_URL) {
-      console.log(`Using mock data for endpoint: ${endpoint}`);
-      
-      // Handle stories endpoint with filters
-      if (endpoint === 'stories') {
-        const filters = params.filters || {};
-        
-        // Create a copy of the mock stories data
-        const storiesData = JSON.parse(JSON.stringify(mockStories));
-        
-        // If there are filters, apply them
-        if (Object.keys(filters).length > 0) {
-          // Handle featured filter
-          if (filters.featured === true) {
-            storiesData.data = storiesData.data.filter(story => story.attributes.featured === true);
-          }
-          
-          // Handle isSelfPublished filter (mock this by using stories with id 2)
-          if (filters.isSelfPublished === true) {
-            storiesData.data = storiesData.data.filter(story => story.id === 2);
-          }
-          
-          // Handle isAIEnhanced filter (mock this by using stories with id 3)
-          if (filters.isAIEnhanced === true) {
-            storiesData.data = storiesData.data.filter(story => story.id === 3);
-          }
-          
-          // Handle isSponsored filter (mock this by using stories with id 1)
-          if (filters.isSponsored === true) {
-            storiesData.data = storiesData.data.filter(story => story.id === 1);
-          }
-          
-          // Update pagination metadata
-          storiesData.meta.pagination.total = storiesData.data.length;
-          storiesData.meta.pagination.pageCount = Math.ceil(storiesData.data.length / storiesData.meta.pagination.pageSize);
-        }
-        
-        return storiesData;
-      }
-      
-      // Handle other endpoints
-      // Check if endpoint is for a specific author (authors/1, authors/2, etc.)
-      if (endpoint.startsWith('authors/')) {
-        const authorId = parseInt(endpoint.split('/')[1]);
-        const author = mockAuthors.data.find(author => author.id === authorId);
-        if (author) {
-          return { data: author };
-        } else {
-          console.warn(`No mock data available for endpoint: ${endpoint}`);
-          return { data: null };
-        }
-      }
-      
-      // Check if endpoint is for a specific story (stories/1, stories/2, etc.)
-      if (endpoint.startsWith('stories/')) {
-        const storyId = parseInt(endpoint.split('/')[1]);
-        const story = mockStories.data.find(story => story.id === storyId);
-        if (story) {
-          return { data: story };
-        } else {
-          console.warn(`No mock data available for endpoint: ${endpoint}`);
-          return { data: null };
-        }
-      }
-      
-      switch (endpoint) {
-        case 'authors':
-          return mockAuthors;
-        case 'tags':
-          return mockTags;
-        case 'blog-posts':
-          return mockBlogPosts;
-        case 'directory-items':
-          return mockDirectoryItems;
-        case 'games':
-          return mockGames;
-        case 'ai-tools':
-          return mockAiTools;
-        default:
-          console.warn(`No mock data available for endpoint: ${endpoint}`);
-          return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
-      }
+      console.log(`No Strapi URL configured. Returning empty data for endpoint: ${endpoint}`);
+      return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
     }
 
-    // If STRAPI_URL is set, make the actual API call
+    // Make the actual API call
     const queryString = new URLSearchParams(params).toString();
     const url = `${STRAPI_URL}/api/${endpoint}${queryString ? `?${queryString}` : ''}`;
     
@@ -254,86 +164,14 @@ export const fetchFromStrapi = async (endpoint: string, params: StrapiParams = {
   } catch (error) {
     console.error('Error fetching from Strapi:', error);
     
-    // On error, fall back to mock data
-    console.log(`Falling back to mock data for endpoint: ${endpoint}`);
+    // On error, return empty data
+    console.log(`Error fetching from Strapi. Returning empty data for endpoint: ${endpoint}`);
     
-    // Handle stories endpoint with filters
-    if (endpoint === 'stories') {
-      const filters = params.filters || {};
-      
-      // Create a copy of the mock stories data
-      const storiesData = JSON.parse(JSON.stringify(mockStories));
-      
-      // If there are filters, apply them
-      if (Object.keys(filters).length > 0) {
-        // Handle featured filter
-        if (filters.featured === true) {
-          storiesData.data = storiesData.data.filter(story => story.attributes.featured === true);
-        }
-        
-        // Handle isSelfPublished filter (mock this by using stories with id 2)
-        if (filters.isSelfPublished === true) {
-          storiesData.data = storiesData.data.filter(story => story.id === 2);
-        }
-        
-        // Handle isAIEnhanced filter (mock this by using stories with id 3)
-        if (filters.isAIEnhanced === true) {
-          storiesData.data = storiesData.data.filter(story => story.id === 3);
-        }
-        
-        // Handle isSponsored filter (mock this by using stories with id 1)
-        if (filters.isSponsored === true) {
-          storiesData.data = storiesData.data.filter(story => story.id === 1);
-        }
-        
-        // Update pagination metadata
-        storiesData.meta.pagination.total = storiesData.data.length;
-        storiesData.meta.pagination.pageCount = Math.ceil(storiesData.data.length / storiesData.meta.pagination.pageSize);
-      }
-      
-      return storiesData;
-    }
-    
-    // Handle other endpoints
-    // Check if endpoint is for a specific author (authors/1, authors/2, etc.)
-    if (endpoint.startsWith('authors/')) {
-      const authorId = parseInt(endpoint.split('/')[1]);
-      const author = mockAuthors.data.find(author => author.id === authorId);
-      if (author) {
-        return { data: author };
-      } else {
-        console.warn(`No mock data available for endpoint: ${endpoint}`);
-        return { data: null };
-      }
-    }
-    
-    // Check if endpoint is for a specific story (stories/1, stories/2, etc.)
-    if (endpoint.startsWith('stories/')) {
-      const storyId = parseInt(endpoint.split('/')[1]);
-      const story = mockStories.data.find(story => story.id === storyId);
-      if (story) {
-        return { data: story };
-      } else {
-        console.warn(`No mock data available for endpoint: ${endpoint}`);
-        return { data: null };
-      }
-    }
-    
-    switch (endpoint) {
-      case 'authors':
-        return mockAuthors;
-      case 'tags':
-        return mockTags;
-      case 'blog-posts':
-        return mockBlogPosts;
-      case 'directory-items':
-        return mockDirectoryItems;
-      case 'games':
-        return mockGames;
-      case 'ai-tools':
-        return mockAiTools;
-      default:
-        return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
+    // Return empty data structure
+    if (endpoint.startsWith('authors/') || endpoint.startsWith('stories/')) {
+      return { data: null };
+    } else {
+      return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
     }
   }
 };

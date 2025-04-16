@@ -9,7 +9,6 @@ import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
 import { fetchFromStrapi } from '../lib/api';
-import { mockStories } from '../lib/mockData';
 import '../styles/base.css';
 
 // Dynamic data arrays fetched from Strapi
@@ -450,10 +449,10 @@ try {
         <div class="container mx-auto px-4 relative z-10">
           <AIRecommendationBox
             story={{
-              slug: mockStories.data[0].attributes.slug,
-              title: mockStories.data[0].attributes.title,
+              slug: "enchanted-forest",
+              title: "The Enchanted Forest",
               author: {
-                name: mockStories.data[0].attributes.author.data[0].attributes.name
+                name: "David Brown"
               }
             }}
             recommendationText="Based on your reading history, we think you'll enjoy this magical adventure story!"

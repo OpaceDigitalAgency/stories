@@ -62,13 +62,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Also set up a fallback timer in case the event doesn't fire
+        var jQueryRetryCount = 0;
+        var maxJQueryRetries = 10; // Maximum number of retries
+        
         setTimeout(function checkJQuery() {
             if (jQueryLoaded()) {
                 console.log("jQuery detected by timer. Initializing jQuery-dependent features.");
                 initJQueryFeatures();
             } else {
-                console.warn("jQuery still not loaded. Trying again...");
-                setTimeout(checkJQuery, 500);
+                jQueryRetryCount++;
+                if (jQueryRetryCount < maxJQueryRetries) {
+                    console.warn("jQuery still not loaded. Trying again... (Attempt " + jQueryRetryCount + "/" + maxJQueryRetries + ")");
+                    setTimeout(checkJQuery, 500);
+                } else {
+                    console.error("Failed to load jQuery after " + maxJQueryRetries + " attempts. Some features may not work properly.");
+                    // Try to load jQuery one last time using a different CDN
+                    var lastResortScript = document.createElement('script');
+                    lastResortScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js';
+                    document.head.appendChild(lastResortScript);
+                }
             }
         }, 1000);
     }

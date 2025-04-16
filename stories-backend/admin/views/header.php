@@ -77,6 +77,11 @@
                             <i class="fas fa-images"></i> Media
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $activeMenu === 'test-tools' ? 'active' : ''; ?>" href="<?php echo ADMIN_URL; ?>/test_tools.php">
+                            <i class="fas fa-tools"></i> Test Tools
+                        </a>
+                    </li>
                 </ul>
                 <?php if (isset($user)): ?>
                 <ul class="navbar-nav">

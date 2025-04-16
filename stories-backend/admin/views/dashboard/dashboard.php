@@ -217,5 +217,31 @@
                 <div class="alert alert-info">No recent stories found.</div>
             <?php endif; ?>
         </div>
+        
+        <?php if (isset($apiErrors) && !empty($apiErrors)): ?>
+        <!-- API Error Information (Only visible to admins for debugging) -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-white">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                API Debugging Information
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <p><strong>Note:</strong> The dashboard is showing some content counts from fallback sources because the API returned errors.</p>
+                    <p>This section is only visible to administrators and helps diagnose API issues.</p>
+                </div>
+                
+                <h5>API Errors:</h5>
+                <ul class="list-group">
+                    <?php foreach ($apiErrors as $endpoint => $error): ?>
+                    <li class="list-group-item list-group-item-warning">
+                        <strong>Endpoint:</strong> <?php echo htmlspecialchars($endpoint); ?><br>
+                        <strong>Error:</strong> <?php echo htmlspecialchars($error); ?>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>

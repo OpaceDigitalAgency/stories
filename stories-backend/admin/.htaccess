@@ -97,6 +97,12 @@ DirectoryIndex index.php
     Header set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.storiesfromtheweb.org https://storiesfromtheweb.org"
 </IfModule>
 
-# Error documents
+# Allow direct access to test scripts
+<FilesMatch "^test_.*\.php$">
+    # These files should be accessible directly
+    # No special rules needed, just don't redirect them
+</FilesMatch>
+
+# Error documents (but not for test scripts)
 ErrorDocument 404 /admin/index.php
 ErrorDocument 403 /admin/index.php

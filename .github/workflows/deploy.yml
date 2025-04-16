@@ -23,8 +23,20 @@ jobs:
         mkdir -p ~/.ssh
         ssh-keyscan -H api.storiesfromtheweb.org >> ~/.ssh/known_hosts
         
-        # Deploy backend files
-        echo "Deploying backend files to cPanel..."
-        rsync -avz --delete stories-backend/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+        # Deploy direct login scripts to root
+        echo "Deploying direct login scripts to cPanel root..."
+        rsync -avz --delete stories-backend/check_auth_status.php stories-backend/direct_login.php stories-backend/go_to_dashboard.php stories-backend/logout.php stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+        
+        # Deploy admin directory
+        echo "Deploying admin directory to cPanel..."
+        rsync -avz --delete stories-backend/admin/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/admin/
+        
+        # Deploy api directory
+        echo "Deploying api directory to cPanel..."
+        rsync -avz --delete stories-backend/api/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/api/
+        
+        # Deploy other files
+        echo "Deploying other files to cPanel..."
+        rsync -avz --delete stories-backend/.htaccess stories-backend/database.sql stories-backend/README.md stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
         
         echo "Deployment completed successfully!"

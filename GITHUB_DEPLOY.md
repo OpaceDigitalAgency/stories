@@ -9,6 +9,36 @@ This guide explains how to set up automatic deployment to your cPanel server whe
 3. Your changes are deployed to cPanel
 4. Netlify automatically deploys frontend changes
 
+## Understanding the File Structure
+
+There's a difference between how files are organized in your GitHub repository and on your cPanel server:
+
+### GitHub Repository Structure
+```
+stories-backend/
+├── admin/
+├── api/
+├── direct_login.php
+├── check_auth_status.php
+├── go_to_dashboard.php
+├── logout.php
+└── ...
+```
+
+### cPanel Server Structure
+```
+api.storiesfromtheweb.org/
+├── admin/
+├── api/
+├── direct_login.php
+├── check_auth_status.php
+├── go_to_dashboard.php
+├── logout.php
+└── ...
+```
+
+The GitHub Action workflow is configured to handle this difference by deploying files to the correct locations.
+
 ## Setup Instructions
 
 ### 1. Generate an SSH Key Pair
@@ -43,7 +73,7 @@ This creates:
 3. Click "Secrets and variables" → "Actions"
 4. Click "New repository secret"
 5. Name: `CPANEL_SSH_KEY`
-6. Value: Copy the content of your private key (run `cat ~/.ssh/cpanel_deploy` in Terminal)
+6. Value: Copy the entire content of your private key (run `cat ~/.ssh/cpanel_deploy` in Terminal)
 7. Click "Add secret"
 
 ### 4. Test the Connection
@@ -55,16 +85,6 @@ ssh -i ~/.ssh/cpanel_deploy stories@api.storiesfromtheweb.org
 ```
 
 If it connects without asking for a password, the setup is correct.
-
-### 5. Commit and Push the GitHub Action Workflow
-
-The workflow file is already created at `.github/workflows/deploy.yml`. Just commit and push it:
-
-```bash
-git add .github/workflows/deploy.yml
-git commit -m "Add GitHub Action for automatic deployment to cPanel"
-git push origin main
-```
 
 ## How to Use
 
@@ -80,6 +100,17 @@ git add .
 git commit -m "Your commit message"
 git push origin main
 ```
+
+## What the GitHub Action Does
+
+The GitHub Action workflow (`.github/workflows/deploy.yml`) does the following:
+
+1. Deploys direct login scripts to the root of your cPanel domain
+2. Deploys the admin directory to the admin directory on your server
+3. Deploys the api directory to the api directory on your server
+4. Deploys other files (.htaccess, database.sql, README.md) to the root
+
+This ensures that all files are placed in the correct locations on your server.
 
 ## Troubleshooting
 
@@ -101,10 +132,20 @@ If files aren't updating on cPanel:
 
 ## Manual Deployment
 
-If you need to deploy manually, you can still use:
+If you need to deploy manually, you can use these commands:
 
 ```bash
-rsync -avz --delete stories-backend/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+# Deploy direct login scripts
+rsync -avz --delete stories-backend/check_auth_status.php stories-backend/direct_login.php stories-backend/go_to_dashboard.php stories-backend/logout.php stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
+
+# Deploy admin directory
+rsync -avz --delete stories-backend/admin/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/admin/
+
+# Deploy api directory
+rsync -avz --delete stories-backend/api/ stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/api/
+
+# Deploy other files
+rsync -avz --delete stories-backend/.htaccess stories-backend/database.sql stories-backend/README.md stories@api.storiesfromtheweb.org:/home/stories/api.storiesfromtheweb.org/
 ```
 
-This is the same command that the GitHub Action uses.
+These are the same commands that the GitHub Action uses.

@@ -1,11 +1,11 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromStrapi, type StrapiResponse } from '../../lib/api';
+import { fetchFromApi, type ApiResponse } from '../../lib/api';
 import '../../styles/base.css';
 
-// Fetch directory categories from Strapi
-const categoriesResponse = await fetchFromStrapi('directory-categories', {
+// Fetch directory categories from API
+const categoriesResponse = await fetchFromApi('directory-categories', {
   populate: '*'
 }) as StrapiResponse<any>;
 

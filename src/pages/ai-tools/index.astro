@@ -1,11 +1,11 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromStrapi, type StrapiResponse, type AiTool } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type AiTool } from '../../lib/api';
 import '../../styles/base.css';
 
-// Fetch AI tools from Strapi
-const aiToolsResponse = await fetchFromStrapi('ai-tools', {
+// Fetch AI tools from API
+const aiToolsResponse = await fetchFromApi('ai-tools', {
   populate: '*',
   sort: 'title:asc'
 }) as StrapiResponse<AiTool>;

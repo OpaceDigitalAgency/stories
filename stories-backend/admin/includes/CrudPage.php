@@ -200,6 +200,15 @@ class CrudPage extends AdminPage {
         // Get items from API
         $response = $this->apiClient->get($this->endpoint, $params);
         
+        if (!$response) {
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to fetch ' . $this->entityNamePlural . ($error ? ': ' . $error : ''));
+            
+            // Log detailed error for debugging
+            error_log('API list error: ' . json_encode($this->apiClient->getLastError()));
+        }
+        
         // Set data
         $this->data['items'] = $response ? $response['data'] : [];
         $this->data['pagination'] = $response ? $response['meta']['pagination'] : [
@@ -251,7 +260,9 @@ class CrudPage extends AdminPage {
         $response = $this->apiClient->get($this->endpoint . '/' . $id);
         
         if (!$response) {
-            $this->setError('Item not found');
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
             $this->redirect($this->entityName . '.php');
             return;
         }
@@ -280,7 +291,9 @@ class CrudPage extends AdminPage {
         $response = $this->apiClient->get($this->endpoint . '/' . $id);
         
         if (!$response) {
-            $this->setError('Item not found');
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
             $this->redirect($this->entityName . '.php');
             return;
         }
@@ -308,7 +321,9 @@ class CrudPage extends AdminPage {
         $response = $this->apiClient->get($this->endpoint . '/' . $id);
         
         if (!$response) {
-            $this->setError('Item not found');
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
             $this->redirect($this->entityName . '.php');
             return;
         }
@@ -338,7 +353,12 @@ class CrudPage extends AdminPage {
             $this->setSuccess($this->entityName . ' created successfully');
             $this->redirect($this->entityName . '.php');
         } else {
-            $this->setError('Failed to create ' . $this->entityName);
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to create ' . $this->entityName . ($error ? ': ' . $error : ''));
+            
+            // Log detailed error for debugging
+            error_log('API create error: ' . json_encode($this->apiClient->getLastError()));
         }
     }
     
@@ -371,7 +391,12 @@ class CrudPage extends AdminPage {
             $this->setSuccess($this->entityName . ' updated successfully');
             $this->redirect($this->entityName . '.php');
         } else {
-            $this->setError('Failed to update ' . $this->entityName);
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to update ' . $this->entityName . ($error ? ': ' . $error : ''));
+            
+            // Log detailed error for debugging
+            error_log('API update error: ' . json_encode($this->apiClient->getLastError()));
         }
     }
     
@@ -394,7 +419,12 @@ class CrudPage extends AdminPage {
         if ($response) {
             $this->setSuccess($this->entityName . ' deleted successfully');
         } else {
-            $this->setError('Failed to delete ' . $this->entityName);
+            // Get API error details
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to delete ' . $this->entityName . ($error ? ': ' . $error : ''));
+            
+            // Log detailed error for debugging
+            error_log('API delete error: ' . json_encode($this->apiClient->getLastError()));
         }
         
         $this->redirect($this->entityName . '.php');

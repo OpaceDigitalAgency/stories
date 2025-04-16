@@ -4,7 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  STRAPI_URL = ""  # Empty string will cause fetchFromStrapi to fail gracefully and fall back to mock data
+  # API configuration is handled in src/lib/api.ts with a hardcoded API_URL
 
 # Removed functions directory setting
 

@@ -8,7 +8,7 @@ import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
-import { fetchFromStrapi } from '../lib/api';
+import { fetchFromApi } from '../lib/api';
 import '../styles/base.css';
 
 // Dynamic data arrays fetched from Strapi
@@ -21,7 +21,7 @@ let featuredAuthors = [];
 
 try {
   // Fetch featured stories
-  const featuredStoriesResponse = await fetchFromStrapi('stories', {
+  const featuredStoriesResponse = await fetchFromApi('stories', {
     filters: {
       featured: true
     },
@@ -45,7 +45,7 @@ try {
   })) || [];
 
   // Fetch most loved stories
-  const mostLovedStoriesResponse = await fetchFromStrapi('stories', {
+  const mostLovedStoriesResponse = await fetchFromApi('stories', {
     sort: 'averageRating:desc',
     populate: '*',
     pagination: { limit: 6 }
@@ -66,7 +66,7 @@ try {
   })) || [];
 
   // Fetch latest self-published stories
-  const selfPublishedStoriesResponse = await fetchFromStrapi('stories', {
+  const selfPublishedStoriesResponse = await fetchFromApi('stories', {
     filters: {
       isSelfPublished: true
     },
@@ -90,7 +90,7 @@ try {
   })) || [];
 
   // Fetch AI-enhanced stories
-  const aiEnhancedStoriesResponse = await fetchFromStrapi('stories', {
+  const aiEnhancedStoriesResponse = await fetchFromApi('stories', {
     filters: {
       isAIEnhanced: true
     },
@@ -114,7 +114,7 @@ try {
   })) || [];
 
   // Fetch sponsored stories
-  const sponsoredStoriesResponse = await fetchFromStrapi('stories', {
+  const sponsoredStoriesResponse = await fetchFromApi('stories', {
     filters: {
       isSponsored: true
     },
@@ -139,7 +139,7 @@ try {
   })) || [];
 
   // Fetch featured authors
-  const featuredAuthorsResponse = await fetchFromStrapi('authors', {
+  const featuredAuthorsResponse = await fetchFromApi('authors', {
     filters: {
       featured: true
     },

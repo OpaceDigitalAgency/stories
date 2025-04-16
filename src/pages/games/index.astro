@@ -1,11 +1,11 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromStrapi, type StrapiResponse, type Game } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type Game } from '../../lib/api';
 import '../../styles/base.css';
 
-// Fetch games from Strapi
-const gamesResponse = await fetchFromStrapi('games', {
+// Fetch games from API
+const gamesResponse = await fetchFromApi('games', {
   populate: '*',
   sort: 'title:asc'
 }) as StrapiResponse<Game>;
@@ -19,8 +19,8 @@ const games = gamesResponse.data.map(game => ({
   url: game.attributes.url
 }));
 
-// Fetch age groups from Strapi
-const ageGroupsResponse = await fetchFromStrapi('game-age-groups', {
+// Fetch age groups from API
+const ageGroupsResponse = await fetchFromApi('game-age-groups', {
   sort: 'order:asc'
 }) as StrapiResponse<{ name: string }>;
 

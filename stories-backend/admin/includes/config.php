@@ -10,7 +10,7 @@
 
 // Define the environment (development, testing, production)
 if (!defined('ENVIRONMENT')) {
-    define('ENVIRONMENT', 'development');
+    define('ENVIRONMENT', 'production');
 }
 
 // Set error reporting based on environment
@@ -30,22 +30,29 @@ if (!defined('ADMIN_URL')) {
     define('ADMIN_URL', '/admin');
 }
 if (!defined('API_URL')) {
-    define('API_URL', '/api/v1');
+    // Use absolute URL for API server
+    if (ENVIRONMENT === 'development') {
+        // For local development
+        define('API_URL', 'http://localhost:8000/api/v1');
+    } else {
+        // For production
+        define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
+    }
 }
 
 // Database configuration
 $config['db'] = [
     'host'     => 'localhost',      // Database host
     'name'     => 'stories_db',     // Database name
-    'user'     => 'stories_user',   // Database username
-    'password' => 'your_secure_password', // Database password (use environment variables in production)
+    'user'     => 'stories_prod_user',   // Production database username
+    'password' => 'Str0ng_Pr0d_P@ssw0rd!', // Production database password
     'charset'  => 'utf8mb4',        // Character set
     'port'     => 3306              // Database port
 ];
 
 // Security configuration
 $config['security'] = [
-    'jwt_secret'   => 'your_jwt_secret_key', // JWT secret key (use environment variables in production)
+    'jwt_secret'   => 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6', // Production JWT secret key
     'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
 ];
 
@@ -63,7 +70,7 @@ $config['session'] = [
     'lifetime'     => 86400, // 24 hours
     'path'         => '/',
     'domain'       => '',
-    'secure'       => false, // Set to true in production with HTTPS
+    'secure'       => true, // Enabled for production with HTTPS
     'httponly'     => true
 ];
 

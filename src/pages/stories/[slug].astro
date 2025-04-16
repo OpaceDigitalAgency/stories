@@ -7,13 +7,13 @@ import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
-import { fetchFromStrapi, type StrapiResponse, type Story } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const storiesResponse = await fetchFromStrapi('stories', {
+  const storiesResponse = await fetchFromApi('stories', {
     populate: '*'
   }) as StrapiResponse<Story>;
 
@@ -26,7 +26,7 @@ export async function getStaticPaths() {
 const { storyId } = Astro.props;
 
 // Fetch full story data
-const storyResponse = await fetchFromStrapi(`stories/${storyId}`, {
+const storyResponse = await fetchFromApi(`stories/${storyId}`, {
   populate: '*'
 }) as { data: { id: number; attributes: Story } };
 
@@ -57,7 +57,7 @@ const story = {
 };
 
 // Fetch related stories
-const relatedStoriesResponse = await fetchFromStrapi('stories', {
+const relatedStoriesResponse = await fetchFromApi('stories', {
   filters: {
     id: { $ne: storyId },
     tags: { $contains: story.tags[0] }

@@ -5,13 +5,13 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
-import { fetchFromStrapi, type StrapiResponse, type Author, type Story } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type Author, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const authorsResponse = await fetchFromStrapi('authors', {
+  const authorsResponse = await fetchFromApi('authors', {
     populate: '*'
   }) as StrapiResponse<Author>;
 
@@ -24,7 +24,7 @@ export async function getStaticPaths() {
 const { authorId } = Astro.props;
 
 // Fetch full author data
-const authorResponse = await fetchFromStrapi(`authors/${authorId}`, {
+const authorResponse = await fetchFromApi(`authors/${authorId}`, {
   populate: '*'
 }) as { data: { id: number; attributes: Author } };
 
@@ -53,7 +53,7 @@ const author = {
 };
 
 // Fetch author's stories
-const storiesResponse = await fetchFromStrapi('stories', {
+const storiesResponse = await fetchFromApi('stories', {
   filters: {
     author: { id: { $eq: authorId } }
   },

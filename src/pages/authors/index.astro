@@ -2,16 +2,16 @@
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import CardAuthor from '../../components/CardAuthor.astro';
-import { fetchFromStrapi, type StrapiResponse, type Author } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type Author } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
 
-// Fetch all authors from Strapi
-const authorsResponse = await fetchFromStrapi('authors', {
+// Fetch all authors from API
+const authorsResponse = await fetchFromApi('authors', {
   populate: '*',
   sort: 'name:asc'
-}) as StrapiResponse<Author>;
+}) as ApiResponse<Author>;
 
 // Process authors data
 const authors = authorsResponse.data.map(item => {

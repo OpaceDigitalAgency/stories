@@ -75,9 +75,24 @@ class Database {
         try {
             $this->connection = new PDO($dsn, $this->config['user'], $this->config['password'], $options);
         } catch (PDOException $e) {
-            // Log the error but don't expose details in the response
-            error_log("Database connection failed: " . $e->getMessage());
-            throw new Exception("Database connection failed. Please try again later.");
+            // Log detailed error information for debugging
+            $errorMessage = "Database connection failed: " . $e->getMessage();
+            $errorCode = $e->getCode();
+            $errorFile = $e->getFile();
+            $errorLine = $e->getLine();
+            
+            error_log("[DB ERROR] Code: $errorCode | Message: $errorMessage | File: $errorFile | Line: $errorLine");
+            
+            // Check for specific error conditions to provide more helpful messages
+            if (strpos($e->getMessage(), "Access denied") !== false) {
+                throw new Exception("Database authentication failed. Please check credentials.");
+            } elseif (strpos($e->getMessage(), "Unknown database") !== false) {
+                throw new Exception("Database not found. Please check database name.");
+            } elseif (strpos($e->getMessage(), "Connection refused") !== false) {
+                throw new Exception("Database server connection refused. Please check host and port.");
+            } else {
+                throw new Exception("Database connection failed. Please contact support with error code: " . date('YmdHis'));
+            }
         }
     }
     
@@ -104,9 +119,37 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            // Log the error but don't expose details in the response
-            error_log("Query execution failed: " . $e->getMessage() . " - Query: $query");
-            throw new Exception("Database query failed. Please try again later.");
+            // Log detailed error information for debugging
+            $errorMessage = $e->getMessage();
+            $errorCode = $e->getCode();
+            $errorFile = $e->getFile();
+            $errorLine = $e->getLine();
+            
+            // Create a sanitized version of the query for logging (remove sensitive data)
+            $sanitizedQuery = preg_replace('/password\s*=\s*[^\s,)]+/i', 'password=***', $query);
+            
+            error_log("[QUERY ERROR] Code: $errorCode | Message: $errorMessage | Query: $sanitizedQuery | File: $errorFile | Line: $errorLine");
+            
+            // Check for specific error conditions
+            if ($e->getCode() == '23000') {
+                // Integrity constraint violation
+                if (strpos($errorMessage, "Duplicate entry") !== false) {
+                    throw new Exception("Record already exists with this information.");
+                } else {
+                    throw new Exception("Data integrity error. Please check your input.");
+                }
+            } elseif ($e->getCode() == '42S02') {
+                // Table not found
+                throw new Exception("Database schema error. Please contact support.");
+            } elseif ($e->getCode() == '42000') {
+                // Syntax error
+                throw new Exception("Database query syntax error. Please contact support.");
+            } else {
+                // Generic error with timestamp for log correlation
+                $errorId = date('YmdHis');
+                error_log("[ERROR ID: $errorId] " . $errorMessage);
+                throw new Exception("Database operation failed. Reference ID: $errorId");
+            }
         }
     }
     

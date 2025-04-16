@@ -10,7 +10,7 @@
  */
 
 // Define the environment (development, testing, production)
-define('ENVIRONMENT', 'development');
+define('ENVIRONMENT', 'production');
 
 // Set error reporting based on environment
 if (ENVIRONMENT === 'development') {
@@ -25,8 +25,8 @@ if (ENVIRONMENT === 'development') {
 $config['db'] = [
     'host'     => 'localhost',      // Database host
     'name'     => 'stories_db',     // Database name
-    'user'     => 'stories_user',   // Database username
-    'password' => 'your_secure_password', // Database password (use environment variables in production)
+    'user'     => 'stories_prod_user',   // Production database username
+    'password' => 'Str0ng_Pr0d_P@ssw0rd!', // Production database password
     'charset'  => 'utf8mb4',        // Character set
     'port'     => 3306              // Database port
 ];
@@ -42,13 +42,15 @@ $config['api'] = [
 
 // Security configuration
 $config['security'] = [
-    'jwt_secret'   => 'your_jwt_secret_key', // JWT secret key (use environment variables in production)
+    'jwt_secret'   => 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6', // Production JWT secret key
     'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
     'cors' => [
         'allowed_origins' => [
             'https://storiesfromtheweb.netlify.app', // Production Netlify site
+            'https://api.storiesfromtheweb.org',     // API/Admin site
             'http://localhost:3000',                 // Local development
-            'http://localhost:4321'                  // Astro dev server
+            'http://localhost:4321',                 // Astro dev server
+            'http://localhost:8000'                  // PHP built-in server
         ],
         'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],

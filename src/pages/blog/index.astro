@@ -1,18 +1,18 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromStrapi, type StrapiResponse, type BlogPost } from '../../lib/api';
+import { fetchFromApi, type ApiResponse, type BlogPost } from '../../lib/api';
 import '../../styles/base.css';
 
 // Fetch blog post categories
-const categoriesResponse = await fetchFromStrapi('blog-categories', {
+const categoriesResponse = await fetchFromApi('blog-categories', {
   sort: 'name:asc'
 }) as StrapiResponse<{ name: string }>;
 
 const categories = categoriesResponse.data.map(category => category.attributes.name);
 
 // Fetch blog posts
-const blogPostsResponse = await fetchFromStrapi('blog-posts', {
+const blogPostsResponse = await fetchFromApi('blog-posts', {
   populate: '*',
   sort: 'publishedAt:desc'
 }) as StrapiResponse<BlogPost>;

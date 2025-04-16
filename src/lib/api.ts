@@ -1,23 +1,7 @@
-// Define environment variables type
-interface ImportMetaEnv {
-  STRAPI_URL?: string;
-  STRAPI_TOKEN?: string;
-}
+// Define API response types
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-
-// Augment the ImportMeta interface
-declare global {
-  interface ImportMeta {
-    readonly env: ImportMetaEnv;
-  }
-}
-
-// Define Strapi response types
-export interface StrapiResponse<T> {
-  data: StrapiData<T>[];
+export interface ApiResponse<T> {
+  data: ApiData<T>[];
   meta: {
     pagination: {
       page: number;
@@ -28,12 +12,12 @@ export interface StrapiResponse<T> {
   };
 }
 
-export interface StrapiData<T> {
+export interface ApiData<T> {
   id: number;
   attributes: T;
 }
 
-export interface StrapiImage {
+export interface ApiImage {
   data: {
     id: number;
     attributes: {
@@ -58,17 +42,17 @@ export interface Story {
   publishedAt: string;
   featured: boolean;
   averageRating: number;
-  cover: StrapiImage;
-  author: StrapiResponse<Author>;
-  tags: StrapiResponse<Tag>;
+  cover: ApiImage;
+  author: ApiResponse<Author>;
+  tags: ApiResponse<Tag>;
 }
 
 export interface Author {
   name: string;
   slug: string;
   bio: string;
-  avatar: StrapiImage;
-  stories: StrapiResponse<Story>;
+  avatar: ApiImage;
+  stories: ApiResponse<Story>;
 }
 
 export interface BlogPost {
@@ -77,15 +61,15 @@ export interface BlogPost {
   content: string;
   excerpt: string;
   publishedAt: string;
-  cover: StrapiImage;
-  author: StrapiResponse<Author>;
+  cover: ApiImage;
+  author: ApiResponse<Author>;
 }
 
 export interface DirectoryItem {
   name: string;
   description: string;
   url: string;
-  logo: StrapiImage;
+  logo: ApiImage;
   category: string;
 }
 
@@ -93,7 +77,7 @@ export interface Game {
   title: string;
   description: string;
   url: string;
-  thumbnail: StrapiImage;
+  thumbnail: ApiImage;
   category: string;
 }
 
@@ -101,7 +85,7 @@ export interface AiTool {
   name: string;
   description: string;
   url: string;
-  logo: StrapiImage;
+  logo: ApiImage;
   category: string;
 }
 
@@ -129,7 +113,7 @@ interface ApiParams {
   [key: string]: any;
 }
 
-export const fetchFromStrapi = async (endpoint: string, params: ApiParams = {}) => {
+export const fetchFromApi = async (endpoint: string, params: ApiParams = {}) => {
   try {
     // Build query parameters
     const queryParams = new URLSearchParams();
@@ -174,13 +158,26 @@ export const fetchFromStrapi = async (endpoint: string, params: ApiParams = {}) 
     const res = await fetch(url, { headers });
     
     if (!res.ok) {
-      console.error(`Error fetching from API: ${res.status} ${res.statusText}`);
+      const errorMessage = `Error fetching from API: ${res.status} ${res.statusText}`;
+      console.error(errorMessage);
+      console.error(`URL: ${url}`);
+      console.error(`Headers: ${JSON.stringify(headers)}`);
+      
+      try {
+        const errorResponse = await res.text();
+        console.error(`Error response: ${errorResponse}`);
+      } catch (textError) {
+        console.error('Could not read error response body');
+      }
+      
       throw new Error(`Failed to fetch from API: ${res.status} ${res.statusText}`);
     }
     
     return res.json();
   } catch (error) {
     console.error('Error fetching from API:', error);
+    console.error(`Endpoint: ${endpoint}`);
+    console.error(`Params: ${JSON.stringify(params)}`);
     
     // On error, return empty data
     console.log(`Error fetching from API. Returning empty data for endpoint: ${endpoint}`);

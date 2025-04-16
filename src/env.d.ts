@@ -1,8 +1,8 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
-  readonly STRAPI_URL: string;
-  readonly STRAPI_TOKEN: string;
+  // Define any environment variables here if needed in the future
+  // Currently using hardcoded API_URL in src/lib/api.ts
 }
 
 interface ImportMeta {

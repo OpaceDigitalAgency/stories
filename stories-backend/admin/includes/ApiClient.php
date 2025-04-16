@@ -20,6 +20,11 @@ class ApiClient {
     private $authToken;
     
     /**
+     * @var array Last error details
+     */
+    private $lastError = [];
+    
+    /**
      * Constructor
      * 
      * @param string $apiUrl API URL
@@ -126,7 +131,13 @@ class ApiClient {
         
         // Check for errors
         if (curl_errno($ch)) {
-            error_log('API request error: ' . curl_error($ch));
+            $errorMessage = curl_error($ch);
+            error_log('API request error: ' . $errorMessage);
+            $this->lastError = [
+                'type' => 'curl_error',
+                'message' => $errorMessage,
+                'code' => curl_errno($ch)
+            ];
             curl_close($ch);
             return null;
         }
@@ -139,17 +150,74 @@ class ApiClient {
         
         // Check for JSON parsing errors
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('API response JSON parsing error: ' . json_last_error_msg());
+            $errorMessage = json_last_error_msg();
+            error_log('API response JSON parsing error: ' . $errorMessage);
+            $this->lastError = [
+                'type' => 'json_error',
+                'message' => $errorMessage,
+                'code' => json_last_error()
+            ];
             return null;
         }
         
         // Check for API errors
         if ($httpCode >= 400) {
             $errorMessage = isset($responseData['error']) ? $responseData['error'] : 'Unknown API error';
-            error_log('API error: ' . $errorMessage);
+            $errorDetail = isset($responseData['detail']) ? $responseData['detail'] : '';
+            error_log('API error: ' . $errorMessage . ($errorDetail ? ' - ' . $errorDetail : ''));
+            $this->lastError = [
+                'type' => 'api_error',
+                'message' => $errorMessage,
+                'detail' => $errorDetail,
+                'code' => $httpCode,
+                'response' => $responseData
+            ];
             return null;
         }
         
+        // Clear last error if request was successful
+        $this->lastError = [];
+        
         return $responseData;
+    }
+    
+    /**
+     * Get the last error
+     *
+     * @return array|null Last error details or null if no error
+     */
+    public function getLastError() {
+        return !empty($this->lastError) ? $this->lastError : null;
+    }
+    
+    /**
+     * Get a formatted error message from the last error
+     *
+     * @return string Formatted error message
+     */
+    public function getFormattedError() {
+        if (empty($this->lastError)) {
+            return '';
+        }
+        
+        $error = $this->lastError;
+        
+        switch ($error['type']) {
+            case 'curl_error':
+                return "Connection error: {$error['message']} (Code: {$error['code']})";
+            
+            case 'json_error':
+                return "Response parsing error: {$error['message']}";
+            
+            case 'api_error':
+                $message = "API error: {$error['message']} (Status: {$error['code']})";
+                if (!empty($error['detail'])) {
+                    $message .= " - {$error['detail']}";
+                }
+                return $message;
+            
+            default:
+                return "Unknown error occurred";
+        }
     }
 }

@@ -1,7 +1,7 @@
-import type { Story, Author, Tag, BlogPost, DirectoryItem, Game, AiTool, StrapiResponse, StrapiData } from './api';
+import type { Story, Author, Tag, BlogPost, DirectoryItem, Game, AiTool, ApiResponse, ApiData } from './api';
 
-// Helper function to wrap data in Strapi response format
-const wrapResponse = <T>(data: StrapiData<T>[], page = 1, pageSize = 25): StrapiResponse<T> => ({
+// Helper function to wrap data in API response format
+const wrapResponse = <T>(data: ApiData<T>[], page = 1, pageSize = 25): ApiResponse<T> => ({
   data,
   meta: {
     pagination: {
@@ -13,8 +13,8 @@ const wrapResponse = <T>(data: StrapiData<T>[], page = 1, pageSize = 25): Strapi
   }
 });
 
-// Helper function to wrap attributes in Strapi data format
-const wrapData = <T>(id: number, attributes: T): StrapiData<T> => ({
+// Helper function to wrap attributes in API data format
+const wrapData = <T>(id: number, attributes: T): ApiData<T> => ({
   id,
   attributes
 });
@@ -64,7 +64,7 @@ const createBaseStory = (
   featured: boolean = false,
   averageRating: number = 4.5,
   publishedAt: string = new Date().toISOString()
-): StrapiData<Story> => ({
+): ApiData<Story> => ({
   id,
   attributes: {
     title,

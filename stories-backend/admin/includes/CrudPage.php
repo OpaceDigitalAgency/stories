@@ -334,10 +334,10 @@ class CrudPage extends AdminPage {
         $this->data['entityNamePlural'] = $this->entityNamePlural;
         
         // Process the item data to ensure all expected fields are present
-        $item = $response['data'];
+        $item = isset($response['data']) ? $response['data'] : [];
         
         // Ensure attributes array exists
-        if (!isset($item['attributes']) && !empty($item)) {
+        if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
             // If no attributes array but we have data, create an attributes array
             $item['attributes'] = [];
             
@@ -391,10 +391,10 @@ class CrudPage extends AdminPage {
         $this->data['entityNamePlural'] = $this->entityNamePlural;
         
         // Process the item data to ensure all expected fields are present
-        $item = $response['data'];
+        $item = isset($response['data']) ? $response['data'] : [];
         
         // Ensure attributes array exists
-        if (!isset($item['attributes']) && !empty($item)) {
+        if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
             // If no attributes array but we have data, create an attributes array
             $item['attributes'] = [];
             

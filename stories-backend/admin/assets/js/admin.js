@@ -2,6 +2,7 @@
  * Stories Admin UI JavaScript
  * 
  * This file contains JavaScript functions for the admin UI.
+ * Version: 2.0.0
  */
 
 // Check if jQuery is loaded
@@ -16,6 +17,7 @@ function initJQueryFeatures() {
     // Ensure we wait a moment for jQuery plugins to load
     setTimeout(function() {
         initTagInputs();
+        initDataTables();
         // Add any other jQuery-dependent initializations here
     }, 100);
 }
@@ -41,6 +43,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize date pickers
     initDatePickers();
+    
+    // Initialize modals
+    initModals();
+    
+    // Initialize form feedback
+    initFormFeedback();
+    
+    // Initialize loading indicators
+    initLoadingIndicators();
     
     // Check if jQuery is loaded before initializing jQuery-dependent features
     if (jQueryLoaded()) {
@@ -92,7 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function initTooltips() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            trigger: 'hover'
+        });
     });
 }
 
@@ -109,10 +122,35 @@ function initFormValidation() {
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
+                
+                // Find the first invalid field and focus it
+                const invalidField = form.querySelector(':invalid');
+                if (invalidField) {
+                    invalidField.focus();
+                    
+                    // Show a notification for the error
+                    showNotification('Please correct the errors in the form before submitting.', 'danger');
+                }
+            } else {
+                // Show loading overlay for form submissions
+                showLoading('Processing your request...');
             }
             
             form.classList.add('was-validated');
         }, false);
+    });
+    
+    // Add real-time validation feedback
+    document.querySelectorAll('.form-control, .form-select').forEach(function(input) {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else if (this.value !== '') {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
     });
 }
 
@@ -126,7 +164,7 @@ function initRichTextEditors() {
         document.querySelectorAll('.rich-text-editor').forEach(function(element) {
             ClassicEditor
                 .create(element, {
-                    toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'insertTable', 'undo', 'redo'],
+                    toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'insertTable', 'mediaEmbed', 'undo', 'redo'],
                     heading: {
                         options: [
                             { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
@@ -136,8 +174,20 @@ function initRichTextEditors() {
                         ]
                     }
                 })
+                .then(editor => {
+                    // Store editor instance for later use
+                    element.ckeditor = editor;
+                    
+                    // Add change event listener
+                    editor.model.document.on('change:data', () => {
+                        // Trigger change event on the original textarea
+                        const event = new Event('change', { bubbles: true });
+                        element.dispatchEvent(event);
+                    });
+                })
                 .catch(error => {
-                    console.error(error);
+                    console.error('Error initializing CKEditor:', error);
+                    showNotification('Error initializing rich text editor. Please try reloading the page.', 'danger');
                 });
         });
     }
@@ -149,6 +199,16 @@ function initRichTextEditors() {
 function initMediaUploadPreview() {
     // Get all file inputs with the 'media-upload' class
     document.querySelectorAll('.media-upload').forEach(function(input) {
+        // Create preview container if it doesn't exist
+        let previewContainer = document.querySelector(input.dataset.previewContainer || '#preview-container');
+        if (!previewContainer && input.dataset.preview) {
+            previewContainer = document.createElement('div');
+            previewContainer.id = 'preview-container';
+            previewContainer.className = 'mt-3';
+            input.parentNode.appendChild(previewContainer);
+        }
+        
+        // Add file selection event listener
         input.addEventListener('change', function() {
             // Get the preview element
             var preview = document.querySelector(this.dataset.preview);
@@ -156,21 +216,94 @@ function initMediaUploadPreview() {
             if (preview) {
                 // Check if a file is selected
                 if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const fileType = file.type.split('/')[0];
+                    
+                    // Show loading indicator
+                    preview.src = '';
+                    preview.style.display = 'none';
+                    
+                    if (previewContainer) {
+                        previewContainer.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Processing file...</p></div>';
+                    }
+                    
                     var reader = new FileReader();
                     
                     reader.onload = function(e) {
-                        preview.src = e.target.result;
-                        preview.style.display = 'block';
+                        // Clear loading indicator
+                        if (previewContainer) {
+                            previewContainer.innerHTML = '';
+                        }
+                        
+                        // Handle different file types
+                        if (fileType === 'image') {
+                            preview.src = e.target.result;
+                            preview.style.display = 'block';
+                            
+                            // Add file info
+                            if (previewContainer) {
+                                const fileInfo = document.createElement('div');
+                                fileInfo.className = 'mt-2 text-muted small';
+                                fileInfo.innerHTML = `<strong>File:</strong> ${file.name}<br><strong>Size:</strong> ${formatFileSize(file.size)}<br><strong>Type:</strong> ${file.type}`;
+                                previewContainer.appendChild(preview);
+                                previewContainer.appendChild(fileInfo);
+                            }
+                        } else {
+                            // For non-image files, show file info
+                            if (previewContainer) {
+                                let icon = 'fa-file';
+                                if (fileType === 'video') icon = 'fa-file-video';
+                                else if (fileType === 'audio') icon = 'fa-file-audio';
+                                else if (file.type.includes('pdf')) icon = 'fa-file-pdf';
+                                else if (file.type.includes('word')) icon = 'fa-file-word';
+                                else if (file.type.includes('excel')) icon = 'fa-file-excel';
+                                
+                                previewContainer.innerHTML = `
+                                    <div class="text-center p-4 border rounded">
+                                        <i class="fas ${icon} fa-3x mb-3 text-primary"></i>
+                                        <h5>${file.name}</h5>
+                                        <p class="mb-0 text-muted">${formatFileSize(file.size)} - ${file.type || 'Unknown type'}</p>
+                                    </div>
+                                `;
+                            }
+                        }
                     };
                     
-                    reader.readAsDataURL(this.files[0]);
+                    reader.onerror = function() {
+                        if (previewContainer) {
+                            previewContainer.innerHTML = '<div class="alert alert-danger">Error loading file preview</div>';
+                        }
+                    };
+                    
+                    reader.readAsDataURL(file);
                 } else {
+                    // No file selected, clear preview
                     preview.src = '';
                     preview.style.display = 'none';
+                    
+                    if (previewContainer) {
+                        previewContainer.innerHTML = '';
+                    }
                 }
             }
         });
     });
+}
+
+/**
+ * Format file size in human-readable format
+ * 
+ * @param {number} bytes - File size in bytes
+ * @returns {string} Formatted file size
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
@@ -180,8 +313,176 @@ function initDeleteConfirmations() {
     // Get all delete buttons with the 'delete-confirm' class
     document.querySelectorAll('.delete-confirm').forEach(function(button) {
         button.addEventListener('click', function(event) {
-            if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                event.preventDefault();
+            event.preventDefault();
+            
+            // Get confirmation message
+            const message = this.dataset.confirmMessage || 'Are you sure you want to delete this item? This action cannot be undone.';
+            const itemName = this.dataset.itemName || 'this item';
+            
+            // Set confirmation modal content
+            const modal = document.getElementById('confirmationModal');
+            if (modal) {
+                const confirmMessage = modal.querySelector('#confirmationMessage');
+                if (confirmMessage) {
+                    confirmMessage.innerHTML = message;
+                }
+                
+                const confirmButton = modal.querySelector('#confirmAction');
+                if (confirmButton) {
+                    // Store the original href
+                    confirmButton.dataset.href = this.href;
+                    
+                    // Set up the confirm action
+                    confirmButton.onclick = function() {
+                        showLoading(`Deleting ${itemName}...`);
+                        window.location.href = this.dataset.href;
+                    };
+                }
+                
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            } else {
+                // Fallback to standard confirm dialog
+                if (confirm(message)) {
+                    showLoading(`Deleting ${itemName}...`);
+                    window.location.href = this.href;
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Initialize modals
+ */
+function initModals() {
+    // Handle dynamic content loading in modals
+    document.querySelectorAll('[data-bs-toggle="modal"][data-remote]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const target = this.getAttribute('data-bs-target');
+            const remote = this.getAttribute('data-remote');
+            const modal = document.querySelector(target);
+            
+            if (modal && remote) {
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    // Show loading indicator
+                    modalBody.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Loading content...</p></div>';
+                    
+                    // Load remote content
+                    fetch(remote)
+                        .then(response => response.text())
+                        .then(html => {
+                            modalBody.innerHTML = html;
+                            
+                            // Initialize any form elements in the modal
+                            initFormValidation();
+                            initTooltips();
+                            
+                            // Trigger contentLoaded event
+                            modal.dispatchEvent(new CustomEvent('contentLoaded'));
+                        })
+                        .catch(error => {
+                            modalBody.innerHTML = '<div class="alert alert-danger">Error loading content: ' + error.message + '</div>';
+                        });
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Initialize form feedback
+ */
+function initFormFeedback() {
+    // Add inline validation feedback for form fields
+    document.querySelectorAll('.form-control, .form-select').forEach(function(input) {
+        // Create feedback elements if they don't exist
+        if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('invalid-feedback')) {
+            const invalidFeedback = document.createElement('div');
+            invalidFeedback.className = 'invalid-feedback';
+            input.parentNode.insertBefore(invalidFeedback, input.nextSibling);
+        }
+        
+        if (!input.nextElementSibling.nextElementSibling || !input.nextElementSibling.nextElementSibling.classList.contains('valid-feedback')) {
+            const validFeedback = document.createElement('div');
+            validFeedback.className = 'valid-feedback';
+            validFeedback.textContent = 'Looks good!';
+            input.parentNode.insertBefore(validFeedback, input.nextElementSibling.nextSibling);
+        }
+        
+        // Update invalid feedback message based on validation state
+        input.addEventListener('invalid', function() {
+            const invalidFeedback = this.nextElementSibling;
+            if (invalidFeedback && invalidFeedback.classList.contains('invalid-feedback')) {
+                if (this.validity.valueMissing) {
+                    invalidFeedback.textContent = 'This field is required.';
+                } else if (this.validity.typeMismatch) {
+                    invalidFeedback.textContent = 'Please enter a valid format.';
+                } else if (this.validity.patternMismatch) {
+                    invalidFeedback.textContent = this.dataset.errorPattern || 'Please match the requested format.';
+                } else if (this.validity.tooShort) {
+                    invalidFeedback.textContent = `Please enter at least ${this.minLength} characters.`;
+                } else if (this.validity.tooLong) {
+                    invalidFeedback.textContent = `Please enter no more than ${this.maxLength} characters.`;
+                } else if (this.validity.rangeUnderflow) {
+                    invalidFeedback.textContent = `Please enter a value greater than or equal to ${this.min}.`;
+                } else if (this.validity.rangeOverflow) {
+                    invalidFeedback.textContent = `Please enter a value less than or equal to ${this.max}.`;
+                } else if (this.validity.stepMismatch) {
+                    invalidFeedback.textContent = `Please enter a valid value.`;
+                } else {
+                    invalidFeedback.textContent = this.dataset.errorMessage || 'Please enter a valid value.';
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Initialize loading indicators
+ */
+function initLoadingIndicators() {
+    // Add loading indicators to buttons with the 'btn-loading' class
+    document.querySelectorAll('.btn-loading').forEach(function(button) {
+        button.addEventListener('click', function() {
+            // Don't show loading for buttons that open modals or have other special behaviors
+            if (this.getAttribute('data-bs-toggle') || this.getAttribute('type') === 'button') {
+                return;
+            }
+            
+            // Store original content
+            if (!this.dataset.originalHtml) {
+                this.dataset.originalHtml = this.innerHTML;
+            }
+            
+            // Show loading spinner
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+            this.disabled = true;
+            
+            // For form submissions, show the loading overlay
+            const form = this.closest('form');
+            if (form && form.checkValidity()) {
+                showLoading();
+            }
+        });
+    });
+    
+    // Add loading indicators to forms with the 'form-loading' class
+    document.querySelectorAll('form.form-loading').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (this.checkValidity()) {
+                showLoading();
+                
+                // Disable all buttons
+                this.querySelectorAll('button[type="submit"]').forEach(function(button) {
+                    if (!button.dataset.originalHtml) {
+                        button.dataset.originalHtml = button.innerHTML;
+                    }
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                    button.disabled = true;
+                });
             }
         });
     });
@@ -219,6 +520,49 @@ function initTagInputs() {
 }
 
 /**
+ * Initialize DataTables
+ */
+function initDataTables() {
+    // First check if jQuery is loaded
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded. Cannot initialize DataTables.');
+        return;
+    }
+    
+    // Check if DataTables is loaded
+    if (typeof jQuery.fn.DataTable === 'undefined') {
+        console.warn('DataTables is not loaded. Tables will use default styling.');
+        return;
+    }
+    
+    // Use jQuery safely with a local $ variable
+    jQuery(function($) {
+        try {
+            // Initialize DataTables for tables with the 'datatable' class
+            $('.datatable').each(function() {
+                $(this).DataTable({
+                    responsive: true,
+                    language: {
+                        search: '<i class="fas fa-search"></i>',
+                        searchPlaceholder: 'Search...',
+                        paginate: {
+                            first: '<i class="fas fa-angle-double-left"></i>',
+                            previous: '<i class="fas fa-angle-left"></i>',
+                            next: '<i class="fas fa-angle-right"></i>',
+                            last: '<i class="fas fa-angle-double-right"></i>'
+                        }
+                    }
+                });
+            });
+            
+            console.log('DataTables initialized successfully');
+        } catch (e) {
+            console.error('Error initializing DataTables:', e);
+        }
+    });
+}
+
+/**
  * Initialize date pickers
  */
 function initDatePickers() {
@@ -227,34 +571,63 @@ function initDatePickers() {
         // Initialize Flatpickr for date inputs
         flatpickr('.date-picker', {
             enableTime: false,
-            dateFormat: 'Y-m-d'
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'F j, Y',
+            animate: true
         });
         
         // Initialize Flatpickr for datetime inputs
         flatpickr('.datetime-picker', {
             enableTime: true,
-            dateFormat: 'Y-m-d H:i'
+            dateFormat: 'Y-m-d H:i',
+            altInput: true,
+            altFormat: 'F j, Y at h:i K',
+            animate: true
         });
     }
 }
 
 /**
- * Show loading spinner
+ * Show loading overlay
+ * 
+ * @param {string} message - Optional message to display
  */
-function showSpinner() {
-    var spinner = document.createElement('div');
-    spinner.className = 'spinner-overlay';
-    spinner.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-    document.body.appendChild(spinner);
+function showLoading(message = 'Processing your request...') {
+    // Create loading overlay if it doesn't exist
+    let overlay = document.querySelector('.loading-overlay');
+    
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="spinner-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 loading-message">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    } else {
+        // Update message if overlay already exists
+        const messageEl = overlay.querySelector('.loading-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+        }
+        
+        // Make sure overlay is visible
+        overlay.classList.remove('d-none');
+    }
 }
 
 /**
- * Hide loading spinner
+ * Hide loading overlay
  */
-function hideSpinner() {
-    var spinner = document.querySelector('.spinner-overlay');
-    if (spinner) {
-        spinner.remove();
+function hideLoading() {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.classList.add('d-none');
     }
 }
 
@@ -268,8 +641,8 @@ function hideSpinner() {
  * @param {function} errorCallback - The function to call on error
  */
 function ajaxRequest(url, method, data, successCallback, errorCallback) {
-    // Show loading spinner
-    showSpinner();
+    // Show loading overlay
+    showLoading();
     
     // Create XMLHttpRequest object
     var xhr = new XMLHttpRequest();
@@ -282,12 +655,18 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     // Set up callback
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
-            // Hide loading spinner
-            hideSpinner();
+            // Hide loading overlay
+            hideLoading();
             
             if (xhr.status >= 200 && xhr.status < 300) {
                 // Success
-                var response = JSON.parse(xhr.responseText);
+                var response;
+                try {
+                    response = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    response = xhr.responseText;
+                }
+                
                 if (typeof successCallback === 'function') {
                     successCallback(response);
                 }
@@ -295,7 +674,7 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
                 // Error
                 var error = {
                     status: xhr.status,
-                    message: xhr.statusText
+                    message: xhr.statusText || 'Unknown error'
                 };
                 
                 try {
@@ -310,7 +689,7 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
                 if (typeof errorCallback === 'function') {
                     errorCallback(error);
                 } else {
-                    alert('Error: ' + error.message);
+                    showNotification('Error: ' + error.message, 'danger');
                 }
             }
         }
@@ -327,11 +706,24 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
  * @param {string} type - The type of notification (success, danger, warning, info)
  * @param {number} duration - The duration in milliseconds
  */
-function showNotification(message, type = 'success', duration = 3000) {
+function showNotification(message, type = 'success', duration = 5000) {
     // Create notification element
     var notification = document.createElement('div');
     notification.className = 'alert alert-' + type + ' alert-dismissible fade show notification';
-    notification.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+    
+    // Add icon based on type
+    let icon = 'fa-check-circle';
+    if (type === 'danger') icon = 'fa-exclamation-circle';
+    else if (type === 'warning') icon = 'fa-exclamation-triangle';
+    else if (type === 'info') icon = 'fa-info-circle';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas ${icon} me-2"></i>
+            <div>${message}</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
     
     // Add notification to the container
     var container = document.querySelector('.notification-container');
@@ -350,4 +742,9 @@ function showNotification(message, type = 'success', duration = 3000) {
     setTimeout(function() {
         alert.close();
     }, duration);
+    
+    // Remove from DOM after animation
+    notification.addEventListener('closed.bs.alert', function() {
+        notification.remove();
+    });
 }

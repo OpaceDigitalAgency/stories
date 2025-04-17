@@ -136,17 +136,37 @@ class DashboardPage extends AdminPage {
         // Set statistics
         $this->data['stats'] = $stats;
         
-        // Get recent stories
-        $recentStoriesResponse = $apiClient->get('stories', [
-            'pageSize' => 5,
-            'sort' => '-publishedAt'
-        ]);
+        // Function to get recent items for a content type
+        $getRecentItems = function($endpoint, $pageSize = 5) use ($apiClient) {
+            $response = $apiClient->get($endpoint, [
+                'pageSize' => $pageSize,
+                'sort' => '-publishedAt'
+            ]);
+            
+            if ($response && isset($response['data'])) {
+                return $response['data'];
+            }
+            
+            return [];
+        };
         
-        if ($recentStoriesResponse && isset($recentStoriesResponse['data'])) {
-            $this->data['recentStories'] = $recentStoriesResponse['data'];
-        } else {
-            $this->data['recentStories'] = [];
-        }
+        // Get recent items for all content types
+        $this->data['recentStories'] = $getRecentItems('stories');
+        $this->data['recentAuthors'] = $getRecentItems('authors');
+        $this->data['recentBlogPosts'] = $getRecentItems('blog-posts');
+        $this->data['recentDirectoryItems'] = $getRecentItems('directory-items');
+        $this->data['recentGames'] = $getRecentItems('games');
+        $this->data['recentAiTools'] = $getRecentItems('ai-tools');
+        $this->data['recentTags'] = $getRecentItems('tags');
+        
+        // Get items that need attention (for example, items pending moderation)
+        // This is a placeholder - you would need to implement the actual logic based on your requirements
+        $this->data['needsAttention'] = [
+            'stories' => [], // Items would be populated based on your business logic
+            'blog_posts' => [],
+            'directory_items' => [],
+            // Add other content types as needed
+        ];
     }
     
     /**

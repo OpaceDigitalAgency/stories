@@ -61,8 +61,14 @@ $config['media'] = [
     'upload_dir'   => BASE_PATH . '/uploads/',
     'max_file_size'=> 5242880, // 5MB
     'allowed_types'=> ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    'base_url'     => ADMIN_URL . '/uploads/'
+    'base_url'     => '/admin/uploads/'  // Use absolute path for base_url
 ];
+
+// Ensure uploads directory exists with proper permissions
+$uploadsDir = BASE_PATH . '/uploads/';
+if (!is_dir($uploadsDir)) {
+    mkdir($uploadsDir, 0755, true);
+}
 
 // Session configuration
 $config['session'] = [
@@ -73,5 +79,8 @@ $config['session'] = [
     'secure'       => true, // Enabled for production with HTTPS
     'httponly'     => true
 ];
+
+// Make config available globally
+$GLOBALS['config'] = $config;
 
 return $config;

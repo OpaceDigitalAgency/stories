@@ -78,7 +78,10 @@
                                         <?php if ($field['list'] ?? true): ?>
                                             <td>
                                                 <?php
-                                                    $value = $item['attributes'][$field['name']] ?? '';
+                                                    // Get field value with proper fallback
+                                                    $value = isset($item['attributes']) && isset($item['attributes'][$field['name']])
+                                                        ? $item['attributes'][$field['name']]
+                                                        : ($item[$field['name']] ?? '');
                                                     
                                                     // Format value based on field type
                                                     switch ($field['type']) {
@@ -86,38 +89,77 @@
                                                             echo $value ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>';
                                                             break;
                                                         case 'date':
-                                                            echo $value ? date('M d, Y', strtotime($value)) : '';
+                                                            echo $value ? date('M d, Y', strtotime($value)) : '<span class="text-muted">Not set</span>';
                                                             break;
                                                         case 'datetime':
-                                                            echo $value ? date('M d, Y H:i', strtotime($value)) : '';
+                                                            echo $value ? date('M d, Y H:i', strtotime($value)) : '<span class="text-muted">Not set</span>';
                                                             break;
                                                         case 'image':
                                                             if ($value && isset($value['data']['attributes']['url'])) {
                                                                 echo '<img src="' . htmlspecialchars($value['data']['attributes']['url']) . '" alt="' . htmlspecialchars($value['data']['attributes']['alternativeText'] ?? '') . '" class="media-thumbnail">';
+                                                            } else if ($value && isset($value['url'])) {
+                                                                echo '<img src="' . htmlspecialchars($value['url']) . '" alt="' . htmlspecialchars($value['alternativeText'] ?? '') . '" class="media-thumbnail">';
                                                             }
                                                             break;
                                                         case 'relation':
                                                             if (isset($value['data']) && !empty($value['data'])) {
                                                                 if (is_array($value['data']) && isset($value['data'][0])) {
-                                                                    echo htmlspecialchars($value['data'][0]['attributes']['name'] ?? $value['data'][0]['attributes']['title'] ?? '');
+                                                                    // Handle array of relations
+                                                                    $relName = $value['data'][0]['attributes']['name'] ??
+                                                                              $value['data'][0]['attributes']['title'] ??
+                                                                              $value['data'][0]['name'] ??
+                                                                              $value['data'][0]['title'] ??
+                                                                              'Unnamed';
+                                                                    echo htmlspecialchars($relName);
                                                                 } else {
-                                                                    echo htmlspecialchars($value['data']['attributes']['name'] ?? $value['data']['attributes']['title'] ?? '');
+                                                                    // Handle single relation
+                                                                    $relName = $value['data']['attributes']['name'] ??
+                                                                              $value['data']['attributes']['title'] ??
+                                                                              $value['data']['name'] ??
+                                                                              $value['data']['title'] ??
+                                                                              'Unnamed';
+                                                                    echo htmlspecialchars($relName);
                                                                 }
+                                                            } else if (is_array($value) && !empty($value)) {
+                                                                // Direct array without data wrapper
+                                                                if (isset($value[0])) {
+                                                                    $relName = $value[0]['attributes']['name'] ??
+                                                                              $value[0]['attributes']['title'] ??
+                                                                              $value[0]['name'] ??
+                                                                              $value[0]['title'] ??
+                                                                              'Unnamed';
+                                                                    echo htmlspecialchars($relName);
+                                                                } else {
+                                                                    $relName = $value['attributes']['name'] ??
+                                                                              $value['attributes']['title'] ??
+                                                                              $value['name'] ??
+                                                                              $value['title'] ??
+                                                                              'Unnamed';
+                                                                    echo htmlspecialchars($relName);
+                                                                }
+                                                            } else {
+                                                                echo '<span class="text-muted">No data</span>';
                                                             }
                                                             break;
                                                         case 'array':
                                                             if (is_array($value)) {
-                                                                echo count($value);
-                                                            } else {
+                                                                echo count($value) . ' ' . (count($value) == 1 ? 'item' : 'items');
+                                                            } else if (is_string($value) && !empty($value)) {
                                                                 echo htmlspecialchars($value);
+                                                            } else {
+                                                                echo '<span class="text-muted">Empty</span>';
                                                             }
                                                             break;
                                                         default:
                                                             // Truncate long text
                                                             if (is_string($value) && strlen($value) > 100) {
                                                                 echo htmlspecialchars(substr($value, 0, 100)) . '...';
-                                                            } else {
+                                                            } else if (is_string($value) && !empty($value)) {
                                                                 echo htmlspecialchars($value);
+                                                            } else if (is_numeric($value)) {
+                                                                echo htmlspecialchars((string)$value);
+                                                            } else {
+                                                                echo '<span class="text-muted">Not set</span>';
                                                             }
                                                             break;
                                                     }

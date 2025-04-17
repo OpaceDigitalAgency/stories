@@ -40,14 +40,38 @@ class FileUpload {
      * @param array $config Media configuration
      */
     public function __construct($config) {
+        // Debug: Check if config is valid
+        if (!is_array($config)) {
+            throw new Exception("Invalid configuration: Not an array");
+        }
+        
+        // Check required configuration keys
+        $requiredKeys = ['allowed_types', 'max_file_size', 'upload_dir', 'base_url'];
+        foreach ($requiredKeys as $key) {
+            if (!isset($config[$key])) {
+                throw new Exception("Missing required configuration key: $key");
+            }
+        }
+        
         $this->allowedTypes = $config['allowed_types'];
         $this->maxSize = $config['max_file_size'];
         $this->uploadDir = $config['upload_dir'];
         $this->baseUrl = $config['base_url'];
         
+        // Debug: Print upload directory
+        error_log("Upload directory: " . $this->uploadDir);
+        error_log("Base URL: " . $this->baseUrl);
+        
         // Create upload directory if it doesn't exist
         if (!is_dir($this->uploadDir)) {
-            mkdir($this->uploadDir, 0755, true);
+            if (!mkdir($this->uploadDir, 0755, true)) {
+                throw new Exception("Failed to create upload directory: " . $this->uploadDir);
+            }
+        }
+        
+        // Check if upload directory is writable
+        if (!is_writable($this->uploadDir)) {
+            throw new Exception("Upload directory is not writable: " . $this->uploadDir);
         }
     }
     

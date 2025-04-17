@@ -11,6 +11,13 @@
 - Build an admin interface for content management
 
 ## Current Issues
+- Admin interface UX/UI and data issues:
+  - Media page not working (HTTP ERROR 500)
+  - Main dashboard needs to show all recent content types and be more intuitive
+  - Data is missing in content type admin pages (e.g., title, author information)
+  - Overall design and usability needs improvement across all admin pages
+
+## Previous Issues (Fixed)
 - PHP API returning HTTP 500 errors with blank bodies due to:
   - Autoloader implementation issues:
     - Not properly requiring class files even with correct case-matched paths

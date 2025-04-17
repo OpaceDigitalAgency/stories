@@ -8,6 +8,10 @@
  * @version 1.0.0
  */
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Include required files
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/Database.php';
@@ -257,8 +261,13 @@ class MediaPage extends AdminPage {
             return;
         }
         
+        // Debug: Print media configuration
+        if (!isset($GLOBALS['config']['media'])) {
+            die("Media configuration not found in global config");
+        }
+        
         // Create file upload instance
-        $fileUpload = new FileUpload($this->config['media']);
+        $fileUpload = new FileUpload($GLOBALS['config']['media']);
         
         // Upload file
         $file = $fileUpload->upload(
@@ -289,8 +298,13 @@ class MediaPage extends AdminPage {
             return;
         }
         
+        // Debug: Print media configuration
+        if (!isset($GLOBALS['config']['media'])) {
+            die("Media configuration not found in global config");
+        }
+        
         // Create file upload instance
-        $fileUpload = new FileUpload($this->config['media']);
+        $fileUpload = new FileUpload($GLOBALS['config']['media']);
         
         // Delete file
         if ($fileUpload->delete($id)) {

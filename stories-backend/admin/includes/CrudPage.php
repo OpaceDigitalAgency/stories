@@ -210,8 +210,41 @@ class CrudPage extends AdminPage {
         }
         
         // Set data
-        $this->data['items'] = $response ? $response['data'] : [];
-        $this->data['pagination'] = $response ? $response['meta']['pagination'] : [
+        $items = $response ? $response['data'] : [];
+        
+        // Process each item to ensure consistent data structure
+        foreach ($items as &$item) {
+            // Ensure attributes array exists
+            if (!isset($item['attributes']) && !empty($item)) {
+                // If no attributes array but we have data, create an attributes array
+                $item['attributes'] = [];
+                
+                // Move any non-special fields to attributes
+                foreach ($item as $key => $value) {
+                    if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships'])) {
+                        $item['attributes'][$key] = $value;
+                    }
+                }
+            }
+            
+            // Process relation fields
+            foreach ($this->fields as $field) {
+                if ($field['type'] === 'relation' && !isset($item['attributes'][$field['name']])) {
+                    // Check if the relation exists in a different format
+                    if (isset($item[$field['name']])) {
+                        $item['attributes'][$field['name']] = $item[$field['name']];
+                    }
+                }
+            }
+        }
+        
+        $this->data['items'] = $items;
+        $this->data['pagination'] = $response ? ($response['meta']['pagination'] ?? [
+            'page' => $page,
+            'pageSize' => $pageSize,
+            'pageCount' => 0,
+            'total' => 0
+        ]) : [
             'page' => $page,
             'pageSize' => $pageSize,
             'pageCount' => 0,
@@ -271,7 +304,34 @@ class CrudPage extends AdminPage {
         $this->data['requiredFields'] = $this->requiredFields;
         $this->data['entityName'] = $this->entityName;
         $this->data['entityNamePlural'] = $this->entityNamePlural;
-        $this->data['item'] = $response['data'];
+        
+        // Process the item data to ensure all expected fields are present
+        $item = $response['data'];
+        
+        // Ensure attributes array exists
+        if (!isset($item['attributes']) && !empty($item)) {
+            // If no attributes array but we have data, create an attributes array
+            $item['attributes'] = [];
+            
+            // Move any non-special fields to attributes
+            foreach ($item as $key => $value) {
+                if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships'])) {
+                    $item['attributes'][$key] = $value;
+                }
+            }
+        }
+        
+        // Process relation fields
+        foreach ($this->fields as $field) {
+            if ($field['type'] === 'relation' && !isset($item['attributes'][$field['name']])) {
+                // Check if the relation exists in a different format
+                if (isset($item[$field['name']])) {
+                    $item['attributes'][$field['name']] = $item[$field['name']];
+                }
+            }
+        }
+        
+        $this->data['item'] = $item;
     }
     
     /**
@@ -301,7 +361,34 @@ class CrudPage extends AdminPage {
         $this->data['fields'] = $this->fields;
         $this->data['entityName'] = $this->entityName;
         $this->data['entityNamePlural'] = $this->entityNamePlural;
-        $this->data['item'] = $response['data'];
+        
+        // Process the item data to ensure all expected fields are present
+        $item = $response['data'];
+        
+        // Ensure attributes array exists
+        if (!isset($item['attributes']) && !empty($item)) {
+            // If no attributes array but we have data, create an attributes array
+            $item['attributes'] = [];
+            
+            // Move any non-special fields to attributes
+            foreach ($item as $key => $value) {
+                if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships'])) {
+                    $item['attributes'][$key] = $value;
+                }
+            }
+        }
+        
+        // Process relation fields
+        foreach ($this->fields as $field) {
+            if ($field['type'] === 'relation' && !isset($item['attributes'][$field['name']])) {
+                // Check if the relation exists in a different format
+                if (isset($item[$field['name']])) {
+                    $item['attributes'][$field['name']] = $item[$field['name']];
+                }
+            }
+        }
+        
+        $this->data['item'] = $item;
     }
     
     /**
@@ -330,7 +417,34 @@ class CrudPage extends AdminPage {
         
         $this->data['entityName'] = $this->entityName;
         $this->data['entityNamePlural'] = $this->entityNamePlural;
-        $this->data['item'] = $response['data'];
+        
+        // Process the item data to ensure all expected fields are present
+        $item = $response['data'];
+        
+        // Ensure attributes array exists
+        if (!isset($item['attributes']) && !empty($item)) {
+            // If no attributes array but we have data, create an attributes array
+            $item['attributes'] = [];
+            
+            // Move any non-special fields to attributes
+            foreach ($item as $key => $value) {
+                if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships'])) {
+                    $item['attributes'][$key] = $value;
+                }
+            }
+        }
+        
+        // Process relation fields
+        foreach ($this->fields as $field) {
+            if ($field['type'] === 'relation' && !isset($item['attributes'][$field['name']])) {
+                // Check if the relation exists in a different format
+                if (isset($item[$field['name']])) {
+                    $item['attributes'][$field['name']] = $item[$field['name']];
+                }
+            }
+        }
+        
+        $this->data['item'] = $item;
     }
     
     /**

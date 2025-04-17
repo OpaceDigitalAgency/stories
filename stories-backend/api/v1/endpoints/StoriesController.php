@@ -234,8 +234,10 @@ class StoriesController extends BaseController {
                 'tags' => $simpleTags
             ];
             
-            // Send response
-            Response::sendSuccess(['data' => $formattedStory]);
+            // Send response directly to avoid double-wrapping in data key
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['data' => $formattedStory, 'meta' => []]);
+            exit;
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch story: ' . $e->getMessage());
         }
@@ -347,9 +349,97 @@ class StoriesController extends BaseController {
             // Commit transaction
             $this->db->commit();
             
-            // Return the created story
+            // Get the created story
             $this->params['slug'] = $slug;
-            $this->show();
+            
+            // Get story by identifier
+            $query = "SELECT
+                s.id, s.title, s.slug, s.excerpt, s.content, s.published_at as publishedAt,
+                s.featured, s.average_rating as averageRating, s.review_count as reviewCount,
+                s.estimated_reading_time as estimatedReadingTime, s.is_sponsored as isSponsored,
+                s.age_group as ageGroup, s.needs_moderation as needsModeration,
+                s.is_self_published as isSelfPublished, s.is_ai_enhanced as isAIEnhanced,
+                s.created_at as createdAt, s.updated_at as updatedAt,
+                a.id as authorId, a.name as authorName, a.slug as authorSlug
+                FROM stories s
+                LEFT JOIN story_authors sa ON s.id = sa.story_id
+                LEFT JOIN authors a ON sa.author_id = a.id
+                WHERE s.slug = ? LIMIT 1";
+            
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                $this->notFound('Story not found');
+                return;
+            }
+            
+            $story = $stmt->fetch();
+            $storyId = $story['id'];
+            
+            // Get basic story author info
+            $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
+                JOIN story_authors sa ON a.id = sa.author_id
+                WHERE sa.story_id = ? LIMIT 1";
+            $authorStmt = $this->db->query($authorQuery, [$storyId]);
+            $author = $authorStmt->fetch();
+            
+            // Get basic tag info
+            $tagsQuery = "SELECT t.id, t.name FROM tags t
+                JOIN story_tags st ON t.id = st.tag_id
+                WHERE st.story_id = ?";
+            $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
+            $tags = $tagsStmt->fetchAll();
+            
+            // Simplify tag structure
+            $simpleTags = [];
+            foreach ($tags as $tag) {
+                $simpleTags[] = [
+                    'id' => $tag['id'],
+                    'name' => $tag['name']
+                ];
+            }
+            
+            // Get cover URL if exists
+            $coverUrl = null;
+            $coverQuery = "SELECT url FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
+            $coverStmt = $this->db->query($coverQuery, [$storyId]);
+            $cover = $coverStmt->fetch();
+            if ($cover) {
+                $coverUrl = $cover['url'];
+            }
+            
+            // Build a simplified story structure
+            $formattedStory = [
+                'id' => $storyId,
+                'title' => $story['title'],
+                'slug' => $story['slug'],
+                'excerpt' => $story['excerpt'],
+                'content' => $story['content'],
+                'publishedAt' => $story['publishedAt'],
+                'featured' => (bool)$story['featured'],
+                'averageRating' => (float)$story['averageRating'],
+                'reviewCount' => (int)$story['reviewCount'],
+                'estimatedReadingTime' => $story['estimatedReadingTime'],
+                'isSponsored' => (bool)$story['isSponsored'],
+                'ageGroup' => $story['ageGroup'],
+                'needsModeration' => (bool)$story['needsModeration'],
+                'isSelfPublished' => (bool)$story['isSelfPublished'],
+                'isAIEnhanced' => (bool)$story['isAIEnhanced'],
+                'createdAt' => $story['createdAt'],
+                'updatedAt' => $story['updatedAt'],
+                'coverUrl' => $coverUrl,
+                'author' => $author ? [
+                    'id' => $author['id'],
+                    'name' => $author['name'],
+                    'slug' => $author['slug']
+                ] : null,
+                'tags' => $simpleTags
+            ];
+            
+            // Send response directly to avoid double-wrapping in data key
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['data' => $formattedStory, 'meta' => []]);
+            exit;
         } catch (\Exception $e) {
             // Rollback transaction
             $this->db->rollback();
@@ -439,13 +529,100 @@ class StoriesController extends BaseController {
                 $this->db->query($query, $params);
             }
             
-            // Return the updated story
+            // Get the updated story
             $query = "SELECT slug FROM stories WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$storyId]);
             $updatedStory = $stmt->fetch();
+            $slug = $updatedStory['slug'];
             
-            $this->params['slug'] = $updatedStory['slug'];
-            $this->show();
+            // Get story by identifier
+            $query = "SELECT
+                s.id, s.title, s.slug, s.excerpt, s.content, s.published_at as publishedAt,
+                s.featured, s.average_rating as averageRating, s.review_count as reviewCount,
+                s.estimated_reading_time as estimatedReadingTime, s.is_sponsored as isSponsored,
+                s.age_group as ageGroup, s.needs_moderation as needsModeration,
+                s.is_self_published as isSelfPublished, s.is_ai_enhanced as isAIEnhanced,
+                s.created_at as createdAt, s.updated_at as updatedAt,
+                a.id as authorId, a.name as authorName, a.slug as authorSlug
+                FROM stories s
+                LEFT JOIN story_authors sa ON s.id = sa.story_id
+                LEFT JOIN authors a ON sa.author_id = a.id
+                WHERE s.slug = ? LIMIT 1";
+            
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                $this->notFound('Story not found');
+                return;
+            }
+            
+            $story = $stmt->fetch();
+            $storyId = $story['id'];
+            
+            // Get basic story author info
+            $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
+                JOIN story_authors sa ON a.id = sa.author_id
+                WHERE sa.story_id = ? LIMIT 1";
+            $authorStmt = $this->db->query($authorQuery, [$storyId]);
+            $author = $authorStmt->fetch();
+            
+            // Get basic tag info
+            $tagsQuery = "SELECT t.id, t.name FROM tags t
+                JOIN story_tags st ON t.id = st.tag_id
+                WHERE st.story_id = ?";
+            $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
+            $tags = $tagsStmt->fetchAll();
+            
+            // Simplify tag structure
+            $simpleTags = [];
+            foreach ($tags as $tag) {
+                $simpleTags[] = [
+                    'id' => $tag['id'],
+                    'name' => $tag['name']
+                ];
+            }
+            
+            // Get cover URL if exists
+            $coverUrl = null;
+            $coverQuery = "SELECT url FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
+            $coverStmt = $this->db->query($coverQuery, [$storyId]);
+            $cover = $coverStmt->fetch();
+            if ($cover) {
+                $coverUrl = $cover['url'];
+            }
+            
+            // Build a simplified story structure
+            $formattedStory = [
+                'id' => $storyId,
+                'title' => $story['title'],
+                'slug' => $story['slug'],
+                'excerpt' => $story['excerpt'],
+                'content' => $story['content'],
+                'publishedAt' => $story['publishedAt'],
+                'featured' => (bool)$story['featured'],
+                'averageRating' => (float)$story['averageRating'],
+                'reviewCount' => (int)$story['reviewCount'],
+                'estimatedReadingTime' => $story['estimatedReadingTime'],
+                'isSponsored' => (bool)$story['isSponsored'],
+                'ageGroup' => $story['ageGroup'],
+                'needsModeration' => (bool)$story['needsModeration'],
+                'isSelfPublished' => (bool)$story['isSelfPublished'],
+                'isAIEnhanced' => (bool)$story['isAIEnhanced'],
+                'createdAt' => $story['createdAt'],
+                'updatedAt' => $story['updatedAt'],
+                'coverUrl' => $coverUrl,
+                'author' => $author ? [
+                    'id' => $author['id'],
+                    'name' => $author['name'],
+                    'slug' => $author['slug']
+                ] : null,
+                'tags' => $simpleTags
+            ];
+            
+            // Send response directly to avoid double-wrapping in data key
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['data' => $formattedStory, 'meta' => []]);
+            exit;
         } catch (\Exception $e) {
             $this->serverError('Failed to update story: ' . $e->getMessage());
         }

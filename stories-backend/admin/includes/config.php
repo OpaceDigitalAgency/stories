@@ -51,10 +51,10 @@ if (!defined('ADMIN_ASSETS_URL')) {
     define('ADMIN_ASSETS_URL', '/admin');
 }
 if (!defined('API_URL')) {
-    // Use absolute URL for API server
+    // Use relative URL for API server to avoid cross-domain issues
     if (ENVIRONMENT === 'development') {
-        // For local development
-        define('API_URL', 'http://localhost/stories-backend/api/v1');
+        // For local development - use relative path
+        define('API_URL', '../api/v1');
     } else {
         // For production
         define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');

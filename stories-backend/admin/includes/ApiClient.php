@@ -131,8 +131,13 @@ class ApiClient {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         }
         
-        // Execute request
+        // Execute request with output capture
+        ob_start();                     // capture anything printed by the API
         $response = curl_exec($ch);
+        $leak = ob_get_clean();
+        if ($leak) {
+            error_log('[STRAY OUTPUT] ' . $leak);
+        }
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         
         // Check for errors

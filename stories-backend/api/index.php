@@ -203,8 +203,16 @@ $router->post('tags', '\StoriesAPI\Endpoints\TagsController', 'create', [new \St
 $router->put('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->delete('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 
-// Handle the request
-$router->handle();
+// Handle the request with try/catch to squash any PHP fatal into JSON
+try {
+    $router->handle();
+} catch (Throwable $e) {
+    \StoriesAPI\Utils\Response::sendError(
+        'Internal server error',
+        500,
+        ['exception' => $e->getMessage()]
+    );
+}
 
 // Clean the output buffer and ensure only JSON is sent
 $output = ob_get_clean();

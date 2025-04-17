@@ -51,14 +51,9 @@ if (!defined('ADMIN_ASSETS_URL')) {
     define('ADMIN_ASSETS_URL', '/admin');
 }
 if (!defined('API_URL')) {
-    // Use hardcoded URL for simplicity and reliability
-    if (ENVIRONMENT === 'development') {
-        // For local development - use fixed URL
-        define('API_URL', 'http://localhost/stories-backend/api/v1');
-    } else {
-        // For production - fix double slash issue
-        define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
-    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    define('API_URL', $scheme . '://' . $host . '/api/v1');
 }
 
 // Database configuration

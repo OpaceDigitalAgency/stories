@@ -1,7 +1,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">
-            <?php echo $item && isset($item['attributes']['id']) ? 'Edit ' : 'Create '; ?><?php echo htmlspecialchars($entityName); ?>
+            <?php echo $item && isset($item['id']) ? 'Edit ' : 'Create '; ?><?php echo htmlspecialchars($entityName); ?>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-sm btn-outline-secondary">
@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['attributes']['id']) ? 'edit&id=' . $item['attributes']['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo $activeMenu; ?>-form">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo $activeMenu; ?>-form">
                 <?php foreach ($fields as $field): ?>
                     <?php if ($field['form'] ?? true): ?>
                         <div class="mb-3">
@@ -157,7 +157,7 @@
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
                     <button type="submit" class="btn btn-primary btn-loading">
-                        <span class="button-text"><?php echo $item && isset($item['attributes']['id']) ? 'Update' : 'Create'; ?> <?php echo htmlspecialchars($entityName); ?></span>
+                        <span class="button-text"><?php echo $item && isset($item['id']) ? 'Update' : 'Create'; ?> <?php echo htmlspecialchars($entityName); ?></span>
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                     </button>
                 </div>

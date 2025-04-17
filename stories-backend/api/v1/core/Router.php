@@ -216,8 +216,8 @@ class Router {
         try {
             $controller = new $controllerClass($this->config);
             
-            // Set URL parameters
-            $controller->params = $params;
+            // Set URL parameters using the setter method
+            $controller->setParams($params);
             
             // Call controller action
             $action = $matchedRoute['action'];

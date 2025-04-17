@@ -247,4 +247,13 @@ class BaseController {
     protected function serverError($message = 'Internal server error') {
         Response::sendError($message, 500);
     }
+    
+    /**
+     * Set URL parameters
+     *
+     * @param array $params URL parameters
+     */
+    public function setParams($params) {
+        $this->params = $params;
+    }
 }

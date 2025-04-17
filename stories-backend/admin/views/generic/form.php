@@ -4,7 +4,7 @@
             <?php echo $item && isset($item['id']) ? 'Edit ' : 'Create '; ?><?php echo htmlspecialchars($entityName); ?>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-sm btn-outline-secondary">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
         </div>
@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo strtolower($entityName); ?>-form">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo strtolower($entityName); ?>-form">
                 <?php foreach ($fields as $field): ?>
                     <?php if ($field['form'] ?? true): ?>
                         <div class="mb-3">
@@ -151,7 +151,7 @@
                 <?php endforeach; ?>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                    <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
                     <button type="submit" class="btn btn-primary btn-loading">
                         <span class="button-text"><?php echo $item && isset($item['id']) ? 'Update' : 'Create'; ?> <?php echo htmlspecialchars($entityName); ?></span>
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>

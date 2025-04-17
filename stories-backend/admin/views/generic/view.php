@@ -4,13 +4,13 @@
             <?php echo htmlspecialchars($entityName); ?> Details
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-sm btn-outline-secondary me-2">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary me-2">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary me-2">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm">
                 <i class="fas fa-trash"></i> Delete
             </a>
         </div>

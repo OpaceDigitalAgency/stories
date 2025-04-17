@@ -2,7 +2,7 @@
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2"><?php echo htmlspecialchars($entityNamePlural); ?></h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=create'; ?>" class="btn btn-sm btn-primary">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=create'; ?>" class="btn btn-sm btn-primary">
                 <i class="fas fa-plus"></i> Add <?php echo htmlspecialchars($entityName); ?>
             </a>
         </div>
@@ -11,7 +11,7 @@
     <!-- Search and Filters -->
     <div class="card mb-4">
         <div class="card-body">
-            <form action="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" method="get" class="row g-3">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" method="get" class="row g-3">
                 <div class="col-md-6">
                     <div class="input-group">
                         <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="<?php echo htmlspecialchars($search); ?>">
@@ -32,7 +32,7 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-outline-secondary w-100">
+                    <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-outline-secondary w-100">
                         <i class="fas fa-sync-alt"></i> Reset
                     </a>
                 </div>
@@ -56,7 +56,7 @@
                                     <?php if ($field['list'] ?? true): ?>
                                         <th>
                                             <?php if (in_array($field['name'], $sortableFields ?? [])): ?>
-                                                <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?sort=' . $field['name'] . '&direction=' . ($sort['field'] == $field['name'] && $sort['direction'] == 'asc' ? 'desc' : 'asc') . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>" class="text-decoration-none text-dark">
+                                                <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?sort=' . $field['name'] . '&direction=' . ($sort['field'] == $field['name'] && $sort['direction'] == 'asc' ? 'desc' : 'asc') . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>" class="text-decoration-none text-dark">
                                                     <?php echo htmlspecialchars($field['label']); ?>
                                                     <?php if ($sort['field'] == $field['name']): ?>
                                                         <i class="fas fa-sort-<?php echo $sort['direction'] == 'asc' ? 'up' : 'down'; ?>"></i>
@@ -169,13 +169,13 @@
                                     <?php endforeach; ?>
                                     <td class="table-actions">
                                         <div class="btn-group" role="group">
-                                            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=view&id=' . $item['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=view&id=' . $item['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
                                                 <i class="fas fa-eye me-1"></i> View
                                             </a>
-                                            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
                                                 <i class="fas fa-edit me-1"></i> Edit
                                             </a>
-                                            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </a>
                                         </div>
@@ -192,7 +192,7 @@
                         <ul class="pagination justify-content-center mt-4">
                             <?php if ($pagination['page'] > 1): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?page=' . ($pagination['page'] - 1) . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">
+                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?page=' . ($pagination['page'] - 1) . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">
                                         <i class="fas fa-chevron-left"></i> Previous
                                     </a>
                                 </li>
@@ -212,7 +212,7 @@
 
                             <?php if ($startPage > 1): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?page=1&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">1</a>
+                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?page=1&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">1</a>
                                 </li>
                                 <?php if ($startPage > 2): ?>
                                     <li class="page-item disabled">
@@ -223,7 +223,7 @@
 
                             <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
                                 <li class="page-item <?php echo $i == $pagination['page'] ? 'active' : ''; ?>">
-                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?page=' . $i . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>"><?php echo $i; ?></a>
+                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?page=' . $i . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>"><?php echo $i; ?></a>
                                 </li>
                             <?php endfor; ?>
 
@@ -234,13 +234,13 @@
                                     </li>
                                 <?php endif; ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?page=' . $pagination['pageCount'] . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>"><?php echo $pagination['pageCount']; ?></a>
+                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?page=' . $pagination['pageCount'] . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>"><?php echo $pagination['pageCount']; ?></a>
                                 </li>
                             <?php endif; ?>
 
                             <?php if ($pagination['page'] < $pagination['pageCount']): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?page=' . ($pagination['page'] + 1) . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">
+                                    <a class="page-link" href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?page=' . ($pagination['page'] + 1) . '&sort=' . $sort['field'] . '&direction=' . $sort['direction'] . '&search=' . urlencode($search) . '&pageSize=' . $pagination['pageSize']; ?>">
                                         Next <i class="fas fa-chevron-right"></i>
                                     </a>
                                 </li>

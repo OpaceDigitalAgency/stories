@@ -4,7 +4,7 @@
             Delete <?php echo htmlspecialchars($entityName); ?>
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-sm btn-outline-secondary">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
         </div>
@@ -113,9 +113,9 @@
                 </div>
             </div>
 
-            <form action="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=delete&id=' . $item['id']; ?>" method="post">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" method="post">
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                    <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Delete <?php echo htmlspecialchars($entityName); ?>
                     </button>

@@ -77,6 +77,9 @@ class CrudPage extends AdminPage {
         // Get session messages
         $this->getSessionErrors();
         $this->getSessionSuccess();
+        
+        // Expose slug to all views
+        $this->data['slug'] = $this->activeMenu;
     }
     
     /**

@@ -14,7 +14,7 @@
         <div class="card-body">
             <div class="alert alert-danger">
                 <h4 class="alert-heading">Warning!</h4>
-                <p>Are you sure you want to delete this <?php echo htmlspecialchars(strtolower($entityName)); ?>? This action cannot be undone.</p>
+                <p>Are you sure you want to delete this <?php echo htmlspecialchars(strtolower($activeMenu)); ?>? This action cannot be undone.</p>
             </div>
 
             <div class="card mb-4">

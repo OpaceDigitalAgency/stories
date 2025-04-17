@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo strtolower($entityName); ?>-form">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo $activeMenu; ?>-form">
                 <?php foreach ($fields as $field): ?>
                     <?php if ($field['form'] ?? true): ?>
                         <div class="mb-3">

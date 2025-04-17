@@ -18,6 +18,30 @@
    - Resolve missing AdminPage class error in stories.php ✓
    - Fix multiple constant definitions in config.php ✓
    - Resolve missing AdminPage class error in all other admin pages ✓
+4. Fix API returning HTML instead of JSON responses ✓
+   - Test if the current code is being executed ✓
+   - Fix case sensitivity issues with directory paths ✓
+   - Fix protected property access in Router and BaseController ✓
+   - Resolve OpCache issues ✓
+   - Fix CSP blocking jQuery by adding CDN domains to script-src in .htaccess ✓
+   - Fix Font Awesome 404s by using CDN version ✓
+   - Set absolute error log path in .htaccess ✓
+
+## Completed Tasks
+1. Fix PHP API HTTP 500 errors and autoloader issues ✓
+   - Rename folders to match namespace case (endpoints → Endpoints, utils → Utils, core → Core) ✓
+   - Fix error reporting in development mode (changed environment to 'development') ✓
+   - Fix error log path in .htaccess (created logs directory and updated path) ✓
+   - Simplify autoloader to pure PSR-4 ✓
+   - Align test script with the real bootstrap ✓
+   - Add direct include of Router class as a sanity check ✓
+2. Fix admin panel styling ✓
+   - Fix initial CSS path issue ✓
+   - Fix Content Security Policy (CSP) issues with CSS files ✓
+3. Fix PHP errors in admin panel ✓
+   - Resolve missing AdminPage class error in stories.php ✓
+   - Fix multiple constant definitions in config.php ✓
+   - Resolve missing AdminPage class error in all other admin pages ✓
 
 ## Backlog
 - None

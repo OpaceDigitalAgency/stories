@@ -1,6 +1,35 @@
 # Progress Log
 
 ## 2025-04-17
+### Fixed: API returning HTML instead of JSON
+- Started investigation of API returning HTML instead of JSON responses
+- Analyzed key files: index.php, test_endpoints.php, config.php, and .htaccess
+- Identified potential causes:
+  - Cached code still running (LiteSpeed LSCache or PHP OpCache)
+  - Deployment synchronization issues
+  - Multiple copies of the API with different code versions
+- Added logging code to index.php to test if current code is being executed
+- Identified and fixed several issues:
+  1. Case sensitivity issues with directory paths:
+     - Implemented a case-insensitive autoloader in index.php that can find files regardless of directory name case
+  2. Protected property access:
+     - Fixed an error where Router was trying to directly access a protected property in BaseController
+     - Added a proper setParams() method to BaseController
+     - Updated Router to use the setter method instead of direct property access
+  3. OpCache issues:
+     - Removed the opcache_reset() function that was causing a fatal error
+- Fixed additional issues:
+  1. CSP blocking jQuery:
+     - Added jQuery CDN domains (code.jquery.com, ajax.googleapis.com, cdnjs.cloudflare.com) to script-src in .htaccess
+  2. Font Awesome 404s:
+     - Created webfonts directory at /admin/assets/webfonts/
+     - Updated header.php to use CDN version of Font Awesome
+  3. Error log path:
+     - Created logs directory and api-error.log file with appropriate permissions
+     - Updated .htaccess to use correct error log path
+- Verified API now returns proper JSON responses with correct headers
+
+## 2025-04-17 (Earlier)
 - Started investigation of PHP API HTTP 500 errors:
   - Identified case-sensitivity issues with folder names vs. namespace expectations
   - Found error reporting turned off in development mode

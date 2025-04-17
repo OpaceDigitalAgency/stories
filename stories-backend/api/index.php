@@ -1,4 +1,7 @@
 <?php
+file_put_contents('/home/stories/tmp_autoload_test.txt', date('c')." index.php executed\n", FILE_APPEND);
+header("Cache-Control: no-cache");
+header("Content-Type: application/json; charset=UTF-8");
 /**
  * Stories API - Main Entry Point
  *
@@ -14,6 +17,7 @@ ob_start();
 
 // Set error reporting
 error_reporting(E_ALL);
+opcache_reset();
 ini_set('display_errors', 1);
 
 // Define the base path

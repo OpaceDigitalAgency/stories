@@ -119,10 +119,8 @@ class Response {
      * @param array $data The response data
      */
     public static function json($data) {
-        // Set content type header
-        if (!self::$debugMode) {
-            header('Content-Type: application/json; charset=UTF-8');
-        }
+        // Set content type header - ALWAYS set to JSON regardless of debug mode
+        header('Content-Type: application/json; charset=UTF-8');
         
         // Debug: Log the data being encoded
         error_log("Response data before encoding: " . print_r($data, true));
@@ -143,34 +141,15 @@ class Response {
                 error_log("JSON encoding still failing after sanitization");
                 $errorJson = '{"error":true,"message":"Internal server error: Unable to encode response","statusCode":500}';
                 
-                if (self::$debugMode) {
-                    echo "<div style='color: red; margin: 20px; padding: 20px; border: 1px solid red;'>";
-                    echo "<h2>JSON Encoding Error</h2>";
-                    echo "<p>Error: " . json_last_error_msg() . "</p>";
-                    echo "<h3>Data that failed to encode:</h3>";
-                    echo "<pre>" . htmlspecialchars(print_r($data, true)) . "</pre>";
-                    echo "</div>";
-                    return;
-                } else {
-                    echo $errorJson;
-                    exit;
-                }
+                // Always output JSON error response regardless of debug mode
+                echo $errorJson;
+                exit;
             }
         }
         
-        // Output the JSON response
-        if (self::$debugMode) {
-            echo "<div style='margin: 20px; padding: 20px; border: 1px solid #ccc;'>";
-            echo "<h2>JSON Response</h2>";
-            echo "<pre style='background-color: #f0f0f0; padding: 10px;'>" . htmlspecialchars($json) . "</pre>";
-            echo "<h3>Parsed Response:</h3>";
-            echo "<pre style='background-color: #f0f0f0; padding: 10px;'>" . htmlspecialchars(print_r(json_decode($json, true), true)) . "</pre>";
-            echo "</div>";
-            return;
-        } else {
-            echo $json;
-            exit;
-        }
+        // Output the JSON response - ALWAYS output JSON regardless of debug mode
+        echo $json;
+        exit;
     }
     
     /**

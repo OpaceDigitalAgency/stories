@@ -1,9 +1,8 @@
 <?php
 /**
- * Create Admin User Script
+ * Update Admin Password Script
  * 
- * This script creates or updates an admin user with a properly hashed password.
- * It should be run once to fix the login issue, then deleted for security.
+ * This script generates a proper hash for the password "Pa55word!" and updates the admin user in the database.
  */
 
 // Set error reporting for debugging
@@ -26,7 +25,7 @@ echo '<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Admin User</title>
+    <title>Update Admin Password</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         h1 { color: #333; }
@@ -35,13 +34,21 @@ echo '<!DOCTYPE html>
         .info { color: blue; }
         pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
         .container { border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-top: 20px; }
+        code { background: #f5f5f5; padding: 2px 5px; border-radius: 3px; }
     </style>
 </head>
 <body>
-    <h1>Create Admin User</h1>
+    <h1>Update Admin Password</h1>
     <div class="container">';
 
 try {
+    // Generate password hash for "Pa55word!"
+    $password = 'Pa55word!';
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    
+    echo "<p class='info'>Generated hash for password <code>$password</code>:</p>";
+    echo "<pre>$hash</pre>";
+    
     // Connect to database
     echo "<p class='info'>Connecting to database...</p>";
     $dsn = "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']};port={$config['port']}";
@@ -66,13 +73,20 @@ try {
         echo "<p class='info'>No existing admin user found.</p>";
     }
     
-    // Password hash for "Pa55word!"
-    $passwordHash = '$2y$10$8AobgFUdBaUKoeBkFxfRgeIod6CVuToAfM0c/niIXv3LhyCd9cCIu';
-    
-    // Create new admin user
+    // Insert new admin user with correct hash
     echo "<p class='info'>Creating new admin user with correct password hash...</p>";
-    $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
-    $stmt->execute(['Site Admin', 'admin@example.com', $passwordHash, 'admin', 1]);
+    $stmt = $pdo->prepare("
+        INSERT INTO users (name, email, password, role, active, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+    ");
+    $stmt->execute([
+        'Site Admin',
+        'admin@example.com',
+        $hash,
+        'admin',
+        1
+    ]);
+    
     echo "<p class='success'>Admin user created successfully.</p>";
     
     // Verify the user

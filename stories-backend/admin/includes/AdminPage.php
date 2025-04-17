@@ -231,109 +231,109 @@ class AdminPage {
             $this->success = $_SESSION['success'];
             unset($_SESSION['success']);
         }
+    }
+    
+    /**
+     * Set page description
+     *
+     * @param string $description Page description
+     */
+    protected function setPageDescription($description) {
+        $this->pageDescription = $description;
+    }
+    
+    /**
+     * Add a breadcrumb
+     *
+     * @param string $label Breadcrumb label
+     * @param string|null $url Breadcrumb URL (null for current page)
+     */
+    protected function addBreadcrumb($label, $url = null) {
+        $this->breadcrumbs[$label] = $url;
+    }
+    
+    /**
+     * Show a tooltip with help information
+     *
+     * @param string $text Tooltip text
+     * @param string $placement Tooltip placement (top, bottom, left, right)
+     * @return string HTML for tooltip
+     */
+    protected function helpTooltip($text, $placement = 'top') {
+        return '<i class="fas fa-question-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="' . $placement . '" title="' . htmlspecialchars($text) . '"></i>';
+    }
+    
+    /**
+     * Format a form field with label, input, and optional help text
+     *
+     * @param string $type Input type (text, textarea, select, etc.)
+     * @param string $name Field name
+     * @param string $label Field label
+     * @param mixed $value Field value
+     * @param array $options Additional options (required, help, placeholder, etc.)
+     * @return string HTML for form field
+     */
+    protected function formField($type, $name, $label, $value = '', $options = []) {
+        $required = isset($options['required']) && $options['required'] ? true : false;
+        $help = $options['help'] ?? '';
+        $placeholder = $options['placeholder'] ?? '';
+        $classes = $options['classes'] ?? '';
+        $attributes = $options['attributes'] ?? [];
         
-        /**
-         * Set page description
-         *
-         * @param string $description Page description
-         */
-        protected function setPageDescription($description) {
-            $this->pageDescription = $description;
+        $html = '<div class="mb-3">';
+        $html .= '<label for="' . $name . '" class="form-label' . ($required ? ' required' : '') . '">' . $label;
+        
+        if (!empty($help)) {
+            $html .= $this->helpTooltip($help);
         }
         
-        /**
-         * Add a breadcrumb
-         *
-         * @param string $label Breadcrumb label
-         * @param string|null $url Breadcrumb URL (null for current page)
-         */
-        protected function addBreadcrumb($label, $url = null) {
-            $this->breadcrumbs[$label] = $url;
+        $html .= '</label>';
+        
+        $attributesStr = '';
+        foreach ($attributes as $attr => $attrValue) {
+            $attributesStr .= ' ' . $attr . '="' . htmlspecialchars($attrValue) . '"';
         }
         
-        /**
-         * Show a tooltip with help information
-         *
-         * @param string $text Tooltip text
-         * @param string $placement Tooltip placement (top, bottom, left, right)
-         * @return string HTML for tooltip
-         */
-        protected function helpTooltip($text, $placement = 'top') {
-            return '<i class="fas fa-question-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="' . $placement . '" title="' . htmlspecialchars($text) . '"></i>';
-        }
-        
-        /**
-         * Format a form field with label, input, and optional help text
-         *
-         * @param string $type Input type (text, textarea, select, etc.)
-         * @param string $name Field name
-         * @param string $label Field label
-         * @param mixed $value Field value
-         * @param array $options Additional options (required, help, placeholder, etc.)
-         * @return string HTML for form field
-         */
-        protected function formField($type, $name, $label, $value = '', $options = []) {
-            $required = isset($options['required']) && $options['required'] ? true : false;
-            $help = $options['help'] ?? '';
-            $placeholder = $options['placeholder'] ?? '';
-            $classes = $options['classes'] ?? '';
-            $attributes = $options['attributes'] ?? [];
-            
-            $html = '<div class="mb-3">';
-            $html .= '<label for="' . $name . '" class="form-label' . ($required ? ' required' : '') . '">' . $label;
-            
-            if (!empty($help)) {
-                $html .= $this->helpTooltip($help);
-            }
-            
-            $html .= '</label>';
-            
-            $attributesStr = '';
-            foreach ($attributes as $attr => $attrValue) {
-                $attributesStr .= ' ' . $attr . '="' . htmlspecialchars($attrValue) . '"';
-            }
-            
-            switch ($type) {
-                case 'textarea':
-                    $html .= '<textarea class="form-control ' . $classes . '" id="' . $name . '" name="' . $name . '" placeholder="' . $placeholder . '"' . ($required ? ' required' : '') . $attributesStr . '>' . htmlspecialchars($value) . '</textarea>';
-                    break;
-                    
-                case 'select':
-                    $html .= '<select class="form-select ' . $classes . '" id="' . $name . '" name="' . $name . '"' . ($required ? ' required' : '') . $attributesStr . '>';
-                    if (!empty($placeholder)) {
-                        $html .= '<option value="">' . $placeholder . '</option>';
+        switch ($type) {
+            case 'textarea':
+                $html .= '<textarea class="form-control ' . $classes . '" id="' . $name . '" name="' . $name . '" placeholder="' . $placeholder . '"' . ($required ? ' required' : '') . $attributesStr . '>' . htmlspecialchars($value) . '</textarea>';
+                break;
+                
+            case 'select':
+                $html .= '<select class="form-select ' . $classes . '" id="' . $name . '" name="' . $name . '"' . ($required ? ' required' : '') . $attributesStr . '>';
+                if (!empty($placeholder)) {
+                    $html .= '<option value="">' . $placeholder . '</option>';
+                }
+                if (isset($options['options']) && is_array($options['options'])) {
+                    foreach ($options['options'] as $optValue => $optLabel) {
+                        $selected = $value == $optValue ? ' selected' : '';
+                        $html .= '<option value="' . htmlspecialchars($optValue) . '"' . $selected . '>' . htmlspecialchars($optLabel) . '</option>';
                     }
-                    if (isset($options['options']) && is_array($options['options'])) {
-                        foreach ($options['options'] as $optValue => $optLabel) {
-                            $selected = $value == $optValue ? ' selected' : '';
-                            $html .= '<option value="' . htmlspecialchars($optValue) . '"' . $selected . '>' . htmlspecialchars($optLabel) . '</option>';
-                        }
-                    }
-                    $html .= '</select>';
-                    break;
-                    
-                case 'checkbox':
-                    $html = '<div class="mb-3 form-check">';
-                    $html .= '<input type="checkbox" class="form-check-input ' . $classes . '" id="' . $name . '" name="' . $name . '" value="1"' . ($value ? ' checked' : '') . ($required ? ' required' : '') . $attributesStr . '>';
-                    $html .= '<label class="form-check-label" for="' . $name . '">' . $label;
-                    if (!empty($help)) {
-                        $html .= $this->helpTooltip($help);
-                    }
-                    $html .= '</label>';
-                    break;
-                    
-                default: // text, email, password, etc.
-                    $html .= '<input type="' . $type . '" class="form-control ' . $classes . '" id="' . $name . '" name="' . $name . '" value="' . htmlspecialchars($value) . '" placeholder="' . $placeholder . '"' . ($required ? ' required' : '') . $attributesStr . '>';
-                    break;
-            }
-            
-            if (isset($options['feedback'])) {
-                $html .= '<div class="form-text text-muted">' . $options['feedback'] . '</div>';
-            }
-            
-            $html .= '</div>';
-            
-            return $html;
+                }
+                $html .= '</select>';
+                break;
+                
+            case 'checkbox':
+                $html = '<div class="mb-3 form-check">';
+                $html .= '<input type="checkbox" class="form-check-input ' . $classes . '" id="' . $name . '" name="' . $name . '" value="1"' . ($value ? ' checked' : '') . ($required ? ' required' : '') . $attributesStr . '>';
+                $html .= '<label class="form-check-label" for="' . $name . '">' . $label;
+                if (!empty($help)) {
+                    $html .= $this->helpTooltip($help);
+                }
+                $html .= '</label>';
+                break;
+                
+            default: // text, email, password, etc.
+                $html .= '<input type="' . $type . '" class="form-control ' . $classes . '" id="' . $name . '" name="' . $name . '" value="' . htmlspecialchars($value) . '" placeholder="' . $placeholder . '"' . ($required ? ' required' : '') . $attributesStr . '>';
+                break;
         }
+        
+        if (isset($options['feedback'])) {
+            $html .= '<div class="form-text text-muted">' . $options['feedback'] . '</div>';
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
     }
 }

@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initLoadingIndicators();
     
     // Initialize dropdowns
-    initDropdowns();
+    // initDropdowns();  // Commented out as this function is not properly defined
     
     // Check if jQuery is loaded before initializing jQuery-dependent features
     if (jQueryLoaded()) {

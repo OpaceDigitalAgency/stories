@@ -19,6 +19,7 @@
   - Root cause: Missing admin user or admin user with plaintext password instead of proper hash
   - Solution: Created scripts to insert/update admin user with proper bcrypt hash and secure the system
   - Documentation: Created LOGIN_FIX.md with detailed explanation
+  - Additional fix: Updated Content Security Policy to allow external resources from CDNs
 
 - Admin interface UX/UI and data issues:
   - Media page not working (HTTP ERROR 500) (fixed)

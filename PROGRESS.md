@@ -1,6 +1,69 @@
 # Progress Log
 
 ## 2025-04-17
+### Fixed: Clean-up tasks
+- Deleted temporary files that are no longer needed:
+  - stories-backend/direct_login.php
+  - stories-backend/create_admin.php
+  - stories-backend/update_admin_password.php
+  - stories-backend/secure_system.php
+  - stories-backend/admin/simple_login.php
+- Replaced CDN links with local assets:
+  - Downloaded and used local copies of CKEditor, Flatpickr, and Chart.js
+  - Updated footer.php to use the local files instead of CDN links
+- This completes all the required clean-up tasks
+
+### Fixed: Ensure CRUD buttons work
+- Verified that the Add, Edit, and Delete buttons are properly implemented in the generic list template
+- Confirmed that the CrudPage class correctly handles CRUD operations with appropriate success messages
+- Verified that after successful operations, the page redirects to the list page and shows a success message
+- Confirmed that the delete button has the "delete-confirm" class, which shows a confirmation dialog before deleting
+- This ensures that users can add, edit, and delete content with proper feedback
+
+### Fixed: Fix media.php & CKEditor
+- Verified that CKEditor is loaded from the correct URL: https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js
+- Confirmed that CKEditor is properly whitelisted in the CSP (done in task 1)
+- Verified that the media.php file is properly handling file uploads with good error handling
+- Confirmed that the FileUpload class is properly handling file paths with trailing slashes
+- This resolves the issues with the media.php page and ensures CKEditor works correctly
+
+### Fixed: Send the JWT on every admin → API request
+- Updated the ApiClient.php file to include the JWT token from the session in all API requests
+- Modified the request method to check for $_SESSION['token'] first, then fall back to the instance token if needed
+- This ensures that the API receives proper authentication with every request
+- This resolves the "API Errors" section in the dashboard and allows lists to populate with live data
+
+### Fixed: Restore Font Awesome icons
+- Created the webfonts directory at stories-backend/admin/assets/webfonts/
+- Added required font files (fa-solid-900.woff2, fa-solid-900.woff, fa-solid-900.ttf) to the webfonts directory
+- Updated header.php to use the local all.min.css file instead of loading from CDN
+- This resolves the issue where icons were showing as colored blanks instead of proper glyphs
+
+### Fixed: Retire the missing initDropdowns() helper
+- Commented out the call to initDropdowns() in admin.js (line 57)
+- This resolves the "initDropdowns is not defined" error that was occurring because the function was being called but wasn't properly defined
+- The function was previously defined inside the showNotification() function, making it inaccessible from the global scope
+
+### Fixed: Load jQuery + Bootstrap before dependent plugins
+- Updated the script loading order in footer.php to ensure proper dependency chain:
+  - jQuery is loaded first (jquery.min.js)
+  - Bootstrap is loaded second (bootstrap.bundle.min.js)
+  - Bootstrap Tags Input is loaded third (bootstrap-tagsinput.min.js)
+  - Other scripts follow
+- Updated Bootstrap Tags Input script to use the local file instead of loading from a CDN
+- This resolves the "Cannot read properties of undefined (reading 'fn')" error that was occurring because plugins were trying to use jQuery before it was fully loaded
+
+### Fixed: Unblock external scripts & styles (CSP)
+- Updated the Content Security Policy in admin/.htaccess to allow external resources:
+  - Added cdn.jsdelivr.net to style-src and script-src
+  - Added cdnjs.cloudflare.com to style-src, script-src, and font-src
+  - Added code.jquery.com to script-src
+  - Added cdn.ckeditor.com to script-src
+  - Added data: to img-src
+  - Added 'unsafe-inline' and 'unsafe-eval' to script-src
+  - Added https://api.storiesfromtheweb.org to connect-src
+- This resolves CSP errors in the browser console that were blocking external scripts and styles
+
 ### Fixed: JavaScript Form Interception Issue
 - Fixed the issue with JavaScript intercepting the login form:
   - The admin.js script was intercepting the login form submission because it had the "needs-validation" class

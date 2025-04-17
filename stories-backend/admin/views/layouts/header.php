@@ -8,8 +8,8 @@
     <!-- Bootstrap CSS -->
     <link href="<?php echo ADMIN_URL; ?>/assets/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Font Awesome (CDN) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Font Awesome (Local) -->
+    <link href="<?php echo ADMIN_URL; ?>/assets/css/all.min.css" rel="stylesheet">
     
     <!-- Flatpickr CSS -->
     <link href="<?php echo ADMIN_URL; ?>/assets/css/flatpickr.min.css" rel="stylesheet">

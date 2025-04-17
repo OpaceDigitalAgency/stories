@@ -116,8 +116,11 @@ class ApiClient {
             'Accept: application/json'
         ];
         
-        // Add authentication token if available
-        if ($this->authToken) {
+        // Add authentication token from session or instance
+        $token = $_SESSION['token'] ?? '';
+        if (!empty($token)) {
+            $headers[] = 'Authorization: Bearer ' . $token;
+        } elseif ($this->authToken) {
             $headers[] = 'Authorization: Bearer ' . $this->authToken;
         }
         

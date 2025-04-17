@@ -1,7 +1,15 @@
 # Tasks
 
 ## Active Tasks
-- None
+1. Fix remaining admin panel issues
+   - Unblock external scripts & styles (CSP)
+   - Load jQuery + Bootstrap before dependent plugins
+   - Retire the missing initDropdowns() helper
+   - Restore Font Awesome icons
+   - Send the JWT on every admin → API request
+   - Fix media.php & CKEditor
+   - Ensure CRUD buttons work
+   - Clean-up tasks
 
 ## Completed Tasks
 1. Fix Login Authentication Issue ✓
@@ -63,6 +71,43 @@
 - None
 
 ## Subtasks
+### Fix remaining admin panel issues
+1. Unblock external scripts & styles (CSP)
+   - Update Content Security Policy in admin/.htaccess to allow external resources
+   - Add cdn.ckeditor.com to script-src directive
+   - Test by hard-refreshing /admin/index.php and verifying no CSP warnings
+
+2. Load jQuery + Bootstrap before dependent plugins
+   - Ensure jQuery and Bootstrap are loaded before other plugins in all admin layouts
+   - Fix script loading order in footer.php
+   - Test by reloading a list page and checking for "reading fn" errors
+
+3. Retire the missing initDropdowns() helper
+   - Comment out or delete the call to initDropdowns() in admin.js
+   - Test to confirm no "initDropdowns is not defined" message
+
+4. Restore Font Awesome icons
+   - Copy font files to admin/assets/webfonts/ directory
+   - Update CSS references to use local files
+   - Test to ensure icons render properly
+
+5. Send the JWT on every admin → API request
+   - Update ApiClient.php to include JWT token in all requests
+   - Test dashboard to ensure API errors disappear and lists populate with data
+
+6. Fix media.php & CKEditor
+   - Ensure CKEditor script URL matches the CSP whitelist
+   - Test media.php to ensure it loads properly with CKEditor active
+
+7. Ensure CRUD buttons work
+   - Test add, edit, delete functionality on stories.php
+   - Verify successful operations refresh the list and show success messages
+
+8. Clean-up tasks
+   - Remove temporary files (simple_login.php, direct_login.php, etc.)
+   - Replace CDN links with local assets where appropriate
+   - Commit final working version
+
 ### Fix Login Authentication Issue (COMPLETED)
 - Analyze the authentication flow in admin/login.php and Auth.php ✓
 - Examine direct_login.php to understand how it bypasses password verification ✓

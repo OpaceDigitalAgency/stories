@@ -13,38 +13,11 @@ ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Define the base path
-define('BASE_PATH', __DIR__);
+// Include the main API entry point to use the same autoloader and configuration
+require_once __DIR__ . '/index.php';
 
 // Set content type to HTML
 header('Content-Type: text/html; charset=UTF-8');
-
-// Autoload classes
-spl_autoload_register(function ($class) {
-    // Convert namespace to file path
-    $prefix = 'StoriesAPI\\';
-    $base_dir = __DIR__ . '/v1/';
-    
-    // Check if the class uses the namespace prefix
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-    
-    // Get the relative class name
-    $relative_class = substr($class, $len);
-    
-    // Convert namespace separators to directory separators
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-    
-    // If the file exists, require it
-    if (file_exists($file)) {
-        require $file;
-    }
-});
-
-// Load configuration
-$config = require __DIR__ . '/v1/config/config.php';
 
 echo "<h1>API Endpoints Test</h1>";
 

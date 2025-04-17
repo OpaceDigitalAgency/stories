@@ -32,78 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Autoload classes
-spl_autoload_register(function ($class) {
-    // Convert namespace to file path
-    $prefix = 'StoriesAPI\\';
-    $base_dir = __DIR__ . '/v1/';
-    
-    // Check if the class uses the namespace prefix
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-    
-    // Get the relative class name
-    $relative_class = substr($class, $len);
-    
-    // Convert namespace separators to directory separators
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-    
-    // If the file exists, require it
-    if (file_exists($file)) {
-        require $file;
-        return;
-    }
-    
-    // Case-insensitive approach - try lowercase path
-    $lowercase_path = strtolower($base_dir . str_replace('\\', '/', $relative_class)) . '.php';
-    $actual_path = '';
-    
-    // Get the actual path with correct case
-    $parts = explode('/', str_replace('\\', '/', $relative_class));
-    $current_path = $base_dir;
-    
-    foreach ($parts as $part) {
-        if (!is_dir($current_path)) {
-            break;
-        }
-        
-        $found = false;
-        $items = scandir($current_path);
-        
-        foreach ($items as $item) {
-            if (strtolower($item) === strtolower($part)) {
-                $current_path .= $item . '/';
-                $found = true;
-                break;
-            }
-        }
-        
-        if (!$found) {
-            break;
-        }
-    }
-    
-    // Remove trailing slash and add .php
-    $actual_path = substr($current_path, 0, -1) . '.php';
-    
-    // If the file exists with the correct case, require it
-    if (file_exists($actual_path)) {
-        require $actual_path;
-        return;
-    }
-    
-    // Direct approach - try to find the file in the utils directory
-    if (strpos($relative_class, 'Utils') === 0) {
-        $utils_file = $base_dir . 'utils/' . substr($relative_class, 6) . '.php';
-        if (file_exists($utils_file)) {
-            require $utils_file;
-            return;
-        }
-    }
-    
-    // Log the error
-    error_log("Failed to load class: $class. Tried paths: $file, $lowercase_path, $actual_path");
+spl_autoload_register(function($class) {
+  $prefix   = 'StoriesAPI\\';
+  $base_dir = __DIR__ . '/v1/';
+  if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
+    return;
+  }
+  $relative = substr($class, strlen($prefix));
+  $file     = $base_dir . str_replace('\\','/',$relative) . '.php';
+  if (file_exists($file)) {
+    require_once $file;
+  }
 });
 
 // Load configuration
@@ -114,6 +53,9 @@ $config = require __DIR__ . '/v1/config/config.php';
 
 // Set debug mode for Response class
 \StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;
+
+// Direct include of Router class for sanity check
+require_once __DIR__ . '/v1/Core/Router.php';
 
 // Create router
 $router = new \StoriesAPI\Core\Router($config);

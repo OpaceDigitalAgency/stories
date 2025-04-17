@@ -4,10 +4,13 @@
 - None
 
 ## Completed Tasks
-1. Fix PHP API HTTP 500 errors ✓
+1. Fix PHP API HTTP 500 errors and autoloader issues ✓
    - Rename folders to match namespace case (endpoints → Endpoints, utils → Utils, core → Core) ✓
    - Fix error reporting in development mode (changed environment to 'development') ✓
    - Fix error log path in .htaccess (created logs directory and updated path) ✓
+   - Simplify autoloader to pure PSR-4 ✓
+   - Align test script with the real bootstrap ✓
+   - Add direct include of Router class as a sanity check ✓
 2. Fix admin panel styling ✓
    - Fix initial CSS path issue ✓
    - Fix Content Security Policy (CSP) issues with CSS files ✓
@@ -37,7 +40,7 @@
 ### Fix multiple constant definitions (COMPLETED)
 - Modify config.php to prevent multiple definitions of constants ✓
 
-### Fix PHP API HTTP 500 errors (COMPLETED)
+### Fix PHP API HTTP 500 errors and autoloader issues (COMPLETED)
 - Rename folders to match namespace case: ✓
   - Rename api/v1/endpoints/ → api/v1/Endpoints/ ✓
   - Rename api/v1/utils/ → api/v1/Utils/ ✓
@@ -47,3 +50,7 @@
 - Fix error log path: ✓
   - Created logs directory in stories-backend folder ✓
   - Updated .htaccess to point to logs/api-error.log ✓
+- Fix autoloader implementation: ✓
+  - Simplified autoloader to pure PSR-4 in index.php ✓
+  - Added direct include of Router class as a sanity check ✓
+  - Aligned test script with the real bootstrap ✓

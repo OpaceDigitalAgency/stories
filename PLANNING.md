@@ -12,6 +12,9 @@
 
 ## Current Issues
 - PHP API returning HTTP 500 errors with blank bodies due to:
-  - Case-sensitive autoloading vs. lowercase folder names (endpoints/ vs. Endpoints/)
-  - Error reporting turned off in development mode
-  - Error logging pointing to non-existent path
+  - Autoloader implementation issues:
+    - Not properly requiring class files even with correct case-matched paths
+    - Case-insensitive fallback logic only matching directories, not final PHP files
+    - Test scripts not using the same autoloader bootstrap
+  - Error reporting turned off in development mode (fixed)
+  - Error logging pointing to non-existent path (fixed)

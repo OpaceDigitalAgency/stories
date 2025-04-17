@@ -9,7 +9,7 @@
   - Rename folders to match namespace case
   - Fix error reporting configuration
   - Update error log path
-- Fixed PHP API HTTP 500 errors:
+- Implemented initial fixes for PHP API HTTP 500 errors:
   - Renamed folders to match namespace case:
     - Renamed api/v1/endpoints/ → api/v1/Endpoints/
     - Renamed api/v1/utils/ → api/v1/Utils/
@@ -19,6 +19,19 @@
   - Fixed error log path:
     - Created logs directory in stories-backend folder
     - Updated .htaccess to point to logs/api-error.log
+- Discovered deeper issues with the autoloader implementation:
+  - The autoloader is not actually requiring the Router class file
+  - The case-insensitive fallback logic is mis-targeting files - only matching directories, never the final PHP file
+  - The test script may not be bootstrapping the same autoloader
+- Created new plan to fix the autoloader issues:
+  - Simplify autoloader to pure PSR-4
+  - Align test script with the real bootstrap
+  - Check file permissions and owner
+- Fixed PHP API autoloader issues:
+  - Simplified the autoloader in stories-backend/api/index.php to pure PSR-4
+  - Removed the complex case-insensitive fallback logic that was only matching directories
+  - Added a direct include of the Router class before instantiation as a sanity check
+  - Modified stories-backend/api/test_endpoints.php to include index.php for consistent bootstrapping
 
 ## 2025-04-16
 - Created memory files (README.md, PLANNING.md, TASK.md, PROGRESS.md)

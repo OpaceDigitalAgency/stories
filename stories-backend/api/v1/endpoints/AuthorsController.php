@@ -58,49 +58,35 @@ class AuthorsController extends BaseController {
             $stmt = $this->db->query($query, $params);
             $authors = $stmt->fetchAll();
             
-            // Format authors to match Strapi response format
+            // Format authors with a simplified structure to avoid JSON encoding issues
             $formattedAuthors = [];
             
             foreach ($authors as $author) {
                 $authorId = $author['id'];
                 
-                // Get author avatar
-                $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
+                // Get avatar URL if exists
+                $avatarUrl = null;
+                $avatarQuery = "SELECT url FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
                 $avatarStmt = $this->db->query($avatarQuery, [$authorId]);
                 $avatar = $avatarStmt->fetch();
-                
-                // Format avatar
-                $formattedAvatar = null;
                 if ($avatar) {
-                    $formattedAvatar = [
-                        'data' => [
-                            'id' => $avatar['id'],
-                            'attributes' => [
-                                'url' => $avatar['url'],
-                                'width' => $avatar['width'],
-                                'height' => $avatar['height'],
-                                'alternativeText' => $avatar['alt_text']
-                            ]
-                        ]
-                    ];
+                    $avatarUrl = $avatar['url'];
                 }
                 
-                // Build the formatted author
+                // Build a simplified author structure
                 $formattedAuthor = [
                     'id' => $authorId,
-                    'attributes' => [
-                        'name' => $author['name'],
-                        'slug' => $author['slug'],
-                        'bio' => $author['bio'],
-                        'featured' => (bool)$author['featured'],
-                        'twitter' => $author['twitter'],
-                        'instagram' => $author['instagram'],
-                        'website' => $author['website'],
-                        'storyCount' => (int)$author['storyCount'],
-                        'createdAt' => $author['createdAt'],
-                        'updatedAt' => $author['updatedAt'],
-                        'avatar' => $formattedAvatar
-                    ]
+                    'name' => $author['name'],
+                    'slug' => $author['slug'],
+                    'bio' => $author['bio'],
+                    'featured' => (bool)$author['featured'],
+                    'twitter' => $author['twitter'],
+                    'instagram' => $author['instagram'],
+                    'website' => $author['website'],
+                    'storyCount' => (int)$author['storyCount'],
+                    'createdAt' => $author['createdAt'],
+                    'updatedAt' => $author['updatedAt'],
+                    'avatarUrl' => $avatarUrl
                 ];
                 
                 $formattedAuthors[] = $formattedAuthor;
@@ -143,29 +129,17 @@ class AuthorsController extends BaseController {
             $author = $stmt->fetch();
             $authorId = $author['id'];
             
-            // Get author avatar
-            $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
+            // Get avatar URL if exists
+            $avatarUrl = null;
+            $avatarQuery = "SELECT url FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
             $avatarStmt = $this->db->query($avatarQuery, [$authorId]);
             $avatar = $avatarStmt->fetch();
-            
-            // Format avatar
-            $formattedAvatar = null;
             if ($avatar) {
-                $formattedAvatar = [
-                    'data' => [
-                        'id' => $avatar['id'],
-                        'attributes' => [
-                            'url' => $avatar['url'],
-                            'width' => $avatar['width'],
-                            'height' => $avatar['height'],
-                            'alternativeText' => $avatar['alt_text']
-                        ]
-                    ]
-                ];
+                $avatarUrl = $avatar['url'];
             }
             
-            // Get author's stories
-            $storiesQuery = "SELECT 
+            // Get author's stories with simplified structure
+            $storiesQuery = "SELECT
                 s.id, s.title, s.slug, s.excerpt, s.published_at as publishedAt,
                 s.featured, s.average_rating as averageRating
                 FROM stories s
@@ -176,77 +150,51 @@ class AuthorsController extends BaseController {
             $storiesStmt = $this->db->query($storiesQuery, [$authorId]);
             $stories = $storiesStmt->fetchAll();
             
-            // Format stories
-            $formattedStories = [];
+            // Format stories with simplified structure
+            $simpleStories = [];
             foreach ($stories as $story) {
                 $storyId = $story['id'];
                 
-                // Get story cover
-                $coverQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
+                // Get cover URL if exists
+                $coverUrl = null;
+                $coverQuery = "SELECT url FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
                 $coverStmt = $this->db->query($coverQuery, [$storyId]);
                 $cover = $coverStmt->fetch();
-                
-                // Format cover
-                $formattedCover = null;
                 if ($cover) {
-                    $formattedCover = [
-                        'data' => [
-                            'id' => $cover['id'],
-                            'attributes' => [
-                                'url' => $cover['url'],
-                                'width' => $cover['width'],
-                                'height' => $cover['height'],
-                                'alternativeText' => $cover['alt_text']
-                            ]
-                        ]
-                    ];
+                    $coverUrl = $cover['url'];
                 }
                 
-                // Format story
-                $formattedStories[] = [
+                // Format story with simplified structure
+                $simpleStories[] = [
                     'id' => $storyId,
-                    'attributes' => [
-                        'title' => $story['title'],
-                        'slug' => $story['slug'],
-                        'excerpt' => $story['excerpt'],
-                        'publishedAt' => $story['publishedAt'],
-                        'featured' => (bool)$story['featured'],
-                        'averageRating' => (float)$story['averageRating'],
-                        'cover' => $formattedCover
-                    ]
+                    'title' => $story['title'],
+                    'slug' => $story['slug'],
+                    'excerpt' => $story['excerpt'],
+                    'publishedAt' => $story['publishedAt'],
+                    'featured' => (bool)$story['featured'],
+                    'averageRating' => (float)$story['averageRating'],
+                    'coverUrl' => $coverUrl
                 ];
             }
             
             // Count stories
-            $storyCount = count($formattedStories);
+            $storyCount = count($simpleStories);
             
-            // Build the formatted author
+            // Build the formatted author with simplified structure
             $formattedAuthor = [
                 'id' => $authorId,
-                'attributes' => [
-                    'name' => $author['name'],
-                    'slug' => $author['slug'],
-                    'bio' => $author['bio'],
-                    'featured' => (bool)$author['featured'],
-                    'twitter' => $author['twitter'],
-                    'instagram' => $author['instagram'],
-                    'website' => $author['website'],
-                    'storyCount' => $storyCount,
-                    'createdAt' => $author['createdAt'],
-                    'updatedAt' => $author['updatedAt'],
-                    'avatar' => $formattedAvatar,
-                    'stories' => [
-                        'data' => $formattedStories,
-                        'meta' => [
-                            'pagination' => [
-                                'page' => 1,
-                                'pageSize' => $storyCount,
-                                'pageCount' => 1,
-                                'total' => $storyCount
-                            ]
-                        ]
-                    ]
-                ]
+                'name' => $author['name'],
+                'slug' => $author['slug'],
+                'bio' => $author['bio'],
+                'featured' => (bool)$author['featured'],
+                'twitter' => $author['twitter'],
+                'instagram' => $author['instagram'],
+                'website' => $author['website'],
+                'storyCount' => $storyCount,
+                'createdAt' => $author['createdAt'],
+                'updatedAt' => $author['updatedAt'],
+                'avatarUrl' => $avatarUrl,
+                'stories' => $simpleStories
             ];
             
             // Send response

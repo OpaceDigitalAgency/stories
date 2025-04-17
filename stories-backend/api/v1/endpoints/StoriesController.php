@@ -67,130 +67,53 @@ class StoriesController extends BaseController {
             $stmt = $this->db->query($query, $params);
             $stories = $stmt->fetchAll();
             
-            // Format stories to match Strapi response format
+            // Format stories with a simplified structure to avoid JSON encoding issues
             $formattedStories = [];
             
             foreach ($stories as $story) {
                 $storyId = $story['id'];
                 
-                // Get story cover image
-                $coverQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
-                $coverStmt = $this->db->query($coverQuery, [$storyId]);
-                $cover = $coverStmt->fetch();
-                
-                // Get story author
-                $authorQuery = "SELECT a.id, a.name, a.slug, a.bio FROM authors a 
-                    JOIN story_authors sa ON a.id = sa.author_id 
+                // Get basic story author info
+                $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
+                    JOIN story_authors sa ON a.id = sa.author_id
                     WHERE sa.story_id = ? LIMIT 1";
                 $authorStmt = $this->db->query($authorQuery, [$storyId]);
                 $author = $authorStmt->fetch();
                 
-                // Get author avatar
-                if ($author) {
-                    $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
-                    $avatarStmt = $this->db->query($avatarQuery, [$author['id']]);
-                    $avatar = $avatarStmt->fetch();
-                    
-                    if ($avatar) {
-                        $author['avatar'] = [
-                            'data' => [
-                                'id' => $avatar['id'],
-                                'attributes' => [
-                                    'url' => $avatar['url'],
-                                    'width' => $avatar['width'],
-                                    'height' => $avatar['height'],
-                                    'alternativeText' => $avatar['alt_text']
-                                ]
-                            ]
-                        ];
-                    }
-                }
-                
-                // Get story tags
-                $tagsQuery = "SELECT t.id, t.name, t.slug FROM tags t 
-                    JOIN story_tags st ON t.id = st.tag_id 
+                // Get basic tag info
+                $tagsQuery = "SELECT t.id, t.name FROM tags t
+                    JOIN story_tags st ON t.id = st.tag_id
                     WHERE st.story_id = ?";
                 $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
                 $tags = $tagsStmt->fetchAll();
                 
-                // Format tags
-                $formattedTags = [];
+                // Simplify tag structure
+                $simpleTags = [];
                 foreach ($tags as $tag) {
-                    $formattedTags[] = [
+                    $simpleTags[] = [
                         'id' => $tag['id'],
-                        'attributes' => [
-                            'name' => $tag['name'],
-                            'slug' => $tag['slug']
-                        ]
+                        'name' => $tag['name']
                     ];
                 }
                 
-                // Format cover image
-                $formattedCover = null;
-                if ($cover) {
-                    $formattedCover = [
-                        'data' => [
-                            'id' => $cover['id'],
-                            'attributes' => [
-                                'url' => $cover['url'],
-                                'width' => $cover['width'],
-                                'height' => $cover['height'],
-                                'alternativeText' => $cover['alt_text']
-                            ]
-                        ]
-                    ];
-                }
-                
-                // Format author
-                $formattedAuthor = null;
-                if ($author) {
-                    $formattedAuthor = [
-                        'data' => [
-                            'id' => $author['id'],
-                            'attributes' => [
-                                'name' => $author['name'],
-                                'slug' => $author['slug'],
-                                'bio' => $author['bio'],
-                                'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                            ]
-                        ]
-                    ];
-                }
-                
-                // Build the formatted story
+                // Build a simplified story structure
                 $formattedStory = [
                     'id' => $storyId,
-                    'attributes' => [
-                        'title' => $story['title'],
-                        'slug' => $story['slug'],
-                        'excerpt' => $story['excerpt'],
-                        'content' => $story['content'],
-                        'publishedAt' => $story['publishedAt'],
-                        'featured' => (bool)$story['featured'],
-                        'averageRating' => (float)$story['averageRating'],
-                        'reviewCount' => (int)$story['reviewCount'],
-                        'estimatedReadingTime' => $story['estimatedReadingTime'],
-                        'isSponsored' => (bool)$story['isSponsored'],
-                        'ageGroup' => $story['ageGroup'],
-                        'needsModeration' => (bool)$story['needsModeration'],
-                        'isSelfPublished' => (bool)$story['isSelfPublished'],
-                        'isAIEnhanced' => (bool)$story['isAIEnhanced'],
-                        'createdAt' => $story['createdAt'],
-                        'updatedAt' => $story['updatedAt'],
-                        'cover' => $formattedCover,
-                        'author' => $formattedAuthor,
-                        'tags' => [
-                            'data' => $formattedTags,
-                            'meta' => [
-                                'pagination' => [
-                                    'page' => 1,
-                                    'pageSize' => count($formattedTags),
-                                    'pageCount' => 1,
-                                    'total' => count($formattedTags)
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $story['title'],
+                    'slug' => $story['slug'],
+                    'excerpt' => $story['excerpt'],
+                    'publishedAt' => $story['publishedAt'],
+                    'featured' => (bool)$story['featured'],
+                    'averageRating' => (float)$story['averageRating'],
+                    'reviewCount' => (int)$story['reviewCount'],
+                    'createdAt' => $story['createdAt'],
+                    'updatedAt' => $story['updatedAt'],
+                    'author' => $author ? [
+                        'id' => $author['id'],
+                        'name' => $author['name'],
+                        'slug' => $author['slug']
+                    ] : null,
+                    'tags' => $simpleTags
                 ];
                 
                 $formattedStories[] = $formattedStory;
@@ -237,124 +160,64 @@ class StoriesController extends BaseController {
             $story = $stmt->fetch();
             $storyId = $story['id'];
             
-            // Get story cover image
-            $coverQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
-            $coverStmt = $this->db->query($coverQuery, [$storyId]);
-            $cover = $coverStmt->fetch();
-            
-            // Get story author
-            $authorQuery = "SELECT a.id, a.name, a.slug, a.bio FROM authors a 
-                JOIN story_authors sa ON a.id = sa.author_id 
+            // Get basic story author info
+            $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
+                JOIN story_authors sa ON a.id = sa.author_id
                 WHERE sa.story_id = ? LIMIT 1";
             $authorStmt = $this->db->query($authorQuery, [$storyId]);
             $author = $authorStmt->fetch();
             
-            // Get author avatar
-            if ($author) {
-                $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
-                $avatarStmt = $this->db->query($avatarQuery, [$author['id']]);
-                $avatar = $avatarStmt->fetch();
-                
-                if ($avatar) {
-                    $author['avatar'] = [
-                        'data' => [
-                            'id' => $avatar['id'],
-                            'attributes' => [
-                                'url' => $avatar['url'],
-                                'width' => $avatar['width'],
-                                'height' => $avatar['height'],
-                                'alternativeText' => $avatar['alt_text']
-                            ]
-                        ]
-                    ];
-                }
-            }
-            
-            // Get story tags
-            $tagsQuery = "SELECT t.id, t.name, t.slug FROM tags t 
-                JOIN story_tags st ON t.id = st.tag_id 
+            // Get basic tag info
+            $tagsQuery = "SELECT t.id, t.name FROM tags t
+                JOIN story_tags st ON t.id = st.tag_id
                 WHERE st.story_id = ?";
             $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
             $tags = $tagsStmt->fetchAll();
             
-            // Format tags
-            $formattedTags = [];
+            // Simplify tag structure
+            $simpleTags = [];
             foreach ($tags as $tag) {
-                $formattedTags[] = [
+                $simpleTags[] = [
                     'id' => $tag['id'],
-                    'attributes' => [
-                        'name' => $tag['name'],
-                        'slug' => $tag['slug']
-                    ]
+                    'name' => $tag['name']
                 ];
             }
             
-            // Format cover image
-            $formattedCover = null;
+            // Get cover URL if exists
+            $coverUrl = null;
+            $coverQuery = "SELECT url FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
+            $coverStmt = $this->db->query($coverQuery, [$storyId]);
+            $cover = $coverStmt->fetch();
             if ($cover) {
-                $formattedCover = [
-                    'data' => [
-                        'id' => $cover['id'],
-                        'attributes' => [
-                            'url' => $cover['url'],
-                            'width' => $cover['width'],
-                            'height' => $cover['height'],
-                            'alternativeText' => $cover['alt_text']
-                        ]
-                    ]
-                ];
+                $coverUrl = $cover['url'];
             }
             
-            // Format author
-            $formattedAuthor = null;
-            if ($author) {
-                $formattedAuthor = [
-                    'data' => [
-                        'id' => $author['id'],
-                        'attributes' => [
-                            'name' => $author['name'],
-                            'slug' => $author['slug'],
-                            'bio' => $author['bio'],
-                            'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                        ]
-                    ]
-                ];
-            }
-            
-            // Build the formatted story
+            // Build a simplified story structure
             $formattedStory = [
                 'id' => $storyId,
-                'attributes' => [
-                    'title' => $story['title'],
-                    'slug' => $story['slug'],
-                    'excerpt' => $story['excerpt'],
-                    'content' => $story['content'],
-                    'publishedAt' => $story['publishedAt'],
-                    'featured' => (bool)$story['featured'],
-                    'averageRating' => (float)$story['averageRating'],
-                    'reviewCount' => (int)$story['reviewCount'],
-                    'estimatedReadingTime' => $story['estimatedReadingTime'],
-                    'isSponsored' => (bool)$story['isSponsored'],
-                    'ageGroup' => $story['ageGroup'],
-                    'needsModeration' => (bool)$story['needsModeration'],
-                    'isSelfPublished' => (bool)$story['isSelfPublished'],
-                    'isAIEnhanced' => (bool)$story['isAIEnhanced'],
-                    'createdAt' => $story['createdAt'],
-                    'updatedAt' => $story['updatedAt'],
-                    'cover' => $formattedCover,
-                    'author' => $formattedAuthor,
-                    'tags' => [
-                        'data' => $formattedTags,
-                        'meta' => [
-                            'pagination' => [
-                                'page' => 1,
-                                'pageSize' => count($formattedTags),
-                                'pageCount' => 1,
-                                'total' => count($formattedTags)
-                            ]
-                        ]
-                    ]
-                ]
+                'title' => $story['title'],
+                'slug' => $story['slug'],
+                'excerpt' => $story['excerpt'],
+                'content' => $story['content'],
+                'publishedAt' => $story['publishedAt'],
+                'featured' => (bool)$story['featured'],
+                'averageRating' => (float)$story['averageRating'],
+                'reviewCount' => (int)$story['reviewCount'],
+                'estimatedReadingTime' => $story['estimatedReadingTime'],
+                'isSponsored' => (bool)$story['isSponsored'],
+                'ageGroup' => $story['ageGroup'],
+                'needsModeration' => (bool)$story['needsModeration'],
+                'isSelfPublished' => (bool)$story['isSelfPublished'],
+                'isAIEnhanced' => (bool)$story['isAIEnhanced'],
+                'createdAt' => $story['createdAt'],
+                'updatedAt' => $story['updatedAt'],
+                'coverUrl' => $coverUrl,
+                'author' => $author ? [
+                    'id' => $author['id'],
+                    'name' => $author['name'],
+                    'slug' => $author['slug']
+                ] : null,
+                'tags' => $simpleTags
             ];
             
             // Send response

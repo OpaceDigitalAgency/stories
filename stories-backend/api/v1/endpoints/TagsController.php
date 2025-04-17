@@ -57,17 +57,15 @@ class TagsController extends BaseController {
             $stmt = $this->db->query($query, $params);
             $tags = $stmt->fetchAll();
             
-            // Format tags to match Strapi response format
+            // Format tags with a simplified structure to avoid JSON encoding issues
             $formattedTags = [];
             
             foreach ($tags as $tag) {
                 $formattedTags[] = [
                     'id' => $tag['id'],
-                    'attributes' => [
-                        'name' => $tag['name'],
-                        'slug' => $tag['slug'],
-                        'storyCount' => (int)$tag['storyCount']
-                    ]
+                    'name' => $tag['name'],
+                    'slug' => $tag['slug'],
+                    'storyCount' => (int)$tag['storyCount']
                 ];
             }
             
@@ -119,91 +117,63 @@ class TagsController extends BaseController {
             $storiesStmt = $this->db->query($storiesQuery, [$tagId]);
             $stories = $storiesStmt->fetchAll();
             
-            // Format stories
-            $formattedStories = [];
+            // Format stories with simplified structure
+            $simpleStories = [];
             foreach ($stories as $story) {
                 $storyId = $story['id'];
                 
-                // Get story cover
-                $coverQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
+                // Get cover URL if exists
+                $coverUrl = null;
+                $coverQuery = "SELECT url FROM media WHERE entity_type = 'story' AND entity_id = ? AND type = 'cover' LIMIT 1";
                 $coverStmt = $this->db->query($coverQuery, [$storyId]);
                 $cover = $coverStmt->fetch();
-                
-                // Format cover
-                $formattedCover = null;
                 if ($cover) {
-                    $formattedCover = [
-                        'data' => [
-                            'id' => $cover['id'],
-                            'attributes' => [
-                                'url' => $cover['url'],
-                                'width' => $cover['width'],
-                                'height' => $cover['height'],
-                                'alternativeText' => $cover['alt_text']
-                            ]
-                        ]
-                    ];
+                    $coverUrl = $cover['url'];
                 }
                 
-                // Get story author
-                $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a 
-                    JOIN story_authors sa ON a.id = sa.author_id 
+                // Get author basic info
+                $authorName = null;
+                $authorSlug = null;
+                $authorId = null;
+                $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
+                    JOIN story_authors sa ON a.id = sa.author_id
                     WHERE sa.story_id = ? LIMIT 1";
                 $authorStmt = $this->db->query($authorQuery, [$storyId]);
                 $author = $authorStmt->fetch();
-                
-                // Format author
-                $formattedAuthor = null;
                 if ($author) {
-                    $formattedAuthor = [
-                        'data' => [
-                            'id' => $author['id'],
-                            'attributes' => [
-                                'name' => $author['name'],
-                                'slug' => $author['slug']
-                            ]
-                        ]
-                    ];
+                    $authorId = $author['id'];
+                    $authorName = $author['name'];
+                    $authorSlug = $author['slug'];
                 }
                 
-                // Format story
-                $formattedStories[] = [
+                // Format story with simplified structure
+                $simpleStories[] = [
                     'id' => $storyId,
-                    'attributes' => [
-                        'title' => $story['title'],
-                        'slug' => $story['slug'],
-                        'excerpt' => $story['excerpt'],
-                        'publishedAt' => $story['publishedAt'],
-                        'featured' => (bool)$story['featured'],
-                        'averageRating' => (float)$story['averageRating'],
-                        'cover' => $formattedCover,
-                        'author' => $formattedAuthor
-                    ]
+                    'title' => $story['title'],
+                    'slug' => $story['slug'],
+                    'excerpt' => $story['excerpt'],
+                    'publishedAt' => $story['publishedAt'],
+                    'featured' => (bool)$story['featured'],
+                    'averageRating' => (float)$story['averageRating'],
+                    'coverUrl' => $coverUrl,
+                    'author' => $author ? [
+                        'id' => $authorId,
+                        'name' => $authorName,
+                        'slug' => $authorSlug
+                    ] : null
                 ];
             }
             
             // Count stories
-            $storyCount = count($formattedStories);
+            $storyCount = count($simpleStories);
             
-            // Build the formatted tag
+            // Build the formatted tag with simplified structure
             $formattedTag = [
                 'id' => $tagId,
-                'attributes' => [
-                    'name' => $tag['name'],
-                    'slug' => $tag['slug'],
-                    'storyCount' => $storyCount,
-                    'stories' => [
-                        'data' => $formattedStories,
-                        'meta' => [
-                            'pagination' => [
-                                'page' => 1,
-                                'pageSize' => $storyCount,
-                                'pageCount' => 1,
-                                'total' => $storyCount
-                            ]
-                        ]
-                    ]
-                ]
+                'name' => $tag['name'],
+                'slug' => $tag['slug'],
+                'storyCount' => $storyCount,
+                'stories' => $simpleStories
             ];
             
             // Send response
@@ -254,14 +224,12 @@ class TagsController extends BaseController {
             
             $tagId = $this->db->lastInsertId();
             
-            // Return the created tag
+            // Return the created tag with simplified structure
             $formattedTag = [
                 'id' => $tagId,
-                'attributes' => [
-                    'name' => $name,
-                    'slug' => $slug,
-                    'storyCount' => 0
-                ]
+                'name' => $name,
+                'slug' => $slug,
+                'storyCount' => 0
             ];
             
             Response::sendSuccess(['data' => $formattedTag], [], 201);
@@ -369,11 +337,9 @@ class TagsController extends BaseController {
             
             $formattedTag = [
                 'id' => $tagId,
-                'attributes' => [
-                    'name' => $updatedTag['name'],
-                    'slug' => $updatedTag['slug'],
-                    'storyCount' => $this->getStoryCount($tagId)
-                ]
+                'name' => $updatedTag['name'],
+                'slug' => $updatedTag['slug'],
+                'storyCount' => $this->getStoryCount($tagId)
             ];
             
             Response::sendSuccess(['data' => $formattedTag]);

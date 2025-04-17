@@ -131,14 +131,14 @@
     <script src="<?php echo ADMIN_URL; ?>/assets/js/jquery.min.js"></script>
     <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Bootstrap Tags Input -->
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap-tagsinput.min.js"></script>
+    
     <!-- CKEditor -->
     <script src="<?php echo ADMIN_URL; ?>/assets/js/ckeditor.js"></script>
     
     <!-- Flatpickr -->
     <script src="<?php echo ADMIN_URL; ?>/assets/js/flatpickr.min.js"></script>
-    
-    <!-- Bootstrap Tags Input -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap-tagsinput.min.js"></script>
     
     <!-- Chart.js -->
     <script src="<?php echo ADMIN_URL; ?>/assets/js/chart.min.js"></script>

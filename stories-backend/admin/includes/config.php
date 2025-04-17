@@ -45,7 +45,7 @@ if (!defined('API_URL')) {
         define('API_URL', 'http://localhost/stories-backend/api/v1');
     } else {
         // For production
-        define('API_URL', '/stories-backend/api/v1');
+        define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
     }
 }
 

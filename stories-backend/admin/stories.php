@@ -287,11 +287,15 @@ class StoriesPage extends CrudPage {
         $authorOptions = [];
         
         if ($authors && isset($authors['data'])) {
-            foreach ($authors['data'] as $author) {
-                $authorOptions[] = [
-                    'id' => $author['id'],
-                    'name' => $author['attributes']['name']
-                ];
+            if (is_array($authors['data'])) {
+                foreach ($authors['data'] as $author) {
+                    if (isset($author['id'])) {
+                        $authorOptions[] = [
+                            'id' => $author['id'],
+                            'name' => isset($author['attributes']) && isset($author['attributes']['name']) ? $author['attributes']['name'] : 'Unknown'
+                        ];
+                    }
+                }
             }
         }
         
@@ -308,11 +312,15 @@ class StoriesPage extends CrudPage {
         $tagOptions = [];
         
         if ($tags && isset($tags['data'])) {
-            foreach ($tags['data'] as $tag) {
-                $tagOptions[] = [
-                    'id' => $tag['id'],
-                    'name' => $tag['attributes']['name']
-                ];
+            if (is_array($tags['data'])) {
+                foreach ($tags['data'] as $tag) {
+                    if (isset($tag['id'])) {
+                        $tagOptions[] = [
+                            'id' => $tag['id'],
+                            'name' => isset($tag['attributes']) && isset($tag['attributes']['name']) ? $tag['attributes']['name'] : 'Unknown'
+                        ];
+                    }
+                }
             }
         }
         

@@ -165,11 +165,15 @@ class BlogPostsPage extends CrudPage {
         $authorOptions = [];
         
         if ($authors && isset($authors['data'])) {
-            foreach ($authors['data'] as $author) {
-                $authorOptions[] = [
-                    'id' => $author['id'],
-                    'name' => isset($author['attributes']) && isset($author['attributes']['name']) ? $author['attributes']['name'] : 'Unknown'
-                ];
+            if (is_array($authors['data'])) {
+                foreach ($authors['data'] as $author) {
+                    if (isset($author['id'])) {
+                        $authorOptions[] = [
+                            'id' => $author['id'],
+                            'name' => isset($author['attributes']) && isset($author['attributes']['name']) ? $author['attributes']['name'] : 'Unknown'
+                        ];
+                    }
+                }
             }
         }
         

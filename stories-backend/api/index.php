@@ -57,8 +57,43 @@ $config = require __DIR__ . '/v1/config/config.php';
 // Set debug mode for Response class
 \StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;
 
-// Direct include of Router class for sanity check
-require_once __DIR__ . '/v1/Core/Router.php';
+// Try to include Router class with case-insensitive approach
+$routerPath = __DIR__ . '/v1/Core/Router.php';
+$routerPathLower = __DIR__ . '/v1/core/Router.php';
+
+if (file_exists($routerPath)) {
+    require_once $routerPath;
+} elseif (file_exists($routerPathLower)) {
+    require_once $routerPathLower;
+} else {
+    // Try to find the file with correct case
+    $v1Dir = __DIR__ . '/v1';
+    if (is_dir($v1Dir)) {
+        $items = scandir($v1Dir);
+        $coreDir = '';
+        
+        // Find the Core directory with correct case
+        foreach ($items as $item) {
+            if (strtolower($item) === 'core' && is_dir($v1Dir . '/' . $item)) {
+                $coreDir = $v1Dir . '/' . $item;
+                break;
+            }
+        }
+        
+        if ($coreDir) {
+            $routerPath = $coreDir . '/Router.php';
+            if (file_exists($routerPath)) {
+                require_once $routerPath;
+            } else {
+                error_log("Router.php not found in $coreDir");
+            }
+        } else {
+            error_log("Core directory not found in $v1Dir");
+        }
+    } else {
+        error_log("v1 directory not found");
+    }
+}
 
 // Create router
 $router = new \StoriesAPI\Core\Router($config);

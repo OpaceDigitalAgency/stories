@@ -171,13 +171,13 @@
                                     <?php endforeach; ?>
                                     <td class="table-actions">
                                         <div class="btn-group" role="group">
-                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=view&id=' . $item['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=view&id=' . ($item['attributes']['id'] ?? ''); ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
                                                 <i class="fas fa-eye me-1"></i> View
                                             </a>
-                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . ($item['attributes']['id'] ?? ''); ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
                                                 <i class="fas fa-edit me-1"></i> Edit
                                             </a>
-                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . ($item['attributes']['id'] ?? ''); ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </a>
                                         </div>

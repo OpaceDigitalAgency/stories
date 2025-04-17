@@ -7,10 +7,10 @@
             <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-sm btn-outline-secondary me-2">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
-            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . (isset($item['id']) ? $item['id'] : ''); ?>" class="btn btn-sm btn-primary me-2">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . ($item['attributes']['id'] ?? ''); ?>" class="btn btn-sm btn-primary me-2">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . (isset($item['id']) ? $item['id'] : ''); ?>" class="btn btn-sm btn-danger delete-confirm">
+            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . ($item['attributes']['id'] ?? ''); ?>" class="btn btn-sm btn-danger delete-confirm">
                 <i class="fas fa-trash"></i> Delete
             </a>
         </div>
@@ -155,7 +155,7 @@
                             <tbody>
                                 <tr>
                                     <th style="width: 200px;">ID</th>
-                                    <td><?php echo htmlspecialchars($item['id'] ?? 'Unknown'); ?></td>
+                                    <td><?php echo htmlspecialchars($item['attributes']['id'] ?? 'Unknown'); ?></td>
                                 </tr>
                                 
                                 <?php

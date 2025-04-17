@@ -92,7 +92,7 @@
                         <div class="col-md-4 mb-3">
                             <h5>ID</h5>
                             <div class="p-2 bg-light rounded">
-                                <?php echo htmlspecialchars($item['id']); ?>
+                                <?php echo htmlspecialchars($item['attributes']['id'] ?? ''); ?>
                             </div>
                         </div>
                         
@@ -117,7 +117,7 @@
                 </div>
             </div>
 
-            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" method="post">
+            <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . ($item['attributes']['id'] ?? ''); ?>" method="post">
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
                     <button type="submit" class="btn btn-danger">

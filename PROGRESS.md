@@ -1,6 +1,18 @@
 # Progress Log
 
 ## 2025-04-17
+### Fixed: Login Authentication Issue
+- Fixed the issue where the main login page (admin/login.php) always returned "Invalid credentials" while direct_login.php worked:
+  - Identified the root cause: The users table either had no admin user or had an admin user with a plaintext password instead of a proper bcrypt hash
+  - Created a solution with three components:
+    1. Created a SQL script (create_admin_user.sql) to insert or update an admin user with a properly hashed password
+    2. Created a PHP script (create_admin.php) to execute the SQL and create/update the admin user with a proper bcrypt hash
+    3. Created a security script (secure_system.php) to remove the direct_login.php backdoor and protect the admin/includes/ directory
+  - Created comprehensive documentation (LOGIN_FIX.md) explaining the issue, root cause, and solution
+  - The fix ensures that the main login system works correctly with the credentials:
+    - Email: admin@example.com
+    - Password: Pa55word!
+
 ### Fixed: Final Admin Interface Issues
 - Fixed the last remaining issues with the admin interface:
   - Fixed API 404 error when fetching stories:

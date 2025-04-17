@@ -100,26 +100,35 @@ class AuthorsController extends BaseController {
     }
     
     /**
-     * Get a single author by slug
+     * Get a single author by slug or numeric ID
      */
     public function show() {
-        // Validate slug
-        $slug = isset($this->params['slug']) ? Validator::sanitizeString($this->params['slug']) : null;
-        
-        if (!$slug) {
-            $this->badRequest('Author slug is required');
+        // Grab the placeholder (named "slug" by the router)
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            $this->serverError('No identifier provided');
             return;
+        }
+
+        // Decide whether this is an ID or a slug
+        if (ctype_digit($identifier)) {
+            $column = 'a.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 'a.slug';
+            // sanitize as before
+            $value  = Validator::sanitizeString($identifier);
         }
         
         try {
-            // Get author by slug
-            $query = "SELECT 
+            // Get author by identifier
+            $query = "SELECT
                 a.id, a.name, a.slug, a.bio, a.featured, a.twitter, a.instagram, a.website,
                 a.created_at as createdAt, a.updated_at as updatedAt
-                FROM authors a 
-                WHERE a.slug = ? LIMIT 1";
+                FROM authors a
+                WHERE $column = ? LIMIT 1";
             
-            $stmt = $this->db->query($query, [$slug]);
+            $stmt = $this->db->query($query, [$value]);
             
             if ($stmt->rowCount() === 0) {
                 $this->notFound('Author not found');

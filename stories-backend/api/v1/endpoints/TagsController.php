@@ -77,25 +77,34 @@ class TagsController extends BaseController {
     }
     
     /**
-     * Get a single tag by slug
+     * Get a single tag by slug or numeric ID
      */
     public function show() {
-        // Validate slug
-        $slug = isset($this->params['slug']) ? Validator::sanitizeString($this->params['slug']) : null;
-        
-        if (!$slug) {
-            $this->badRequest('Tag slug is required');
+        // Grab the placeholder (named "slug" by the router)
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            $this->serverError('No identifier provided');
             return;
+        }
+
+        // Decide whether this is an ID or a slug
+        if (ctype_digit($identifier)) {
+            $column = 't.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 't.slug';
+            // sanitize as before
+            $value  = Validator::sanitizeString($identifier);
         }
         
         try {
-            // Get tag by slug
-            $query = "SELECT 
+            // Get tag by identifier
+            $query = "SELECT
                 t.id, t.name, t.slug
-                FROM tags t 
-                WHERE t.slug = ? LIMIT 1";
+                FROM tags t
+                WHERE $column = ? LIMIT 1";
             
-            $stmt = $this->db->query($query, [$slug]);
+            $stmt = $this->db->query($query, [$value]);
             
             if ($stmt->rowCount() === 0) {
                 $this->notFound('Tag not found');

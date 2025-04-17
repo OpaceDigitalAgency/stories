@@ -170,26 +170,38 @@ class BlogPostsController extends BaseController {
     }
     
     /**
-     * Get a single blog post by slug
+     * Get a single blog post by slug or numeric ID
      */
     public function show() {
-        // Validate slug
-        $slug = isset($this->params['slug']) ? Validator::sanitizeString($this->params['slug']) : null;
-        
-        if (!$slug) {
-            $this->badRequest('Blog post slug is required');
+        // Grab the placeholder (named "slug" by the router)
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            $this->serverError('No identifier provided');
             return;
+        }
+
+        // Decide whether this is an ID or a slug
+        if (ctype_digit($identifier)) {
+            $column = 'bp.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 'bp.slug';
+            // sanitize as before
+            $value  = Validator::sanitizeString($identifier);
         }
         
         try {
-            // Get blog post by slug
-            $query = "SELECT 
+            // Get blog post by identifier
+            $query = "SELECT
                 bp.id, bp.title, bp.slug, bp.excerpt, bp.content, bp.published_at as publishedAt,
-                bp.created_at as createdAt, bp.updated_at as updatedAt
-                FROM blog_posts bp 
-                WHERE bp.slug = ? LIMIT 1";
+                bp.created_at as createdAt, bp.updated_at as updatedAt,
+                a.id as authorId, a.name as authorName, a.slug as authorSlug
+                FROM blog_posts bp
+                LEFT JOIN blog_post_authors bpa ON bp.id = bpa.blog_post_id
+                LEFT JOIN authors a ON bpa.author_id = a.id
+                WHERE $column = ? LIMIT 1";
             
-            $stmt = $this->db->query($query, [$slug]);
+            $stmt = $this->db->query($query, [$value]);
             
             if ($stmt->rowCount() === 0) {
                 $this->notFound('Blog post not found');

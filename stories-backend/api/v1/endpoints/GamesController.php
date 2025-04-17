@@ -107,74 +107,92 @@ class GamesController extends BaseController {
     }
     
     /**
-     * Get a single game by ID
+     * Get a single Game by slug or numeric ID
      */
     public function show() {
-        // Validate ID
-        $gameId = isset($this->params['id']) ? (int)$this->params['id'] : null;
-        
-        if (!$gameId) {
-            $this->badRequest('Game ID is required');
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            Response::sendError('No identifier provided', 400);
             return;
         }
-        
+
+        // Determine whether $identifier is an ID or a slug
+        if (ctype_digit($identifier)) {
+            $column = 'g.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 'g.slug'; // Use slug for string identifiers
+            $value  = Validator::sanitizeString($identifier);
+        }
+
         try {
-            // Get game by ID
-            $query = "SELECT 
-                g.id, g.title, g.description, g.url, g.category,
-                g.created_at as createdAt, g.updated_at as updatedAt
-                FROM games g 
-                WHERE g.id = ? LIMIT 1";
-            
-            $stmt = $this->db->query($query, [$gameId]);
-            
-            if ($stmt->rowCount() === 0) {
-                $this->notFound('Game not found');
+            // Get Game by identifier
+            $query = "
+                SELECT
+                    g.id, g.title, g.slug, g.description, g.url, g.category,
+                    g.created_at as createdAt, g.updated_at as updatedAt
+                FROM games g
+                WHERE $column = ?
+                LIMIT 1
+            ";
+            $stmt  = $this->db->query($query, [$value]);
+            $game = $stmt->fetch();
+
+            if (!$game) {
+                Response::sendError('Game not found', 404);
                 return;
             }
-            
-            $game = $stmt->fetch();
-            
-            // Get game thumbnail
-            $thumbnailQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'game' AND entity_id = ? AND type = 'thumbnail' LIMIT 1";
-            $thumbnailStmt = $this->db->query($thumbnailQuery, [$gameId]);
-            $thumbnail = $thumbnailStmt->fetch();
-            
-            // Format thumbnail
-            $formattedThumbnail = null;
-            if ($thumbnail) {
-                $formattedThumbnail = [
-                    'data' => [
-                        'id' => $thumbnail['id'],
-                        'attributes' => [
-                            'url' => $thumbnail['url'],
-                            'width' => $thumbnail['width'],
-                            'height' => $thumbnail['height'],
-                            'alternativeText' => $thumbnail['alt_text']
-                        ]
+
+            // Format the Game
+            $formatted = $this->formatSingleGame($game);
+            Response::sendSuccess($formatted);
+
+        } catch (\Exception $e) {
+            $this->serverError('Failed to fetch Game: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Helper to format a single Game
+     */
+    private function formatSingleGame(array $game): array {
+        $gameId = $game['id'];
+
+        // Get game thumbnail
+        $thumbnailQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'game' AND entity_id = ? AND type = 'thumbnail' LIMIT 1";
+        $thumbnailStmt = $this->db->query($thumbnailQuery, [$gameId]);
+        $thumbnail = $thumbnailStmt->fetch();
+
+        // Format thumbnail
+        $formattedThumbnail = null;
+        if ($thumbnail) {
+            $formattedThumbnail = [
+                'data' => [
+                    'id' => $thumbnail['id'],
+                    'attributes' => [
+                        'url' => $thumbnail['url'],
+                        'width' => $thumbnail['width'],
+                        'height' => $thumbnail['height'],
+                        'alternativeText' => $thumbnail['alt_text']
                     ]
-                ];
-            }
-            
-            // Build the formatted game
-            $formattedGame = [
-                'id' => $gameId,
-                'attributes' => [
-                    'title' => $game['title'],
-                    'description' => $game['description'],
-                    'url' => $game['url'],
-                    'category' => $game['category'],
-                    'createdAt' => $game['createdAt'],
-                    'updatedAt' => $game['updatedAt'],
-                    'thumbnail' => $formattedThumbnail
                 ]
             ];
-            
-            // Send response
-            Response::sendSuccess(['data' => $formattedGame]);
-        } catch (\Exception $e) {
-            $this->serverError('Failed to fetch game: ' . $e->getMessage());
         }
+
+        // Build the formatted Game
+        return [
+            'id' => $gameId,
+            'attributes' => [
+                'title' => $game['title'],
+                'slug' => $game['slug'], // Ensure slug is included
+                'description' => $game['description'],
+                'url' => $game['url'],
+                'category' => $game['category'],
+                'createdAt' => $game['createdAt'],
+                'updatedAt' => $game['updatedAt'],
+                'thumbnail' => $formattedThumbnail
+            ]
+        ];
     }
     
     /**

@@ -107,26 +107,32 @@ class DirectoryItemsController extends BaseController {
     }
     
     /**
-     * Get a single directory item by ID
+     * Get a single directory item by slug or numeric ID
      */
     public function show() {
-        // Validate ID
-        $itemId = isset($this->params['id']) ? (int)$this->params['id'] : null;
-        
-        if (!$itemId) {
-            $this->badRequest('Directory item ID is required');
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            Response::sendError('No identifier provided', 400);
             return;
+        }
+        if (ctype_digit($identifier)) {
+            $column = 'di.id';
+            $value = (int)$identifier;
+        } else {
+            $column = 'di.name';
+            $value = Validator::sanitizeString($identifier);
         }
         
         try {
-            // Get directory item by ID
-            $query = "SELECT 
+            // Get directory item by identifier
+            $query = "SELECT
                 di.id, di.name, di.description, di.url, di.category,
                 di.created_at as createdAt, di.updated_at as updatedAt
-                FROM directory_items di 
-                WHERE di.id = ? LIMIT 1";
+                FROM directory_items di
+                WHERE $column = ?
+                LIMIT 1";
             
-            $stmt = $this->db->query($query, [$itemId]);
+            $stmt = $this->db->query($query, [$value]);
             
             if ($stmt->rowCount() === 0) {
                 $this->notFound('Directory item not found');
@@ -134,6 +140,7 @@ class DirectoryItemsController extends BaseController {
             }
             
             $item = $stmt->fetch();
+            $itemId = $item['id'];
             
             // Get item logo
             $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'directory_item' AND entity_id = ? AND type = 'logo' LIMIT 1";
@@ -171,7 +178,7 @@ class DirectoryItemsController extends BaseController {
             ];
             
             // Send response
-            Response::sendSuccess(['data' => $formattedDirectoryItem]);
+            Response::sendSuccess($formattedDirectoryItem);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch directory item: ' . $e->getMessage());
         }

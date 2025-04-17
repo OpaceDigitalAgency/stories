@@ -107,74 +107,91 @@ class AiToolsController extends BaseController {
     }
     
     /**
-     * Get a single AI tool by ID
+     * Get a single AI tool by slug or numeric ID
      */
     public function show() {
-        // Validate ID
-        $toolId = isset($this->params['id']) ? (int)$this->params['id'] : null;
-        
-        if (!$toolId) {
-            $this->badRequest('AI tool ID is required');
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            Response::sendError('No identifier provided', 400);
             return;
         }
-        
+
+        // Determine whether $identifier is an ID or a slug (using 'name' as slug for AI Tools)
+        if (ctype_digit($identifier)) {
+            $column = 'at.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 'at.name'; // Assuming 'name' is the unique string identifier
+            $value  = Validator::sanitizeString($identifier);
+        }
+
         try {
-            // Get AI tool by ID
-            $query = "SELECT 
-                at.id, at.name, at.description, at.url, at.category,
-                at.created_at as createdAt, at.updated_at as updatedAt
-                FROM ai_tools at 
-                WHERE at.id = ? LIMIT 1";
-            
-            $stmt = $this->db->query($query, [$toolId]);
-            
-            if ($stmt->rowCount() === 0) {
-                $this->notFound('AI tool not found');
+            // Get AI tool by identifier
+            $query = "
+                SELECT
+                    at.id, at.name, at.description, at.url, at.category,
+                    at.created_at as createdAt, at.updated_at as updatedAt
+                FROM ai_tools at
+                WHERE $column = ?
+                LIMIT 1
+            ";
+            $stmt  = $this->db->query($query, [$value]);
+            $tool = $stmt->fetch();
+
+            if (!$tool) {
+                Response::sendError('AI tool not found', 404);
                 return;
             }
-            
-            $tool = $stmt->fetch();
-            
-            // Get tool logo
-            $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'ai_tool' AND entity_id = ? AND type = 'logo' LIMIT 1";
-            $logoStmt = $this->db->query($logoQuery, [$toolId]);
-            $logo = $logoStmt->fetch();
-            
-            // Format logo
-            $formattedLogo = null;
-            if ($logo) {
-                $formattedLogo = [
-                    'data' => [
-                        'id' => $logo['id'],
-                        'attributes' => [
-                            'url' => $logo['url'],
-                            'width' => $logo['width'],
-                            'height' => $logo['height'],
-                            'alternativeText' => $logo['alt_text']
-                        ]
-                    ]
-                ];
-            }
-            
-            // Build the formatted AI tool
-            $formattedAiTool = [
-                'id' => $toolId,
-                'attributes' => [
-                    'name' => $tool['name'],
-                    'description' => $tool['description'],
-                    'url' => $tool['url'],
-                    'category' => $tool['category'],
-                    'createdAt' => $tool['createdAt'],
-                    'updatedAt' => $tool['updatedAt'],
-                    'logo' => $formattedLogo
-                ]
-            ];
-            
-            // Send response
-            Response::sendSuccess(['data' => $formattedAiTool]);
+
+            // Format the AI tool (using existing logic adapted)
+            $formatted = $this->formatSingleAiTool($tool);
+            Response::sendSuccess($formatted);
+
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch AI tool: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Helper to format a single AI Tool
+     */
+    private function formatSingleAiTool(array $tool): array {
+        $toolId = $tool['id'];
+
+        // Get tool logo
+        $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'ai_tool' AND entity_id = ? AND type = 'logo' LIMIT 1";
+        $logoStmt = $this->db->query($logoQuery, [$toolId]);
+        $logo = $logoStmt->fetch();
+
+        // Format logo
+        $formattedLogo = null;
+        if ($logo) {
+            $formattedLogo = [
+                'data' => [
+                    'id' => $logo['id'],
+                    'attributes' => [
+                        'url' => $logo['url'],
+                        'width' => $logo['width'],
+                        'height' => $logo['height'],
+                        'alternativeText' => $logo['alt_text']
+                    ]
+                ]
+            ];
+        }
+
+        // Build the formatted AI tool
+        return [
+            'id' => $toolId,
+            'attributes' => [
+                'name' => $tool['name'],
+                'description' => $tool['description'],
+                'url' => $tool['url'],
+                'category' => $tool['category'],
+                'createdAt' => $tool['createdAt'],
+                'updatedAt' => $tool['updatedAt'],
+                'logo' => $formattedLogo
+            ]
+        ];
     }
     
     /**

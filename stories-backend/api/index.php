@@ -17,7 +17,6 @@ ob_start();
 
 // Set error reporting
 error_reporting(E_ALL);
-opcache_reset();
 ini_set('display_errors', 1);
 
 // Define the base path

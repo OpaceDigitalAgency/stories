@@ -64,12 +64,18 @@ We implemented the following solutions:
    - Set proper error log path
    - This resolved the "Unexpected token '<'" errors caused by PHP errors being output before JSON responses
 
+### Local JavaScript Resources
+
+1. Added local JavaScript resources to avoid CSP issues:
+   - Created placeholder files for jQuery and Bootstrap in the assets directory
+   - Updated login.php to use local resources instead of CDN links
+   - This ensures that the login page loads properly even with strict Content Security Policy settings
+
 ### Simplified Login Page
 
 1. Created a simplified login page that doesn't rely on external resources:
    - Created simple_login.php with inline CSS styles
    - Removed all external JavaScript and CSS dependencies
-   - Modified login.php to redirect to simple_login.php
    - This provides a reliable login experience even with strict Content Security Policy settings
 
 ### Password Hash Fix

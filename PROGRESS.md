@@ -1,6 +1,14 @@
 # Progress Log
 
 ## 2025-04-17
+### Fixed: JavaScript Form Interception Issue
+- Fixed the issue with JavaScript intercepting the login form:
+  - The admin.js script was intercepting the login form submission because it had the "needs-validation" class
+  - The script was trying to handle the form via AJAX and expected a JSON response
+  - Since login.php returns HTML, this caused the "Unexpected token '<'" error
+  - Removed the "needs-validation" class from the login form to prevent JavaScript interception
+  - This allows the form to submit normally and the PHP redirect to work properly
+
 ### Fixed: Password Hash Issue in Database
 - Fixed the issue where the password hash in the database was a placeholder and didn't match any actual password:
   - Created update_admin_password.php script to generate a proper hash for "Pa55word!" and update the database

@@ -36,7 +36,14 @@ if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(__DIR__));
 }
 if (!defined('ADMIN_URL')) {
-    define('ADMIN_URL', '/admin');
+    // Use absolute URL for admin interface
+    if (ENVIRONMENT === 'development') {
+        // For local development
+        define('ADMIN_URL', '/admin');
+    } else {
+        // For production - use the correct domain, not the API domain
+        define('ADMIN_URL', 'https://storiesfromtheweb.org/admin');
+    }
 }
 if (!defined('API_URL')) {
     // Use absolute URL for API server

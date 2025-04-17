@@ -194,7 +194,14 @@ class Response {
      * @param int $statusCode HTTP status code
      */
     public static function sendSuccess($data, $meta = [], $statusCode = 200) {
-        self::json(self::success($data, $meta, $statusCode));
+        // Check if data is already formatted with a 'data' key
+        if (is_array($data) && isset($data['id']) && !isset($data['data'])) {
+            // This is a single entity response, don't wrap it in another 'data' key
+            self::json(['data' => $data, 'meta' => $meta]);
+        } else {
+            // Use the standard success method for other cases
+            self::json(self::success($data, $meta, $statusCode));
+        }
     }
     
     /**

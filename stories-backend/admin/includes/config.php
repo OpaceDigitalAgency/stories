@@ -37,13 +37,8 @@ if (!defined('BASE_PATH')) {
 }
 if (!defined('ADMIN_URL')) {
     // Use absolute URL for admin interface
-    if (ENVIRONMENT === 'development') {
-        // For local development
-        define('ADMIN_URL', '/admin');
-    } else {
-        // For production - use the correct domain, not the API domain
-        define('ADMIN_URL', '/admin');
-    }
+    // Always use a relative path so links stay on the admin host
+    define('ADMIN_URL', '/admin');
 }
 
 // Define the admin assets URL (always relative to ensure assets load from the same domain)

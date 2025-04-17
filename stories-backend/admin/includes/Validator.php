@@ -1,12 +1,15 @@
 <?php
 /**
  * Validator Utility Class
- * 
+ *
  * This class provides methods for validating and sanitizing input data.
- * 
+ *
  * @package Stories Admin
  * @version 1.0.0
  */
+
+// Prevent any output before headers are sent
+if (ob_get_level() == 0) ob_start();
 
 class Validator {
     /**

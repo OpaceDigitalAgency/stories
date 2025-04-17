@@ -1,12 +1,15 @@
 <?php
 /**
  * Authentication Utility Class
- * 
+ *
  * This class handles JWT token generation, validation, and user authentication.
- * 
+ *
  * @package Stories Admin
  * @version 1.0.0
  */
+
+// Prevent any output before headers are sent
+if (ob_get_level() == 0) ob_start();
 
 class Auth {
     /**

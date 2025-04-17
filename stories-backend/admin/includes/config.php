@@ -1,12 +1,21 @@
 <?php
 /**
  * Admin UI Configuration
- * 
+ *
  * This file contains configuration settings for the admin UI.
- * 
+ *
  * @package Stories Admin
  * @version 1.0.0
  */
+
+// Prevent any output before headers are sent
+if (ob_get_level() == 0) ob_start();
+
+// Error handling
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors to browser
+ini_set('log_errors', 1);
+ini_set('error_log', '/home/stories/api.storiesfromtheweb.org/logs/api-error.log');
 
 // Define the environment (development, testing, production)
 if (!defined('ENVIRONMENT')) {

@@ -1,13 +1,16 @@
 <?php
 /**
  * Database Connection Class
- * 
+ *
  * This class handles the database connection and provides methods for
  * executing queries with prepared statements for security.
- * 
+ *
  * @package Stories Admin
  * @version 1.0.0
  */
+
+// Prevent any output before headers are sent
+if (ob_get_level() == 0) ob_start();
 
 class Database {
     /**

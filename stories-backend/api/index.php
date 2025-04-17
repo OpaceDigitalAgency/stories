@@ -18,14 +18,14 @@ ob_start();
 
 // Set error reporting - don't display errors in output to prevent JSON corruption
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1); // TEMPORARY DEBUG: Show errors on screen
 ini_set('log_errors', 1);
 
 // Define the base path
 define('BASE_PATH', __DIR__);
 
 // Define debug mode (should be false for production)
-define('DEBUG_MODE', false);
+define('DEBUG_MODE', true); // TEMPORARY DEBUG: Enable debug features
 
 // Enable CORS for preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

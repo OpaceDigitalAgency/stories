@@ -153,31 +153,30 @@ function initFormValidation() {
                     method = 'PUT';
                 }
                 
-                // Use AJAX to submit the form
-                fetch(actionUrl, {
-                    method: method,
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Form submission failed');
-                        });
+                // Use our custom AJAX function to submit the form
+                console.log('Submitting form to:', actionUrl, 'with method:', method);
+                
+                // Use our custom AJAX function instead of fetch
+                ajaxRequest(
+                    actionUrl,
+                    method,
+                    formData,  // Pass FormData directly
+                    function(response) {
+                        // Success callback
+                        hideLoading();
+                        showNotification('Form submitted successfully', 'success');
+                        
+                        // Redirect to the list page
+                        const listUrl = actionUrl.split('?')[0];
+                        console.log('Redirecting to:', listUrl);
+                        window.location.href = listUrl;
+                    },
+                    function(error) {
+                        // Error callback
+                        hideLoading();
+                        showNotification('Error: ' + error.message, 'danger');
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    hideLoading();
-                    showNotification('Form submitted successfully', 'success');
-                    
-                    // Redirect to the list page
-                    const listUrl = actionUrl.split('?')[0];
-                    window.location.href = listUrl;
-                })
-                .catch(error => {
-                    hideLoading();
-                    showNotification('Error: ' + error.message, 'danger');
-                });
+                );
             }
             
             form.classList.add('was-validated');
@@ -726,14 +725,30 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     
     // Configure it
     xhr.open(method, url, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    
+    // Set Content-Type header based on data type
+    if (data instanceof FormData) {
+        // Don't set Content-Type for FormData, browser will set it with boundary
+        console.log('Sending FormData');
+    } else if (data !== null && typeof data === 'object') {
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        // Convert data to JSON string
+        data = JSON.stringify(data);
+        console.log('Sending JSON data');
+    } else {
+        // For GET requests or null data
+        console.log('Sending request without body data');
+    }
     
     // Set up callback
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             // Hide loading overlay
             hideLoading();
+            
+            console.log('Response status:', xhr.status);
+            console.log('Response text:', xhr.responseText);
             
             if (xhr.status >= 200 && xhr.status < 300) {
                 // Success
@@ -742,6 +757,7 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
                     response = JSON.parse(xhr.responseText);
                 } catch (e) {
                     response = xhr.responseText;
+                    console.log('Response is not JSON:', e);
                 }
                 
                 if (typeof successCallback === 'function') {
@@ -761,7 +777,10 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
                     }
                 } catch (e) {
                     // Ignore parsing error
+                    console.log('Error response is not JSON:', e);
                 }
+                
+                console.error('AJAX error:', error);
                 
                 if (typeof errorCallback === 'function') {
                     errorCallback(error);
@@ -773,7 +792,7 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     };
     
     // Send the request
-    xhr.send(data ? JSON.stringify(data) : null);
+    xhr.send(data);
 }
 
 /**

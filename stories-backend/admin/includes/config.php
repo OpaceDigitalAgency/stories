@@ -19,7 +19,7 @@ ini_set('error_log', '/home/stories/api.storiesfromtheweb.org/logs/api-error.log
 
 // Define the environment (development, testing, production)
 if (!defined('ENVIRONMENT')) {
-    define('ENVIRONMENT', 'production');
+    define('ENVIRONMENT', 'development');
 }
 
 // Set error reporting based on environment

@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2025-04-17
+- Started investigation of PHP API HTTP 500 errors:
+  - Identified case-sensitivity issues with folder names vs. namespace expectations
+  - Found error reporting turned off in development mode
+  - Discovered error logging pointing to non-existent path
+- Created plan to fix the issues:
+  - Rename folders to match namespace case
+  - Fix error reporting configuration
+  - Update error log path
+- Fixed PHP API HTTP 500 errors:
+  - Renamed folders to match namespace case:
+    - Renamed api/v1/endpoints/ → api/v1/Endpoints/
+    - Renamed api/v1/utils/ → api/v1/Utils/
+    - Renamed api/v1/core/ → api/v1/Core/
+  - Fixed error reporting in development mode:
+    - Changed environment from 'production' to 'development' in config.php
+  - Fixed error log path:
+    - Created logs directory in stories-backend folder
+    - Updated .htaccess to point to logs/api-error.log
+
 ## 2025-04-16
 - Created memory files (README.md, PLANNING.md, TASK.md, PROGRESS.md)
 - Started investigation of admin panel issues:
@@ -46,3 +66,56 @@
   - Verified CORS configuration for the frontend domain
   - Enhanced database error handling with detailed information
   - Added error reference IDs for easier troubleshooting
+- Fixed API and database connectivity issues:
+  - Updated .htaccess files to fix Content Security Policy (CSP) violations
+  - Modified Router.php to handle both full URL and relative path formats
+  - Created diagnostic tools for troubleshooting:
+    - test_connection.php: Tests API connectivity and database connection
+    - check_syntax.php: Checks PHP files for syntax errors
+    - test_database.php: Tests database connection with detailed diagnostics
+    - test_endpoints.php: Tests API endpoints for properly formatted JSON responses
+  - Created FIXES.md documentation with troubleshooting instructions
+  - Committed with message: "Fix API and database connectivity issues: CSP headers, Router URL handling, and diagnostic tools"
+- Fixed specific issues shown in the screenshots:
+  - Fixed the 500 Internal Server Error in test_connection.php by adding proper error handling for configuration file loading
+  - Fixed the "Failed to fetch Stories: Response parsing error: Syntax error" in the admin panel by adding the JSON_INVALID_UTF8_SUBSTITUTE flag to the json_encode function in Response.php
+  - Fixed the Content Security Policy (CSP) violations by updating the connect-src directive in both .htaccess files
+  - Added https://storiesfromtheweb.org to the allowed domains in the CSP headers
+  - Committed with message: "Fix critical backend issues: 500 error in test script, JSON parsing error, and CSP violations"
+- Fixed admin panel data display and add button issues:
+  - Added output buffering to the API index.php file to capture any unexpected output before the JSON response
+  - Modified the CrudPage.php file to redirect to the entity's list page after successful creation
+  - Fixed test scripts to prevent 500 errors by adding output buffering and setting proper content-type headers
+  - Committed with message: "Fix admin panel issues: Add output buffering to API index.php to handle unexpected output, modify CrudPage.php to redirect to entity list page after creation, and fix test scripts to prevent 500 errors"
+- Fixed remaining admin panel issues:
+  - Fixed the 500 Internal Server Error in test_database.php by adding an alternative config path check and improving error reporting
+  - Fixed the JavaScript error "Uncaught ReferenceError: $ is not defined" in admin.js by adding better error handling in jQuery-dependent functions
+  - Fixed the dashboard content type count display issues by adding proper error handling for API requests and correcting table name mapping
+  - Committed with message: "Fix remaining admin panel issues: 500 error in test_database.php, jQuery loading in admin.js, and dashboard content type counts"
+- Fixed final admin panel issues:
+  - Fixed the redirection issue where URLs like https://api.storiesfromtheweb.org/admin/test_database.php were redirecting to the dashboard
+  - Modified the .htaccess file to allow direct access to test_*.php files without redirection
+  - Added new test files in the admin directory that properly include the corresponding API test scripts
+  - Fixed the jQuery loading issues causing the infinite loop of "jQuery still not loaded. Trying again..."
+  - Improved the jQuery loading mechanism with better fallbacks and error handling
+  - Enhanced the script loading sequence in footer.php
+  - Added a maximum retry count to prevent infinite loops
+  - Created a comprehensive test_tools.php page with a dashboard of all testing utilities
+  - Added a "Test Tools" navigation link in the admin header for easy access
+  - Committed with message: "Fix final admin panel issues: redirection to test scripts and jQuery loading infinite loops"
+- Fixed API case sensitivity issues:
+  - Updated the autoloader in index.php and debug_index.php to handle case sensitivity in file paths
+  - Added fallback mechanisms to find files with different case than the namespace
+  - Added specific handling for the Utils namespace to find files in the utils directory
+  - Set debug mode to false in production for the API
+  - Properly initialized the Response class with debug mode
+  - Added detailed error logging for autoloader failures
+  - Committed with message: "Fix case sensitivity issues in API autoloader and add debug mode support. This resolves the 500 Internal Server Error in API endpoints by handling case sensitivity in file paths and properly initializing the Response class with debug mode."
+- Fixed API response structure issues:
+  - Simplified the complex nested data structures in StoriesController.php, AuthorsController.php, and TagsController.php
+  - Removed deeply nested attributes and data objects that were causing JSON encoding issues
+  - Replaced complex cover image and avatar structures with simple URL references
+  - Flattened the response structure to avoid multiple levels of nesting
+  - Simplified the tags and stories arrays in the response
+  - Removed pagination metadata from nested arrays
+  - Committed with message: "Simplify API response structures to fix JSON encoding issues. This resolves the 500 Internal Server Error in API endpoints by reducing the complexity of nested data structures in StoriesController, AuthorsController, and TagsController."

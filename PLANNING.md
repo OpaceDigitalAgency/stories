@@ -11,7 +11,7 @@
 - Build an admin interface for content management
 
 ## Current Issues
-- Admin panel styling is missing
-- PHP errors in the admin panel:
-  - Missing AdminPage class
-  - Multiple constant definitions in config.php
+- PHP API returning HTTP 500 errors with blank bodies due to:
+  - Case-sensitive autoloading vs. lowercase folder names (endpoints/ vs. Endpoints/)
+  - Error reporting turned off in development mode
+  - Error logging pointing to non-existent path

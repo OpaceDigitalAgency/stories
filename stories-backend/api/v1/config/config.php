@@ -10,7 +10,7 @@
  */
 
 // Define the environment (development, testing, production)
-define('ENVIRONMENT', 'production');
+define('ENVIRONMENT', 'development');
 
 // Set error reporting based on environment
 if (ENVIRONMENT === 'development') {

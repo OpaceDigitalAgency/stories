@@ -133,7 +133,7 @@ class Response {
         }
         
         // Encode the data with simpler options to avoid encoding issues
-        $json = json_encode($data);
+        $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         
         // Check for JSON encoding errors
         if ($json === false) {

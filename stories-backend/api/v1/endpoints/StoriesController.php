@@ -129,30 +129,42 @@ class StoriesController extends BaseController {
     }
     
     /**
-     * Get a single story by slug
+     * Get a single story by slug or numeric ID
      */
     public function show() {
-        // Validate slug
-        $slug = isset($this->params['slug']) ? Validator::sanitizeString($this->params['slug']) : null;
-        
-        if (!$slug) {
-            $this->badRequest('Story slug is required');
+        // Grab the placeholder (named "slug" by the router)
+        $identifier = $this->params['slug'] ?? null;
+        if (!$identifier) {
+            $this->serverError('No identifier provided');
             return;
         }
-        
+
+        // Decide whether this is an ID or a slug
+        if (ctype_digit($identifier)) {
+            $column = 's.id';
+            $value  = (int)$identifier;
+        } else {
+            $column = 's.slug';
+            // sanitize as before
+            $value  = Validator::sanitizeString($identifier);
+        }
+
         try {
-            // Get story by slug
-            $query = "SELECT 
-                s.id, s.title, s.slug, s.excerpt, s.content, s.published_at as publishedAt, 
+            // Get story by identifier
+            $query = "SELECT
+                s.id, s.title, s.slug, s.excerpt, s.content, s.published_at as publishedAt,
                 s.featured, s.average_rating as averageRating, s.review_count as reviewCount,
                 s.estimated_reading_time as estimatedReadingTime, s.is_sponsored as isSponsored,
                 s.age_group as ageGroup, s.needs_moderation as needsModeration,
                 s.is_self_published as isSelfPublished, s.is_ai_enhanced as isAIEnhanced,
-                s.created_at as createdAt, s.updated_at as updatedAt
-                FROM stories s 
-                WHERE s.slug = ? LIMIT 1";
+                s.created_at as createdAt, s.updated_at as updatedAt,
+                a.id as authorId, a.name as authorName, a.slug as authorSlug
+                FROM stories s
+                LEFT JOIN story_authors sa ON s.id = sa.story_id
+                LEFT JOIN authors a ON sa.author_id = a.id
+                WHERE $column = ? LIMIT 1";
             
-            $stmt = $this->db->query($query, [$slug]);
+            $stmt = $this->db->query($query, [$value]);
             
             if ($stmt->rowCount() === 0) {
                 $this->notFound('Story not found');

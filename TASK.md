@@ -10,6 +10,8 @@
    - Remove the direct_login.php backdoor for security ✓
    - Protect the admin/includes/ directory from direct access ✓
    - Document the solution in LOGIN_FIX.md ✓
+   - Fix Content Security Policy to allow external resources from CDNs ✓
+   - Fix JavaScript form interception issue by removing "needs-validation" class ✓
 
 2. Fix Media Page HTTP 500 Error ✓
    - Debug and fix the FileUpload class configuration ✓

@@ -51,15 +51,12 @@ if (!defined('ADMIN_ASSETS_URL')) {
     define('ADMIN_ASSETS_URL', '/admin');
 }
 if (!defined('API_URL')) {
-    // Use absolute URL with same domain for API server
+    // Use hardcoded URL for simplicity and reliability
     if (ENVIRONMENT === 'development') {
-        // For local development - use same domain with full path
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'];
-        $basePath = dirname(dirname($_SERVER['SCRIPT_NAME']));
-        define('API_URL', $protocol . $host . $basePath . '/api/v1');
+        // For local development - use fixed URL
+        define('API_URL', 'http://localhost/stories-backend/api/v1');
     } else {
-        // For production
+        // For production - fix double slash issue
         define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
     }
 }

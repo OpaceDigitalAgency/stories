@@ -26,9 +26,11 @@
                             <div class="p-2 bg-light rounded">
                                 <?php
                                     // Get field value with proper fallback
-                                    $value = isset($item['attributes']) && isset($item['attributes'][$field['name']])
-                                        ? $item['attributes'][$field['name']]
-                                        : ($item[$field['name']] ?? '');
+                                    if (isset($item['attributes'][$field['name']])) {
+                                        $value = $item['attributes'][$field['name']];
+                                    } else {
+                                        $value = $item[$field['name']] ?? '';
+                                    }
                                     
                                     // Format value based on field type
                                     switch ($field['type']):

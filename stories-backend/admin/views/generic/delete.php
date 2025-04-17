@@ -40,9 +40,11 @@
                             
                             // Display the main field
                             if ($mainField):
-                                $value = isset($item['attributes']) && isset($item['attributes'][$mainField['name']])
-                                    ? $item['attributes'][$mainField['name']]
-                                    : ($item[$mainField['name']] ?? '');
+                                if (isset($item['attributes'][$mainField['name']])) {
+                                    $value = $item['attributes'][$mainField['name']];
+                                } else {
+                                    $value = $item[$mainField['name']] ?? '';
+                                }
                         ?>
                             <div class="col-md-12 mb-3">
                                 <h5><?php echo htmlspecialchars($mainField['label']); ?></h5>

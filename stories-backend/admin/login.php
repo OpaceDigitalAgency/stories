@@ -1,32 +1,16 @@
 <?php
 /**
- * Login Page
+ * Login Page Redirect
  *
- * This page handles user authentication for the admin UI.
+ * This page redirects to the simplified login page that doesn't rely on external resources.
  *
  * @package Stories Admin
  * @version 1.0.0
  */
 
-// Prevent any output before headers are sent
-ob_start();
-
-// Error handling
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors to browser
-ini_set('log_errors', 1);
-ini_set('error_log', '/home/stories/api.storiesfromtheweb.org/logs/api-error.log');
-
-// Include required files
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/Database.php';
-require_once __DIR__ . '/includes/Auth.php';
-require_once __DIR__ . '/includes/Validator.php';
-
-// Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Redirect to the simplified login page
+header('Location: simple_login.php');
+exit;
 
 // Initialize database
 $db = Database::getInstance($config['db']);

@@ -177,21 +177,21 @@ $router->delete('blog-posts/{id}', '\StoriesAPI\Endpoints\BlogPostsController', 
 
 // Directory items routes
 $router->get('directory-items', '\StoriesAPI\Endpoints\DirectoryItemsController', 'index');
-$router->get('directory-items/{id}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'show');
+$router->get('directory-items/{slug}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'show');
 $router->post('directory-items', '\StoriesAPI\Endpoints\DirectoryItemsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->put('directory-items/{id}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->delete('directory-items/{id}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 
 // Games routes
 $router->get('games', '\StoriesAPI\Endpoints\GamesController', 'index');
-$router->get('games/{id}', '\StoriesAPI\Endpoints\GamesController', 'show');
+$router->get('games/{slug}', '\StoriesAPI\Endpoints\GamesController', 'show');
 $router->post('games', '\StoriesAPI\Endpoints\GamesController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->put('games/{id}', '\StoriesAPI\Endpoints\GamesController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->delete('games/{id}', '\StoriesAPI\Endpoints\GamesController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 
 // AI tools routes
 $router->get('ai-tools', '\StoriesAPI\Endpoints\AiToolsController', 'index');
-$router->get('ai-tools/{id}', '\StoriesAPI\Endpoints\AiToolsController', 'show');
+$router->get('ai-tools/{slug}', '\StoriesAPI\Endpoints\AiToolsController', 'show');
 $router->post('ai-tools', '\StoriesAPI\Endpoints\AiToolsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->put('ai-tools/{id}', '\StoriesAPI\Endpoints\AiToolsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
 $router->delete('ai-tools/{id}', '\StoriesAPI\Endpoints\AiToolsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);

@@ -19,15 +19,17 @@ class StoriesController extends BaseController {
      * Get all stories with pagination, filtering, and sorting
      */
     public function index() {
-        // Get pagination parameters
+        // Get pagination parameters - cast to int to avoid notices
         $pagination = $this->getPaginationParams();
-        $page = $pagination['page'];
-        $pageSize = $pagination['pageSize'];
+        $page = (int)($pagination['page'] ?? 1);
+        $pageSize = (int)($pagination['pageSize'] ?? 10);
         $offset = ($page - 1) * $pageSize;
         
-        // Get sort parameters
-        $allowedSortFields = ['title', 'publishedAt', 'averageRating', 'featured'];
-        $sort = $this->getSortParams($allowedSortFields);
+        // Get sort parameters - use null coalescing to avoid undefined index notices
+        $sortParam = $this->query['sort'] ?? '';
+        $sort = $sortParam === ''
+            ? null
+            : $this->getSortParams(['title', 'publishedAt', 'averageRating', 'featured']);
         $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY published_at DESC";
         
         // Get filter parameters

@@ -77,6 +77,11 @@ class Database {
         
         try {
             $this->connection = new PDO($dsn, $this->config['user'], $this->config['password'], $options);
+            
+            if (!$this->connection) {
+                throw new \Exception('Database connection failed (no PDO handle)');
+            }
+            
             error_log("[DB CONNECTION SUCCESS] Connected to database {$this->config['name']} as user {$this->config['user']}");
         } catch (PDOException $e) {
             // Log detailed error information for debugging

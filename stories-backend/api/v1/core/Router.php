@@ -134,6 +134,12 @@ class Router {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
+        // Handle bare API root requests
+        $apiRoot = "/api/{$this->config['api']['version']}";
+        if (rtrim($path, '/') === $apiRoot) {
+            $path = '';   // forces clean 404 without warnings
+        }
+        
         // Debug log
         error_log("Router handling request: {$method} {$path}");
         

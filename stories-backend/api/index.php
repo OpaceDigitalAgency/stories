@@ -1,5 +1,6 @@
 <?php
-file_put_contents('/home/stories/tmp_autoload_test.txt', date('c')." index.php executed\n", FILE_APPEND);
+// Comment out debug file writing to prevent output before JSON
+// file_put_contents('/home/stories/tmp_autoload_test.txt', date('c')." index.php executed\n", FILE_APPEND);
 header("Cache-Control: no-cache");
 header("Content-Type: application/json; charset=UTF-8");
 /**
@@ -15,9 +16,10 @@ header("Content-Type: application/json; charset=UTF-8");
 // Start output buffering to capture any unexpected output
 ob_start();
 
-// Set error reporting
+// Set error reporting - don't display errors in output to prevent JSON corruption
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
 // Define the base path
 define('BASE_PATH', __DIR__);

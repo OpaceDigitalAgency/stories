@@ -385,7 +385,15 @@
                                                     }
                                                 ?>
                                             </td>
-                                            <td><?php echo date('M d, Y', strtotime($story['attributes']['publishedAt'])); ?></td>
+                                            <td>
+                                                <?php
+                                                    if (isset($story['attributes']['publishedAt']) && !empty($story['attributes']['publishedAt'])) {
+                                                        echo date('M d, Y', strtotime($story['attributes']['publishedAt']));
+                                                    } else {
+                                                        echo '<em>Not set</em>';
+                                                    }
+                                                ?>
+                                            </td>
                                             <td>
                                                 <a href="<?php echo ADMIN_URL; ?>/stories.php?action=view&id=<?php echo $story['id']; ?>" class="btn btn-sm btn-info" title="View Story">
                                                     <i class="fas fa-eye"></i>

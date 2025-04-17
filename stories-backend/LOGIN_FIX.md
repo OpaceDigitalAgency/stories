@@ -64,6 +64,15 @@ We implemented the following solutions:
    - Set proper error log path
    - This resolved the "Unexpected token '<'" errors caused by PHP errors being output before JSON responses
 
+### JavaScript Form Interception Fix
+
+1. Fixed the issue with JavaScript intercepting the login form:
+   - The admin.js script was intercepting the login form submission because it had the "needs-validation" class
+   - The script was trying to handle the form via AJAX and expected a JSON response
+   - Since login.php returns HTML, this caused the "Unexpected token '<'" error
+   - Removed the "needs-validation" class from the login form to prevent JavaScript interception
+   - This allows the form to submit normally and the PHP redirect to work properly
+
 ### Local JavaScript Resources
 
 1. Added local JavaScript resources to avoid CSP issues:

@@ -128,22 +128,22 @@
     <div class="notification-container position-fixed top-0 end-0 p-3"></div>
 
     <!-- Core JS Libraries (loaded in the correct order) -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/jquery.min.js"></script>
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/jquery.min.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/bootstrap.bundle.min.js"></script>
     
     <!-- Bootstrap Tags Input -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap-tagsinput.min.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/bootstrap-tagsinput.min.js"></script>
     
     <!-- CKEditor -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/ckeditor.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/ckeditor.js"></script>
     
     <!-- Flatpickr -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/flatpickr.min.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/flatpickr.min.js"></script>
     
     <!-- Chart.js -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/chart.min.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/chart.min.js"></script>
     
     <!-- Custom JS (loaded last to ensure all dependencies are available) -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/admin.js"></script>
+    <script src="<?php echo ADMIN_ASSETS_URL; ?>/assets/js/admin.js"></script>
 </body>
 </html>

@@ -42,8 +42,13 @@ if (!defined('ADMIN_URL')) {
         define('ADMIN_URL', '/admin');
     } else {
         // For production - use the correct domain, not the API domain
-        define('ADMIN_URL', 'https://storiesfromtheweb.org/admin');
+        define('ADMIN_URL', '/admin');
     }
+}
+
+// Define the admin assets URL (always relative to ensure assets load from the same domain)
+if (!defined('ADMIN_ASSETS_URL')) {
+    define('ADMIN_ASSETS_URL', '/admin');
 }
 if (!defined('API_URL')) {
     // Use absolute URL for API server

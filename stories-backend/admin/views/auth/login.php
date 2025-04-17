@@ -10,7 +10,7 @@
                         <h4 class="mb-0">Login</h4>
                     </div>
                     <div class="card-body">
-                        <form action="<?php echo ADMIN_URL; ?>/login.php" method="post" class="needs-validation" novalidate>
+                        <form action="<?php echo ADMIN_URL; ?>/login.php" method="post">
                             <div class="mb-3">
                                 <label for="email" class="form-label required">Email</label>
                                 <input type="email" class="form-control" id="email" name="email" required>

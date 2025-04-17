@@ -170,13 +170,13 @@
                                     <td class="table-actions">
                                         <div class="btn-group" role="group">
                                             <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=view&id=' . $item['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye me-1"></i> View
                                             </a>
                                             <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
-                                                <i class="fas fa-edit"></i>
+                                                <i class="fas fa-edit me-1"></i> Edit
                                             </a>
                                             <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash me-1"></i> Delete
                                             </a>
                                         </div>
                                     </td>

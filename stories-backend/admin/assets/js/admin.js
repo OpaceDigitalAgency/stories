@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize loading indicators
     initLoadingIndicators();
     
+    // Initialize dropdowns
+    initDropdowns();
+    
     // Check if jQuery is loaded before initializing jQuery-dependent features
     if (jQueryLoaded()) {
         console.log("jQuery already loaded on DOM ready");
@@ -132,8 +135,49 @@ function initFormValidation() {
                     showNotification('Please correct the errors in the form before submitting.', 'danger');
                 }
             } else {
+                // Prevent default form submission
+                event.preventDefault();
+                
                 // Show loading overlay for form submissions
                 showLoading('Processing your request...');
+                
+                // Get form data
+                const formData = new FormData(form);
+                
+                // Get form action URL
+                const actionUrl = form.getAttribute('action');
+                
+                // Determine method (POST for create, PUT for edit)
+                let method = 'POST';
+                if (actionUrl.includes('action=edit')) {
+                    method = 'PUT';
+                }
+                
+                // Use AJAX to submit the form
+                fetch(actionUrl, {
+                    method: method,
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Form submission failed');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+                    showNotification('Form submitted successfully', 'success');
+                    
+                    // Redirect to the list page
+                    const listUrl = actionUrl.split('?')[0];
+                    window.location.href = listUrl;
+                })
+                .catch(error => {
+                    hideLoading();
+                    showNotification('Error: ' + error.message, 'danger');
+                });
             }
             
             form.classList.add('was-validated');
@@ -335,7 +379,24 @@ function initDeleteConfirmations() {
                     // Set up the confirm action
                     confirmButton.onclick = function() {
                         showLoading(`Deleting ${itemName}...`);
-                        window.location.href = this.dataset.href;
+                        
+                        // Use AJAX to submit the delete request
+                        const url = this.dataset.href;
+                        ajaxRequest(url, 'GET', null,
+                            function(response) {
+                                // Success callback
+                                hideLoading();
+                                showNotification('Item deleted successfully', 'success');
+                                // Redirect to the list page
+                                const listUrl = url.split('?')[0];
+                                window.location.href = listUrl;
+                            },
+                            function(error) {
+                                // Error callback
+                                hideLoading();
+                                showNotification('Error deleting item: ' + error.message, 'danger');
+                            }
+                        );
                     };
                 }
                 
@@ -346,7 +407,23 @@ function initDeleteConfirmations() {
                 // Fallback to standard confirm dialog
                 if (confirm(message)) {
                     showLoading(`Deleting ${itemName}...`);
-                    window.location.href = this.href;
+                    
+                    // Use AJAX to submit the delete request
+                    ajaxRequest(this.href, 'GET', null,
+                        function(response) {
+                            // Success callback
+                            hideLoading();
+                            showNotification('Item deleted successfully', 'success');
+                            // Redirect to the list page
+                            const listUrl = this.href.split('?')[0];
+                            window.location.href = listUrl;
+                        },
+                        function(error) {
+                            // Error callback
+                            hideLoading();
+                            showNotification('Error deleting item: ' + error.message, 'danger');
+                        }
+                    );
                 }
             }
         });
@@ -731,6 +808,47 @@ function showNotification(message, type = 'success', duration = 5000) {
         container = document.createElement('div');
         container.className = 'notification-container position-fixed top-0 end-0 p-3';
         document.body.appendChild(container);
+    }
+    
+    /**
+     * Initialize Bootstrap dropdowns
+     */
+    function initDropdowns() {
+        // Get all dropdown toggle elements
+        var dropdownToggleList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+        
+        // Initialize each dropdown
+        dropdownToggleList.forEach(function(dropdownToggle) {
+            // Create dropdown instance
+            var dropdown = new bootstrap.Dropdown(dropdownToggle);
+            
+            // Add click event listener
+            dropdownToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                dropdown.toggle();
+            });
+            
+            // Log initialization
+            console.log('Dropdown initialized:', dropdownToggle.id || 'unnamed dropdown');
+        });
+        
+        // Specifically handle the Features dropdown
+        var featuresDropdown = document.getElementById('featuresDropdown');
+        if (featuresDropdown) {
+            console.log('Features dropdown found, adding special handling');
+            
+            // Ensure dropdown items work correctly
+            var featuresDropdownItems = document.querySelectorAll('[aria-labelledby="featuresDropdown"] .dropdown-item');
+            featuresDropdownItems.forEach(function(item) {
+                item.addEventListener('click', function(e) {
+                    // Prevent default only if needed for special handling
+                    // e.preventDefault();
+                    
+                    // Navigate to the href
+                    window.location.href = this.getAttribute('href');
+                });
+            });
+        }
     }
     
     container.appendChild(notification);

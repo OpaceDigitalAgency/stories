@@ -147,7 +147,37 @@ class DashboardPage extends AdminPage {
                 return $response['data'];
             }
             
-            return [];
+            // Fallback to database if API fails
+            try {
+                $db = Database::getInstance($this->config['db']);
+                $tableName = str_replace('-', '_', $endpoint);
+                // Handle special cases for table names
+                if ($tableName == 'blog_posts') {
+                    $tableName = 'blog';
+                } elseif ($tableName == 'ai_tools') {
+                    $tableName = 'ai_tool';
+                } elseif ($tableName == 'directory_items') {
+                    $tableName = 'directory';
+                }
+                
+                $query = "SELECT * FROM {$tableName} ORDER BY created_at DESC LIMIT {$pageSize}";
+                $stmt = $db->query($query);
+                $results = $stmt->fetchAll();
+                
+                // Format results to match API response format
+                $formattedResults = [];
+                foreach ($results as $result) {
+                    $formattedResults[] = [
+                        'id' => $result['id'],
+                        'attributes' => $result
+                    ];
+                }
+                
+                return $formattedResults;
+            } catch (Exception $e) {
+                error_log("Database fallback error for {$endpoint}: " . $e->getMessage());
+                return [];
+            }
         };
         
         // Get recent items for all content types

@@ -375,7 +375,7 @@
                                 <tbody>
                                     <?php foreach ($recentStories as $story): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($story['attributes']['title']); ?></td>
+                                            <td><?php echo htmlspecialchars($story['attributes']['title'] ?? 'Untitled'); ?></td>
                                             <td>
                                                 <?php 
                                                     if (isset($story['attributes']['author']['data']['attributes']['name'])) {

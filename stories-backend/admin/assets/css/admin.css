@@ -238,8 +238,19 @@ body {
 }
 
 .table-actions {
-    width: 150px;
+    width: 220px;
     text-align: right;
+}
+
+.table-actions .btn {
+    margin: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-actions .btn i {
+    margin-right: 4px;
 }
 
 .table-responsive {
@@ -591,4 +602,47 @@ body {
 .accordion-body {
     padding: 1.25rem;
     background-color: var(--card-bg);
+}
+
+/* ========== FORM FEEDBACK MESSAGES ========== */
+.form-messages {
+    margin-top: 1.5rem;
+}
+
+.form-messages .alert {
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.form-messages .alert i {
+    margin-right: 0.5rem;
+    font-size: 1.25rem;
+}
+
+/* ========== BUTTON LOADING STATE ========== */
+.btn-loading .spinner-border {
+    margin-right: 0.5rem;
+}
+
+.btn-loading:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* ========== AJAX FORM STYLES ========== */
+.ajax-form-feedback {
+    display: none;
+    margin-top: 1rem;
+}
+
+.ajax-form-feedback.show {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

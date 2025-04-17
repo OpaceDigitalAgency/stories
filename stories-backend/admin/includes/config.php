@@ -33,10 +33,10 @@ if (!defined('API_URL')) {
     // Use absolute URL for API server
     if (ENVIRONMENT === 'development') {
         // For local development
-        define('API_URL', 'http://localhost:8000/api/v1');
+        define('API_URL', 'http://localhost/stories-backend/api/v1');
     } else {
         // For production
-        define('API_URL', 'https://api.storiesfromtheweb.org/api/v1');
+        define('API_URL', '/stories-backend/api/v1');
     }
 }
 

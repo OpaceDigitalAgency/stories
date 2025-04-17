@@ -55,8 +55,8 @@ class FileUpload {
         
         $this->allowedTypes = $config['allowed_types'];
         $this->maxSize = $config['max_file_size'];
-        $this->uploadDir = $config['upload_dir'];
-        $this->baseUrl = $config['base_url'];
+        $this->uploadDir = rtrim($config['upload_dir'], '/') . '/';
+        $this->baseUrl = rtrim($config['base_url'], '/') . '/';
         
         // Debug: Print upload directory
         error_log("Upload directory: " . $this->uploadDir);

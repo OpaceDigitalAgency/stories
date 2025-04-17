@@ -261,13 +261,19 @@ class MediaPage extends AdminPage {
             return;
         }
         
-        // Debug: Print media configuration
+        // Check if media configuration exists
         if (!isset($GLOBALS['config']['media'])) {
-            die("Media configuration not found in global config");
+            $this->setError("Media configuration not found in global config");
+            return;
         }
         
-        // Create file upload instance
-        $fileUpload = new FileUpload($GLOBALS['config']['media']);
+        try {
+            // Create file upload instance
+            $fileUpload = new FileUpload($GLOBALS['config']['media']);
+        } catch (Exception $e) {
+            $this->setError("Error initializing file upload: " . $e->getMessage());
+            return;
+        }
         
         // Upload file
         $file = $fileUpload->upload(
@@ -298,13 +304,21 @@ class MediaPage extends AdminPage {
             return;
         }
         
-        // Debug: Print media configuration
+        // Check if media configuration exists
         if (!isset($GLOBALS['config']['media'])) {
-            die("Media configuration not found in global config");
+            $this->setError("Media configuration not found in global config");
+            $this->redirect('media.php');
+            return;
         }
         
-        // Create file upload instance
-        $fileUpload = new FileUpload($GLOBALS['config']['media']);
+        try {
+            // Create file upload instance
+            $fileUpload = new FileUpload($GLOBALS['config']['media']);
+        } catch (Exception $e) {
+            $this->setError("Error initializing file upload: " . $e->getMessage());
+            $this->redirect('media.php');
+            return;
+        }
         
         // Delete file
         if ($fileUpload->delete($id)) {

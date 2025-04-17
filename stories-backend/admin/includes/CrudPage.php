@@ -113,20 +113,45 @@ class CrudPage extends AdminPage {
         // Get current action
         $action = $this->getParam('action', 'list');
         
+        // Check if this is an AJAX request
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        
         // Call appropriate method based on action
+        $result = null;
         switch ($action) {
             case 'create':
-                $this->handleCreate();
+                $result = $this->handleCreate();
                 break;
             case 'edit':
-                $this->handleEdit();
+                $result = $this->handleEdit();
                 break;
             case 'delete':
-                $this->handleDelete();
+                $result = $this->handleDelete();
                 break;
             default:
                 // No action needed for list and view
                 break;
+        }
+        
+        // If this is an AJAX request, return JSON response
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            
+            if (!empty($this->errors)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'errors' => $this->errors
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'message' => $this->success,
+                    'data' => $result
+                ]);
+            }
+            exit;
         }
     }
     
@@ -449,12 +474,14 @@ class CrudPage extends AdminPage {
     
     /**
      * Handle create
+     *
+     * @return array|null Response data
      */
     protected function handleCreate() {
         // Validate required fields
         if (!Validator::required($_POST, $this->requiredFields)) {
             $this->errors = Validator::getErrors();
-            return;
+            return null;
         }
         
         // Prepare data
@@ -465,7 +492,16 @@ class CrudPage extends AdminPage {
         
         if ($response) {
             $this->setSuccess($this->entityName . ' created successfully');
-            $this->redirect($this->entityName . '.php');
+            
+            // Check if this is an AJAX request
+            $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                      strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            
+            if (!$isAjax) {
+                $this->redirect($this->entityName . '.php');
+            }
+            
+            return $response;
         } else {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
@@ -473,11 +509,15 @@ class CrudPage extends AdminPage {
             
             // Log detailed error for debugging
             error_log('API create error: ' . json_encode($this->apiClient->getLastError()));
+            
+            return null;
         }
     }
     
     /**
      * Handle edit
+     *
+     * @return array|null Response data
      */
     protected function handleEdit() {
         // Get item ID
@@ -485,14 +525,22 @@ class CrudPage extends AdminPage {
         
         if (!$id) {
             $this->setError('Invalid ID');
-            $this->redirect($this->entityName . '.php');
-            return;
+            
+            // Check if this is an AJAX request
+            $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                      strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            
+            if (!$isAjax) {
+                $this->redirect($this->entityName . '.php');
+            }
+            
+            return null;
         }
         
         // Validate required fields
         if (!Validator::required($_POST, $this->requiredFields)) {
             $this->errors = Validator::getErrors();
-            return;
+            return null;
         }
         
         // Prepare data
@@ -503,7 +551,16 @@ class CrudPage extends AdminPage {
         
         if ($response) {
             $this->setSuccess($this->entityName . ' updated successfully');
-            $this->redirect($this->entityName . '.php');
+            
+            // Check if this is an AJAX request
+            $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                      strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            
+            if (!$isAjax) {
+                $this->redirect($this->entityName . '.php');
+            }
+            
+            return $response;
         } else {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
@@ -511,11 +568,15 @@ class CrudPage extends AdminPage {
             
             // Log detailed error for debugging
             error_log('API update error: ' . json_encode($this->apiClient->getLastError()));
+            
+            return null;
         }
     }
     
     /**
      * Handle delete
+     *
+     * @return array|null Response data
      */
     protected function handleDelete() {
         // Get item ID
@@ -523,8 +584,16 @@ class CrudPage extends AdminPage {
         
         if (!$id) {
             $this->setError('Invalid ID');
-            $this->redirect($this->entityName . '.php');
-            return;
+            
+            // Check if this is an AJAX request
+            $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                      strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            
+            if (!$isAjax) {
+                $this->redirect($this->entityName . '.php');
+            }
+            
+            return null;
         }
         
         // Delete item
@@ -541,7 +610,15 @@ class CrudPage extends AdminPage {
             error_log('API delete error: ' . json_encode($this->apiClient->getLastError()));
         }
         
-        $this->redirect($this->entityName . '.php');
+        // Check if this is an AJAX request
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        
+        if (!$isAjax) {
+            $this->redirect($this->entityName . '.php');
+        }
+        
+        return $response;
     }
     
     /**

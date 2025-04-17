@@ -99,6 +99,9 @@ class ApiClient {
             $url .= '?' . http_build_query($params);
         }
         
+        // Log the request for debugging
+        error_log("API Request: $method $url");
+        
         // Initialize cURL
         $ch = curl_init();
         
@@ -164,12 +167,29 @@ class ApiClient {
         if ($httpCode >= 400) {
             $errorMessage = isset($responseData['error']) ? $responseData['error'] : 'Unknown API error';
             $errorDetail = isset($responseData['detail']) ? $responseData['detail'] : '';
-            error_log('API error: ' . $errorMessage . ($errorDetail ? ' - ' . $errorDetail : ''));
+            
+            // Add more detailed error information based on HTTP code
+            if ($httpCode == 404) {
+                $errorMessage = 'Resource not found: ' . $url;
+                $errorDetail = 'The requested API endpoint does not exist or is not properly configured.';
+            } else if ($httpCode == 401) {
+                $errorMessage = 'Authentication required';
+                $errorDetail = 'Your session may have expired. Please log in again.';
+            } else if ($httpCode == 403) {
+                $errorMessage = 'Access denied';
+                $errorDetail = 'You do not have permission to access this resource.';
+            } else if ($httpCode == 500) {
+                $errorMessage = 'Server error';
+                $errorDetail = 'The API server encountered an internal error. Please try again later or contact support.';
+            }
+            
+            error_log('API error: ' . $errorMessage . ($errorDetail ? ' - ' . $errorDetail : '') . ' - URL: ' . $url);
             $this->lastError = [
                 'type' => 'api_error',
                 'message' => $errorMessage,
                 'detail' => $errorDetail,
                 'code' => $httpCode,
+                'url' => $url,
                 'response' => $responseData
             ];
             return null;
@@ -214,6 +234,16 @@ class ApiClient {
                 if (!empty($error['detail'])) {
                     $message .= " - {$error['detail']}";
                 }
+                
+                // Add troubleshooting tips based on error code
+                if ($error['code'] == 404) {
+                    $message .= "\nTroubleshooting: Check that the API endpoint exists and is correctly configured in config.php.";
+                } else if ($error['code'] == 401) {
+                    $message .= "\nTroubleshooting: Try logging out and logging back in to refresh your session.";
+                } else if ($error['code'] == 500) {
+                    $message .= "\nTroubleshooting: Check the server logs for more details or contact the administrator.";
+                }
+                
                 return $message;
             
             default:

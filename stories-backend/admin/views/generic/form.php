@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+            <form action="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo strtolower($entityName); ?>-form">
                 <?php foreach ($fields as $field): ?>
                     <?php if ($field['form'] ?? true): ?>
                         <div class="mb-3">
@@ -152,9 +152,16 @@
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="<?php echo ADMIN_URL . '/' . strtolower($entityName) . '.php'; ?>" class="btn btn-outline-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <?php echo $item && isset($item['id']) ? 'Update' : 'Create'; ?> <?php echo htmlspecialchars($entityName); ?>
+                    <button type="submit" class="btn btn-primary btn-loading">
+                        <span class="button-text"><?php echo $item && isset($item['id']) ? 'Update' : 'Create'; ?> <?php echo htmlspecialchars($entityName); ?></span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                     </button>
+                </div>
+                
+                <!-- Form feedback messages -->
+                <div class="mt-3 form-messages" style="display: none;">
+                    <div class="alert alert-success success-message" role="alert" style="display: none;"></div>
+                    <div class="alert alert-danger error-message" role="alert" style="display: none;"></div>
                 </div>
             </form>
         </div>

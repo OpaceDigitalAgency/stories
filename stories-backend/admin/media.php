@@ -121,7 +121,8 @@ class MediaPage extends AdminPage {
         }
         
         // Get media from database
-        $db = Database::getInstance();
+        global $config;
+        $db = Database::getInstance($config['db']);
         
         try {
             // Build query

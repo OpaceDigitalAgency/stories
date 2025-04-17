@@ -487,8 +487,32 @@ class CrudPage extends AdminPage {
             return null;
         }
         
-        // Prepare data
-        $data = $this->prepareData($_POST);
+        // Check if we have file uploads
+        $hasFileUploads = false;
+        foreach ($_FILES as $field => $file) {
+            if (!empty($file['name'])) {
+                $hasFileUploads = true;
+                break;
+            }
+        }
+        
+        if ($hasFileUploads) {
+            // For file uploads, we need to handle the data differently
+            $data = $_POST;
+            
+            // Add files to the data
+            foreach ($_FILES as $field => $file) {
+                if (!empty($file['name'])) {
+                    $data[$field] = $file;
+                }
+            }
+            
+            error_log('Create with file upload: ' . json_encode($data));
+        } else {
+            // For regular form data, prepare it as usual
+            $data = $this->prepareData($_POST);
+            error_log('Create with regular data: ' . json_encode($data));
+        }
         
         // Create item
         $response = $this->apiClient->post($this->endpoint, $data);
@@ -546,8 +570,32 @@ class CrudPage extends AdminPage {
             return null;
         }
         
-        // Prepare data
-        $data = $this->prepareData($_POST);
+        // Check if we have file uploads
+        $hasFileUploads = false;
+        foreach ($_FILES as $field => $file) {
+            if (!empty($file['name'])) {
+                $hasFileUploads = true;
+                break;
+            }
+        }
+        
+        if ($hasFileUploads) {
+            // For file uploads, we need to handle the data differently
+            $data = $_POST;
+            
+            // Add files to the data
+            foreach ($_FILES as $field => $file) {
+                if (!empty($file['name'])) {
+                    $data[$field] = $file;
+                }
+            }
+            
+            error_log('Edit with file upload: ' . json_encode($data));
+        } else {
+            // For regular form data, prepare it as usual
+            $data = $this->prepareData($_POST);
+            error_log('Edit with regular data: ' . json_encode($data));
+        }
         
         // Update item
         $response = $this->apiClient->put($this->endpoint . '/' . $id, $data);
@@ -599,18 +647,24 @@ class CrudPage extends AdminPage {
             return null;
         }
         
+        // Log the delete request
+        error_log('Deleting ' . $this->entityName . ' with ID: ' . $id);
+        
         // Delete item
         $response = $this->apiClient->delete($this->endpoint . '/' . $id);
         
         if ($response) {
             $this->setSuccess($this->entityName . ' deleted successfully');
+            error_log('Delete successful for ' . $this->entityName . ' with ID: ' . $id);
         } else {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
-            $this->setError('Failed to delete ' . $this->entityName . ($error ? ': ' . $error : ''));
+            $errorMessage = 'Failed to delete ' . $this->entityName . ($error ? ': ' . $error : '');
+            $this->setError($errorMessage);
             
             // Log detailed error for debugging
             error_log('API delete error: ' . json_encode($this->apiClient->getLastError()));
+            error_log('Delete failed for ' . $this->entityName . ' with ID: ' . $id . ' - ' . $errorMessage);
         }
         
         // Check if this is an AJAX request

@@ -112,7 +112,6 @@ class ApiClient {
         
         // Set headers
         $headers = [
-            'Content-Type: application/json',
             'Accept: application/json'
         ];
         
@@ -124,11 +123,39 @@ class ApiClient {
             $headers[] = 'Authorization: Bearer ' . $this->authToken;
         }
         
+        // Check if we're dealing with a file upload
+        $isFileUpload = false;
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                if (is_array($value) && isset($value['tmp_name']) && file_exists($value['tmp_name'])) {
+                    $isFileUpload = true;
+                    break;
+                }
+            }
+        }
+        
+        // Set content type based on data
+        if ($isFileUpload) {
+            // Don't set Content-Type for multipart/form-data, cURL will set it with boundary
+            error_log('API Request: File upload detected, using multipart/form-data');
+        } else {
+            // For regular JSON data
+            $headers[] = 'Content-Type: application/json';
+        }
+        
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         
         // Add request data for POST and PUT requests
         if (($method === 'POST' || $method === 'PUT') && $data !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            if ($isFileUpload) {
+                // Use raw data for file uploads
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                error_log('API Request: Sending raw form data');
+            } else {
+                // JSON encode for regular data
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+                error_log('API Request: Sending JSON data: ' . json_encode($data));
+            }
         }
         
         // Execute request with output capture

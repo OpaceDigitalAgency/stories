@@ -381,21 +381,49 @@ function initDeleteConfirmations() {
                         
                         // Use AJAX to submit the delete request
                         const url = this.dataset.href;
-                        ajaxRequest(url, 'GET', null,
-                            function(response) {
-                                // Success callback
-                                hideLoading();
-                                showNotification('Item deleted successfully', 'success');
-                                // Redirect to the list page
-                                const listUrl = url.split('?')[0];
-                                window.location.href = listUrl;
-                            },
-                            function(error) {
-                                // Error callback
-                                hideLoading();
-                                showNotification('Error deleting item: ' + error.message, 'danger');
+                        console.log('Delete URL:', url);
+                        
+                        // Add a timestamp to prevent caching
+                        const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+                        
+                        // Set X-Requested-With header to indicate AJAX request
+                        const headers = new Headers({
+                            'X-Requested-With': 'XMLHttpRequest'
+                        });
+                        
+                        // Use fetch with proper error handling
+                        fetch(timestampedUrl, {
+                            method: 'GET',
+                            headers: headers,
+                            credentials: 'same-origin'
+                        })
+                        .then(response => {
+                            console.log('Delete response status:', response.status);
+                            
+                            if (!response.ok) {
+                                return response.text().then(text => {
+                                    console.error('Delete error response:', text);
+                                    throw new Error('Failed to delete item. Status: ' + response.status);
+                                });
                             }
-                        );
+                            
+                            return response.text();
+                        })
+                        .then(data => {
+                            console.log('Delete success response:', data);
+                            hideLoading();
+                            showNotification('Item deleted successfully', 'success');
+                            
+                            // Redirect to the list page
+                            const listUrl = url.split('?')[0];
+                            console.log('Redirecting to:', listUrl);
+                            window.location.href = listUrl;
+                        })
+                        .catch(error => {
+                            console.error('Delete error:', error);
+                            hideLoading();
+                            showNotification('Error deleting item: ' + error.message, 'danger');
+                        });
                     };
                 }
                 
@@ -407,22 +435,50 @@ function initDeleteConfirmations() {
                 if (confirm(message)) {
                     showLoading(`Deleting ${itemName}...`);
                     
-                    // Use AJAX to submit the delete request
-                    ajaxRequest(this.href, 'GET', null,
-                        function(response) {
-                            // Success callback
-                            hideLoading();
-                            showNotification('Item deleted successfully', 'success');
-                            // Redirect to the list page
-                            const listUrl = this.href.split('?')[0];
-                            window.location.href = listUrl;
-                        },
-                        function(error) {
-                            // Error callback
-                            hideLoading();
-                            showNotification('Error deleting item: ' + error.message, 'danger');
+                    const url = this.href;
+                    console.log('Delete URL (fallback):', url);
+                    
+                    // Add a timestamp to prevent caching
+                    const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+                    
+                    // Set X-Requested-With header to indicate AJAX request
+                    const headers = new Headers({
+                        'X-Requested-With': 'XMLHttpRequest'
+                    });
+                    
+                    // Use fetch with proper error handling
+                    fetch(timestampedUrl, {
+                        method: 'GET',
+                        headers: headers,
+                        credentials: 'same-origin'
+                    })
+                    .then(response => {
+                        console.log('Delete response status (fallback):', response.status);
+                        
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                console.error('Delete error response (fallback):', text);
+                                throw new Error('Failed to delete item. Status: ' + response.status);
+                            });
                         }
-                    );
+                        
+                        return response.text();
+                    })
+                    .then(data => {
+                        console.log('Delete success response (fallback):', data);
+                        hideLoading();
+                        showNotification('Item deleted successfully', 'success');
+                        
+                        // Redirect to the list page
+                        const listUrl = url.split('?')[0];
+                        console.log('Redirecting to (fallback):', listUrl);
+                        window.location.href = listUrl;
+                    })
+                    .catch(error => {
+                        console.error('Delete error (fallback):', error);
+                        hideLoading();
+                        showNotification('Error deleting item: ' + error.message, 'danger');
+                    });
                 }
             }
         });

@@ -24,7 +24,9 @@
                                 // Get field value
                                 $value = '';
                                 if ($item && isset($item['id'])) {
-                                    $value = $item['attributes'][$field['name']] ?? '';
+                                    $value = isset($item['attributes']) && isset($item['attributes'][$field['name']])
+                                        ? $item['attributes'][$field['name']]
+                                        : ($item[$field['name']] ?? '');
                                 } else {
                                     $value = $field['default'] ?? '';
                                 }

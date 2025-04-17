@@ -194,7 +194,7 @@
                                 ?>
                                 <tr>
                                     <th>Published At</th>
-                                    <td><?php echo date('F d, Y H:i:s', strtotime($item['attributes']['publishedAt'])); ?></td>
+                                    <td><?php echo date('F d, Y H:i:s', strtotime($publishedAt)); ?></td>
                                 </tr>
                                 <?php endif; ?>
                             </tbody>

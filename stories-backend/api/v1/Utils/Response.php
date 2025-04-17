@@ -122,11 +122,18 @@ class Response {
         // Set content type header - ALWAYS set to JSON regardless of debug mode
         header('Content-Type: application/json; charset=UTF-8');
         
-        // Debug: Log the data being encoded
-        error_log("Response data before encoding: " . print_r($data, true));
+        // Debug: Log the data being encoded only in debug mode
+        if (self::$debugMode) {
+            error_log("Response data before encoding: " . print_r($data, true));
+        }
         
-        // Encode the data
-        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        // Make sure there's no output before JSON
+        if (ob_get_length() > 0) {
+            ob_clean();
+        }
+        
+        // Encode the data with simpler options to avoid encoding issues
+        $json = json_encode($data);
         
         // Check for JSON encoding errors
         if ($json === false) {
@@ -134,7 +141,7 @@ class Response {
             
             // Try to identify problematic data
             $cleanData = self::sanitizeDataForJson($data);
-            $json = json_encode($cleanData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $json = json_encode($cleanData);
             
             if ($json === false) {
                 // If still failing, return a simple error response

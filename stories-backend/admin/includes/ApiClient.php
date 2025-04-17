@@ -91,8 +91,8 @@ class ApiClient {
      * @return array|null Response data
      */
     private function request($method, $endpoint, $params = [], $data = null) {
-        // Build URL
-        $url = $this->apiUrl . '/' . ltrim($endpoint, '/');
+        // Build URL - ensure no double slashes
+        $url = rtrim($this->apiUrl, '/') . '/' . ltrim($endpoint, '/');
         
         // Add query parameters
         if (!empty($params)) {

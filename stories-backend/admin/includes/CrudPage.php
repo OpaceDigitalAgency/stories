@@ -369,6 +369,12 @@ class CrudPage extends AdminPage {
         // Process the item data to ensure all expected fields are present
         $item = isset($response['data']) ? $response['data'] : [];
         
+        // Handle nested attributes structure (attributes.attributes)
+        if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+            // Move nested attributes up one level
+            $item['attributes'] = $item['attributes']['attributes'];
+        }
+        
         // Ensure attributes array exists
         if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
             // If no attributes array but we have data, create an attributes array
@@ -444,6 +450,12 @@ class CrudPage extends AdminPage {
         // Process the item data to ensure all expected fields are present
         $item = isset($response['data']) ? $response['data'] : [];
         
+        // Handle nested attributes structure (attributes.attributes)
+        if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+            // Move nested attributes up one level
+            $item['attributes'] = $item['attributes']['attributes'];
+        }
+        
         // Ensure attributes array exists
         if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
             // If no attributes array but we have data, create an attributes array
@@ -499,6 +511,12 @@ class CrudPage extends AdminPage {
         
         // Process the item data to ensure all expected fields are present
         $item = isset($response['data']) ? $response['data'] : [];
+        
+        // Handle nested attributes structure (attributes.attributes)
+        if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+            // Move nested attributes up one level
+            $item['attributes'] = $item['attributes']['attributes'];
+        }
         
         // Ensure attributes array exists
         if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {

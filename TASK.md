@@ -8,10 +8,16 @@
    - Restore Font Awesome icons
    - Send the JWT on every admin → API request
    - Fix media.php & CKEditor
-   - Ensure CRUD buttons work
+   - Ensure CRUD buttons work ✓
    - Clean-up tasks
 
 ## Completed Tasks
+11. Fix Admin Panel CRUD Operations ✓
+    - Fixed issues with add, delete, and edit save functions not working on any admin page ✓
+    - Enhanced client-side AJAX handling with improved error messages ✓
+    - Fixed delete operations to use the proper DELETE HTTP method ✓
+    - Improved authentication and token handling ✓
+    - Added comprehensive logging for all CRUD operations ✓
 1. Fix Login Authentication Issue ✓
    - Fix the issue where the main login page always returns "Invalid credentials" ✓
    - Create a proper admin user with a correctly hashed password ✓
@@ -147,3 +153,10 @@
   - Simplified autoloader to pure PSR-4 in index.php ✓
   - Added direct include of Router class as a sanity check ✓
   - Aligned test script with the real bootstrap ✓
+10. Fix Dashboard Data Display and Stories API Endpoint ✓
+    - Document the complete database schema in PLANNING.md for reference ✓
+    - Fix dashboard data display to accurately reflect the database structure ✓
+    - Add missing fields to the dashboard for all content types ✓
+    - Remove inconsistent fields not present in the database schema ✓
+    - Fix Stories API endpoint 500 Server Error when accessing individual stories ✓
+    - Remove reference to non-existent `cover_url` column in the database query ✓

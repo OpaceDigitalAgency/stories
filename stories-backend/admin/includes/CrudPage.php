@@ -71,8 +71,27 @@ class CrudPage extends AdminPage {
     public function __construct() {
         parent::__construct();
         
-        // Initialize API client
-        $this->apiClient = new ApiClient(API_URL, isset($_COOKIE['auth_token']) ? $_COOKIE['auth_token'] : null);
+        // Initialize API client with better token handling
+        $token = null;
+        
+        // First try to get token from session (most secure)
+        if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
+            $token = $_SESSION['token'];
+            error_log("CrudPage: Using token from session");
+        }
+        // Then try cookie as fallback
+        else if (isset($_COOKIE['auth_token']) && !empty($_COOKIE['auth_token'])) {
+            $token = $_COOKIE['auth_token'];
+            error_log("CrudPage: Using token from cookie");
+            
+            // Store in session for future use
+            $_SESSION['token'] = $token;
+        } else {
+            error_log("CrudPage: No authentication token found in session or cookie");
+        }
+        
+        // Initialize API client with token
+        $this->apiClient = new ApiClient(API_URL, $token);
         
         // Get session messages
         $this->getSessionErrors();
@@ -80,6 +99,9 @@ class CrudPage extends AdminPage {
         
         // Expose slug to all views
         $this->data['slug'] = $this->activeMenu;
+        
+        // Log CRUD operations for debugging
+        error_log("CrudPage initialized for entity: " . ($this->entityName ?? 'unknown'));
     }
     
     /**
@@ -120,21 +142,38 @@ class CrudPage extends AdminPage {
         $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                   strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
         
-        // Call appropriate method based on action
+        // Check for DELETE method override
+        $method = $_SERVER['REQUEST_METHOD'];
+        if (isset($_GET['_method'])) {
+            $method = strtoupper($_GET['_method']);
+        } else if (isset($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
+        } else if (isset($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'])) {
+            $method = strtoupper($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE']);
+        }
+        
+        // Log request details for debugging
+        error_log("CrudPage::handlePost - Action: $action, Method: $method, AJAX: " . ($isAjax ? 'Yes' : 'No'));
+        
+        // Call appropriate method based on action and method
         $result = null;
-        switch ($action) {
-            case 'create':
-                $result = $this->handleCreate();
-                break;
-            case 'edit':
-                $result = $this->handleEdit();
-                break;
-            case 'delete':
-                $result = $this->handleDelete();
-                break;
-            default:
-                // No action needed for list and view
-                break;
+        if ($method === 'DELETE' || (isset($_GET['_ajax']) && $action === 'delete')) {
+            $result = $this->handleDelete();
+        } else {
+            switch ($action) {
+                case 'create':
+                    $result = $this->handleCreate();
+                    break;
+                case 'edit':
+                    $result = $this->handleEdit();
+                    break;
+                case 'delete':
+                    $result = $this->handleDelete();
+                    break;
+                default:
+                    // No action needed for list and view
+                    break;
+            }
         }
         
         // If this is an AJAX request, return JSON response
@@ -145,14 +184,21 @@ class CrudPage extends AdminPage {
                 http_response_code(400);
                 echo json_encode([
                     'success' => false,
-                    'errors' => $this->errors
+                    'errors' => $this->errors,
+                    'message' => is_array($this->errors) ? implode('; ', $this->errors) : $this->errors
                 ]);
+                
+                // Log error for debugging
+                error_log("CrudPage::handlePost - AJAX Error Response: " . json_encode($this->errors));
             } else {
                 echo json_encode([
                     'success' => true,
                     'message' => $this->success,
                     'data' => $result
                 ]);
+                
+                // Log success for debugging
+                error_log("CrudPage::handlePost - AJAX Success Response: " . $this->success);
             }
             exit;
         }
@@ -583,28 +629,57 @@ class CrudPage extends AdminPage {
             error_log('Create with regular data: ' . json_encode($data));
         }
         
+        // Log the create request
+        error_log('Creating ' . $this->entityName . ' with data: ' . json_encode($data));
+        
         // Create item
         $response = $this->apiClient->post($this->endpoint, $data);
         
         if ($response) {
-            $this->setSuccess($this->entityName . ' created successfully');
+            $successMessage = $this->entityName . ' created successfully';
+            $this->setSuccess($successMessage);
+            
+            // Log success
+            error_log('Create successful for ' . $this->entityName . ': ' . json_encode($response));
             
             // Check if this is an AJAX request
             $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                       strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
             if (!$isAjax) {
-                $this->redirect($this->entityName . '.php');
+                $this->redirect($this->activeMenu . '.php');
             }
             
             return $response;
         } else {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
-            $this->setError('Failed to create ' . $this->entityName . ($error ? ': ' . $error : ''));
+            $errorMessage = 'Failed to create ' . $this->entityName . ($error ? ': ' . $error : '');
+            $this->setError($errorMessage);
             
             // Log detailed error for debugging
-            error_log('API create error: ' . json_encode($this->apiClient->getLastError()));
+            $lastError = $this->apiClient->getLastError();
+            error_log('API create error: ' . json_encode($lastError));
+            
+            // Add more detailed error logging
+            if (isset($lastError['response']) && is_array($lastError['response'])) {
+                if (isset($lastError['response']['errors'])) {
+                    error_log('Validation errors: ' . json_encode($lastError['response']['errors']));
+                    
+                    // Add specific field errors to the error array
+                    if (is_array($lastError['response']['errors'])) {
+                        foreach ($lastError['response']['errors'] as $field => $fieldErrors) {
+                            if (is_array($fieldErrors)) {
+                                foreach ($fieldErrors as $fieldError) {
+                                    $this->setError($field . ': ' . $fieldError);
+                                }
+                            } else {
+                                $this->setError($field . ': ' . $fieldErrors);
+                            }
+                        }
+                    }
+                }
+            }
             
             return null;
         }
@@ -666,28 +741,57 @@ class CrudPage extends AdminPage {
             error_log('Edit with regular data: ' . json_encode($data));
         }
         
+        // Log the update request
+        error_log('Updating ' . $this->entityName . ' with ID: ' . $id . ', data: ' . json_encode($data));
+        
         // Update item
         $response = $this->apiClient->put($this->endpoint . '/' . $id, $data);
         
         if ($response) {
-            $this->setSuccess($this->entityName . ' updated successfully');
+            $successMessage = $this->entityName . ' updated successfully';
+            $this->setSuccess($successMessage);
+            
+            // Log success
+            error_log('Update successful for ' . $this->entityName . ' with ID: ' . $id);
             
             // Check if this is an AJAX request
             $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                       strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
             if (!$isAjax) {
-                $this->redirect($this->entityName . '.php');
+                $this->redirect($this->activeMenu . '.php');
             }
             
             return $response;
         } else {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
-            $this->setError('Failed to update ' . $this->entityName . ($error ? ': ' . $error : ''));
+            $errorMessage = 'Failed to update ' . $this->entityName . ($error ? ': ' . $error : '');
+            $this->setError($errorMessage);
             
             // Log detailed error for debugging
-            error_log('API update error: ' . json_encode($this->apiClient->getLastError()));
+            $lastError = $this->apiClient->getLastError();
+            error_log('API update error: ' . json_encode($lastError));
+            
+            // Add more detailed error logging
+            if (isset($lastError['response']) && is_array($lastError['response'])) {
+                if (isset($lastError['response']['errors'])) {
+                    error_log('Validation errors: ' . json_encode($lastError['response']['errors']));
+                    
+                    // Add specific field errors to the error array
+                    if (is_array($lastError['response']['errors'])) {
+                        foreach ($lastError['response']['errors'] as $field => $fieldErrors) {
+                            if (is_array($fieldErrors)) {
+                                foreach ($fieldErrors as $fieldError) {
+                                    $this->setError($field . ': ' . $fieldError);
+                                }
+                            } else {
+                                $this->setError($field . ': ' . $fieldErrors);
+                            }
+                        }
+                    }
+                }
+            }
             
             return null;
         }
@@ -719,11 +823,28 @@ class CrudPage extends AdminPage {
         // Log the delete request
         error_log('Deleting ' . $this->entityName . ' with ID: ' . $id);
         
+        // Log the delete request with more details
+        error_log('Deleting ' . $this->entityName . ' with ID: ' . $id . ' - Request method: ' . $_SERVER['REQUEST_METHOD']);
+        
+        // Check for DELETE method override
+        $method = $_SERVER['REQUEST_METHOD'];
+        if (isset($_GET['_method'])) {
+            $method = strtoupper($_GET['_method']);
+            error_log('Delete method override from query: ' . $method);
+        } else if (isset($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
+            error_log('Delete method override from post: ' . $method);
+        } else if (isset($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'])) {
+            $method = strtoupper($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE']);
+            error_log('Delete method override from header: ' . $method);
+        }
+        
         // Delete item
         $response = $this->apiClient->delete($this->endpoint . '/' . $id);
         
         if ($response) {
-            $this->setSuccess($this->entityName . ' deleted successfully');
+            $successMessage = $this->entityName . ' deleted successfully';
+            $this->setSuccess($successMessage);
             error_log('Delete successful for ' . $this->entityName . ' with ID: ' . $id);
         } else {
             // Get API error details
@@ -732,8 +853,16 @@ class CrudPage extends AdminPage {
             $this->setError($errorMessage);
             
             // Log detailed error for debugging
-            error_log('API delete error: ' . json_encode($this->apiClient->getLastError()));
+            $lastError = $this->apiClient->getLastError();
+            error_log('API delete error: ' . json_encode($lastError));
             error_log('Delete failed for ' . $this->entityName . ' with ID: ' . $id . ' - ' . $errorMessage);
+            
+            // Check for specific error conditions
+            if (isset($lastError['code']) && $lastError['code'] == 404) {
+                $this->setError('The ' . $this->entityName . ' you are trying to delete could not be found. It may have been already deleted.');
+            } else if (isset($lastError['code']) && $lastError['code'] == 403) {
+                $this->setError('You do not have permission to delete this ' . $this->entityName . '.');
+            }
         }
         
         // Check if this is an AJAX request

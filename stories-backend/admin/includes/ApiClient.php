@@ -117,10 +117,19 @@ class ApiClient {
         
         // Add authentication token from session or instance
         $token = $_SESSION['token'] ?? '';
+        
+        // Debug token information
+        error_log("API Request Auth - Session token: " . (!empty($token) ? "Present" : "Missing"));
+        error_log("API Request Auth - Instance token: " . ($this->authToken ? "Present" : "Missing"));
+        
         if (!empty($token)) {
             $headers[] = 'Authorization: Bearer ' . $token;
+            error_log("API Request Auth - Using session token");
         } elseif ($this->authToken) {
             $headers[] = 'Authorization: Bearer ' . $this->authToken;
+            error_log("API Request Auth - Using instance token");
+        } else {
+            error_log("API Request Auth - WARNING: No authentication token available");
         }
         
         // Check if we're dealing with a file upload
@@ -138,25 +147,52 @@ class ApiClient {
         if ($isFileUpload) {
             // Don't set Content-Type for multipart/form-data, cURL will set it with boundary
             error_log('API Request: File upload detected, using multipart/form-data');
+            
+            // Add debug header to help track file uploads
+            $headers[] = 'X-Debug-Upload: true';
         } else {
             // For regular JSON data
             $headers[] = 'Content-Type: application/json';
+            
+            // Add request ID for tracking
+            $requestId = uniqid('req_');
+            $headers[] = 'X-Request-ID: ' . $requestId;
+            error_log("API Request ID: $requestId - $method $url");
         }
         
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         
         // Add request data for POST and PUT requests
-        if (($method === 'POST' || $method === 'PUT') && $data !== null) {
+        if (($method === 'POST' || $method === 'PUT' || $method === 'DELETE') && $data !== null) {
             if ($isFileUpload) {
                 // Use raw data for file uploads
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
                 error_log('API Request: Sending raw form data');
+                
+                // Log file information for debugging
+                foreach ($data as $key => $value) {
+                    if (is_array($value) && isset($value['tmp_name'])) {
+                        error_log("API Request: File upload field '$key', size: " . filesize($value['tmp_name']) . " bytes");
+                    }
+                }
             } else {
                 // JSON encode for regular data
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                error_log('API Request: Sending JSON data: ' . json_encode($data));
+                $jsonData = json_encode($data);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+                error_log('API Request: Sending JSON data: ' . $jsonData);
             }
         }
+        
+        // For DELETE requests, ensure the method is properly set
+        if ($method === 'DELETE') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+            error_log('API Request: Using DELETE method');
+        }
+        
+        // Set verbose debugging
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        $verbose = fopen('php://temp', 'w+');
+        curl_setopt($ch, CURLOPT_STDERR, $verbose);
         
         // Execute request with output capture
         ob_start();                     // capture anything printed by the API
@@ -166,6 +202,23 @@ class ApiClient {
             error_log('[STRAY OUTPUT] ' . $leak);
         }
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        // Get verbose debug information
+        rewind($verbose);
+        $verboseLog = stream_get_contents($verbose);
+        fclose($verbose);
+        
+        // Log verbose output for debugging
+        error_log("API Request Verbose Log: " . $verboseLog);
+        
+        // Log request and response timing
+        $info = curl_getinfo($ch);
+        error_log(sprintf(
+            "API Request Timing: Connect: %2.2f s, Total: %2.2f s, Speed: %2.2f bytes/s",
+            $info['connect_time'],
+            $info['total_time'],
+            $info['speed_download']
+        ));
         
         // Check for errors
         if (curl_errno($ch)) {
@@ -271,6 +324,21 @@ class ApiClient {
             $errorMessage = isset($responseData['error']) ? $responseData['error'] : 'Unknown API error';
             $errorDetail = isset($responseData['detail']) ? $responseData['detail'] : '';
             
+            // Check for message in different formats
+            if (empty($errorMessage) && isset($responseData['message'])) {
+                $errorMessage = $responseData['message'];
+            }
+            
+            // Check for errors array
+            if (empty($errorMessage) && isset($responseData['errors']) && is_array($responseData['errors'])) {
+                if (isset($responseData['errors'][0])) {
+                    $errorMessage = $responseData['errors'][0];
+                } else {
+                    $errorMessage = 'Validation errors occurred';
+                    $errorDetail = json_encode($responseData['errors']);
+                }
+            }
+            
             // Add more detailed error information based on HTTP code
             if ($httpCode == 404) {
                 $errorMessage = 'Resource not found: ' . $url;
@@ -278,6 +346,21 @@ class ApiClient {
             } else if ($httpCode == 401) {
                 $errorMessage = 'Authentication required';
                 $errorDetail = 'Your session may have expired. Please log in again.';
+                
+                // Log token information for debugging authentication issues
+                error_log("AUTH ERROR: Session token: " . (isset($_SESSION['token']) ? "Present" : "Missing"));
+                error_log("AUTH ERROR: Instance token: " . ($this->authToken ? "Present" : "Missing"));
+                
+                // Check for token expiration
+                if (isset($responseData['message']) && strpos($responseData['message'], 'expired') !== false) {
+                    $errorDetail = 'Your authentication token has expired. Please log in again.';
+                    
+                    // Clear the expired token
+                    if (isset($_SESSION['token'])) {
+                        unset($_SESSION['token']);
+                        error_log("AUTH ERROR: Cleared expired session token");
+                    }
+                }
             } else if ($httpCode == 403) {
                 $errorMessage = 'Access denied';
                 $errorDetail = 'You do not have permission to access this resource.';
@@ -289,13 +372,22 @@ class ApiClient {
                 error_log("SERVER ERROR (500) DETAILS: " . $response);
                 
                 // Try to extract more information from the response
-                if (strpos($response, 'PHP Fatal error') !== false || 
+                if (strpos($response, 'PHP Fatal error') !== false ||
                     strpos($response, 'PHP Parse error') !== false ||
                     strpos($response, 'PHP Warning') !== false) {
                     preg_match('/PHP .*?: (.+?) in /', $response, $matches);
                     if (!empty($matches[1])) {
                         $errorDetail .= ' PHP Error: ' . $matches[1];
                     }
+                }
+            } else if ($httpCode == 422) {
+                $errorMessage = 'Validation error';
+                
+                // Try to extract validation errors
+                if (isset($responseData['errors']) && is_array($responseData['errors'])) {
+                    $errorDetail = 'Please check the following fields: ';
+                    $fields = array_keys($responseData['errors']);
+                    $errorDetail .= implode(', ', $fields);
                 }
             }
             

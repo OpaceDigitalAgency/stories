@@ -144,6 +144,13 @@ function initFormValidation() {
                 // Get form data
                 const formData = new FormData(form);
                 
+                // Add form identifier for debugging
+                formData.append('_form_id', form.id || 'unnamed_form');
+                
+                // Log form data for debugging
+                console.log('[FORM] Submitting form:', form.id || 'unnamed_form');
+                console.log('[FORM] Form data:', Array.from(formData.entries()));
+                
                 // Get form action URL
                 const actionUrl = form.getAttribute('action');
                 
@@ -154,7 +161,7 @@ function initFormValidation() {
                 }
                 
                 // Use our custom AJAX function to submit the form
-                console.log('Submitting form to:', actionUrl, 'with method:', method);
+                console.log('[FORM] Submitting to:', actionUrl, 'with method:', method);
                 
                 // Use our custom AJAX function instead of fetch
                 ajaxRequest(
@@ -164,17 +171,80 @@ function initFormValidation() {
                     function(response) {
                         // Success callback
                         hideLoading();
-                        showNotification('Form submitted successfully', 'success');
+                        console.log('[FORM] Success response:', response);
+                        
+                        // Get success message from response or use default
+                        let successMessage = 'Form submitted successfully';
+                        if (response && response.message) {
+                            successMessage = response.message;
+                        }
+                        
+                        showNotification(successMessage, 'success');
                         
                         // Redirect to the list page
                         const listUrl = actionUrl.split('?')[0];
-                        console.log('Redirecting to:', listUrl);
+                        console.log('[FORM] Redirecting to:', listUrl);
                         window.location.href = listUrl;
                     },
                     function(error) {
                         // Error callback
                         hideLoading();
-                        showNotification('Error: ' + error.message, 'danger');
+                        console.error('[FORM] Error response:', error);
+                        
+                        // Create a more detailed error message
+                        let errorMessage = 'Error: ' + error.message;
+                        
+                        // If we have detailed error information, display it
+                        if (error.details && error.details.errors) {
+                            const errorDetails = error.details.errors;
+                            errorMessage += '<ul class="mt-2 mb-0">';
+                            
+                            // Handle array of errors or object of errors
+                            if (Array.isArray(errorDetails)) {
+                                errorDetails.forEach(err => {
+                                    errorMessage += `<li>${err}</li>`;
+                                });
+                            } else {
+                                for (const field in errorDetails) {
+                                    if (Array.isArray(errorDetails[field])) {
+                                        errorDetails[field].forEach(err => {
+                                            errorMessage += `<li>${field}: ${err}</li>`;
+                                        });
+                                    } else {
+                                        errorMessage += `<li>${field}: ${errorDetails[field]}</li>`;
+                                    }
+                                }
+                            }
+                            
+                            errorMessage += '</ul>';
+                        }
+                        
+                        showNotification(errorMessage, 'danger');
+                        
+                        // Highlight fields with errors if we have field-specific errors
+                        if (error.details && error.details.errors && typeof error.details.errors === 'object') {
+                            for (const field in error.details.errors) {
+                                const inputField = form.querySelector(`[name="${field}"]`);
+                                if (inputField) {
+                                    inputField.classList.add('is-invalid');
+                                    
+                                    // Add error message below the field
+                                    const feedbackDiv = document.createElement('div');
+                                    feedbackDiv.className = 'invalid-feedback';
+                                    feedbackDiv.textContent = Array.isArray(error.details.errors[field])
+                                        ? error.details.errors[field].join(', ')
+                                        : error.details.errors[field];
+                                    
+                                    // Remove any existing feedback
+                                    const existingFeedback = inputField.parentNode.querySelector('.invalid-feedback');
+                                    if (existingFeedback) {
+                                        existingFeedback.remove();
+                                    }
+                                    
+                                    inputField.parentNode.appendChild(feedbackDiv);
+                                }
+                            }
+                        }
                     }
                 );
             }
@@ -381,49 +451,64 @@ function initDeleteConfirmations() {
                         
                         // Use AJAX to submit the delete request
                         const url = this.dataset.href;
-                        console.log('Delete URL:', url);
+                        console.log('[DELETE] Delete URL:', url);
                         
                         // Add a timestamp to prevent caching
-                        const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+                        const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime() + '&_ajax=1';
                         
-                        // Set X-Requested-With header to indicate AJAX request
-                        const headers = new Headers({
-                            'X-Requested-With': 'XMLHttpRequest'
-                        });
-                        
-                        // Use fetch with proper error handling
-                        fetch(timestampedUrl, {
-                            method: 'GET',
-                            headers: headers,
-                            credentials: 'same-origin'
-                        })
-                        .then(response => {
-                            console.log('Delete response status:', response.status);
-                            
-                            if (!response.ok) {
-                                return response.text().then(text => {
-                                    console.error('Delete error response:', text);
-                                    throw new Error('Failed to delete item. Status: ' + response.status);
-                                });
+                        // Use our custom AJAX function instead of fetch for consistent handling
+                        ajaxRequest(
+                            timestampedUrl,
+                            'DELETE',  // Use proper DELETE method instead of GET
+                            null,
+                            function(response) {
+                                // Success callback
+                                console.log('[DELETE] Success response:', response);
+                                hideLoading();
+                                
+                                // Get success message from response or use default
+                                let successMessage = 'Item deleted successfully';
+                                if (response && response.message) {
+                                    successMessage = response.message;
+                                }
+                                
+                                showNotification(successMessage, 'success');
+                                
+                                // Redirect to the list page
+                                const listUrl = url.split('?')[0];
+                                console.log('[DELETE] Redirecting to:', listUrl);
+                                window.location.href = listUrl;
+                            },
+                            function(error) {
+                                // Error callback
+                                console.error('[DELETE] Error response:', error);
+                                hideLoading();
+                                
+                                // Create a more detailed error message
+                                let errorMessage = 'Error deleting item: ' + error.message;
+                                
+                                // If we have detailed error information, display it
+                                if (error.details && error.details.errors) {
+                                    const errorDetails = error.details.errors;
+                                    errorMessage += '<ul class="mt-2 mb-0">';
+                                    
+                                    // Handle array of errors or object of errors
+                                    if (Array.isArray(errorDetails)) {
+                                        errorDetails.forEach(err => {
+                                            errorMessage += `<li>${err}</li>`;
+                                        });
+                                    } else {
+                                        for (const field in errorDetails) {
+                                            errorMessage += `<li>${field}: ${errorDetails[field]}</li>`;
+                                        }
+                                    }
+                                    
+                                    errorMessage += '</ul>';
+                                }
+                                
+                                showNotification(errorMessage, 'danger');
                             }
-                            
-                            return response.text();
-                        })
-                        .then(data => {
-                            console.log('Delete success response:', data);
-                            hideLoading();
-                            showNotification('Item deleted successfully', 'success');
-                            
-                            // Redirect to the list page
-                            const listUrl = url.split('?')[0];
-                            console.log('Redirecting to:', listUrl);
-                            window.location.href = listUrl;
-                        })
-                        .catch(error => {
-                            console.error('Delete error:', error);
-                            hideLoading();
-                            showNotification('Error deleting item: ' + error.message, 'danger');
-                        });
+                        );
                     };
                 }
                 
@@ -436,49 +521,64 @@ function initDeleteConfirmations() {
                     showLoading(`Deleting ${itemName}...`);
                     
                     const url = this.href;
-                    console.log('Delete URL (fallback):', url);
+                    console.log('[DELETE] Delete URL (fallback):', url);
                     
                     // Add a timestamp to prevent caching
-                    const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+                    const timestampedUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + new Date().getTime() + '&_ajax=1';
                     
-                    // Set X-Requested-With header to indicate AJAX request
-                    const headers = new Headers({
-                        'X-Requested-With': 'XMLHttpRequest'
-                    });
-                    
-                    // Use fetch with proper error handling
-                    fetch(timestampedUrl, {
-                        method: 'GET',
-                        headers: headers,
-                        credentials: 'same-origin'
-                    })
-                    .then(response => {
-                        console.log('Delete response status (fallback):', response.status);
-                        
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                console.error('Delete error response (fallback):', text);
-                                throw new Error('Failed to delete item. Status: ' + response.status);
-                            });
+                    // Use our custom AJAX function instead of fetch for consistent handling
+                    ajaxRequest(
+                        timestampedUrl,
+                        'DELETE',  // Use proper DELETE method instead of GET
+                        null,
+                        function(response) {
+                            // Success callback
+                            console.log('[DELETE] Success response (fallback):', response);
+                            hideLoading();
+                            
+                            // Get success message from response or use default
+                            let successMessage = 'Item deleted successfully';
+                            if (response && response.message) {
+                                successMessage = response.message;
+                            }
+                            
+                            showNotification(successMessage, 'success');
+                            
+                            // Redirect to the list page
+                            const listUrl = url.split('?')[0];
+                            console.log('[DELETE] Redirecting to (fallback):', listUrl);
+                            window.location.href = listUrl;
+                        },
+                        function(error) {
+                            // Error callback
+                            console.error('[DELETE] Error response (fallback):', error);
+                            hideLoading();
+                            
+                            // Create a more detailed error message
+                            let errorMessage = 'Error deleting item: ' + error.message;
+                            
+                            // If we have detailed error information, display it
+                            if (error.details && error.details.errors) {
+                                const errorDetails = error.details.errors;
+                                errorMessage += '<ul class="mt-2 mb-0">';
+                                
+                                // Handle array of errors or object of errors
+                                if (Array.isArray(errorDetails)) {
+                                    errorDetails.forEach(err => {
+                                        errorMessage += `<li>${err}</li>`;
+                                    });
+                                } else {
+                                    for (const field in errorDetails) {
+                                        errorMessage += `<li>${field}: ${errorDetails[field]}</li>`;
+                                    }
+                                }
+                                
+                                errorMessage += '</ul>';
+                            }
+                            
+                            showNotification(errorMessage, 'danger');
                         }
-                        
-                        return response.text();
-                    })
-                    .then(data => {
-                        console.log('Delete success response (fallback):', data);
-                        hideLoading();
-                        showNotification('Item deleted successfully', 'success');
-                        
-                        // Redirect to the list page
-                        const listUrl = url.split('?')[0];
-                        console.log('Redirecting to (fallback):', listUrl);
-                        window.location.href = listUrl;
-                    })
-                    .catch(error => {
-                        console.error('Delete error (fallback):', error);
-                        hideLoading();
-                        showNotification('Error deleting item: ' + error.message, 'danger');
-                    });
+                    );
                 }
             }
         });
@@ -776,6 +876,8 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     // Show loading overlay
     showLoading();
     
+    console.log(`[AJAX] ${method} request to ${url}`);
+    
     // Create XMLHttpRequest object
     var xhr = new XMLHttpRequest();
     
@@ -786,15 +888,18 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     // Set Content-Type header based on data type
     if (data instanceof FormData) {
         // Don't set Content-Type for FormData, browser will set it with boundary
-        console.log('Sending FormData');
+        console.log('[AJAX] Sending FormData:', Array.from(data.entries()));
+        
+        // Add a debug field to FormData to help track requests
+        data.append('_debug', 'true');
     } else if (data !== null && typeof data === 'object') {
         xhr.setRequestHeader('Content-Type', 'application/json');
         // Convert data to JSON string
         data = JSON.stringify(data);
-        console.log('Sending JSON data');
+        console.log('[AJAX] Sending JSON data:', data);
     } else {
         // For GET requests or null data
-        console.log('Sending request without body data');
+        console.log('[AJAX] Sending request without body data');
     }
     
     // Set up callback
@@ -803,42 +908,51 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
             // Hide loading overlay
             hideLoading();
             
-            console.log('Response status:', xhr.status);
-            console.log('Response text:', xhr.responseText);
+            console.log(`[AJAX] Response status: ${xhr.status}`);
+            console.log('[AJAX] Response headers:', xhr.getAllResponseHeaders());
+            console.log('[AJAX] Response text:', xhr.responseText);
             
             if (xhr.status >= 200 && xhr.status < 300) {
                 // Success
                 var response;
                 try {
                     response = JSON.parse(xhr.responseText);
+                    console.log('[AJAX] Parsed JSON response:', response);
                 } catch (e) {
                     response = xhr.responseText;
-                    console.log('Response is not JSON:', e);
+                    console.log('[AJAX] Response is not JSON:', e);
                 }
                 
                 if (typeof successCallback === 'function') {
+                    console.log('[AJAX] Calling success callback');
                     successCallback(response);
                 }
             } else {
                 // Error
                 var error = {
                     status: xhr.status,
-                    message: xhr.statusText || 'Unknown error'
+                    message: xhr.statusText || 'Unknown error',
+                    responseText: xhr.responseText
                 };
                 
                 try {
                     var response = JSON.parse(xhr.responseText);
+                    console.log('[AJAX] Parsed error response:', response);
                     if (response.error) {
                         error.message = response.error;
+                    } else if (response.message) {
+                        error.message = response.message;
                     }
+                    error.details = response;
                 } catch (e) {
                     // Ignore parsing error
-                    console.log('Error response is not JSON:', e);
+                    console.log('[AJAX] Error response is not JSON:', e);
                 }
                 
-                console.error('AJAX error:', error);
+                console.error('[AJAX] Error:', error);
                 
                 if (typeof errorCallback === 'function') {
+                    console.log('[AJAX] Calling error callback');
                     errorCallback(error);
                 } else {
                     showNotification('Error: ' + error.message, 'danger');

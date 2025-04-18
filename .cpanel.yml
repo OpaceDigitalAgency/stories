@@ -7,14 +7,18 @@ deployment:
     - /bin/rm -rf $DEPLOYPATH/* || true
     - find $DEPLOYPATH -mindepth 1 -maxdepth 1 -name ".*" ! -name "." ! -name ".." ! -name ".well-known" -exec /bin/rm -rf {} \; || true
 
-    # Create necessary directories with proper case
+    # Create base directories first
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/mkdir -p $DEPLOYPATH/admin
+    
+    # Create API directory structure
     - /bin/mkdir -p $DEPLOYPATH/api/v1/Core
     - /bin/mkdir -p $DEPLOYPATH/api/v1/Endpoints
     - /bin/mkdir -p $DEPLOYPATH/api/v1/middleware
     - /bin/mkdir -p $DEPLOYPATH/api/v1/Utils
     - /bin/mkdir -p $DEPLOYPATH/api/v1/config
     
-    # Create admin directories
+    # Create admin directory structure
     - /bin/mkdir -p $DEPLOYPATH/admin/views/auth
     - /bin/mkdir -p $DEPLOYPATH/admin/views/generic
     - /bin/mkdir -p $DEPLOYPATH/admin/views/layouts
@@ -24,6 +28,19 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH/admin/assets/img
     - /bin/mkdir -p $DEPLOYPATH/admin/controllers
     - /bin/mkdir -p $DEPLOYPATH/admin/uploads
+    
+    # Set initial directory permissions
+    - /bin/chmod 755 $DEPLOYPATH/api
+    - /bin/chmod 755 $DEPLOYPATH/admin
+    - /bin/chmod 755 $DEPLOYPATH/admin/views
+    - /bin/chmod 755 $DEPLOYPATH/admin/includes
+    - /bin/chmod 755 $DEPLOYPATH/admin/assets
+    - /bin/chmod 755 $DEPLOYPATH/admin/controllers
+    - /bin/chmod 755 $DEPLOYPATH/admin/uploads
+    
+    # Copy API files
+    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
+    - /bin/cp stories-backend/api/*.php $DEPLOYPATH/api/
     
     # Copy core files with proper case
     - /bin/cp stories-backend/api/v1/Core/Auth.php $DEPLOYPATH/api/v1/Core/
@@ -38,13 +55,9 @@ deployment:
     - /bin/cp -R stories-backend/api/v1/middleware/* $DEPLOYPATH/api/v1/middleware/
     - /bin/cp -R stories-backend/api/v1/Utils/* $DEPLOYPATH/api/v1/Utils/
     
-    # Copy API root files and .htaccess
-    - /bin/cp stories-backend/api/*.php $DEPLOYPATH/api/
-    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
-
-    # Copy admin files with explicit paths
-    - /bin/cp stories-backend/admin/*.php $DEPLOYPATH/admin/
+    # Copy admin files
     - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
+    - /bin/cp stories-backend/admin/*.php $DEPLOYPATH/admin/
     - /bin/cp -R stories-backend/admin/views/auth/* $DEPLOYPATH/admin/views/auth/
     - /bin/cp -R stories-backend/admin/views/generic/* $DEPLOYPATH/admin/views/generic/
     - /bin/cp -R stories-backend/admin/views/layouts/* $DEPLOYPATH/admin/views/layouts/
@@ -62,28 +75,15 @@ deployment:
     - /bin/cp stories-backend/.htaccess $DEPLOYPATH
     - /bin/cp stories-backend/database.sql $DEPLOYPATH
     - /bin/cp stories-backend/README.md $DEPLOYPATH
-
-    # Set proper permissions
-    - /bin/chmod 755 $DEPLOYPATH/api/v1/Core
+    
+    # Set final permissions
     - /bin/chmod 644 $DEPLOYPATH/api/v1/Core/*.php
-    - /bin/chmod 755 $DEPLOYPATH/api/v1/Endpoints
     - /bin/chmod 644 $DEPLOYPATH/api/v1/Endpoints/*.php
-    - /bin/chmod 755 $DEPLOYPATH/api/v1/middleware
     - /bin/chmod 644 $DEPLOYPATH/api/v1/middleware/*.php
-    - /bin/chmod 755 $DEPLOYPATH/api/v1/Utils
     - /bin/chmod 644 $DEPLOYPATH/api/v1/Utils/*.php
-    - /bin/chmod 755 $DEPLOYPATH/api/v1/config
     - /bin/chmod 644 $DEPLOYPATH/api/v1/config/*.php
     - /bin/chmod 644 $DEPLOYPATH/api/*.php
     - /bin/chmod 644 $DEPLOYPATH/api/.htaccess
-    
-    # Set admin permissions
-    - /bin/chmod 755 $DEPLOYPATH/admin
-    - /bin/chmod 755 $DEPLOYPATH/admin/views
-    - /bin/chmod 755 $DEPLOYPATH/admin/includes
-    - /bin/chmod 755 $DEPLOYPATH/admin/assets
-    - /bin/chmod 755 $DEPLOYPATH/admin/controllers
-    - /bin/chmod 755 $DEPLOYPATH/admin/uploads
     - /bin/chmod 644 $DEPLOYPATH/admin/*.php
     - /bin/chmod 644 $DEPLOYPATH/admin/.htaccess
     - /bin/chmod 644 $DEPLOYPATH/admin/views/*/*.php
@@ -91,10 +91,6 @@ deployment:
     - /bin/chmod 644 $DEPLOYPATH/admin/assets/css/*.css
     - /bin/chmod 644 $DEPLOYPATH/admin/assets/js/*.js
     - /bin/chmod 644 $DEPLOYPATH/admin/controllers/*.php
-    
-    # Set root file permissions
     - /bin/chmod 644 $DEPLOYPATH/*.php
     - /bin/chmod 644 $DEPLOYPATH/.htaccess
-    
-    # Create uploads directory with write permissions
     - /bin/chmod 775 $DEPLOYPATH/admin/uploads

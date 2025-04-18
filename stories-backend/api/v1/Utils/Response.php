@@ -278,7 +278,19 @@ class Response {
      * @param int $statusCode HTTP status code
      */
     public static function sendPaginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
-        self::json(self::paginated(self::formatData($data), $page, $pageSize, $total, $additionalMeta, $statusCode));
+        // Check if data is already formatted
+        $isFormatted = true;
+        if (is_array($data)) {
+            foreach ($data as $item) {
+                if (!isset($item['id']) || !isset($item['attributes'])) {
+                    $isFormatted = false;
+                    break;
+                }
+            }
+        }
+        
+        $formattedData = $isFormatted ? $data : self::formatData($data);
+        self::json(self::paginated($formattedData, $page, $pageSize, $total, $additionalMeta, $statusCode));
     }
     
     /**

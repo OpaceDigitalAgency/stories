@@ -85,10 +85,12 @@ $testEndpoint = 'tags';
         <div class="test-section">
             <h2>1. Authentication Status</h2>
             <?php
+            // Get token status after potential cookie restore
+            $token = $_SESSION['token'] ?? $_COOKIE['auth_token'] ?? null;
             logTest("Checking authentication", [
                 'user_id' => $user['id'],
                 'email' => $user['email'],
-                'token_exists' => !empty($_SESSION['token'])
+                'token_exists' => !empty($token)
             ]);
             ?>
         </div>

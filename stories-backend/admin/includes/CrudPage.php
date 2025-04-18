@@ -612,15 +612,22 @@ class CrudPage extends AdminPage {
         }
         
         if ($hasFileUploads) {
-            // For file uploads, we need to handle the data differently
-            $data = $_POST;
+            // Prepare the form data first
+            $attributes = $this->prepareData($_POST)['data']['attributes'];
             
-            // Add files to the data
+            // Add files to the attributes
             foreach ($_FILES as $field => $file) {
                 if (!empty($file['name'])) {
-                    $data[$field] = $file;
+                    $attributes[$field] = $file;
                 }
             }
+            
+            // Wrap in API structure
+            $data = [
+                'data' => [
+                    'attributes' => $attributes
+                ]
+            ];
             
             error_log('Create with file upload: ' . json_encode($data));
         } else {
@@ -724,15 +731,22 @@ class CrudPage extends AdminPage {
         }
         
         if ($hasFileUploads) {
-            // For file uploads, we need to handle the data differently
-            $data = $_POST;
+            // Prepare the form data first
+            $attributes = $this->prepareData($_POST)['data']['attributes'];
             
-            // Add files to the data
+            // Add files to the attributes
             foreach ($_FILES as $field => $file) {
                 if (!empty($file['name'])) {
-                    $data[$field] = $file;
+                    $attributes[$field] = $file;
                 }
             }
+            
+            // Wrap in API structure
+            $data = [
+                'data' => [
+                    'attributes' => $attributes
+                ]
+            ];
             
             error_log('Edit with file upload: ' . json_encode($data));
         } else {

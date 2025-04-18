@@ -253,6 +253,40 @@ class AuthController extends BaseController {
         $userId = (int)$this->request['user_id'];
         
         try {
+            // Check if we have an authenticated user from the token
+            $currentUser = Auth::getCurrentUser();
+            
+            // Enhanced security: Only allow token refresh if:
+            // 1. The request has a valid token (user is authenticated), OR
+            // 2. The request is coming from a trusted source (admin panel)
+            
+            $isTrustedSource = false;
+            
+            // Check if request is from admin panel by checking referer
+            if (isset($_SERVER['HTTP_REFERER'])) {
+                $referer = $_SERVER['HTTP_REFERER'];
+                $adminUrl = isset($_SERVER['HTTP_HOST']) ? 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . $_SERVER['HTTP_HOST'] . '/admin/' : '';
+                
+                if (!empty($adminUrl) && strpos($referer, $adminUrl) === 0) {
+                    $isTrustedSource = true;
+                    error_log("Token refresh: Trusted source (admin panel)");
+                }
+            }
+            
+            // If not authenticated and not from trusted source, reject
+            if (!$currentUser && !$isTrustedSource) {
+                error_log("Token refresh rejected: Not authenticated and not from trusted source");
+                $this->unauthorized('Unauthorized token refresh attempt');
+                return;
+            }
+            
+            // If authenticated, ensure user is only refreshing their own token
+            if ($currentUser && $currentUser['id'] != $userId && $currentUser['role'] !== 'admin') {
+                error_log("Token refresh rejected: User attempting to refresh another user's token");
+                $this->forbidden('You can only refresh your own token');
+                return;
+            }
+            
             // Get user by ID
             $query = "SELECT id, name, email, role FROM users WHERE id = ? AND active = 1 LIMIT 1";
             $stmt = $this->db->query($query, [$userId]);
@@ -263,6 +297,9 @@ class AuthController extends BaseController {
             }
             
             $user = $stmt->fetch();
+            
+            // Log the token refresh
+            error_log("Refreshing token for user ID: {$user['id']}, role: {$user['role']}");
             
             // Generate new JWT token
             $token = Auth::generateToken([
@@ -276,6 +313,7 @@ class AuthController extends BaseController {
                 'expires_in' => $this->config['security']['token_expiry']
             ]);
         } catch (\Exception $e) {
+            error_log("Token refresh error: " . $e->getMessage());
             $this->serverError('Failed to refresh token');
         }
     }

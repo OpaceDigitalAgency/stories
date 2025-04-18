@@ -285,6 +285,17 @@ class Response {
      * @param array $errors Detailed error information
      */
     public static function sendError($message, $statusCode = 400, $errors = []) {
+        // Check if token expiration was detected
+        if ($statusCode == 401 && isset($GLOBALS['token_expired']) && $GLOBALS['token_expired']) {
+            // Add token expiration information to the message
+            $message = 'Authentication token has expired. Please refresh your token or log in again.';
+            
+            // Add a specific error code for token expiration
+            $errors['code'] = 'token_expired';
+            
+            error_log("Sending token expired error response");
+        }
+        
         self::json(self::error($message, $statusCode, $errors));
     }
 }

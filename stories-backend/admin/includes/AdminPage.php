@@ -122,9 +122,25 @@ class AdminPage {
         // Check if we have a token in cookie
         $cookieToken = isset($_COOKIE['auth_token']) ? $_COOKIE['auth_token'] : null;
         
+        // Log token status for debugging
+        error_log("AdminPage::ensureTokenConsistency - Session token: " . ($sessionToken ? "Present" : "Missing"));
+        error_log("AdminPage::ensureTokenConsistency - Cookie token: " . ($cookieToken ? "Present" : "Missing"));
+        
+        // Determine if we're using HTTPS
+        $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                 (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        
         // If we have a token in session but not in cookie, set the cookie
         if ($sessionToken && !$cookieToken) {
-            setcookie('auth_token', $sessionToken, time() + $this->config['security']['token_expiry'], '/', '', false, true);
+            setcookie(
+                'auth_token',
+                $sessionToken,
+                time() + $this->config['security']['token_expiry'],
+                '/',
+                '',
+                $secure,
+                true
+            );
             error_log("AdminPage: Set cookie token from session token");
         }
         
@@ -132,12 +148,85 @@ class AdminPage {
         if ($cookieToken && !$sessionToken) {
             $_SESSION['token'] = $cookieToken;
             error_log("AdminPage: Set session token from cookie token");
+            
+            // Validate the token to ensure it's not expired
+            if (method_exists('Auth', 'validateToken')) {
+                $valid = Auth::validateToken($cookieToken);
+                if (!$valid) {
+                    error_log("AdminPage: Cookie token is invalid or expired, clearing tokens");
+                    unset($_SESSION['token']);
+                    setcookie('auth_token', '', time() - 3600, '/', '', $secure, true);
+                    
+                    // Redirect to login page
+                    $this->redirect('login.php');
+                    exit;
+                }
+            }
         }
         
         // If we have both tokens but they don't match, refresh the token
         if ($sessionToken && $cookieToken && $sessionToken !== $cookieToken) {
             error_log("AdminPage: Token mismatch between session and cookie, refreshing token");
-            Auth::refreshToken($_SESSION['user'], true);
+            
+            // Determine which token is newer by decoding them
+            $sessionPayload = $this->decodeJwtPayload($sessionToken);
+            $cookiePayload = $this->decodeJwtPayload($cookieToken);
+            
+            if ($sessionPayload && $cookiePayload) {
+                // Use the token with the later expiration time
+                if ($sessionPayload['exp'] > $cookiePayload['exp']) {
+                    setcookie(
+                        'auth_token',
+                        $sessionToken,
+                        time() + $this->config['security']['token_expiry'],
+                        '/',
+                        '',
+                        $secure,
+                        true
+                    );
+                    error_log("AdminPage: Updated cookie token to match newer session token");
+                } else {
+                    $_SESSION['token'] = $cookieToken;
+                    error_log("AdminPage: Updated session token to match newer cookie token");
+                }
+            } else {
+                // If we can't decode the tokens, refresh them
+                Auth::refreshToken($_SESSION['user'], true);
+            }
+        }
+        
+        // Periodically refresh token if it's close to expiration
+        if ($sessionToken) {
+            $payload = $this->decodeJwtPayload($sessionToken);
+            if ($payload && isset($payload['exp'])) {
+                $expiresIn = $payload['exp'] - time();
+                // If token expires in less than 10 minutes (600 seconds), refresh it
+                if ($expiresIn < 600 && $expiresIn > 0) {
+                    error_log("AdminPage: Token expires in $expiresIn seconds, refreshing");
+                    Auth::refreshToken($_SESSION['user'], true);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Decode JWT payload without verifying signature
+     *
+     * @param string $token JWT token
+     * @return array|null Decoded payload or null if invalid
+     */
+    private function decodeJwtPayload($token) {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return null;
+        }
+        
+        try {
+            $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+            return $payload;
+        } catch (\Exception $e) {
+            error_log("AdminPage: Error decoding JWT payload: " . $e->getMessage());
+            return null;
         }
     }
     

@@ -72,6 +72,7 @@ class Auth {
         // Split token into parts
         $parts = explode('.', $token);
         if (count($parts) !== 3) {
+            error_log("Token validation failed: Invalid token format");
             return false;
         }
         
@@ -82,6 +83,7 @@ class Auth {
         $valid = self::base64UrlEncode($valid);
         
         if ($signature !== $valid) {
+            error_log("Token validation failed: Invalid signature");
             return false;
         }
         
@@ -90,6 +92,10 @@ class Auth {
         
         // Check if token has expired
         if (isset($payload['exp']) && $payload['exp'] < time()) {
+            // Set a global variable to indicate token expiration
+            // This will be used by the Response class to include an expiration message
+            $GLOBALS['token_expired'] = true;
+            error_log("Token validation failed: Token expired at " . date('Y-m-d H:i:s', $payload['exp']));
             return false;
         }
         

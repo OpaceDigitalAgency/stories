@@ -246,23 +246,123 @@ class Auth {
      */
     public static function refreshToken($user, $remember = false) {
         if (!$user || !isset($user['id'])) {
+            error_log("Auth::refreshToken - Invalid user data");
             return false;
         }
         
-        // Generate new JWT token
-        $token = self::generateToken([
-            'user_id' => $user['id'],
-            'role' => $user['role']
-        ]);
+        error_log("Auth::refreshToken - Refreshing token for user ID: {$user['id']}, role: {$user['role']}");
         
-        // Store token in session
-        $_SESSION['token'] = $token;
-        
-        // Set token in cookie
-        $cookieExpiry = $remember ? time() + self::$tokenExpiry : 0;
-        setcookie('auth_token', $token, $cookieExpiry, '/', '', false, true);
-        
-        return $token;
+        try {
+            // Generate new JWT token
+            $token = self::generateToken([
+                'user_id' => $user['id'],
+                'role' => $user['role']
+            ]);
+            
+            // Store token in session
+            $_SESSION['token'] = $token;
+            
+            // Determine if we're using HTTPS
+            $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                     (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+            
+            // Set token in cookie with secure flag if using HTTPS
+            $cookieExpiry = $remember ? time() + self::$tokenExpiry : 0;
+            if ($cookieExpiry === 0) {
+                // If not remembering, set expiry to session end (browser close)
+                $cookieExpiry = 0;
+            } else {
+                // If remembering, ensure expiry is not too far in the future
+                // Maximum 30 days
+                $maxExpiry = time() + (30 * 24 * 60 * 60);
+                $cookieExpiry = min($cookieExpiry, $maxExpiry);
+            }
+            
+            // Set the cookie with appropriate security settings
+            setcookie(
+                'auth_token',
+                $token,
+                $cookieExpiry,
+                '/',
+                '',  // Domain - empty for current domain
+                $secure,  // Secure - only send over HTTPS if available
+                true  // HttpOnly - prevent JavaScript access
+            );
+            
+            error_log("Auth::refreshToken - Token refreshed successfully");
+            
+            // Also try to refresh the token on the API side
+            self::refreshApiToken($user['id'], $token);
+            
+            return $token;
+        } catch (\Exception $e) {
+            error_log("Auth::refreshToken - Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Attempt to refresh the token on the API side
+     *
+     * @param int $userId User ID
+     * @param string $token New token
+     * @return bool Success status
+     */
+    private static function refreshApiToken($userId, $token) {
+        try {
+            // Get API URL from config
+            $apiUrl = defined('API_URL') ? API_URL : '';
+            if (empty($apiUrl)) {
+                error_log("Auth::refreshApiToken - API_URL not defined");
+                return false;
+            }
+            
+            // Initialize cURL
+            $ch = curl_init();
+            $url = rtrim($apiUrl, '/') . '/auth/refresh';
+            
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            
+            // Set headers
+            $headers = [
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token  // Use the new token for authorization
+            ];
+            
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            
+            // Set request data
+            $jsonData = json_encode(['user_id' => $userId]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+            
+            // Execute request
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Check for errors
+            if (curl_errno($ch)) {
+                error_log("Auth::refreshApiToken - cURL error: " . curl_error($ch));
+                curl_close($ch);
+                return false;
+            }
+            
+            curl_close($ch);
+            
+            // Check response
+            if ($httpCode == 200) {
+                error_log("Auth::refreshApiToken - API token refresh successful");
+                return true;
+            } else {
+                error_log("Auth::refreshApiToken - API token refresh failed: HTTP $httpCode");
+                return false;
+            }
+        } catch (\Exception $e) {
+            error_log("Auth::refreshApiToken - Error: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**

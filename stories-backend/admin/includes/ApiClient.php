@@ -128,6 +128,13 @@ class ApiClient {
         if (!empty($token)) {
             $headers[] = 'Authorization: Bearer ' . $token;
             error_log("API Request Auth - Using session token");
+            
+            // Ensure cookie is consistent with session
+            if (empty($cookieToken) || $cookieToken !== $token) {
+                $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+                setcookie('auth_token', $token, time() + 86400, '/', '', $secure, true);
+                error_log("API Request Auth - Updated cookie token to match session token");
+            }
         } elseif (!empty($cookieToken)) {
             $headers[] = 'Authorization: Bearer ' . $cookieToken;
             error_log("API Request Auth - Using cookie token");
@@ -136,8 +143,10 @@ class ApiClient {
         } elseif ($this->authToken) {
             $headers[] = 'Authorization: Bearer ' . $this->authToken;
             error_log("API Request Auth - Using instance token");
-            // Store in session for consistency
+            // Store in session and cookie for consistency
             $_SESSION['token'] = $this->authToken;
+            $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+            setcookie('auth_token', $this->authToken, time() + 86400, '/', '', $secure, true);
         } else {
             error_log("API Request Auth - WARNING: No authentication token available");
         }
@@ -359,30 +368,29 @@ class ApiClient {
                 
                 // Log token information for debugging authentication issues
                 error_log("AUTH ERROR: Session token: " . (isset($_SESSION['token']) ? "Present" : "Missing"));
+                error_log("AUTH ERROR: Cookie token: " . (isset($_COOKIE['auth_token']) ? "Present" : "Missing"));
                 error_log("AUTH ERROR: Instance token: " . ($this->authToken ? "Present" : "Missing"));
                 
-                // Check for token expiration
-                if (isset($responseData['message']) && strpos($responseData['message'], 'expired') !== false) {
-                    $errorDetail = 'Your authentication token has expired.';
+                // Always attempt to refresh the token on 401 errors
+                // This handles both explicit expiration messages and other auth failures
+                error_log("AUTH: Attempting token refresh due to 401 error");
+                $refreshed = $this->refreshToken();
+                
+                if ($refreshed) {
+                    // Retry the request with the new token
+                    error_log("AUTH: Token refreshed successfully, retrying request");
+                    return $this->request($method, $endpoint, $params, $data);
+                } else {
+                    $errorDetail = 'Your authentication token has expired or is invalid. Please log in again.';
                     
-                    // Try to refresh the token
-                    $refreshed = $this->refreshToken();
-                    if ($refreshed) {
-                        // Retry the request with the new token
-                        error_log("AUTH: Token refreshed, retrying request");
-                        return $this->request($method, $endpoint, $params, $data);
-                    } else {
-                        $errorDetail .= ' Please log in again.';
-                        
-                        // Clear the expired tokens
-                        if (isset($_SESSION['token'])) {
-                            unset($_SESSION['token']);
-                            error_log("AUTH ERROR: Cleared expired session token");
-                        }
-                        if (isset($_COOKIE['auth_token'])) {
-                            setcookie('auth_token', '', time() - 3600, '/', '', false, true);
-                            error_log("AUTH ERROR: Cleared expired cookie token");
-                        }
+                    // Clear the expired tokens
+                    if (isset($_SESSION['token'])) {
+                        unset($_SESSION['token']);
+                        error_log("AUTH ERROR: Cleared expired session token");
+                    }
+                    if (isset($_COOKIE['auth_token'])) {
+                        setcookie('auth_token', '', time() - 3600, '/', '', true, true);
+                        error_log("AUTH ERROR: Cleared expired cookie token");
                     }
                 }
             } else if ($httpCode == 403) {
@@ -450,23 +458,74 @@ class ApiClient {
         }
         
         try {
-            // Create a new API client without authentication for the refresh request
-            $tempClient = new ApiClient($this->apiUrl);
+            // Use the current token for authentication if available
+            // This adds a layer of security by requiring the old token
+            $headers = [];
+            $currentToken = null;
             
-            // Call the refresh token endpoint
-            $response = $tempClient->post('auth/refresh', [
-                'user_id' => $userId
-            ]);
+            // Try to get the current token from session, cookie, or instance
+            if (!empty($_SESSION['token'])) {
+                $currentToken = $_SESSION['token'];
+            } elseif (!empty($_COOKIE['auth_token'])) {
+                $currentToken = $_COOKIE['auth_token'];
+            } elseif ($this->authToken) {
+                $currentToken = $this->authToken;
+            }
             
-            if ($response && isset($response['token'])) {
-                $newToken = $response['token'];
+            if ($currentToken) {
+                $headers['Authorization'] = 'Bearer ' . $currentToken;
+            }
+            
+            // Initialize cURL for the refresh request
+            $ch = curl_init();
+            $url = rtrim($this->apiUrl, '/') . '/auth/refresh';
+            
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            
+            // Set headers
+            $curlHeaders = [
+                'Accept: application/json',
+                'Content-Type: application/json'
+            ];
+            
+            if (isset($headers['Authorization'])) {
+                $curlHeaders[] = 'Authorization: ' . $headers['Authorization'];
+            }
+            
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $curlHeaders);
+            
+            // Set request data
+            $jsonData = json_encode(['user_id' => $userId]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+            
+            // Execute request
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Check for errors
+            if (curl_errno($ch)) {
+                error_log("Token refresh cURL error: " . curl_error($ch));
+                curl_close($ch);
+                return false;
+            }
+            
+            curl_close($ch);
+            
+            // Parse response
+            $responseData = json_decode($response, true);
+            
+            if ($httpCode == 200 && $responseData && isset($responseData['token'])) {
+                $newToken = $responseData['token'];
                 
                 // Update session token
                 $_SESSION['token'] = $newToken;
                 
-                // Update cookie token
-                $cookieExpiry = isset($response['expires_in']) ? time() + $response['expires_in'] : time() + 3600;
-                setcookie('auth_token', $newToken, $cookieExpiry, '/', '', false, true);
+                // Update cookie token - use secure cookies in production
+                $cookieExpiry = isset($responseData['expires_in']) ? time() + $responseData['expires_in'] : time() + 3600;
+                $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+                setcookie('auth_token', $newToken, $cookieExpiry, '/', '', $secure, true);
                 
                 // Update instance token
                 $this->authToken = $newToken;
@@ -475,7 +534,10 @@ class ApiClient {
                 return true;
             }
             
-            error_log("Token refresh failed: Invalid response");
+            error_log("Token refresh failed: Invalid response (HTTP $httpCode)");
+            if ($responseData) {
+                error_log("Response: " . json_encode($responseData));
+            }
             return false;
         } catch (Exception $e) {
             error_log("Token refresh error: " . $e->getMessage());

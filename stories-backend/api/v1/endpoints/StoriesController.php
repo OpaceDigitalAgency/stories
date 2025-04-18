@@ -93,28 +93,30 @@ class StoriesController extends BaseController {
                 // Build the formatted story
                 $formattedStories[] = [
                     'id' => $storyId,
-                    'title' => $story['title'],
-                    'slug' => $story['slug'],
-                    'excerpt' => $story['excerpt'],
-                    'publishedAt' => $story['publishedAt'],
-                    'featured' => (bool)$story['featured'],
-                    'averageRating' => (float)$story['averageRating'],
-                    'reviewCount' => (int)$story['reviewCount'],
-                    'estimatedReadingTime' => $story['estimatedReadingTime'],
-                    'isSponsored' => (bool)$story['isSponsored'],
-                    'ageGroup' => $story['ageGroup'],
-                    'needsModeration' => (bool)$story['needsModeration'],
-                    'isSelfPublished' => (bool)$story['isSelfPublished'],
-                    'isAIEnhanced' => (bool)$story['isAIEnhanced'],
-                    'coverUrl' => $story['coverUrl'],
-                    'createdAt' => $story['createdAt'],
-                    'updatedAt' => $story['updatedAt'],
-                    'author' => $author ? [
-                        'id' => $author['id'],
-                        'name' => $author['name'],
-                        'slug' => $author['slug']
-                    ] : null,
-                    'tags' => $formattedTags
+                    'attributes' => [
+                        'title' => $story['title'],
+                        'slug' => $story['slug'],
+                        'excerpt' => $story['excerpt'],
+                        'publishedAt' => $story['publishedAt'],
+                        'featured' => (bool)$story['featured'],
+                        'averageRating' => (float)$story['averageRating'],
+                        'reviewCount' => (int)$story['reviewCount'],
+                        'estimatedReadingTime' => $story['estimatedReadingTime'],
+                        'isSponsored' => (bool)$story['isSponsored'],
+                        'ageGroup' => $story['ageGroup'],
+                        'needsModeration' => (bool)$story['needsModeration'],
+                        'isSelfPublished' => (bool)$story['isSelfPublished'],
+                        'isAIEnhanced' => (bool)$story['isAIEnhanced'],
+                        'coverUrl' => $story['coverUrl'],
+                        'createdAt' => $story['createdAt'],
+                        'updatedAt' => $story['updatedAt'],
+                        'author' => $author ? [
+                            'id' => $author['id'],
+                            'name' => $author['name'],
+                            'slug' => $author['slug']
+                        ] : null,
+                        'tags' => $formattedTags
+                    ]
                 ];
             }
             
@@ -154,26 +156,28 @@ class StoriesController extends BaseController {
                 return;
             }
             
-            // Format the story
+            // Format the story with attributes wrapper
             $formattedStory = [
                 'id' => $story['id'],
-                'title' => $story['title'],
-                'slug' => $story['slug'],
-                'excerpt' => $story['excerpt'],
-                'content' => $story['content'],
-                'publishedAt' => $story['published_at'],
-                'featured' => (bool)$story['featured'],
-                'averageRating' => (float)$story['average_rating'],
-                'reviewCount' => (int)$story['review_count'],
-                'estimatedReadingTime' => $story['estimated_reading_time'],
-                'isSponsored' => (bool)$story['is_sponsored'],
-                'ageGroup' => $story['age_group'],
-                'needsModeration' => (bool)$story['needs_moderation'],
-                'isSelfPublished' => (bool)$story['is_self_published'],
-                'isAIEnhanced' => (bool)$story['is_ai_enhanced'],
-                'coverUrl' => $story['cover_url'],
-                'createdAt' => $story['created_at'],
-                'updatedAt' => $story['updated_at']
+                'attributes' => [
+                    'title' => $story['title'],
+                    'slug' => $story['slug'],
+                    'excerpt' => $story['excerpt'],
+                    'content' => $story['content'],
+                    'publishedAt' => $story['published_at'],
+                    'featured' => (bool)$story['featured'],
+                    'averageRating' => (float)$story['average_rating'],
+                    'reviewCount' => (int)$story['review_count'],
+                    'estimatedReadingTime' => $story['estimated_reading_time'],
+                    'isSponsored' => (bool)$story['is_sponsored'],
+                    'ageGroup' => $story['age_group'],
+                    'needsModeration' => (bool)$story['needs_moderation'],
+                    'isSelfPublished' => (bool)$story['is_self_published'],
+                    'isAIEnhanced' => (bool)$story['is_ai_enhanced'],
+                    'coverUrl' => $story['cover_url'],
+                    'createdAt' => $story['created_at'],
+                    'updatedAt' => $story['updated_at']
+                ]
             ];
             
             // Get author
@@ -184,7 +188,7 @@ class StoriesController extends BaseController {
             $author = $authorStmt->fetch();
             
             if ($author) {
-                $formattedStory['author'] = [
+                $formattedStory['attributes']['author'] = [
                     'id' => $author['id'],
                     'name' => $author['name'],
                     'slug' => $author['slug']
@@ -206,7 +210,7 @@ class StoriesController extends BaseController {
                 ];
             }
             
-            $formattedStory['tags'] = $formattedTags;
+            $formattedStory['attributes']['tags'] = $formattedTags;
             
             Response::sendSuccess($formattedStory);
         } catch (\Exception $e) {

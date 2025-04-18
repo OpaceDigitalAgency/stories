@@ -26,13 +26,25 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check authentication
+// Initialize Auth and check authentication
 Auth::init($config['security']);
 $user = Auth::checkAuth();
 
 if (!$user) {
     header('Location: ' . ADMIN_URL . '/login.php');
     exit('Authentication required');
+}
+
+// Ensure we have a valid token
+if (empty($_SESSION['token'])) {
+    // Generate new token if needed
+    $token = Auth::refreshToken($user, true);
+    if (!$token) {
+        error_log("Failed to refresh token for user {$user['id']}");
+        exit('Failed to refresh authentication token');
+    }
+} else {
+    $token = $_SESSION['token'];
 }
 
 // Create log function
@@ -46,19 +58,15 @@ function logTest($message, $data = null) {
     echo "</pre>";
 }
 
-// Initialize API client with token
-$token = $_SESSION['token'] ?? null;
-if (!$token) {
-    // Try to get token from cookie
-    $token = $_COOKIE['auth_token'] ?? null;
-    if ($token) {
-        $_SESSION['token'] = $token;
-        error_log("Restored token from cookie to session");
-    }
-}
-
+// Initialize API client with the validated token
 error_log("Using token: " . ($token ? "Present" : "Missing"));
 $apiClient = new ApiClient(API_URL, $token);
+
+// Log token details for debugging
+error_log("Token details:");
+error_log("- Session token: " . (!empty($_SESSION['token']) ? "Present" : "Missing"));
+error_log("- Cookie token: " . (!empty($_COOKIE['auth_token']) ? "Present" : "Missing"));
+error_log("- API Client token: " . ($token ? "Present" : "Missing"));
 
 // Test endpoint (using tags as it's a simple resource)
 $testEndpoint = 'tags';

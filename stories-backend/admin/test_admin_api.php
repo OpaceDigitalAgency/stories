@@ -47,7 +47,7 @@ function logTest($message, $data = null) {
 }
 
 // Initialize API client
-$apiClient = new ApiClient($config['api']['url'], $_SESSION['token'] ?? null);
+$apiClient = new ApiClient(API_URL, $_SESSION['token'] ?? null);
 
 // Test endpoint (using tags as it's a simple resource)
 $testEndpoint = 'tags';

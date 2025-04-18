@@ -324,7 +324,7 @@ class CrudPage extends AdminPage {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
             $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
-            $this->redirect($this->entityName . '.php');
+            $this->redirect($this->activeMenu . '.php');
             return;
         }
         
@@ -382,6 +382,7 @@ class CrudPage extends AdminPage {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
             $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
+            // Already correct, no change needed
             $this->redirect($this->activeMenu . '.php');
             return;
         }
@@ -439,7 +440,7 @@ class CrudPage extends AdminPage {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
             $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
-            $this->redirect($this->entityName . '.php');
+            $this->redirect($this->activeMenu . '.php');
             return;
         }
         

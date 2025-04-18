@@ -58,18 +58,17 @@ class TagsController extends BaseController {
             $tags = $stmt->fetchAll();
             
             // Format tags with a simplified structure to avoid JSON encoding issues
-            $formattedTags = [
-    "id" => $tagsId,
-    "attributes" => [];
+            $formattedTags = [];
             
             foreach ($tags as $tag) {
                 $formattedTags[] = [
-
-                    'name' => $tag['name'],
-                    'slug' => $tag['slug'],
-                    'storyCount' => (int)$tag['storyCount']
-    ]
-];
+                    'id' => $tag['id'],
+                    'attributes' => [
+                        'name' => $tag['name'],
+                        'slug' => $tag['slug'],
+                        'storyCount' => (int)$tag['storyCount']
+                    ]
+                ];
             }
             
             // Send paginated response
@@ -179,13 +178,15 @@ class TagsController extends BaseController {
             // Count stories
             $storyCount = count($simpleStories);
             
-            // Build the formatted tag with simplified structure
+            // Build the formatted tag with proper structure
             $formattedTag = [
                 'id' => $tagId,
-                'name' => $tag['name'],
-                'slug' => $tag['slug'],
-                'storyCount' => $storyCount,
-                'stories' => $simpleStories
+                'attributes' => [
+                    'name' => $tag['name'],
+                    'slug' => $tag['slug'],
+                    'storyCount' => $storyCount,
+                    'stories' => $simpleStories
+                ]
             ];
             
             // Send response
@@ -236,12 +237,14 @@ class TagsController extends BaseController {
             
             $tagId = $this->db->lastInsertId();
             
-            // Return the created tag with simplified structure
+            // Return the created tag with proper structure
             $formattedTag = [
                 'id' => $tagId,
-                'name' => $name,
-                'slug' => $slug,
-                'storyCount' => 0
+                'attributes' => [
+                    'name' => $name,
+                    'slug' => $slug,
+                    'storyCount' => 0
+                ]
             ];
             
             Response::sendSuccess($formattedTag, [], 201);
@@ -349,9 +352,11 @@ class TagsController extends BaseController {
             
             $formattedTag = [
                 'id' => $tagId,
-                'name' => $updatedTag['name'],
-                'slug' => $updatedTag['slug'],
-                'storyCount' => $this->getStoryCount($tagId)
+                'attributes' => [
+                    'name' => $updatedTag['name'],
+                    'slug' => $updatedTag['slug'],
+                    'storyCount' => $this->getStoryCount($tagId)
+                ]
             ];
             
             Response::sendSuccess($formattedTag);

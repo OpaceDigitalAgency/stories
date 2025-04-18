@@ -63,9 +63,7 @@ class BlogPostsController extends BaseController {
             $blogPosts = $stmt->fetchAll();
             
             // Format blog posts to match Strapi response format
-            $formattedBlogPosts = [
-    "id" => $blogpostsId,
-    "attributes" => [];
+            $formattedBlogPosts = [];
             
             foreach ($blogPosts as $blogPost) {
                 $blogPostId = $blogPost['id'];
@@ -91,7 +89,7 @@ class BlogPostsController extends BaseController {
                     if ($avatar) {
                         $author['avatar'] = [
                             'data' => [
-
+                                'id' => $avatar['id'],
                                 'attributes' => [
                                     'url' => $avatar['url'],
                                     'width' => $avatar['width'],
@@ -99,8 +97,7 @@ class BlogPostsController extends BaseController {
                                     'alternativeText' => $avatar['alt_text']
                                 ]
                             ]
-    ]
-];
+                        ];
                     }
                 }
                 
@@ -125,29 +122,19 @@ class BlogPostsController extends BaseController {
                 if ($author) {
                     $formattedAuthor = [
                         'data' => [
-                            [
-                                'id' => $author['id'],
-                                'attributes' => [
-                                    'name' => $author['name'],
-                                    'slug' => $author['slug'],
-                                    'bio' => $author['bio'],
-                                    'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                                ]
-                            ]
-                        ],
-                        'meta' => [
-                            'pagination' => [
-                                'page' => 1,
-                                'pageSize' => 1,
-                                'pageCount' => 1,
-                                'total' => 1
+                            'id' => $author['id'],
+                            'attributes' => [
+                                'name' => $author['name'],
+                                'slug' => $author['slug'],
+                                'bio' => $author['bio'],
+                                'avatar' => isset($author['avatar']) ? $author['avatar'] : null
                             ]
                         ]
                     ];
                 }
                 
                 // Build the formatted blog post
-                $formattedBlogPost = [
+                $formattedBlogPosts[] = [
                     'id' => $blogPostId,
                     'attributes' => [
                         'title' => $blogPost['title'],
@@ -161,8 +148,6 @@ class BlogPostsController extends BaseController {
                         'author' => $formattedAuthor
                     ]
                 ];
-                
-                $formattedBlogPosts[] = $formattedBlogPost;
             }
             
             // Send paginated response
@@ -267,7 +252,7 @@ class BlogPostsController extends BaseController {
             $formattedAuthor = null;
             if ($author) {
                 $formattedAuthor = [
-                    'data' => [ // Simplified structure for single relation
+                    'data' => [
                         'id' => $author['id'],
                         'attributes' => [
                             'name' => $author['name'],
@@ -291,7 +276,6 @@ class BlogPostsController extends BaseController {
                     'createdAt' => $blogPost['createdAt'],
                     'updatedAt' => $blogPost['updatedAt'],
                     'cover' => $formattedCover,
-                    'author' => $formattedAuthor // Add the formatted author here
                     'author' => $formattedAuthor
                 ]
             ];

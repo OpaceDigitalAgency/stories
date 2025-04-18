@@ -193,13 +193,17 @@ class Response {
      * @return array The formatted data
      */
     private static function formatData($data) {
-        // If data is already in the correct format, return it as is
+        // If data is already in the correct format, check if attributes needs fixing
         if (isset($data['id']) && isset($data['attributes'])) {
+            // Check for nested attributes
+            if (isset($data['attributes']['attributes'])) {
+                $data['attributes'] = $data['attributes']['attributes'];
+            }
             return $data;
         }
         
         // If data is an array of items, format each item
-        if (is_array($data) && !isset($data['id']) && !empty($data)) {
+        if (is_array($data) && !isset($data['id']) && !isset($data['attributes']) && !empty($data)) {
             $formattedData = [];
             foreach ($data as $item) {
                 if (is_array($item) && isset($item['id'])) {

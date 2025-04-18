@@ -148,6 +148,7 @@ class GamesController extends BaseController {
             Response::sendSuccess($formatted);
 
         } catch (\Exception $e) {
+            error_log("GamesController::show() - Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
             $this->serverError('Failed to fetch Game: ' . $e->getMessage());
         }
     }

@@ -37,7 +37,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Initialize and register the case-insensitive class loader
-require_once __DIR__ . '/v1/Core/ClassLoader.php';
+$classLoaderPaths = [
+    __DIR__ . '/v1/Core/ClassLoader.php',
+    __DIR__ . '/v1/core/ClassLoader.php',
+    __DIR__ . '/v1/CORE/ClassLoader.php'
+];
+
+$loaded = false;
+foreach ($classLoaderPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $loaded = true;
+        if (DEBUG_MODE) {
+            error_log("ClassLoader found at: " . $path);
+        }
+        break;
+    }
+}
+
+if (!$loaded) {
+    throw new Exception("ClassLoader not found in any of the expected locations: " . implode(", ", $classLoaderPaths));
+}
 $classLoader = \StoriesAPI\Core\ClassLoader::getInstance(__DIR__ . '/v1/', 'StoriesAPI\\');
 $classLoader->register();
 

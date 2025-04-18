@@ -328,6 +328,9 @@ class CrudPage extends AdminPage {
             return;
         }
         
+        // Debug response structure
+        error_log("CrudPage::getEditData - Response for {$this->endpoint}/{$id}: " . json_encode($response, JSON_PRETTY_PRINT));
+        
         $this->data['fields'] = $this->fields;
         $this->data['requiredFields'] = $this->requiredFields;
         $this->data['entityName'] = $this->entityName;
@@ -386,6 +389,9 @@ class CrudPage extends AdminPage {
             $this->redirect($this->activeMenu . '.php');
             return;
         }
+        
+        // Debug response structure
+        error_log("CrudPage::getViewData - Response for {$this->endpoint}/{$id}: " . json_encode($response, JSON_PRETTY_PRINT));
         
         $this->data['fields'] = $this->fields;
         $this->data['entityName'] = $this->entityName;

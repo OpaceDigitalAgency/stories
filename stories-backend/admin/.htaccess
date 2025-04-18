@@ -4,6 +4,11 @@
 # Enable URL rewriting
 RewriteEngine On
 
+# Make URLs case-insensitive
+RewriteMap lowercase int:tolower
+RewriteCond %{REQUEST_URI} [A-Z]
+RewriteRule (.*) ${lowercase:$1} [R=301,L]
+
 # Set the base directory
 RewriteBase /admin/
 

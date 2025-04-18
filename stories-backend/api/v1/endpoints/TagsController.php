@@ -189,7 +189,7 @@ class TagsController extends BaseController {
             ];
             
             // Send response
-            Response::sendSuccess(['data' => $formattedTag]);
+            Response::sendSuccess($formattedTag);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch tag: ' . $e->getMessage());
         }
@@ -244,7 +244,7 @@ class TagsController extends BaseController {
                 'storyCount' => 0
             ];
             
-            Response::sendSuccess(['data' => $formattedTag], [], 201);
+            Response::sendSuccess($formattedTag, [], 201);
         } catch (\Exception $e) {
             $this->serverError('Failed to create tag: ' . $e->getMessage());
         }
@@ -354,7 +354,7 @@ class TagsController extends BaseController {
                 'storyCount' => $this->getStoryCount($tagId)
             ];
             
-            Response::sendSuccess(['data' => $formattedTag]);
+            Response::sendSuccess($formattedTag);
         } catch (\Exception $e) {
             $this->serverError('Failed to update tag: ' . $e->getMessage());
         }

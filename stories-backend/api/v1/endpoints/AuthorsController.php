@@ -210,7 +210,7 @@ class AuthorsController extends BaseController {
             ];
             
             // Send response
-            Response::sendSuccess(['data' => $formattedAuthor]);
+            Response::sendSuccess($formattedAuthor]);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch author: ' . $e->getMessage());
         }

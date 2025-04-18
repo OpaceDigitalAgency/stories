@@ -121,6 +121,11 @@ class DashboardPage extends AdminPage {
         $stats['authors'] = $getCountFromApi('authors');
         $stats['blog_posts'] = $getCountFromApi('blog-posts');
         $stats['tags'] = $getCountFromApi('tags');
+
+        echo "<!-- Debugging Authors/Tags Counts -->";
+        echo "<pre>Authors Count: " . $stats['authors'] . "</pre>";
+        echo "<pre>Tags Count: " . $stats['tags'] . "</pre>";
+        echo "<!-- End Debugging -->";
         $stats['directory_items'] = $getCountFromApi('directory-items');
         $stats['games'] = $getCountFromApi('games');
         $stats['ai_tools'] = $getCountFromApi('ai-tools');
@@ -237,6 +242,15 @@ class DashboardPage extends AdminPage {
         $this->data['recentGames'] = $getRecentItems('games');
         $this->data['recentAiTools'] = $getRecentItems('ai-tools');
         $this->data['recentTags'] = $getRecentItems('tags');
+
+        echo "<!-- Debugging Recent Authors/Tags -->";
+        echo "<pre>Recent Authors: ";
+        var_dump($this->data['recentAuthors']);
+        echo "</pre>";
+        echo "<pre>Recent Tags: ";
+        var_dump($this->data['recentTags']);
+        echo "</pre>";
+        echo "<!-- End Debugging -->";
         
         // Get items that need attention (for example, items pending moderation)
         // This is a placeholder - you would need to implement the actual logic based on your requirements

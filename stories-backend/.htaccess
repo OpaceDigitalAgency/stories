@@ -4,6 +4,9 @@ RewriteEngine On
 # Set the base directory
 RewriteBase /
 
+# Allow access to admin directory
+RewriteRule ^admin/ - [L]
+
 # Redirect all requests to the API entry point
 # Except for existing files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -15,12 +18,6 @@ RewriteRule ^api/(.*)$ api/index.php [QSA,L]
     Order allow,deny
     Deny from all
 </FilesMatch>
-
-# Make URLs case-insensitive
-RewriteEngine On
-RewriteMap lowercase int:tolower
-RewriteCond %{REQUEST_URI} [A-Z]
-RewriteRule (.*) ${lowercase:$1} [R=301,L]
 
 <FilesMatch "\.(sql|log|ini|json)$">
     Order allow,deny
@@ -76,10 +73,6 @@ RewriteRule ^(.*)$ $1 [R=200,L]
     
     # Log PHP errors
     php_flag log_errors On
-    # Production error log path (uncomment in production)
-    # php_value error_log /home/stories/api.storiesfromtheweb.org/logs/api-error.log
-    
-    # Development error log path
     php_value error_log logs/api-error.log
     
     # Maximum upload file size

@@ -59,13 +59,25 @@ class StoriesController extends BaseController {
             $total = $stmt->fetch()['total'];
             
             // Get stories with pagination
-            $query = "SELECT 
-                s.id, s.title, s.slug, s.excerpt, s.published_at AS publishedAt, 
+            // Check if cover_url column exists in the stories table
+            try {
+                $checkQuery = "SHOW COLUMNS FROM stories LIKE 'cover_url'";
+                $checkStmt = $this->db->query($checkQuery);
+                $hasCoverUrl = $checkStmt->rowCount() > 0;
+            } catch (\Exception $e) {
+                // If the check fails, assume the column doesn't exist
+                $hasCoverUrl = false;
+                error_log("Failed to check for cover_url column: " . $e->getMessage());
+            }
+            
+            $query = "SELECT
+                s.id, s.title, s.slug, s.excerpt, s.published_at AS publishedAt,
                 s.featured, s.average_rating AS averageRating, s.review_count AS reviewCount,
                 s.estimated_reading_time AS estimatedReadingTime, s.is_sponsored AS isSponsored,
                 s.age_group AS ageGroup, s.needs_moderation AS needsModeration,
                 s.is_self_published AS isSelfPublished, s.is_ai_enhanced AS isAIEnhanced,
-                s.cover_url AS coverUrl, s.created_at AS createdAt, s.updated_at AS updatedAt
+                " . ($hasCoverUrl ? "s.cover_url AS coverUrl, " : "NULL AS coverUrl, ") . "
+                s.created_at AS createdAt, s.updated_at AS updatedAt
                 FROM stories s
                 $whereClause
                 $sortClause

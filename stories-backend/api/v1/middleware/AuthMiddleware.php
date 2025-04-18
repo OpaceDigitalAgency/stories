@@ -10,7 +10,7 @@
 
 namespace StoriesAPI\Middleware;
 
-use StoriesAPI\Utils\Auth;
+use StoriesAPI\Core\Auth;
 use StoriesAPI\Utils\Response;
 
 class AuthMiddleware {

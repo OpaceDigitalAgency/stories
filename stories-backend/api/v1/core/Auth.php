@@ -1,6 +1,6 @@
 <?php
 /**
- * Authentication Utility Class
+ * Authentication Core Class
  * 
  * This class handles JWT token generation, validation, and user authentication.
  * 
@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-namespace StoriesAPI\Utils;
+namespace StoriesAPI\Core;
 
 use Exception;
 use StoriesAPI\Core\Database;

@@ -148,7 +148,7 @@ try {
 
     // Initialize Auth utility
     echo "<h2>Initializing Auth Utility</h2>";
-    \StoriesAPI\Utils\Auth::init($config['security']);
+    \StoriesAPI\Core\Auth::init($config['security']);
     echo "<p style='color: green;'>Auth utility initialized</p>";
 
     // Create router

@@ -12,7 +12,7 @@
 namespace StoriesAPI\Core;
 
 use StoriesAPI\Core\Database;
-use StoriesAPI\Utils\Auth;
+use StoriesAPI\Core\Auth;
 use StoriesAPI\Utils\Response;
 use StoriesAPI\Utils\Validator;
 

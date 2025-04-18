@@ -173,7 +173,7 @@ function loadFileInsensitive($basePath, $relativePath, $requireFile = true) {
 $config = require __DIR__ . '/v1/config/config.php';
 
 // Initialize Auth utility
-\StoriesAPI\Utils\Auth::init($config['security']);
+\StoriesAPI\Core\Auth::init($config['security']);
 
 // Set debug mode for Response class
 \StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;

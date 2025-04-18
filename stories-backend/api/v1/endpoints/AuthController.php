@@ -11,7 +11,7 @@
 namespace StoriesAPI\Endpoints;
 
 use StoriesAPI\Core\BaseController;
-use StoriesAPI\Utils\Auth;
+use StoriesAPI\Core\Auth;
 use StoriesAPI\Utils\Response;
 use StoriesAPI\Utils\Validator;
 

@@ -251,6 +251,12 @@ class CrudPage extends AdminPage {
         
         // Process each item to ensure consistent data structure
         foreach ($items as &$item) {
+            // Handle nested attributes structure (attributes.attributes)
+            if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+                // Move nested attributes up one level
+                $item['attributes'] = $item['attributes']['attributes'];
+            }
+            
             // Ensure attributes array exists
             if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
                 // If no attributes array but we have data, create an attributes array

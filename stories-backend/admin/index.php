@@ -122,10 +122,6 @@ class DashboardPage extends AdminPage {
         $stats['blog_posts'] = $getCountFromApi('blog-posts');
         $stats['tags'] = $getCountFromApi('tags');
 
-        echo "<!-- Debugging Authors/Tags Counts -->";
-        echo "<pre>Authors Count: " . $stats['authors'] . "</pre>";
-        echo "<pre>Tags Count: " . $stats['tags'] . "</pre>";
-        echo "<!-- End Debugging -->";
         $stats['directory_items'] = $getCountFromApi('directory-items');
         $stats['games'] = $getCountFromApi('games');
         $stats['ai_tools'] = $getCountFromApi('ai-tools');
@@ -150,10 +146,33 @@ class DashboardPage extends AdminPage {
         
         // Function to get recent items for a content type
         $getRecentItems = function($endpoint, $pageSize = 5) use ($apiClient) {
-            $response = $apiClient->get($endpoint, [
+            $params = [
                 'pageSize' => $pageSize,
-                'sort' => '-publishedAt'
-            ]);
+                'sort' => '-createdAt' // Change default sort to createdAt
+            ];
+
+            // Add specific sort for stories
+            if ($endpoint === 'stories') {
+                 $params['sort'] = '-publishedAt';
+            }
+
+            // Add populate for specific endpoints
+            if ($endpoint === 'stories') {
+                $params['populate'] = ['author'];
+            } elseif ($endpoint === 'authors') {
+                 $params['populate'] = ['stories', 'blog_posts']; // Populate relationships to potentially get counts
+            } elseif ($endpoint === 'blog-posts') {
+                 $params['populate'] = ['author'];
+            } elseif ($endpoint === 'games') {
+                 $params['populate'] = ['developer', 'category']; // Add category to populate
+            } elseif ($endpoint === 'directory-items') {
+                 $params['populate'] = ['category'];
+            } elseif ($endpoint === 'ai-tools') {
+                 $params['populate'] = ['category']; // Populate category for AI tools
+            }
+
+
+            $response = $apiClient->get($endpoint, $params);
             
             if ($response && isset($response['data'])) {
                 // Process each item to handle nested attributes structure
@@ -165,37 +184,39 @@ class DashboardPage extends AdminPage {
                         $item['attributes'] = $item['attributes']['attributes'];
                     }
                     
-                    // Handle author data structure for stories
-                    if ($endpoint === 'stories' && isset($item['attributes']['author'])) {
-                        // If author is already in the correct format, keep it
-                        if (isset($item['attributes']['author']['data']['attributes']['name'])) {
-                            // Already in correct format
-                        }
-                        // If author is a simple ID, fetch the author data
-                        elseif (is_numeric($item['attributes']['author'])) {
-                            $authorId = $item['attributes']['author'];
-                            $authorResponse = $apiClient->get("authors/$authorId");
-                            if ($authorResponse && isset($authorResponse['data']['attributes']['name'])) {
-                                $item['attributes']['author_name'] = $authorResponse['data']['attributes']['name'];
-                            } else {
-                                $item['attributes']['author_name'] = 'Unknown Author'; // Default if author not found or name missing
-                            }
-                        } elseif (isset($item['attributes']['author']['data']['attributes']['name'])) {
-                             $item['attributes']['author_name'] = $item['attributes']['author']['data']['attributes']['name'];
-                        } else {
-                            $item['attributes']['author_name'] = 'No author'; // Default if author data is missing or not in expected format
-                        }
+                    // Handle author data structure for stories and blog posts
+                    if (($endpoint === 'stories' || $endpoint === 'blog-posts') && isset($item['attributes']['author']['data']['attributes']['name'])) {
+                        $item['attributes']['author_name'] = $item['attributes']['author']['data']['attributes']['name'];
+                    } else {
+                         $item['attributes']['author_name'] = 'No author'; // Default if author data is missing or not in expected format
                     }
-                    
+
                     // Handle category data structure for directory items
-                    if ($endpoint === 'directory-items' && isset($item['attributes']['category']) && is_numeric($item['attributes']['category'])) {
-                        $categoryId = $item['attributes']['category'];
-                        $categoryResponse = $apiClient->get("categories/$categoryId");
-                        if ($categoryResponse && isset($categoryResponse['data'])) {
-                            $item['attributes']['category'] = [
-                                'data' => $categoryResponse['data']
-                            ];
-                        }
+                    if ($endpoint === 'directory-items' && isset($item['attributes']['category']['data']['attributes']['name'])) {
+                         $item['attributes']['category_name'] = $item['attributes']['category']['data']['attributes']['name'];
+                    } else {
+                         $item['attributes']['category_name'] = 'No category'; // Default if category data is missing or not in expected format
+                    }
+
+                    // Handle developer data structure for games
+                    if ($endpoint === 'games' && isset($item['attributes']['developer']['data']['attributes']['name'])) {
+                        $item['attributes']['developer_name'] = $item['attributes']['developer']['data']['attributes']['name'];
+                    } else {
+                        $item['attributes']['developer_name'] = 'No developer'; // Default if developer data is missing or not in expected format
+                    }
+
+                    // Handle story count for authors
+                    if ($endpoint === 'authors' && isset($item['attributes']['stories']['data']) && is_array($item['attributes']['stories']['data'])) {
+                        $item['attributes']['storyCount'] = count($item['attributes']['stories']['data']);
+                    } else {
+                        $item['attributes']['storyCount'] = 0;
+                    }
+
+                    // Handle blog post count for authors
+                     if ($endpoint === 'authors' && isset($item['attributes']['blog_posts']['data']) && is_array($item['attributes']['blog_posts']['data'])) {
+                        $item['attributes']['blogPostCount'] = count($item['attributes']['blog_posts']['data']);
+                    } else {
+                        $item['attributes']['blogPostCount'] = 0;
                     }
                 }
                 return $items;
@@ -240,23 +261,8 @@ class DashboardPage extends AdminPage {
         $this->data['recentBlogPosts'] = $getRecentItems('blog-posts');
         $this->data['recentDirectoryItems'] = $getRecentItems('directory-items');
         $this->data['recentGames'] = $getRecentItems('games');
-
-        echo "<!-- Debugging Recent Games -->";
-        echo "<pre>Recent Games: ";
-        var_dump($this->data['recentGames']);
-        echo "</pre>";
-        echo "<!-- End Debugging -->";
         $this->data['recentAiTools'] = $getRecentItems('ai-tools');
         $this->data['recentTags'] = $getRecentItems('tags');
-
-        echo "<!-- Debugging Recent Authors/Tags -->";
-        echo "<pre>Recent Authors: ";
-        var_dump($this->data['recentAuthors']);
-        echo "</pre>";
-        echo "<pre>Recent Tags: ";
-        var_dump($this->data['recentTags']);
-        echo "</pre>";
-        echo "<!-- End Debugging -->";
         
         // Get items that need attention (for example, items pending moderation)
         // This is a placeholder - you would need to implement the actual logic based on your requirements
@@ -270,7 +276,7 @@ class DashboardPage extends AdminPage {
     
     /**
      * Get content template name
-     * 
+     *
      * @return string Template name
      */
     protected function getContentTemplate() {

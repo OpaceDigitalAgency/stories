@@ -34,3 +34,21 @@
     - Test scripts not using the same autoloader bootstrap
   - Error reporting turned off in development mode (fixed)
   - Error logging pointing to non-existent path (fixed)
+## Database Schema
+
+This section documents the database schema based on `stories-backend/database.sql`.
+
+### Tables:
+
+*   **users**: `id`, `name`, `email`, `password`, `role`, `active`, `created_at`, `updated_at`
+*   **authors**: `id`, `name`, `slug`, `bio`, `featured`, `twitter`, `instagram`, `website`, `created_at`, `updated_at`
+*   **stories**: `id`, `title`, `slug`, `excerpt`, `content`, `published_at`, `featured`, `average_rating`, `review_count`, `estimated_reading_time`, `is_sponsored`, `age_group`, `needs_moderation`, `is_self_published`, `is_ai_enhanced`, `created_at`, `updated_at`
+*   **tags**: `id`, `name`, `slug`, `created_at`, `updated_at`
+*   **story_authors**: `story_id`, `author_id` (Many-to-Many)
+*   **story_tags**: `story_id`, `tag_id` (Many-to-Many)
+*   **blog_posts**: `id`, `title`, `slug`, `excerpt`, `content`, `published_at`, `created_at`, `updated_at`
+*   **blog_post_authors**: `blog_post_id`, `author_id` (Many-to-Many)
+*   **directory_items**: `id`, `name`, `description`, `url`, `category`, `created_at`, `updated_at`
+*   **games**: `id`, `title`, `description`, `url`, `category`, `created_at`, `updated_at`
+*   **ai_tools**: `id`, `name`, `description`, `url`, `category`, `created_at`, `updated_at`
+*   **media**: `id`, `entity_type`, `entity_id`, `type`, `url`, `width`, `height`, `alt_text`, `created_at`

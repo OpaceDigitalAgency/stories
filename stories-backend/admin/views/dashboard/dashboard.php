@@ -369,6 +369,10 @@
                                         <th>Title</th>
                                         <th>Author</th>
                                         <th>Published</th>
+                                        <th>Created At</th>
+                                        <th>Featured</th>
+                                        <th>Is Sponsored</th>
+                                        <th>Needs Moderation</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -377,11 +381,11 @@
                                         <tr>
                                             <td><?php echo htmlspecialchars($story['attributes']['title'] ?? 'Untitled'); ?></td>
                                             <td>
-                                                <?php 
+                                                <?php
                                                     if (isset($story['attributes']['author_name'])) {
                                                         echo htmlspecialchars($story['attributes']['author_name']);
                                                     } else {
-                                                        echo '<em>No author</em>'; // Should not happen with the fix in index.php, but good fallback
+                                                        echo '<em>No author</em>';
                                                     }
                                                 ?>
                                             </td>
@@ -393,6 +397,16 @@
                                                         echo '<em>Not set</em>';
                                                     }
                                                 ?>
+                                            </td>
+                                            <td><?php echo date('M d, Y', strtotime($story['attributes']['createdAt'] ?? 'now')); ?></td>
+                                            <td>
+                                                <?php echo (isset($story['attributes']['featured']) && $story['attributes']['featured']) ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>'; ?>
+                                            </td>
+                                            <td>
+                                                <?php echo (isset($story['attributes']['is_sponsored']) && $story['attributes']['is_sponsored']) ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>'; ?>
+                                            </td>
+                                            <td>
+                                                <?php echo (isset($story['attributes']['needs_moderation']) && $story['attributes']['needs_moderation']) ? '<i class="fas fa-exclamation-triangle text-warning"></i>' : '<i class="fas fa-check-circle text-success"></i>'; ?>
                                             </td>
                                             <td>
                                                 <a href="<?php echo ADMIN_URL; ?>/stories.php?action=view&id=<?php echo $story['id']; ?>" class="btn btn-sm btn-info" title="View Story">
@@ -411,7 +425,7 @@
                         <div class="alert alert-info">No recent stories found.</div>
                     <?php endif; ?>
                 </div>
-                
+
                 <!-- Authors Tab -->
                 <div class="tab-pane fade" id="authors" role="tabpanel" aria-labelledby="authors-tab">
                     <div class="d-flex justify-content-between mb-3">
@@ -425,15 +439,16 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <?php if (isset($recentAuthors) && !empty($recentAuthors)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Stories</th>
+                                        <th>Slug</th>
+                                        <th>Featured</th>
+                                        <th>Stories/Blog Posts</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -441,14 +456,16 @@
                                     <?php foreach ($recentAuthors as $author): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($author['attributes']['name'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($author['attributes']['email'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($author['attributes']['slug'] ?? ''); ?></td>
                                             <td>
-                                                <?php 
-                                                    if (isset($author['attributes']['storyCount'])) {
-                                                        echo htmlspecialchars($author['attributes']['storyCount']);
-                                                    } else {
-                                                        echo '0';
-                                                    }
+                                                <?php echo (isset($author['attributes']['featured']) && $author['attributes']['featured']) ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>'; ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                    $storyCount = $author['attributes']['storyCount'] ?? 0;
+                                                    $blogPostCount = $author['attributes']['blogPostCount'] ?? 0;
+                                                    echo "Stories: " . htmlspecialchars($storyCount) . "<br>";
+                                                    echo "Blog Posts: " . htmlspecialchars($blogPostCount);
                                                 ?>
                                             </td>
                                             <td>
@@ -468,7 +485,7 @@
                         <div class="alert alert-info">No recent authors found.</div>
                     <?php endif; ?>
                 </div>
-                
+
                 <!-- Blog Posts Tab -->
                 <div class="tab-pane fade" id="blog-posts" role="tabpanel" aria-labelledby="blog-posts-tab">
                     <div class="d-flex justify-content-between mb-3">
@@ -482,7 +499,7 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <?php if (isset($recentBlogPosts) && !empty($recentBlogPosts)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
@@ -491,6 +508,7 @@
                                         <th>Title</th>
                                         <th>Author</th>
                                         <th>Published</th>
+                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -499,7 +517,7 @@
                                         <tr>
                                             <td><?php echo htmlspecialchars($post['attributes']['title'] ?? ''); ?></td>
                                             <td>
-                                                <?php 
+                                                <?php
                                                     if (isset($post['attributes']['author']['data']['attributes']['name'])) {
                                                         echo htmlspecialchars($post['attributes']['author']['data']['attributes']['name']);
                                                     } else {
@@ -508,6 +526,7 @@
                                                 ?>
                                             </td>
                                             <td><?php echo date('M d, Y', strtotime($post['attributes']['publishedAt'] ?? 'now')); ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($post['attributes']['createdAt'] ?? 'now')); ?></td>
                                             <td>
                                                 <a href="<?php echo ADMIN_URL; ?>/blog-posts.php?action=view&id=<?php echo $post['id']; ?>" class="btn btn-sm btn-info" title="View Blog Post">
                                                     <i class="fas fa-eye"></i>
@@ -546,8 +565,10 @@
                                 <thead>
                                     <tr>
                                         <th>Name</th>
+                                        <th>Description</th>
+                                        <th>URL</th>
                                         <th>Category</th>
-                                        <th>Added</th>
+                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -555,10 +576,12 @@
                                     <?php foreach ($recentDirectoryItems as $item): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($item['attributes']['name'] ?? $item['attributes']['title'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars(substr($item['attributes']['description'] ?? '', 0, 100)) . (strlen($item['attributes']['description'] ?? '') > 100 ? '...' : ''); ?></td>
+                                            <td><a href="<?php echo htmlspecialchars($item['attributes']['url'] ?? '#'); ?>" target="_blank"><?php echo htmlspecialchars($item['attributes']['url'] ?? ''); ?></a></td>
                                             <td>
-                                                <?php 
-                                                    if (isset($item['attributes']['category'])) {
-                                                        echo htmlspecialchars($item['attributes']['category']['data']['attributes']['name'] ?? '');
+                                                <?php
+                                                    if (isset($item['attributes']['category']['data']['attributes']['name'])) {
+                                                        echo htmlspecialchars($item['attributes']['category']['data']['attributes']['name']);
                                                     } else {
                                                         echo '<em>Uncategorized</em>';
                                                     }
@@ -582,7 +605,7 @@
                         <div class="alert alert-info">No recent directory items found.</div>
                     <?php endif; ?>
                 </div>
-                
+
                 <!-- Games Tab -->
                 <div class="tab-pane fade" id="games" role="tabpanel" aria-labelledby="games-tab">
                     <div class="d-flex justify-content-between mb-3">
@@ -596,15 +619,18 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <?php if (isset($recentGames) && !empty($recentGames)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
                                         <th>Title</th>
+                                        <th>Category</th>
                                         <th>Developer</th>
-                                        <th>Added</th>
+                                        <th>Description</th>
+                                        <th>URL</th>
+                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -612,7 +638,10 @@
                                     <?php foreach ($recentGames as $game): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($game['attributes']['title'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($game['attributes']['developer'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($game['attributes']['category']['data']['attributes']['name'] ?? 'No category'); ?></td>
+                                            <td><?php echo htmlspecialchars($game['attributes']['developer_name'] ?? 'No developer'); ?></td>
+                                            <td><?php echo htmlspecialchars(substr($game['attributes']['description'] ?? '', 0, 100)) . (strlen($game['attributes']['description'] ?? '') > 100 ? '...' : ''); ?></td>
+                                            <td><a href="<?php echo htmlspecialchars($game['attributes']['url'] ?? '#'); ?>" target="_blank"><?php echo htmlspecialchars($game['attributes']['url'] ?? ''); ?></a></td>
                                             <td><?php echo date('M d, Y', strtotime($game['attributes']['createdAt'] ?? 'now')); ?></td>
                                             <td>
                                                 <a href="<?php echo ADMIN_URL; ?>/games.php?action=view&id=<?php echo $game['id']; ?>" class="btn btn-sm btn-info" title="View Game">
@@ -631,7 +660,7 @@
                         <div class="alert alert-info">No recent games found.</div>
                     <?php endif; ?>
                 </div>
-                
+
                 <!-- AI Tools Tab -->
                 <div class="tab-pane fade" id="ai-tools" role="tabpanel" aria-labelledby="ai-tools-tab">
                     <div class="d-flex justify-content-between mb-3">
@@ -645,15 +674,17 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <?php if (isset($recentAiTools) && !empty($recentAiTools)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
-                                        <th>Provider</th>
-                                        <th>Added</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>URL</th>
+                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -661,7 +692,17 @@
                                     <?php foreach ($recentAiTools as $tool): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($tool['attributes']['name'] ?? $tool['attributes']['title'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($tool['attributes']['provider'] ?? ''); ?></td>
+                                            <td>
+                                                <?php
+                                                    if (isset($tool['attributes']['category']['data']['attributes']['name'])) {
+                                                        echo htmlspecialchars($tool['attributes']['category']['data']['attributes']['name']);
+                                                    } else {
+                                                        echo '<em>Uncategorized</em>';
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars(substr($tool['attributes']['description'] ?? '', 0, 100)) . (strlen($tool['attributes']['description'] ?? '') > 100 ? '...' : ''); ?></td>
+                                            <td><a href="<?php echo htmlspecialchars($tool['attributes']['url'] ?? '#'); ?>" target="_blank"><?php echo htmlspecialchars($tool['attributes']['url'] ?? ''); ?></a></td>
                                             <td><?php echo date('M d, Y', strtotime($tool['attributes']['createdAt'] ?? 'now')); ?></td>
                                             <td>
                                                 <a href="<?php echo ADMIN_URL; ?>/ai-tools.php?action=view&id=<?php echo $tool['id']; ?>" class="btn btn-sm btn-info" title="View AI Tool">
@@ -680,7 +721,7 @@
                         <div class="alert alert-info">No recent AI tools found.</div>
                     <?php endif; ?>
                 </div>
-                
+
                 <!-- Tags Tab -->
                 <div class="tab-pane fade" id="tags" role="tabpanel" aria-labelledby="tags-tab">
                     <div class="d-flex justify-content-between mb-3">
@@ -694,7 +735,7 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <?php if (isset($recentTags) && !empty($recentTags)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
@@ -702,7 +743,8 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Slug</th>
-                                        <th>Items</th>
+                                        <th>Created At</th>
+                                        <th>Stories/Blog Posts</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -711,6 +753,7 @@
                                         <tr>
                                             <td><?php echo htmlspecialchars($tag['attributes']['name'] ?? ''); ?></td>
                                             <td><?php echo htmlspecialchars($tag['attributes']['slug'] ?? ''); ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($tag['attributes']['created_at'] ?? 'now')); ?></td>
                                             <td>
                                                 <?php
                                                     $itemCount = 0;
@@ -743,7 +786,7 @@
             </div>
         </div>
     </div>
-    
+
     <?php if (isset($apiErrors) && !empty($apiErrors)): ?>
     <!-- API Error Information (Only visible to admins for debugging) -->
     <div class="card mb-4">
@@ -756,7 +799,7 @@
                 <p><strong>Note:</strong> The dashboard is showing some content counts from fallback sources because the API returned errors.</p>
                 <p>This section is only visible to administrators and helps diagnose API issues.</p>
             </div>
-            
+
             <h5>API Errors:</h5>
             <ul class="list-group">
                 <?php foreach ($apiErrors as $endpoint => $error): ?>

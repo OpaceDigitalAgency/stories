@@ -63,7 +63,9 @@ class BlogPostsController extends BaseController {
             $blogPosts = $stmt->fetchAll();
             
             // Format blog posts to match Strapi response format
-            $formattedBlogPosts = [];
+            $formattedBlogPosts = [
+    "id" => $blogpostsId,
+    "attributes" => [];
             
             foreach ($blogPosts as $blogPost) {
                 $blogPostId = $blogPost['id'];
@@ -89,7 +91,7 @@ class BlogPostsController extends BaseController {
                     if ($avatar) {
                         $author['avatar'] = [
                             'data' => [
-                                'id' => $avatar['id'],
+
                                 'attributes' => [
                                     'url' => $avatar['url'],
                                     'width' => $avatar['width'],
@@ -97,7 +99,8 @@ class BlogPostsController extends BaseController {
                                     'alternativeText' => $avatar['alt_text']
                                 ]
                             ]
-                        ];
+    ]
+];
                     }
                 }
                 
@@ -264,23 +267,13 @@ class BlogPostsController extends BaseController {
             $formattedAuthor = null;
             if ($author) {
                 $formattedAuthor = [
-                    'data' => [
-                        [
-                            'id' => $author['id'],
-                            'attributes' => [
-                                'name' => $author['name'],
-                                'slug' => $author['slug'],
-                                'bio' => $author['bio'],
-                                'avatar' => isset($author['avatar']) ? $author['avatar'] : null
-                            ]
-                        ]
-                    ],
-                    'meta' => [
-                        'pagination' => [
-                            'page' => 1,
-                            'pageSize' => 1,
-                            'pageCount' => 1,
-                            'total' => 1
+                    'data' => [ // Simplified structure for single relation
+                        'id' => $author['id'],
+                        'attributes' => [
+                            'name' => $author['name'],
+                            'slug' => $author['slug'],
+                            'bio' => $author['bio'],
+                            'avatar' => isset($author['avatar']) ? $author['avatar'] : null
                         ]
                     ]
                 ];
@@ -298,12 +291,13 @@ class BlogPostsController extends BaseController {
                     'createdAt' => $blogPost['createdAt'],
                     'updatedAt' => $blogPost['updatedAt'],
                     'cover' => $formattedCover,
+                    'author' => $formattedAuthor // Add the formatted author here
                     'author' => $formattedAuthor
                 ]
             ];
             
             // Send response
-            Response::sendSuccess(['data' => $formattedBlogPost]);
+            Response::sendSuccess($formattedBlogPost);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch blog post: ' . $e->getMessage());
         }

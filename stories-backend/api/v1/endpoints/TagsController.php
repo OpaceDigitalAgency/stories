@@ -58,15 +58,18 @@ class TagsController extends BaseController {
             $tags = $stmt->fetchAll();
             
             // Format tags with a simplified structure to avoid JSON encoding issues
-            $formattedTags = [];
+            $formattedTags = [
+    "id" => $tagsId,
+    "attributes" => [];
             
             foreach ($tags as $tag) {
                 $formattedTags[] = [
-                    'id' => $tag['id'],
+
                     'name' => $tag['name'],
                     'slug' => $tag['slug'],
                     'storyCount' => (int)$tag['storyCount']
-                ];
+    ]
+];
             }
             
             // Send paginated response

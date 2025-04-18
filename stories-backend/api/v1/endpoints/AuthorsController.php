@@ -59,7 +59,9 @@ class AuthorsController extends BaseController {
             $authors = $stmt->fetchAll();
             
             // Format authors with a simplified structure to avoid JSON encoding issues
-            $formattedAuthors = [];
+            $formattedAuthors = [
+    "id" => $authorsId,
+    "attributes" => [];
             
             foreach ($authors as $author) {
                 $authorId = $author['id'];
@@ -75,7 +77,7 @@ class AuthorsController extends BaseController {
                 
                 // Build a simplified author structure
                 $formattedAuthor = [
-                    'id' => $authorId,
+
                     'name' => $author['name'],
                     'slug' => $author['slug'],
                     'bio' => $author['bio'],
@@ -87,7 +89,8 @@ class AuthorsController extends BaseController {
                     'createdAt' => $author['createdAt'],
                     'updatedAt' => $author['updatedAt'],
                     'avatarUrl' => $avatarUrl
-                ];
+    ]
+];
                 
                 $formattedAuthors[] = $formattedAuthor;
             }

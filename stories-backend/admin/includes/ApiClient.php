@@ -193,6 +193,7 @@ class ApiClient {
         if (json_last_error() !== JSON_ERROR_NONE) {
             $errorMessage = json_last_error_msg();
             error_log('API response JSON parsing error: ' . $errorMessage);
+            error_log('Raw response: ' . $response);
             $this->lastError = [
                 'type' => 'json_error',
                 'message' => $errorMessage,
@@ -202,7 +203,7 @@ class ApiClient {
         }
         
         // Enhanced debugging for specific endpoints
-        $debugEndpoints = ['tags', 'blog-posts', 'authors'];
+        $debugEndpoints = ['tags', 'blog-posts', 'authors', 'stories'];
         $isDebugEndpoint = false;
         foreach ($debugEndpoints as $endpoint) {
             if (strpos($url, $endpoint) !== false) {
@@ -255,6 +256,13 @@ class ApiClient {
                 }
             } else {
                 error_log("RESPONSE MISSING DATA KEY");
+                
+                // Try to fix the response structure if it's missing the data key
+                if (!empty($responseData) && isset($responseData['id'])) {
+                    error_log("ADDING MISSING DATA KEY");
+                    $responseData = ['data' => $responseData];
+                    error_log("MODIFIED RESPONSE: " . json_encode($responseData, JSON_PRETTY_PRINT));
+                }
             }
         }
         
@@ -276,6 +284,19 @@ class ApiClient {
             } else if ($httpCode == 500) {
                 $errorMessage = 'Server error';
                 $errorDetail = 'The API server encountered an internal error. Please try again later or contact support.';
+                
+                // Add more detailed error information for 500 errors
+                error_log("SERVER ERROR (500) DETAILS: " . $response);
+                
+                // Try to extract more information from the response
+                if (strpos($response, 'PHP Fatal error') !== false || 
+                    strpos($response, 'PHP Parse error') !== false ||
+                    strpos($response, 'PHP Warning') !== false) {
+                    preg_match('/PHP .*?: (.+?) in /', $response, $matches);
+                    if (!empty($matches[1])) {
+                        $errorDetail .= ' PHP Error: ' . $matches[1];
+                    }
+                }
             }
             
             error_log('API error: ' . $errorMessage . ($errorDetail ? ' - ' . $errorDetail : '') . ' - URL: ' . $url);

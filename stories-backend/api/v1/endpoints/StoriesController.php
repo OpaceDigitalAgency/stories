@@ -71,12 +71,16 @@ class StoriesController extends BaseController {
                 $sortClause
                 LIMIT $offset, $pageSize";
             
-            $stmt = $this->db->query($query, $params);
+            // Log the query and parameters for debugging
+            error_log('Stories query: ' . $query);
+            error_log('Stories params: ' . json_encode($params));
+            
             try {
+                $stmt = $this->db->query($query, $params);
                 $stories = $stmt->fetchAll();
             } catch (\Exception $e) {
                 error_log('Main stories query error: ' . $e->getMessage());
-                $this->serverError('Failed to fetch stories (main query): ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                $this->serverError('Failed to fetch stories (main query): ' . $e->getMessage() . "\nQuery: " . $query . "\nParams: " . json_encode($params));
                 return;
             }
             

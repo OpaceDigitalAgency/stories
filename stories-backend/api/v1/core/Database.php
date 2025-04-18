@@ -158,7 +158,13 @@ class Database {
                 // Generic error with timestamp for log correlation
                 $errorId = date('YmdHis');
                 error_log("[ERROR ID: $errorId] " . $errorMessage);
-                throw new Exception("Database operation failed. Reference ID: $errorId");
+                
+                // Include more detailed error information for debugging
+                if (DEBUG_MODE) {
+                    throw new Exception("Database operation failed. Error: " . $errorMessage . ". Reference ID: $errorId");
+                } else {
+                    throw new Exception("Database operation failed. Reference ID: $errorId");
+                }
             }
         }
     }

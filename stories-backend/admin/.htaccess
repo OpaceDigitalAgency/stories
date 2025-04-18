@@ -4,41 +4,11 @@
 # Enable URL rewriting
 RewriteEngine On
 
-# Make URLs case-insensitive
-RewriteMap lowercase int:tolower
-RewriteCond %{REQUEST_URI} [A-Z]
-RewriteRule (.*) ${lowercase:$1} [R=301,L]
-
 # Set the base directory
 RewriteBase /admin/
 
 # Prevent directory listing
 Options -Indexes
-
-# Deny access to hidden files and directories
-<FilesMatch "^\.">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Deny access to sensitive files
-<FilesMatch "^(config\.php|.*\.log)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Protect includes directory
-<IfModule mod_rewrite.c>
-    RewriteRule ^includes/ - [F,L]
-</IfModule>
-
-# Protect uploads directory from PHP execution
-<Directory "uploads">
-    <FilesMatch "\.php$">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-</Directory>
 
 # Set default character set
 AddDefaultCharset UTF-8
@@ -66,55 +36,26 @@ DirectoryIndex index.php
 
 # PHP settings
 <IfModule mod_php7.c>
-    # Maximum upload file size
     php_value upload_max_filesize 10M
     php_value post_max_size 10M
-    
-    # Maximum execution time
     php_value max_execution_time 300
-    
-    # Maximum input time
     php_value max_input_time 300
-    
-    # Memory limit
     php_value memory_limit 256M
 </IfModule>
 
 # Security headers
 <IfModule mod_headers.c>
-    # Prevent clickjacking
     Header set X-Frame-Options "SAMEORIGIN"
-    
-    # Prevent MIME-type sniffing
     Header set X-Content-Type-Options "nosniff"
-    
-    # Enable XSS protection
     Header set X-XSS-Protection "1; mode=block"
     
-    # Disable content caching for dynamic content
     <FilesMatch "\.(php)$">
         Header set Cache-Control "private, no-cache, no-store, must-revalidate"
         Header set Pragma "no-cache"
         Header set Expires "0"
     </FilesMatch>
-    
-    # Content Security Policy
-    Header set Content-Security-Policy "
-  default-src 'self';
-  img-src     'self' data:;
-  style-src   'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
-  script-src  'self' 'unsafe-inline' 'unsafe-eval'
-              https://cdn.jsdelivr.net https://code.jquery.com https://cdn.ckeditor.com;
-  font-src    'self' https://cdnjs.cloudflare.com;
-  connect-src 'self' https://api.storiesfromtheweb.org"
 </IfModule>
 
-# Allow direct access to test scripts
-<FilesMatch "^test_.*\.php$">
-    # These files should be accessible directly
-    # No special rules needed, just don't redirect them
-</FilesMatch>
-
-# Error documents (but not for test scripts)
+# Error documents
 ErrorDocument 404 /admin/index.php
 ErrorDocument 403 /admin/index.php

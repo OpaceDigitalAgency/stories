@@ -152,6 +152,35 @@ class DashboardPage extends AdminPage {
                         // Move nested attributes up one level
                         $item['attributes'] = $item['attributes']['attributes'];
                     }
+                    
+                    // Handle author data structure for stories
+                    if ($endpoint === 'stories' && isset($item['attributes']['author'])) {
+                        // If author is already in the correct format, keep it
+                        if (isset($item['attributes']['author']['data']['attributes']['name'])) {
+                            // Already in correct format
+                        }
+                        // If author is a simple ID, fetch the author data
+                        elseif (is_numeric($item['attributes']['author'])) {
+                            $authorId = $item['attributes']['author'];
+                            $authorResponse = $apiClient->get("authors/$authorId");
+                            if ($authorResponse && isset($authorResponse['data'])) {
+                                $item['attributes']['author'] = [
+                                    'data' => $authorResponse['data']
+                                ];
+                            }
+                        }
+                    }
+                    
+                    // Handle category data structure for directory items
+                    if ($endpoint === 'directory-items' && isset($item['attributes']['category']) && is_numeric($item['attributes']['category'])) {
+                        $categoryId = $item['attributes']['category'];
+                        $categoryResponse = $apiClient->get("categories/$categoryId");
+                        if ($categoryResponse && isset($categoryResponse['data'])) {
+                            $item['attributes']['category'] = [
+                                'data' => $categoryResponse['data']
+                            ];
+                        }
+                    }
                 }
                 return $items;
             }

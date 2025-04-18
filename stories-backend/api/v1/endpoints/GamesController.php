@@ -121,7 +121,7 @@ class GamesController extends BaseController {
             $column = 'g.id';
             $value  = (int)$identifier;
         } else {
-            $column = 'g.slug'; // Use slug for string identifiers
+            $column = 'g.title'; // Use title as the string identifier since there's no slug column
             $value  = Validator::sanitizeString($identifier);
         }
 
@@ -129,7 +129,7 @@ class GamesController extends BaseController {
             // Get Game by identifier
             $query = "
                 SELECT
-                    g.id, g.title, g.slug, g.description, g.url, g.category,
+                    g.id, g.title, g.description, g.url, g.category,
                     g.created_at as createdAt, g.updated_at as updatedAt
                 FROM games g
                 WHERE $column = ?
@@ -184,7 +184,7 @@ class GamesController extends BaseController {
             'id' => $gameId,
             'attributes' => [
                 'title' => $game['title'],
-                'slug' => $game['slug'], // Ensure slug is included
+                'slug' => $game['title'], // Use title as slug since there's no slug column
                 'description' => $game['description'],
                 'url' => $game['url'],
                 'category' => $game['category'],

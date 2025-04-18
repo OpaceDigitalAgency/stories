@@ -186,6 +186,9 @@ class ApiClient {
         // Parse response
         $responseData = json_decode($response, true);
         
+        // Log the response for debugging
+        error_log("API Response: $httpCode - " . substr($response, 0, 500) . (strlen($response) > 500 ? '...' : ''));
+        
         // Check for JSON parsing errors
         if (json_last_error() !== JSON_ERROR_NONE) {
             $errorMessage = json_last_error_msg();
@@ -196,6 +199,63 @@ class ApiClient {
                 'code' => json_last_error()
             ];
             return null;
+        }
+        
+        // Enhanced debugging for specific endpoints
+        $debugEndpoints = ['tags', 'blog-posts', 'authors'];
+        $isDebugEndpoint = false;
+        foreach ($debugEndpoints as $endpoint) {
+            if (strpos($url, $endpoint) !== false) {
+                $isDebugEndpoint = true;
+                break;
+            }
+        }
+        
+        if ($isDebugEndpoint) {
+            error_log("DETAILED API RESPONSE for $url: " . json_encode($responseData, JSON_PRETTY_PRINT));
+            
+            // Check if response has the expected structure
+            if (isset($responseData['data'])) {
+                error_log("RESPONSE HAS DATA KEY");
+                
+                // Check if data has attributes
+                if (isset($responseData['data']['attributes'])) {
+                    error_log("DATA HAS ATTRIBUTES KEY");
+                } else {
+                    error_log("DATA MISSING ATTRIBUTES KEY");
+                    
+                    // Try to fix the response structure
+                    if (!empty($responseData['data'])) {
+                        if (!isset($responseData['data']['attributes']) && is_array($responseData['data'])) {
+                            // If data is an array but doesn't have attributes, create it
+                            if (!isset($responseData['data']['id']) && isset($responseData['data'][0])) {
+                                // This is a collection, don't modify
+                                error_log("DATA IS A COLLECTION, NOT MODIFYING");
+                            } else {
+                                // This is a single item, add attributes if missing
+                                error_log("ADDING MISSING ATTRIBUTES TO DATA");
+                                $id = $responseData['data']['id'] ?? null;
+                                $attributes = [];
+                                
+                                // Move non-special fields to attributes
+                                foreach ($responseData['data'] as $key => $value) {
+                                    if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships', 'attributes'])) {
+                                        $attributes[$key] = $value;
+                                    }
+                                }
+                                
+                                // Only modify if we have attributes to add
+                                if (!empty($attributes)) {
+                                    $responseData['data']['attributes'] = $attributes;
+                                    error_log("MODIFIED RESPONSE: " . json_encode($responseData, JSON_PRETTY_PRINT));
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                error_log("RESPONSE MISSING DATA KEY");
+            }
         }
         
         // Check for API errors

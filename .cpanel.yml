@@ -2,6 +2,7 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - export SOURCEPATH=/home/stories/repositories/stories/stories-backend/
 
     # Clean out the target directory (preserving .well-known)
     - /bin/rm -rf $DEPLOYPATH/* || true
@@ -12,25 +13,25 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH/admin
 
     # Copy root level files
-    - /bin/cp stories-backend/*.php $DEPLOYPATH/
-    - /bin/cp stories-backend/.htaccess $DEPLOYPATH/
-    - /bin/cp stories-backend/database.sql $DEPLOYPATH/
-    - /bin/cp stories-backend/README.md $DEPLOYPATH/
+    - /bin/cp $SOURCEPATH/*.php $DEPLOYPATH/
+    - /bin/cp $SOURCEPATH/.htaccess $DEPLOYPATH/
+    - /bin/cp $SOURCEPATH/database.sql $DEPLOYPATH/
+    - /bin/cp $SOURCEPATH/README.md $DEPLOYPATH/
 
     # Handle Core files first (case-sensitive)
-    - /bin/cp stories-backend/api/v1/Core/Auth.php $DEPLOYPATH/api/v1/Core/
-    - /bin/cp stories-backend/api/v1/Core/ClassLoader.php $DEPLOYPATH/api/v1/Core/
-    - /bin/cp stories-backend/api/v1/Core/Router.php $DEPLOYPATH/api/v1/Core/
-    - /bin/cp stories-backend/api/v1/Core/BaseController.php $DEPLOYPATH/api/v1/Core/
-    - /bin/cp stories-backend/api/v1/Core/Database.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp $SOURCEPATH/api/v1/Core/Auth.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp $SOURCEPATH/api/v1/Core/ClassLoader.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp $SOURCEPATH/api/v1/Core/Router.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp $SOURCEPATH/api/v1/Core/BaseController.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp $SOURCEPATH/api/v1/Core/Database.php $DEPLOYPATH/api/v1/Core/
 
-    # Copy API files using find
-    - cd stories-backend/api && find . -type f -name "*.php" ! -path "*/v1/Core/*" -exec /bin/cp --parents {} $DEPLOYPATH/api/ \;
-    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
+    # Copy API files
+    - find $SOURCEPATH/api -type f -name "*.php" ! -path "*/v1/Core/*" -exec /bin/cp {} $DEPLOYPATH/api/ \;
+    - /bin/cp $SOURCEPATH/api/.htaccess $DEPLOYPATH/api/
 
-    # Copy admin files using find
-    - cd stories-backend/admin && find . -type f -exec /bin/cp --parents {} $DEPLOYPATH/admin/ \;
-    - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
+    # Copy admin structure
+    - /bin/cp -R $SOURCEPATH/admin/* $DEPLOYPATH/admin/
+    - /bin/cp $SOURCEPATH/admin/.htaccess $DEPLOYPATH/admin/
 
     # Set permissions
     - /bin/chmod 755 $DEPLOYPATH/api/v1/Core

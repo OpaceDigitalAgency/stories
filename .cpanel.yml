@@ -7,35 +7,34 @@ deployment:
     - /bin/rm -rf $DEPLOYPATH/* || true
     - find $DEPLOYPATH -mindepth 1 -maxdepth 1 -name ".*" ! -name "." ! -name ".." ! -name ".well-known" -exec /bin/rm -rf {} \; || true
 
-    # Copy root files first
+    # Create necessary directories
+    - /bin/mkdir -p $DEPLOYPATH/api/v1/Core
+    - /bin/mkdir -p $DEPLOYPATH/admin
+
+    # Copy root level files
     - /bin/cp stories-backend/*.php $DEPLOYPATH/
     - /bin/cp stories-backend/.htaccess $DEPLOYPATH/
     - /bin/cp stories-backend/database.sql $DEPLOYPATH/
     - /bin/cp stories-backend/README.md $DEPLOYPATH/
 
-    # Handle API structure
-    - /bin/mkdir -p $DEPLOYPATH/api/v1/Core
-    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
-    - /bin/cp stories-backend/api/*.php $DEPLOYPATH/api/
-    
-    # Copy Core files explicitly to maintain case
-    - /bin/cp stories-backend/api/v1/Core/*.php $DEPLOYPATH/api/v1/Core/
-    
-    # Copy remaining API directories
-    - /bin/cp -R stories-backend/api/v1/config $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/Endpoints $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/middleware $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/Utils $DEPLOYPATH/api/v1/
+    # Handle Core files first (case-sensitive)
+    - /bin/cp stories-backend/api/v1/Core/Auth.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp stories-backend/api/v1/Core/ClassLoader.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp stories-backend/api/v1/Core/Router.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp stories-backend/api/v1/Core/BaseController.php $DEPLOYPATH/api/v1/Core/
+    - /bin/cp stories-backend/api/v1/Core/Database.php $DEPLOYPATH/api/v1/Core/
 
-    # Handle admin structure
-    - /bin/cp -R stories-backend/admin $DEPLOYPATH/
+    # Copy API files using find
+    - cd stories-backend/api && find . -type f -name "*.php" ! -path "*/v1/Core/*" -exec /bin/cp --parents {} $DEPLOYPATH/api/ \;
+    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
+
+    # Copy admin files using find
+    - cd stories-backend/admin && find . -type f -exec /bin/cp --parents {} $DEPLOYPATH/admin/ \;
     - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
 
-    # Set core permissions
+    # Set permissions
     - /bin/chmod 755 $DEPLOYPATH/api/v1/Core
     - /bin/chmod 644 $DEPLOYPATH/api/v1/Core/*.php
-
-    # Set admin permissions
-    - /bin/chmod 755 $DEPLOYPATH/admin/uploads
-    - /bin/find $DEPLOYPATH/admin -type d -exec /bin/chmod 755 {} \;
-    - /bin/find $DEPLOYPATH/admin -type f -exec /bin/chmod 644 {} \;
+    - /bin/find $DEPLOYPATH -type d -exec /bin/chmod 755 {} \;
+    - /bin/find $DEPLOYPATH -type f -exec /bin/chmod 644 {} \;
+    - /bin/chmod 775 $DEPLOYPATH/admin/uploads

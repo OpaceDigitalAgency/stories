@@ -168,6 +168,7 @@ class DirectoryItemsController extends BaseController {
                 'id' => $itemId,
                 'attributes' => [
                     'name' => $item['name'],
+                    'slug' => $item['name'], // Add slug attribute using name as the value
                     'description' => $item['description'],
                     'url' => $item['url'],
                     'category' => $item['category'],

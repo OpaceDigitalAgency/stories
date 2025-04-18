@@ -184,6 +184,7 @@ class AiToolsController extends BaseController {
             'id' => $toolId,
             'attributes' => [
                 'name' => $tool['name'],
+                'slug' => $tool['name'], // Add slug attribute using name as the value
                 'description' => $tool['description'],
                 'url' => $tool['url'],
                 'category' => $tool['category'],

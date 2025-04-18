@@ -31,8 +31,14 @@ class ApiClient {
      * @param string|null $authToken Authentication token
      */
     public function __construct($apiUrl, $authToken = null) {
+        if (!$apiUrl) {
+            error_log("Warning: No API URL provided to ApiClient");
+            $apiUrl = API_URL ?? 'http://localhost/api/v1';
+        }
         $this->apiUrl = rtrim($apiUrl, '/');
         $this->authToken = $authToken;
+        
+        error_log("ApiClient initialized with URL: " . $this->apiUrl);
     }
     
     /**

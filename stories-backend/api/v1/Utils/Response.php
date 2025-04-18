@@ -187,6 +187,64 @@ class Response {
     }
     
     /**
+    /**
+     * Format data to ensure it has the correct structure with attributes
+     * 
+     * @param array $data The data to format
+     * @return array The formatted data
+     */
+    private static function formatData($data) {
+        // If data is already in the correct format, return it as is
+        if (isset($data['id']) && isset($data['attributes'])) {
+            return $data;
+        }
+        
+        // If data is an array of items, format each item
+        if (is_array($data) && !isset($data['id']) && !empty($data)) {
+            $formattedData = [];
+            foreach ($data as $item) {
+                if (is_array($item) && isset($item['id'])) {
+                    // Format each item
+                    $attributes = [];
+                    foreach ($item as $key => $value) {
+                        if ($key !== 'id') {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                    
+                    $formattedData[] = [
+                        'id' => $item['id'],
+                        'attributes' => $attributes
+                    ];
+                } else {
+                    // If item doesn't have an ID, keep it as is
+                    $formattedData[] = $item;
+                }
+            }
+            return $formattedData;
+        }
+        
+        // Format a single item
+        $id = $data['id'] ?? null;
+        if ($id === null) {
+            // If no ID, return data as is
+            return $data;
+        }
+        
+        // Create attributes array
+        $attributes = [];
+        foreach ($data as $key => $value) {
+            if ($key !== 'id') {
+                $attributes[$key] = $value;
+            }
+        }
+        
+        // Return formatted data
+        return [
+            'id' => $id,
+            'attributes' => $attributes
+        ];
+    }
      * Send a success response as JSON
      * 
      * @param array $data The data to include in the response
@@ -197,10 +255,10 @@ class Response {
         // Check if data is already formatted with a 'data' key
         if (is_array($data) && isset($data['id']) && !isset($data['data'])) {
             // This is a single entity response, don't wrap it in another 'data' key
-            self::json(['data' => $data, 'meta' => $meta]);
+            self::json(['data' => self::formatData($data), 'meta' => $meta]);
         } else {
             // Use the standard success method for other cases
-            self::json(self::success($data, $meta, $statusCode));
+            self::json(self::success(self::formatData($data), $meta, $statusCode));
         }
     }
     
@@ -215,7 +273,7 @@ class Response {
      * @param int $statusCode HTTP status code
      */
     public static function sendPaginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
-        self::json(self::paginated($data, $page, $pageSize, $total, $additionalMeta, $statusCode));
+        self::json(self::paginated(self::formatData($data), $page, $pageSize, $total, $additionalMeta, $statusCode));
     }
     
     /**

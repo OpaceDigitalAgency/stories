@@ -254,6 +254,7 @@ class BaseController {
      * @param array $params URL parameters
      */
     public function setParams($params) {
+        error_log("BaseController::setParams received: " . print_r($params, true)); // DEBUG LOG
         $this->params = $params;
     }
 }

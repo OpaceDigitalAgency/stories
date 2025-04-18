@@ -247,7 +247,7 @@ class Router {
         $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?<$1>[^/]+)', $path);
         
         // Add start and end anchors
-        $pattern = '#^' . $pattern . '$#';
+        $pattern = '#^' . $pattern . '$#i'; // Add 'i' flag for case-insensitivity
         
         return $pattern;
     }

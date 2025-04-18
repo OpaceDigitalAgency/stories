@@ -378,10 +378,10 @@
                                             <td><?php echo htmlspecialchars($story['attributes']['title'] ?? 'Untitled'); ?></td>
                                             <td>
                                                 <?php 
-                                                    if (isset($story['attributes']['author']['data']['attributes']['name'])) {
-                                                        echo htmlspecialchars($story['attributes']['author']['data']['attributes']['name']);
+                                                    if (isset($story['attributes']['author_name'])) {
+                                                        echo htmlspecialchars($story['attributes']['author_name']);
                                                     } else {
-                                                        echo '<em>No author</em>';
+                                                        echo '<em>No author</em>'; // Should not happen with the fix in index.php, but good fallback
                                                     }
                                                 ?>
                                             </td>
@@ -444,8 +444,8 @@
                                             <td><?php echo htmlspecialchars($author['attributes']['email'] ?? ''); ?></td>
                                             <td>
                                                 <?php 
-                                                    if (isset($author['attributes']['stories']['data'])) {
-                                                        echo count($author['attributes']['stories']['data']);
+                                                    if (isset($author['attributes']['storyCount'])) {
+                                                        echo htmlspecialchars($author['attributes']['storyCount']);
                                                     } else {
                                                         echo '0';
                                                     }

@@ -240,6 +240,12 @@ class DashboardPage extends AdminPage {
         $this->data['recentBlogPosts'] = $getRecentItems('blog-posts');
         $this->data['recentDirectoryItems'] = $getRecentItems('directory-items');
         $this->data['recentGames'] = $getRecentItems('games');
+
+        echo "<!-- Debugging Recent Games -->";
+        echo "<pre>Recent Games: ";
+        var_dump($this->data['recentGames']);
+        echo "</pre>";
+        echo "<!-- End Debugging -->";
         $this->data['recentAiTools'] = $getRecentItems('ai-tools');
         $this->data['recentTags'] = $getRecentItems('tags');
 

@@ -82,10 +82,15 @@ class StoriesController extends BaseController {
                 
                 // Get author
                 $authorQuery = "SELECT a.id, a.name, a.slug FROM authors a
-                    JOIN story_authors sa ON a.id = sa.author_id
+                    LEFT JOIN story_authors sa ON a.id = sa.author_id
                     WHERE sa.story_id = ? LIMIT 1";
-                $authorStmt = $this->db->query($authorQuery, [$storyId]);
-                $author = $authorStmt->fetch();
+                try {
+                    $authorStmt = $this->db->query($authorQuery, [$storyId]);
+                    $author = $authorStmt->fetch();
+                } catch (\Exception $e) {
+                    error_log('Author subquery error for story ' . $storyId . ': ' . $e->getMessage());
+                    $author = null;
+                }
                 
                 // Get tags
                 $tagsQuery = "SELECT t.id, t.name FROM tags t

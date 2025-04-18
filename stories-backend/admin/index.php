@@ -144,7 +144,16 @@ class DashboardPage extends AdminPage {
             ]);
             
             if ($response && isset($response['data'])) {
-                return $response['data'];
+                // Process each item to handle nested attributes structure
+                $items = $response['data'];
+                foreach ($items as &$item) {
+                    // Handle nested attributes structure (attributes.attributes)
+                    if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+                        // Move nested attributes up one level
+                        $item['attributes'] = $item['attributes']['attributes'];
+                    }
+                }
+                return $items;
             }
             
             // Fallback to database if API fails

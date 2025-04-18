@@ -5,13 +5,14 @@
 
 // Database connection parameters
 $host = 'localhost';
-$dbname = 'stories';
-$username = 'root';
-$password = '';
+$dbname = 'stories_db';
+$username = 'stories_user';
+$password = '$tw1cac3*sOt';
+$port = 3306;
 
 try {
     // Connect to database
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;port=$port", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     echo "Connected to database successfully.\n";

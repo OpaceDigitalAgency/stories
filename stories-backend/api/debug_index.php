@@ -35,93 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Autoload classes
-spl_autoload_register(function ($class) {
-    // Convert namespace to file path
-    $prefix = 'StoriesAPI\\';
-    $base_dir = __DIR__ . '/v1/';
-    
-    // Check if the class uses the namespace prefix
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-    
-    // Get the relative class name
-    $relative_class = substr($class, $len);
-    
-    // Convert namespace separators to directory separators
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-    
-    // Debug output
-    echo "<p>Attempting to load class: " . htmlspecialchars($class) . " from file: " . htmlspecialchars($file) . "</p>";
-    
-    // If the file exists, require it
-    if (file_exists($file)) {
-        require $file;
-        echo "<p style='color: green;'>Successfully loaded: " . htmlspecialchars($file) . "</p>";
-        return;
-    } else {
-        echo "<p style='color: red;'>File not found: " . htmlspecialchars($file) . "</p>";
-    }
-    
-    // Case-insensitive approach - try lowercase path
-    $lowercase_path = strtolower($base_dir . str_replace('\\', '/', $relative_class)) . '.php';
-    $actual_path = '';
-    
-    // Get the actual path with correct case
-    $parts = explode('/', str_replace('\\', '/', $relative_class));
-    $current_path = $base_dir;
-    
-    foreach ($parts as $part) {
-        if (!is_dir($current_path)) {
-            break;
-        }
-        
-        $found = false;
-        $items = scandir($current_path);
-        
-        foreach ($items as $item) {
-            if (strtolower($item) === strtolower($part)) {
-                $current_path .= $item . '/';
-                $found = true;
-                break;
-            }
-        }
-        
-        if (!$found) {
-            break;
-        }
-    }
-    
-    // Remove trailing slash and add .php
-    $actual_path = substr($current_path, 0, -1) . '.php';
-    
-    // Debug output for case-insensitive approach
-    echo "<p>Trying case-insensitive approach. Actual path: " . htmlspecialchars($actual_path) . "</p>";
-    
-    // If the file exists with the correct case, require it
-    if (file_exists($actual_path)) {
-        require $actual_path;
-        echo "<p style='color: green;'>Successfully loaded with case-insensitive approach: " . htmlspecialchars($actual_path) . "</p>";
-        return;
-    }
-    
-    // Direct approach - try to find the file in the utils directory
-    if (strpos($relative_class, 'Utils') === 0) {
-        $utils_file = $base_dir . 'utils/' . substr($relative_class, 6) . '.php';
-        echo "<p>Trying direct utils approach. Path: " . htmlspecialchars($utils_file) . "</p>";
-        if (file_exists($utils_file)) {
-            require $utils_file;
-            echo "<p style='color: green;'>Successfully loaded from utils directory: " . htmlspecialchars($utils_file) . "</p>";
-            return;
-        }
-    }
-    
-    // Log the error
-    echo "<p style='color: red;'>Failed to load class: " . htmlspecialchars($class) . ". Tried paths: " . htmlspecialchars($file) . ", " . htmlspecialchars($lowercase_path) . ", " . htmlspecialchars($actual_path) . "</p>";
-    error_log("Failed to load class: $class. Tried paths: $file, $lowercase_path, $actual_path");
-});
+// Initialize the case-insensitive class loader
+echo "<h2>Initializing Class Loader</h2>";
+require_once __DIR__ . '/v1/Core/ClassLoader.php';
+$classLoader = \StoriesAPI\Core\ClassLoader::getInstance(__DIR__ . '/v1/', 'StoriesAPI\\');
+$classLoader->register();
+echo "<p style='color: green;'>Class loader initialized</p>";
 
 try {
     // Load configuration

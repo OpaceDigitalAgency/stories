@@ -36,68 +36,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Autoload classes with case-insensitive directory handling
-spl_autoload_register(function($class) {
-  $prefix   = 'StoriesAPI\\';
-  $base_dir = __DIR__ . '/v1/';
-  
-  // Check if the class uses our namespace
-  if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
-    return;
-  }
-  
-  // Get the relative class name
-  $relative = substr($class, strlen($prefix));
-  
-  // Convert namespace separators to directory separators
-  $path = str_replace('\\', '/', $relative);
-  
-  // Try the exact case first
-  $file = $base_dir . $path . '.php';
-  if (file_exists($file)) {
-    require_once $file;
-    return;
-  }
-  
-  // If exact case doesn't work, try case-insensitive approach
-  $parts = explode('/', $path);
-  $current_path = $base_dir;
-  
-  foreach ($parts as $i => $part) {
-    // If this is the last part (the file itself)
-    if ($i === count($parts) - 1) {
-      $file_name = $part . '.php';
-      $dir_contents = scandir($current_path);
-      
-      foreach ($dir_contents as $item) {
-        if (strtolower($item) === strtolower($file_name)) {
-          require_once $current_path . $item;
-          return;
-        }
-      }
-    } else {
-      // This is a directory part
-      $dir_contents = scandir($current_path);
-      $found = false;
-      
-      foreach ($dir_contents as $item) {
-        if (is_dir($current_path . $item) && strtolower($item) === strtolower($part)) {
-          $current_path .= $item . '/';
-          $found = true;
-          break;
-        }
-      }
-      
-      if (!$found) {
-        // Directory not found, can't proceed
-        return;
-      }
-    }
-  }
-  
-  // If we get here, the file wasn't found
-  error_log("Autoloader: Could not find file for class $class");
-});
+// Initialize and register the case-insensitive class loader
+require_once __DIR__ . '/v1/Core/ClassLoader.php';
+$classLoader = \StoriesAPI\Core\ClassLoader::getInstance(__DIR__ . '/v1/', 'StoriesAPI\\');
+$classLoader->register();
+
+// Enable detailed error logging in debug mode
+if (DEBUG_MODE) {
+    error_log("Class loader initialized with base directory: " . __DIR__ . '/v1/');
+}
 
 /**
  * Case-insensitive file loader

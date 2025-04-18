@@ -417,9 +417,20 @@ class ApiClient {
                 
                 // Try to extract validation errors
                 if (isset($responseData['errors']) && is_array($responseData['errors'])) {
-                    $errorDetail = 'Please check the following fields: ';
-                    $fields = array_keys($responseData['errors']);
-                    $errorDetail .= implode(', ', $fields);
+                    $errorDetails = [];
+                    foreach ($responseData['errors'] as $field => $errors) {
+                        if (is_array($errors)) {
+                            foreach ($errors as $error) {
+                                $errorDetails[] = "$field: $error";
+                            }
+                        } else {
+                            $errorDetails[] = "$field: $errors";
+                        }
+                    }
+                    $errorDetail = implode("\n", $errorDetails);
+                    
+                    // Log validation errors for debugging
+                    error_log("Validation errors:\n" . $errorDetail);
                 }
             }
             

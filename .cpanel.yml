@@ -2,13 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
-    - /bin/cp -R stories-backend/check_auth_status.php $DEPLOYPATH
-    - /bin/cp -R stories-backend/direct_login.php $DEPLOYPATH
-    - /bin/cp -R stories-backend/go_to_dashboard.php $DEPLOYPATH
-    - /bin/cp -R stories-backend/logout.php $DEPLOYPATH
-    - /bin/cp -R stories-backend/.htaccess $DEPLOYPATH
-    - /bin/cp -R stories-backend/database.sql $DEPLOYPATH
-    - /bin/cp -R stories-backend/README.md $DEPLOYPATH
-    - /bin/cp -R stories-backend/admin $DEPLOYPATH
-    - /bin/cp -R stories-backend/api $DEPLOYPATH
-    - /bin/cp -R stories-backend/test_folder $DEPLOYPATH
+    - /bin/cp -R stories-backend/* $DEPLOYPATH
+    - /bin/cp stories-backend/.htaccess $DEPLOYPATH

@@ -2,7 +2,7 @@
 /**
  * Authors Controller
  * 
- * This controller handles operations for authors.
+ * This controller handles CRUD operations for authors.
  * 
  * @package Stories API
  * @version 1.0.0
@@ -26,12 +26,12 @@ class AuthorsController extends BaseController {
         $offset = ($page - 1) * $pageSize;
         
         // Get sort parameters
-        $allowedSortFields = ['name', 'storyCount', 'featured'];
+        $allowedSortFields = ['name', 'storyCount'];
         $sort = $this->getSortParams($allowedSortFields);
         $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY name ASC";
         
         // Get filter parameters
-        $allowedFilterFields = ['name', 'slug', 'featured'];
+        $allowedFilterFields = ['name', 'slug'];
         $filters = $this->getFilterParams($allowedFilterFields);
         
         try {
@@ -47,8 +47,7 @@ class AuthorsController extends BaseController {
             
             // Get authors with pagination
             $query = "SELECT 
-                a.id, a.name, a.slug, a.bio, a.featured, a.twitter, a.instagram, a.website,
-                a.created_at as createdAt, a.updated_at as updatedAt,
+                a.id, a.name, a.slug, a.bio,
                 (SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id) as storyCount
                 FROM authors a
                 $whereClause
@@ -59,40 +58,39 @@ class AuthorsController extends BaseController {
             $authors = $stmt->fetchAll();
             
             // Format authors with a simplified structure to avoid JSON encoding issues
-            $formattedAuthors = [
-    "id" => $authorsId,
-    "attributes" => [];
+            $formattedAuthors = [];
             
             foreach ($authors as $author) {
-                $authorId = $author['id'];
-                
-                // Get avatar URL if exists
-                $avatarUrl = null;
-                $avatarQuery = "SELECT url FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
-                $avatarStmt = $this->db->query($avatarQuery, [$authorId]);
+                // Get author avatar
+                $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
+                $avatarStmt = $this->db->query($avatarQuery, [$author['id']]);
                 $avatar = $avatarStmt->fetch();
+                
+                $formattedAvatar = null;
                 if ($avatar) {
-                    $avatarUrl = $avatar['url'];
+                    $formattedAvatar = [
+                        'data' => [
+                            'id' => $avatar['id'],
+                            'attributes' => [
+                                'url' => $avatar['url'],
+                                'width' => $avatar['width'],
+                                'height' => $avatar['height'],
+                                'alternativeText' => $avatar['alt_text']
+                            ]
+                        ]
+                    ];
                 }
                 
-                // Build a simplified author structure
-                $formattedAuthor = [
-
-                    'name' => $author['name'],
-                    'slug' => $author['slug'],
-                    'bio' => $author['bio'],
-                    'featured' => (bool)$author['featured'],
-                    'twitter' => $author['twitter'],
-                    'instagram' => $author['instagram'],
-                    'website' => $author['website'],
-                    'storyCount' => (int)$author['storyCount'],
-                    'createdAt' => $author['createdAt'],
-                    'updatedAt' => $author['updatedAt'],
-                    'avatarUrl' => $avatarUrl
-    ]
-];
-                
-                $formattedAuthors[] = $formattedAuthor;
+                $formattedAuthors[] = [
+                    'id' => $author['id'],
+                    'attributes' => [
+                        'name' => $author['name'],
+                        'slug' => $author['slug'],
+                        'bio' => $author['bio'],
+                        'storyCount' => (int)$author['storyCount'],
+                        'avatar' => $formattedAvatar
+                    ]
+                ];
             }
             
             // Send paginated response
@@ -126,8 +124,7 @@ class AuthorsController extends BaseController {
         try {
             // Get author by identifier
             $query = "SELECT
-                a.id, a.name, a.slug, a.bio, a.featured, a.twitter, a.instagram, a.website,
-                a.created_at as createdAt, a.updated_at as updatedAt
+                a.id, a.name, a.slug, a.bio, a.created_at as createdAt, a.updated_at as updatedAt
                 FROM authors a
                 WHERE $column = ? LIMIT 1";
             
@@ -141,17 +138,28 @@ class AuthorsController extends BaseController {
             $author = $stmt->fetch();
             $authorId = $author['id'];
             
-            // Get avatar URL if exists
-            $avatarUrl = null;
-            $avatarQuery = "SELECT url FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
+            // Get author avatar
+            $avatarQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'author' AND entity_id = ? AND type = 'avatar' LIMIT 1";
             $avatarStmt = $this->db->query($avatarQuery, [$authorId]);
             $avatar = $avatarStmt->fetch();
+            
+            $formattedAvatar = null;
             if ($avatar) {
-                $avatarUrl = $avatar['url'];
+                $formattedAvatar = [
+                    'data' => [
+                        'id' => $avatar['id'],
+                        'attributes' => [
+                            'url' => $avatar['url'],
+                            'width' => $avatar['width'],
+                            'height' => $avatar['height'],
+                            'alternativeText' => $avatar['alt_text']
+                        ]
+                    ]
+                ];
             }
             
-            // Get author's stories with simplified structure
-            $storiesQuery = "SELECT
+            // Get stories by this author
+            $storiesQuery = "SELECT 
                 s.id, s.title, s.slug, s.excerpt, s.published_at as publishedAt,
                 s.featured, s.average_rating as averageRating
                 FROM stories s
@@ -192,27 +200,116 @@ class AuthorsController extends BaseController {
             // Count stories
             $storyCount = count($simpleStories);
             
-            // Build the formatted author with simplified structure
+            // Build the formatted author with proper structure
             $formattedAuthor = [
                 'id' => $authorId,
-                'name' => $author['name'],
-                'slug' => $author['slug'],
-                'bio' => $author['bio'],
-                'featured' => (bool)$author['featured'],
-                'twitter' => $author['twitter'],
-                'instagram' => $author['instagram'],
-                'website' => $author['website'],
-                'storyCount' => $storyCount,
-                'createdAt' => $author['createdAt'],
-                'updatedAt' => $author['updatedAt'],
-                'avatarUrl' => $avatarUrl,
-                'stories' => $simpleStories
+                'attributes' => [
+                    'name' => $author['name'],
+                    'slug' => $author['slug'],
+                    'bio' => $author['bio'],
+                    'createdAt' => $author['createdAt'],
+                    'updatedAt' => $author['updatedAt'],
+                    'storyCount' => $storyCount,
+                    'avatar' => $formattedAvatar,
+                    'stories' => $simpleStories
+                ]
             ];
             
             // Send response
-            Response::sendSuccess($formattedAuthor]);
+            Response::sendSuccess($formattedAuthor);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch author: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create a new author
+     */
+    public function create() {
+        // Validate required fields
+        if (!Validator::required($this->request, ['name'])) {
+            $this->badRequest('Author name is required', Validator::getErrors());
+            return;
+        }
+        
+        // Validate name length
+        if (!Validator::length($this->request['name'], 'name', 2, 100)) {
+            $this->badRequest('Author name must be between 2 and 100 characters', Validator::getErrors());
+            return;
+        }
+        
+        // Sanitize input
+        $name = Validator::sanitizeString($this->request['name']);
+        $slug = isset($this->request['slug']) ? Validator::sanitizeString($this->request['slug']) : $this->generateSlug($name);
+        $bio = isset($this->request['bio']) ? $this->request['bio'] : null;
+        
+        try {
+            // Check if slug already exists
+            $query = "SELECT id FROM authors WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() > 0) {
+                // Generate a unique slug
+                $slug = $this->generateUniqueSlug($slug);
+            }
+            
+            // Insert author
+            $query = "INSERT INTO authors (name, slug, bio, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
+            $this->db->query($query, [
+                $name,
+                $slug,
+                $bio,
+                date('Y-m-d H:i:s'),
+                date('Y-m-d H:i:s')
+            ]);
+            
+            $authorId = $this->db->lastInsertId();
+            
+            // Handle avatar if provided
+            $avatarUrl = null;
+            if (isset($this->request['avatar']) && !empty($this->request['avatar'])) {
+                $avatarUrl = Validator::sanitizeString($this->request['avatar']);
+                $query = "INSERT INTO media (
+                    entity_type, entity_id, type, url, width, height, alt_text, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                
+                $this->db->query($query, [
+                    'author',
+                    $authorId,
+                    'avatar',
+                    $avatarUrl,
+                    isset($this->request['avatarWidth']) ? (int)$this->request['avatarWidth'] : 300,
+                    isset($this->request['avatarHeight']) ? (int)$this->request['avatarHeight'] : 300,
+                    isset($this->request['avatarAlt']) ? Validator::sanitizeString($this->request['avatarAlt']) : $name,
+                    date('Y-m-d H:i:s')
+                ]);
+            }
+            
+            // Return the created author with proper structure
+            $formattedAuthor = [
+                'id' => $authorId,
+                'attributes' => [
+                    'name' => $name,
+                    'slug' => $slug,
+                    'bio' => $bio,
+                    'storyCount' => 0,
+                    'avatar' => $avatarUrl ? [
+                        'data' => [
+                            'id' => $this->db->lastInsertId(),
+                            'attributes' => [
+                                'url' => $avatarUrl,
+                                'width' => isset($this->request['avatarWidth']) ? (int)$this->request['avatarWidth'] : 300,
+                                'height' => isset($this->request['avatarHeight']) ? (int)$this->request['avatarHeight'] : 300,
+                                'alternativeText' => isset($this->request['avatarAlt']) ? Validator::sanitizeString($this->request['avatarAlt']) : $name
+                            ]
+                        ]
+                    ] : null
+                ]
+            ];
+            
+            Response::sendSuccess($formattedAuthor, [], 201);
+        } catch (\Exception $e) {
+            $this->serverError('Failed to create author: ' . $e->getMessage());
         }
     }
     
@@ -229,7 +326,7 @@ class AuthorsController extends BaseController {
         }
         
         try {
-            // Check if author exists and user has permission to update it
+            // Check if author exists
             $query = "SELECT * FROM authors WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$authorId]);
             
@@ -240,49 +337,67 @@ class AuthorsController extends BaseController {
             
             $author = $stmt->fetch();
             
-            // Check if user is the author or has admin/editor role
-            $isOwnProfile = $this->user['id'] == $authorId;
-            $isAdminOrEditor = isset($this->user['role']) && in_array($this->user['role'], ['admin', 'editor']);
-            
-            if (!$isOwnProfile && !$isAdminOrEditor) {
-                $this->forbidden('You do not have permission to update this author');
-                return;
-            }
-            
             // Build update query
             $updates = [];
             $params = [];
             
-            // Update fields if provided
+            // Update name if provided
             if (isset($this->request['name'])) {
+                if (!Validator::length($this->request['name'], 'name', 2, 100)) {
+                    $this->badRequest('Author name must be between 2 and 100 characters', Validator::getErrors());
+                    return;
+                }
+                
+                $name = Validator::sanitizeString($this->request['name']);
                 $updates[] = "name = ?";
-                $params[] = Validator::sanitizeString($this->request['name']);
+                $params[] = $name;
+                
+                // Update slug if name is changed and slug is not provided
+                if (!isset($this->request['slug'])) {
+                    $slug = $this->generateSlug($name);
+                    
+                    // Check if slug already exists
+                    $query = "SELECT id FROM authors WHERE slug = ? AND id != ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$slug, $authorId]);
+                    
+                    if ($stmt->rowCount() > 0) {
+                        // Generate a unique slug
+                        $slug = $this->generateUniqueSlug($slug);
+                    }
+                    
+                    $updates[] = "slug = ?";
+                    $params[] = $slug;
+                }
             }
             
+            // Update slug if provided
+            if (isset($this->request['slug'])) {
+                $slug = Validator::sanitizeString($this->request['slug']);
+                
+                // Check if slug already exists
+                $query = "SELECT id FROM authors WHERE slug = ? AND id != ? LIMIT 1";
+                $stmt = $this->db->query($query, [$slug, $authorId]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Generate a unique slug
+                    $slug = $this->generateUniqueSlug($slug);
+                }
+                
+                $updates[] = "slug = ?";
+                $params[] = $slug;
+            }
+            
+            // Update bio if provided
             if (isset($this->request['bio'])) {
                 $updates[] = "bio = ?";
-                $params[] = Validator::sanitizeString($this->request['bio']);
+                $params[] = $this->request['bio'];
             }
             
-            if (isset($this->request['twitter'])) {
-                $updates[] = "twitter = ?";
-                $params[] = Validator::sanitizeString($this->request['twitter']);
-            }
-            
-            if (isset($this->request['instagram'])) {
-                $updates[] = "instagram = ?";
-                $params[] = Validator::sanitizeString($this->request['instagram']);
-            }
-            
-            if (isset($this->request['website'])) {
-                $updates[] = "website = ?";
-                $params[] = Validator::sanitizeString($this->request['website']);
-            }
-            
-            // Only admin/editor can update featured status
-            if (isset($this->request['featured']) && $isAdminOrEditor) {
-                $updates[] = "featured = ?";
-                $params[] = (bool)$this->request['featured'] ? 1 : 0;
+            // If no updates, check if avatar is provided
+            if (empty($updates) && !isset($this->request['avatar'])) {
+                $this->params['slug'] = $author['slug'];
+                $this->show();
+                return;
             }
             
             // Add updated_at
@@ -291,9 +406,6 @@ class AuthorsController extends BaseController {
             
             // Add author ID to params
             $params[] = $authorId;
-            
-            // Start transaction
-            $this->db->beginTransaction();
             
             // Update author
             if (!empty($updates)) {
@@ -345,20 +457,106 @@ class AuthorsController extends BaseController {
                 }
             }
             
+            // Return the updated author
+            $this->params['slug'] = isset($slug) ? $slug : $author['slug'];
+            $this->show();
+        } catch (\Exception $e) {
+            $this->serverError('Failed to update author: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Delete an author
+     */
+    public function delete() {
+        // Validate author ID
+        $authorId = isset($this->params['id']) ? (int)$this->params['id'] : null;
+        
+        if (!$authorId) {
+            $this->badRequest('Author ID is required');
+            return;
+        }
+        
+        try {
+            // Check if author exists
+            $query = "SELECT * FROM authors WHERE id = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$authorId]);
+            
+            if ($stmt->rowCount() === 0) {
+                $this->notFound('Author not found');
+                return;
+            }
+            
+            // Start transaction
+            $this->db->beginTransaction();
+            
+            // Delete author associations
+            $query = "DELETE FROM story_authors WHERE author_id = ?";
+            $this->db->query($query, [$authorId]);
+            
+            // Delete author media
+            $query = "DELETE FROM media WHERE entity_type = 'author' AND entity_id = ?";
+            $this->db->query($query, [$authorId]);
+            
+            // Delete author
+            $query = "DELETE FROM authors WHERE id = ?";
+            $this->db->query($query, [$authorId]);
+            
             // Commit transaction
             $this->db->commit();
             
-            // Return the updated author
-            $query = "SELECT slug FROM authors WHERE id = ? LIMIT 1";
-            $stmt = $this->db->query($query, [$authorId]);
-            $updatedAuthor = $stmt->fetch();
-            
-            $this->params['slug'] = $updatedAuthor['slug'];
-            $this->show();
+            // Send success response
+            Response::sendSuccess(['message' => 'Author deleted successfully'], [], 200);
         } catch (\Exception $e) {
             // Rollback transaction
             $this->db->rollback();
-            $this->serverError('Failed to update author: ' . $e->getMessage());
+            $this->serverError('Failed to delete author: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Generate a slug from a name
+     * 
+     * @param string $name The name to generate a slug from
+     * @return string The generated slug
+     */
+    private function generateSlug($name) {
+        // Convert to lowercase
+        $slug = strtolower($name);
+        
+        // Replace non-alphanumeric characters with hyphens
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+        
+        // Remove leading and trailing hyphens
+        $slug = trim($slug, '-');
+        
+        return $slug;
+    }
+    
+    /**
+     * Generate a unique slug
+     * 
+     * @param string $slug The base slug
+     * @return string A unique slug
+     */
+    private function generateUniqueSlug($slug) {
+        $originalSlug = $slug;
+        $counter = 1;
+        
+        while (true) {
+            // Check if slug exists
+            $query = "SELECT id FROM authors WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                break;
+            }
+            
+            // Append counter to slug
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
     }
 }

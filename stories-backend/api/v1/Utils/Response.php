@@ -187,7 +187,6 @@ class Response {
     }
     
     /**
-    /**
      * Format data to ensure it has the correct structure with attributes
      * 
      * @param array $data The data to format
@@ -245,6 +244,8 @@ class Response {
             'attributes' => $attributes
         ];
     }
+    
+    /**
      * Send a success response as JSON
      * 
      * @param array $data The data to include in the response

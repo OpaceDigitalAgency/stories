@@ -98,7 +98,16 @@ class BaseController {
         if (strpos($contentType, 'application/json') !== false) {
             // Parse JSON request body
             $input = file_get_contents('php://input');
-            $this->request = json_decode($input, true) ?? [];
+            $data = json_decode($input, true) ?? [];
+            
+            // Extract data from Strapi-style structure
+            if (isset($data['data']['attributes'])) {
+                $this->request = $data['data']['attributes'];
+            } else {
+                $this->request = $data;
+            }
+            
+            error_log("Parsed JSON request: " . json_encode($this->request));
         } else if (strpos($contentType, 'multipart/form-data') !== false) {
             // Handle multipart form data (including files)
             $this->request = $_POST;

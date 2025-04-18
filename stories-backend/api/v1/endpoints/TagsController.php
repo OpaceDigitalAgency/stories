@@ -201,20 +201,25 @@ class TagsController extends BaseController {
      */
     public function create() {
         // Validate required fields
-        if (!Validator::required($this->request, ['name'])) {
+        // Extract data from request
+        $data = isset($this->request['data']['attributes']) ? $this->request['data']['attributes'] : $this->request;
+        
+        error_log("Tag create data: " . json_encode($data));
+        
+        if (!Validator::required($data, ['name'])) {
             $this->badRequest('Tag name is required', Validator::getErrors());
             return;
         }
         
         // Validate name length
-        if (!Validator::length($this->request['name'], 'name', 2, 50)) {
+        if (!Validator::length($data['name'], 'name', 2, 50)) {
             $this->badRequest('Tag name must be between 2 and 50 characters', Validator::getErrors());
             return;
         }
         
         // Sanitize input
-        $name = Validator::sanitizeString($this->request['name']);
-        $slug = isset($this->request['slug']) ? Validator::sanitizeString($this->request['slug']) : $this->generateSlug($name);
+        $name = Validator::sanitizeString($data['name']);
+        $slug = isset($data['slug']) ? Validator::sanitizeString($data['slug']) : $this->generateSlug($name);
         
         try {
             // Check if slug already exists
@@ -282,18 +287,23 @@ class TagsController extends BaseController {
             $params = [];
             
             // Update name if provided
-            if (isset($this->request['name'])) {
-                if (!Validator::length($this->request['name'], 'name', 2, 50)) {
+            // Extract data from request
+            $data = isset($this->request['data']['attributes']) ? $this->request['data']['attributes'] : $this->request;
+            
+            error_log("Tag update data: " . json_encode($data));
+            
+            if (isset($data['name'])) {
+                if (!Validator::length($data['name'], 'name', 2, 50)) {
                     $this->badRequest('Tag name must be between 2 and 50 characters', Validator::getErrors());
                     return;
                 }
                 
-                $name = Validator::sanitizeString($this->request['name']);
+                $name = Validator::sanitizeString($data['name']);
                 $updates[] = "name = ?";
                 $params[] = $name;
                 
                 // Update slug if name is changed and slug is not provided
-                if (!isset($this->request['slug'])) {
+                if (!isset($data['slug'])) {
                     $slug = $this->generateSlug($name);
                     
                     // Check if slug already exists
@@ -311,8 +321,8 @@ class TagsController extends BaseController {
             }
             
             // Update slug if provided
-            if (isset($this->request['slug'])) {
-                $slug = Validator::sanitizeString($this->request['slug']);
+            if (isset($data['slug'])) {
+                $slug = Validator::sanitizeString($data['slug']);
                 
                 // Check if slug already exists
                 $query = "SELECT id FROM tags WHERE slug = ? AND id != ? LIMIT 1";

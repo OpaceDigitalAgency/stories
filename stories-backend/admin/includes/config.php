@@ -43,7 +43,10 @@ if (!defined('ADMIN_URL')) {
 
 // Define the admin assets URL (always relative to ensure assets load from the same domain)
 if (!defined('ADMIN_ASSETS_URL')) {
-    define('ADMIN_ASSETS_URL', '/admin');
+    // Use the full URL path to ensure assets load correctly
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    define('ADMIN_ASSETS_URL', $protocol . $host . '/admin');
 }
 if (!defined('API_URL')) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

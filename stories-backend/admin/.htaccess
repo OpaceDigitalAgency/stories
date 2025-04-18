@@ -43,7 +43,7 @@ DirectoryIndex index.php
     php_value memory_limit 256M
 </IfModule>
 
-# Security headers
+# Security headers and access control
 <IfModule mod_headers.c>
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-Content-Type-Options "nosniff"
@@ -55,6 +55,20 @@ DirectoryIndex index.php
         Header set Expires "0"
     </FilesMatch>
 </IfModule>
+
+# Protect PHP files from direct access
+<FilesMatch "\.php$">
+    # First check if the file is login.php or index.php
+    <If "%{REQUEST_URI} =~ m#/admin/(login\.php|index\.php)$#">
+        Order allow,deny
+        Allow from all
+    </If>
+    <Else>
+        # For all other PHP files, require a valid session
+        RewriteCond %{HTTP_COOKIE} !PHPSESSID [NC]
+        RewriteRule .* login.php [L,R=302]
+    </Else>
+</FilesMatch>
 
 # Error documents
 ErrorDocument 404 /admin/index.php

@@ -883,7 +883,7 @@ class CrudPage extends AdminPage {
      * @return array Prepared data
      */
     protected function prepareData($data) {
-        $prepared = [];
+        $attributes = [];
         
         // Process each field
         foreach ($this->fields as $field) {
@@ -900,27 +900,32 @@ class CrudPage extends AdminPage {
             // Process based on field type
             switch ($field['type']) {
                 case 'boolean':
-                    $prepared[$name] = (bool)$value;
+                    $attributes[$name] = (bool)$value;
                     break;
                 case 'number':
-                    $prepared[$name] = (float)$value;
+                    $attributes[$name] = (float)$value;
                     break;
                 case 'integer':
-                    $prepared[$name] = (int)$value;
+                    $attributes[$name] = (int)$value;
                     break;
                 case 'date':
                 case 'datetime':
-                    $prepared[$name] = $value;
+                    $attributes[$name] = $value;
                     break;
                 case 'array':
-                    $prepared[$name] = is_array($value) ? $value : explode(',', $value);
+                    $attributes[$name] = is_array($value) ? $value : explode(',', $value);
                     break;
                 default:
-                    $prepared[$name] = $value;
+                    $attributes[$name] = $value;
                     break;
             }
         }
         
-        return $prepared;
+        // Format data in the structure expected by the API
+        return [
+            'data' => [
+                'attributes' => $attributes
+            ]
+        ];
     }
 }

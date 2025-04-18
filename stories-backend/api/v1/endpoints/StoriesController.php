@@ -28,7 +28,20 @@ class StoriesController extends BaseController {
         // Get sort parameters
         $allowedSortFields = ['title', 'publishedAt', 'averageRating'];
         $sort = $this->getSortParams($allowedSortFields);
-        $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY published_at DESC";
+        // Map API sort fields to DB columns
+        $sortFieldMap = [
+            'title' => 'title',
+            'publishedAt' => 'published_at',
+            'averageRating' => 'average_rating'
+        ];
+        $sortField = $sort['field'] ?? 'publishedAt';
+        if (isset($sortFieldMap[$sortField])) {
+            $dbSortField = $sortFieldMap[$sortField];
+        } else {
+            $dbSortField = 'published_at';
+        }
+        $sortDirection = $sort['direction'] ?? 'DESC';
+        $sortClause = "ORDER BY $dbSortField $sortDirection";
         
         // Get filter parameters
         $allowedFilterFields = ['title', 'slug', 'featured', 'ageGroup', 'isSponsored'];

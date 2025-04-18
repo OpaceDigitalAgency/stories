@@ -107,6 +107,38 @@ class AdminPage {
         
         // Store user in data
         $this->data['user'] = $user;
+        
+        // Ensure token consistency between session and cookie
+        $this->ensureTokenConsistency();
+    }
+    
+    /**
+     * Ensure token consistency between session and cookie
+     */
+    protected function ensureTokenConsistency() {
+        // Check if we have a token in session
+        $sessionToken = isset($_SESSION['token']) ? $_SESSION['token'] : null;
+        
+        // Check if we have a token in cookie
+        $cookieToken = isset($_COOKIE['auth_token']) ? $_COOKIE['auth_token'] : null;
+        
+        // If we have a token in session but not in cookie, set the cookie
+        if ($sessionToken && !$cookieToken) {
+            setcookie('auth_token', $sessionToken, time() + $this->config['security']['token_expiry'], '/', '', false, true);
+            error_log("AdminPage: Set cookie token from session token");
+        }
+        
+        // If we have a token in cookie but not in session, set the session
+        if ($cookieToken && !$sessionToken) {
+            $_SESSION['token'] = $cookieToken;
+            error_log("AdminPage: Set session token from cookie token");
+        }
+        
+        // If we have both tokens but they don't match, refresh the token
+        if ($sessionToken && $cookieToken && $sessionToken !== $cookieToken) {
+            error_log("AdminPage: Token mismatch between session and cookie, refreshing token");
+            Auth::refreshToken($_SESSION['user'], true);
+        }
     }
     
     /**

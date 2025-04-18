@@ -190,6 +190,7 @@ $router = new \StoriesAPI\Core\Router($config);
 $router->post('auth/login', '\StoriesAPI\Endpoints\AuthController', 'login');
 $router->post('auth/register', '\StoriesAPI\Endpoints\AuthController', 'register');
 $router->get('auth/me', '\StoriesAPI\Endpoints\AuthController', 'me', [new \StoriesAPI\Middleware\AuthMiddleware()]);
+$router->post('auth/refresh', '\StoriesAPI\Endpoints\AuthController', 'refresh');
 
 // Stories routes
 $router->get('stories', '\StoriesAPI\Endpoints\StoriesController', 'index');

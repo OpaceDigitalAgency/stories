@@ -1,161 +1,84 @@
-# Login System Fix Documentation
+# Authentication Fix Documentation
 
-## Issues
+## Overview
 
-1. The main login page (`admin/login.php`) was returning "Invalid credentials" while `direct_login.php` was working.
-2. After fixing the authentication issue, the login page had Content Security Policy (CSP) errors preventing resources from loading.
-3. PHP errors were being output before the JSON response, causing "Unexpected token '<'" errors.
-4. The password hash in the database was a placeholder and didn't match any actual password.
+This document outlines the fixes implemented to resolve authentication issues in the Stories from the Web admin panel. The main problem was that CRUD operations (add, edit, delete) were failing with "API error: Authentication required (Status: 401)" errors.
 
-This document explains the root causes and the solutions implemented.
+## Issues Identified
 
-## Root Cause Analysis
+1. **Token Storage Inconsistency**
+   - Tokens were stored in cookies but not in session
+   - ApiClient was looking for tokens in session first, then falling back to instance token
+   - No mechanism to synchronize tokens between cookie and session
 
-The authentication flow in the main login page follows this path:
-```
-admin/login.php → Auth::login() → Auth::authenticate()
-```
+2. **Missing Token Refresh Mechanism**
+   - When tokens expired, users were forced to log in again
+   - No automatic token refresh when 401 errors were encountered
+   - Token expiration handling was limited to clearing the token
 
-The `authenticate()` method performs these checks:
-1. Queries the users table for a user with the given email and active=1
-2. Verifies the password using `password_verify()`
-3. Checks if the user's role is admin or editor
+3. **Session Management Issues**
+   - Session was started in multiple places, potentially causing inconsistencies
+   - User data was stored in session, but token was only in cookie
 
-The issue was that:
-- Either the users table was empty (no admin user existed)
-- Or an admin user existed but with a plaintext password instead of a proper bcrypt hash
+## Implemented Fixes
 
-The `direct_login.php` file worked because it bypassed the password verification step by directly setting the user in the session after finding them in the database.
+### 1. Token Storage Consistency
 
-## Solutions Implemented
+- Updated `Auth::login()` to store token in both session and cookie
+- Added token consistency checks in `AdminPage::checkAuth()`
+- Modified `ApiClient::request()` to check for tokens in session, cookie, and instance, in that order
+- Added automatic session token update when using cookie token
 
-We implemented the following solutions:
+### 2. Token Refresh Mechanism
 
-### Authentication Fix
+- Added `Auth::refreshToken()` method to generate a new token for a user
+- Added `ApiClient::refreshToken()` method to call the API refresh endpoint
+- Added automatic token refresh in ApiClient when 401 errors with "expired" message are encountered
+- Created a new API endpoint `auth/refresh` to handle token refresh requests
 
-1. Created a script (`create_admin.php`) to:
-   - Check if an admin user exists
-   - If it exists, update its password with a proper bcrypt hash
-   - If it doesn't exist, create a new admin user with a proper bcrypt hash
+### 3. Session Management Improvements
 
-2. Created a security script (`secure_system.php`) to:
-   - Remove the `direct_login.php` backdoor
-   - Create an `.htaccess` file to protect the `admin/includes/` directory
-   - Ensure the logs directory exists with proper permissions
+- Added `AdminPage::ensureTokenConsistency()` to synchronize tokens between session and cookie
+- Improved token handling in `Auth::logout()` to clear both session and cookie tokens
+- Enhanced error reporting for authentication issues
 
-### Content Security Policy Fix
+## How It Works
 
-1. Updated the Content Security Policy in `admin/.htaccess` to allow:
-   - External stylesheets from CDNs (Bootstrap, Font Awesome)
-   - External scripts from CDNs (jQuery, Bootstrap)
-   - External fonts from CDNs (Font Awesome)
-   - This resolved the CSP violations that were preventing resources from loading
+1. **Login Process**
+   - User logs in via login.php
+   - Auth::login() authenticates the user and generates a JWT token
+   - Token is stored in both $_SESSION['token'] and a cookie named 'auth_token'
+   - User data is stored in $_SESSION['user']
 
-### PHP Error Output Fix
+2. **Request Authentication**
+   - ApiClient checks for token in session, cookie, and instance
+   - Token is included in the Authorization header for API requests
+   - If token is found in cookie but not in session, it's automatically added to session
 
-1. Updated all core PHP files to prevent errors from being output:
-   - Added output buffering to all core files:
-     - login.php
-     - Auth.php
-     - Database.php
-     - Validator.php
-     - config.php
-   - Configured error reporting to log errors instead of displaying them
-   - Set proper error log path
-   - This resolved the "Unexpected token '<'" errors caused by PHP errors being output before JSON responses
+3. **Token Expiration Handling**
+   - When a 401 error with "expired" message is received, ApiClient attempts to refresh the token
+   - ApiClient calls the auth/refresh endpoint with the user ID
+   - If successful, the new token is stored in both session and cookie
+   - The original request is retried with the new token
+   - If refresh fails, user is prompted to log in again
 
-### JavaScript Form Interception Fix
+4. **Token Consistency**
+   - AdminPage checks token consistency on each page load
+   - If tokens in session and cookie don't match, token is refreshed
+   - If token is missing in either session or cookie, it's copied from the other
 
-1. Fixed the issue with JavaScript intercepting the login form:
-   - The admin.js script was intercepting the login form submission because it had the "needs-validation" class
-   - The script was trying to handle the form via AJAX and expected a JSON response
-   - Since login.php returns HTML, this caused the "Unexpected token '<'" error
-   - Removed the "needs-validation" class from the login form to prevent JavaScript interception
-   - This allows the form to submit normally and the PHP redirect to work properly
+## Testing
 
-### Local JavaScript Resources
+To verify the fix:
+1. Log in to the admin panel
+2. Navigate to any CRUD page (stories, authors, etc.)
+3. Perform CRUD operations (add, edit, delete)
+4. Leave the admin panel idle for a while (longer than token expiry)
+5. Try to perform CRUD operations again - they should work without requiring re-login
 
-1. Added local JavaScript resources to avoid CSP issues:
-   - Created placeholder files for jQuery and Bootstrap in the assets directory
-   - Updated login.php to use local resources instead of CDN links
-   - This ensures that the login page loads properly even with strict Content Security Policy settings
+## Future Improvements
 
-### Simplified Login Page
-
-1. Created a simplified login page that doesn't rely on external resources:
-   - Created simple_login.php with inline CSS styles
-   - Removed all external JavaScript and CSS dependencies
-   - This provides a reliable login experience even with strict Content Security Policy settings
-
-### Password Hash Fix
-
-1. Fixed the issue with the password hash in the database:
-   - The hash in the database.sql file was just a placeholder and didn't match any actual password
-   - Created update_admin_password.php script to generate a proper hash for "Pa55word!" and update the database
-   - Updated create_admin_user.sql to delete existing admin user and insert a new one with the correct hash
-   - Modified create_admin.php to use the same approach
-   - This ensures that the standard login flow works with the credentials:
-     - Email: admin@example.com
-     - Password: Pa55word!
-
-## Login Credentials
-
-After running the fix, you can log in with:
-- Email: admin@example.com
-- Password: Pa55word!
-
-## Security Recommendations
-
-1. Delete the following files after use:
-   - `create_admin.php`
-   - `create_admin_user.sql`
-   - `secure_system.php`
-   - `direct_login.php` (should be removed by the secure_system.php script)
-
-2. Change the admin password after the first login to something unique and secure.
-
-3. Regularly review user accounts and ensure proper password hashing is used for all accounts.
-
-## Technical Details
-
-### Password Hashing
-
-The system uses PHP's `password_hash()` and `password_verify()` functions for secure password management. The hash used in the fix was generated with:
-
-```php
-password_hash('Pa55word!', PASSWORD_DEFAULT)
-```
-
-This produces a bcrypt hash that looks like:
-```
-$2y$10$8AobgFUdBaUKoeBkFxfRgeIod6CVuToAfM0c/niIXv3LhyCd9cCIu
-```
-
-### Authentication Flow
-
-The proper authentication flow is:
-1. User submits email and password
-2. System retrieves user by email
-3. System verifies password hash
-4. System checks user role
-5. If all checks pass, user is logged in and session is created
-
-### Database Schema
-
-The users table has the following structure:
-```sql
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('user', 'author', 'editor', 'admin') NOT NULL DEFAULT 'user',
-    active TINYINT(1) NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-## Conclusion
-
-This fix ensures that the main login system works correctly by providing a properly hashed password for the admin user. It also improves security by removing the backdoor login method and protecting sensitive directories.
+1. Implement a more sophisticated token refresh mechanism with refresh tokens
+2. Add automatic token refresh before expiration (e.g., refresh when token is 80% through its lifetime)
+3. Improve error handling for network issues during token refresh
+4. Add more detailed logging for authentication issues

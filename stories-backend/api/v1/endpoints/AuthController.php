@@ -238,4 +238,45 @@ class AuthController extends BaseController {
             $this->serverError('Failed to update profile');
         }
     }
+    
+    /**
+     * Refresh a user's authentication token
+     */
+    public function refresh() {
+        // Validate required fields
+        if (!Validator::required($this->request, ['user_id'])) {
+            $this->badRequest('User ID is required', Validator::getErrors());
+            return;
+        }
+        
+        // Get user ID
+        $userId = (int)$this->request['user_id'];
+        
+        try {
+            // Get user by ID
+            $query = "SELECT id, name, email, role FROM users WHERE id = ? AND active = 1 LIMIT 1";
+            $stmt = $this->db->query($query, [$userId]);
+            
+            if ($stmt->rowCount() === 0) {
+                $this->unauthorized('Invalid user ID');
+                return;
+            }
+            
+            $user = $stmt->fetch();
+            
+            // Generate new JWT token
+            $token = Auth::generateToken([
+                'user_id' => $user['id'],
+                'role' => $user['role']
+            ]);
+            
+            // Return new token
+            Response::sendSuccess([
+                'token' => $token,
+                'expires_in' => $this->config['security']['token_expiry']
+            ]);
+        } catch (\Exception $e) {
+            $this->serverError('Failed to refresh token');
+        }
+    }
 }

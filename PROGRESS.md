@@ -400,3 +400,13 @@
   - Added comprehensive logging for all CRUD operations to facilitate debugging
   - Improved request/response tracking for easier troubleshooting
 - This resolves the issue where users couldn't add new content, edit existing content, or delete content from the admin panel
+## 2025-04-18
+### Fixed: Authentication Issues in Admin Panel
+- Fixed authentication issues that were preventing CRUD operations from working:
+  - Implemented consistent JWT token storage in both session and cookie
+  - Created an automatic token refresh mechanism that activates when tokens expire
+  - Enhanced session management with token consistency checks
+  - Added proper error handling for authentication failures
+  - Created a new API endpoint for token refresh
+- This resolves the "API error: Authentication required (Status: 401)" errors that were occurring during add, edit, and delete operations
+- All CRUD operations now work properly across the admin panel

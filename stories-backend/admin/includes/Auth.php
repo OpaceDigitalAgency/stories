@@ -215,6 +215,9 @@ class Auth {
             'role' => $user['role']
         ]);
         
+        // Store token in both session and cookie for consistency
+        $_SESSION['token'] = $token;
+        
         // Set token in cookie
         $cookieExpiry = $remember ? time() + self::$tokenExpiry : 0;
         setcookie('auth_token', $token, $cookieExpiry, '/', '', false, true);
@@ -228,9 +231,38 @@ class Auth {
     public static function logout() {
         // Clear session
         unset($_SESSION['user']);
+        unset($_SESSION['token']);
         
         // Clear cookie
         setcookie('auth_token', '', time() - 3600, '/', '', false, true);
+    }
+    
+    /**
+     * Refresh the authentication token
+     *
+     * @param array $user User data
+     * @param bool $remember Whether to remember the user
+     * @return string|bool New token if successful, false otherwise
+     */
+    public static function refreshToken($user, $remember = false) {
+        if (!$user || !isset($user['id'])) {
+            return false;
+        }
+        
+        // Generate new JWT token
+        $token = self::generateToken([
+            'user_id' => $user['id'],
+            'role' => $user['role']
+        ]);
+        
+        // Store token in session
+        $_SESSION['token'] = $token;
+        
+        // Set token in cookie
+        $cookieExpiry = $remember ? time() + self::$tokenExpiry : 0;
+        setcookie('auth_token', $token, $cookieExpiry, '/', '', false, true);
+        
+        return $token;
     }
     
     /**

@@ -100,10 +100,15 @@ class StoriesController extends BaseController {
                 
                 // Get tags
                 $tagsQuery = "SELECT t.id, t.name FROM tags t
-                    JOIN story_tags st ON t.id = st.tag_id
+                    LEFT JOIN story_tags st ON t.id = st.tag_id
                     WHERE st.story_id = ?";
-                $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
-                $tags = $tagsStmt->fetchAll();
+                try {
+                    $tagsStmt = $this->db->query($tagsQuery, [$storyId]);
+                    $tags = $tagsStmt->fetchAll();
+                } catch (\Exception $e) {
+                    error_log('Tags subquery error for story ' . $storyId . ': ' . $e->getMessage());
+                    $tags = [];
+                }
                 
                 // Format tags
                 $formattedTags = [];

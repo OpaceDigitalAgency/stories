@@ -46,8 +46,19 @@ function logTest($message, $data = null) {
     echo "</pre>";
 }
 
-// Initialize API client
-$apiClient = new ApiClient(API_URL, $_SESSION['token'] ?? null);
+// Initialize API client with token
+$token = $_SESSION['token'] ?? null;
+if (!$token) {
+    // Try to get token from cookie
+    $token = $_COOKIE['auth_token'] ?? null;
+    if ($token) {
+        $_SESSION['token'] = $token;
+        error_log("Restored token from cookie to session");
+    }
+}
+
+error_log("Using token: " . ($token ? "Present" : "Missing"));
+$apiClient = new ApiClient(API_URL, $token);
 
 // Test endpoint (using tags as it's a simple resource)
 $testEndpoint = 'tags';

@@ -72,7 +72,13 @@ class StoriesController extends BaseController {
                 LIMIT $offset, $pageSize";
             
             $stmt = $this->db->query($query, $params);
-            $stories = $stmt->fetchAll();
+            try {
+                $stories = $stmt->fetchAll();
+            } catch (\Exception $e) {
+                error_log('Main stories query error: ' . $e->getMessage());
+                $this->serverError('Failed to fetch stories (main query): ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                return;
+            }
             
             // Format stories with a simplified structure to avoid JSON encoding issues
             $formattedStories = [];

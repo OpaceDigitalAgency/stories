@@ -94,8 +94,12 @@ $testEndpoint = 'tags';
             <h2>3. POST Request Test</h2>
             <?php
             $testData = [
-                'name' => 'Test Tag ' . time(),
-                'slug' => 'test-tag-' . time()
+                'data' => [
+                    'attributes' => [
+                        'name' => 'Test Tag ' . time(),
+                        'slug' => 'test-tag-' . time()
+                    ]
+                ]
             ];
             $postResponse = $apiClient->post($testEndpoint, $testData);
             logTest("POST /$testEndpoint Request Data", $testData);
@@ -111,8 +115,12 @@ $testEndpoint = 'tags';
                 <h2>4. PUT Request Test</h2>
                 <?php
                 $updateData = [
-                    'name' => 'Updated Test Tag ' . time(),
-                    'slug' => 'updated-test-tag-' . time()
+                    'data' => [
+                        'attributes' => [
+                            'name' => 'Updated Test Tag ' . time(),
+                            'slug' => 'updated-test-tag-' . time()
+                        ]
+                    ]
                 ];
                 $putResponse = $apiClient->put("$testEndpoint/$createdId", $updateData);
                 logTest("PUT /$testEndpoint/$createdId Request Data", $updateData);

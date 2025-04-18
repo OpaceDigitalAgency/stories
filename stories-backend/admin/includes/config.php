@@ -70,6 +70,13 @@ $config['security'] = [
     'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
 ];
 
+// API configuration
+$config['api'] = [
+    'url' => API_URL,
+    'page_size' => 25,
+    'max_page_size' => 100
+];
+
 // Media configuration
 $config['media'] = [
     'upload_dir'   => BASE_PATH . '/uploads/',

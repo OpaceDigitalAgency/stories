@@ -30,6 +30,32 @@ class Auth {
     public static function init($config) {
         self::$jwtSecret = $config['jwt_secret'];
         self::$tokenExpiry = $config['token_expiry'];
+        
+        // Initialize CSRF token if not exists
+        if (!isset($_SESSION['csrf_token'])) {
+            self::regenerateCsrfToken();
+        }
+    }
+    
+    /**
+     * Generate a new CSRF token
+     *
+     * @return string The generated token
+     */
+    public static function regenerateCsrfToken() {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $token;
+        return $token;
+    }
+    
+    /**
+     * Validate CSRF token
+     *
+     * @param string $token Token to validate
+     * @return bool True if token is valid
+     */
+    public static function validateCsrfToken($token) {
+        return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
     }
     
     /**
@@ -222,6 +248,9 @@ class Auth {
         $cookieExpiry = $remember ? time() + self::$tokenExpiry : 0;
         setcookie('auth_token', $token, $cookieExpiry, '/', '', false, true);
         
+        // Generate new CSRF token on login
+        self::regenerateCsrfToken();
+        
         return $user;
     }
     
@@ -232,6 +261,7 @@ class Auth {
         // Clear session
         unset($_SESSION['user']);
         unset($_SESSION['token']);
+        unset($_SESSION['csrf_token']);
         
         // Clear cookie
         setcookie('auth_token', '', time() - 3600, '/', '', false, true);

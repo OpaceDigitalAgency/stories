@@ -883,18 +883,28 @@ function ajaxRequest(url, method, data, successCallback, errorCallback) {
     
     // Configure it
     xhr.open(method, url, true);
+    
+    // Add common headers
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
     
-    // Set Content-Type header based on data type
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+    }
+    
+    // Handle data based on type and method
     if (data instanceof FormData) {
-        // Don't set Content-Type for FormData, browser will set it with boundary
+        // For FormData, add method override for PUT/DELETE
+        if (method === 'PUT' || method === 'DELETE') {
+            data.append('_method', method);
+            // Actually send as POST to handle FormData properly
+            xhr.open('POST', url, true);
+        }
         console.log('[AJAX] Sending FormData:', Array.from(data.entries()));
-        
-        // Add a debug field to FormData to help track requests
-        data.append('_debug', 'true');
     } else if (data !== null && typeof data === 'object') {
         xhr.setRequestHeader('Content-Type', 'application/json');
-        // Convert data to JSON string
+        // For PUT/DELETE with JSON, send normally
         data = JSON.stringify(data);
         console.log('[AJAX] Sending JSON data:', data);
     } else {

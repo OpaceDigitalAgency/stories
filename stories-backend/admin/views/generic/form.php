@@ -13,6 +13,7 @@
     <div class="card">
         <div class="card-body">
             <form action="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=' . ($item && isset($item['id']) ? 'edit&id=' . $item['id'] : 'create'); ?>" method="post" enctype="multipart/form-data" class="needs-validation form-loading" novalidate id="<?php echo $activeMenu; ?>-form">
+                <input type="hidden" name="_csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <?php foreach ($fields as $field): ?>
                     <?php if ($field['form'] ?? true): ?>
                         <div class="mb-3">

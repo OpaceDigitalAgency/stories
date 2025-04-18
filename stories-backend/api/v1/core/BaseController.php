@@ -60,29 +60,66 @@ class BaseController {
      * Parse the request data
      */
     protected function parseRequest() {
-        // Get request method
+        // Get request method, checking for method override
         $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST' && isset($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
+        }
+        
+        // Validate CSRF token for non-GET requests
+        if ($method !== 'GET') {
+            $csrfToken = isset($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : null;
+            if (!$csrfToken) {
+                // Check form data for token if not in header
+                $csrfToken = isset($_POST['_csrf_token']) ? $_POST['_csrf_token'] : null;
+            }
+            
+            if (!$csrfToken || !Auth::validateCsrfToken($csrfToken)) {
+                $this->forbidden('Invalid CSRF token');
+                exit;
+            }
+        }
         
         // Parse query parameters
         $this->query = $_GET;
         
-        // Parse request body for POST, PUT, PATCH
+        // Parse request body
         $this->request = [];
-        if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
-            
-            if (strpos($contentType, 'application/json') !== false) {
-                // Parse JSON request body
-                $input = file_get_contents('php://input');
-                $this->request = json_decode($input, true) ?? [];
-            } else {
-                // Parse form data
-                $this->request = $_POST;
+        $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
+        
+        // Handle different content types
+        if (strpos($contentType, 'application/json') !== false) {
+            // Parse JSON request body
+            $input = file_get_contents('php://input');
+            $this->request = json_decode($input, true) ?? [];
+        } else if (strpos($contentType, 'multipart/form-data') !== false) {
+            // Handle multipart form data (including files)
+            $this->request = $_POST;
+            if (!empty($_FILES)) {
+                foreach ($_FILES as $key => $file) {
+                    $this->request[$key] = $file;
+                }
             }
+        } else if ($method !== 'GET') {
+            // For other content types, try to parse POST data
+            $this->request = $_POST;
         }
         
-        // Get authenticated user if available
-        $this->user = isset($_REQUEST['user']) ? $_REQUEST['user'] : null;
+        // Remove method override and CSRF token from request data if present
+        if (isset($this->request['_method'])) {
+            unset($this->request['_method']);
+        }
+        if (isset($this->request['_csrf_token'])) {
+            unset($this->request['_csrf_token']);
+        }
+        
+        // Get authenticated user from Authorization header
+        $authHeader = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+        if (strpos($authHeader, 'Bearer ') === 0) {
+            $token = substr($authHeader, 7);
+            // Validate token and get user
+            $this->user = Auth::validateToken($token);
+        }
     }
     
     /**
@@ -254,7 +291,25 @@ class BaseController {
      * @param array $params URL parameters
      */
     public function setParams($params) {
-        error_log("BaseController::setParams received: " . print_r($params, true)); // DEBUG LOG
         $this->params = $params;
+    }
+    
+    /**
+     * Validate authentication token
+     *
+     * @param string $token JWT token
+     * @return array|null User data if valid, null if invalid
+     */
+    protected function validateToken($token) {
+        try {
+            // Implement your token validation logic here
+            // For example, using JWT:
+            $key = $this->config['jwt']['secret'];
+            $decoded = \Firebase\JWT\JWT::decode($token, $key, array('HS256'));
+            return (array)$decoded->data;
+        } catch (\Exception $e) {
+            error_log("Token validation failed: " . $e->getMessage());
+            return null;
+        }
     }
 }

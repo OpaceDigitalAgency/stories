@@ -1,57 +1,41 @@
 <?php
-/**
- * Authentication Middleware
- * 
- * This middleware handles authentication for protected API endpoints.
- * 
- * @package Stories API
- * @version 1.0.0
- */
-
 namespace StoriesAPI\Middleware;
 
-use StoriesAPI\Core\Auth;
 use StoriesAPI\Utils\Response;
+use StoriesAPI\Core\Auth;
 
 class AuthMiddleware {
-    /**
-     * @var array Required roles for the endpoint
-     */
-    private $requiredRoles;
+    private $config;
     
-    /**
-     * Constructor
-     * 
-     * @param string|array $roles Required roles for the endpoint
-     */
-    public function __construct($roles = null) {
-        $this->requiredRoles = $roles;
+    public function __construct($config) {
+        $this->config = $config;
     }
     
-    /**
-     * Handle the authentication
-     * 
-     * @return bool True if the request should continue, false if it should stop
-     */
     public function handle() {
-        // Get the current user
-        $user = Auth::getCurrentUser();
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         
-        // If no user is authenticated, return 401 Unauthorized
-        if (!$user) {
+        if (!$authHeader || !preg_match('/^Bearer\s+(.+)$/i', $authHeader, $matches)) {
+            error_log("AuthMiddleware: No valid Authorization header found");
             Response::sendError('Unauthorized. Please log in to access this resource.', 401);
             return false;
         }
         
-        // If roles are required, check if the user has the required role
-        if ($this->requiredRoles !== null && !Auth::hasRole($user, $this->requiredRoles)) {
-            Response::sendError('Forbidden. You do not have permission to access this resource.', 403);
+        $token = $matches[1];
+        Auth::init($this->config['security']);
+        
+        $payload = Auth::validateToken($token);
+        if (!$payload) {
+            error_log("AuthMiddleware: Invalid token");
+            Response::sendError('Invalid or expired token. Please log in again.', 401);
             return false;
         }
         
-        // Set the user in the request for later use
-        $_REQUEST['user'] = $user;
+        $_REQUEST['user'] = [
+            'id' => $payload['user_id'],
+            'role' => $payload['role']
+        ];
         
+        error_log("AuthMiddleware: Token validated for user {$payload['user_id']}");
         return true;
     }
 }

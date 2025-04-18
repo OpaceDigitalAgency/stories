@@ -89,6 +89,7 @@ class GamesController extends BaseController {
                     'id' => $gameId,
                     'attributes' => [
                         'title' => $game['title'],
+                        'slug' => $game['title'], // Use title as slug since there's no slug column
                         'description' => $game['description'],
                         'url' => $game['url'],
                         'category' => $game['category'],
@@ -121,15 +122,36 @@ class GamesController extends BaseController {
             $column = 'g.id';
             $value  = (int)$identifier;
         } else {
-            $column = 'g.title'; // Use title as the string identifier since there's no slug column
-            $value  = Validator::sanitizeString($identifier);
+            // Try to use slug if it exists, otherwise fall back to title
+            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
+            $checkStmt = $this->db->query($checkSlugQuery);
+            
+            if ($checkStmt->rowCount() > 0) {
+                $column = 'g.slug';
+            } else {
+                $column = 'g.title';
+            }
+            
+            $value = Validator::sanitizeString($identifier);
         }
 
         try {
+            // Check if slug column exists
+            $hasSlugColumn = false;
+            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
+            $checkStmt = $this->db->query($checkSlugQuery);
+            if ($checkStmt->rowCount() > 0) {
+                $hasSlugColumn = true;
+            }
+            
             // Get Game by identifier
+            $selectColumns = $hasSlugColumn ? 
+                "g.id, g.title, g.slug, g.description, g.url, g.category," :
+                "g.id, g.title, g.description, g.url, g.category,";
+                
             $query = "
                 SELECT
-                    g.id, g.title, g.description, g.url, g.category,
+                    $selectColumns
                     g.created_at as createdAt, g.updated_at as updatedAt
                 FROM games g
                 WHERE $column = ?
@@ -185,7 +207,7 @@ class GamesController extends BaseController {
             'id' => $gameId,
             'attributes' => [
                 'title' => $game['title'],
-                'slug' => $game['title'], // Use title as slug since there's no slug column
+                'slug' => isset($game['slug']) ? $game['slug'] : $game['title'], // Use slug if it exists, otherwise use title
                 'description' => $game['description'],
                 'url' => $game['url'],
                 'category' => $game['category'],
@@ -222,25 +244,64 @@ class GamesController extends BaseController {
         $title = Validator::sanitizeString($this->request['title']);
         $url = Validator::sanitizeString($this->request['url']);
         $description = isset($this->request['description']) ? Validator::sanitizeString($this->request['description']) : '';
-        $category = isset($this->request['category']) ? Validator::sanitizeString($this->request['category']) : 'Educational';
+        $category = isset($this->request['category']) ? Validator::sanitizeString($this->request['category']) : 'General';
         
         try {
+            // Check if slug column exists
+            $hasSlugColumn = false;
+            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
+            $checkStmt = $this->db->query($checkSlugQuery);
+            if ($checkStmt->rowCount() > 0) {
+                $hasSlugColumn = true;
+            }
+            
+            // Generate slug from title if slug column exists
+            $slug = null;
+            if ($hasSlugColumn) {
+                $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $title), '-'));
+                
+                // Check if slug already exists
+                $stmt = $this->db->prepare("SELECT id FROM games WHERE slug = ?");
+                $stmt->execute([$slug]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Append timestamp to make slug unique
+                    $slug .= '-' . time();
+                }
+            }
+            
             // Start transaction
             $this->db->beginTransaction();
             
             // Insert game
-            $query = "INSERT INTO games (
-                title, description, url, category, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)";
-            
-            $this->db->query($query, [
-                $title,
-                $description,
-                $url,
-                $category,
-                date('Y-m-d H:i:s'),
-                date('Y-m-d H:i:s')
-            ]);
+            if ($hasSlugColumn) {
+                $query = "INSERT INTO games (
+                    title, slug, description, url, category, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                
+                $this->db->query($query, [
+                    $title,
+                    $slug,
+                    $description,
+                    $url,
+                    $category,
+                    date('Y-m-d H:i:s'),
+                    date('Y-m-d H:i:s')
+                ]);
+            } else {
+                $query = "INSERT INTO games (
+                    title, description, url, category, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?)";
+                
+                $this->db->query($query, [
+                    $title,
+                    $description,
+                    $url,
+                    $category,
+                    date('Y-m-d H:i:s'),
+                    date('Y-m-d H:i:s')
+                ]);
+            }
             
             $gameId = $this->db->lastInsertId();
             
@@ -300,6 +361,14 @@ class GamesController extends BaseController {
             
             $game = $stmt->fetch();
             
+            // Check if slug column exists
+            $hasSlugColumn = false;
+            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
+            $checkStmt = $this->db->query($checkSlugQuery);
+            if ($checkStmt->rowCount() > 0) {
+                $hasSlugColumn = true;
+            }
+            
             // Build update query
             $updates = [];
             $params = [];
@@ -311,8 +380,26 @@ class GamesController extends BaseController {
                     return;
                 }
                 
+                $title = Validator::sanitizeString($this->request['title']);
                 $updates[] = "title = ?";
-                $params[] = Validator::sanitizeString($this->request['title']);
+                $params[] = $title;
+                
+                // Update slug if title is updated and slug column exists
+                if ($hasSlugColumn) {
+                    $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $title), '-'));
+                    
+                    // Check if slug already exists
+                    $stmt = $this->db->prepare("SELECT id FROM games WHERE slug = ? AND id != ?");
+                    $stmt->execute([$slug, $gameId]);
+                    
+                    if ($stmt->rowCount() > 0) {
+                        // Append ID to make slug unique
+                        $slug .= '-' . $gameId;
+                    }
+                    
+                    $updates[] = "slug = ?";
+                    $params[] = $slug;
+                }
             }
             
             if (isset($this->request['url'])) {

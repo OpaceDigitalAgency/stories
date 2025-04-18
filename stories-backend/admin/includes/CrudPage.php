@@ -226,6 +226,7 @@ class CrudPage extends AdminPage {
         }
         
         // Get items from API
+        error_log("CrudPage::getListData - Requesting {$this->endpoint} with params: " . json_encode($params));
         $response = $this->apiClient->get($this->endpoint, $params);
         
         if (!$response) {
@@ -234,7 +235,15 @@ class CrudPage extends AdminPage {
             $this->setError('Failed to fetch ' . $this->entityNamePlural . ($error ? ': ' . $error : ''));
             
             // Log detailed error for debugging
-            error_log('API list error: ' . json_encode($this->apiClient->getLastError()));
+            $lastError = $this->apiClient->getLastError();
+            error_log('API list error: ' . json_encode($lastError));
+            
+            // Add more detailed logging for 500 errors
+            if (isset($lastError['code']) && $lastError['code'] == 500) {
+                error_log('SERVER ERROR 500 when fetching ' . $this->endpoint . ': ' . json_encode($lastError, JSON_PRETTY_PRINT));
+            }
+        } else {
+            error_log("CrudPage::getListData - Successful response for {$this->endpoint}: " . substr(json_encode($response), 0, 200) . '...');
         }
         
         // Set data
@@ -318,12 +327,27 @@ class CrudPage extends AdminPage {
         }
         
         // Get item from API
+        error_log("CrudPage::getEditData - Requesting {$this->endpoint}/{$id}");
         $response = $this->apiClient->get($this->endpoint . '/' . $id);
         
         if (!$response) {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
-            $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
+            $lastError = $this->apiClient->getLastError();
+            
+            // Log detailed error information
+            error_log("CrudPage::getEditData - Error fetching {$this->endpoint}/{$id}: " . json_encode($lastError, JSON_PRETTY_PRINT));
+            
+            // Add more detailed error message
+            $errorMsg = 'Failed to fetch ' . $this->entityName;
+            if ($error) {
+                $errorMsg .= ': ' . $error;
+            }
+            if (isset($lastError['code'])) {
+                $errorMsg .= ' (Status code: ' . $lastError['code'] . ')';
+            }
+            
+            $this->setError($errorMsg);
             $this->redirect($this->activeMenu . '.php');
             return;
         }
@@ -379,13 +403,27 @@ class CrudPage extends AdminPage {
         }
         
         // Get item from API
+        error_log("CrudPage::getViewData - Requesting {$this->endpoint}/{$id}");
         $response = $this->apiClient->get($this->endpoint . '/' . $id);
         
         if (!$response) {
             // Get API error details
             $error = $this->apiClient->getFormattedError();
-            $this->setError('Failed to fetch ' . $this->entityName . ($error ? ': ' . $error : ''));
-            // Already correct, no change needed
+            $lastError = $this->apiClient->getLastError();
+            
+            // Log detailed error information
+            error_log("CrudPage::getViewData - Error fetching {$this->endpoint}/{$id}: " . json_encode($lastError, JSON_PRETTY_PRINT));
+            
+            // Add more detailed error message
+            $errorMsg = 'Failed to fetch ' . $this->entityName;
+            if ($error) {
+                $errorMsg .= ': ' . $error;
+            }
+            if (isset($lastError['code'])) {
+                $errorMsg .= ' (Status code: ' . $lastError['code'] . ')';
+            }
+            
+            $this->setError($errorMsg);
             $this->redirect($this->activeMenu . '.php');
             return;
         }

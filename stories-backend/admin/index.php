@@ -56,35 +56,42 @@ class DashboardPage extends AdminPage {
         
         // Function to safely get count from API response
         $getCountFromApi = function($endpoint, $params = ['pageSize' => 1]) use ($apiClient, &$apiErrors) {
+            $apiCount = null;
             try {
                 $response = $apiClient->get($endpoint, $params);
-                
                 if ($response) {
-                    // Check for different response formats
                     if (isset($response['meta']['pagination']['total'])) {
-                        return $response['meta']['pagination']['total'];
+                        $apiCount = $response['meta']['pagination']['total'];
                     } elseif (isset($response['meta']['total'])) {
-                        return $response['meta']['total'];
+                        $apiCount = $response['meta']['total'];
                     } elseif (isset($response['total'])) {
-                        return $response['total'];
+                        $apiCount = $response['total'];
                     } elseif (isset($response['data']) && is_array($response['data'])) {
                         // If we have data but no count, return the count of data items
-                        return count($response['data']);
+                        $apiCount = count($response['data']);
                     }
                 }
-                
-                // Store error information for debugging
-                $error = $apiClient->getLastError();
-                if ($error) {
-                    $apiErrors[$endpoint] = $apiClient->getFormattedError();
-                } else {
-                    $apiErrors[$endpoint] = "Unknown error or unexpected response format";
+
+                if ($apiCount === null) {
+                    // Store error information for debugging if API count couldn't be determined
+                    $error = $apiClient->getLastError();
+                    if ($error) {
+                        $apiErrors[$endpoint] = $apiClient->getFormattedError();
+                    } else {
+                        $apiErrors[$endpoint] = "Unknown error or unexpected response format";
+                    }
                 }
+
             } catch (Exception $apiEx) {
                 $apiErrors[$endpoint] = "API Exception: " . $apiEx->getMessage();
             }
-            
-            // Fallback to direct database count if API fails
+
+            // If API count was obtained, return it, unless it's 0 and we suspect an issue for authors/tags
+            if ($apiCount !== null && ($apiCount > 0 || ($endpoint !== 'authors' && $endpoint !== 'tags'))) {
+                 return $apiCount;
+            }
+
+            // Fallback to direct database count if API fails or returns 0 for authors/tags
             try {
                 $db = Database::getInstance($this->config['db']);
                 $tableName = str_replace('-', '_', $endpoint);
@@ -96,7 +103,7 @@ class DashboardPage extends AdminPage {
                 } elseif ($tableName == 'directory_items') {
                     $tableName = 'directory';
                 }
-                
+
                 $query = "SELECT COUNT(*) as count FROM {$tableName}";
                 $stmt = $db->query($query);
                 $result = $stmt->fetch();
@@ -163,11 +170,15 @@ class DashboardPage extends AdminPage {
                         elseif (is_numeric($item['attributes']['author'])) {
                             $authorId = $item['attributes']['author'];
                             $authorResponse = $apiClient->get("authors/$authorId");
-                            if ($authorResponse && isset($authorResponse['data'])) {
-                                $item['attributes']['author'] = [
-                                    'data' => $authorResponse['data']
-                                ];
+                            if ($authorResponse && isset($authorResponse['data']['attributes']['name'])) {
+                                $item['attributes']['author_name'] = $authorResponse['data']['attributes']['name'];
+                            } else {
+                                $item['attributes']['author_name'] = 'Unknown Author'; // Default if author not found or name missing
                             }
+                        } elseif (isset($item['attributes']['author']['data']['attributes']['name'])) {
+                             $item['attributes']['author_name'] = $item['attributes']['author']['data']['attributes']['name'];
+                        } else {
+                            $item['attributes']['author_name'] = 'No author'; // Default if author data is missing or not in expected format
                         }
                     }
                     

@@ -3,12 +3,17 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
 
-    # Clean out the target directory
+    # Clean out the target directory (preserving .well-known)
     - /bin/rm -rf $DEPLOYPATH/* || true
     - find $DEPLOYPATH -mindepth 1 -maxdepth 1 -name ".*" ! -name "." ! -name ".." ! -name ".well-known" -exec /bin/rm -rf {} \; || true
 
-    # Create core directories with proper case
+    # Create necessary directories with proper case
     - /bin/mkdir -p $DEPLOYPATH/api/v1/Core
+    - /bin/mkdir -p $DEPLOYPATH/api/v1/Endpoints
+    - /bin/mkdir -p $DEPLOYPATH/api/v1/middleware
+    - /bin/mkdir -p $DEPLOYPATH/api/v1/Utils
+    - /bin/mkdir -p $DEPLOYPATH/api/v1/config
+    - /bin/mkdir -p $DEPLOYPATH/admin
     
     # Copy core files with proper case
     - /bin/cp stories-backend/api/v1/Core/Auth.php $DEPLOYPATH/api/v1/Core/
@@ -17,14 +22,40 @@ deployment:
     - /bin/cp stories-backend/api/v1/Core/BaseController.php $DEPLOYPATH/api/v1/Core/
     - /bin/cp stories-backend/api/v1/Core/Database.php $DEPLOYPATH/api/v1/Core/
     
-    # Copy remaining files/folders
-    - /bin/cp -R stories-backend/api/v1/config $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/Endpoints $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/middleware $DEPLOYPATH/api/v1/
-    - /bin/cp -R stories-backend/api/v1/Utils $DEPLOYPATH/api/v1/
+    # Copy API structure
+    - /bin/cp -R stories-backend/api/v1/config/* $DEPLOYPATH/api/v1/config/
+    - /bin/cp -R stories-backend/api/v1/Endpoints/* $DEPLOYPATH/api/v1/Endpoints/
+    - /bin/cp -R stories-backend/api/v1/middleware/* $DEPLOYPATH/api/v1/middleware/
+    - /bin/cp -R stories-backend/api/v1/Utils/* $DEPLOYPATH/api/v1/Utils/
     
-    # Copy API root files
+    # Copy API root files and .htaccess
     - /bin/cp stories-backend/api/*.php $DEPLOYPATH/api/
+    - /bin/cp stories-backend/api/.htaccess $DEPLOYPATH/api/
 
-    # Copy dotfiles from stories-backend (e.g. .htaccess), excluding .git
-    - find stories-backend -maxdepth 1 -name ".*" ! -name "." ! -name ".." ! -name ".git" -exec /bin/cp -R {} $DEPLOYPATH \;
+    # Copy admin section
+    - /bin/cp -R stories-backend/admin/* $DEPLOYPATH/admin/
+    - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
+    
+    # Copy root level files
+    - /bin/cp stories-backend/check_auth_status.php $DEPLOYPATH
+    - /bin/cp stories-backend/direct_login.php $DEPLOYPATH
+    - /bin/cp stories-backend/go_to_dashboard.php $DEPLOYPATH
+    - /bin/cp stories-backend/logout.php $DEPLOYPATH
+    - /bin/cp stories-backend/.htaccess $DEPLOYPATH
+    - /bin/cp stories-backend/database.sql $DEPLOYPATH
+    - /bin/cp stories-backend/README.md $DEPLOYPATH
+
+    # Set proper permissions
+    - /bin/chmod 755 $DEPLOYPATH/api/v1/Core
+    - /bin/chmod 644 $DEPLOYPATH/api/v1/Core/*.php
+    - /bin/chmod 755 $DEPLOYPATH/api/v1/Endpoints
+    - /bin/chmod 644 $DEPLOYPATH/api/v1/Endpoints/*.php
+    - /bin/chmod 755 $DEPLOYPATH/api/v1/middleware
+    - /bin/chmod 644 $DEPLOYPATH/api/v1/middleware/*.php
+    - /bin/chmod 755 $DEPLOYPATH/api/v1/Utils
+    - /bin/chmod 644 $DEPLOYPATH/api/v1/Utils/*.php
+    - /bin/chmod 755 $DEPLOYPATH/api/v1/config
+    - /bin/chmod 644 $DEPLOYPATH/api/v1/config/*.php
+    - /bin/chmod 644 $DEPLOYPATH/api/*.php
+    - /bin/chmod 644 $DEPLOYPATH/api/.htaccess
+    - /bin/chmod 644 $DEPLOYPATH/.htaccess

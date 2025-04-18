@@ -136,7 +136,8 @@ class StoriesController extends BaseController {
             // Send paginated response
             Response::sendPaginated($formattedStories, $page, $pageSize, $total);
         } catch (\Exception $e) {
-            $this->serverError('Failed to fetch stories: ' . $e->getMessage());
+            error_log('StoriesController index() error: ' . $e->getMessage());
+            $this->serverError('Failed to fetch stories: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
     }
     

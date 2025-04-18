@@ -99,6 +99,76 @@ spl_autoload_register(function($class) {
   error_log("Autoloader: Could not find file for class $class");
 });
 
+/**
+ * Case-insensitive file loader
+ *
+ * This function attempts to load a file regardless of case sensitivity.
+ * It will try the exact path first, then try to find the file with case-insensitive matching.
+ *
+ * @param string $basePath The base directory path
+ * @param string $relativePath The relative path to the file
+ * @param bool $requireFile Whether to require the file or just return the path
+ * @return string|bool The file path if found, false otherwise
+ */
+function loadFileInsensitive($basePath, $relativePath, $requireFile = true) {
+    // Try the exact path first
+    $exactPath = $basePath . '/' . $relativePath;
+    if (file_exists($exactPath)) {
+        if ($requireFile) {
+            require_once $exactPath;
+        }
+        return $exactPath;
+    }
+    
+    // Split the relative path into parts
+    $parts = explode('/', $relativePath);
+    $currentPath = $basePath;
+    
+    // Traverse the path parts
+    foreach ($parts as $i => $part) {
+        // If this is the last part (the file itself)
+        if ($i === count($parts) - 1) {
+            $fileName = $part;
+            $dirContents = scandir($currentPath);
+            
+            foreach ($dirContents as $item) {
+                if (strtolower($item) === strtolower($fileName)) {
+                    $filePath = $currentPath . '/' . $item;
+                    if ($requireFile) {
+                        require_once $filePath;
+                    }
+                    return $filePath;
+                }
+            }
+            
+            // File not found
+            error_log("File not found: $relativePath in $basePath");
+            return false;
+        } else {
+            // This is a directory part
+            $dirContents = scandir($currentPath);
+            $found = false;
+            
+            foreach ($dirContents as $item) {
+                if (is_dir($currentPath . '/' . $item) && strtolower($item) === strtolower($part)) {
+                    $currentPath .= '/' . $item;
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                // Directory not found
+                error_log("Directory not found: $part in $currentPath");
+                return false;
+            }
+        }
+    }
+    
+    // Should not reach here
+    return false;
+}
+
 // Load configuration
 $config = require __DIR__ . '/v1/config/config.php';
 
@@ -108,43 +178,8 @@ $config = require __DIR__ . '/v1/config/config.php';
 // Set debug mode for Response class
 \StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;
 
-// Try to include Router class with case-insensitive approach
-$routerPath = __DIR__ . '/v1/Core/Router.php';
-$routerPathLower = __DIR__ . '/v1/core/Router.php';
-
-if (file_exists($routerPath)) {
-    require_once $routerPath;
-} elseif (file_exists($routerPathLower)) {
-    require_once $routerPathLower;
-} else {
-    // Try to find the file with correct case
-    $v1Dir = __DIR__ . '/v1';
-    if (is_dir($v1Dir)) {
-        $items = scandir($v1Dir);
-        $coreDir = '';
-        
-        // Find the Core directory with correct case
-        foreach ($items as $item) {
-            if (strtolower($item) === 'core' && is_dir($v1Dir . '/' . $item)) {
-                $coreDir = $v1Dir . '/' . $item;
-                break;
-            }
-        }
-        
-        if ($coreDir) {
-            $routerPath = $coreDir . '/Router.php';
-            if (file_exists($routerPath)) {
-                require_once $routerPath;
-            } else {
-                error_log("Router.php not found in $coreDir");
-            }
-        } else {
-            error_log("Core directory not found in $v1Dir");
-        }
-    } else {
-        error_log("v1 directory not found");
-    }
-}
+// Load Router class with case-insensitive approach
+loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
 
 // Create router
 $router = new \StoriesAPI\Core\Router($config);

@@ -3,25 +3,44 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
 
-    # Create base directories
+    # Create base directories with proper permissions
     - /bin/mkdir -p $DEPLOYPATH/admin
+    - /bin/chmod 755 $DEPLOYPATH/admin
     - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/chmod 755 $DEPLOYPATH/api
 
-    # Copy admin structure first
-    - /bin/cp -R stories-backend/admin/assets $DEPLOYPATH/admin/
-    - /bin/cp -R stories-backend/admin/includes $DEPLOYPATH/admin/
-    - /bin/cp -R stories-backend/admin/views $DEPLOYPATH/admin/
-    - /bin/cp -R stories-backend/admin/controllers $DEPLOYPATH/admin/
-    - /bin/cp stories-backend/admin/*.php $DEPLOYPATH/admin/
-    - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
-
-    # Set admin permissions
-    - /bin/chmod -R 755 $DEPLOYPATH/admin
-    - /bin/find $DEPLOYPATH/admin -type f -exec /bin/chmod 644 {} \;
-    - /bin/chmod 775 $DEPLOYPATH/admin/uploads
-
-    # Copy root files
+    # Copy root files first
     - /bin/cp stories-backend/*.php $DEPLOYPATH/
     - /bin/cp stories-backend/.htaccess $DEPLOYPATH/
+    - /bin/cp stories-backend/database.sql $DEPLOYPATH/
+    - /bin/cp stories-backend/README.md $DEPLOYPATH/
     - /bin/chmod 644 $DEPLOYPATH/*.php
     - /bin/chmod 644 $DEPLOYPATH/.htaccess
+
+    # Copy admin structure with proper permissions
+    - /bin/mkdir -p $DEPLOYPATH/admin/assets
+    - /bin/mkdir -p $DEPLOYPATH/admin/includes
+    - /bin/mkdir -p $DEPLOYPATH/admin/views
+    - /bin/mkdir -p $DEPLOYPATH/admin/controllers
+    - /bin/mkdir -p $DEPLOYPATH/admin/uploads
+    - /bin/chmod 755 $DEPLOYPATH/admin/assets
+    - /bin/chmod 755 $DEPLOYPATH/admin/includes
+    - /bin/chmod 755 $DEPLOYPATH/admin/views
+    - /bin/chmod 755 $DEPLOYPATH/admin/controllers
+    - /bin/chmod 775 $DEPLOYPATH/admin/uploads
+
+    # Copy admin files
+    - /bin/cp stories-backend/admin/*.php $DEPLOYPATH/admin/
+    - /bin/cp stories-backend/admin/.htaccess $DEPLOYPATH/admin/
+    - /bin/cp -R stories-backend/admin/assets/* $DEPLOYPATH/admin/assets/
+    - /bin/cp -R stories-backend/admin/includes/* $DEPLOYPATH/admin/includes/
+    - /bin/cp -R stories-backend/admin/views/* $DEPLOYPATH/admin/views/
+    - /bin/cp -R stories-backend/admin/controllers/* $DEPLOYPATH/admin/controllers/
+
+    # Set admin file permissions
+    - /bin/chmod 644 $DEPLOYPATH/admin/*.php
+    - /bin/chmod 644 $DEPLOYPATH/admin/.htaccess
+    - /bin/find $DEPLOYPATH/admin/assets -type f -exec /bin/chmod 644 {} \;
+    - /bin/find $DEPLOYPATH/admin/includes -type f -exec /bin/chmod 644 {} \;
+    - /bin/find $DEPLOYPATH/admin/views -type f -exec /bin/chmod 644 {} \;
+    - /bin/find $DEPLOYPATH/admin/controllers -type f -exec /bin/chmod 644 {} \;

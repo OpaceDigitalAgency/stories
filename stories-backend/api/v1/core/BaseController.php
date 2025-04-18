@@ -101,8 +101,16 @@ class BaseController {
             $data = json_decode($input, true) ?? [];
             
             // Extract data from Strapi-style structure
-            if (isset($data['data']['attributes'])) {
-                $this->request = $data['data']['attributes'];
+            if (isset($data['data'])) {
+                if (isset($data['data']['attributes'])) {
+                    $this->request = $data['data']['attributes'];
+                    // Preserve ID if present
+                    if (isset($data['data']['id'])) {
+                        $this->request['id'] = $data['data']['id'];
+                    }
+                } else {
+                    $this->request = $data['data'];
+                }
             } else {
                 $this->request = $data;
             }

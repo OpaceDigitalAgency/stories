@@ -124,6 +124,18 @@ function initFormValidation() {
     // Loop over them and prevent submission
     Array.prototype.slice.call(forms).forEach(function(form) {
         console.log('[INIT] Attaching submit listener to form:', form.id); // DEBUG
+        
+        // DEBUG: Add click listener to submit button
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.addEventListener('click', function(e) {
+                console.log('[BUTTON CLICK] Submit button clicked for form:', form.id);
+            });
+        } else {
+             console.warn('[INIT] Submit button not found for form:', form.id);
+        }
+        // END DEBUG
+        
         form.addEventListener('submit', function(event) {
             console.log('[FORM HANDLER] Submit event triggered for form:', form.id); // DEBUG
             

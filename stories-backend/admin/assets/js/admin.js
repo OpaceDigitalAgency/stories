@@ -136,8 +136,15 @@ function initFormValidation() {
         }
         // END DEBUG
         
+        // Add a capturing submit listener to see if it fires before others
         form.addEventListener('submit', function(event) {
-            console.log('[FORM HANDLER] Submit event triggered for form:', form.id); // DEBUG
+            console.log('[FORM HANDLER - CAPTURING] Submit event triggered for form:', form.id); // DEBUG
+            // event.stopImmediatePropagation(); // Keep this for bubbling phase listener
+            // Don't prevent default here yet, let the bubbling listener handle it
+        }, true); // Use capturing phase
+
+        form.addEventListener('submit', function(event) {
+            console.log('[FORM HANDLER - BUBBLING] Submit event triggered for form:', form.id); // DEBUG
             
             // Ensure our handler runs first if possible
             event.stopImmediatePropagation(); // Prevent other listeners on the same element from running

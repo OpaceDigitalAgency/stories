@@ -279,7 +279,10 @@ class AuthController extends BaseController {
             }
             
             // Check if force parameter is set
-            $forceRefresh = isset($this->request['force']) && $this->request['force'] === true;
+            $forceRefresh = isset($this->request['force']) && ($this->request['force'] === true || $this->request['force'] === 'true' || $this->request['force'] === 1 || $this->request['force'] === '1');
+            
+            // Log the request data for debugging
+            error_log("Token refresh request data: " . json_encode($this->request));
             
             // If force parameter is set, consider it a trusted source
             if ($forceRefresh) {
@@ -313,7 +316,7 @@ class AuthController extends BaseController {
             $user = $stmt->fetch();
             
             // Check if we should force refresh or check expiration
-            $forceRefresh = isset($this->request['force']) && $this->request['force'] === true;
+            $forceRefresh = isset($this->request['force']) && ($this->request['force'] === true || $this->request['force'] === 'true' || $this->request['force'] === 1 || $this->request['force'] === '1');
             $checkExpiration = !$forceRefresh;
             
             // Get expiration threshold (default to 30 seconds)

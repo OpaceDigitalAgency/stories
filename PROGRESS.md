@@ -434,6 +434,15 @@
 - This was causing token refresh to fail silently, preventing CRUD operations from working properly
 - Updated all instances of Auth::refreshToken() in AdminPage.php to correctly pass the user ID
 
+### Documented Debugging Tools
+- Identified and documented several debugging tools that can help diagnose authentication and API issues:
+  - auth_diagnostic.php: Comprehensive tool for diagnosing authentication issues
+  - test_api_endpoints.php: Tests various API endpoints to help debug issues
+  - admin/test_tools.php: Provides links to various test scripts for debugging and troubleshooting
+  - api/debug.php and api/debug_index.php: Display debugging information for the API
+- Added these tools to the system-documentation.html file for future reference
+- These tools can be used to diagnose issues with CRUD operations and other API functionality
+
 ### Deployment Process
 - Committed and pushed all changes to GitHub repository (https://github.com/OpaceDigitalAgency/stories.git)
 - Frontend changes (src/lib/api.ts) will be automatically deployed to Netlify (https://storiesfromtheweb.netlify.app/)

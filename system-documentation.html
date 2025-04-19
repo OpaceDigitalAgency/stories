@@ -4,2134 +4,314 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stories from the Web - System Documentation</title>
-    <!-- Mermaid.js for diagrams -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-    <!-- Highlight.js for code highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-            --accent-color: #e74c3c;
-            --light-bg: #f8f9fa;
-            --dark-bg: #343a40;
-            --text-color: #333;
-            --light-text: #f8f9fa;
-            --border-color: #dee2e6;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: var(--text-color);
-            background-color: var(--light-bg);
-            padding-top: 60px;
-        }
-        
-        .container {
-            display: flex;
-            min-height: calc(100vh - 60px);
-        }
-        
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background-color: var(--secondary-color);
-            color: var(--light-text);
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        
-        header h1 {
-            font-size: 1.5rem;
             margin: 0;
+            padding: 20px;
+            color: #333;
         }
-        
-        nav {
-            width: 280px;
-            background-color: var(--light-bg);
-            border-right: 1px solid var(--border-color);
-            padding: 1rem;
-            position: fixed;
-            height: calc(100vh - 60px);
-            overflow-y: auto;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        
-        nav ul {
-            list-style: none;
+        h1, h2, h3, h4 {
+            color: #2c3e50;
         }
-        
-        nav ul li {
-            margin-bottom: 0.5rem;
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
         }
-        
-        nav ul li a {
-            color: var(--secondary-color);
-            text-decoration: none;
-            display: block;
-            padding: 0.5rem;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        
-        nav ul li a:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-        
-        nav ul li a.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        nav .section-title {
-            font-weight: bold;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            color: var(--secondary-color);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-        
-        main {
-            flex: 1;
-            padding: 2rem;
-            margin-left: 280px;
-        }
-        
-        section {
-            margin-bottom: 3rem;
-            scroll-margin-top: 80px;
-        }
-        
         h2 {
-            color: var(--secondary-color);
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary-color);
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
         }
-        
-        h3 {
-            color: var(--secondary-color);
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
         }
-        
-        h4 {
-            color: var(--secondary-color);
-            margin-top: 1.2rem;
-            margin-bottom: 0.8rem;
-        }
-        
-        p {
-            margin-bottom: 1rem;
-        }
-        
-        ul, ol {
-            margin-bottom: 1rem;
-            padding-left: 2rem;
-        }
-        
-        .code-block {
-            background-color: var(--dark-bg);
-            color: var(--light-text);
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1.5rem;
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
             overflow-x: auto;
+            font-family: monospace;
         }
-        
-        .collapsible {
-            background-color: var(--light-bg);
-            color: var(--secondary-color);
-            cursor: pointer;
-            padding: 1rem;
-            width: 100%;
-            border: none;
-            text-align: left;
-            outline: none;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            transition: background-color 0.3s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .collapsible:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-        
-        .collapsible:after {
-            content: '\002B';
-            color: var(--secondary-color);
-            font-weight: bold;
-            float: right;
-            margin-left: 5px;
-        }
-        
-        .active:after {
-            content: "\2212";
-        }
-        
-        .content {
-            padding: 0 1rem;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.2s ease-out;
-            background-color: white;
-            border-radius: 0 0 4px 4px;
-            border: 1px solid var(--border-color);
-            border-top: none;
-        }
-        
-        .content-inner {
-            padding: 1rem 0;
-        }
-        
-        .mermaid {
-            margin: 2rem 0;
-            text-align: center;
-        }
-        
-        .zoom-container {
-            position: relative;
-            overflow: hidden;
-            margin: 2rem 0;
-        }
-        
-        .zoom-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 4px;
-            padding: 5px;
-            z-index: 100;
-        }
-        
-        .zoom-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            margin: 0 2px;
-            cursor: pointer;
-        }
-        
-        .zoom-btn:hover {
-            background-color: #2980b9;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5rem;
-        }
-        
-        table, th, td {
-            border: 1px solid var(--border-color);
-        }
-        
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-        }
-        
-        th {
-            background-color: var(--light-bg);
-            font-weight: bold;
-        }
-        
-        tr:nth-child(even) {
-            background-color: rgba(0, 0, 0, 0.02);
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-        
-        .badge-get {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .badge-post {
-            background-color: var(--success-color);
-            color: white;
-        }
-        
-        .badge-put {
-            background-color: var(--warning-color);
-            color: var(--dark-bg);
-        }
-        
-        .badge-delete {
-            background-color: var(--danger-color);
-            color: white;
-        }
-        
         .note {
-            background-color: #d4edda;
-            border-left: 4px solid var(--success-color);
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
+            background-color: #ffffcc;
+            padding: 15px;
+            border-left: 5px solid #ffcc00;
+            margin: 15px 0;
         }
-        
         .warning {
-            background-color: #fff3cd;
-            border-left: 4px solid var(--warning-color);
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
+            background-color: #ffeeee;
+            padding: 15px;
+            border-left: 5px solid #ff0000;
+            margin: 15px 0;
         }
-        
-        .error {
-            background-color: #f8d7da;
-            border-left: 4px solid var(--danger-color);
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
+        .success {
+            background-color: #eeffee;
+            padding: 15px;
+            border-left: 5px solid #00cc00;
+            margin: 15px 0;
         }
-        
-        @media (max-width: 768px) {
-            body {
-                padding-top: 60px;
-            }
-            
-            .container {
-                flex-direction: column;
-            }
-            
-            nav {
-                width: 100%;
-                position: static;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            
-            main {
-                margin-left: 0;
-            }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.9em;
+            color: #777;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Stories from the Web - System Documentation</h1>
-    </header>
-    
     <div class="container">
-        <nav>
-            <div class="section-title">Contents</div>
-            <ul>
-                <li><a href="#system-overview">System Overview</a></li>
-                <li><a href="#frontend-architecture">Frontend Architecture</a></li>
-                <li><a href="#backend-architecture">Backend Architecture</a></li>
-                <li><a href="#database-schema">Database Schema</a></li>
-                <li><a href="#api-endpoints">API Endpoints</a></li>
-                <li><a href="#crud-operations">CRUD Operations Flow</a></li>
-                <li><a href="#authentication">Authentication System</a></li>
-                <li><a href="#integration-points">Integration Points</a></li>
-                <li><a href="#known-issues">Known Issues and Solutions</a></li>
-                <li><a href="#conclusion">Conclusion and Documentation Maintenance</a></li>
-            </ul>
-        </nav>
+        <h1>Stories from the Web - System Documentation</h1>
         
-        <main>
-            <section id="system-overview">
-                <h2>1. System Overview</h2>
-                <div class="note">
-                    <h4>Documentation Purpose</h4>
-                    <p>
-                        This documentation serves as a comprehensive reference for the "Stories from the Web" project. It includes not only the current architecture but also historical challenges and their solutions. Understanding these past issues is crucial for:
-                    </p>
-                    <ul>
-                        <li><strong>Context awareness</strong> - Knowing why certain design decisions were made</li>
-                        <li><strong>Issue prevention</strong> - Avoiding reintroduction of solved problems</li>
-                        <li><strong>Troubleshooting</strong> - Recognizing patterns in new issues that may be related to past challenges</li>
-                    </ul>
-                    <p>
-                        When working on this project, always refer to this documentation first to understand the system's architecture and history before making changes.
-                    </p>
-                </div>
-                <p>
-                    "Stories from the Web" is a platform for sharing and discovering stories, providing tools for authors to publish and manage their content, and building an admin interface for content management.
-                </p>
-                
-                <h3>Architecture Overview</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('system-architecture', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('system-architecture', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('system-architecture')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="system-architecture" style="transform-origin: center; transform: scale(1);">
-                        graph TB
-                            subgraph "Frontend (Astro.js)"
-                                A[User Interface] --> B[Astro Components]
-                                B --> C[API Client]
-                            end
-                            
-                            subgraph "Backend (PHP)"
-                                D[API Endpoints] --> E[Controllers]
-                                E --> F[Database Access]
-                                G[Admin Panel] --> H[CRUD Interface]
-                                H --> E
-                            end
-                            
-                            subgraph "Database (MySQL)"
-                                I[Tables]
-                            end
-                            
-                            C --> D
-                            F --> I
-                    </div>
-                </div>
-                
-                <h3>Key Components</h3>
-                <ul>
-                    <li><strong>Frontend:</strong> Astro.js static site with components for different content types</li>
-                    <li><strong>Backend:</strong> PHP-based API and admin panel for content management</li>
-                    <li><strong>Database:</strong> MySQL database storing all content and user data</li>
-                    <li><strong>Authentication:</strong> JWT-based authentication system for secure access</li>
-                </ul>
-                
-                <h3>System Flow</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('system-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('system-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('system-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="system-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant User
-                            participant Frontend
-                            participant API
-                            participant Database
-                            
-                            User->>Frontend: Access website
-                            Frontend->>API: Request data
-                            API->>Database: Query data
-                            Database-->>API: Return data
-                            API-->>Frontend: JSON response
-                            Frontend-->>User: Render content
-                            
-                            User->>Frontend: Login request
-                            Frontend->>API: Auth request
-                            API->>Database: Verify credentials
-                            Database-->>API: User data
-                            API-->>Frontend: JWT token
-                            Frontend-->>User: Authenticated session
-                    </div>
-                </div>
-            </section>
-
-<section id="frontend-architecture">
-                <h2>2. Frontend Architecture</h2>
-                
-                <div class="warning">
-                    <h4>Historical Challenge: Frontend Data Loading Issues</h4>
-                    <p>
-                        The frontend initially had issues with data loading from the backend:
-                    </p>
-                    <ul>
-                        <li><strong>API connection configuration</strong> - Environment variables contained placeholder values</li>
-                        <li><strong>Skeleton loading states</strong> - Components showed loading states indefinitely</li>
-                        <li><strong>HTML structure issues</strong> - Some components had incorrect HTML structure</li>
-                        <li><strong>Styling inconsistencies</strong> - Skeleton states didn't match the styling of actual content</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Implemented proper API configuration, added mock data fallback for development, fixed HTML structure issues, and improved styling consistency.
-                    </p>
-                </div>
-                
-                <h3>Technology Stack</h3>
-                <ul>
-                    <li><strong>Framework:</strong> Astro.js</li>
-                    <li><strong>Styling:</strong> CSS with potential Tailwind integration</li>
-                    <li><strong>API Client:</strong> Custom TypeScript implementation</li>
-                </ul>
-                
-                <h3>Directory Structure</h3>
-                <button class="collapsible">Frontend Directory Structure</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-plaintext">
-src/
-├── components/         # Reusable UI components
-│   ├── AIRecommendationBox.astro
-│   ├── CardAuthor.astro
-│   ├── CardStory.astro
-│   ├── EducatorSection.astro
-│   ├── Footer.astro
-│   ├── ModerationCTA.astro
-│   ├── NavHeader.astro
-│   ├── PartnerBadges.astro
-│   ├── PremiumBlock.astro
-│   ├── ProfileSwitcher.astro
-│   ├── RatingStars.astro
-│   ├── ReadingHistory.astro
-│   ├── ReviewSection.astro
-│   ├── SignUpPrompts.astro
-│   ├── SponsoredBadge.astro
-│   ├── SponsoredCarousel.astro
-│   ├── StoryCarousel.astro
-│   └── TagBadge.astro
-├── lib/                # Utility functions and API client
-│   ├── api.ts          # API client implementation
-│   └── mockData.ts     # Mock data for development
-├── pages/              # Page components and routes
-│   ├── index.astro     # Homepage
-│   ├── ai-tools/       # AI tools pages
-│   ├── authors/        # Author pages
-│   ├── blog/           # Blog pages
-│   ├── directories/    # Directory pages
-│   ├── games/          # Games pages
-│   ├── login/          # Authentication pages
-│   ├── profile/        # User profile pages
-│   ├── publish/        # Content publishing pages
-│   ├── reviews/        # Review pages
-│   └── stories/        # Story pages
-├── styles/             # Global styles
-│   └── base.css
-└── types/              # TypeScript type definitions
-    └── components.ts
-                        </code></pre>
-                    </div>
-                </div>
-                
-                <h3>Component Architecture</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('component-architecture', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('component-architecture', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('component-architecture')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="component-architecture" style="transform-origin: center; transform: scale(1);">
-                        graph TD
-                            A[Page Components] --> B[Layout Components]
-                            A --> C[Feature Components]
-                            B --> D[NavHeader]
-                            B --> E[Footer]
-                            C --> F[StoryCarousel]
-                            C --> G[CardStory]
-                            C --> H[CardAuthor]
-                            C --> I[ReviewSection]
-                            F --> G
-                            I --> J[RatingStars]
-                    </div>
-                </div>
-                
-                <h3>API Client</h3>
-                <p>
-                    The frontend communicates with the backend through a custom API client implemented in TypeScript. The client handles:
-                </p>
-                <ul>
-                    <li>Fetching data from API endpoints</li>
-                    <li>Authentication token management</li>
-                    <li>Error handling and fallback responses</li>
-                    <li>Data transformation for frontend consumption</li>
-                </ul>
-                
-                <button class="collapsible">API Client Implementation</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-typescript">
-// API URL for the custom backend
-const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
-
-export const fetchFromApi = async (endpoint: string, params: ApiParams = {}) => {
-  try {
-    // Build query parameters
-    const queryParams = new URLSearchParams();
-    
-    if (params.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    
-    if (params.pageSize) {
-      queryParams.append('pageSize', params.pageSize.toString());
-    }
-    
-    if (params.sort) {
-      queryParams.append('sort', params.sort);
-    }
-    
-    // Add any filters
-    if (params.filters) {
-      Object.entries(params.filters).forEach(([key, value]) => {
-        queryParams.append(key, value.toString());
-      });
-    }
-    
-    // Make the API call
-    const queryString = queryParams.toString();
-    const url = `${API_URL}/${endpoint}${queryString ? `?${queryString}` : ''}`;
-    
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json'
-    };
-    
-    // Get auth token from cookie if available
-    const authToken = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='))
-      ?.split('=')[1];
-    
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    const res = await fetch(url, { headers });
-    
-    if (!res.ok) {
-      throw new Error(`Failed to fetch from API: ${res.status} ${res.statusText}`);
-    }
-    
-    return res.json();
-  } catch (error) {
-    console.error('Error fetching from API:', error);
-    
-    // On error, return empty data structure
-    if (endpoint.includes('/') && endpoint.split('/').length > 1) {
-      return { data: null };
-    } else {
-      return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
-    }
-  }
-};
-                        </code></pre>
-                    </div>
-                </div>
-                
-                <h3>Data Models</h3>
-                <p>
-                    The frontend uses TypeScript interfaces to define the structure of data received from the API:
-                </p>
-                
-                <button class="collapsible">Frontend Data Models</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-typescript">
-export interface ApiResponse<T> {
-  data: ApiData<T>[];
-  meta: {
-    pagination: {
-      page: number;
-      pageSize: number;
-      pageCount: number;
-      total: number;
-    };
-  };
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#architecture">System Architecture</a></li>
+            <li><a href="#database">Database Schema</a></li>
+            <li><a href="#api">API Endpoints</a></li>
+            <li><a href="#authentication">Authentication System</a></li>
+            <li><a href="#admin">Admin Interface</a></li>
+            <li><a href="#frontend">Frontend Integration</a></li>
+            <li><a href="#deployment">Deployment Process</a></li>
+            <li><a href="#issues">Known Issues and Solutions</a></li>
+        </ul>
+        
+        <h2 id="architecture">System Architecture</h2>
+        <p>The Stories from the Web platform uses a modern architecture with separate backend and frontend components:</p>
+        
+        <pre>
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Astro Frontend │────▶│   PHP REST API  │────▶│  MySQL Database │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        </pre>
+        
+        <h3>Backend Components</h3>
+        <ul>
+            <li><strong>PHP REST API</strong>: Custom PHP framework providing RESTful endpoints</li>
+            <li><strong>Authentication System</strong>: JWT-based authentication for secure API access</li>
+            <li><strong>Admin Interface</strong>: PHP-based admin panel for content management</li>
+            <li><strong>MySQL Database</strong>: Relational database storing all content and user data</li>
+        </ul>
+        
+        <h3>Frontend Components</h3>
+        <ul>
+            <li><strong>Astro Framework</strong>: Modern static site generator with dynamic capabilities</li>
+            <li><strong>Tailwind CSS</strong>: Utility-first CSS framework for styling</li>
+            <li><strong>TypeScript</strong>: Typed JavaScript for improved developer experience</li>
+        </ul>
+        
+        <h2 id="database">Database Schema</h2>
+        
+        <h3>Core Tables</h3>
+        <ul>
+            <li><strong>stories</strong>: Main content table for stories</li>
+            <li><strong>authors</strong>: Information about story authors</li>
+            <li><strong>tags</strong>: Categories and tags for content</li>
+            <li><strong>users</strong>: User accounts for authentication</li>
+            <li><strong>blog_posts</strong>: Blog content</li>
+            <li><strong>games</strong>: Interactive story games</li>
+            <li><strong>directory_items</strong>: Directory listings</li>
+            <li><strong>ai_tools</strong>: AI tool listings</li>
+        </ul>
+        
+        <h3>Relationship Tables</h3>
+        <ul>
+            <li><strong>story_tags</strong>: Many-to-many relationship between stories and tags</li>
+            <li><strong>author_stories</strong>: Many-to-many relationship between authors and stories</li>
+        </ul>
+        
+        <h2 id="api">API Endpoints</h2>
+        
+        <h3>Authentication Endpoints</h3>
+        <ul>
+            <li><code>POST /api/v1/auth/login</code>: Authenticate user and get JWT token</li>
+            <li><code>POST /api/v1/auth/logout</code>: Invalidate current token</li>
+            <li><code>GET /api/v1/auth/me</code>: Get current user information</li>
+            <li><code>POST /api/v1/auth/refresh</code>: Refresh JWT token</li>
+        </ul>
+        
+        <h3>Content Endpoints</h3>
+        <ul>
+            <li><code>GET /api/v1/stories</code>: List all stories</li>
+            <li><code>GET /api/v1/stories/{id}</code>: Get specific story</li>
+            <li><code>POST /api/v1/stories</code>: Create new story</li>
+            <li><code>PUT /api/v1/stories/{id}</code>: Update existing story</li>
+            <li><code>DELETE /api/v1/stories/{id}</code>: Delete story</li>
+        </ul>
+        
+        <p>Similar endpoints exist for authors, tags, blog posts, games, directory items, and AI tools.</p>
+        
+        <h2 id="authentication">Authentication System</h2>
+        
+        <h3>JWT Authentication</h3>
+        <p>The system uses JSON Web Tokens (JWT) for authentication:</p>
+        <ul>
+            <li>Tokens are issued upon successful login</li>
+            <li>Tokens contain user ID and role information</li>
+            <li>Tokens expire after a configurable time period</li>
+            <li>Protected endpoints require a valid token</li>
+        </ul>
+        
+        <h3>Authentication Flow</h3>
+        <pre>
+1. Client sends credentials to /auth/login
+2. Server validates credentials and issues JWT
+3. Client includes JWT in Authorization header
+4. Server validates JWT for protected endpoints
+5. Server refreshes JWT when needed
+        </pre>
+        
+        <h3>Middleware</h3>
+        <p>Authentication is handled by middleware classes:</p>
+        <ul>
+            <li><code>AuthMiddleware</code>: Standard JWT validation</li>
+            <li><code>SimpleAuthMiddleware</code>: Simplified authentication for admin interface</li>
+        </ul>
+        
+        <h2 id="admin">Admin Interface</h2>
+        
+        <h3>Overview</h3>
+        <p>The admin interface provides a web-based UI for managing all content:</p>
+        <ul>
+            <li>Dashboard with overview statistics</li>
+            <li>Content management for all content types</li>
+            <li>User management</li>
+            <li>Media library</li>
+        </ul>
+        
+        <h3>Admin Architecture</h3>
+        <p>The admin interface uses a simple MVC architecture:</p>
+        <ul>
+            <li><strong>Controllers</strong>: Handle request processing and business logic</li>
+            <li><strong>Views</strong>: Template files for rendering HTML</li>
+            <li><strong>Models</strong>: Data access and manipulation</li>
+            <li><strong>API Client</strong>: Communicates with the API for data operations</li>
+        </ul>
+        
+        <h3>Form Submission Process</h3>
+        <p>The admin interface uses JavaScript to handle form submissions:</p>
+        <pre>
+1. User submits form
+2. JavaScript intercepts form submission
+3. Form data is serialized to JSON
+4. API request is made using fetch()
+5. Response is processed and UI is updated
+        </pre>
+        
+        <h2 id="frontend">Frontend Integration</h2>
+        
+        <h3>API Integration</h3>
+        <p>The Astro frontend integrates with the API using TypeScript:</p>
+        <pre>
+// src/lib/api.ts
+export async function fetchStories() {
+  const response = await fetch('https://api.storiesfromtheweb.org/api/v1/stories');
+  return await response.json();
 }
-
-export interface ApiData<T> {
-  id: number;
-  attributes: T;
-}
-
-export interface Story {
-  title: string;
-  slug: string;
-  content: string;
-  excerpt: string;
-  publishedAt: string;
-  featured: boolean;
-  averageRating: number;
-  cover: ApiImage;
-  author: ApiResponse<Author>;
-  tags: ApiResponse<Tag>;
-}
-
-export interface Author {
-  name: string;
-  slug: string;
-  bio: string;
-  avatar: ApiImage;
-  stories: ApiResponse<Story>;
-}
-
-export interface BlogPost {
-  title: string;
-  slug: string;
-  content: string;
-  excerpt: string;
-  publishedAt: string;
-  cover: ApiImage;
-  author: ApiResponse<Author>;
-}
-
-// Additional interfaces for other content types...
-                        </code></pre>
-                    </div>
-                </div>
-            </section>
-            
-            <section id="backend-architecture">
-                <h2>3. Backend Architecture</h2>
-                
-                <h3>Technology Stack</h3>
-                <ul>
-                    <li><strong>Language:</strong> PHP</li>
-                    <li><strong>Database:</strong> MySQL</li>
-                    <li><strong>Authentication:</strong> JWT (JSON Web Tokens)</li>
-                    <li><strong>Architecture:</strong> MVC-inspired with Controllers and Models</li>
-                </ul>
-                
-                <h3>Directory Structure</h3>
-                <button class="collapsible">Backend Directory Structure</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-plaintext">
-stories-backend/
-├── .htaccess                # Apache configuration
-├── api/                     # API implementation
-│   ├── .htaccess            # API-specific Apache config
-│   ├── index.php            # Main entry point
-│   └── v1/                  # API version 1
-│       ├── Core/            # Core framework classes
-│       │   ├── Auth.php     # Authentication utilities
-│       │   ├── BaseController.php
-│       │   ├── ClassLoader.php
-│       │   ├── Database.php
-│       │   └── Router.php   # URL routing
-│       ├── Endpoints/       # API controllers
-│       │   ├── AiToolsController.php
-│       │   ├── AuthController.php
-│       │   ├── AuthorsController.php
-│       │   ├── BlogPostsController.php
-│       │   ├── DirectoryItemsController.php
-│       │   ├── GamesController.php
-│       │   ├── StoriesController.php
-│       │   └── TagsController.php
-│       ├── Middleware/      # Request middleware
-│       │   ├── AuthMiddleware.php
-│       │   └── CorsMiddleware.php
-│       ├── Models/          # Data models
-│       ├── Utils/           # Utility classes
-│       │   ├── Response.php
-│       │   └── Validator.php
-│       ├── config/          # Configuration files
-│       │   └── config.php
-│       └── routes.php       # API route definitions
-├── admin/                   # Admin panel
-│   ├── .htaccess            # Admin-specific Apache config
-│   ├── assets/              # CSS, JS, and images
-│   ├── controllers/         # Admin controllers
-│   ├── includes/            # Shared code
-│   ├── views/               # Admin UI templates
-│   ├── index.php            # Admin dashboard
-│   ├── login.php            # Admin login
-│   ├── stories.php          # Story management
-│   ├── authors.php          # Author management
-│   └── ...                  # Other admin pages
-└── database.sql             # Database schema
-                        </code></pre>
-                    </div>
-                </div>
-                
-                <h3>API Architecture</h3>
-                <div class="warning">
-                    <h4>Historical Challenge: Case Sensitivity Issues</h4>
-                    <p>
-                        The API initially suffered from case sensitivity issues in file paths. The autoloader expected directory names to match namespace case (e.g., "Endpoints", "Core", "Utils"), but the actual directories used lowercase names. This caused HTTP 500 errors with blank bodies.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Directories were renamed to match namespace case (endpoints → Endpoints, utils → Utils, core → Core) and a case-insensitive file loading mechanism was implemented as a fallback.
-                    </p>
-                </div>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('api-architecture', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('api-architecture', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('api-architecture')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="api-architecture" style="transform-origin: center; transform: scale(1);">
-                        graph TD
-                            A[API Request] --> B[index.php]
-                            B --> C[Router]
-                            C --> D[Middleware]
-                            D --> E[Controller]
-                            E --> F[Database]
-                            F --> G[Response]
-                            G --> H[JSON Output]
-                            
-                            subgraph "Middleware"
-                                I[CORS Middleware]
-                                J[Auth Middleware]
-                            end
-                            
-                            subgraph "Controllers"
-                                K[StoriesController]
-                                L[AuthorsController]
-                                M[AuthController]
-                                N[Other Controllers]
-                            end
-                    </div>
-                </div>
-                
-                <h3>Request Flow</h3>
-                <ol>
-                    <li>Client sends HTTP request to API endpoint</li>
-                    <li>index.php initializes the application and loads the router</li>
-                    <li>Router matches the URL to a controller and action</li>
-                    <li>Middleware (CORS, Auth) processes the request</li>
-                    <li>Controller action is executed</li>
-                    <li>Controller interacts with the database</li>
-                    <li>Response is formatted as JSON and returned to the client</li>
-                </ol>
-                
-                <h3>Admin Panel Architecture</h3>
-                <p>
-                    The admin panel is a PHP-based web application that provides a user interface for managing content. It communicates with the API for data operations.
-                </p>
-                
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('admin-architecture', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('admin-architecture', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('admin-architecture')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="admin-architecture" style="transform-origin: center; transform: scale(1);">
-                        graph TD
-                            A[Admin User] --> B[Admin Panel]
-                            B --> C[Admin Controllers]
-                            C --> D[API Client]
-                            D --> E[API Endpoints]
-                            E --> F[Database]
-                            F --> E
-                            E --> D
-                            D --> C
-                            C --> B
-                            B --> A
-                    </div>
-                </div>
-                
-                <h3>Authentication Flow</h3>
-                <p>
-                    The backend uses JWT (JSON Web Tokens) for authentication. The token is stored in both session and cookie for consistency.
-                </p>
-                
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('auth-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('auth-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('auth-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="auth-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant User
-                            participant AdminPanel
-                            participant AuthController
-                            participant Database
-                            
-                            User->>AdminPanel: Login with credentials
-                            AdminPanel->>AuthController: /auth/login request
-                            AuthController->>Database: Verify credentials
-                            Database-->>AuthController: User data
-                            AuthController-->>AdminPanel: JWT token
-                            AdminPanel->>AdminPanel: Store token in session and cookie
-                            AdminPanel-->>User: Redirect to dashboard
-                    </div>
-                </div>
-            </section>
-
-<section id="database-schema">
-                <h2>4. Database Schema</h2>
-                
-                <h3>Entity Relationship Diagram</h3>
-                <div class="warning">
-                    <h4>Historical Challenge: Database Integration Issues</h4>
-                    <p>
-                        The database initially had several integration issues:
-                    </p>
-                    <ul>
-                        <li><strong>Case sensitivity in table names</strong> - Some queries failed due to inconsistent case usage in table names</li>
-                        <li><strong>Missing foreign key constraints</strong> - Some relationship tables lacked proper constraints, leading to data integrity issues</li>
-                        <li><strong>Non-existent columns</strong> - Some queries referenced columns that didn't exist in the database (e.g., "cover_url")</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Standardized table names to lowercase in all queries, added proper foreign key constraints with cascading deletes where appropriate, and updated queries to use only existing columns.
-                    </p>
-                </div>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('database-erd', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('database-erd', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('database-erd')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="database-erd" style="transform-origin: center; transform: scale(1);">
-                        erDiagram
-                            USERS {
-                                int id PK
-                                string name
-                                string email
-                                string password
-                                enum role
-                                boolean active
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            AUTHORS {
-                                int id PK
-                                string name
-                                string slug
-                                text bio
-                                boolean featured
-                                string twitter
-                                string instagram
-                                string website
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            STORIES {
-                                int id PK
-                                string title
-                                string slug
-                                text excerpt
-                                longtext content
-                                datetime published_at
-                                boolean featured
-                                decimal average_rating
-                                int review_count
-                                string estimated_reading_time
-                                boolean is_sponsored
-                                string age_group
-                                boolean needs_moderation
-                                boolean is_self_published
-                                boolean is_ai_enhanced
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            TAGS {
-                                int id PK
-                                string name
-                                string slug
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            STORY_AUTHORS {
-                                int story_id FK
-                                int author_id FK
-                            }
-                            
-                            STORY_TAGS {
-                                int story_id FK
-                                int tag_id FK
-                            }
-                            
-                            BLOG_POSTS {
-                                int id PK
-                                string title
-                                string slug
-                                text excerpt
-                                longtext content
-                                datetime published_at
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            BLOG_POST_AUTHORS {
-                                int blog_post_id FK
-                                int author_id FK
-                            }
-                            
-                            DIRECTORY_ITEMS {
-                                int id PK
-                                string name
-                                text description
-                                string url
-                                string category
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            GAMES {
-                                int id PK
-                                string title
-                                text description
-                                string url
-                                string category
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            AI_TOOLS {
-                                int id PK
-                                string name
-                                text description
-                                string url
-                                string category
-                                datetime created_at
-                                datetime updated_at
-                            }
-                            
-                            MEDIA {
-                                int id PK
-                                enum entity_type
-                                int entity_id
-                                enum type
-                                string url
-                                int width
-                                int height
-                                string alt_text
-                                datetime created_at
-                            }
-                            
-                            USERS ||--o{ AUTHORS : "can be"
-                            AUTHORS ||--o{ STORY_AUTHORS : "writes"
-                            STORIES ||--o{ STORY_AUTHORS : "written by"
-                            STORIES ||--o{ STORY_TAGS : "has"
-                            TAGS ||--o{ STORY_TAGS : "applied to"
-                            AUTHORS ||--o{ BLOG_POST_AUTHORS : "writes"
-                            BLOG_POSTS ||--o{ BLOG_POST_AUTHORS : "written by"
-                            STORIES ||--o{ MEDIA : "has"
-                            AUTHORS ||--o{ MEDIA : "has"
-                            BLOG_POSTS ||--o{ MEDIA : "has"
-                            DIRECTORY_ITEMS ||--o{ MEDIA : "has"
-                            GAMES ||--o{ MEDIA : "has"
-                            AI_TOOLS ||--o{ MEDIA : "has"
-                    </div>
-                </div>
-                
-                <h3>Table Descriptions</h3>
-                
-                <button class="collapsible">Users Table</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <p>Stores user account information for authentication and authorization.</p>
-                        <table>
-                            <tr>
-                                <th>Column</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                            </tr>
-                            <tr>
-                                <td>id</td>
-                                <td>INT</td>
-                                <td>Primary key</td>
-                            </tr>
-                            <tr>
-                                <td>name</td>
-                                <td>VARCHAR(100)</td>
-                                <td>User's display name</td>
-                            </tr>
-                            <tr>
-                                <td>email</td>
-                                <td>VARCHAR(100)</td>
-                                <td>User's email address (unique)</td>
-                            </tr>
-                            <tr>
-                                <td>password</td>
-                                <td>VARCHAR(255)</td>
-                                <td>Bcrypt-hashed password</td>
-                            </tr>
-                            <tr>
-                                <td>role</td>
-                                <td>ENUM</td>
-                                <td>User role: 'user', 'author', 'editor', 'admin'</td>
-                            </tr>
-                            <tr>
-                                <td>active</td>
-                                <td>TINYINT(1)</td>
-                                <td>Account status (1 = active, 0 = inactive)</td>
-                            </tr>
-                            <tr>
-                                <td>created_at</td>
-                                <td>DATETIME</td>
-                                <td>Account creation timestamp</td>
-                            </tr>
-                            <tr>
-                                <td>updated_at</td>
-                                <td>DATETIME</td>
-                                <td>Last update timestamp</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                
-                <button class="collapsible">Stories Table</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <p>Stores story content and metadata.</p>
-                        <table>
-                            <tr>
-                                <th>Column</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                            </tr>
-                            <tr>
-                                <td>id</td>
-                                <td>INT</td>
-                                <td>Primary key</td>
-                            </tr>
-                            <tr>
-                                <td>title</td>
-                                <td>VARCHAR(255)</td>
-                                <td>Story title</td>
-                            </tr>
-                            <tr>
-                                <td>slug</td>
-                                <td>VARCHAR(255)</td>
-                                <td>URL-friendly version of title (unique)</td>
-                            </tr>
-                            <tr>
-                                <td>excerpt</td>
-                                <td>TEXT</td>
-                                <td>Short summary of the story</td>
-                            </tr>
-                            <tr>
-                                <td>content</td>
-                                <td>LONGTEXT</td>
-                                <td>Full story content</td>
-                            </tr>
-                            <tr>
-                                <td>published_at</td>
-                                <td>DATETIME</td>
-                                <td>Publication timestamp</td>
-                            </tr>
-                            <tr>
-                                <td>featured</td>
-                                <td>TINYINT(1)</td>
-                                <td>Featured status (1 = featured, 0 = not featured)</td>
-                            </tr>
-                            <tr>
-                                <td>average_rating</td>
-                                <td>DECIMAL(3,2)</td>
-                                <td>Average user rating</td>
-                            </tr>
-                            <tr>
-                                <td>review_count</td>
-                                <td>INT</td>
-                                <td>Number of reviews</td>
-                            </tr>
-                            <tr>
-                                <td>estimated_reading_time</td>
-                                <td>VARCHAR(50)</td>
-                                <td>Estimated time to read the story</td>
-                            </tr>
-                            <tr>
-                                <td>is_sponsored</td>
-                                <td>TINYINT(1)</td>
-                                <td>Sponsored status (1 = sponsored, 0 = not sponsored)</td>
-                            </tr>
-                            <tr>
-                                <td>age_group</td>
-                                <td>VARCHAR(50)</td>
-                                <td>Target age group</td>
-                            </tr>
-                            <tr>
-                                <td>needs_moderation</td>
-                                <td>TINYINT(1)</td>
-                                <td>Moderation status (1 = needs moderation, 0 = approved)</td>
-                            </tr>
-                            <tr>
-                                <td>is_self_published</td>
-                                <td>TINYINT(1)</td>
-                                <td>Self-published status (1 = self-published, 0 = traditionally published)</td>
-                            </tr>
-                            <tr>
-                                <td>is_ai_enhanced</td>
-                                <td>TINYINT(1)</td>
-                                <td>AI enhancement status (1 = AI enhanced, 0 = not AI enhanced)</td>
-                            </tr>
-                            <tr>
-                                <td>created_at</td>
-                                <td>DATETIME</td>
-                                <td>Creation timestamp</td>
-                            </tr>
-                            <tr>
-                                <td>updated_at</td>
-                                <td>DATETIME</td>
-                                <td>Last update timestamp</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                
-                <h3>Relationships</h3>
-                <ul>
-                    <li><strong>Stories to Authors:</strong> Many-to-many relationship through the story_authors table</li>
-                    <li><strong>Stories to Tags:</strong> Many-to-many relationship through the story_tags table</li>
-                    <li><strong>Blog Posts to Authors:</strong> Many-to-many relationship through the blog_post_authors table</li>
-                    <li><strong>Media to Content Types:</strong> One-to-many relationship with entity_type and entity_id fields</li>
-                </ul>
-                
-                <h3>Indexes</h3>
-                <p>
-                    The database includes the following indexes for better performance:
-                </p>
-                <ul>
-                    <li>idx_stories_featured on stories(featured)</li>
-                    <li>idx_stories_published_at on stories(published_at)</li>
-                    <li>idx_authors_featured on authors(featured)</li>
-                    <li>idx_blog_posts_published_at on blog_posts(published_at)</li>
-                    <li>idx_directory_items_category on directory_items(category)</li>
-                    <li>idx_games_category on games(category)</li>
-                    <li>idx_ai_tools_category on ai_tools(category)</li>
-                </ul>
-            </section>
-            
-            <section id="api-endpoints">
-                <h2>5. API Endpoints</h2>
-                
-                <div class="warning">
-                    <h4>Historical Challenge: API Returning HTML Instead of JSON</h4>
-                    <p>
-                        The API initially had issues returning HTML instead of JSON responses due to:
-                    </p>
-                    <ul>
-                        <li><strong>Output before headers</strong> - PHP code was generating output before setting JSON headers</li>
-                        <li><strong>OpCache issues</strong> - Cached code was still running despite updates</li>
-                        <li><strong>Protected property access</strong> - Router was trying to directly access protected properties in BaseController</li>
-                        <li><strong>Content Security Policy (CSP) violations</strong> - CSP was blocking necessary resources</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Added output buffering to capture unexpected output, fixed protected property access with proper setter methods, resolved OpCache issues, and updated CSP headers to allow necessary resources.
-                    </p>
-                </div>
-                
-                <h3>Authentication Endpoints</h3>
-                <table>
-                    <tr>
-                        <th>Method</th>
-                        <th>Endpoint</th>
-                        <th>Description</th>
-                        <th>Auth Required</th>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td>/auth/login</td>
-                        <td>Authenticate user and get JWT token</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td>/auth/register</td>
-                        <td>Register a new user</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td>/auth/me</td>
-                        <td>Get current user profile</td>
-                        <td>Yes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td>/auth/refresh</td>
-                        <td>Refresh JWT token</td>
-                        <td>Yes</td>
-                    </tr>
-                </table>
-                
-                <h3>Stories Endpoints</h3>
-                <table>
-                    <tr>
-                        <th>Method</th>
-                        <th>Endpoint</th>
-                        <th>Description</th>
-                        <th>Auth Required</th>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td>/stories</td>
-                        <td>Get list of stories</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td>/stories/{slug}</td>
-                        <td>Get story by slug</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td>/stories</td>
-                        <td>Create a new story</td>
-                        <td>Yes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-put">PUT</span></td>
-                        <td>/stories/{id}</td>
-                        <td>Update a story</td>
-                        <td>Yes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-delete">DELETE</span></td>
-                        <td>/stories/{id}</td>
-                        <td>Delete a story</td>
-                        <td>Yes</td>
-                    </tr>
-                </table>
-                
-                <h3>Authors Endpoints</h3>
-                <table>
-                    <tr>
-                        <th>Method</th>
-                        <th>Endpoint</th>
-                        <th>Description</th>
-                        <th>Auth Required</th>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td>/authors</td>
-                        <td>Get list of authors</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td>/authors/{id}</td>
-                        <td>Get author by ID</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td>/authors</td>
-                        <td>Create a new author</td>
-                        <td>Yes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-put">PUT</span></td>
-                        <td>/authors/{id}</td>
-                        <td>Update an author</td>
-                        <td>Yes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-delete">DELETE</span></td>
-                        <td>/authors/{id}</td>
-                        <td>Delete an author</td>
-                        <td>Yes</td>
-                    </tr>
-                </table>
-                
-                <h3>Additional Content Type Endpoints</h3>
-                <p>
-                    Similar endpoint patterns exist for the following content types:
-                </p>
-                <ul>
-                    <li><strong>Blog Posts:</strong> /blog-posts</li>
-                    <li><strong>Directory Items:</strong> /directory-items</li>
-                    <li><strong>Games:</strong> /games</li>
-                    <li><strong>AI Tools:</strong> /ai-tools</li>
-                    <li><strong>Tags:</strong> /tags</li>
-                </ul>
-                
-                <h3>Query Parameters</h3>
-                <p>
-                    List endpoints support the following query parameters:
-                </p>
-                <table>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Description</th>
-                        <th>Example</th>
-                    </tr>
-                    <tr>
-                        <td>page</td>
-                        <td>Page number for pagination</td>
-                        <td>?page=2</td>
-                    </tr>
-                    <tr>
-                        <td>pageSize</td>
-                        <td>Number of items per page</td>
-                        <td>?pageSize=25</td>
-                    </tr>
-                    <tr>
-                        <td>sort</td>
-                        <td>Field to sort by (prefix with - for descending)</td>
-                        <td>?sort=-created_at</td>
-                    </tr>
-                    <tr>
-                        <td>featured</td>
-                        <td>Filter by featured status</td>
-                        <td>?featured=1</td>
-                    </tr>
-                    <tr>
-                        <td>category</td>
-                        <td>Filter by category (for applicable content types)</td>
-                        <td>?category=fantasy</td>
-                    </tr>
-                </table>
-                
-                <h3>Response Format</h3>
-                <p>
-                    API responses follow a consistent format:
-                </p>
-                
-                <button class="collapsible">List Response Format</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-json">
-{
-  "data": [
-    {
-      "id": 1,
-      "attributes": {
-        "title": "The Magic Forest",
-        "slug": "the-magic-forest",
-        "excerpt": "A story about a magical forest and the adventures within.",
-        "content": "<p>Once upon a time, there was a magical forest...</p>",
-        "published_at": "2025-04-15T10:00:00Z",
-        "featured": true,
-        "average_rating": 4.5,
-        "review_count": 10,
-        "estimated_reading_time": "5 minutes",
-        "is_sponsored": false,
-        "age_group": "5-8",
-        "needs_moderation": false,
-        "is_self_published": true,
-        "is_ai_enhanced": false,
-        "created_at": "2025-04-15T09:30:00Z",
-        "updated_at": "2025-04-15T09:30:00Z"
-      }
-    },
-    // Additional items...
-  ],
-  "meta": {
-    "pagination": {
-      "page": 1,
-      "pageSize": 25,
-      "pageCount": 5,
-      "total": 120
-    }
-  }
-}
-                        </code></pre>
-                    </div>
-                </div>
-                
-                <button class="collapsible">Single Item Response Format</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-json">
-{
-  "data": {
-    "id": 1,
-    "attributes": {
-      "title": "The Magic Forest",
-      "slug": "the-magic-forest",
-      "excerpt": "A story about a magical forest and the adventures within.",
-      "content": "<p>Once upon a time, there was a magical forest...</p>",
-      "published_at": "2025-04-15T10:00:00Z",
-      "featured": true,
-      "average_rating": 4.5,
-      "review_count": 10,
-      "estimated_reading_time": "5 minutes",
-      "is_sponsored": false,
-      "age_group": "5-8",
-      "needs_moderation": false,
-      "is_self_published": true,
-      "is_ai_enhanced": false,
-      "created_at": "2025-04-15T09:30:00Z",
-      "updated_at": "2025-04-15T09:30:00Z"
-    }
-  }
-}
-                        </code></pre>
-                    </div>
-                </div>
-                
-                <button class="collapsible">Error Response Format</button>
-                <div class="content">
-                    <div class="content-inner">
-                        <pre><code class="language-json">
-{
-  "status": "error",
-  "message": "Error message describing the issue",
-  "errors": {
-    "field_name": ["Validation error message"]
-  }
-}
-                        </code></pre>
-                    </div>
-                </div>
-            </section>
-
-<section id="crud-operations">
-                <h2>6. CRUD Operations Flow</h2>
-                
-                <h3>Create Operation Flow</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('create-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('create-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('create-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="create-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant Admin
-                            participant AdminPanel
-                            participant ApiClient
-                            participant API
-                            participant Database
-                            
-                            Admin->>AdminPanel: Fill create form
-                            Admin->>AdminPanel: Submit form
-                            AdminPanel->>ApiClient: POST request
-                            ApiClient->>ApiClient: Add auth token
-                            ApiClient->>API: POST /resource
-                            API->>API: Validate request
-                            API->>Database: Insert record
-                            Database-->>API: Return new ID
-                            API-->>ApiClient: Return success response
-                            ApiClient-->>AdminPanel: Display success message
-                            AdminPanel-->>Admin: Redirect to list view
-                    </div>
-                </div>
-                
-                <h3>Read Operation Flow</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('read-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('read-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('read-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="read-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant User
-                            participant Frontend
-                            participant API
-                            participant Database
-                            
-                            User->>Frontend: Request page
-                            Frontend->>API: GET /resource
-                            API->>Database: Query data
-                            Database-->>API: Return data
-                            API-->>Frontend: Return JSON response
-                            Frontend-->>User: Display data
-                    </div>
-                </div>
-                
-                <h3>Update Operation Flow</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('update-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('update-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('update-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="update-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant Admin
-                            participant AdminPanel
-                            participant ApiClient
-                            participant API
-                            participant Database
-                            
-                            Admin->>AdminPanel: Request edit form
-                            AdminPanel->>ApiClient: GET request
-                            ApiClient->>API: GET /resource/{id}
-                            API->>Database: Query record
-                            Database-->>API: Return record
-                            API-->>ApiClient: Return JSON response
-                            ApiClient-->>AdminPanel: Populate form
-                            Admin->>AdminPanel: Modify data
-                            Admin->>AdminPanel: Submit form
-                            AdminPanel->>ApiClient: PUT request
-                            ApiClient->>ApiClient: Add auth token
-                            ApiClient->>API: PUT /resource/{id}
-                            API->>API: Validate request
-                            API->>Database: Update record
-                            Database-->>API: Confirm update
-                            API-->>ApiClient: Return success response
-                            ApiClient-->>AdminPanel: Display success message
-                    </div>
-                </div>
-                
-                <h3>Delete Operation Flow</h3>
-                <div class="error">
-                    <h4>Historical Challenge: CRUD Operation Failures</h4>
-                    <p>
-                        The project faced significant issues with CRUD operations failing in the admin panel:
-                    </p>
-                    <ul>
-                        <li><strong>Authentication token issues</strong> - Tokens were stored inconsistently between session and cookies</li>
-                        <li><strong>Token expiration</strong> - Operations failed with 401 errors when tokens expired</li>
-                        <li><strong>Missing error handling</strong> - API errors were not properly displayed to users</li>
-                        <li><strong>HTTP method issues</strong> - Delete operations weren't using the proper DELETE HTTP method</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Enhanced client-side AJAX handling with improved error messages, implemented automatic token refresh, fixed HTTP method usage, and added comprehensive logging for troubleshooting.
-                    </p>
-                </div>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('delete-flow', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('delete-flow', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('delete-flow')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="delete-flow" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant Admin
-                            participant AdminPanel
-                            participant ApiClient
-                            participant API
-                            participant Database
-                            
-                            Admin->>AdminPanel: Click delete button
-                            AdminPanel->>AdminPanel: Show confirmation dialog
-                            Admin->>AdminPanel: Confirm deletion
-                            AdminPanel->>ApiClient: DELETE request
-                            ApiClient->>ApiClient: Add auth token
-                            ApiClient->>API: DELETE /resource/{id}
-                            API->>API: Verify permissions
-                            API->>Database: Delete record
-                            Database-->>API: Confirm deletion
-                            API-->>ApiClient: Return success response
-                            ApiClient-->>AdminPanel: Display success message
-                            AdminPanel-->>Admin: Update list view
-                    </div>
-                </div>
-                
-                <h3>Common CRUD Issues</h3>
-                <div class="warning">
-                    <h4>Authentication Token Issues</h4>
-                    <p>
-                        CRUD operations may fail if the authentication token is missing, expired, or invalid. The system now includes automatic token refresh to handle expired tokens.
-                    </p>
-                </div>
-                
-                <div class="warning">
-                    <h4>Validation Errors</h4>
-                    <p>
-                        Create and update operations may fail if the submitted data does not pass validation. The API returns detailed validation error messages to help identify the issues.
-                    </p>
-                </div>
-                
-                <div class="warning">
-                    <h4>Relationship Constraints</h4>
-                    <p>
-                        Delete operations may fail if there are foreign key constraints preventing the deletion. For example, you cannot delete an author who has associated stories.
-                    </p>
-                </div>
-            </section>
-            
-            <section id="authentication">
-                <h2>7. Authentication System</h2>
-                
-                <h3>JWT Authentication</h3>
-                <div class="error">
-                    <h4>Historical Challenge: Authentication System Issues</h4>
-                    <p>
-                        The authentication system initially had several critical issues:
-                    </p>
-                    <ul>
-                        <li><strong>Token storage inconsistency</strong> - Tokens were stored in cookies but not in session</li>
-                        <li><strong>Missing token refresh mechanism</strong> - Users were forced to log in again when tokens expired</li>
-                        <li><strong>Session management issues</strong> - Sessions were started in multiple places, causing inconsistencies</li>
-                        <li><strong>Login authentication failures</strong> - The main login page always returned "Invalid credentials" due to password hash issues</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Implemented consistent token storage in both session and cookie, created an automatic token refresh mechanism, enhanced session management with token consistency checks, and fixed password hashing issues.
-                    </p>
-                </div>
-                <p>
-                    The system uses JWT (JSON Web Tokens) for authentication. JWTs are stateless tokens that contain encoded JSON data, including user information and permissions.
-                </p>
-                
-                <h3>Token Structure</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('jwt-structure', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('jwt-structure', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('jwt-structure')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="jwt-structure" style="transform-origin: center; transform: scale(1);">
-                        graph LR
-                            A[JWT Token] --> B[Header]
-                            A --> C[Payload]
-                            A --> D[Signature]
-                            
-                            B --> B1[Algorithm: HS256]
-                            B --> B2[Type: JWT]
-                            
-                            C --> C1[user_id: 1]
-                            C --> C2[role: admin]
-                            C --> C3[exp: Expiration time]
-                            C --> C4[iat: Issued at time]
-                            
-                            D --> D1[HMACSHA256 signature]
-                    </div>
-                </div>
-                
-                <h3>Authentication Flow</h3>
-                <ol>
-                    <li>User submits login credentials (email and password)</li>
-                    <li>Server verifies credentials against the database</li>
-                    <li>If valid, server generates a JWT token with user information and expiration time</li>
-                    <li>Token is returned to the client and stored in both session and cookie</li>
-                    <li>Client includes the token in the Authorization header for subsequent API requests</li>
-                    <li>Server validates the token for each protected API request</li>
-                    <li>If the token is expired, the system attempts to refresh it automatically</li>
-                </ol>
-                
-                <h3>Token Storage</h3>
-                <p>
-                    The token is stored in both the session and a cookie for consistency:
-                </p>
-                <ul>
-                    <li><strong>Session Storage:</strong> $_SESSION['token']</li>
-                    <li><strong>Cookie Storage:</strong> Cookie named 'auth_token'</li>
-                </ul>
-                
-                <h3>Token Refresh Mechanism</h3>
-                <div class="zoom-container">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoomDiagram('token-refresh', 1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoomDiagram('token-refresh', 0.8)">-</button>
-                        <button class="zoom-btn" onclick="resetZoom('token-refresh')">Reset</button>
-                    </div>
-                    <div class="mermaid" id="token-refresh" style="transform-origin: center; transform: scale(1);">
-                        sequenceDiagram
-                            participant Client
-                            participant API
-                            participant Auth
-                            participant Database
-                            
-                            Client->>API: Request with expired token
-                            API->>API: Detect expired token
-                            
-                            alt Automatic Refresh in Middleware
-                                API->>Auth: refreshToken(user_id)
-                                Auth->>Database: Verify user exists
-                                Database-->>Auth: User data
-                                Auth->>Auth: Generate new token
-                                Auth-->>API: Return new token
-                                API->>API: Set X-New-Token header
-                                API->>API: Continue with original request
-                                API-->>Client: Response with X-New-Token header
-                                Client->>Client: Update stored token
-                            else Manual Refresh on 401
-                                API-->>Client: 401 Unauthorized (token expired)
-                                Client->>API: POST /auth/refresh with user_id
-                                API->>Auth: refreshToken(user_id)
-                                Auth->>Database: Verify user exists
-                                Database-->>Auth: User data
-                                Auth->>Auth: Generate new token
-                                Auth-->>API: Return new token
-                                API-->>Client: New token
-                                Client->>Client: Update stored token
-                                Client->>API: Retry original request with new token
-                                API->>API: Validate token
-                                API-->>Client: Successful response
-                            end
-                    </div>
-                </div>
-                
-                <h3>Token Consistency</h3>
-                <p>
-                    The system ensures token consistency between session and cookie storage:
-                </p>
-                <ul>
-                    <li>If tokens in session and cookie don't match, the token is refreshed</li>
-                    <li>If token is missing in either session or cookie, it's copied from the other</li>
-                    <li>Token consistency is checked on each admin page load</li>
-                </ul>
-                
-                <h3>Security Considerations</h3>
-                <ul>
-                    <li><strong>Password Storage:</strong> Passwords are hashed using bcrypt</li>
-                    <li><strong>Token Expiration:</strong> Tokens have a configurable expiration time</li>
-                    <li><strong>HTTPS:</strong> All communication should be over HTTPS to prevent token interception</li>
-                    <li><strong>CORS:</strong> Cross-Origin Resource Sharing is configured to restrict API access</li>
-                    <li><strong>Content Security Policy:</strong> CSP headers are set to prevent XSS attacks</li>
-                </ul>
-            </section>
-            
-            <section id="integration-points">
-                <h2>8. Integration Points</h2>
-                
-                <h3>Frontend to Backend Integration</h3>
-                <p>
-                    The Astro.js frontend integrates with the PHP backend through the API client:
-                </p>
-                <ul>
-                    <li><strong>API Client:</strong> src/lib/api.ts provides methods for interacting with the API</li>
-                    <li><strong>Authentication:</strong> JWT tokens are stored in cookies and included in API requests</li>
-                    <li><strong>Data Fetching:</strong> Components fetch data from the API during rendering</li>
-                </ul>
-                
-                <h3>Admin Panel to API Integration</h3>
-                <p>
-                    The admin panel communicates with the API for all data operations:
-                </p>
-                <ul>
-                    <li><strong>API Client:</strong> Admin panel includes a PHP API client class</li>
-                    <li><strong>Authentication:</strong> JWT tokens are stored in both session and cookies</li>
-                    <li><strong>CRUD Operations:</strong> All data operations are performed through API calls</li>
-                </ul>
-                
-                <h3>Media Integration</h3>
-                <p>
-                    Media files (images, etc.) are managed through the media table and API:
-                </p>
-                <ul>
-                    <li><strong>Upload:</strong> Files are uploaded through the admin panel</li>
-                    <li><strong>Storage:</strong> Files are stored on the server filesystem</li>
-                    <li><strong>Access:</strong> Files are served through the API with proper caching headers</li>
-                    <li><strong>Association:</strong> Media items are associated with content through the entity_type and entity_id fields</li>
-                </ul>
-                
-                <h3>External Service Integration</h3>
-                <p>
-                    The system may integrate with external services:
-                </p>
-                <ul>
-                    <li><strong>Email Service:</strong> For user notifications and password resets</li>
-                    <li><strong>CDN:</strong> For serving static assets and media files</li>
-                    <li><strong>Analytics:</strong> For tracking user behavior and content performance</li>
-                </ul>
-            </section>
-            
-            <section id="known-issues">
-                <h2>9. Known Issues and Solutions</h2>
-                
-                <h3>Database Integration Issues</h3>
-                
-                <div class="error">
-                    <h4>Issue: Case Sensitivity in Table Names</h4>
-                    <p>
-                        <strong>Problem:</strong> Some database queries failed due to case sensitivity issues in table names.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Standardized table names to lowercase in all queries and ensured consistent case usage throughout the codebase.
-                    </p>
-                </div>
-                
-                <div class="error">
-                    <h4>Issue: Missing Foreign Key Constraints</h4>
-                    <p>
-                        <strong>Problem:</strong> Some tables were missing proper foreign key constraints, leading to data integrity issues.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Added proper foreign key constraints to all relationship tables and implemented cascading deletes where appropriate.
-                    </p>
-                </div>
-                
-                <h3>Save Operation Issues</h3>
-                
-                <h4>Resolved Issues</h4>
-                
-                <div class="note">
-                    <h4>Issue: JWT Refresh and Token Consistency</h4>
-                    <p>
-                        <strong>Problem:</strong> CRUD operations failed with "Authentication required (Status: 401)" errors due to:
-                    </p>
-                    <ul>
-                        <li>Expired JWT not auto-refreshing</li>
-                        <li>Cookie (auth_token) and PHP $_SESSION['token'] drifting out of sync</li>
-                        <li>Admin panel JS/PHP clients not retrying the original request after refresh</li>
-                    </ul>
-                    <p>
-                        <strong>Solution:</strong> Implemented a comprehensive JWT refresh solution:
-                    </p>
-                    <ul>
-                        <li>Added Auth::refreshToken() method to the API Core</li>
-                        <li>Enhanced AuthMiddleware to check token consistency and handle expiration</li>
-                        <li>Improved AdminPage::ensureTokenConsistency() to validate tokens on every page load</li>
-                        <li>Updated API clients (PHP and TypeScript) to retry requests after token refresh</li>
-                        <li>Added PHPUnit tests to verify token refresh functionality</li>
-                    </ul>
-                    <p>
-                        <strong>Date Resolved:</strong> April 19, 2025
-                    </p>
-                </div>
-                
-                <div class="error">
-                    <h4>Issue: Missing Error Handling</h4>
-                    <p>
-                        <strong>Problem:</strong> API errors were not properly handled or displayed to users.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Enhanced client-side AJAX handling with improved error messages and added comprehensive logging for easier troubleshooting.
-                    </p>
-                </div>
-                
-                <h3>Authentication Flow Issues</h3>
-                
-                <h4>Resolved Issues</h4>
-                
-                <div class="note">
-                    <h4>Issue: Missing Token Refresh Mechanism</h4>
-                    <p>
-                        <strong>Problem:</strong> When tokens expired, users were forced to log in again.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Added Auth::refreshToken() method and created a new API endpoint auth/refresh to handle token refresh requests. Enhanced with automatic retry functionality in both PHP and TypeScript API clients.
-                    </p>
-                    <p>
-                        <strong>Date Resolved:</strong> April 19, 2025
-                    </p>
-                </div>
-                
-                <div class="note">
-                    <h4>Issue: Session Management Issues</h4>
-                    <p>
-                        <strong>Problem:</strong> Session was started in multiple places, potentially causing inconsistencies.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Added AdminPage::ensureTokenConsistency() to synchronize tokens between session and cookie and improved token handling in Auth::logout().
-                    </p>
-                    <p>
-                        <strong>Date Resolved:</strong> April 18, 2025
-                    </p>
-                </div>
-                
-                <h3>API Issues</h3>
-                
-                <div class="error">
-                    <h4>Issue: Case Sensitivity in File Paths</h4>
-                    <p>
-                        <strong>Problem:</strong> API returned HTTP 500 errors due to case sensitivity issues in file paths.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Renamed folders to match namespace case (endpoints → Endpoints, utils → Utils, core → Core) and implemented case-insensitive file loading.
-                    </p>
-                </div>
-                
-                <h3>Debugging Tools</h3>
-                
-                <div class="note">
-                    <h4>Authentication Diagnostic Tool</h4>
-                    <p>
-                        <strong>Path:</strong> /stories-backend/auth_diagnostic.php
-                    </p>
-                    <p>
-                        <strong>Purpose:</strong> Comprehensive tool for diagnosing authentication issues. Provides detailed information about authentication status, token information, configuration, session information, and cookie information. Allows testing login, logout, token refresh, and API connections.
-                    </p>
-                    <p>
-                        <strong>Usage:</strong> Access directly via browser at https://api.storiesfromtheweb.org/auth_diagnostic.php
-                    </p>
-                </div>
-                
-                <div class="note">
-                    <h4>API Endpoint Testing Tools</h4>
-                    <p>
-                        <strong>Path:</strong> /stories-backend/test_api_endpoints.php
-                    </p>
-                    <p>
-                        <strong>Purpose:</strong> Tests various API endpoints (stories, tags, authors, blog posts) to help debug issues. Tests both list endpoints and individual item endpoints.
-                    </p>
-                    <p>
-                        <strong>Usage:</strong> Access directly via browser at https://api.storiesfromtheweb.org/test_api_endpoints.php
-                    </p>
-                </div>
-                
-                <div class="note">
-                    <h4>Admin Test Tools</h4>
-                    <p>
-                        <strong>Path:</strong> /stories-backend/admin/test_tools.php
-                    </p>
-                    <p>
-                        <strong>Purpose:</strong> Provides links to various test scripts for debugging and troubleshooting, including database tests, API tests, connection tests, and endpoint tests.
-                    </p>
-                    <p>
-                        <strong>Usage:</strong> Access via admin panel at https://api.storiesfromtheweb.org/admin/test_tools.php
-                    </p>
-                </div>
-                
-                <div class="note">
-                    <h4>API Debug Mode</h4>
-                    <p>
-                        <strong>Path:</strong> /stories-backend/api/debug.php and /stories-backend/api/debug_index.php
-                    </p>
-                    <p>
-                        <strong>Purpose:</strong> Displays debugging information for the API. Provides detailed information about API requests and responses.
-                    </p>
-                    <p>
-                        <strong>Usage:</strong> Access directly via browser at https://api.storiesfromtheweb.org/api/debug.php
-                    </p>
-                </div>
-                
-                <div class="note">
-                    <h4>JWT Diagnostic Scripts</h4>
-                    <p>
-                        <strong>Path:</strong> /stories-backend/test_jwt_secret.php, /stories-backend/test_api_jwt_secret.php, and /stories-backend/test_token_refresh.php
-                    </p>
-                    <p>
-                        <strong>Purpose:</strong> These scripts test JWT token validation and refresh mechanisms. They help diagnose issues with token validation, generation, and cross-validation between admin and API Auth classes.
-                    </p>
-                    <p>
-                        <strong>Usage:</strong> Run via command line or browser:
-                        <ul>
-                            <li>php test_jwt_secret.php - Tests JWT secret in admin Auth class</li>
-                            <li>php test_api_jwt_secret.php - Tests JWT secret in API Auth class and cross-validation</li>
-                            <li>php test_token_refresh.php - Tests token refresh mechanisms</li>
-                        </ul>
-                    </p>
-                </div>
-                
-                <div class="error">
-                    <h4>Issue: Error Reporting Turned Off</h4>
-                    <p>
-                        <strong>Problem:</strong> Error reporting was turned off in development mode, making it difficult to debug issues.
-                    </p>
-                    <p>
-                        <strong>Solution:</strong> Enabled error reporting in development mode and fixed error logging to point to the correct path.
-                    </p>
-                </div>
-            </section>
-            
-            <section id="conclusion">
-                <h2>10. Conclusion and Documentation Maintenance</h2>
-                
-                <div class="note">
-                    <h4>Documentation as a Living Resource</h4>
-                    <p>
-                        This documentation serves as a comprehensive reference for the "Stories from the Web" project. To maintain its value:
-                    </p>
-                    <ul>
-                        <li><strong>Keep it updated</strong> - When making significant changes to the system, update this documentation accordingly</li>
-                        <li><strong>Document new issues</strong> - If new challenges arise, add them to the Known Issues section with their solutions</li>
-                        <li><strong>Use as first reference</strong> - Before starting work on the system, review this documentation to understand the architecture and past challenges</li>
-                        <li><strong>Maintain markdown files</strong> - Continue to use PLANNING.md, TASK.md, PROGRESS.md, and README.md for tracking ongoing work</li>
-                    </ul>
-                    <p>
-                        The combination of this HTML documentation (for system architecture) and the markdown files (for work tracking) provides a complete picture of the project's state and history.
-                    </p>
-                    
-                    <h3>Project Resources</h3>
-                    <div class="note">
-                        <h4>Repository and Deployment</h4>
-                        <ul>
-                            <li><strong>Git Repository:</strong> <a href="https://github.com/OpaceDigitalAgency/stories.git" target="_blank">https://github.com/OpaceDigitalAgency/stories.git</a></li>
-                            <li><strong>Frontend URL:</strong> <a href="https://storiesfromtheweb.netlify.app/" target="_blank">https://storiesfromtheweb.netlify.app/</a> (Hosted on Netlify)</li>
-                            <li><strong>Backend/API URL:</strong> <a href="https://api.storiesfromtheweb.org/" target="_blank">https://api.storiesfromtheweb.org/</a> (Hosted on cPanel)</li>
-                            <li><strong>Admin Panel:</strong> <a href="https://api.storiesfromtheweb.org/admin/" target="_blank">https://api.storiesfromtheweb.org/admin/</a></li>
-                        </ul>
-                        
-                        <h4>Deployment Process</h4>
-                        <ul>
-                            <li><strong>Frontend:</strong> Automatically deployed to Netlify when changes are pushed to GitHub. No manual deployment steps required.</li>
-                            <li><strong>Backend:</strong> Deployed using cPanel's Git Version Control feature:
-                                <ol>
-                                    <li>Push changes to GitHub repository</li>
-                                    <li>Log in to cPanel</li>
-                                    <li>Go to "Git Version Control"</li>
-                                    <li>Find the "stories" repository</li>
-                                    <li>Click "Manage"</li>
-                                    <li>Click "Update from Remote" to pull the latest changes</li>
-                                    <li>Click "Deploy HEAD Commit" to deploy the changes</li>
-                                </ol>
-                            </li>
-                        </ul>
-                        <p>The <code>.cpanel.yml</code> file in the repository defines what files to deploy and where. See <a href="DEPLOYMENT.md">DEPLOYMENT.md</a> for more details.</p>
-                    </div>
-                    
-                    <h3>Recent Updates</h3>
-                    <div class="note">
-                        <ul>
-                            <li><strong>April 19, 2025 (Update 6)</strong> - Fixed token refresh security check in AuthController.php to allow requests with the force parameter, even without a referer header. This resolves the 401 errors when trying to refresh tokens programmatically.</li>
-                            <li><strong>April 19, 2025 (Update 5)</strong> - Fixed missing authentication routes and Auth.php syntax errors. Added the crucial /auth/refresh endpoint to routes.php and fixed syntax errors in the refreshToken method that were causing token refresh to fail.</li>
-                            <li><strong>April 19, 2025 (Update 4)</strong> - Created diagnostic scripts for JWT token validation and refresh. These scripts help identify and fix issues with token validation, generation, and cross-validation between admin and API Auth classes.</li>
-                            <li><strong>April 19, 2025 (Update 3)</strong> - Fixed a bug in StoriesController.php that was causing 500 errors when accessing individual items. The issue was that the formatSingleStory method was trying to access the 'coverUrl' key, but this key wasn't included in the SQL query for the show method.</li>
-                            <li><strong>April 19, 2025 (Update 2)</strong> - Fixed a critical bug in AdminPage.php where Auth::refreshToken() was being called with the user object instead of the user ID. This was causing token refresh to fail silently, preventing CRUD operations from working properly.</li>
-                            <li><strong>April 19, 2025 (Update 1)</strong> - Implemented comprehensive JWT refresh mechanism to fix recurring 401 failures in Admin CRUD operations. Enhanced token consistency between cookie and session storage, added auto-retry functionality in API clients, and created PHPUnit tests for authentication flows.</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-            
-            <script>
-                // Initialize Mermaid.js
-                mermaid.initialize({
-                    startOnLoad: true,
-                    theme: 'default',
-                    securityLevel: 'loose',
-                    flowchart: { useMaxWidth: false }
-                });
-                
-                // Initialize Highlight.js
-                document.addEventListener('DOMContentLoaded', (event) => {
-                    document.querySelectorAll('pre code').forEach((block) => {
-                        hljs.highlightBlock(block);
-                    });
-                });
-                
-                // Collapsible sections
-                var coll = document.getElementsByClassName("collapsible");
-                for (var i = 0; i < coll.length; i++) {
-                    coll[i].addEventListener("click", function() {
-                        this.classList.toggle("active");
-                        var content = this.nextElementSibling;
-                        if (content.style.maxHeight) {
-                            content.style.maxHeight = null;
-                        } else {
-                            content.style.maxHeight = content.scrollHeight + "px";
-                        }
-                    });
-                }
-                
-                // Zoom functionality for diagrams
-                function zoomDiagram(id, factor) {
-                    const diagram = document.getElementById(id);
-                    const currentScale = parseFloat(diagram.style.transform.replace('scale(', '').replace(')', '') || 1);
-                    const newScale = currentScale * factor;
-                    diagram.style.transform = `scale(${newScale})`;
-                }
-                
-                function resetZoom(id) {
-                    const diagram = document.getElementById(id);
-                    diagram.style.transform = 'scale(1)';
-                }
-                
-                // Active navigation link
-                document.addEventListener('DOMContentLoaded', () => {
-                    const sections = document.querySelectorAll('section');
-                    const navLinks = document.querySelectorAll('nav ul li a');
-                    
-                    window.addEventListener('scroll', () => {
-                        let current = '';
-                        
-                        sections.forEach(section => {
-                            const sectionTop = section.offsetTop;
-                            const sectionHeight = section.clientHeight;
-                            if (pageYOffset >= sectionTop - 100) {
-                                current = section.getAttribute('id');
-                            }
-                        });
-                        
-                        navLinks.forEach(link => {
-                            link.classList.remove('active');
-                            if (link.getAttribute('href') === `#${current}`) {
-                                link.classList.add('active');
-                            }
-                        });
-                    });
-                });
-            </script>
-        </main>
+        </pre>
+        
+        <h3>Data Flow</h3>
+        <p>Content flows from the API to the frontend:</p>
+        <pre>
+1. Astro page requests data during build or client-side
+2. API returns JSON data
+3. Data is rendered using Astro components
+4. Interactive elements use client-side JavaScript
+        </pre>
+        
+        <h2 id="deployment">Deployment Process</h2>
+        
+        <h3>Backend Deployment</h3>
+        <p>The backend is deployed to a shared hosting environment:</p>
+        <ol>
+            <li>Code is pushed to GitHub repository</li>
+            <li>Files are transferred to server via FTP or Git</li>
+            <li>Database migrations are applied if needed</li>
+        </ol>
+        
+        <h3>Frontend Deployment</h3>
+        <p>The frontend is deployed to Netlify:</p>
+        <ol>
+            <li>Code is pushed to GitHub repository</li>
+            <li>Netlify detects changes and triggers build</li>
+            <li>Astro builds static files</li>
+            <li>Files are deployed to Netlify CDN</li>
+        </ol>
+        
+        <h2 id="issues">Known Issues and Solutions</h2>
+        
+        <h3>Case Sensitivity Issues</h3>
+        <div class="note">
+            <p><strong>Issue:</strong> File paths may have case sensitivity issues on different servers.</p>
+            <p><strong>Solution:</strong> Use consistent casing in all file references and imports.</p>
+            <p><strong>Tools:</strong> <code>case_dir_audit.php</code> and <code>case_sensitivity_scan.php</code> can identify case sensitivity issues.</p>
+        </div>
+        
+        <h3>Authentication Issues</h3>
+        <div class="note">
+            <p><strong>Issue:</strong> JWT token validation may fail due to configuration differences.</p>
+            <p><strong>Solution:</strong> Ensure JWT secret is consistent across environments and token format is correct.</p>
+            <p><strong>Tools:</strong> <code>test_jwt_secret.php</code> and <code>test_token_refresh.php</code> can diagnose token issues.</p>
+        </div>
+        
+        <h3>Admin Form Submission Issues</h3>
+        <div class="success">
+            <p><strong>Issue:</strong> Admin interface form submissions may get stuck in "Processing" state.</p>
+            <p><strong>Root Cause:</strong> JavaScript form handler not properly processing API responses.</p>
+            <p><strong>Solution:</strong> Updated admin JavaScript to properly handle API responses and provide clear feedback.</p>
+            <p><strong>Implementation:</strong> Modified <code>admin/assets/js/admin.js</code> to improve form submission handling.</p>
+        </div>
+        
+        <h3>API Response Format Issues</h3>
+        <div class="note">
+            <p><strong>Issue:</strong> API may return responses in unexpected formats.</p>
+            <p><strong>Solution:</strong> Ensure consistent response formatting and proper error handling in API controllers.</p>
+            <p><strong>Tools:</strong> <code>debug_api_calls.php</code> can test API endpoints and verify response formats.</p>
+        </div>
+        
+        <h3>Database Write Issues</h3>
+        <div class="success">
+            <p><strong>Issue:</strong> Database write operations may fail due to authentication or permission issues.</p>
+            <p><strong>Root Cause:</strong> Missing <code>SimpleAuthMiddleware</code> class referenced in routes.php.</p>
+            <p><strong>Solution:</strong> Created <code>SimpleAuthMiddleware.php</code> to handle authentication properly.</p>
+            <p><strong>Implementation:</strong> Added middleware class and updated routes configuration.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Last updated: April 19, 2025</p>
+            <h3>Recent Updates</h3>
+            <ul>
+                <li><strong>2025-04-19:</strong> Added documentation for admin form submission fix and database write issues</li>
+                <li><strong>2025-04-15:</strong> Updated deployment process documentation</li>
+                <li><strong>2025-04-10:</strong> Added case sensitivity troubleshooting section</li>
+            </ul>
+        </div>
     </div>
 </body>
 </html>

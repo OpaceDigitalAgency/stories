@@ -8,8 +8,14 @@
  * @version 1.0.0
  */
 
-// Initialize router with config
-$router = new StoriesAPI\Core\Router($config);
+// Use the router passed from index.php
+// If $router is not defined, create a new instance (for direct access)
+if (!isset($router)) {
+    $router = new StoriesAPI\Core\Router($config);
+    error_log("Created new router instance in routes.php");
+} else {
+    error_log("Using existing router instance from index.php");
+}
 
 // Add CORS middleware globally
 $corsMiddleware = new StoriesAPI\Middleware\CorsMiddleware($config['security']['cors']);

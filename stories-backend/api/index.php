@@ -154,7 +154,6 @@ $router = new \StoriesAPI\Core\Router($config);
 // Load routes from routes file
 if (file_exists(__DIR__ . '/v1/routes.php')) {
     // Pass the router to the routes file
-    $routerVar = $router;
     require __DIR__ . '/v1/routes.php';
     error_log("Routes loaded from routes.php");
 } else {

@@ -284,11 +284,25 @@ class AuthController extends BaseController {
                 }
             }
             
-            // Check if force parameter is set
-            $forceRefresh = isset($this->request['force']) && ($this->request['force'] === true || $this->request['force'] === 'true' || $this->request['force'] === 1 || $this->request['force'] === '1');
+            // Check if force parameter is set - be very lenient with the check
+            $forceRefresh = false;
+            if (isset($this->request['force'])) {
+                $force = $this->request['force'];
+                if ($force === true || $force === 'true' || $force === 1 || $force === '1' || $force === 'yes' || $force === 'y' || $force === 'on') {
+                    $forceRefresh = true;
+                }
+            }
+            
+            // Also check if force is in the raw input
+            $rawInput = file_get_contents('php://input');
+            if (strpos($rawInput, '"force":true') !== false || strpos($rawInput, '"force":"true"') !== false ||
+                strpos($rawInput, '"force":1') !== false || strpos($rawInput, '"force":"1"') !== false) {
+                $forceRefresh = true;
+            }
             
             // Log the request data for debugging
             error_log("Token refresh request data: " . json_encode($this->request));
+            error_log("Token refresh raw input: " . $rawInput);
             
             // If force parameter is set, consider it a trusted source
             if ($forceRefresh) {
@@ -321,8 +335,23 @@ class AuthController extends BaseController {
             
             $user = $stmt->fetch();
             
-            // Check if we should force refresh or check expiration
-            $forceRefresh = isset($this->request['force']) && ($this->request['force'] === true || $this->request['force'] === 'true' || $this->request['force'] === 1 || $this->request['force'] === '1');
+            // Check if we should force refresh or check expiration - be very lenient with the check
+            $forceRefresh = false;
+            if (isset($this->request['force'])) {
+                $force = $this->request['force'];
+                if ($force === true || $force === 'true' || $force === 1 || $force === '1' || $force === 'yes' || $force === 'y' || $force === 'on') {
+                    $forceRefresh = true;
+                }
+            }
+            
+            // Also check if force is in the raw input
+            $rawInput = file_get_contents('php://input');
+            if (strpos($rawInput, '"force":true') !== false || strpos($rawInput, '"force":"true"') !== false ||
+                strpos($rawInput, '"force":1') !== false || strpos($rawInput, '"force":"1"') !== false) {
+                $forceRefresh = true;
+            }
+            
+            error_log("Force refresh: " . ($forceRefresh ? "true" : "false"));
             $checkExpiration = !$forceRefresh;
             
             // Get expiration threshold (default to 30 seconds)

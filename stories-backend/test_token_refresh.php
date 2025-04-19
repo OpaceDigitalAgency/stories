@@ -26,12 +26,12 @@ $testUser = [
     'role' => 'admin'
 ];
 
-// Generate a token that's about to expire (30 seconds from now)
+// Generate a token that's about to expire (5 minutes from now)
 $payload = [
     'user_id' => $testUser['id'],
     'role' => $testUser['role'],
     'iat' => time(),
-    'exp' => time() + 30 // 30 seconds from now
+    'exp' => time() + 300 // 5 minutes from now
 ];
 
 // Create JWT header
@@ -115,8 +115,23 @@ $jsonData = json_encode([
 ]);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
 
+// Print request details for debugging
+echo "Request URL: $url\n";
+echo "Request Headers: " . json_encode(curl_getinfo($ch, CURLINFO_HEADER_OUT)) . "\n";
+echo "Request Data: $jsonData\n";
+
+// Enable verbose output
+curl_setopt($ch, CURLOPT_VERBOSE, true);
+$verbose = fopen('php://temp', 'w+');
+curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+// Get verbose information
+rewind($verbose);
+$verboseLog = stream_get_contents($verbose);
+echo "Verbose information:\n" . $verboseLog . "\n";
 
 if (curl_errno($ch)) {
     echo "cURL error: " . curl_error($ch) . "\n";

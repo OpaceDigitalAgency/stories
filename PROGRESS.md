@@ -440,6 +440,13 @@
 - Added the cover_url column to the SQL query to fix the issue
 - This should resolve the 500 errors when accessing individual items in the admin panel
 
+### Fixed: Missing Auth Routes and Auth.php Syntax Errors
+- Identified and fixed critical issues with the JWT token refresh mechanism:
+  - Added missing authentication routes to routes.php, including the crucial /auth/refresh endpoint
+  - Fixed syntax errors in Auth.php where the refreshToken method was incorrectly defined inside the validateCsrfToken method
+  - Fixed indentation issues in the refreshToken method that were causing syntax errors
+- These fixes should resolve the 404 errors when trying to refresh tokens and ensure proper token validation
+
 ### Created JWT Diagnostic Scripts
 - Created diagnostic scripts to help identify and fix JWT token validation issues:
   - test_jwt_secret.php: Tests if the JWT secret key is properly set in the admin Auth class

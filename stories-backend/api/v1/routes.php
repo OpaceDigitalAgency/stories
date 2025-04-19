@@ -33,5 +33,47 @@ $router->post('tags', 'StoriesAPI\Endpoints\TagsController', 'create', [$authMid
 $router->put('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'update', [$authMiddleware]);
 $router->delete('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'delete', [$authMiddleware]);
 
+// --- Stories ---
+$router->get('stories', 'StoriesAPI\Endpoints\StoriesController', 'index');
+$router->get('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'show');
+$router->post('stories', 'StoriesAPI\Endpoints\StoriesController', 'create', [$authMiddleware]);
+$router->put('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'update', [$authMiddleware]);
+$router->delete('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'delete', [$authMiddleware]);
+
+// --- Authors ---
+$router->get('authors', 'StoriesAPI\Endpoints\AuthorsController', 'index');
+$router->get('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'show');
+$router->post('authors', 'StoriesAPI\Endpoints\AuthorsController', 'create', [$authMiddleware]);
+$router->put('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'update', [$authMiddleware]);
+$router->delete('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'delete', [$authMiddleware]);
+
+// --- Blog Posts ---
+$router->get('blog-posts', 'StoriesAPI\Endpoints\BlogPostsController', 'index');
+$router->get('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'show');
+$router->post('blog-posts', 'StoriesAPI\Endpoints\BlogPostsController', 'create', [$authMiddleware]);
+$router->put('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'update', [$authMiddleware]);
+$router->delete('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'delete', [$authMiddleware]);
+
+// --- Directory Items ---
+$router->get('directory-items', 'StoriesAPI\Endpoints\DirectoryItemsController', 'index');
+$router->get('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'show');
+$router->post('directory-items', 'StoriesAPI\Endpoints\DirectoryItemsController', 'create', [$authMiddleware]);
+$router->put('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'update', [$authMiddleware]);
+$router->delete('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'delete', [$authMiddleware]);
+
+// --- Games ---
+$router->get('games', 'StoriesAPI\Endpoints\GamesController', 'index');
+$router->get('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'show');
+$router->post('games', 'StoriesAPI\Endpoints\GamesController', 'create', [$authMiddleware]);
+$router->put('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'update', [$authMiddleware]);
+$router->delete('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'delete', [$authMiddleware]);
+
+// --- AI Tools ---
+$router->get('ai-tools', 'StoriesAPI\Endpoints\AiToolsController', 'index');
+$router->get('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'show');
+$router->post('ai-tools', 'StoriesAPI\Endpoints\AiToolsController', 'create', [$authMiddleware]);
+$router->put('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'update', [$authMiddleware]);
+$router->delete('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'delete', [$authMiddleware]);
+
 // Handle the request
 $router->handle();

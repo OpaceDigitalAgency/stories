@@ -34,8 +34,9 @@ if (SimpleAuth::initDB($config['db'])) {
     
     if ($user) {
         echo "Found test user: {$user['email']}\n";
-        echo "Please enter the password for this user: ";
-        $password = trim(fgets(STDIN));
+        // Use a default password for testing or get it from a config file
+        $password = "admin123"; // Replace with the actual password or get from config
+        echo "Using default password for testing\n";
         
         $result = SimpleAuth::login($user['email'], $password);
         

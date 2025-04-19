@@ -104,12 +104,16 @@ class AuthorsController extends BaseController {
      * Get a single author by slug or numeric ID
      */
     public function show() {
-        // Grab the placeholder (named "slug" by the router)
-        $identifier = $this->params['slug'] ?? null;
+        // Grab the placeholder (named "id" by the router)
+        $identifier = $this->params['id'] ?? null;
         if (!$identifier) {
-            $this->serverError('No identifier provided');
+            $this->badRequest('No identifier provided');
             return;
         }
+        
+        // Log the identifier for debugging
+        error_log("AuthorsController::show - Identifier: " . $identifier);
+        error_log("AuthorsController::show - Params: " . json_encode($this->params));
 
         // Decide whether this is an ID or a slug
         if (ctype_digit($identifier)) {

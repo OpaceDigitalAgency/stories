@@ -434,6 +434,21 @@
 - This was causing token refresh to fail silently, preventing CRUD operations from working properly
 - Updated all instances of Auth::refreshToken() in AdminPage.php to correctly pass the user ID
 
+### Fixed: 500 Error in StoriesController
+- Identified and fixed a bug in StoriesController.php that was causing 500 errors when accessing individual items
+- The issue was that the formatSingleStory method was trying to access the 'coverUrl' key, but this key wasn't included in the SQL query for the show method
+- Added the cover_url column to the SQL query to fix the issue
+- This should resolve the 500 errors when accessing individual items in the admin panel
+
+### Created JWT Diagnostic Scripts
+- Created diagnostic scripts to help identify and fix JWT token validation issues:
+  - test_jwt_secret.php: Tests if the JWT secret key is properly set in the admin Auth class
+  - test_api_jwt_secret.php: Tests if the JWT secret key is properly set in the API Auth class
+  - test_token_refresh.php: Tests the token refresh mechanism in the admin panel
+- These scripts can help diagnose issues with token validation and refresh
+- The scripts test token generation, validation, and cross-validation between admin and API Auth classes
+- They also provide detailed debug information about the PHP environment
+
 ### Documented Debugging Tools
 - Identified and documented several debugging tools that can help diagnose authentication and API issues:
   - auth_diagnostic.php: Comprehensive tool for diagnosing authentication issues

@@ -147,7 +147,16 @@ $config = require __DIR__ . '/v1/config/config.php';
 \StoriesAPI\Utils\Response::$debugMode = DEBUG_MODE;
 
 // Load Router class with case-insensitive approach
-loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
+$routerFileResult = loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
+
+// Debug output: log whether Router.php was found and loaded
+if ($routerFileResult) {
+    error_log("[DEBUG] Router.php loaded: " . $routerFileResult);
+    file_put_contents(__DIR__ . '/router_load_debug.log', "[DEBUG] Router.php loaded: " . $routerFileResult . PHP_EOL, FILE_APPEND);
+} else {
+    error_log("[DEBUG] Router.php NOT found. Attempted path: " . __DIR__ . '/v1/Core/Router.php');
+    file_put_contents(__DIR__ . '/router_load_debug.log', "[DEBUG] Router.php NOT found. Attempted path: " . __DIR__ . '/v1/Core/Router.php' . PHP_EOL, FILE_APPEND);
+}
 
 // Create router
 $router = new \StoriesAPI\Core\Router($config);

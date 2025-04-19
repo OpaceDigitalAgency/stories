@@ -16,8 +16,8 @@ function initJQueryFeatures() {
     
     // Ensure we wait a moment for jQuery plugins to load
     setTimeout(function() {
-        initTagInputs();
-        initDataTables();
+        // initTagInputs(); // Temporarily disabled for debugging
+        // initDataTables(); // Temporarily disabled for debugging
         // Add any other jQuery-dependent initializations here
     }, 100);
 }
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("jQuery loaded event received");
             // Delay initialization slightly to ensure all jQuery plugins are loaded
             setTimeout(function() {
-                initJQueryFeatures();
+                // initJQueryFeatures(); // Temporarily disabled for debugging - ensure jQuery loads first
             }, 200);
         });
         
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function checkJQuery() {
             if (jQueryLoaded()) {
                 console.log("jQuery detected by timer. Initializing jQuery-dependent features.");
-                initJQueryFeatures();
+                // initJQueryFeatures(); // Temporarily disabled for debugging - ensure jQuery loads first
             } else {
                 jQueryRetryCount++;
                 if (jQueryRetryCount < maxJQueryRetries) {

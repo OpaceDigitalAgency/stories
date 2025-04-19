@@ -116,11 +116,14 @@ function initTooltips() {
  * Initialize form validation
  */
 function initFormValidation() {
+    console.log('[INIT] Running initFormValidation...'); // DEBUG
     // Get all forms with the 'needs-validation' class
     var forms = document.querySelectorAll('.needs-validation');
+    console.log('[INIT] Found forms:', forms.length); // DEBUG
     
     // Loop over them and prevent submission
     Array.prototype.slice.call(forms).forEach(function(form) {
+        console.log('[INIT] Attaching submit listener to form:', form.id); // DEBUG
         form.addEventListener('submit', function(event) {
             console.log('[FORM HANDLER] Submit event triggered for form:', form.id); // DEBUG
             

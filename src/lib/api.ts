@@ -159,24 +159,47 @@ const refreshAuthToken = async (): Promise<boolean> => {
     
     // Make refresh request
     const url = `${API_URL}/auth/refresh`;
+    console.log(`Refresh token URL: ${url}`);
+    
+    const requestData = {
+      user_id: userId,
+      force: true,
+      threshold: 60 // 1 minute threshold
+    };
+    
+    console.log(`Refresh token request data:`, requestData);
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
       },
-      body: JSON.stringify({
-        user_id: userId,
-        force: true
-      })
+      body: JSON.stringify(requestData)
     });
+    
+    // Log the response status
+    console.log(`Token refresh response status: ${response.status} ${response.statusText}`);
+    
+    // Try to get the response body as text first for debugging
+    const responseText = await response.text();
+    console.log(`Token refresh response body: ${responseText}`);
     
     if (!response.ok) {
       console.error(`Token refresh failed: ${response.status} ${response.statusText}`);
+      console.error(`Response body: ${responseText}`);
       return false;
     }
     
-    const data = await response.json();
+    // Parse the response JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('Token refresh parsed response:', data);
+    } catch (e) {
+      console.error('Error parsing token refresh response:', e);
+      return false;
+    }
     
     // Check if token was refreshed
     if (data.refreshed === false) {
@@ -187,6 +210,7 @@ const refreshAuthToken = async (): Promise<boolean> => {
     // Check if we have a new token
     if (data.token) {
       console.log('Token refreshed successfully');
+      console.log(`New token expires in: ${data.expires_in} seconds`);
       setAuthToken(data.token, data.expires_in);
       return true;
     }

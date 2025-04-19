@@ -445,6 +445,7 @@
   - Added missing authentication routes to routes.php, including the crucial /auth/refresh endpoint
   - Fixed syntax errors in Auth.php where the refreshToken method was incorrectly defined inside the validateCsrfToken method
   - Fixed indentation issues in the refreshToken method that were causing syntax errors
+  - Modified AuthController.php to allow token refresh requests with the force parameter, even without a referer header
 - These fixes should resolve the 404 errors when trying to refresh tokens and ensure proper token validation
 
 ### Created JWT Diagnostic Scripts
@@ -476,3 +477,12 @@
   5. Click "Update from Remote" to pull the latest changes
   6. Click "Deploy HEAD Commit" to deploy the changes
 - Added deployment information to system-documentation.html for future reference
+## 2025-04-19
+### Fixed: JWT Refresh & Token-Consistency Bug in AdminPage.php
+- Fixed a critical issue in AdminPage.php where token refresh was failing due to improper user ID extraction:
+  - Identified that AdminPage.php was passing $_SESSION['user']['id'] directly to Auth::refreshToken() without proper validation
+  - Enhanced the code to properly check if $_SESSION['user'] and $_SESSION['user']['id'] exist before using them
+  - Added detailed error logging to track token refresh attempts and results
+  - This fix ensures that the token refresh mechanism works correctly in the admin panel
+  - The changes have been committed and pushed to the repository (commit 92cde65)
+- This fix should resolve the persistent issues with CRUD operations failing due to authentication problems

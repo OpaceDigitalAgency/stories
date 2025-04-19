@@ -2052,6 +2052,7 @@ stories-backend/
                     <h3>Recent Updates</h3>
                     <div class="note">
                         <ul>
+                            <li><strong>April 19, 2025 (Update 6)</strong> - Fixed token refresh security check in AuthController.php to allow requests with the force parameter, even without a referer header. This resolves the 401 errors when trying to refresh tokens programmatically.</li>
                             <li><strong>April 19, 2025 (Update 5)</strong> - Fixed missing authentication routes and Auth.php syntax errors. Added the crucial /auth/refresh endpoint to routes.php and fixed syntax errors in the refreshToken method that were causing token refresh to fail.</li>
                             <li><strong>April 19, 2025 (Update 4)</strong> - Created diagnostic scripts for JWT token validation and refresh. These scripts help identify and fix issues with token validation, generation, and cross-validation between admin and API Auth classes.</li>
                             <li><strong>April 19, 2025 (Update 3)</strong> - Fixed a bug in StoriesController.php that was causing 500 errors when accessing individual items. The issue was that the formatSingleStory method was trying to access the 'coverUrl' key, but this key wasn't included in the SQL query for the show method.</li>

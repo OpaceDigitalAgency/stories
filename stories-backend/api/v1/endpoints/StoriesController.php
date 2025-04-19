@@ -177,9 +177,16 @@ class StoriesController extends BaseController {
      * Get a single story by slug or numeric ID
      */
     public function show() {
+        // Add debugging for show method
+        error_log("StoriesController::show - Starting show method");
+        
+        // Set timeout limit to prevent hanging
+        set_time_limit(60); // 60 seconds timeout
+        
         // Check for both 'id' and 'slug' parameters
         $identifier = $this->params['id'] ?? $this->params['slug'] ?? null;
         if (!$identifier) {
+            error_log("StoriesController::show - No identifier provided");
             Response::sendError('No identifier provided', 400);
             return;
         }
@@ -225,9 +232,13 @@ class StoriesController extends BaseController {
             }
 
             // Format relationships inline if you need to match previous $formattedStory
+            error_log("StoriesController::show - Formatting story for response");
             $formatted = $this->formatSingleStory($story);
+            error_log("StoriesController::show - Sending success response");
             Response::sendSuccess($formatted);
         } catch (\Exception $e) {
+            error_log("StoriesController::show - ERROR: " . $e->getMessage());
+            error_log("StoriesController::show - Stack trace: " . $e->getTraceAsString());
             $this->serverError('Failed to fetch Story: ' . $e->getMessage());
         }
     }
@@ -380,6 +391,12 @@ class StoriesController extends BaseController {
      * Update a story
      */
     public function update() {
+        // Add debugging for update method
+        error_log("StoriesController::update - Starting update method");
+        
+        // Set timeout limit to prevent hanging
+        set_time_limit(60); // 60 seconds timeout
+        
         // Validate story ID
         $storyId = isset($this->params['id']) ? (int)$this->params['id'] : null;
         
@@ -390,6 +407,7 @@ class StoriesController extends BaseController {
         
         try {
             // Start transaction
+            error_log("StoriesController::update - Starting transaction");
             $this->db->beginTransaction();
             
             // Check if story exists
@@ -586,18 +604,24 @@ class StoriesController extends BaseController {
             }
             
             // Commit transaction
+            error_log("StoriesController::update - Committing transaction");
             $this->db->commit();
             
             // Return the updated story
+            error_log("StoriesController::update - Fetching updated story slug");
             $query = "SELECT slug FROM stories WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$storyId]);
             $updatedStory = $stmt->fetch();
             
+            error_log("StoriesController::update - Returning updated story with slug: " . $updatedStory['slug']);
             $this->params['slug'] = $updatedStory['slug'];
             $this->show();
         } catch (\Exception $e) {
             // Rollback transaction
+            error_log("StoriesController::update - ERROR: " . $e->getMessage());
+            error_log("StoriesController::update - Stack trace: " . $e->getTraceAsString());
             $this->db->rollback();
+            error_log("StoriesController::update - Transaction rolled back");
             $this->serverError('Failed to update story: ' . $e->getMessage());
         }
     }

@@ -274,13 +274,46 @@ class Auth {
      * @param bool $remember Whether to remember the user
      * @return string|bool New token if successful, false otherwise
      */
-    public static function refreshToken($user, $remember = false) {
+    public static function refreshToken($user, $remember = false, $expirationThreshold = 30) {
+        // Handle case where $user is just a user ID
+        if (is_numeric($user)) {
+            $userId = $user;
+            $user = self::getUserById($userId);
+            if (!$user) {
+                error_log("Auth::refreshToken - Invalid user ID: $userId");
+                return false;
+            }
+        }
+        
         if (!$user || !isset($user['id'])) {
             error_log("Auth::refreshToken - Invalid user data");
             return false;
         }
         
         error_log("Auth::refreshToken - Refreshing token for user ID: {$user['id']}, role: {$user['role']}");
+        
+        // Check if current token is still valid and not about to expire
+        if (isset($_SESSION['token'])) {
+            $currentToken = $_SESSION['token'];
+            $parts = explode('.', $currentToken);
+            if (count($parts) === 3) {
+                try {
+                    $payload = json_decode(self::base64UrlDecode($parts[1]), true);
+                    if ($payload && isset($payload['exp'])) {
+                        $expiresIn = $payload['exp'] - time();
+                        error_log("Auth::refreshToken - Current token expires in $expiresIn seconds");
+                        
+                        // If token is not about to expire and remember is false, skip refresh
+                        if ($expiresIn > $expirationThreshold && $remember === false) {
+                            error_log("Auth::refreshToken - Token still valid, skipping refresh");
+                            return true;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log("Auth::refreshToken - Error decoding token: " . $e->getMessage());
+                }
+            }
+        }
         
         try {
             // Generate new JWT token
@@ -351,6 +384,8 @@ class Auth {
             $ch = curl_init();
             $url = rtrim($apiUrl, '/') . '/auth/refresh';
             
+            error_log("Auth::refreshApiToken - URL: $url");
+            
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
@@ -364,13 +399,33 @@ class Auth {
             
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             
-            // Set request data
-            $jsonData = json_encode(['user_id' => $userId]);
+            // Set request data with force=true to ensure refresh happens
+            $requestData = [
+                'user_id' => $userId,
+                'force' => true,
+                'threshold' => 60 // 1 minute threshold
+            ];
+            $jsonData = json_encode($requestData);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+            
+            error_log("Auth::refreshApiToken - Request data: $jsonData");
+            
+            // Set verbose debugging
+            curl_setopt($ch, CURLOPT_VERBOSE, true);
+            $verbose = fopen('php://temp', 'w+');
+            curl_setopt($ch, CURLOPT_STDERR, $verbose);
             
             // Execute request
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Get verbose debug information
+            rewind($verbose);
+            $verboseLog = stream_get_contents($verbose);
+            fclose($verbose);
+            
+            // Log verbose output for debugging
+            error_log("Auth::refreshApiToken - Verbose log: " . $verboseLog);
             
             // Check for errors
             if (curl_errno($ch)) {
@@ -380,6 +435,17 @@ class Auth {
             }
             
             curl_close($ch);
+            
+            // Log the response
+            error_log("Auth::refreshApiToken - Response (HTTP $httpCode): " . substr($response, 0, 500));
+            
+            // Parse response
+            $responseData = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                error_log("Auth::refreshApiToken - JSON parsing error: " . json_last_error_msg());
+            } else {
+                error_log("Auth::refreshApiToken - Parsed response: " . json_encode($responseData));
+            }
             
             // Check response
             if ($httpCode == 200) {

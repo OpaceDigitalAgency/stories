@@ -139,6 +139,9 @@ function initFormValidation() {
         form.addEventListener('submit', function(event) {
             console.log('[FORM HANDLER] Submit event triggered for form:', form.id); // DEBUG
             
+            // Ensure our handler runs first if possible
+            event.stopImmediatePropagation(); // Prevent other listeners on the same element from running
+            
             if (!form.checkValidity()) {
                 console.log('[FORM HANDLER] Form invalid, stopping.'); // DEBUG
                 event.preventDefault();

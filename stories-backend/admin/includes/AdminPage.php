@@ -191,7 +191,8 @@ class AdminPage {
                 }
             } else {
                 // If we can't decode the tokens, refresh them
-                Auth::refreshToken($_SESSION['user'], true);
+                // Pass user ID instead of user object
+                Auth::refreshToken($_SESSION['user']['id'], true);
             }
         }
         
@@ -207,17 +208,20 @@ class AdminPage {
                 // If token expires in less than 1 minute (60 seconds), refresh it
                 if ($expiresIn < 60 && $expiresIn > 0) {
                     error_log("AdminPage: Token expires in $expiresIn seconds, refreshing");
-                    Auth::refreshToken($_SESSION['user'], true);
+                    // Pass user ID instead of user object
+                    Auth::refreshToken($_SESSION['user']['id'], true);
                 }
                 // If token is already expired, refresh it immediately
                 else if ($expiresIn <= 0) {
                     error_log("AdminPage: Token is expired, refreshing immediately");
-                    Auth::refreshToken($_SESSION['user'], true);
+                    // Pass user ID instead of user object
+                    Auth::refreshToken($_SESSION['user']['id'], true);
                 }
             } else {
                 // If we can't decode the payload or it doesn't have an exp claim, refresh the token
                 error_log("AdminPage: Token payload is invalid or missing expiration, refreshing");
-                Auth::refreshToken($_SESSION['user'], true);
+                // Pass user ID instead of user object
+                Auth::refreshToken($_SESSION['user']['id'], true);
             }
         }
     }

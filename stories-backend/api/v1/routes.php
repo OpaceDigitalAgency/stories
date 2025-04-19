@@ -35,7 +35,7 @@ $router->delete('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'delete', [$
 
 // --- Stories ---
 $router->get('stories', 'StoriesAPI\Endpoints\StoriesController', 'index');
-$router->get('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'show');
+$router->get('stories/{slug}', 'StoriesAPI\Endpoints\StoriesController', 'show');
 $router->post('stories', 'StoriesAPI\Endpoints\StoriesController', 'create', [$authMiddleware]);
 $router->put('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'update', [$authMiddleware]);
 $router->delete('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'delete', [$authMiddleware]);

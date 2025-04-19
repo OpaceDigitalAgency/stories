@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Start output buffering immediately after opening PHP tag
 // Comment out debug file writing to prevent output before JSON
 // file_put_contents('/home/stories/tmp_autoload_test.txt', date('c')." index.php executed\n", FILE_APPEND);
 header("Cache-Control: no-cache");
@@ -189,8 +190,9 @@ try {
 $output = ob_get_clean();
 if (!empty($output)) {
     // Log unexpected output for debugging
-    error_log('Unexpected output before JSON response: ' . $output);
-    
+    // Log unexpected output for debugging to a dedicated file
+    file_put_contents(__DIR__ . '/api-error.log', date('c') . " Unexpected output before JSON response: " . $output . "\n", FILE_APPEND);
+
     // If headers haven't been sent yet, we can still send a proper JSON response
     if (!headers_sent()) {
         header('Content-Type: application/json');

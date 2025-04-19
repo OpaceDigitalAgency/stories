@@ -108,6 +108,12 @@ $testEndpoint = 'tags';
             <?php
             $getResponse = $apiClient->get($testEndpoint);
             logTest("GET /$testEndpoint Response", $getResponse);
+            // Debug output: HTTP status code and raw response body
+            echo "<pre style='margin: 10px; padding: 10px; background: #eef; border: 1px solid #99f;'>";
+            echo "<strong>GET /$testEndpoint Debug Info</strong>\n";
+            echo "HTTP Status Code: " . htmlspecialchars($apiClient->getLastStatusCode()) . "\n";
+            echo "Raw Response Body:\n" . htmlspecialchars($apiClient->getLastRawResponse());
+            echo "</pre>";
             ?>
         </div>
 
@@ -125,6 +131,12 @@ $testEndpoint = 'tags';
             $postResponse = $apiClient->post($testEndpoint, $testData);
             logTest("POST /$testEndpoint Request Data", $testData);
             logTest("POST /$testEndpoint Response", $postResponse);
+            // Debug output: HTTP status code and raw response body
+            echo "<pre style='margin: 10px; padding: 10px; background: #eef; border: 1px solid #99f;'>";
+            echo "<strong>POST /$testEndpoint Debug Info</strong>\n";
+            echo "HTTP Status Code: " . htmlspecialchars($apiClient->getLastStatusCode()) . "\n";
+            echo "Raw Response Body:\n" . htmlspecialchars($apiClient->getLastRawResponse());
+            echo "</pre>";
 
             // Store created ID for update and delete tests
             $createdId = $postResponse['data']['id'] ?? null;

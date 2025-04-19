@@ -13,16 +13,26 @@ class ApiClient {
      * @var string API URL
      */
     private $apiUrl;
-    
+
     /**
      * @var string|null Authentication token
      */
     private $authToken;
-    
+
     /**
      * @var array Last error details
      */
     private $lastError = [];
+
+    /**
+     * @var int|null Last HTTP status code
+     */
+    private $lastStatusCode = null;
+
+    /**
+     * @var string|null Last raw response body
+     */
+    private $lastRawResponse = null;
     
     /**
      * Constructor
@@ -30,15 +40,24 @@ class ApiClient {
      * @param string $apiUrl API URL
      * @param string|null $authToken Authentication token
      */
-    public function __construct($apiUrl, $authToken = null) {
-        if (!$apiUrl) {
-            error_log("Warning: No API URL provided to ApiClient");
-            $apiUrl = API_URL ?? 'http://localhost/api/v1';
+    public function __construct($apiUrl = null, $authToken = null) {
+        // Use provided URL or fall back to config
+        if (!$apiUrl && defined('API_URL')) {
+            $apiUrl = API_URL;
+            error_log("Using API_URL from config: " . $apiUrl);
+        } elseif (!$apiUrl) {
+            // Construct URL from current server if no URL provided
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $apiUrl = $scheme . '://' . $host . '/api/v1';
+            error_log("Constructed API URL: " . $apiUrl);
         }
+
         $this->apiUrl = rtrim($apiUrl, '/');
         $this->authToken = $authToken;
         
         error_log("ApiClient initialized with URL: " . $this->apiUrl);
+        error_log("Auth token status: " . ($authToken ? "Present" : "Missing"));
     }
     
     /**
@@ -105,8 +124,14 @@ class ApiClient {
             $url .= '?' . http_build_query($params);
         }
         
-        // Log the request for debugging
-        error_log("API Request: $method $url");
+        // Log the request details
+        error_log("API Request Details:");
+        error_log("- Method: $method");
+        error_log("- URL: $url");
+        error_log("- Params: " . json_encode($params));
+        if ($data !== null) {
+            error_log("- Data: " . json_encode($data));
+        }
         
         // Initialize cURL
         $ch = curl_init();
@@ -267,11 +292,18 @@ class ApiClient {
         // Close cURL
         curl_close($ch);
         
+        // Store last status code and raw response
+        $this->lastStatusCode = $httpCode;
+        $this->lastRawResponse = $response;
+
         // Parse response
         $responseData = json_decode($response, true);
         
-        // Log the response for debugging
-        error_log("API Response: $httpCode - " . substr($response, 0, 500) . (strlen($response) > 500 ? '...' : ''));
+        // Log detailed response information
+        error_log("API Response Details:");
+        error_log("- Status Code: $httpCode");
+        error_log("- Raw Response: " . substr($response, 0, 500) . (strlen($response) > 500 ? '...' : ''));
+        error_log("- Parsed Response: " . json_encode($responseData));
         
         // Check for JSON parsing errors
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -635,5 +667,23 @@ class ApiClient {
             default:
                 return "Unknown error occurred";
         }
+    }
+
+    /**
+     * Get the last HTTP status code from the most recent request.
+     *
+     * @return int|null
+     */
+    public function getLastStatusCode() {
+        return $this->lastStatusCode;
+    }
+
+    /**
+     * Get the last raw response body from the most recent request.
+     *
+     * @return string|null
+     */
+    public function getLastRawResponse() {
+        return $this->lastRawResponse;
     }
 }

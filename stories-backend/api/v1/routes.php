@@ -24,15 +24,18 @@ error_log("ROUTES.PHP IS BEING LOADED - " . date('Y-m-d H:i:s'));
 $corsMiddleware = new StoriesAPI\Middleware\CorsMiddleware($config['security']['cors']);
 $router->addGlobalMiddleware($corsMiddleware);
 
-// Create auth middleware instance
-$authMiddleware = new StoriesAPI\Middleware\AuthMiddleware($config);
+// Create simple auth middleware instance
+$authMiddleware = new StoriesAPI\Middleware\SimpleAuthMiddleware($config);
 
 // Authentication routes
-$router->post('auth/login', 'StoriesAPI\Endpoints\AuthController', 'login');
-$router->post('auth/register', 'StoriesAPI\Endpoints\AuthController', 'register');
-$router->post('auth/refresh', 'StoriesAPI\Endpoints\AuthController', 'refresh');
-$router->get('auth/me', 'StoriesAPI\Endpoints\AuthController', 'me', [$authMiddleware]);
-$router->put('auth/profile', 'StoriesAPI\Endpoints\AuthController', 'updateProfile', [$authMiddleware]);
+$router->post('auth/login', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
+$router->post('auth/logout', 'StoriesAPI\Endpoints\SimpleAuthController', 'logout');
+$router->get('auth/me', 'StoriesAPI\Endpoints\SimpleAuthController', 'me', [$authMiddleware]);
+
+// Keep old routes for backward compatibility but point to new controller
+$router->post('auth/register', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
+$router->post('auth/refresh', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
+$router->put('auth/profile', 'StoriesAPI\Endpoints\SimpleAuthController', 'me', [$authMiddleware]);
 
 // Public routes (no auth required)
 $router->get('tags', 'StoriesAPI\Endpoints\TagsController', 'index');

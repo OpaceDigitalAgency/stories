@@ -1,9 +1,9 @@
 <?php
 /**
  * API Routes Configuration
- * 
+ *
  * This file defines all the API routes and their corresponding controllers.
- * 
+ *
  * @package Stories API
  * @version 1.0.0
  */
@@ -16,6 +16,9 @@ if (!isset($router)) {
 } else {
     error_log("Using existing router instance from index.php");
 }
+
+// Add a debug log to confirm this file is being loaded
+error_log("ROUTES.PHP IS BEING LOADED - " . date('Y-m-d H:i:s'));
 
 // Add CORS middleware globally
 $corsMiddleware = new StoriesAPI\Middleware\CorsMiddleware($config['security']['cors']);
@@ -33,7 +36,7 @@ $router->put('auth/profile', 'StoriesAPI\Endpoints\AuthController', 'updateProfi
 
 // Public routes (no auth required)
 $router->get('tags', 'StoriesAPI\Endpoints\TagsController', 'index');
-$router->get('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'show');
+$router->get('tags/{slug}', 'StoriesAPI\Endpoints\TagsController', 'show');
 
 // Protected routes (auth required)
 $router->post('tags', 'StoriesAPI\Endpoints\TagsController', 'create', [$authMiddleware]);
@@ -49,14 +52,14 @@ $router->delete('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'delet
 
 // --- Authors ---
 $router->get('authors', 'StoriesAPI\Endpoints\AuthorsController', 'index');
-$router->get('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'show');
+$router->get('authors/{slug}', 'StoriesAPI\Endpoints\AuthorsController', 'show');
 $router->post('authors', 'StoriesAPI\Endpoints\AuthorsController', 'create', [$authMiddleware]);
 $router->put('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'update', [$authMiddleware]);
 $router->delete('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'delete', [$authMiddleware]);
 
 // --- Blog Posts ---
 $router->get('blog-posts', 'StoriesAPI\Endpoints\BlogPostsController', 'index');
-$router->get('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'show');
+$router->get('blog-posts/{slug}', 'StoriesAPI\Endpoints\BlogPostsController', 'show');
 $router->post('blog-posts', 'StoriesAPI\Endpoints\BlogPostsController', 'create', [$authMiddleware]);
 $router->put('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'update', [$authMiddleware]);
 $router->delete('blog-posts/{id}', 'StoriesAPI\Endpoints\BlogPostsController', 'delete', [$authMiddleware]);

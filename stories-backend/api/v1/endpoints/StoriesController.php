@@ -177,11 +177,16 @@ class StoriesController extends BaseController {
      * Get a single story by slug or numeric ID
      */
     public function show() {
-        $identifier = $this->params['slug'] ?? null;
+        // Check for both 'id' and 'slug' parameters
+        $identifier = $this->params['id'] ?? $this->params['slug'] ?? null;
         if (!$identifier) {
             Response::sendError('No identifier provided', 400);
             return;
         }
+        
+        // Log the identifier for debugging
+        error_log("StoriesController::show - Identifier: " . $identifier);
+        error_log("StoriesController::show - Params: " . json_encode($this->params));
 
         // Decide whether this is an ID or a slug
         if (ctype_digit($identifier)) {

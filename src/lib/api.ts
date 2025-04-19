@@ -113,7 +113,92 @@ interface ApiParams {
   [key: string]: any;
 }
 
-export const fetchFromApi = async (endpoint: string, params: ApiParams = {}) => {
+// Function to get the current auth token from cookies
+const getAuthToken = (): string | undefined => {
+  return document.cookie
+    .split('; ')
+    .find(row => row.startsWith('auth_token='))
+    ?.split('=')[1];
+};
+
+// Function to set the auth token in cookies
+const setAuthToken = (token: string, expiresIn: number = 86400): void => {
+  const expiryDate = new Date();
+  expiryDate.setTime(expiryDate.getTime() + (expiresIn * 1000));
+  document.cookie = `auth_token=${token}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Strict`;
+};
+
+// Function to refresh the auth token
+const refreshAuthToken = async (): Promise<boolean> => {
+  try {
+    console.log('Attempting to refresh auth token');
+    
+    // Get the current token
+    const currentToken = getAuthToken();
+    if (!currentToken) {
+      console.error('Cannot refresh token: No token available');
+      return false;
+    }
+    
+    // Extract user ID from token
+    let userId: number | null = null;
+    try {
+      const tokenParts = currentToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        userId = payload.user_id;
+      }
+    } catch (e) {
+      console.error('Error decoding token:', e);
+    }
+    
+    if (!userId) {
+      console.error('Cannot refresh token: Unable to extract user ID');
+      return false;
+    }
+    
+    // Make refresh request
+    const url = `${API_URL}/auth/refresh`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        force: true
+      })
+    });
+    
+    if (!response.ok) {
+      console.error(`Token refresh failed: ${response.status} ${response.statusText}`);
+      return false;
+    }
+    
+    const data = await response.json();
+    
+    // Check if token was refreshed
+    if (data.refreshed === false) {
+      console.log('Token is still valid, no refresh needed');
+      return true;
+    }
+    
+    // Check if we have a new token
+    if (data.token) {
+      console.log('Token refreshed successfully');
+      setAuthToken(data.token, data.expires_in);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    return false;
+  }
+};
+
+export const fetchFromApi = async (endpoint: string, params: ApiParams = {}, retryCount = 0): Promise<any> => {
   try {
     // Build query parameters
     const queryParams = new URLSearchParams();
@@ -146,10 +231,7 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}) => 
     };
     
     // Get auth token from cookie if available
-    const authToken = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='))
-      ?.split('=')[1];
+    const authToken = getAuthToken();
     
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
@@ -157,11 +239,31 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}) => 
     
     const res = await fetch(url, { headers });
     
+    // Check for new token in response headers
+    const newToken = res.headers.get('X-New-Token');
+    if (newToken) {
+      console.log('Received new token in response headers');
+      setAuthToken(newToken);
+    }
+    
     if (!res.ok) {
       const errorMessage = `Error fetching from API: ${res.status} ${res.statusText}`;
       console.error(errorMessage);
       console.error(`URL: ${url}`);
       console.error(`Headers: ${JSON.stringify(headers)}`);
+      
+      // If we get a 401 Unauthorized error, try to refresh the token and retry
+      if (res.status === 401 && retryCount < 1) {
+        console.log('Received 401 Unauthorized, attempting to refresh token and retry');
+        
+        const refreshed = await refreshAuthToken();
+        if (refreshed) {
+          console.log('Token refreshed, retrying original request');
+          return fetchFromApi(endpoint, params, retryCount + 1);
+        } else {
+          console.error('Token refresh failed, cannot retry request');
+        }
+      }
       
       try {
         const errorResponse = await res.text();

@@ -52,3 +52,5 @@ This section documents the database schema based on `stories-backend/database.sq
 *   **games**: `id`, `title`, `description`, `url`, `category`, `created_at`, `updated_at`
 *   **ai_tools**: `id`, `name`, `description`, `url`, `category`, `created_at`, `updated_at`
 *   **media**: `id`, `entity_type`, `entity_id`, `type`, `url`, `width`, `height`, `alt_text`, `created_at`
+## Upcoming
+- JWT refresh overhaul: Implementing robust token refresh mechanism to fix recurring 401 failures in Admin CRUD operations. This will ensure expired JWTs auto-refresh, maintain consistency between cookie and PHP session storage, and allow clients to retry the original request after refresh.

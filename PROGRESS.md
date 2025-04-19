@@ -417,3 +417,14 @@
 - Inspected the Response utility: found it is sensitive to output before headers and requires output buffering.
 - Fix applied: Ensured output buffering is started at the very top of stories-backend/api/index.php and added debug logging to api-error.log for any output before JSON responses.
 - Next step: Re-run the admin API diagnostic test to confirm CRUD operations now work. Check stories-backend/api/api-error.log for any logged output if issues persist.
+## 2025-04-19
+### Fixed: JWT Refresh & Token-Consistency Bug
+- Implemented comprehensive JWT refresh mechanism to fix recurring 401 failures in Admin CRUD operations:
+  - Added Auth::refreshToken() method to the API Core to issue new tokens when expiration is ≤ now+30s
+  - Enhanced AuthMiddleware.php to check if cookie & session tokens differ and use the newer one
+  - Updated AdminPage::ensureTokenConsistency() to validate tokens on every page load and call /auth/refresh when ≤ 1 min left
+  - Improved ApiClient.php to retry the original request after token refresh
+  - Enhanced src/lib/api.ts to handle 401 errors, refresh token, and retry the original request
+  - Created PHPUnit tests for login, expiry, refresh, and successful operations after auto-refresh
+  - Updated system-documentation.html with a new sequence diagram for token refresh flow and moved issues to the resolved list
+- This resolves the last open blocker that was preventing Admin CRUD operations from working reliably

@@ -1,17 +1,28 @@
 # Tasks
 
 ## Active Tasks
-1. Fix remaining admin panel issues
-   - Unblock external scripts & styles (CSP)
-   - Load jQuery + Bootstrap before dependent plugins
-   - Retire the missing initDropdowns() helper
-   - Restore Font Awesome icons
-   - Send the JWT on every admin → API request ✓
-   - Fix media.php & CKEditor
-   - Ensure CRUD buttons work ✓
-   - Clean-up tasks
+None
 
 ## Completed Tasks
+13. Resolve JWT refresh & token-consistency bug that breaks Admin CRUD ✓
+    - Added Auth::refreshToken() method to API Core to issue new tokens when expiration is ≤ now+30s ✓
+    - Enhanced AuthMiddleware.php to check if cookie & session tokens differ and use the newer one ✓
+    - Updated AdminPage::ensureTokenConsistency() to validate tokens on every page load ✓
+    - Improved ApiClient.php to retry the original request after token refresh ✓
+    - Enhanced src/lib/api.ts to handle 401 errors, refresh token, and retry ✓
+    - Created PHPUnit tests for login, expiry, refresh, and successful operations after auto-refresh ✓
+    - Updated system-documentation.html with sequence diagram and moved issues to resolved list ✓
+
+1. Fix remaining admin panel issues ✓
+   - Unblock external scripts & styles (CSP) ✓
+   - Load jQuery + Bootstrap before dependent plugins ✓
+   - Retire the missing initDropdowns() helper ✓
+   - Restore Font Awesome icons ✓
+   - Send the JWT on every admin → API request ✓
+   - Fix media.php & CKEditor ✓
+   - Ensure CRUD buttons work ✓
+   - Clean-up tasks ✓
+
 12. Fix Authentication Issues in Admin Panel ✓
     - Fixed authentication issues that were preventing CRUD operations from working ✓
     - Implemented consistent JWT token storage in both session and cookie ✓

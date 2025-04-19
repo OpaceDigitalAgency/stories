@@ -513,6 +513,32 @@ class ApiClient {
                 return false;
             }
             
+            // Try to extract user ID from the token
+            $userId = null;
+            $parts = explode('.', $currentToken);
+            if (count($parts) === 3) {
+                try {
+                    $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+                    if ($payload && isset($payload['user_id'])) {
+                        $userId = $payload['user_id'];
+                        error_log("Extracted user ID from token: $userId");
+                    }
+                } catch (\Exception $e) {
+                    error_log("Error decoding token payload: " . $e->getMessage());
+                }
+            }
+            
+            if (!$userId) {
+                // Try to get user ID from session
+                if (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
+                    $userId = $_SESSION['user']['id'];
+                    error_log("Using user ID from session: $userId");
+                } else {
+                    error_log("Cannot refresh token: Unable to determine user ID");
+                    return false;
+                }
+            }
+            
             // Initialize cURL for the refresh request
             $ch = curl_init();
             $url = rtrim($this->apiUrl, '/') . '/auth/refresh';
@@ -529,56 +555,19 @@ class ApiClient {
                 ]
             ]);
             
+            // Prepare request data with user ID and force refresh
+            $jsonData = json_encode([
+                'user_id' => $userId,
+                'force' => true,
+                'threshold' => 60 // 1 minute threshold
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+            
             // Execute refresh request
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
             
-            // Parse response
-            $responseData = json_decode($response, true);
-            
-            if ($httpCode === 200 && isset($responseData['token'])) {
-                $newToken = $responseData['token'];
-                
-                // Update token in all storage locations
-                $this->authToken = $newToken;
-                $_SESSION['token'] = $newToken;
-                $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
-                setcookie('auth_token', $newToken, time() + 86400, '/', '', $secure, true);
-                
-                error_log("Token refresh successful");
-                return true;
-            }
-            
-            error_log("Token refresh failed: Invalid response (HTTP $httpCode)");
-            error_log("Response: " . $response);
-            return false;
-            
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            
-            // Set headers
-            $curlHeaders = [
-                'Accept: application/json',
-                'Content-Type: application/json'
-            ];
-            
-            if (isset($headers['Authorization'])) {
-                $curlHeaders[] = 'Authorization: ' . $headers['Authorization'];
-            }
-            
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $curlHeaders);
-            
-            // Set request data
-            $jsonData = json_encode(['user_id' => $userId]);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
-            
-            // Execute request
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            
-            // Check for errors
+            // Check for cURL errors
             if (curl_errno($ch)) {
                 error_log("Token refresh cURL error: " . curl_error($ch));
                 curl_close($ch);
@@ -590,28 +579,36 @@ class ApiClient {
             // Parse response
             $responseData = json_decode($response, true);
             
-            if ($httpCode == 200 && $responseData && isset($responseData['token'])) {
-                $newToken = $responseData['token'];
+            // Log the response for debugging
+            error_log("Token refresh response (HTTP $httpCode): " . substr($response, 0, 500));
+            
+            if ($httpCode === 200) {
+                // Check if token was actually refreshed
+                if (isset($responseData['refreshed']) && $responseData['refreshed'] === false) {
+                    error_log("Token refresh skipped: Current token is still valid");
+                    return true; // Token is still valid, no need to refresh
+                }
                 
-                // Update session token
-                $_SESSION['token'] = $newToken;
-                
-                // Update cookie token - use secure cookies in production
-                $cookieExpiry = isset($responseData['expires_in']) ? time() + $responseData['expires_in'] : time() + 3600;
-                $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
-                setcookie('auth_token', $newToken, $cookieExpiry, '/', '', $secure, true);
-                
-                // Update instance token
-                $this->authToken = $newToken;
-                
-                error_log("Token refreshed successfully");
-                return true;
+                // Check if we have a new token
+                if (isset($responseData['token'])) {
+                    $newToken = $responseData['token'];
+                    
+                    // Update token in all storage locations
+                    $this->authToken = $newToken;
+                    $_SESSION['token'] = $newToken;
+                    
+                    // Set cookie with appropriate expiry
+                    $cookieExpiry = isset($responseData['expires_in']) ? time() + $responseData['expires_in'] : time() + 86400;
+                    $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+                    setcookie('auth_token', $newToken, $cookieExpiry, '/', '', $secure, true);
+                    
+                    error_log("Token refresh successful");
+                    return true;
+                }
             }
             
             error_log("Token refresh failed: Invalid response (HTTP $httpCode)");
-            if ($responseData) {
-                error_log("Response: " . json_encode($responseData));
-            }
+            error_log("Response: " . $response);
             return false;
         } catch (Exception $e) {
             error_log("Token refresh error: " . $e->getMessage());

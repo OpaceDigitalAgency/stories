@@ -243,23 +243,28 @@ class AuthController extends BaseController {
      * Refresh a user's authentication token
      */
     public function refresh() {
-        // Validate required fields
-        if (!Validator::required($this->request, ['user_id'])) {
-            $this->badRequest('User ID is required', Validator::getErrors());
-            return;
-        }
-        
-        // Get user ID
-        $userId = (int)$this->request['user_id'];
-        
         try {
-            // Check if we have an authenticated user from the token
+            // Check if user_id is provided in the request
+            $userId = null;
+            if (isset($this->request['user_id'])) {
+                $userId = (int)$this->request['user_id'];
+            }
+            
+            // If no user_id provided, try to get it from the current token
+            if (!$userId) {
+                $currentUser = Auth::getCurrentUser();
+                if ($currentUser && isset($currentUser['id'])) {
+                    $userId = $currentUser['id'];
+                    error_log("Token refresh: Using user ID from current token: $userId");
+                } else {
+                    error_log("Token refresh: No user ID provided and no valid token");
+                    $this->badRequest('User ID is required', ['user_id' => 'This field is required']);
+                    return;
+                }
+            }
+            
+            // Enhanced security checks
             $currentUser = Auth::getCurrentUser();
-            
-            // Enhanced security: Only allow token refresh if:
-            // 1. The request has a valid token (user is authenticated), OR
-            // 2. The request is coming from a trusted source (admin panel)
-            
             $isTrustedSource = false;
             
             // Check if request is from admin panel by checking referer
@@ -280,7 +285,7 @@ class AuthController extends BaseController {
                 return;
             }
             
-            // If authenticated, ensure user is only refreshing their own token
+            // If authenticated, ensure user is only refreshing their own token (unless admin)
             if ($currentUser && $currentUser['id'] != $userId && $currentUser['role'] !== 'admin') {
                 error_log("Token refresh rejected: User attempting to refresh another user's token");
                 $this->forbidden('You can only refresh your own token');
@@ -298,18 +303,45 @@ class AuthController extends BaseController {
             
             $user = $stmt->fetch();
             
-            // Log the token refresh
-            error_log("Refreshing token for user ID: {$user['id']}, role: {$user['role']}");
+            // Check if we should force refresh or check expiration
+            $forceRefresh = isset($this->request['force']) && $this->request['force'] === true;
+            $checkExpiration = !$forceRefresh;
             
-            // Generate new JWT token
-            $token = Auth::generateToken([
-                'user_id' => $user['id'],
-                'role' => $user['role']
-            ]);
+            // Get expiration threshold (default to 30 seconds)
+            $expirationThreshold = isset($this->request['threshold']) ? (int)$this->request['threshold'] : 30;
+            
+            // Log the token refresh attempt
+            error_log("Token refresh attempt for user ID: {$user['id']}, role: {$user['role']}, force: " .
+                      ($forceRefresh ? 'true' : 'false') . ", threshold: $expirationThreshold seconds");
+            
+            // Use Auth::refreshToken with expiration check
+            $token = Auth::refreshToken($user['id'], $checkExpiration, $expirationThreshold);
+            
+            if ($token === false && $checkExpiration) {
+                // Token is still valid and not about to expire
+                error_log("Token refresh skipped: Current token is still valid");
+                
+                // Return success with no new token
+                Response::sendSuccess([
+                    'message' => 'Token is still valid',
+                    'refreshed' => false,
+                    'expires_in' => null
+                ]);
+                return;
+            }
+            
+            // If we got here, either force refresh was true or the token was about to expire
+            if (!$token) {
+                // Something went wrong with the refresh
+                error_log("Token refresh failed: Unable to generate new token");
+                $this->serverError('Failed to refresh token');
+                return;
+            }
             
             // Return new token
             Response::sendSuccess([
                 'token' => $token,
+                'refreshed' => true,
                 'expires_in' => $this->config['security']['token_expiry']
             ]);
         } catch (\Exception $e) {

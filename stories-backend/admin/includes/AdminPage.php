@@ -195,16 +195,29 @@ class AdminPage {
             }
         }
         
-        // Periodically refresh token if it's close to expiration
+        // Check token expiration and refresh if needed
         if ($sessionToken) {
             $payload = $this->decodeJwtPayload($sessionToken);
             if ($payload && isset($payload['exp'])) {
                 $expiresIn = $payload['exp'] - time();
-                // If token expires in less than 10 minutes (600 seconds), refresh it
-                if ($expiresIn < 600 && $expiresIn > 0) {
+                
+                // Log token expiration time for debugging
+                error_log("AdminPage: Token expires in $expiresIn seconds");
+                
+                // If token expires in less than 1 minute (60 seconds), refresh it
+                if ($expiresIn < 60 && $expiresIn > 0) {
                     error_log("AdminPage: Token expires in $expiresIn seconds, refreshing");
                     Auth::refreshToken($_SESSION['user'], true);
                 }
+                // If token is already expired, refresh it immediately
+                else if ($expiresIn <= 0) {
+                    error_log("AdminPage: Token is expired, refreshing immediately");
+                    Auth::refreshToken($_SESSION['user'], true);
+                }
+            } else {
+                // If we can't decode the payload or it doesn't have an exp claim, refresh the token
+                error_log("AdminPage: Token payload is invalid or missing expiration, refreshing");
+                Auth::refreshToken($_SESSION['user'], true);
             }
         }
     }

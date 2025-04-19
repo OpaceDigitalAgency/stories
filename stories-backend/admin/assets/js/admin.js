@@ -122,7 +122,10 @@ function initFormValidation() {
     // Loop over them and prevent submission
     Array.prototype.slice.call(forms).forEach(function(form) {
         form.addEventListener('submit', function(event) {
+            console.log('[FORM HANDLER] Submit event triggered for form:', form.id); // DEBUG
+            
             if (!form.checkValidity()) {
+                console.log('[FORM HANDLER] Form invalid, stopping.'); // DEBUG
                 event.preventDefault();
                 event.stopPropagation();
                 
@@ -136,6 +139,7 @@ function initFormValidation() {
                 }
             } else {
                 // Prevent default form submission
+                console.log('[FORM HANDLER] Form valid, preventing default submission.'); // DEBUG
                 event.preventDefault();
                 
                 // Show loading overlay for form submissions
@@ -183,7 +187,7 @@ function initFormValidation() {
                 }
                 
                 // Use our custom AJAX function to submit the form to the API
-                console.log('[FORM] Submitting to API:', apiUrl, 'with method:', method);
+                console.log('[FORM HANDLER] Attempting AJAX request to API:', apiUrl, 'with method:', method); // DEBUG
                 
                 // Use our custom AJAX function instead of fetch
                 ajaxRequest(

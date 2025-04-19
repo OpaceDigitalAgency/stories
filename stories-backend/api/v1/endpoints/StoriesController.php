@@ -205,6 +205,7 @@ class StoriesController extends BaseController {
                     s.needs_moderation  AS needsModeration,
                     s.is_self_published AS isSelfPublished,
                     s.is_ai_enhanced    AS isAIEnhanced,
+                    s.cover_url         AS coverUrl,
                     s.created_at        AS createdAt,
                     s.updated_at        AS updatedAt
                 FROM stories s

@@ -278,6 +278,15 @@ class AuthController extends BaseController {
                 }
             }
             
+            // Check if force parameter is set
+            $forceRefresh = isset($this->request['force']) && $this->request['force'] === true;
+            
+            // If force parameter is set, consider it a trusted source
+            if ($forceRefresh) {
+                $isTrustedSource = true;
+                error_log("Token refresh: Trusted source (force parameter)");
+            }
+            
             // If not authenticated and not from trusted source, reject
             if (!$currentUser && !$isTrustedSource) {
                 error_log("Token refresh rejected: Not authenticated and not from trusted source");

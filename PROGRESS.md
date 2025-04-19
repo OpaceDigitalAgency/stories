@@ -429,6 +429,11 @@
   - Updated system-documentation.html with a new sequence diagram for token refresh flow and moved issues to the resolved list
 - This resolves the last open blocker that was preventing Admin CRUD operations from working reliably
 
+### Additional Fix: AdminPage Token Refresh
+- Fixed a critical bug in AdminPage.php where Auth::refreshToken() was being called with the user object instead of the user ID
+- This was causing token refresh to fail silently, preventing CRUD operations from working properly
+- Updated all instances of Auth::refreshToken() in AdminPage.php to correctly pass the user ID
+
 ### Deployment Process
 - Committed and pushed all changes to GitHub repository (https://github.com/OpaceDigitalAgency/stories.git)
 - Frontend changes (src/lib/api.ts) will be automatically deployed to Netlify (https://storiesfromtheweb.netlify.app/)

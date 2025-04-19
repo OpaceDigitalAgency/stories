@@ -1980,7 +1980,8 @@ stories-backend/
                     <h3>Recent Updates</h3>
                     <div class="note">
                         <ul>
-                            <li><strong>April 19, 2025</strong> - Implemented comprehensive JWT refresh mechanism to fix recurring 401 failures in Admin CRUD operations. Enhanced token consistency between cookie and session storage, added auto-retry functionality in API clients, and created PHPUnit tests for authentication flows.</li>
+                            <li><strong>April 19, 2025 (Update 2)</strong> - Fixed a critical bug in AdminPage.php where Auth::refreshToken() was being called with the user object instead of the user ID. This was causing token refresh to fail silently, preventing CRUD operations from working properly.</li>
+                            <li><strong>April 19, 2025 (Update 1)</strong> - Implemented comprehensive JWT refresh mechanism to fix recurring 401 failures in Admin CRUD operations. Enhanced token consistency between cookie and session storage, added auto-retry functionality in API clients, and created PHPUnit tests for authentication flows.</li>
                         </ul>
                     </div>
                 </div>

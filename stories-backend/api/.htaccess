@@ -1,0 +1,39 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory
+RewriteBase /api/
+
+# Redirect trailing slashes
+RewriteRule ^(.*)/$ $1 [L,R=301]
+
+# Handle front controller pattern
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Set CORS headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set Access-Control-Expose-Headers "X-Total-Count, X-Pagination-Total-Pages"
+    
+    # Handle preflight requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
+
+# PHP settings
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_value error_reporting E_ALL
+    php_value error_log /home/stories/api.storiesfromtheweb.org/logs/api-error.log
+    
+    # Increase memory limit for large operations
+    php_value memory_limit 256M
+    
+    # Increase upload limits
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+</IfModule>

@@ -151,60 +151,29 @@ loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
 // Create router
 $router = new \StoriesAPI\Core\Router($config);
 
-// Define routes
-
-// Auth routes
-$router->post('auth/login', '\StoriesAPI\Endpoints\AuthController', 'login');
-$router->post('auth/register', '\StoriesAPI\Endpoints\AuthController', 'register');
-$router->get('auth/me', '\StoriesAPI\Endpoints\AuthController', 'me', [new \StoriesAPI\Middleware\AuthMiddleware()]);
-$router->post('auth/refresh', '\StoriesAPI\Endpoints\AuthController', 'refresh');
-
-// Stories routes
-$router->get('stories', '\StoriesAPI\Endpoints\StoriesController', 'index');
-$router->get('stories/{slug}', '\StoriesAPI\Endpoints\StoriesController', 'show');
-$router->post('stories', '\StoriesAPI\Endpoints\StoriesController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware()]);
-$router->put('stories/{id}', '\StoriesAPI\Endpoints\StoriesController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware()]);
-$router->delete('stories/{id}', '\StoriesAPI\Endpoints\StoriesController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware()]);
-
-// Authors routes
-$router->get('authors', '\StoriesAPI\Endpoints\AuthorsController', 'index');
-$router->get('authors/{slug}', '\StoriesAPI\Endpoints\AuthorsController', 'show');
-$router->put('authors/{id}', '\StoriesAPI\Endpoints\AuthorsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware()]);
-
-// Blog posts routes
-$router->get('blog-posts', '\StoriesAPI\Endpoints\BlogPostsController', 'index');
-$router->get('blog-posts/{slug}', '\StoriesAPI\Endpoints\BlogPostsController', 'show');
-$router->post('blog-posts', '\StoriesAPI\Endpoints\BlogPostsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->put('blog-posts/{id}', '\StoriesAPI\Endpoints\BlogPostsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->delete('blog-posts/{id}', '\StoriesAPI\Endpoints\BlogPostsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-
-// Directory items routes
-$router->get('directory-items', '\StoriesAPI\Endpoints\DirectoryItemsController', 'index');
-$router->get('directory-items/{slug}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'show');
-$router->post('directory-items', '\StoriesAPI\Endpoints\DirectoryItemsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->put('directory-items/{id}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->delete('directory-items/{id}', '\StoriesAPI\Endpoints\DirectoryItemsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-
-// Games routes
-$router->get('games', '\StoriesAPI\Endpoints\GamesController', 'index');
-$router->get('games/{slug}', '\StoriesAPI\Endpoints\GamesController', 'show');
-$router->post('games', '\StoriesAPI\Endpoints\GamesController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->put('games/{id}', '\StoriesAPI\Endpoints\GamesController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->delete('games/{id}', '\StoriesAPI\Endpoints\GamesController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-
-// AI tools routes
-$router->get('ai-tools', '\StoriesAPI\Endpoints\AiToolsController', 'index');
-$router->get('ai-tools/{slug}', '\StoriesAPI\Endpoints\AiToolsController', 'show');
-$router->post('ai-tools', '\StoriesAPI\Endpoints\AiToolsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->put('ai-tools/{id}', '\StoriesAPI\Endpoints\AiToolsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->delete('ai-tools/{id}', '\StoriesAPI\Endpoints\AiToolsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-
-// Tags routes
-$router->get('tags', '\StoriesAPI\Endpoints\TagsController', 'index');
-$router->get('tags/{slug}', '\StoriesAPI\Endpoints\TagsController', 'show');
-$router->post('tags', '\StoriesAPI\Endpoints\TagsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->put('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
-$router->delete('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware(['admin', 'editor'])]);
+// Load routes from routes file
+if (file_exists(__DIR__ . '/v1/routes.php')) {
+    // Pass the router to the routes file
+    $routerVar = $router;
+    require __DIR__ . '/v1/routes.php';
+    error_log("Routes loaded from routes.php");
+} else {
+    // Fallback to defining routes directly
+    error_log("WARNING: routes.php not found, using hardcoded routes");
+    
+    // Auth routes
+    $router->post('auth/login', '\StoriesAPI\Endpoints\AuthController', 'login');
+    $router->post('auth/register', '\StoriesAPI\Endpoints\AuthController', 'register');
+    $router->get('auth/me', '\StoriesAPI\Endpoints\AuthController', 'me', [new \StoriesAPI\Middleware\AuthMiddleware()]);
+    $router->post('auth/refresh', '\StoriesAPI\Endpoints\AuthController', 'refresh');
+    
+    // Tags routes (minimum required for testing)
+    $router->get('tags', '\StoriesAPI\Endpoints\TagsController', 'index');
+    $router->get('tags/{slug}', '\StoriesAPI\Endpoints\TagsController', 'show');
+    $router->post('tags', '\StoriesAPI\Endpoints\TagsController', 'create', [new \StoriesAPI\Middleware\AuthMiddleware()]);
+    $router->put('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'update', [new \StoriesAPI\Middleware\AuthMiddleware()]);
+    $router->delete('tags/{id}', '\StoriesAPI\Endpoints\TagsController', 'delete', [new \StoriesAPI\Middleware\AuthMiddleware()]);
+}
 
 // Handle the request with try/catch to squash any PHP fatal into JSON
 try {

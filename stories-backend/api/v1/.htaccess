@@ -1,0 +1,30 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory
+RewriteBase /api/v1/
+
+# Redirect trailing slashes
+RewriteRule ^(.*)/$ $1 [L,R=301]
+
+# Handle front controller pattern
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Prevent direct access to PHP files other than index.php
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*\.php\ HTTP/
+RewriteCond %{REQUEST_FILENAME} !index\.php
+RewriteRule ^(.*)\.php$ - [F,L]
+
+# Prevent directory listing
+Options -Indexes
+
+# Prevent access to dot files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to specific directories
+RewriteRule ^(config|Core|Middleware|Utils)/ - [F,L]

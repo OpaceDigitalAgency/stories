@@ -151,17 +151,17 @@ $routerFileResult = loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
 
 // --- GUARANTEED DEBUG LOGGING BEFORE ROUTER INSTANTIATION ---
 $router_debug_message = "[GUARANTEE] loadFileInsensitive result: " . var_export($routerFileResult, true) . " | CWD: " . getcwd() . PHP_EOL;
-file_put_contents(__DIR__ . '/router_load_debug.log', $router_debug_message, FILE_APPEND);
+file_put_contents(__DIR__ . '/logs/router_load_debug.log', $router_debug_message, FILE_APPEND);
 error_log($router_debug_message);
 // ------------------------------------------------------------
 
 // Debug output: log whether Router.php was found and loaded
 if ($routerFileResult) {
     error_log("[DEBUG] Router.php loaded: " . $routerFileResult);
-    file_put_contents(__DIR__ . '/router_load_debug.log', "[DEBUG] Router.php loaded: " . $routerFileResult . PHP_EOL, FILE_APPEND);
+    file_put_contents(__DIR__ . '/logs/router_load_debug.log', "[DEBUG] Router.php loaded: " . $routerFileResult . PHP_EOL, FILE_APPEND);
 } else {
     error_log("[DEBUG] Router.php NOT found. Attempted path: " . __DIR__ . '/v1/Core/Router.php');
-    file_put_contents(__DIR__ . '/router_load_debug.log', "[DEBUG] Router.php NOT found. Attempted path: " . __DIR__ . '/v1/Core/Router.php' . PHP_EOL, FILE_APPEND);
+    file_put_contents(__DIR__ . '/logs/router_load_debug.log', "[DEBUG] Router.php NOT found. Attempted path: " . __DIR__ . '/v1/Core/Router.php' . PHP_EOL, FILE_APPEND);
 }
 
 // Create router

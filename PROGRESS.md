@@ -410,3 +410,10 @@
   - Created a new API endpoint for token refresh
 - This resolves the "API error: Authentication required (Status: 401)" errors that were occurring during add, edit, and delete operations
 - All CRUD operations now work properly across the admin panel
+## [2025-04-19 09:32] API CRUD Failure Diagnostic & Fix
+
+- Broke down the issue into subtasks: analyzed the admin test script, API entrypoint, controller logic, and .htaccess/CORS.
+- Synthesized findings: authentication worked but all CRUD failed, pointing to a shared utility (Response class) as the likely root cause.
+- Inspected the Response utility: found it is sensitive to output before headers and requires output buffering.
+- Fix applied: Ensured output buffering is started at the very top of stories-backend/api/index.php and added debug logging to api-error.log for any output before JSON responses.
+- Next step: Re-run the admin API diagnostic test to confirm CRUD operations now work. Check stories-backend/api/api-error.log for any logged output if issues persist.

@@ -168,3 +168,12 @@
     - Remove inconsistent fields not present in the database schema ✓
     - Fix Stories API endpoint 500 Server Error when accessing individual stories ✓
     - Remove reference to non-existent `cover_url` column in the database query ✓
+## Active Task
+- Diagnose and fix why the admin API is not performing save/update/delete (CRUD) operations, despite authentication working.
+
+### Subtasks
+1. Analyze test_admin_api.php to understand test logic and error output.
+2. Review api/index.php for routing and error handling.
+3. Inspect a sample controller (AuthorsController.php) for CRUD logic and error handling.
+4. Check .htaccess and CORS settings.
+5. Synthesize findings and propose/implement fixes.

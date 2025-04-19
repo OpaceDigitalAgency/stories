@@ -141,6 +141,10 @@ class ApiClient {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         
+        // Set timeout to prevent hanging requests
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // 10 seconds connection timeout
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30); // 30 seconds total timeout
+        
         // Set headers
         $headers = [
             'Accept: application/json'
@@ -252,7 +256,13 @@ class ApiClient {
         
         // Execute request with output capture
         ob_start();                     // capture anything printed by the API
+        error_log("API Request: Executing cURL request to $url");
+        $startTime = microtime(true);
         $response = curl_exec($ch);
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+        error_log("API Request: cURL execution completed in $executionTime seconds");
+        
         $leak = ob_get_clean();
         if ($leak) {
             error_log('[STRAY OUTPUT] ' . $leak);
@@ -503,6 +513,8 @@ class ApiClient {
      */
     private function refreshToken() {
         error_log("Attempting to refresh authentication token");
+        error_log("REFRESH TOKEN DEBUG: " . date('Y-m-d H:i:s'));
+        error_log("REFRESH TOKEN DEBUG: " . date('Y-m-d H:i:s'));
         
         try {
             // Get the current active token
@@ -543,6 +555,8 @@ class ApiClient {
             $ch = curl_init();
             $url = rtrim($this->apiUrl, '/') . '/auth/refresh';
             
+            error_log("Token refresh URL: " . $url);
+            
             // Set up the refresh request
             curl_setopt_array($ch, [
                 CURLOPT_URL => $url,
@@ -556,16 +570,34 @@ class ApiClient {
             ]);
             
             // Prepare request data with user ID and force refresh
-            $jsonData = json_encode([
+            $requestData = [
                 'user_id' => $userId,
                 'force' => true,
                 'threshold' => 60 // 1 minute threshold
-            ]);
+            ];
+            
+            $jsonData = json_encode($requestData);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+            
+            error_log("Token refresh request data: " . $jsonData);
+            error_log("Token refresh user ID: " . $userId);
+            
+            // Set verbose debugging
+            curl_setopt($ch, CURLOPT_VERBOSE, true);
+            $verbose = fopen('php://temp', 'w+');
+            curl_setopt($ch, CURLOPT_STDERR, $verbose);
             
             // Execute refresh request
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Get verbose debug information
+            rewind($verbose);
+            $verboseLog = stream_get_contents($verbose);
+            fclose($verbose);
+            
+            // Log verbose output for debugging
+            error_log("Token refresh verbose log: " . $verboseLog);
             
             // Check for cURL errors
             if (curl_errno($ch)) {
@@ -581,6 +613,7 @@ class ApiClient {
             
             // Log the response for debugging
             error_log("Token refresh response (HTTP $httpCode): " . substr($response, 0, 500));
+            error_log("Token refresh parsed response: " . json_encode($responseData));
             
             if ($httpCode === 200) {
                 // Check if token was actually refreshed

@@ -428,3 +428,15 @@
   - Created PHPUnit tests for login, expiry, refresh, and successful operations after auto-refresh
   - Updated system-documentation.html with a new sequence diagram for token refresh flow and moved issues to the resolved list
 - This resolves the last open blocker that was preventing Admin CRUD operations from working reliably
+
+### Deployment Process
+- Committed and pushed all changes to GitHub repository (https://github.com/OpaceDigitalAgency/stories.git)
+- Frontend changes (src/lib/api.ts) will be automatically deployed to Netlify (https://storiesfromtheweb.netlify.app/)
+- Backend changes need to be deployed using cPanel's Git Version Control:
+  1. Log in to cPanel
+  2. Go to "Git Version Control"
+  3. Find the "stories" repository
+  4. Click "Manage"
+  5. Click "Update from Remote" to pull the latest changes
+  6. Click "Deploy HEAD Commit" to deploy the changes
+- Added deployment information to system-documentation.html for future reference

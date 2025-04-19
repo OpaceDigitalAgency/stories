@@ -40,3 +40,16 @@ Recent improvements include:
    - Enhanced session management with token consistency checks
    - Added proper error handling for authentication failures
    - Created dedicated API endpoint for token refresh
+
+## Deployment Process
+- **Frontend**: Automatically deployed to Netlify (https://storiesfromtheweb.netlify.app/) when changes are pushed to GitHub
+- **Backend**: Deployed using cPanel's Git Version Control:
+  1. Push changes to GitHub repository
+  2. Log in to cPanel
+  3. Go to "Git Version Control"
+  4. Find the "stories" repository
+  5. Click "Manage"
+  6. Click "Update from Remote" to pull the latest changes
+  7. Click "Deploy HEAD Commit" to deploy the changes
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for more detailed deployment instructions.

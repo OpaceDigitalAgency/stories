@@ -1949,6 +1949,34 @@ stories-backend/
                         The combination of this HTML documentation (for system architecture) and the markdown files (for work tracking) provides a complete picture of the project's state and history.
                     </p>
                     
+                    <h3>Project Resources</h3>
+                    <div class="note">
+                        <h4>Repository and Deployment</h4>
+                        <ul>
+                            <li><strong>Git Repository:</strong> <a href="https://github.com/OpaceDigitalAgency/stories.git" target="_blank">https://github.com/OpaceDigitalAgency/stories.git</a></li>
+                            <li><strong>Frontend URL:</strong> <a href="https://storiesfromtheweb.netlify.app/" target="_blank">https://storiesfromtheweb.netlify.app/</a> (Hosted on Netlify)</li>
+                            <li><strong>Backend/API URL:</strong> <a href="https://api.storiesfromtheweb.org/" target="_blank">https://api.storiesfromtheweb.org/</a> (Hosted on cPanel)</li>
+                            <li><strong>Admin Panel:</strong> <a href="https://api.storiesfromtheweb.org/admin/" target="_blank">https://api.storiesfromtheweb.org/admin/</a></li>
+                        </ul>
+                        
+                        <h4>Deployment Process</h4>
+                        <ul>
+                            <li><strong>Frontend:</strong> Automatically deployed to Netlify when changes are pushed to GitHub. No manual deployment steps required.</li>
+                            <li><strong>Backend:</strong> Deployed using cPanel's Git Version Control feature:
+                                <ol>
+                                    <li>Push changes to GitHub repository</li>
+                                    <li>Log in to cPanel</li>
+                                    <li>Go to "Git Version Control"</li>
+                                    <li>Find the "stories" repository</li>
+                                    <li>Click "Manage"</li>
+                                    <li>Click "Update from Remote" to pull the latest changes</li>
+                                    <li>Click "Deploy HEAD Commit" to deploy the changes</li>
+                                </ol>
+                            </li>
+                        </ul>
+                        <p>The <code>.cpanel.yml</code> file in the repository defines what files to deploy and where. See <a href="DEPLOYMENT.md">DEPLOYMENT.md</a> for more details.</p>
+                    </div>
+                    
                     <h3>Recent Updates</h3>
                     <div class="note">
                         <ul>

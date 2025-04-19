@@ -389,6 +389,9 @@ class StoriesController extends BaseController {
         }
         
         try {
+            // Start transaction
+            $this->db->beginTransaction();
+            
             // Check if story exists
             $query = "SELECT * FROM stories WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$storyId]);
@@ -399,6 +402,10 @@ class StoriesController extends BaseController {
             }
             
             $story = $stmt->fetch();
+            
+            // Log the request data for debugging
+            error_log("StoriesController::update - Request data: " . json_encode($this->request));
+            error_log("StoriesController::update - Story ID: " . $storyId);
             
             // Build update query
             $updates = [];
@@ -532,8 +539,15 @@ class StoriesController extends BaseController {
                 // Add story ID to params
                 $params[] = $storyId;
                 
-                $query = "UPDATE stories SET " . implode(', ', $updates) . " WHERE id = ?";
-                $this->db->query($query, $params);
+                // Only execute the update query if there are updates to make
+                if (!empty($updates)) {
+                    $query = "UPDATE stories SET " . implode(', ', $updates) . " WHERE id = ?";
+                    error_log("StoriesController::update - Update query: " . $query);
+                    error_log("StoriesController::update - Update params: " . json_encode($params));
+                    $this->db->query($query, $params);
+                } else {
+                    error_log("StoriesController::update - No updates to make");
+                }
             }
             
             // Update author if provided

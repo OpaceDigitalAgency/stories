@@ -119,42 +119,56 @@ class Response {
      * @param array $data The response data
      */
     public static function json($data) {
+        // Add debugging
+        error_log("Response::json - Starting JSON encoding");
+        
         // Set content type header - ALWAYS set to JSON regardless of debug mode
         header('Content-Type: application/json; charset=UTF-8');
         
-        // Debug: Log the data being encoded only in debug mode
-        if (self::$debugMode) {
-            error_log("Response data before encoding: " . print_r($data, true));
+        // Debug: Log the data being encoded
+        error_log("Response::json - Data type: " . gettype($data));
+        if (is_array($data)) {
+            error_log("Response::json - Top-level keys: " . implode(", ", array_keys($data)));
+            if (isset($data['data'])) {
+                error_log("Response::json - Data structure: " . json_encode(array_keys($data['data'])));
+            }
         }
         
         // Make sure there's no output before JSON
         if (ob_get_length() > 0) {
-            ob_clean();
+            $output = ob_get_clean();
+            error_log("Response::json - Cleared output buffer: " . substr($output, 0, 200));
         }
         
         // Encode the data with simpler options to avoid encoding issues
+        error_log("Response::json - Encoding data to JSON");
         $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         
         // Check for JSON encoding errors
         if ($json === false) {
-            error_log("JSON encoding error: " . json_last_error_msg());
+            error_log("Response::json - JSON encoding error: " . json_last_error_msg());
             
             // Try to identify problematic data
+            error_log("Response::json - Attempting to sanitize data");
             $cleanData = self::sanitizeDataForJson($data);
             $json = json_encode($cleanData);
             
             if ($json === false) {
                 // If still failing, return a simple error response
-                error_log("JSON encoding still failing after sanitization");
+                error_log("Response::json - JSON encoding still failing after sanitization");
                 $errorJson = '{"error":true,"message":"Internal server error: Unable to encode response","statusCode":500}';
                 
                 // Always output JSON error response regardless of debug mode
+                error_log("Response::json - Sending error JSON response");
                 echo $errorJson;
                 exit;
+            } else {
+                error_log("Response::json - Sanitization successful");
             }
         }
         
         // Output the JSON response - ALWAYS output JSON regardless of debug mode
+        error_log("Response::json - Sending JSON response (length: " . strlen($json) . ")");
         echo $json;
         exit;
     }
@@ -257,13 +271,26 @@ class Response {
      * @param int $statusCode HTTP status code
      */
     public static function sendSuccess($data, $meta = [], $statusCode = 200) {
+        // Add debugging
+        error_log("Response::sendSuccess - Starting with status code: " . $statusCode);
+        error_log("Response::sendSuccess - Data type: " . gettype($data));
+        if (is_array($data)) {
+            error_log("Response::sendSuccess - Data keys: " . implode(", ", array_keys($data)));
+        }
+        
         // Check if data is already formatted with a 'data' key
         if (is_array($data) && isset($data['id']) && !isset($data['data'])) {
             // This is a single entity response, don't wrap it in another 'data' key
-            self::json(['data' => self::formatData($data), 'meta' => $meta]);
+            error_log("Response::sendSuccess - Single entity response detected");
+            $formatted = self::formatData($data);
+            error_log("Response::sendSuccess - Formatted data: " . json_encode($formatted));
+            self::json(['data' => $formatted, 'meta' => $meta]);
         } else {
             // Use the standard success method for other cases
-            self::json(self::success(self::formatData($data), $meta, $statusCode));
+            error_log("Response::sendSuccess - Standard response");
+            $formatted = self::formatData($data);
+            error_log("Response::sendSuccess - Formatted data: " . json_encode($formatted));
+            self::json(self::success($formatted, $meta, $statusCode));
         }
     }
     

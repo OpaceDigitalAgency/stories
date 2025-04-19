@@ -152,20 +152,42 @@ function initFormValidation() {
                 console.log('[FORM] Form data:', Array.from(formData.entries()));
                 
                 // Get form action URL
-                const actionUrl = form.getAttribute('action');
+                const originalActionUrl = form.getAttribute('action');
                 
                 // Determine method (POST for create, PUT for edit)
                 let method = 'POST';
-                if (actionUrl.includes('action=edit')) {
+                let entityId = null;
+                const urlParams = new URLSearchParams(originalActionUrl.split('?')[1] || '');
+                
+                if (urlParams.get('action') === 'edit') {
                     method = 'PUT';
+                    entityId = urlParams.get('id');
+                }
+
+                // Extract entity type from form ID (e.g., "stories-form" -> "stories")
+                const entityTypeMatch = form.id.match(/^([a-z-]+)-form$/);
+                const entityType = entityTypeMatch ? entityTypeMatch[1] : null;
+
+                // Construct the correct API endpoint URL
+                let apiUrl = '/api/v1/';
+                if (entityType) {
+                    apiUrl += entityType;
+                    if (method === 'PUT' && entityId) {
+                        apiUrl += '/' + entityId; // Assuming API uses ID for PUT/DELETE
+                    }
+                } else {
+                    console.error('[FORM] Could not determine entity type from form ID:', form.id);
+                    showNotification('Error: Could not determine API endpoint.', 'danger');
+                    hideLoading();
+                    return; // Stop submission if endpoint cannot be determined
                 }
                 
-                // Use our custom AJAX function to submit the form
-                console.log('[FORM] Submitting to:', actionUrl, 'with method:', method);
+                // Use our custom AJAX function to submit the form to the API
+                console.log('[FORM] Submitting to API:', apiUrl, 'with method:', method);
                 
                 // Use our custom AJAX function instead of fetch
                 ajaxRequest(
-                    actionUrl,
+                    apiUrl, // Use the constructed API URL
                     method,
                     formData,  // Pass FormData directly
                     function(response) {

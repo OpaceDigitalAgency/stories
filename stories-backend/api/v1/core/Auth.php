@@ -30,8 +30,25 @@ class Auth {
      * @param array $config Security configuration
      */
     public static function init($config) {
-        self::$jwtSecret = $config['jwt_secret'];
-        self::$tokenExpiry = $config['token_expiry'];
+        // Check if config is properly set
+        if (!isset($config['jwt_secret']) || empty($config['jwt_secret'])) {
+            error_log("Auth::init - JWT secret is not set or empty in config");
+            // Use a fallback secret from environment or hardcoded value
+            self::$jwtSecret = getenv('JWT_SECRET') ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
+        } else {
+            self::$jwtSecret = $config['jwt_secret'];
+        }
+        
+        // Check if token expiry is properly set
+        if (!isset($config['token_expiry']) || empty($config['token_expiry'])) {
+            error_log("Auth::init - Token expiry is not set or empty in config");
+            // Use a fallback expiry time (24 hours)
+            self::$tokenExpiry = 86400;
+        } else {
+            self::$tokenExpiry = $config['token_expiry'];
+        }
+        
+        error_log("Auth::init - JWT secret length: " . strlen(self::$jwtSecret) . ", Token expiry: " . self::$tokenExpiry);
     }
     
     /**
@@ -55,7 +72,9 @@ class Auth {
         $payload = self::base64UrlEncode($payload);
         
         // Create signature
-        $signature = hash_hmac('sha256', "$header.$payload", self::$jwtSecret, true);
+        // Ensure JWT secret is not null
+        $secret = self::$jwtSecret ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
+        $signature = hash_hmac('sha256', "$header.$payload", $secret, true);
         $signature = self::base64UrlEncode($signature);
         
         // Create JWT token
@@ -79,7 +98,9 @@ class Auth {
         list($header, $payload, $signature) = $parts;
         
         // Verify signature
-        $valid = hash_hmac('sha256', "$header.$payload", self::$jwtSecret, true);
+        // Ensure JWT secret is not null
+        $secret = self::$jwtSecret ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
+        $valid = hash_hmac('sha256', "$header.$payload", $secret, true);
         $valid = self::base64UrlEncode($valid);
         
         if ($signature !== $valid) {

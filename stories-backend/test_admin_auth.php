@@ -19,8 +19,31 @@ if (SimpleAuth::initDB($config['db'])) {
     echo "Database connection successful.\n";
     
     // Test login with admin credentials
-    $email = "admin@example.com"; // Replace with an actual admin email
-    $password = "admin123"; // Replace with the actual admin password
+    // Try to get admin credentials from the database
+    try {
+        $db = new PDO(
+            "mysql:host={$config['db']['host']};dbname={$config['db']['name']};charset={$config['db']['charset']}",
+            $config['db']['user'],
+            $config['db']['password'],
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        // Get the first admin user from the database
+        $stmt = $db->query("SELECT email FROM users WHERE role = 'admin' AND active = 1 LIMIT 1");
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($admin) {
+            $email = $admin['email'];
+            $password = "password123"; // Try a common default password
+        } else {
+            $email = "admin@example.com";
+            $password = "admin123";
+        }
+    } catch (PDOException $e) {
+        echo "Database error: " . $e->getMessage() . "\n";
+        $email = "admin@example.com";
+        $password = "admin123";
+    }
     
     echo "\nTesting login with admin credentials...\n";
     echo "Email: $email\n";

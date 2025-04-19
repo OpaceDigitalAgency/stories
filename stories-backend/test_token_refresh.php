@@ -109,10 +109,13 @@ curl_setopt_array($ch, [
     ]
 ]);
 
-$jsonData = json_encode([
+$requestData = [
     'user_id' => $testUser['id'],
     'force' => true
-]);
+];
+$jsonData = json_encode($requestData);
+echo "Raw JSON data: $jsonData\n";
+echo "PHP array: " . print_r($requestData, true) . "\n";
 curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
 
 // Print request details for debugging

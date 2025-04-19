@@ -244,10 +244,16 @@ class AuthController extends BaseController {
      */
     public function refresh() {
         try {
+            // Log the raw request data for debugging
+            error_log("AuthController::refresh - Raw request data: " . file_get_contents('php://input'));
+            error_log("AuthController::refresh - Parsed request data: " . json_encode($this->request));
+            error_log("AuthController::refresh - Request headers: " . json_encode(getallheaders()));
+            
             // Check if user_id is provided in the request
             $userId = null;
             if (isset($this->request['user_id'])) {
                 $userId = (int)$this->request['user_id'];
+                error_log("AuthController::refresh - User ID from request: $userId");
             }
             
             // If no user_id provided, try to get it from the current token

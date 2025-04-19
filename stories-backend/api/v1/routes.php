@@ -24,6 +24,13 @@ $router->addGlobalMiddleware($corsMiddleware);
 // Create auth middleware instance
 $authMiddleware = new StoriesAPI\Middleware\AuthMiddleware($config);
 
+// Authentication routes
+$router->post('auth/login', 'StoriesAPI\Endpoints\AuthController', 'login');
+$router->post('auth/register', 'StoriesAPI\Endpoints\AuthController', 'register');
+$router->post('auth/refresh', 'StoriesAPI\Endpoints\AuthController', 'refresh');
+$router->get('auth/me', 'StoriesAPI\Endpoints\AuthController', 'me', [$authMiddleware]);
+$router->put('auth/profile', 'StoriesAPI\Endpoints\AuthController', 'updateProfile', [$authMiddleware]);
+
 // Public routes (no auth required)
 $router->get('tags', 'StoriesAPI\Endpoints\TagsController', 'index');
 $router->get('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'show');

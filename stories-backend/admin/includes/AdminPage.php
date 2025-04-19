@@ -208,20 +208,52 @@ class AdminPage {
                 // If token expires in less than 1 minute (60 seconds), refresh it
                 if ($expiresIn < 60 && $expiresIn > 0) {
                     error_log("AdminPage: Token expires in $expiresIn seconds, refreshing");
-                    // Pass user ID instead of user object
-                    Auth::refreshToken($_SESSION['user']['id'], true);
+                    // Make sure we're passing a valid user ID
+                    if (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
+                        $userId = $_SESSION['user']['id'];
+                        error_log("AdminPage: Refreshing token for user ID: $userId");
+                        $refreshed = Auth::refreshToken($userId, true);
+                        error_log("AdminPage: Token refresh result: " . ($refreshed ? "Success" : "Failed"));
+                    } else {
+                        error_log("AdminPage: Cannot refresh token - user ID not found in session");
+                        $refreshed = false;
+                    }
+                    error_log("AdminPage: Token refresh result: " . ($refreshed ? "Success" : "Failed"));
                 }
                 // If token is already expired, refresh it immediately
                 else if ($expiresIn <= 0) {
                     error_log("AdminPage: Token is expired, refreshing immediately");
-                    // Pass user ID instead of user object
-                    Auth::refreshToken($_SESSION['user']['id'], true);
+                    // Make sure we're passing a valid user ID
+                    if (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
+                        $userId = $_SESSION['user']['id'];
+                        error_log("AdminPage: Refreshing token for user ID: $userId");
+                        $refreshed = Auth::refreshToken($userId, true);
+                        error_log("AdminPage: Token refresh result: " . ($refreshed ? "Success" : "Failed"));
+                    } else {
+                        error_log("AdminPage: Cannot refresh token - user ID not found in session");
+                        $refreshed = false;
+                    }
+                    error_log("AdminPage: Token refresh result: " . ($refreshed ? "Success" : "Failed"));
+                    
+                    // If refresh failed and token is expired, redirect to login
+                    if (!$refreshed) {
+                        error_log("AdminPage: Token refresh failed for expired token, redirecting to login");
+                        $this->redirect('login.php');
+                        exit;
+                    }
                 }
             } else {
                 // If we can't decode the payload or it doesn't have an exp claim, refresh the token
                 error_log("AdminPage: Token payload is invalid or missing expiration, refreshing");
-                // Pass user ID instead of user object
-                Auth::refreshToken($_SESSION['user']['id'], true);
+                // Make sure we're passing a valid user ID
+                if (isset($_SESSION['user']) && isset($_SESSION['user']['id'])) {
+                    $userId = $_SESSION['user']['id'];
+                    error_log("AdminPage: Refreshing token for user ID: $userId");
+                    $refreshed = Auth::refreshToken($userId, true);
+                    error_log("AdminPage: Token refresh result: " . ($refreshed ? "Success" : "Failed"));
+                } else {
+                    error_log("AdminPage: Cannot refresh token - user ID not found in session");
+                }
             }
         }
     }

@@ -268,61 +268,62 @@ class Auth {
             return false;
         }
         */
-        /**
-         * Refresh a user's authentication token
-         *
-         * @param int $userId User ID
-         * @param bool $checkExpiration Whether to check if token is about to expire
-         * @param int $expirationThreshold Seconds threshold for token expiration (default: 30)
-         * @return string|bool New token if successful, false otherwise
-         */
-        public static function refreshToken($userId, $checkExpiration = false, $expirationThreshold = 30) {
-            try {
-                // Get user data
-                $user = self::getUserById($userId);
-                
-                if (!$user) {
-                    error_log("Auth::refreshToken - Invalid user ID: $userId");
-                    return false;
-                }
-                
-                // If checking expiration, validate the current token first
-                if ($checkExpiration) {
-                    // Get Authorization header
-                    $headers = getallheaders();
-                    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-                    
-                    // Check if token exists
-                    if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-                        $token = $matches[1];
-                        $payload = self::validateToken($token);
-                        
-                        // If token is valid and not about to expire, return false
-                        if ($payload && isset($payload['exp'])) {
-                            $expiresIn = $payload['exp'] - time();
-                            if ($expiresIn > $expirationThreshold) {
-                                // Token is still valid and not about to expire
-                                return false;
-                            }
-                            // Otherwise, token is about to expire, so continue with refresh
-                            error_log("Auth::refreshToken - Token expires in $expiresIn seconds, refreshing");
-                        }
-                    }
-                }
-                
-                // Generate new JWT token
-                $token = self::generateToken([
-                    'user_id' => $user['id'],
-                    'role' => $user['role']
-                ]);
-                
-                error_log("Auth::refreshToken - Token refreshed successfully for user ID: $userId");
-                
-                return $token;
-            } catch (\Exception $e) {
-                error_log("Auth::refreshToken - Error: " . $e->getMessage());
+    }
+    
+    /**
+     * Refresh a user's authentication token
+     *
+     * @param int $userId User ID
+     * @param bool $checkExpiration Whether to check if token is about to expire
+     * @param int $expirationThreshold Seconds threshold for token expiration (default: 30)
+     * @return string|bool New token if successful, false otherwise
+     */
+    public static function refreshToken($userId, $checkExpiration = false, $expirationThreshold = 30) {
+        try {
+            // Get user data
+            $user = self::getUserById($userId);
+            
+            if (!$user) {
+                error_log("Auth::refreshToken - Invalid user ID: $userId");
                 return false;
             }
+            
+            // If checking expiration, validate the current token first
+            if ($checkExpiration) {
+                // Get Authorization header
+                $headers = getallheaders();
+                $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+                
+                // Check if token exists
+                if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                    $token = $matches[1];
+                    $payload = self::validateToken($token);
+                    
+                    // If token is valid and not about to expire, return false
+                    if ($payload && isset($payload['exp'])) {
+                        $expiresIn = $payload['exp'] - time();
+                        if ($expiresIn > $expirationThreshold) {
+                            // Token is still valid and not about to expire
+                            return false;
+                        }
+                        // Otherwise, token is about to expire, so continue with refresh
+                        error_log("Auth::refreshToken - Token expires in $expiresIn seconds, refreshing");
+                    }
+                }
+            }
+            
+            // Generate new JWT token
+            $token = self::generateToken([
+                'user_id' => $user['id'],
+                'role' => $user['role']
+            ]);
+            
+            error_log("Auth::refreshToken - Token refreshed successfully for user ID: $userId");
+            
+            return $token;
+        } catch (\Exception $e) {
+            error_log("Auth::refreshToken - Error: " . $e->getMessage());
+            return false;
         }
     }
 }

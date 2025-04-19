@@ -149,6 +149,12 @@ $config = require __DIR__ . '/v1/config/config.php';
 // Load Router class with case-insensitive approach
 $routerFileResult = loadFileInsensitive(__DIR__, 'v1/Core/Router.php');
 
+// --- GUARANTEED DEBUG LOGGING BEFORE ROUTER INSTANTIATION ---
+$router_debug_message = "[GUARANTEE] loadFileInsensitive result: " . var_export($routerFileResult, true) . " | CWD: " . getcwd() . PHP_EOL;
+file_put_contents(__DIR__ . '/router_load_debug.log', $router_debug_message, FILE_APPEND);
+error_log($router_debug_message);
+// ------------------------------------------------------------
+
 // Debug output: log whether Router.php was found and loaded
 if ($routerFileResult) {
     error_log("[DEBUG] Router.php loaded: " . $routerFileResult);

@@ -45,6 +45,7 @@ try {
     // Get form data
     $id = $_POST['id'] ?? null;
     $name = trim($_POST['name'] ?? '');
+    $slug = trim($_POST['slug'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $bio = trim($_POST['bio'] ?? '');
 
@@ -63,8 +64,16 @@ try {
     // Check if email column exists
     $hasEmailColumn = in_array('email', $columns);
     
+    // Check if slug column exists
+    $hasSlugColumn = in_array('slug', $columns);
+    
     // Check if bio column exists
     $hasBioColumn = in_array('bio', $columns);
+
+    // Generate slug from name if not provided and slug column exists
+    if ($hasSlugColumn && empty($slug)) {
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
+    }
 
     // Validate email format if email column exists
     if ($hasEmailColumn) {
@@ -84,6 +93,24 @@ try {
         }
     }
 
+    // Validate slug format if slug column exists
+    if ($hasSlugColumn) {
+        if (empty($slug)) {
+            throw new Exception("Please fill in the slug field");
+        }
+        
+        if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
+            throw new Exception("Slug can only contain lowercase letters, numbers, and hyphens");
+        }
+
+        // Check if slug is already in use by another author
+        $stmt = $db->prepare("SELECT id FROM authors WHERE slug = ? AND id != ?");
+        $stmt->execute([$slug, $id ?? 0]);
+        if ($stmt->fetch()) {
+            throw new Exception("Slug is already in use by another author");
+        }
+    }
+
     if ($id) {
         // Verify author exists
         $stmt = $db->prepare("SELECT id FROM authors WHERE id = ?");
@@ -95,6 +122,11 @@ try {
         // Update existing author
         $setClause = ["name = ?"];
         $params = [$name];
+        
+        if ($hasSlugColumn) {
+            $setClause[] = "slug = ?";
+            $params[] = $slug;
+        }
         
         if ($hasEmailColumn) {
             $setClause[] = "email = ?";
@@ -119,6 +151,12 @@ try {
         $columns = ["name"];
         $placeholders = ["?"];
         $params = [$name];
+        
+        if ($hasSlugColumn) {
+            $columns[] = "slug";
+            $placeholders[] = "?";
+            $params[] = $slug;
+        }
         
         if ($hasEmailColumn) {
             $columns[] = "email";

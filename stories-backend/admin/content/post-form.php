@@ -33,10 +33,67 @@ try {
         ]
     );
 
+    // Check if blog_posts table exists
+    $blogTableName = 'blog_posts';
+    $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
+    if ($stmt->rowCount() === 0) {
+        // Check if blog table exists instead
+        $stmt = $db->query("SHOW TABLES LIKE 'blog'");
+        if ($stmt->rowCount() > 0) {
+            $blogTableName = 'blog';
+        } else {
+            // Create blog_posts table if neither exists
+            $db->exec("CREATE TABLE IF NOT EXISTS blog_posts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                author_id INT NOT NULL,
+                content TEXT NOT NULL,
+                excerpt TEXT,
+                status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            )");
+        }
+    }
+
+    // Check if post_tags table exists
+    $postTagsTableName = 'post_tags';
+    $stmt = $db->query("SHOW TABLES LIKE 'post_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Check if blog_tags table exists instead
+        $stmt = $db->query("SHOW TABLES LIKE 'blog_tags'");
+        if ($stmt->rowCount() > 0) {
+            $postTagsTableName = 'blog_tags';
+        } else {
+            // Create post_tags table if neither exists
+            $db->exec("CREATE TABLE IF NOT EXISTS post_tags (
+                post_id INT NOT NULL,
+                tag_id INT NOT NULL,
+                PRIMARY KEY (post_id, tag_id)
+            )");
+        }
+    }
+
+    // Get all columns from the blog table
+    $columns = [];
+    $stmt = $db->query("DESCRIBE $blogTableName");
+    while ($row = $stmt->fetch()) {
+        $columns[] = $row['Field'];
+    }
+
+    // Check if author_id column exists
+    $hasAuthorIdColumn = in_array('author_id', $columns);
+    
+    // Check if excerpt column exists
+    $hasExcerptColumn = in_array('excerpt', $columns);
+    
+    // Check if status column exists
+    $hasStatusColumn = in_array('status', $columns);
+
     // Get post if editing
     $post = null;
     if (isset($_GET['id'])) {
-        $stmt = $db->prepare("SELECT * FROM blog_posts WHERE id = ?");
+        $stmt = $db->prepare("SELECT * FROM $blogTableName WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $post = $stmt->fetch();
         
@@ -55,7 +112,7 @@ try {
     // Get post tags if editing
     $postTags = [];
     if ($post) {
-        $stmt = $db->prepare("SELECT tag_id FROM post_tags WHERE post_id = ?");
+        $stmt = $db->prepare("SELECT tag_id FROM $postTagsTableName WHERE post_id = ?");
         $stmt->execute([$post['id']]);
         $postTags = array_column($stmt->fetchAll(), 'tag_id');
     }
@@ -124,18 +181,20 @@ if (isset($_SESSION['error'])) {
                        value="<?php echo htmlspecialchars($post['title'] ?? ''); ?>">
             </div>
 
+            <?php if ($hasAuthorIdColumn): ?>
             <div class="form-group">
                 <label class="form-label" for="author_id">Author</label>
                 <select id="author_id" name="author_id" class="form-input" required>
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
                         <option value="<?php echo $author['id']; ?>"
-                                <?php echo ($post['author_id'] ?? '') == $author['id'] ? 'selected' : ''; ?>>
+                                <?php echo isset($post['author_id']) && $post['author_id'] == $author['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($author['name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php endif; ?>
 
             <div class="form-group">
                 <label class="form-label" for="content">Content</label>
@@ -144,20 +203,24 @@ if (isset($_SESSION['error'])) {
                 ?></textarea>
             </div>
 
+            <?php if ($hasExcerptColumn): ?>
             <div class="form-group">
                 <label class="form-label" for="excerpt">Excerpt</label>
                 <textarea id="excerpt" name="excerpt" class="form-input" rows="3"><?php 
                     echo htmlspecialchars($post['excerpt'] ?? ''); 
                 ?></textarea>
             </div>
+            <?php endif; ?>
 
+            <?php if ($hasStatusColumn): ?>
             <div class="form-group">
                 <label class="form-label" for="status">Status</label>
                 <select id="status" name="status" class="form-input" required>
-                    <option value="draft" <?php echo ($post['status'] ?? '') == 'draft' ? 'selected' : ''; ?>>Draft</option>
-                    <option value="published" <?php echo ($post['status'] ?? '') == 'published' ? 'selected' : ''; ?>>Published</option>
+                    <option value="draft" <?php echo isset($post['status']) && $post['status'] == 'draft' ? 'selected' : ''; ?>>Draft</option>
+                    <option value="published" <?php echo isset($post['status']) && $post['status'] == 'published' ? 'selected' : ''; ?>>Published</option>
                 </select>
             </div>
+            <?php endif; ?>
 
             <div class="form-group">
                 <label class="form-label">Tags</label>

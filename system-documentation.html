@@ -206,23 +206,30 @@
         </ul>
         
         <h3>Admin Architecture</h3>
-        <p>The admin interface uses a simple MVC architecture:</p>
+        <div class="warning">
+            <p><strong>Important:</strong> The admin interface uses a JavaScript-free architecture to ensure reliability and prevent recurring issues. Any attempts to add JavaScript will be blocked by security headers.</p>
+        </div>
+        <p>The admin interface uses a simplified architecture focused on reliability:</p>
         <ul>
-            <li><strong>Controllers</strong>: Handle request processing and business logic</li>
-            <li><strong>Views</strong>: Template files for rendering HTML</li>
-            <li><strong>Models</strong>: Data access and manipulation</li>
-            <li><strong>API Client</strong>: Communicates with the API for data operations</li>
+            <li><strong>Direct Form Submissions</strong>: Pure HTML forms submit directly to PHP processors</li>
+            <li><strong>CSS-Only UI</strong>: Navigation and interactive elements use CSS without JavaScript</li>
+            <li><strong>Session Auth</strong>: Simple session-based authentication without JWT complexity</li>
+            <li><strong>Server-Side Processing</strong>: All data operations handled directly by PHP</li>
         </ul>
         
         <h3>Form Submission Process</h3>
-        <p>The admin interface uses JavaScript to handle form submissions:</p>
+        <p>The admin interface uses direct form submissions for reliability:</p>
         <pre>
-1. User submits form
-2. JavaScript intercepts form submission
-3. Form data is serialized to JSON
-4. API request is made using fetch()
-5. Response is processed and UI is updated
+1. User submits HTML form
+2. Form data sent directly to PHP processor
+3. Server validates input and performs operation
+4. User is redirected with success/error message
+5. No JavaScript intermediary required
         </pre>
+
+        <div class="note">
+            <p><strong>Security Note:</strong> JavaScript is explicitly blocked via Content-Security-Policy headers and .htaccess rules to prevent accidental reintroduction of client-side dependencies.</p>
+        </div>
         
         <h2 id="frontend">Frontend Integration</h2>
         

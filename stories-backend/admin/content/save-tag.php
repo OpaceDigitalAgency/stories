@@ -65,6 +65,14 @@ try {
         throw new Exception("Slug is already in use by another tag");
     }
 
+    // Check if description column exists in tags table
+    $hasDescriptionColumn = true;
+    try {
+        $db->query("SELECT description FROM tags LIMIT 1");
+    } catch (PDOException $e) {
+        $hasDescriptionColumn = false;
+    }
+
     if ($id) {
         // Verify tag exists
         $stmt = $db->prepare("SELECT id FROM tags WHERE id = ?");
@@ -74,14 +82,24 @@ try {
         }
 
         // Update existing tag
-        $stmt = $db->prepare("UPDATE tags SET name = ?, slug = ?, description = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$name, $slug, $description, $id]);
+        if ($hasDescriptionColumn) {
+            $stmt = $db->prepare("UPDATE tags SET name = ?, slug = ?, description = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$name, $slug, $description, $id]);
+        } else {
+            $stmt = $db->prepare("UPDATE tags SET name = ?, slug = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$name, $slug, $id]);
+        }
 
         $message = "Tag updated successfully";
     } else {
         // Create new tag
-        $stmt = $db->prepare("INSERT INTO tags (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
-        $stmt->execute([$name, $slug, $description]);
+        if ($hasDescriptionColumn) {
+            $stmt = $db->prepare("INSERT INTO tags (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
+            $stmt->execute([$name, $slug, $description]);
+        } else {
+            $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+            $stmt->execute([$name, $slug]);
+        }
 
         $message = "Tag created successfully";
     }

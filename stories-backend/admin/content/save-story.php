@@ -44,9 +44,9 @@ try {
 
     // Get form data
     $id = $_POST['id'] ?? null;
-    $title = $_POST['title'] ?? '';
+    $title = trim($_POST['title'] ?? '');
     $author_id = $_POST['author_id'] ?? '';
-    $content = $_POST['content'] ?? '';
+    $content = trim($_POST['content'] ?? '');
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
@@ -54,38 +54,84 @@ try {
         throw new Exception("Please fill in all required fields");
     }
 
+    // Get author name for fallback
+    $stmt = $db->prepare("SELECT name FROM authors WHERE id = ?");
+    $stmt->execute([$author_id]);
+    $author = $stmt->fetch();
+    
+    if (!$author) {
+        throw new Exception("Selected author does not exist");
+    }
+
+    // Check if author_id column exists in stories table
+    $hasAuthorIdColumn = true;
+    try {
+        $db->query("SELECT author_id FROM stories LIMIT 1");
+    } catch (PDOException $e) {
+        $hasAuthorIdColumn = false;
+    }
+
     if ($id) {
+        // Verify story exists
+        $stmt = $db->prepare("SELECT id FROM stories WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            throw new Exception("Story not found");
+        }
+
         // Update existing story
-        $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, content = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$title, $author_id, $content, $id]);
+        if ($hasAuthorIdColumn) {
+            $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, author = ?, content = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$title, $author_id, $author['name'], $content, $id]);
+        } else {
+            $stmt = $db->prepare("UPDATE stories SET title = ?, author = ?, content = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$title, $author['name'], $content, $id]);
+        }
         
         // Delete existing tags
         $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
         $stmt->execute([$id]);
+
+        $message = "Story updated successfully";
     } else {
         // Create new story
-        $stmt = $db->prepare("INSERT INTO stories (title, author_id, content, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
-        $stmt->execute([$title, $author_id, $content]);
+        if ($hasAuthorIdColumn) {
+            $stmt = $db->prepare("INSERT INTO stories (title, author_id, author, content, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
+            $stmt->execute([$title, $author_id, $author['name'], $content]);
+        } else {
+            $stmt = $db->prepare("INSERT INTO stories (title, author, content, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
+            $stmt->execute([$title, $author['name'], $content]);
+        }
         $id = $db->lastInsertId();
+
+        $message = "Story created successfully";
     }
 
-    // Add tags
+    // Add tags if the story_tags table exists
     if (!empty($tags)) {
-        $values = array_fill(0, count($tags), "($id, ?)");
-        $sql = "INSERT INTO story_tags (story_id, tag_id) VALUES " . implode(', ', $values);
-        $stmt = $db->prepare($sql);
-        
-        $i = 1;
-        foreach ($tags as $tag_id) {
-            $stmt->bindValue($i++, $tag_id);
+        try {
+            $values = array_fill(0, count($tags), "($id, ?)");
+            $sql = "INSERT INTO story_tags (story_id, tag_id) VALUES " . implode(', ', $values);
+            $stmt = $db->prepare($sql);
+            
+            $i = 1;
+            foreach ($tags as $tag_id) {
+                $stmt->bindValue($i++, $tag_id);
+            }
+            $stmt->execute();
+        } catch (PDOException $e) {
+            // Ignore tag errors, just log them
+            error_log("Error adding tags: " . $e->getMessage());
         }
-        $stmt->execute();
     }
 
     // Commit transaction
     $db->commit();
 
-    // Redirect back to stories list
+    // Store success message and redirect
+    session_start();
+    $_SESSION['success'] = $message;
+    
     header("Location: stories.php");
     exit;
 

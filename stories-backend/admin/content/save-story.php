@@ -48,11 +48,10 @@ try {
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
-    $featured = isset($_POST['featured']) ? $_POST['featured'] : 0;
+    $featured = isset($_POST['featured']) ? (int)$_POST['featured'] : 0;
     $published_at = $_POST['published_at'] ?? '';
-    $featured_image = $_POST['featured_image'] ?? null;
-    $review_count = isset($_POST['review_count']) ? $_POST['review_count'] : 0;
-    $average_rating = isset($_POST['average_rating']) ? $_POST['average_rating'] : 0;
+    $review_count = isset($_POST['review_count']) ? (int)$_POST['review_count'] : 0;
+    $average_rating = isset($_POST['average_rating']) ? (float)$_POST['average_rating'] : 0;
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
@@ -71,39 +70,13 @@ try {
 
     // Get all columns from stories table
     $columns = [];
-    $columnInfo = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
-        $columnInfo[$row['Field']] = $row;
     }
 
-    // Check if author_id column exists in stories table
-    $hasAuthorIdColumn = in_array('author_id', $columns);
-    
-    // Check if author column exists in stories table
-    $hasAuthorColumn = in_array('author', $columns);
-    
-    // Check if slug column exists in stories table
-    $hasSlugColumn = in_array('slug', $columns);
-    
-    // Check if featured column exists in stories table
-    $hasFeaturedColumn = in_array('featured', $columns);
-    
-    // Check if published_at column exists in stories table
-    $hasPublishedAtColumn = in_array('published_at', $columns);
-    
-    // Check if featured_image column exists in stories table
-    $hasFeaturedImageColumn = in_array('featured_image', $columns);
-    
-    // Check if review_count column exists in stories table
-    $hasReviewCountColumn = in_array('review_count', $columns);
-    
-    // Check if average_rating column exists in stories table
-    $hasAverageRatingColumn = in_array('average_rating', $columns);
-
     // Generate slug from title if not provided
-    if ($hasSlugColumn && empty($slug)) {
+    if (in_array('slug', $columns) && empty($slug)) {
         $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
         $slug = trim($slug, '-');
     }
@@ -115,36 +88,27 @@ try {
     ];
 
     // Add author data
-    if ($hasAuthorIdColumn) {
+    if (in_array('author_id', $columns)) {
         $data['author_id'] = $author_id;
     }
     
-    // Include author name for backward compatibility if the column exists
-    if ($hasAuthorColumn) {
+    // Include author name for backward compatibility
+    if (in_array('author', $columns)) {
         $data['author'] = $author['name'];
     }
     
     // Add slug if the column exists
-    if ($hasSlugColumn) {
+    if (in_array('slug', $columns)) {
         $data['slug'] = $slug;
     }
     
     // Add featured if the column exists
-    if ($hasFeaturedColumn) {
-        // Check if featured is an integer field
-        $featuredType = isset($columnInfo['featured']) ? $columnInfo['featured']['Type'] : '';
-        $isIntField = strpos($featuredType, 'int') !== false || strpos($featuredType, 'tinyint') !== false;
-        
-        if ($isIntField) {
-            // Ensure featured is an integer
-            $data['featured'] = empty($featured) ? 0 : 1;
-        } else {
-            $data['featured'] = $featured;
-        }
+    if (in_array('featured', $columns)) {
+        $data['featured'] = $featured;
     }
     
     // Add published_at if the column exists
-    if ($hasPublishedAtColumn) {
+    if (in_array('published_at', $columns)) {
         if (!empty($published_at)) {
             // Convert HTML datetime-local format to MySQL datetime format
             $date = new DateTime($published_at);
@@ -155,57 +119,20 @@ try {
         }
     }
     
-    // Add featured_image if the column exists
-    if ($hasFeaturedImageColumn && !empty($featured_image)) {
-        $data['featured_image'] = $featured_image;
-    }
-    
     // Add review_count if the column exists
-    if ($hasReviewCountColumn) {
-        // Ensure review_count is an integer
-        $data['review_count'] = intval($review_count);
+    if (in_array('review_count', $columns)) {
+        $data['review_count'] = $review_count;
     }
     
     // Add average_rating if the column exists
-    if ($hasAverageRatingColumn) {
-        // Check if average_rating is a decimal field
-        $ratingType = isset($columnInfo['average_rating']) ? $columnInfo['average_rating']['Type'] : '';
-        $isDecimalField = strpos($ratingType, 'decimal') !== false || strpos($ratingType, 'float') !== false || strpos($ratingType, 'double') !== false;
-        
-        if ($isDecimalField) {
-            // Ensure average_rating is a decimal
-            $data['average_rating'] = floatval($average_rating);
-        } else {
-            $data['average_rating'] = $average_rating;
-        }
+    if (in_array('average_rating', $columns)) {
+        $data['average_rating'] = $average_rating;
     }
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'featured_image', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
-            // Handle datetime fields
-            if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
-                if (!empty($value)) {
-                    // Convert HTML datetime-local format to MySQL datetime format
-                    $date = new DateTime($value);
-                    $data[$key] = $date->format('Y-m-d H:i:s');
-                } else if ($columnInfo[$key]['Null'] === 'NO' && $columnInfo[$key]['Default'] === null) {
-                    // If field is required and no value provided, use current datetime
-                    $data[$key] = date('Y-m-d H:i:s');
-                }
-            } 
-            // Handle integer fields
-            else if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'int') !== false || strpos($columnInfo[$key]['Type'], 'tinyint') !== false)) {
-                $data[$key] = intval($value);
-            }
-            // Handle decimal fields
-            else if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'decimal') !== false || strpos($columnInfo[$key]['Type'], 'float') !== false || strpos($columnInfo[$key]['Type'], 'double') !== false)) {
-                $data[$key] = floatval($value);
-            }
-            // Handle other fields
-            else {
-                $data[$key] = trim($value);
-            }
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
+            $data[$key] = trim($value);
         }
     }
 
@@ -237,8 +164,11 @@ try {
         $stmt->execute($updateData);
         
         // Delete existing tags
-        $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
-        $stmt->execute([$id]);
+        $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+        if ($stmt->rowCount() > 0) {
+            $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
+            $stmt->execute([$id]);
+        }
 
         $message = "Story updated successfully";
     } else {
@@ -260,21 +190,24 @@ try {
         $message = "Story created successfully";
     }
 
-    // Add tags if the story_tags table exists
+    // Add tags if the story_tags table exists and tags were provided
     if (!empty($tags)) {
-        try {
-            $values = array_fill(0, count($tags), "($id, ?)");
-            $sql = "INSERT INTO story_tags (story_id, tag_id) VALUES " . implode(', ', $values);
-            $stmt = $db->prepare($sql);
-            
-            $i = 1;
-            foreach ($tags as $tag_id) {
-                $stmt->bindValue($i++, $tag_id);
+        $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+        if ($stmt->rowCount() > 0) {
+            try {
+                $values = array_fill(0, count($tags), "($id, ?)");
+                $sql = "INSERT INTO story_tags (story_id, tag_id) VALUES " . implode(', ', $values);
+                $stmt = $db->prepare($sql);
+                
+                $i = 1;
+                foreach ($tags as $tag_id) {
+                    $stmt->bindValue($i++, $tag_id);
+                }
+                $stmt->execute();
+            } catch (PDOException $e) {
+                // Ignore tag errors, just log them
+                error_log("Error adding tags: " . $e->getMessage());
             }
-            $stmt->execute();
-        } catch (PDOException $e) {
-            // Ignore tag errors, just log them
-            error_log("Error adding tags: " . $e->getMessage());
         }
     }
 

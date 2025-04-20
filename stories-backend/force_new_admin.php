@@ -61,28 +61,42 @@ foreach ($dirs as $dir) {
     }
 }
 
-// 1. Create config.php first
-$config = <<<'EOT'
+// 1. Create or update config.php
+$configPath = __DIR__ . '/admin/includes/config.php';
+$existingConfig = [];
+
+// Try to get existing database credentials
+if (file_exists($configPath)) {
+    include $configPath;
+    $existingConfig = [
+        'db_host' => $db_host ?? 'localhost',
+        'db_name' => $db_name ?? 'stories',
+        'db_user' => $db_user ?? 'stories_user',
+        'db_pass' => $db_pass ?? 'your_password_here'
+    ];
+}
+
+$config = <<<EOT
 <?php
 // Database configuration
-$db_host = 'localhost';
-$db_name = 'stories';
-$db_user = 'stories_user';
-$db_pass = 'your_password_here';
+\$db_host = '{$existingConfig['db_host']}';
+\$db_name = '{$existingConfig['db_name']}';
+\$db_user = '{$existingConfig['db_user']}';
+\$db_pass = '{$existingConfig['db_pass']}';
 
 try {
-    $db = new PDO(
-        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
-        $db_user,
-        $db_pass,
+    \$db = new PDO(
+        "mysql:host=\$db_host;dbname=\$db_name;charset=utf8mb4",
+        \$db_user,
+        \$db_pass,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-} catch (PDOException $e) {
-    die('Database connection failed: ' . $e->getMessage());
+} catch (PDOException \$e) {
+    die('Database connection failed: ' . \$e->getMessage());
 }
 
 // Site configuration
@@ -107,9 +121,14 @@ session_set_cookie_params([
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('error_log', __DIR__ . '/../logs/error.log');
+
+// Create logs directory if it doesn't exist
+if (!is_dir(__DIR__ . '/../logs')) {
+    mkdir(__DIR__ . '/../logs', 0755, true);
+}
 EOT;
 
-safe_write_file(__DIR__ . '/admin/includes/config.php', $config);
+safe_write_file($configPath, $config);
 
 // 2. Force .htaccess rules
 $htaccess = <<<'EOT'
@@ -272,4 +291,4 @@ EOT;
 safe_write_file(__DIR__ . '/admin/assets/css/main.css', $css);
 
 output("\nForced new admin interface!", 'success');
-output("Please:\n1. Update database credentials in includes/config.php\n2. Clear your browser cache\n3. Visit /admin/login.php\n4. Verify JavaScript is blocked\n5. Test login functionality", 'info');
+output("Please:\n1. Clear your browser cache\n2. Visit /admin/login.php\n3. Verify JavaScript is blocked\n4. Test login functionality", 'info');

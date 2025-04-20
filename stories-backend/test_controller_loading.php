@@ -14,67 +14,8 @@ ini_set('error_log', __DIR__ . '/logs/test-error.log');
 // Define the base path
 $basePath = __DIR__ . '/api/v1';
 
-// Define the controllers to test
-$controllers = [
-    'GamesController.php',
-    'DirectoryItemsController.php',
-    'AiToolsController.php'
-];
-
-// Check if controllers exist in Endpoints directory
+// Include autoloader first
 echo "<h1>Controller Loading Test</h1>";
-echo "<h2>Checking controller files in Endpoints directory</h2>";
-echo "<ul>";
-
-foreach ($controllers as $controller) {
-    $upperCasePath = $basePath . '/Endpoints/' . $controller;
-    $lowerCasePath = $basePath . '/endpoints/' . $controller;
-    
-    echo "<li>$controller: ";
-    
-    if (file_exists($upperCasePath)) {
-        echo "Found at <code>$upperCasePath</code>";
-    } elseif (file_exists($lowerCasePath)) {
-        echo "Found at <code>$lowerCasePath</code>";
-    } else {
-        echo "Not found";
-    }
-    
-    echo "</li>";
-}
-
-echo "</ul>";
-
-// Try to include the controllers
-echo "<h2>Trying to include controllers</h2>";
-echo "<ul>";
-
-foreach ($controllers as $controller) {
-    $upperCasePath = $basePath . '/Endpoints/' . $controller;
-    $lowerCasePath = $basePath . '/endpoints/' . $controller;
-    
-    echo "<li>$controller: ";
-    
-    try {
-        if (file_exists($upperCasePath)) {
-            include_once $upperCasePath;
-            echo "Included successfully from <code>$upperCasePath</code>";
-        } elseif (file_exists($lowerCasePath)) {
-            include_once $lowerCasePath;
-            echo "Included successfully from <code>$lowerCasePath</code>";
-        } else {
-            echo "Not found";
-        }
-    } catch (Exception $e) {
-        echo "Error: " . $e->getMessage();
-    }
-    
-    echo "</li>";
-}
-
-echo "</ul>";
-
-// Check if autoloader is working
 echo "<h2>Testing autoloader</h2>";
 echo "<ul>";
 
@@ -85,6 +26,8 @@ try {
     
     // Try to load controllers using autoloader
     $controllerClasses = [
+        'StoriesAPI\Core\BaseController',
+        'StoriesAPI\Utils\Response',
         'StoriesAPI\Endpoints\GamesController',
         'StoriesAPI\Endpoints\DirectoryItemsController',
         'StoriesAPI\Endpoints\AiToolsController'
@@ -108,6 +51,93 @@ try {
 } catch (Exception $e) {
     echo "<li>Error loading autoloader: " . $e->getMessage() . "</li>";
 }
+
+echo "</ul>";
+
+// Define the controllers to test
+$controllers = [
+    'GamesController.php',
+    'DirectoryItemsController.php',
+    'AiToolsController.php'
+];
+
+// Check if controllers exist in Endpoints directory
+echo "<h2>Checking controller files in Endpoints directory</h2>";
+echo "<ul>";
+
+foreach ($controllers as $controller) {
+    $upperCasePath = $basePath . '/Endpoints/' . $controller;
+    $lowerCasePath = $basePath . '/endpoints/' . $controller;
+    
+    echo "<li>$controller: ";
+    
+    if (file_exists($upperCasePath)) {
+        echo "Found at <code>$upperCasePath</code>";
+    } elseif (file_exists($lowerCasePath)) {
+        echo "Found at <code>$lowerCasePath</code>";
+    } else {
+        echo "Not found";
+    }
+    
+    echo "</li>";
+}
+
+echo "</ul>";
+
+// Check file permissions
+echo "<h2>Checking file permissions</h2>";
+echo "<ul>";
+
+foreach ($controllers as $controller) {
+    $upperCasePath = $basePath . '/Endpoints/' . $controller;
+    $lowerCasePath = $basePath . '/endpoints/' . $controller;
+    
+    echo "<li>$controller: ";
+    
+    if (file_exists($upperCasePath)) {
+        $perms = fileperms($upperCasePath);
+        echo "Permissions: " . substr(sprintf('%o', $perms), -4);
+    } elseif (file_exists($lowerCasePath)) {
+        $perms = fileperms($lowerCasePath);
+        echo "Permissions: " . substr(sprintf('%o', $perms), -4);
+    } else {
+        echo "Not found";
+    }
+    
+    echo "</li>";
+}
+
+echo "</ul>";
+
+// Check if Core directory exists
+echo "<h2>Checking Core directory</h2>";
+echo "<ul>";
+
+$corePath = $basePath . '/Core';
+$coreLowerPath = $basePath . '/core';
+
+echo "<li>Core directory: ";
+if (file_exists($corePath) && is_dir($corePath)) {
+    echo "Found at <code>$corePath</code>";
+} elseif (file_exists($coreLowerPath) && is_dir($coreLowerPath)) {
+    echo "Found at <code>$coreLowerPath</code>";
+} else {
+    echo "Not found";
+}
+echo "</li>";
+
+$baseControllerPath = $corePath . '/BaseController.php';
+$baseControllerLowerPath = $coreLowerPath . '/BaseController.php';
+
+echo "<li>BaseController.php: ";
+if (file_exists($baseControllerPath)) {
+    echo "Found at <code>$baseControllerPath</code>";
+} elseif (file_exists($baseControllerLowerPath)) {
+    echo "Found at <code>$baseControllerLowerPath</code>";
+} else {
+    echo "Not found";
+}
+echo "</li>";
 
 echo "</ul>";
 
@@ -149,31 +179,6 @@ foreach ($routes as $route) {
         } else {
             echo ", Invalid JSON: " . json_last_error_msg();
         }
-    }
-    
-    echo "</li>";
-}
-
-echo "</ul>";
-
-// Check file permissions
-echo "<h2>Checking file permissions</h2>";
-echo "<ul>";
-
-foreach ($controllers as $controller) {
-    $upperCasePath = $basePath . '/Endpoints/' . $controller;
-    $lowerCasePath = $basePath . '/endpoints/' . $controller;
-    
-    echo "<li>$controller: ";
-    
-    if (file_exists($upperCasePath)) {
-        $perms = fileperms($upperCasePath);
-        echo "Permissions: " . substr(sprintf('%o', $perms), -4);
-    } elseif (file_exists($lowerCasePath)) {
-        $perms = fileperms($lowerCasePath);
-        echo "Permissions: " . substr(sprintf('%o', $perms), -4);
-    } else {
-        echo "Not found";
     }
     
     echo "</li>";
@@ -239,3 +244,21 @@ try {
 }
 
 echo "</ul>";
+
+// Check error logs
+echo "<h2>Recent Error Logs</h2>";
+echo "<pre>";
+
+$errorLog = __DIR__ . '/logs/api-error.log';
+if (file_exists($errorLog)) {
+    // Get the last 50 lines of the error log
+    $lines = file($errorLog);
+    $lastLines = array_slice($lines, -50);
+    foreach ($lastLines as $line) {
+        echo htmlspecialchars($line);
+    }
+} else {
+    echo "Error log file not found at $errorLog";
+}
+
+echo "</pre>";

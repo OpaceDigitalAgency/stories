@@ -15,6 +15,9 @@ use PDO;
 use PDOException;
 use Exception;
 
+// Define DEBUG_MODE constant
+define('StoriesAPI\Core\DEBUG_MODE', false);
+
 class Database {
     /**
      * @var PDO The database connection

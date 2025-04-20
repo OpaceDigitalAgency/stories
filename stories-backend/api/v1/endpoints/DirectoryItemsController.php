@@ -26,12 +26,14 @@ class DirectoryItemsController extends BaseController {
         $offset = ($page - 1) * $pageSize;
         
         // Get sort parameters
-        $allowedSortFields = ['name', 'category'];
+        $allowedSortFields = ['title', 'created_at'];
         $sort = $this->getSortParams($allowedSortFields);
-        $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY name ASC";
+        $sortField = $sort['field'] ?? 'created_at';
+        $sortDirection = $sort['direction'] ?? 'DESC';
+        $sortClause = "ORDER BY $sortField $sortDirection";
         
         // Get filter parameters
-        $allowedFilterFields = ['name', 'category'];
+        $allowedFilterFields = ['title', 'slug', 'featured', 'is_published', 'category_id'];
         $filters = $this->getFilterParams($allowedFilterFields);
         
         try {
@@ -41,145 +43,132 @@ class DirectoryItemsController extends BaseController {
             $params = $whereData['params'];
             
             // Count total records
-            $countQuery = "SELECT COUNT(*) as total FROM directory_items di $whereClause";
+            $countQuery = "SELECT COUNT(*) as total FROM directory_items $whereClause";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
             
             // Get directory items with pagination
-            $query = "SELECT 
-                di.id, di.name, di.description, di.url, di.category,
-                di.created_at as createdAt, di.updated_at as updatedAt
-                FROM directory_items di
+            $query = "SELECT
+                d.id, d.title, d.description, d.slug, d.featured, d.is_published,
+                d.category_id, d.website_url, d.contact_email, d.contact_phone, d.address,
+                d.published_at AS publishedAt, d.created_at AS createdAt, d.updated_at AS updatedAt,
+                c.name AS category_name, c.slug AS category_slug
+                FROM directory_items d
+                LEFT JOIN directory_categories c ON d.category_id = c.id
                 $whereClause
                 $sortClause
                 LIMIT $offset, $pageSize";
             
             $stmt = $this->db->query($query, $params);
-            $directoryItems = $stmt->fetchAll();
+            $items = $stmt->fetchAll();
             
-            // Format directory items to match Strapi response format
-            $formattedDirectoryItems = [];
-            
-            foreach ($directoryItems as $item) {
-                $itemId = $item['id'];
-                
-                // Get item logo
-                $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'directory_item' AND entity_id = ? AND type = 'logo' LIMIT 1";
-                $logoStmt = $this->db->query($logoQuery, [$itemId]);
-                $logo = $logoStmt->fetch();
-                
-                // Format logo
-                $formattedLogo = null;
-                if ($logo) {
-                    $formattedLogo = [
-                        'data' => [
-                            'id' => $logo['id'],
-                            'attributes' => [
-                                'url' => $logo['url'],
-                                'width' => $logo['width'],
-                                'height' => $logo['height'],
-                                'alternativeText' => $logo['alt_text']
-                            ]
-                        ]
+            // Format directory items with the expected structure
+            $formattedItems = [];
+            foreach ($items as $item) {
+                $category = null;
+                if ($item['category_id']) {
+                    $category = [
+                        'id' => $item['category_id'],
+                        'name' => $item['category_name'],
+                        'slug' => $item['category_slug']
                     ];
                 }
                 
-                // Build the formatted directory item
-                $formattedDirectoryItems[] = [
-                    'id' => $itemId,
+                $formattedItems[] = [
+                    'id' => $item['id'],
                     'attributes' => [
-                        'name' => $item['name'],
+                        'title' => $item['title'],
                         'description' => $item['description'],
-                        'url' => $item['url'],
-                        'category' => $item['category'],
+                        'slug' => $item['slug'],
+                        'websiteUrl' => $item['website_url'],
+                        'contactEmail' => $item['contact_email'],
+                        'contactPhone' => $item['contact_phone'],
+                        'address' => $item['address'],
+                        'featured' => (bool)$item['featured'],
+                        'isPublished' => (bool)$item['is_published'],
+                        'publishedAt' => $item['publishedAt'],
                         'createdAt' => $item['createdAt'],
                         'updatedAt' => $item['updatedAt'],
-                        'logo' => $formattedLogo
+                        'category' => $category
                     ]
                 ];
             }
             
             // Send paginated response
-            Response::sendPaginated($formattedDirectoryItems, $page, $pageSize, $total);
+            Response::sendPaginated($formattedItems, $page, $pageSize, $total);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch directory items: ' . $e->getMessage());
         }
     }
     
     /**
-     * Get a single directory item by slug or numeric ID
+     * Get a single directory item by ID or slug
      */
     public function show() {
-        $identifier = $this->params['slug'] ?? null;
+        // Check for both 'id' and 'slug' parameters
+        $identifier = $this->params['id'] ?? $this->params['slug'] ?? null;
         if (!$identifier) {
             Response::sendError('No identifier provided', 400);
             return;
         }
+        
+        // Decide whether this is an ID or a slug
         if (ctype_digit($identifier)) {
-            $column = 'di.id';
+            $column = 'd.id';
             $value = (int)$identifier;
         } else {
-            $column = 'di.name';
+            $column = 'd.slug';
             $value = Validator::sanitizeString($identifier);
         }
         
         try {
-            // Get directory item by identifier
             $query = "SELECT
-                di.id, di.name, di.description, di.url, di.category,
-                di.created_at as createdAt, di.updated_at as updatedAt
-                FROM directory_items di
+                d.id, d.title, d.description, d.slug, d.featured, d.is_published,
+                d.category_id, d.website_url, d.contact_email, d.contact_phone, d.address,
+                d.published_at AS publishedAt, d.created_at AS createdAt, d.updated_at AS updatedAt,
+                c.name AS category_name, c.slug AS category_slug
+                FROM directory_items d
+                LEFT JOIN directory_categories c ON d.category_id = c.id
                 WHERE $column = ?
                 LIMIT 1";
-            
             $stmt = $this->db->query($query, [$value]);
+            $item = $stmt->fetch();
             
-            if ($stmt->rowCount() === 0) {
-                $this->notFound('Directory item not found');
+            if (!$item) {
+                Response::sendError('Directory item not found', 404);
                 return;
             }
             
-            $item = $stmt->fetch();
-            $itemId = $item['id'];
-            
-            // Get item logo
-            $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'directory_item' AND entity_id = ? AND type = 'logo' LIMIT 1";
-            $logoStmt = $this->db->query($logoQuery, [$itemId]);
-            $logo = $logoStmt->fetch();
-            
-            // Format logo
-            $formattedLogo = null;
-            if ($logo) {
-                $formattedLogo = [
-                    'data' => [
-                        'id' => $logo['id'],
-                        'attributes' => [
-                            'url' => $logo['url'],
-                            'width' => $logo['width'],
-                            'height' => $logo['height'],
-                            'alternativeText' => $logo['alt_text']
-                        ]
-                    ]
+            // Format directory item with the expected structure
+            $category = null;
+            if ($item['category_id']) {
+                $category = [
+                    'id' => $item['category_id'],
+                    'name' => $item['category_name'],
+                    'slug' => $item['category_slug']
                 ];
             }
             
-            // Build the formatted directory item
-            $formattedDirectoryItem = [
-                'id' => $itemId,
+            $formattedItem = [
+                'id' => $item['id'],
                 'attributes' => [
-                    'name' => $item['name'],
-                    'slug' => $item['name'], // Add slug attribute using name as the value
+                    'title' => $item['title'],
                     'description' => $item['description'],
-                    'url' => $item['url'],
-                    'category' => $item['category'],
+                    'slug' => $item['slug'],
+                    'websiteUrl' => $item['website_url'],
+                    'contactEmail' => $item['contact_email'],
+                    'contactPhone' => $item['contact_phone'],
+                    'address' => $item['address'],
+                    'featured' => (bool)$item['featured'],
+                    'isPublished' => (bool)$item['is_published'],
+                    'publishedAt' => $item['publishedAt'],
                     'createdAt' => $item['createdAt'],
                     'updatedAt' => $item['updatedAt'],
-                    'logo' => $formattedLogo
+                    'category' => $category
                 ]
             ];
             
-            // Send response
-            Response::sendSuccess($formattedDirectoryItem);
+            Response::sendSuccess($formattedItem);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch directory item: ' . $e->getMessage());
         }
@@ -190,77 +179,71 @@ class DirectoryItemsController extends BaseController {
      */
     public function create() {
         // Validate required fields
-        if (!Validator::required($this->request, ['name', 'url'])) {
-            $this->badRequest('Name and URL are required', Validator::getErrors());
-            return;
-        }
-        
-        // Validate name length
-        if (!Validator::length($this->request['name'], 'name', 2, 100)) {
-            $this->badRequest('Name must be between 2 and 100 characters', Validator::getErrors());
-            return;
-        }
-        
-        // Validate URL
-        if (!Validator::url($this->request['url'], 'url')) {
-            $this->badRequest('URL must be a valid URL', Validator::getErrors());
+        if (!Validator::required($this->request, ['title'])) {
+            $this->badRequest('Title is required');
             return;
         }
         
         // Sanitize input
-        $name = Validator::sanitizeString($this->request['name']);
-        $url = Validator::sanitizeString($this->request['url']);
-        $description = isset($this->request['description']) ? Validator::sanitizeString($this->request['description']) : '';
-        $category = isset($this->request['category']) ? Validator::sanitizeString($this->request['category']) : 'General';
+        $title = Validator::sanitizeString($this->request['title']);
+        $description = $this->request['description'] ?? '';
+        $slug = isset($this->request['slug']) ? Validator::sanitizeString($this->request['slug']) : $this->generateSlug($title);
+        $categoryId = !empty($this->request['category_id']) ? (int)$this->request['category_id'] : null;
+        $websiteUrl = $this->request['website_url'] ?? '';
+        $contactEmail = $this->request['contact_email'] ?? '';
+        $contactPhone = $this->request['contact_phone'] ?? '';
+        $address = $this->request['address'] ?? '';
+        $featured = isset($this->request['featured']) ? (bool)$this->request['featured'] : false;
+        $isPublished = isset($this->request['is_published']) ? (bool)$this->request['is_published'] : false;
+        $publishedAt = isset($this->request['published_at']) ? $this->request['published_at'] : null;
         
         try {
-            // Start transaction
-            $this->db->beginTransaction();
+            // Check if slug already exists
+            $query = "SELECT id FROM directory_items WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() > 0) {
+                // Generate a unique slug
+                $slug = $this->generateUniqueSlug($slug);
+            }
+            
+            // Check if category exists if provided
+            if ($categoryId) {
+                $query = "SELECT id FROM directory_categories WHERE id = ? LIMIT 1";
+                $stmt = $this->db->query($query, [$categoryId]);
+                
+                if ($stmt->rowCount() === 0) {
+                    $this->badRequest('Category not found');
+                    return;
+                }
+            }
             
             // Insert directory item
             $query = "INSERT INTO directory_items (
-                name, description, url, category, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)";
+                title, description, slug, category_id, website_url, contact_email, contact_phone, address,
+                featured, is_published, published_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
             
             $this->db->query($query, [
-                $name,
+                $title,
                 $description,
-                $url,
-                $category,
-                date('Y-m-d H:i:s'),
-                date('Y-m-d H:i:s')
+                $slug,
+                $categoryId,
+                $websiteUrl,
+                $contactEmail,
+                $contactPhone,
+                $address,
+                $featured ? 1 : 0,
+                $isPublished ? 1 : 0,
+                $publishedAt
             ]);
             
             $itemId = $this->db->lastInsertId();
-            
-            // Handle logo if provided
-            if (isset($this->request['logo']) && !empty($this->request['logo'])) {
-                $logoUrl = Validator::sanitizeString($this->request['logo']);
-                $query = "INSERT INTO media (
-                    entity_type, entity_id, type, url, width, height, alt_text, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                
-                $this->db->query($query, [
-                    'directory_item',
-                    $itemId,
-                    'logo',
-                    $logoUrl,
-                    isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                    isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                    isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $name,
-                    date('Y-m-d H:i:s')
-                ]);
-            }
-            
-            // Commit transaction
-            $this->db->commit();
             
             // Return the created directory item
             $this->params['id'] = $itemId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to create directory item: ' . $e->getMessage());
         }
     }
@@ -287,112 +270,129 @@ class DirectoryItemsController extends BaseController {
                 return;
             }
             
-            $item = $stmt->fetch();
-            
             // Build update query
             $updates = [];
             $params = [];
             
             // Update fields if provided
-            if (isset($this->request['name'])) {
-                if (!Validator::length($this->request['name'], 'name', 2, 100)) {
-                    $this->badRequest('Name must be between 2 and 100 characters', Validator::getErrors());
-                    return;
-                }
+            if (isset($this->request['title'])) {
+                $title = Validator::sanitizeString($this->request['title']);
+                $updates[] = "title = ?";
+                $params[] = $title;
                 
-                $updates[] = "name = ?";
-                $params[] = Validator::sanitizeString($this->request['name']);
-            }
-            
-            if (isset($this->request['url'])) {
-                if (!Validator::url($this->request['url'], 'url')) {
-                    $this->badRequest('URL must be a valid URL', Validator::getErrors());
-                    return;
+                // Update slug if title is changed and slug is not provided
+                if (!isset($this->request['slug'])) {
+                    $slug = $this->generateSlug($title);
+                    
+                    // Check if slug already exists
+                    $query = "SELECT id FROM directory_items WHERE slug = ? AND id != ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$slug, $itemId]);
+                    
+                    if ($stmt->rowCount() > 0) {
+                        // Generate a unique slug
+                        $slug = $this->generateUniqueSlug($slug);
+                    }
+                    
+                    $updates[] = "slug = ?";
+                    $params[] = $slug;
                 }
-                
-                $updates[] = "url = ?";
-                $params[] = Validator::sanitizeString($this->request['url']);
             }
             
             if (isset($this->request['description'])) {
                 $updates[] = "description = ?";
-                $params[] = Validator::sanitizeString($this->request['description']);
+                $params[] = $this->request['description'];
             }
             
-            if (isset($this->request['category'])) {
-                $updates[] = "category = ?";
-                $params[] = Validator::sanitizeString($this->request['category']);
+            if (isset($this->request['slug'])) {
+                $slug = Validator::sanitizeString($this->request['slug']);
+                
+                // Check if slug already exists
+                $query = "SELECT id FROM directory_items WHERE slug = ? AND id != ? LIMIT 1";
+                $stmt = $this->db->query($query, [$slug, $itemId]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Generate a unique slug
+                    $slug = $this->generateUniqueSlug($slug);
+                }
+                
+                $updates[] = "slug = ?";
+                $params[] = $slug;
+            }
+            
+            if (isset($this->request['category_id'])) {
+                $categoryId = !empty($this->request['category_id']) ? (int)$this->request['category_id'] : null;
+                
+                // Check if category exists if provided
+                if ($categoryId) {
+                    $query = "SELECT id FROM directory_categories WHERE id = ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$categoryId]);
+                    
+                    if ($stmt->rowCount() === 0) {
+                        $this->badRequest('Category not found');
+                        return;
+                    }
+                }
+                
+                $updates[] = "category_id = ?";
+                $params[] = $categoryId;
+            }
+            
+            if (isset($this->request['website_url'])) {
+                $updates[] = "website_url = ?";
+                $params[] = $this->request['website_url'];
+            }
+            
+            if (isset($this->request['contact_email'])) {
+                $updates[] = "contact_email = ?";
+                $params[] = $this->request['contact_email'];
+            }
+            
+            if (isset($this->request['contact_phone'])) {
+                $updates[] = "contact_phone = ?";
+                $params[] = $this->request['contact_phone'];
+            }
+            
+            if (isset($this->request['address'])) {
+                $updates[] = "address = ?";
+                $params[] = $this->request['address'];
+            }
+            
+            if (isset($this->request['featured'])) {
+                $updates[] = "featured = ?";
+                $params[] = (bool)$this->request['featured'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['is_published'])) {
+                $updates[] = "is_published = ?";
+                $params[] = (bool)$this->request['is_published'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['published_at'])) {
+                $updates[] = "published_at = ?";
+                $params[] = $this->request['published_at'];
             }
             
             // Add updated_at
-            $updates[] = "updated_at = ?";
-            $params[] = date('Y-m-d H:i:s');
+            $updates[] = "updated_at = NOW()";
             
-            // Add item ID to params
+            // If no updates, return the directory item
+            if (empty($updates)) {
+                $this->params['id'] = $itemId;
+                $this->show();
+                return;
+            }
+            
+            // Add directory item ID to params
             $params[] = $itemId;
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
             // Update directory item
-            if (!empty($updates)) {
-                $query = "UPDATE directory_items SET " . implode(', ', $updates) . " WHERE id = ?";
-                $this->db->query($query, $params);
-            }
-            
-            // Handle logo if provided
-            if (isset($this->request['logo']) && !empty($this->request['logo'])) {
-                $logoUrl = Validator::sanitizeString($this->request['logo']);
-                
-                // Check if logo already exists
-                $query = "SELECT id FROM media WHERE entity_type = 'directory_item' AND entity_id = ? AND type = 'logo' LIMIT 1";
-                $stmt = $this->db->query($query, [$itemId]);
-                
-                if ($stmt->rowCount() > 0) {
-                    // Update existing logo
-                    $logoId = $stmt->fetch()['id'];
-                    $query = "UPDATE media SET 
-                        url = ?, 
-                        width = ?, 
-                        height = ?, 
-                        alt_text = ? 
-                        WHERE id = ?";
-                    
-                    $this->db->query($query, [
-                        $logoUrl,
-                        isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                        isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                        isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $item['name'],
-                        $logoId
-                    ]);
-                } else {
-                    // Insert new logo
-                    $query = "INSERT INTO media (
-                        entity_type, entity_id, type, url, width, height, alt_text, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                    
-                    $this->db->query($query, [
-                        'directory_item',
-                        $itemId,
-                        'logo',
-                        $logoUrl,
-                        isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                        isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                        isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $item['name'],
-                        date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
-            
-            // Commit transaction
-            $this->db->commit();
+            $query = "UPDATE directory_items SET " . implode(", ", $updates) . " WHERE id = ?";
+            $this->db->query($query, $params);
             
             // Return the updated directory item
             $this->params['id'] = $itemId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to update directory item: ' . $e->getMessage());
         }
     }
@@ -411,7 +411,7 @@ class DirectoryItemsController extends BaseController {
         
         try {
             // Check if directory item exists
-            $query = "SELECT * FROM directory_items WHERE id = ? LIMIT 1";
+            $query = "SELECT id FROM directory_items WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$itemId]);
             
             if ($stmt->rowCount() === 0) {
@@ -419,26 +419,50 @@ class DirectoryItemsController extends BaseController {
                 return;
             }
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
-            // Delete directory item media
-            $query = "DELETE FROM media WHERE entity_type = 'directory_item' AND entity_id = ?";
-            $this->db->query($query, [$itemId]);
-            
             // Delete directory item
             $query = "DELETE FROM directory_items WHERE id = ?";
             $this->db->query($query, [$itemId]);
             
-            // Commit transaction
-            $this->db->commit();
-            
-            // Send success response
-            Response::sendSuccess(['message' => 'Directory item deleted successfully'], [], 200);
+            // Return success
+            Response::sendSuccess(['id' => $itemId, 'deleted' => true]);
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to delete directory item: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Generate a slug from a title
+     */
+    private function generateSlug($title) {
+        // Convert to lowercase
+        $slug = strtolower($title);
+        // Replace non-alphanumeric characters with hyphens
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+        // Remove leading and trailing hyphens
+        $slug = trim($slug, '-');
+        
+        return $slug;
+    }
+    
+    /**
+     * Generate a unique slug
+     */
+    private function generateUniqueSlug($slug) {
+        $originalSlug = $slug;
+        $counter = 1;
+        
+        while (true) {
+            $query = "SELECT id FROM directory_items WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                break;
+            }
+            
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
     }
 }

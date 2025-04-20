@@ -26,12 +26,14 @@ class GamesController extends BaseController {
         $offset = ($page - 1) * $pageSize;
         
         // Get sort parameters
-        $allowedSortFields = ['title', 'category'];
+        $allowedSortFields = ['title', 'created_at'];
         $sort = $this->getSortParams($allowedSortFields);
-        $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY title ASC";
+        $sortField = $sort['field'] ?? 'created_at';
+        $sortDirection = $sort['direction'] ?? 'DESC';
+        $sortClause = "ORDER BY $sortField $sortDirection";
         
         // Get filter parameters
-        $allowedFilterFields = ['title', 'category'];
+        $allowedFilterFields = ['title', 'slug', 'featured', 'is_published'];
         $filters = $this->getFilterParams($allowedFilterFields);
         
         try {
@@ -41,15 +43,15 @@ class GamesController extends BaseController {
             $params = $whereData['params'];
             
             // Count total records
-            $countQuery = "SELECT COUNT(*) as total FROM games g $whereClause";
+            $countQuery = "SELECT COUNT(*) as total FROM games $whereClause";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
             
             // Get games with pagination
-            $query = "SELECT 
-                g.id, g.title, g.description, g.url, g.category,
-                g.created_at as createdAt, g.updated_at as updatedAt
-                FROM games g
+            $query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
                 $whereClause
                 $sortClause
                 LIMIT $offset, $pageSize";
@@ -57,45 +59,20 @@ class GamesController extends BaseController {
             $stmt = $this->db->query($query, $params);
             $games = $stmt->fetchAll();
             
-            // Format games to match Strapi response format
+            // Format games with the expected structure
             $formattedGames = [];
-            
             foreach ($games as $game) {
-                $gameId = $game['id'];
-                
-                // Get game thumbnail
-                $thumbnailQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'game' AND entity_id = ? AND type = 'thumbnail' LIMIT 1";
-                $thumbnailStmt = $this->db->query($thumbnailQuery, [$gameId]);
-                $thumbnail = $thumbnailStmt->fetch();
-                
-                // Format thumbnail
-                $formattedThumbnail = null;
-                if ($thumbnail) {
-                    $formattedThumbnail = [
-                        'data' => [
-                            'id' => $thumbnail['id'],
-                            'attributes' => [
-                                'url' => $thumbnail['url'],
-                                'width' => $thumbnail['width'],
-                                'height' => $thumbnail['height'],
-                                'alternativeText' => $thumbnail['alt_text']
-                            ]
-                        ]
-                    ];
-                }
-                
-                // Build the formatted game
                 $formattedGames[] = [
-                    'id' => $gameId,
+                    'id' => $game['id'],
                     'attributes' => [
                         'title' => $game['title'],
-                        'slug' => $game['title'], // Use title as slug since there's no slug column
                         'description' => $game['description'],
-                        'url' => $game['url'],
-                        'category' => $game['category'],
+                        'slug' => $game['slug'],
+                        'featured' => (bool)$game['featured'],
+                        'isPublished' => (bool)$game['is_published'],
+                        'publishedAt' => $game['publishedAt'],
                         'createdAt' => $game['createdAt'],
-                        'updatedAt' => $game['updatedAt'],
-                        'thumbnail' => $formattedThumbnail
+                        'updatedAt' => $game['updatedAt']
                     ]
                 ];
             }
@@ -108,114 +85,59 @@ class GamesController extends BaseController {
     }
     
     /**
-     * Get a single Game by slug or numeric ID
+     * Get a single game by ID or slug
      */
     public function show() {
-        $identifier = $this->params['slug'] ?? null;
+        // Check for both 'id' and 'slug' parameters
+        $identifier = $this->params['id'] ?? $this->params['slug'] ?? null;
         if (!$identifier) {
             Response::sendError('No identifier provided', 400);
             return;
         }
-
-        // Determine whether $identifier is an ID or a slug
+        
+        // Decide whether this is an ID or a slug
         if (ctype_digit($identifier)) {
-            $column = 'g.id';
-            $value  = (int)$identifier;
+            $column = 'id';
+            $value = (int)$identifier;
         } else {
-            // Try to use slug if it exists, otherwise fall back to title
-            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
-            $checkStmt = $this->db->query($checkSlugQuery);
-            
-            if ($checkStmt->rowCount() > 0) {
-                $column = 'g.slug';
-            } else {
-                $column = 'g.title';
-            }
-            
+            $column = 'slug';
             $value = Validator::sanitizeString($identifier);
         }
-
+        
         try {
-            // Check if slug column exists
-            $hasSlugColumn = false;
-            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
-            $checkStmt = $this->db->query($checkSlugQuery);
-            if ($checkStmt->rowCount() > 0) {
-                $hasSlugColumn = true;
-            }
-            
-            // Get Game by identifier
-            $selectColumns = $hasSlugColumn ? 
-                "g.id, g.title, g.slug, g.description, g.url, g.category," :
-                "g.id, g.title, g.description, g.url, g.category,";
-                
-            $query = "
-                SELECT
-                    $selectColumns
-                    g.created_at as createdAt, g.updated_at as updatedAt
-                FROM games g
+            $query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
                 WHERE $column = ?
-                LIMIT 1
-            ";
-            $stmt  = $this->db->query($query, [$value]);
+                LIMIT 1";
+            $stmt = $this->db->query($query, [$value]);
             $game = $stmt->fetch();
-
+            
             if (!$game) {
                 Response::sendError('Game not found', 404);
                 return;
             }
-
-            // Format the Game
-            $formatted = $this->formatSingleGame($game);
-            Response::sendSuccess($formatted);
-
-        } catch (\Exception $e) {
-            error_log("GamesController::show() - Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            $this->serverError('Failed to fetch Game: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Helper to format a single Game
-     */
-    private function formatSingleGame(array $game): array {
-        $gameId = $game['id'];
-
-        // Get game thumbnail
-        $thumbnailQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'game' AND entity_id = ? AND type = 'thumbnail' LIMIT 1";
-        $thumbnailStmt = $this->db->query($thumbnailQuery, [$gameId]);
-        $thumbnail = $thumbnailStmt->fetch();
-
-        // Format thumbnail
-        $formattedThumbnail = null;
-        if ($thumbnail) {
-            $formattedThumbnail = [
-                'data' => [
-                    'id' => $thumbnail['id'],
-                    'attributes' => [
-                        'url' => $thumbnail['url'],
-                        'width' => $thumbnail['width'],
-                        'height' => $thumbnail['height'],
-                        'alternativeText' => $thumbnail['alt_text']
-                    ]
+            
+            // Format game with the expected structure
+            $formattedGame = [
+                'id' => $game['id'],
+                'attributes' => [
+                    'title' => $game['title'],
+                    'description' => $game['description'],
+                    'slug' => $game['slug'],
+                    'featured' => (bool)$game['featured'],
+                    'isPublished' => (bool)$game['is_published'],
+                    'publishedAt' => $game['publishedAt'],
+                    'createdAt' => $game['createdAt'],
+                    'updatedAt' => $game['updatedAt']
                 ]
             ];
+            
+            Response::sendSuccess($formattedGame);
+        } catch (\Exception $e) {
+            $this->serverError('Failed to fetch game: ' . $e->getMessage());
         }
-
-        // Build the formatted Game
-        return [
-            'id' => $gameId,
-            'attributes' => [
-                'title' => $game['title'],
-                'slug' => isset($game['slug']) ? $game['slug'] : $game['title'], // Use slug if it exists, otherwise use title
-                'description' => $game['description'],
-                'url' => $game['url'],
-                'category' => $game['category'],
-                'createdAt' => $game['createdAt'],
-                'updatedAt' => $game['updatedAt'],
-                'thumbnail' => $formattedThumbnail
-            ]
-        ];
     }
     
     /**
@@ -223,116 +145,50 @@ class GamesController extends BaseController {
      */
     public function create() {
         // Validate required fields
-        if (!Validator::required($this->request, ['title', 'url'])) {
-            $this->badRequest('Title and URL are required', Validator::getErrors());
-            return;
-        }
-        
-        // Validate title length
-        if (!Validator::length($this->request['title'], 'title', 2, 100)) {
-            $this->badRequest('Title must be between 2 and 100 characters', Validator::getErrors());
-            return;
-        }
-        
-        // Validate URL
-        if (!Validator::url($this->request['url'], 'url')) {
-            $this->badRequest('URL must be a valid URL', Validator::getErrors());
+        if (!Validator::required($this->request, ['title'])) {
+            $this->badRequest('Title is required');
             return;
         }
         
         // Sanitize input
         $title = Validator::sanitizeString($this->request['title']);
-        $url = Validator::sanitizeString($this->request['url']);
-        $description = isset($this->request['description']) ? Validator::sanitizeString($this->request['description']) : '';
-        $category = isset($this->request['category']) ? Validator::sanitizeString($this->request['category']) : 'General';
+        $description = $this->request['description'] ?? '';
+        $slug = isset($this->request['slug']) ? Validator::sanitizeString($this->request['slug']) : $this->generateSlug($title);
+        $featured = isset($this->request['featured']) ? (bool)$this->request['featured'] : false;
+        $isPublished = isset($this->request['is_published']) ? (bool)$this->request['is_published'] : false;
+        $publishedAt = isset($this->request['published_at']) ? $this->request['published_at'] : null;
         
         try {
-            // Check if slug column exists
-            $hasSlugColumn = false;
-            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
-            $checkStmt = $this->db->query($checkSlugQuery);
-            if ($checkStmt->rowCount() > 0) {
-                $hasSlugColumn = true;
-            }
+            // Check if slug already exists
+            $query = "SELECT id FROM games WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
             
-            // Generate slug from title if slug column exists
-            $slug = null;
-            if ($hasSlugColumn) {
-                $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $title), '-'));
-                
-                // Check if slug already exists
-                $stmt = $this->db->prepare("SELECT id FROM games WHERE slug = ?");
-                $stmt->execute([$slug]);
-                
-                if ($stmt->rowCount() > 0) {
-                    // Append timestamp to make slug unique
-                    $slug .= '-' . time();
-                }
+            if ($stmt->rowCount() > 0) {
+                // Generate a unique slug
+                $slug = $this->generateUniqueSlug($slug);
             }
-            
-            // Start transaction
-            $this->db->beginTransaction();
             
             // Insert game
-            if ($hasSlugColumn) {
-                $query = "INSERT INTO games (
-                    title, slug, description, url, category, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)";
-                
-                $this->db->query($query, [
-                    $title,
-                    $slug,
-                    $description,
-                    $url,
-                    $category,
-                    date('Y-m-d H:i:s'),
-                    date('Y-m-d H:i:s')
-                ]);
-            } else {
-                $query = "INSERT INTO games (
-                    title, description, url, category, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?)";
-                
-                $this->db->query($query, [
-                    $title,
-                    $description,
-                    $url,
-                    $category,
-                    date('Y-m-d H:i:s'),
-                    date('Y-m-d H:i:s')
-                ]);
-            }
+            $query = "INSERT INTO games (
+                title, description, slug, featured, is_published,
+                published_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+            
+            $this->db->query($query, [
+                $title,
+                $description,
+                $slug,
+                $featured ? 1 : 0,
+                $isPublished ? 1 : 0,
+                $publishedAt
+            ]);
             
             $gameId = $this->db->lastInsertId();
-            
-            // Handle thumbnail if provided
-            if (isset($this->request['thumbnail']) && !empty($this->request['thumbnail'])) {
-                $thumbnailUrl = Validator::sanitizeString($this->request['thumbnail']);
-                $query = "INSERT INTO media (
-                    entity_type, entity_id, type, url, width, height, alt_text, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                
-                $this->db->query($query, [
-                    'game',
-                    $gameId,
-                    'thumbnail',
-                    $thumbnailUrl,
-                    isset($this->request['thumbnailWidth']) ? (int)$this->request['thumbnailWidth'] : 300,
-                    isset($this->request['thumbnailHeight']) ? (int)$this->request['thumbnailHeight'] : 200,
-                    isset($this->request['thumbnailAlt']) ? Validator::sanitizeString($this->request['thumbnailAlt']) : $title,
-                    date('Y-m-d H:i:s')
-                ]);
-            }
-            
-            // Commit transaction
-            $this->db->commit();
             
             // Return the created game
             $this->params['id'] = $gameId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to create game: ' . $e->getMessage());
         }
     }
@@ -359,42 +215,27 @@ class GamesController extends BaseController {
                 return;
             }
             
-            $game = $stmt->fetch();
-            
-            // Check if slug column exists
-            $hasSlugColumn = false;
-            $checkSlugQuery = "SHOW COLUMNS FROM games LIKE 'slug'";
-            $checkStmt = $this->db->query($checkSlugQuery);
-            if ($checkStmt->rowCount() > 0) {
-                $hasSlugColumn = true;
-            }
-            
             // Build update query
             $updates = [];
             $params = [];
             
             // Update fields if provided
             if (isset($this->request['title'])) {
-                if (!Validator::length($this->request['title'], 'title', 2, 100)) {
-                    $this->badRequest('Title must be between 2 and 100 characters', Validator::getErrors());
-                    return;
-                }
-                
                 $title = Validator::sanitizeString($this->request['title']);
                 $updates[] = "title = ?";
                 $params[] = $title;
                 
-                // Update slug if title is updated and slug column exists
-                if ($hasSlugColumn) {
-                    $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $title), '-'));
+                // Update slug if title is changed and slug is not provided
+                if (!isset($this->request['slug'])) {
+                    $slug = $this->generateSlug($title);
                     
                     // Check if slug already exists
-                    $stmt = $this->db->prepare("SELECT id FROM games WHERE slug = ? AND id != ?");
-                    $stmt->execute([$slug, $gameId]);
+                    $query = "SELECT id FROM games WHERE slug = ? AND id != ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$slug, $gameId]);
                     
                     if ($stmt->rowCount() > 0) {
-                        // Append ID to make slug unique
-                        $slug .= '-' . $gameId;
+                        // Generate a unique slug
+                        $slug = $this->generateUniqueSlug($slug);
                     }
                     
                     $updates[] = "slug = ?";
@@ -402,95 +243,63 @@ class GamesController extends BaseController {
                 }
             }
             
-            if (isset($this->request['url'])) {
-                if (!Validator::url($this->request['url'], 'url')) {
-                    $this->badRequest('URL must be a valid URL', Validator::getErrors());
-                    return;
-                }
-                
-                $updates[] = "url = ?";
-                $params[] = Validator::sanitizeString($this->request['url']);
-            }
-            
             if (isset($this->request['description'])) {
                 $updates[] = "description = ?";
-                $params[] = Validator::sanitizeString($this->request['description']);
+                $params[] = $this->request['description'];
             }
             
-            if (isset($this->request['category'])) {
-                $updates[] = "category = ?";
-                $params[] = Validator::sanitizeString($this->request['category']);
+            if (isset($this->request['slug'])) {
+                $slug = Validator::sanitizeString($this->request['slug']);
+                
+                // Check if slug already exists
+                $query = "SELECT id FROM games WHERE slug = ? AND id != ? LIMIT 1";
+                $stmt = $this->db->query($query, [$slug, $gameId]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Generate a unique slug
+                    $slug = $this->generateUniqueSlug($slug);
+                }
+                
+                $updates[] = "slug = ?";
+                $params[] = $slug;
+            }
+            
+            if (isset($this->request['featured'])) {
+                $updates[] = "featured = ?";
+                $params[] = (bool)$this->request['featured'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['is_published'])) {
+                $updates[] = "is_published = ?";
+                $params[] = (bool)$this->request['is_published'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['published_at'])) {
+                $updates[] = "published_at = ?";
+                $params[] = $this->request['published_at'];
             }
             
             // Add updated_at
-            $updates[] = "updated_at = ?";
-            $params[] = date('Y-m-d H:i:s');
+            $updates[] = "updated_at = NOW()";
+            
+            // If no updates, return the game
+            if (empty($updates)) {
+                $this->params['id'] = $gameId;
+                $this->show();
+                return;
+            }
             
             // Add game ID to params
             $params[] = $gameId;
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
             // Update game
-            if (!empty($updates)) {
-                $query = "UPDATE games SET " . implode(', ', $updates) . " WHERE id = ?";
-                $this->db->query($query, $params);
-            }
-            
-            // Handle thumbnail if provided
-            if (isset($this->request['thumbnail']) && !empty($this->request['thumbnail'])) {
-                $thumbnailUrl = Validator::sanitizeString($this->request['thumbnail']);
-                
-                // Check if thumbnail already exists
-                $query = "SELECT id FROM media WHERE entity_type = 'game' AND entity_id = ? AND type = 'thumbnail' LIMIT 1";
-                $stmt = $this->db->query($query, [$gameId]);
-                
-                if ($stmt->rowCount() > 0) {
-                    // Update existing thumbnail
-                    $thumbnailId = $stmt->fetch()['id'];
-                    $query = "UPDATE media SET 
-                        url = ?, 
-                        width = ?, 
-                        height = ?, 
-                        alt_text = ? 
-                        WHERE id = ?";
-                    
-                    $this->db->query($query, [
-                        $thumbnailUrl,
-                        isset($this->request['thumbnailWidth']) ? (int)$this->request['thumbnailWidth'] : 300,
-                        isset($this->request['thumbnailHeight']) ? (int)$this->request['thumbnailHeight'] : 200,
-                        isset($this->request['thumbnailAlt']) ? Validator::sanitizeString($this->request['thumbnailAlt']) : $game['title'],
-                        $thumbnailId
-                    ]);
-                } else {
-                    // Insert new thumbnail
-                    $query = "INSERT INTO media (
-                        entity_type, entity_id, type, url, width, height, alt_text, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                    
-                    $this->db->query($query, [
-                        'game',
-                        $gameId,
-                        'thumbnail',
-                        $thumbnailUrl,
-                        isset($this->request['thumbnailWidth']) ? (int)$this->request['thumbnailWidth'] : 300,
-                        isset($this->request['thumbnailHeight']) ? (int)$this->request['thumbnailHeight'] : 200,
-                        isset($this->request['thumbnailAlt']) ? Validator::sanitizeString($this->request['thumbnailAlt']) : $game['title'],
-                        date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
-            
-            // Commit transaction
-            $this->db->commit();
+            $query = "UPDATE games SET " . implode(", ", $updates) . " WHERE id = ?";
+            $this->db->query($query, $params);
             
             // Return the updated game
             $this->params['id'] = $gameId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to update game: ' . $e->getMessage());
         }
     }
@@ -509,7 +318,7 @@ class GamesController extends BaseController {
         
         try {
             // Check if game exists
-            $query = "SELECT * FROM games WHERE id = ? LIMIT 1";
+            $query = "SELECT id FROM games WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$gameId]);
             
             if ($stmt->rowCount() === 0) {
@@ -517,26 +326,50 @@ class GamesController extends BaseController {
                 return;
             }
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
-            // Delete game media
-            $query = "DELETE FROM media WHERE entity_type = 'game' AND entity_id = ?";
-            $this->db->query($query, [$gameId]);
-            
             // Delete game
             $query = "DELETE FROM games WHERE id = ?";
             $this->db->query($query, [$gameId]);
             
-            // Commit transaction
-            $this->db->commit();
-            
-            // Send success response
-            Response::sendSuccess(['message' => 'Game deleted successfully'], [], 200);
+            // Return success
+            Response::sendSuccess(['id' => $gameId, 'deleted' => true]);
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to delete game: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Generate a slug from a title
+     */
+    private function generateSlug($title) {
+        // Convert to lowercase
+        $slug = strtolower($title);
+        // Replace non-alphanumeric characters with hyphens
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+        // Remove leading and trailing hyphens
+        $slug = trim($slug, '-');
+        
+        return $slug;
+    }
+    
+    /**
+     * Generate a unique slug
+     */
+    private function generateUniqueSlug($slug) {
+        $originalSlug = $slug;
+        $counter = 1;
+        
+        while (true) {
+            $query = "SELECT id FROM games WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                break;
+            }
+            
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
     }
 }

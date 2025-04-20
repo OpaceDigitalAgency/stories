@@ -26,12 +26,14 @@ class AiToolsController extends BaseController {
         $offset = ($page - 1) * $pageSize;
         
         // Get sort parameters
-        $allowedSortFields = ['name', 'category'];
+        $allowedSortFields = ['title', 'created_at', 'rating'];
         $sort = $this->getSortParams($allowedSortFields);
-        $sortClause = $sort ? "ORDER BY {$sort['field']} {$sort['direction']}" : "ORDER BY name ASC";
+        $sortField = $sort['field'] ?? 'created_at';
+        $sortDirection = $sort['direction'] ?? 'DESC';
+        $sortClause = "ORDER BY $sortField $sortDirection";
         
         // Get filter parameters
-        $allowedFilterFields = ['name', 'category'];
+        $allowedFilterFields = ['title', 'slug', 'featured', 'is_published', 'category_id', 'pricing_type'];
         $filters = $this->getFilterParams($allowedFilterFields);
         
         try {
@@ -41,158 +43,153 @@ class AiToolsController extends BaseController {
             $params = $whereData['params'];
             
             // Count total records
-            $countQuery = "SELECT COUNT(*) as total FROM ai_tools at $whereClause";
+            $countQuery = "SELECT COUNT(*) as total FROM ai_tools $whereClause";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
             
             // Get AI tools with pagination
-            $query = "SELECT 
-                at.id, at.name, at.description, at.url, at.category,
-                at.created_at as createdAt, at.updated_at as updatedAt
-                FROM ai_tools at
+            $query = "SELECT
+                t.id, t.title, t.description, t.slug, t.featured, t.is_published,
+                t.category_id, t.tool_url, t.pricing_type, t.price_info, t.features, t.rating,
+                t.published_at AS publishedAt, t.created_at AS createdAt, t.updated_at AS updatedAt,
+                c.name AS category_name, c.slug AS category_slug
+                FROM ai_tools t
+                LEFT JOIN ai_tool_categories c ON t.category_id = c.id
                 $whereClause
                 $sortClause
                 LIMIT $offset, $pageSize";
             
             $stmt = $this->db->query($query, $params);
-            $aiTools = $stmt->fetchAll();
+            $tools = $stmt->fetchAll();
             
-            // Format AI tools to match Strapi response format
-            $formattedAiTools = [];
-            
-            foreach ($aiTools as $tool) {
-                $toolId = $tool['id'];
-                
-                // Get tool logo
-                $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'ai_tool' AND entity_id = ? AND type = 'logo' LIMIT 1";
-                $logoStmt = $this->db->query($logoQuery, [$toolId]);
-                $logo = $logoStmt->fetch();
-                
-                // Format logo
-                $formattedLogo = null;
-                if ($logo) {
-                    $formattedLogo = [
-                        'data' => [
-                            'id' => $logo['id'],
-                            'attributes' => [
-                                'url' => $logo['url'],
-                                'width' => $logo['width'],
-                                'height' => $logo['height'],
-                                'alternativeText' => $logo['alt_text']
-                            ]
-                        ]
+            // Format AI tools with the expected structure
+            $formattedTools = [];
+            foreach ($tools as $tool) {
+                $category = null;
+                if ($tool['category_id']) {
+                    $category = [
+                        'id' => $tool['category_id'],
+                        'name' => $tool['category_name'],
+                        'slug' => $tool['category_slug']
                     ];
                 }
                 
-                // Build the formatted AI tool
-                $formattedAiTools[] = [
-                    'id' => $toolId,
+                // Parse features if it's a string
+                $features = $tool['features'];
+                if (is_string($features) && !empty($features)) {
+                    $features = explode("\n", $features);
+                } elseif (empty($features)) {
+                    $features = [];
+                }
+                
+                $formattedTools[] = [
+                    'id' => $tool['id'],
                     'attributes' => [
-                        'name' => $tool['name'],
+                        'title' => $tool['title'],
                         'description' => $tool['description'],
-                        'url' => $tool['url'],
-                        'category' => $tool['category'],
+                        'slug' => $tool['slug'],
+                        'toolUrl' => $tool['tool_url'],
+                        'pricingType' => $tool['pricing_type'],
+                        'priceInfo' => $tool['price_info'],
+                        'features' => $features,
+                        'rating' => (float)$tool['rating'],
+                        'featured' => (bool)$tool['featured'],
+                        'isPublished' => (bool)$tool['is_published'],
+                        'publishedAt' => $tool['publishedAt'],
                         'createdAt' => $tool['createdAt'],
                         'updatedAt' => $tool['updatedAt'],
-                        'logo' => $formattedLogo
+                        'category' => $category
                     ]
                 ];
             }
             
             // Send paginated response
-            Response::sendPaginated($formattedAiTools, $page, $pageSize, $total);
+            Response::sendPaginated($formattedTools, $page, $pageSize, $total);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch AI tools: ' . $e->getMessage());
         }
     }
     
     /**
-     * Get a single AI tool by slug or numeric ID
+     * Get a single AI tool by ID or slug
      */
     public function show() {
-        $identifier = $this->params['slug'] ?? null;
+        // Check for both 'id' and 'slug' parameters
+        $identifier = $this->params['id'] ?? $this->params['slug'] ?? null;
         if (!$identifier) {
             Response::sendError('No identifier provided', 400);
             return;
         }
-
-        // Determine whether $identifier is an ID or a slug (using 'name' as slug for AI Tools)
+        
+        // Decide whether this is an ID or a slug
         if (ctype_digit($identifier)) {
-            $column = 'at.id';
-            $value  = (int)$identifier;
+            $column = 't.id';
+            $value = (int)$identifier;
         } else {
-            $column = 'at.name'; // Assuming 'name' is the unique string identifier
-            $value  = Validator::sanitizeString($identifier);
+            $column = 't.slug';
+            $value = Validator::sanitizeString($identifier);
         }
-
+        
         try {
-            // Get AI tool by identifier
-            $query = "
-                SELECT
-                    at.id, at.name, at.description, at.url, at.category,
-                    at.created_at as createdAt, at.updated_at as updatedAt
-                FROM ai_tools at
+            $query = "SELECT
+                t.id, t.title, t.description, t.slug, t.featured, t.is_published,
+                t.category_id, t.tool_url, t.pricing_type, t.price_info, t.features, t.rating,
+                t.published_at AS publishedAt, t.created_at AS createdAt, t.updated_at AS updatedAt,
+                c.name AS category_name, c.slug AS category_slug
+                FROM ai_tools t
+                LEFT JOIN ai_tool_categories c ON t.category_id = c.id
                 WHERE $column = ?
-                LIMIT 1
-            ";
-            $stmt  = $this->db->query($query, [$value]);
+                LIMIT 1";
+            $stmt = $this->db->query($query, [$value]);
             $tool = $stmt->fetch();
-
+            
             if (!$tool) {
                 Response::sendError('AI tool not found', 404);
                 return;
             }
-
-            // Format the AI tool (using existing logic adapted)
-            $formatted = $this->formatSingleAiTool($tool);
-            Response::sendSuccess($formatted);
-
+            
+            // Format AI tool with the expected structure
+            $category = null;
+            if ($tool['category_id']) {
+                $category = [
+                    'id' => $tool['category_id'],
+                    'name' => $tool['category_name'],
+                    'slug' => $tool['category_slug']
+                ];
+            }
+            
+            // Parse features if it's a string
+            $features = $tool['features'];
+            if (is_string($features) && !empty($features)) {
+                $features = explode("\n", $features);
+            } elseif (empty($features)) {
+                $features = [];
+            }
+            
+            $formattedTool = [
+                'id' => $tool['id'],
+                'attributes' => [
+                    'title' => $tool['title'],
+                    'description' => $tool['description'],
+                    'slug' => $tool['slug'],
+                    'toolUrl' => $tool['tool_url'],
+                    'pricingType' => $tool['pricing_type'],
+                    'priceInfo' => $tool['price_info'],
+                    'features' => $features,
+                    'rating' => (float)$tool['rating'],
+                    'featured' => (bool)$tool['featured'],
+                    'isPublished' => (bool)$tool['is_published'],
+                    'publishedAt' => $tool['publishedAt'],
+                    'createdAt' => $tool['createdAt'],
+                    'updatedAt' => $tool['updatedAt'],
+                    'category' => $category
+                ]
+            ];
+            
+            Response::sendSuccess($formattedTool);
         } catch (\Exception $e) {
             $this->serverError('Failed to fetch AI tool: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Helper to format a single AI Tool
-     */
-    private function formatSingleAiTool(array $tool): array {
-        $toolId = $tool['id'];
-
-        // Get tool logo
-        $logoQuery = "SELECT id, url, width, height, alt_text FROM media WHERE entity_type = 'ai_tool' AND entity_id = ? AND type = 'logo' LIMIT 1";
-        $logoStmt = $this->db->query($logoQuery, [$toolId]);
-        $logo = $logoStmt->fetch();
-
-        // Format logo
-        $formattedLogo = null;
-        if ($logo) {
-            $formattedLogo = [
-                'data' => [
-                    'id' => $logo['id'],
-                    'attributes' => [
-                        'url' => $logo['url'],
-                        'width' => $logo['width'],
-                        'height' => $logo['height'],
-                        'alternativeText' => $logo['alt_text']
-                    ]
-                ]
-            ];
-        }
-
-        // Build the formatted AI tool
-        return [
-            'id' => $toolId,
-            'attributes' => [
-                'name' => $tool['name'],
-                'slug' => $tool['name'], // Add slug attribute using name as the value
-                'description' => $tool['description'],
-                'url' => $tool['url'],
-                'category' => $tool['category'],
-                'createdAt' => $tool['createdAt'],
-                'updatedAt' => $tool['updatedAt'],
-                'logo' => $formattedLogo
-            ]
-        ];
     }
     
     /**
@@ -200,77 +197,79 @@ class AiToolsController extends BaseController {
      */
     public function create() {
         // Validate required fields
-        if (!Validator::required($this->request, ['name', 'url'])) {
-            $this->badRequest('Name and URL are required', Validator::getErrors());
-            return;
-        }
-        
-        // Validate name length
-        if (!Validator::length($this->request['name'], 'name', 2, 100)) {
-            $this->badRequest('Name must be between 2 and 100 characters', Validator::getErrors());
-            return;
-        }
-        
-        // Validate URL
-        if (!Validator::url($this->request['url'], 'url')) {
-            $this->badRequest('URL must be a valid URL', Validator::getErrors());
+        if (!Validator::required($this->request, ['title'])) {
+            $this->badRequest('Title is required');
             return;
         }
         
         // Sanitize input
-        $name = Validator::sanitizeString($this->request['name']);
-        $url = Validator::sanitizeString($this->request['url']);
-        $description = isset($this->request['description']) ? Validator::sanitizeString($this->request['description']) : '';
-        $category = isset($this->request['category']) ? Validator::sanitizeString($this->request['category']) : 'Writing';
+        $title = Validator::sanitizeString($this->request['title']);
+        $description = $this->request['description'] ?? '';
+        $slug = isset($this->request['slug']) ? Validator::sanitizeString($this->request['slug']) : $this->generateSlug($title);
+        $categoryId = !empty($this->request['category_id']) ? (int)$this->request['category_id'] : null;
+        $toolUrl = $this->request['tool_url'] ?? '';
+        $pricingType = $this->request['pricing_type'] ?? 'free';
+        $priceInfo = $this->request['price_info'] ?? '';
+        $features = $this->request['features'] ?? '';
+        
+        // If features is an array, convert it to a string
+        if (is_array($features)) {
+            $features = implode("\n", $features);
+        }
+        
+        $rating = isset($this->request['rating']) ? (float)$this->request['rating'] : 0;
+        $featured = isset($this->request['featured']) ? (bool)$this->request['featured'] : false;
+        $isPublished = isset($this->request['is_published']) ? (bool)$this->request['is_published'] : false;
+        $publishedAt = isset($this->request['published_at']) ? $this->request['published_at'] : null;
         
         try {
-            // Start transaction
-            $this->db->beginTransaction();
+            // Check if slug already exists
+            $query = "SELECT id FROM ai_tools WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() > 0) {
+                // Generate a unique slug
+                $slug = $this->generateUniqueSlug($slug);
+            }
+            
+            // Check if category exists if provided
+            if ($categoryId) {
+                $query = "SELECT id FROM ai_tool_categories WHERE id = ? LIMIT 1";
+                $stmt = $this->db->query($query, [$categoryId]);
+                
+                if ($stmt->rowCount() === 0) {
+                    $this->badRequest('Category not found');
+                    return;
+                }
+            }
             
             // Insert AI tool
             $query = "INSERT INTO ai_tools (
-                name, description, url, category, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)";
+                title, description, slug, category_id, tool_url, pricing_type, price_info, features,
+                rating, featured, is_published, published_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
             
             $this->db->query($query, [
-                $name,
+                $title,
                 $description,
-                $url,
-                $category,
-                date('Y-m-d H:i:s'),
-                date('Y-m-d H:i:s')
+                $slug,
+                $categoryId,
+                $toolUrl,
+                $pricingType,
+                $priceInfo,
+                $features,
+                $rating,
+                $featured ? 1 : 0,
+                $isPublished ? 1 : 0,
+                $publishedAt
             ]);
             
             $toolId = $this->db->lastInsertId();
-            
-            // Handle logo if provided
-            if (isset($this->request['logo']) && !empty($this->request['logo'])) {
-                $logoUrl = Validator::sanitizeString($this->request['logo']);
-                $query = "INSERT INTO media (
-                    entity_type, entity_id, type, url, width, height, alt_text, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                
-                $this->db->query($query, [
-                    'ai_tool',
-                    $toolId,
-                    'logo',
-                    $logoUrl,
-                    isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                    isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                    isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $name,
-                    date('Y-m-d H:i:s')
-                ]);
-            }
-            
-            // Commit transaction
-            $this->db->commit();
             
             // Return the created AI tool
             $this->params['id'] = $toolId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to create AI tool: ' . $e->getMessage());
         }
     }
@@ -297,112 +296,141 @@ class AiToolsController extends BaseController {
                 return;
             }
             
-            $tool = $stmt->fetch();
-            
             // Build update query
             $updates = [];
             $params = [];
             
             // Update fields if provided
-            if (isset($this->request['name'])) {
-                if (!Validator::length($this->request['name'], 'name', 2, 100)) {
-                    $this->badRequest('Name must be between 2 and 100 characters', Validator::getErrors());
-                    return;
-                }
+            if (isset($this->request['title'])) {
+                $title = Validator::sanitizeString($this->request['title']);
+                $updates[] = "title = ?";
+                $params[] = $title;
                 
-                $updates[] = "name = ?";
-                $params[] = Validator::sanitizeString($this->request['name']);
-            }
-            
-            if (isset($this->request['url'])) {
-                if (!Validator::url($this->request['url'], 'url')) {
-                    $this->badRequest('URL must be a valid URL', Validator::getErrors());
-                    return;
+                // Update slug if title is changed and slug is not provided
+                if (!isset($this->request['slug'])) {
+                    $slug = $this->generateSlug($title);
+                    
+                    // Check if slug already exists
+                    $query = "SELECT id FROM ai_tools WHERE slug = ? AND id != ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$slug, $toolId]);
+                    
+                    if ($stmt->rowCount() > 0) {
+                        // Generate a unique slug
+                        $slug = $this->generateUniqueSlug($slug);
+                    }
+                    
+                    $updates[] = "slug = ?";
+                    $params[] = $slug;
                 }
-                
-                $updates[] = "url = ?";
-                $params[] = Validator::sanitizeString($this->request['url']);
             }
             
             if (isset($this->request['description'])) {
                 $updates[] = "description = ?";
-                $params[] = Validator::sanitizeString($this->request['description']);
+                $params[] = $this->request['description'];
             }
             
-            if (isset($this->request['category'])) {
-                $updates[] = "category = ?";
-                $params[] = Validator::sanitizeString($this->request['category']);
+            if (isset($this->request['slug'])) {
+                $slug = Validator::sanitizeString($this->request['slug']);
+                
+                // Check if slug already exists
+                $query = "SELECT id FROM ai_tools WHERE slug = ? AND id != ? LIMIT 1";
+                $stmt = $this->db->query($query, [$slug, $toolId]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Generate a unique slug
+                    $slug = $this->generateUniqueSlug($slug);
+                }
+                
+                $updates[] = "slug = ?";
+                $params[] = $slug;
+            }
+            
+            if (isset($this->request['category_id'])) {
+                $categoryId = !empty($this->request['category_id']) ? (int)$this->request['category_id'] : null;
+                
+                // Check if category exists if provided
+                if ($categoryId) {
+                    $query = "SELECT id FROM ai_tool_categories WHERE id = ? LIMIT 1";
+                    $stmt = $this->db->query($query, [$categoryId]);
+                    
+                    if ($stmt->rowCount() === 0) {
+                        $this->badRequest('Category not found');
+                        return;
+                    }
+                }
+                
+                $updates[] = "category_id = ?";
+                $params[] = $categoryId;
+            }
+            
+            if (isset($this->request['tool_url'])) {
+                $updates[] = "tool_url = ?";
+                $params[] = $this->request['tool_url'];
+            }
+            
+            if (isset($this->request['pricing_type'])) {
+                $updates[] = "pricing_type = ?";
+                $params[] = $this->request['pricing_type'];
+            }
+            
+            if (isset($this->request['price_info'])) {
+                $updates[] = "price_info = ?";
+                $params[] = $this->request['price_info'];
+            }
+            
+            if (isset($this->request['features'])) {
+                $features = $this->request['features'];
+                
+                // If features is an array, convert it to a string
+                if (is_array($features)) {
+                    $features = implode("\n", $features);
+                }
+                
+                $updates[] = "features = ?";
+                $params[] = $features;
+            }
+            
+            if (isset($this->request['rating'])) {
+                $updates[] = "rating = ?";
+                $params[] = (float)$this->request['rating'];
+            }
+            
+            if (isset($this->request['featured'])) {
+                $updates[] = "featured = ?";
+                $params[] = (bool)$this->request['featured'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['is_published'])) {
+                $updates[] = "is_published = ?";
+                $params[] = (bool)$this->request['is_published'] ? 1 : 0;
+            }
+            
+            if (isset($this->request['published_at'])) {
+                $updates[] = "published_at = ?";
+                $params[] = $this->request['published_at'];
             }
             
             // Add updated_at
-            $updates[] = "updated_at = ?";
-            $params[] = date('Y-m-d H:i:s');
+            $updates[] = "updated_at = NOW()";
             
-            // Add tool ID to params
+            // If no updates, return the AI tool
+            if (empty($updates)) {
+                $this->params['id'] = $toolId;
+                $this->show();
+                return;
+            }
+            
+            // Add AI tool ID to params
             $params[] = $toolId;
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
             // Update AI tool
-            if (!empty($updates)) {
-                $query = "UPDATE ai_tools SET " . implode(', ', $updates) . " WHERE id = ?";
-                $this->db->query($query, $params);
-            }
-            
-            // Handle logo if provided
-            if (isset($this->request['logo']) && !empty($this->request['logo'])) {
-                $logoUrl = Validator::sanitizeString($this->request['logo']);
-                
-                // Check if logo already exists
-                $query = "SELECT id FROM media WHERE entity_type = 'ai_tool' AND entity_id = ? AND type = 'logo' LIMIT 1";
-                $stmt = $this->db->query($query, [$toolId]);
-                
-                if ($stmt->rowCount() > 0) {
-                    // Update existing logo
-                    $logoId = $stmt->fetch()['id'];
-                    $query = "UPDATE media SET 
-                        url = ?, 
-                        width = ?, 
-                        height = ?, 
-                        alt_text = ? 
-                        WHERE id = ?";
-                    
-                    $this->db->query($query, [
-                        $logoUrl,
-                        isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                        isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                        isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $tool['name'],
-                        $logoId
-                    ]);
-                } else {
-                    // Insert new logo
-                    $query = "INSERT INTO media (
-                        entity_type, entity_id, type, url, width, height, alt_text, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                    
-                    $this->db->query($query, [
-                        'ai_tool',
-                        $toolId,
-                        'logo',
-                        $logoUrl,
-                        isset($this->request['logoWidth']) ? (int)$this->request['logoWidth'] : 200,
-                        isset($this->request['logoHeight']) ? (int)$this->request['logoHeight'] : 200,
-                        isset($this->request['logoAlt']) ? Validator::sanitizeString($this->request['logoAlt']) : $tool['name'],
-                        date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
-            
-            // Commit transaction
-            $this->db->commit();
+            $query = "UPDATE ai_tools SET " . implode(", ", $updates) . " WHERE id = ?";
+            $this->db->query($query, $params);
             
             // Return the updated AI tool
             $this->params['id'] = $toolId;
             $this->show();
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to update AI tool: ' . $e->getMessage());
         }
     }
@@ -421,7 +449,7 @@ class AiToolsController extends BaseController {
         
         try {
             // Check if AI tool exists
-            $query = "SELECT * FROM ai_tools WHERE id = ? LIMIT 1";
+            $query = "SELECT id FROM ai_tools WHERE id = ? LIMIT 1";
             $stmt = $this->db->query($query, [$toolId]);
             
             if ($stmt->rowCount() === 0) {
@@ -429,26 +457,50 @@ class AiToolsController extends BaseController {
                 return;
             }
             
-            // Start transaction
-            $this->db->beginTransaction();
-            
-            // Delete AI tool media
-            $query = "DELETE FROM media WHERE entity_type = 'ai_tool' AND entity_id = ?";
-            $this->db->query($query, [$toolId]);
-            
             // Delete AI tool
             $query = "DELETE FROM ai_tools WHERE id = ?";
             $this->db->query($query, [$toolId]);
             
-            // Commit transaction
-            $this->db->commit();
-            
-            // Send success response
-            Response::sendSuccess(['message' => 'AI tool deleted successfully'], [], 200);
+            // Return success
+            Response::sendSuccess(['id' => $toolId, 'deleted' => true]);
         } catch (\Exception $e) {
-            // Rollback transaction
-            $this->db->rollback();
             $this->serverError('Failed to delete AI tool: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Generate a slug from a title
+     */
+    private function generateSlug($title) {
+        // Convert to lowercase
+        $slug = strtolower($title);
+        // Replace non-alphanumeric characters with hyphens
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+        // Remove leading and trailing hyphens
+        $slug = trim($slug, '-');
+        
+        return $slug;
+    }
+    
+    /**
+     * Generate a unique slug
+     */
+    private function generateUniqueSlug($slug) {
+        $originalSlug = $slug;
+        $counter = 1;
+        
+        while (true) {
+            $query = "SELECT id FROM ai_tools WHERE slug = ? LIMIT 1";
+            $stmt = $this->db->query($query, [$slug]);
+            
+            if ($stmt->rowCount() === 0) {
+                break;
+            }
+            
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
     }
 }

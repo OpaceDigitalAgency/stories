@@ -228,12 +228,11 @@ if (isset($_SESSION['error'])) {
         .content-header h1 {
             margin: 0;
         }
-        .table-container {
-            background: white;
+        .text-center {
+            text-align: center;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        }
+        .table-container {
             overflow-x: auto;
         }
         .table {
@@ -242,15 +241,14 @@ if (isset($_SESSION['error'])) {
         }
         .table th, .table td {
             padding: 10px;
+            border: 1px solid #ddd;
             text-align: left;
-            border-bottom: 1px solid #eee;
         }
         .table th {
-            background-color: #f9f9f9;
-            font-weight: bold;
+            background-color: #f5f5f5;
         }
-        .text-center {
-            text-align: center;
+        .table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
 </body>

@@ -46,63 +46,13 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
             description TEXT,
-            slug VARCHAR(255) NOT NULL UNIQUE,
+            slug VARCHAR(255) NOT NULL,
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
             published_at DATETIME,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
-    }
-
-    // Handle game creation/update
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $id = $_POST['id'] ?? null;
-        $title = trim($_POST['title'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-        $featured = isset($_POST['featured']) ? 1 : 0;
-        $is_published = isset($_POST['is_published']) ? 1 : 0;
-        $published_at = $_POST['published_at'] ?? null;
-
-        // Validate required fields
-        if (empty($title)) {
-            throw new Exception("Title is required");
-        }
-
-        // Generate slug if not provided
-        if (empty($slug)) {
-            $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
-            $slug = trim($slug, '-');
-        }
-
-        // Format published_at
-        if (!empty($published_at)) {
-            $date = new DateTime($published_at);
-            $published_at = $date->format('Y-m-d H:i:s');
-        } else {
-            $published_at = null;
-        }
-
-        if ($id) {
-            // Update existing game
-            $stmt = $db->prepare("UPDATE games SET title = ?, description = ?, slug = ?, featured = ?, is_published = ?, published_at = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$title, $description, $slug, $featured, $is_published, $published_at, $id]);
-            $success = "Game updated successfully";
-        } else {
-            // Create new game
-            $stmt = $db->prepare("INSERT INTO games (title, description, slug, featured, is_published, published_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
-            $stmt->execute([$title, $description, $slug, $featured, $is_published, $published_at]);
-            $success = "Game created successfully";
-        }
-    }
-
-    // Handle game deletion
-    if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-        $id = $_GET['delete'];
-        $stmt = $db->prepare("DELETE FROM games WHERE id = ?");
-        $stmt->execute([$id]);
-        $success = "Game deleted successfully";
     }
 
     // Get all games
@@ -158,102 +108,62 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-header">
             <h1>Games</h1>
-            <form method="GET" action="../dashboard.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Dashboard</button>
+            <form method="GET" action="game-form.php" style="display: inline;">
+                <button type="submit" class="form-submit">Add New Game</button>
             </form>
         </div>
 
-        <?php if ($success): ?>
+        <?php if (isset($success)): ?>
             <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
 
-        <?php if ($error): ?>
+        <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="content-section">
-            <h2>Add New Game</h2>
-            <form method="POST" class="game-form">
-                <input type="hidden" name="id" value="">
-                <div class="form-group">
-                    <label class="form-label" for="title">Title <span class="required">*</span></label>
-                    <input type="text" id="title" name="title" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="slug">Slug</label>
-                    <input type="text" id="slug" name="slug" class="form-input">
-                    <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="description">Description</label>
-                    <textarea id="description" name="description" class="form-input" rows="5"></textarea>
-                </div>
-                <div class="form-group checkbox-field">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="featured" value="1">
-                        Featured
-                    </label>
-                </div>
-                <div class="form-group checkbox-field">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="is_published" value="1">
-                        Published
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="published_at">Published at</label>
-                    <input type="datetime-local" id="published_at" name="published_at" class="form-input">
-                    <small>Format: YYYY-MM-DD HH:MM (leave empty for current date/time)</small>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="form-submit">Add Game</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="content-section">
-            <h2>Games List</h2>
-            <?php if (empty($games)): ?>
-                <p class="no-items">No games found.</p>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Slug</th>
+                        <th>Featured</th>
+                        <th>Published</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($games)): ?>
+                        <tr>
+                            <td colspan="7" class="text-center">No games found. Add your first game!</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($games as $game): ?>
                             <tr>
-                                <th>Title</th>
-                                <th>Slug</th>
-                                <th>Featured</th>
-                                <th>Published</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <td><?php echo $game['id']; ?></td>
+                                <td><?php echo htmlspecialchars($game['title']); ?></td>
+                                <td><?php echo htmlspecialchars($game['slug']); ?></td>
+                                <td><?php echo $game['featured'] ? 'Yes' : 'No'; ?></td>
+                                <td><?php echo $game['is_published'] ? 'Yes' : 'No'; ?></td>
+                                <td><?php echo date('M j, Y', strtotime($game['created_at'])); ?></td>
+                                <td>
+                                    <form method="GET" action="game-form.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
+                                        <button type="submit" class="form-submit">Edit</button>
+                                    </form>
+                                    <form method="POST" action="delete-game.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
+                                        <button type="submit" class="form-submit" style="background: #dc3545;"
+                                                onclick="return confirm('Are you sure you want to delete this game?')">Delete</button>
+                                    </form>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($games as $game): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($game['title']); ?></td>
-                                    <td><?php echo htmlspecialchars($game['slug']); ?></td>
-                                    <td><?php echo $game['featured'] ? 'Yes' : 'No'; ?></td>
-                                    <td><?php echo $game['is_published'] ? 'Yes' : 'No'; ?></td>
-                                    <td><?php echo date('M j, Y', strtotime($game['created_at'])); ?></td>
-                                    <td class="actions">
-                                        <button class="action-btn edit" data-id="<?php echo $game['id']; ?>" 
-                                                data-title="<?php echo htmlspecialchars($game['title']); ?>"
-                                                data-slug="<?php echo htmlspecialchars($game['slug']); ?>"
-                                                data-description="<?php echo htmlspecialchars($game['description'] ?? ''); ?>"
-                                                data-featured="<?php echo $game['featured']; ?>"
-                                                data-published="<?php echo $game['is_published']; ?>"
-                                                data-published-at="<?php echo $game['published_at'] ? date('Y-m-d\TH:i', strtotime($game['published_at'])) : ''; ?>">
-                                            Edit
-                                        </button>
-                                        <a href="?delete=<?php echo $game['id']; ?>" class="action-btn delete" onclick="return confirm('Are you sure you want to delete this game?')">Delete</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
     <style>
@@ -279,138 +189,28 @@ if (isset($_SESSION['error'])) {
         .content-header h1 {
             margin: 0;
         }
-        .content-section {
-            background: white;
+        .text-center {
+            text-align: center;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
         }
-        .content-section h2 {
-            margin-top: 0;
-            color: #333;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
-        .game-form {
-            max-width: 600px;
-        }
-        .checkbox-field {
-            margin-bottom: 15px;
-        }
-        .checkbox-field .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .table-responsive {
+        .table-container {
             overflow-x: auto;
         }
-        .data-table {
+        .table {
             width: 100%;
             border-collapse: collapse;
         }
-        .data-table th, .data-table td {
+        .table th, .table td {
             padding: 10px;
+            border: 1px solid #ddd;
             text-align: left;
-            border-bottom: 1px solid #eee;
         }
-        .data-table th {
+        .table th {
+            background-color: #f5f5f5;
+        }
+        .table tr:nth-child(even) {
             background-color: #f9f9f9;
-            font-weight: bold;
-        }
-        .actions {
-            white-space: nowrap;
-        }
-        .action-btn {
-            display: inline-block;
-            padding: 5px 10px;
-            margin-right: 5px;
-            background: #4a6cf7;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-        }
-        .action-btn.delete {
-            background: #dc3545;
-        }
-        .action-btn:hover {
-            opacity: 0.9;
-        }
-        .no-items {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        .required {
-            color: #dc3545;
-            margin-left: 3px;
         }
     </style>
-    <script>
-        // Auto-generate slug from title
-        document.addEventListener('DOMContentLoaded', function() {
-            const titleInput = document.getElementById('title');
-            const slugInput = document.getElementById('slug');
-            
-            if (titleInput && slugInput) {
-                titleInput.addEventListener('input', function() {
-                    // Only auto-generate if slug is empty or hasn't been manually edited
-                    if (!slugInput.value || slugInput._autoGenerated) {
-                        const slug = titleInput.value
-                            .toLowerCase()
-                            .replace(/[^\w\s-]/g, '') // Remove special characters
-                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
-                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-                        
-                        slugInput.value = slug;
-                        slugInput._autoGenerated = true;
-                    }
-                });
-                
-                // Mark when user manually edits the slug
-                slugInput.addEventListener('input', function() {
-                    slugInput._autoGenerated = false;
-                });
-            }
-            
-            // Handle edit buttons
-            const editButtons = document.querySelectorAll('.action-btn.edit');
-            const form = document.querySelector('.game-form');
-            const formTitle = document.querySelector('.game-form h2');
-            const submitButton = form.querySelector('button[type="submit"]');
-            
-            editButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    const title = this.getAttribute('data-title');
-                    const slug = this.getAttribute('data-slug');
-                    const description = this.getAttribute('data-description');
-                    const featured = this.getAttribute('data-featured') === '1';
-                    const published = this.getAttribute('data-published') === '1';
-                    const publishedAt = this.getAttribute('data-published-at');
-                    
-                    // Fill form with game data
-                    form.querySelector('input[name="id"]').value = id;
-                    form.querySelector('input[name="title"]').value = title;
-                    form.querySelector('input[name="slug"]').value = slug;
-                    form.querySelector('textarea[name="description"]').value = description;
-                    form.querySelector('input[name="featured"]').checked = featured;
-                    form.querySelector('input[name="is_published"]').checked = published;
-                    form.querySelector('input[name="published_at"]').value = publishedAt;
-                    
-                    // Update form title and submit button
-                    form.querySelector('h2').textContent = 'Edit Game';
-                    submitButton.textContent = 'Update Game';
-                    
-                    // Scroll to form
-                    form.scrollIntoView({ behavior: 'smooth' });
-                });
-            });
-        });
-    </script>
 </body>
 </html>

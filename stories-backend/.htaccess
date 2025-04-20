@@ -1,87 +1,76 @@
-# Enable URL rewriting
+# Enable rewrite engine
 RewriteEngine On
 
-# Set the base directory
+# Set base directory
 RewriteBase /
 
-# Allow access to admin directory
-RewriteRule ^admin/ - [L]
+# Add CORS headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "https://storiesfromtheweb.netlify.app"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header set Access-Control-Allow-Credentials "true"
+    
+    # Handle preflight OPTIONS requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
 
-# Redirect all requests to the API entry point
-# Except for existing files and directories
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+# Redirect API requests to the appropriate controllers
+RewriteRule ^api/v1/stories/?$ api/v1/index.php?controller=stories [QSA,L]
+RewriteRule ^api/v1/stories/([^/]+)/?$ api/v1/index.php?controller=stories&id=$1 [QSA,L]
 
-# Protect sensitive files
-<FilesMatch "^\.">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
+RewriteRule ^api/v1/authors/?$ api/v1/index.php?controller=authors [QSA,L]
+RewriteRule ^api/v1/authors/([^/]+)/?$ api/v1/index.php?controller=authors&id=$1 [QSA,L]
 
-<FilesMatch "\.(sql|log|ini|json)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
+RewriteRule ^api/v1/tags/?$ api/v1/index.php?controller=tags [QSA,L]
+RewriteRule ^api/v1/tags/([^/]+)/?$ api/v1/index.php?controller=tags&id=$1 [QSA,L]
 
-# Allow specific PHP files in the root directory
-<FilesMatch "^(index\.php|direct_login\.php|check_auth_status\.php|go_to_dashboard\.php|logout\.php)$">
-    Order allow,deny
-    Allow from all
-</FilesMatch>
+RewriteRule ^api/v1/games/?$ api/v1/index.php?controller=games [QSA,L]
+RewriteRule ^api/v1/games/([^/]+)/?$ api/v1/index.php?controller=games&id=$1 [QSA,L]
 
-# Disable directory listing
+RewriteRule ^api/v1/directory-items/?$ api/v1/index.php?controller=directoryItems [QSA,L]
+RewriteRule ^api/v1/directory-items/([^/]+)/?$ api/v1/index.php?controller=directoryItems&id=$1 [QSA,L]
+
+RewriteRule ^api/v1/ai-tools/?$ api/v1/index.php?controller=aiTools [QSA,L]
+RewriteRule ^api/v1/ai-tools/([^/]+)/?$ api/v1/index.php?controller=aiTools&id=$1 [QSA,L]
+
+RewriteRule ^api/v1/auth/login/?$ api/v1/index.php?controller=auth&action=login [QSA,L]
+RewriteRule ^api/v1/auth/register/?$ api/v1/index.php?controller=auth&action=register [QSA,L]
+RewriteRule ^api/v1/auth/refresh/?$ api/v1/index.php?controller=auth&action=refresh [QSA,L]
+
+# Prevent directory listing
 Options -Indexes
 
 # Set default character set
 AddDefaultCharset UTF-8
 
-# Enable CORS
-<IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-    Header set Access-Control-Max-Age "86400"
+# Enable gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
 </IfModule>
 
-# Handle OPTIONS requests for CORS preflight
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
-
-# Set security headers
-<IfModule mod_headers.c>
-    # Prevent MIME type sniffing
-    Header set X-Content-Type-Options "nosniff"
-    
-    # Enable XSS protection
-    Header set X-XSS-Protection "1; mode=block"
-    
-    # Prevent clickjacking
-    Header set X-Frame-Options "SAMEORIGIN"
-    
-    # Content Security Policy
-    Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://*; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://ajax.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://api.storiesfromtheweb.org https://*.netlify.app https://storiesfromtheweb.org"
-    
-    # Referrer Policy
-    Header set Referrer-Policy "same-origin"
+# Set cache control headers
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/pdf "access plus 1 month"
+    ExpiresByType text/html "access plus 1 day"
 </IfModule>
 
 # PHP settings
 <IfModule mod_php7.c>
-    # Disable showing PHP errors
     php_flag display_errors Off
-    
-    # Log PHP errors
-    php_flag log_errors On
-    php_value error_log logs/api-error.log
-    
-    # Maximum upload file size
-    php_value upload_max_filesize 5M
-    php_value post_max_size 6M
-    
-    # Maximum execution time
-    php_value max_execution_time 30
-    
-    # Maximum input variables
-    php_value max_input_vars 1000
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value max_input_time 300
 </IfModule>

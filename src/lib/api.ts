@@ -95,7 +95,7 @@ export interface Tag {
 }
 
 // API URL for the custom backend
-const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
+const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.storiesfromtheweb.org/api/v1';
 
 export const getMediaUrl = (url: string) => {
   if (url.startsWith('http')) {
@@ -250,6 +250,8 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}, ret
     const queryString = queryParams.toString();
     const url = `${API_URL}/${endpoint}${queryString ? `?${queryString}` : ''}`;
     
+    console.log(`Fetching from API: ${url}`);
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json'
     };
@@ -296,6 +298,20 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}, ret
         console.error('Could not read error response body');
       }
       
+      // Check API status if we get an error
+      try {
+        console.log('Checking API status...');
+        const statusRes = await fetch(`${API_URL.replace('/api/v1', '')}/api-status.php`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          console.log('API Status:', statusData);
+        } else {
+          console.error('API status check failed:', statusRes.status, statusRes.statusText);
+        }
+      } catch (statusError) {
+        console.error('Error checking API status:', statusError);
+      }
+      
       throw new Error(`Failed to fetch from API: ${res.status} ${res.statusText}`);
     }
     
@@ -305,14 +321,27 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}, ret
     console.error(`Endpoint: ${endpoint}`);
     console.error(`Params: ${JSON.stringify(params)}`);
     
-    // On error, return empty data
-    console.log(`Error fetching from API. Returning empty data for endpoint: ${endpoint}`);
+    // Create a detailed error object
+    const apiError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      endpoint,
+      params,
+      timestamp: new Date().toISOString(),
+      apiUrl: API_URL
+    };
     
-    // Return empty data structure
+    // Log the detailed error
+    console.error('API Error Details:', apiError);
+    
+    // On error, return empty data with error information
     if (endpoint.includes('/') && endpoint.split('/').length > 1) {
-      return { data: null };
+      return { data: null, error: apiError };
     } else {
-      return { data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } };
+      return { 
+        data: [], 
+        meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } },
+        error: apiError
+      };
     }
   }
 };

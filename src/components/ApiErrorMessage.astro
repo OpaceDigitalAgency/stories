@@ -1,0 +1,73 @@
+---
+interface Props {
+  error: any;
+  message?: string;
+}
+
+const { error, message = "We're having trouble loading content right now." } = Astro.props;
+---
+
+<div class="api-error">
+  <h3>Oops! Something went wrong</h3>
+  <p>{message}</p>
+  
+  {error && import.meta.env.DEV && (
+    <details>
+      <summary>Technical Details (Development Only)</summary>
+      <pre>{JSON.stringify(error, null, 2)}</pre>
+    </details>
+  )}
+  
+  <button class="retry-button" onclick="window.location.reload()">
+    Try Again
+  </button>
+</div>
+
+<style>
+  .api-error {
+    background-color: #fff8f8;
+    border: 1px solid #ffcdd2;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  
+  h3 {
+    color: #d32f2f;
+    margin-top: 0;
+  }
+  
+  details {
+    margin: 15px 0;
+    text-align: left;
+  }
+  
+  summary {
+    cursor: pointer;
+    color: #666;
+    font-size: 0.9em;
+  }
+  
+  pre {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.8em;
+  }
+  
+  .retry-button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .retry-button:hover {
+    background-color: #0d8bf2;
+  }
+</style>

@@ -3,17 +3,15 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
-  # API configuration is handled in src/lib/api.ts with a hardcoded API_URL
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
-# Removed functions directory setting
+[context.production.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
-# Removed redirects to non-existent functions
+[context.deploy-preview.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

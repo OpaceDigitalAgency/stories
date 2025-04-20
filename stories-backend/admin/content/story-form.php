@@ -122,7 +122,19 @@ try {
     $mediaFiles = [];
     $stmt = $db->query("SHOW TABLES LIKE 'media'");
     if ($stmt->rowCount() > 0) {
-        $mediaFiles = $db->query("SELECT id, filename, file_path FROM media ORDER BY created_at DESC")->fetchAll();
+        // Check if created_at column exists in media table
+        $mediaColumns = [];
+        $stmt = $db->query("DESCRIBE media");
+        while ($row = $stmt->fetch()) {
+            $mediaColumns[] = $row['Field'];
+        }
+        
+        // Use created_at for ordering if it exists, otherwise use id
+        if (in_array('created_at', $mediaColumns)) {
+            $mediaFiles = $db->query("SELECT id, filename, file_path FROM media ORDER BY created_at DESC")->fetchAll();
+        } else {
+            $mediaFiles = $db->query("SELECT id, filename, file_path FROM media ORDER BY id DESC")->fetchAll();
+        }
     }
 
     // Get additional fields from the database
@@ -137,7 +149,9 @@ try {
     $requiredFields = ['title', 'author_id', 'content'];
     foreach ($columnInfo as $field => $info) {
         if ($info['Null'] === 'NO' && $info['Default'] === null && !in_array($field, ['id', 'created_at', 'updated_at'])) {
-            $requiredFields[] = $field;
+            if (!in_array($field, $requiredFields)) {
+                $requiredFields[] = $field;
+            }
         }
     }
 

@@ -41,13 +41,18 @@ try {
         ]
     );
     
+    // Current timestamp
+    $now = date('Y-m-d H:i:s');
+    
     // Admin user details
     $admin = [
         'name' => 'Admin',
         'email' => 'admin@storiesfromtheweb.org',
         'password' => password_hash('admin123', PASSWORD_BCRYPT),
         'role' => 'admin',
-        'active' => 1
+        'active' => 1,
+        'created_at' => $now,
+        'updated_at' => $now
     ];
     
     // Check if admin user already exists
@@ -56,23 +61,26 @@ try {
     
     if ($stmt->fetch()) {
         // Update existing admin user
-        $stmt = $db->prepare("UPDATE users SET password = ?, role = ?, active = ? WHERE email = ?");
+        $stmt = $db->prepare("UPDATE users SET password = ?, role = ?, active = ?, updated_at = ? WHERE email = ?");
         $stmt->execute([
             $admin['password'],
             $admin['role'],
             $admin['active'],
+            $admin['updated_at'],
             $admin['email']
         ]);
         output("Admin user updated successfully", 'success');
     } else {
         // Create new admin user
-        $stmt = $db->prepare("INSERT INTO users (name, email, password, role, active) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO users (name, email, password, role, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $admin['name'],
             $admin['email'],
             $admin['password'],
             $admin['role'],
-            $admin['active']
+            $admin['active'],
+            $admin['created_at'],
+            $admin['updated_at']
         ]);
         output("Admin user created successfully", 'success');
     }

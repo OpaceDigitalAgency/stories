@@ -49,20 +49,39 @@ try {
     $bio = trim($_POST['bio'] ?? '');
 
     // Validate required fields
-    if (empty($name) || empty($email)) {
-        throw new Exception("Please fill in all required fields");
+    if (empty($name)) {
+        throw new Exception("Please fill in the name field");
     }
 
-    // Validate email format
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception("Invalid email format");
+    // Get all columns from authors table
+    $columns = [];
+    $stmt = $db->query("DESCRIBE authors");
+    while ($row = $stmt->fetch()) {
+        $columns[] = $row['Field'];
     }
 
-    // Check if email is already in use by another author
-    $stmt = $db->prepare("SELECT id FROM authors WHERE email = ? AND id != ?");
-    $stmt->execute([$email, $id ?? 0]);
-    if ($stmt->fetch()) {
-        throw new Exception("Email is already in use by another author");
+    // Check if email column exists
+    $hasEmailColumn = in_array('email', $columns);
+    
+    // Check if bio column exists
+    $hasBioColumn = in_array('bio', $columns);
+
+    // Validate email format if email column exists
+    if ($hasEmailColumn) {
+        if (empty($email)) {
+            throw new Exception("Please fill in the email field");
+        }
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception("Invalid email format");
+        }
+
+        // Check if email is already in use by another author
+        $stmt = $db->prepare("SELECT id FROM authors WHERE email = ? AND id != ?");
+        $stmt->execute([$email, $id ?? 0]);
+        if ($stmt->fetch()) {
+            throw new Exception("Email is already in use by another author");
+        }
     }
 
     if ($id) {
@@ -74,14 +93,53 @@ try {
         }
 
         // Update existing author
-        $stmt = $db->prepare("UPDATE authors SET name = ?, email = ?, bio = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$name, $email, $bio, $id]);
+        $setClause = ["name = ?"];
+        $params = [$name];
+        
+        if ($hasEmailColumn) {
+            $setClause[] = "email = ?";
+            $params[] = $email;
+        }
+        
+        if ($hasBioColumn) {
+            $setClause[] = "bio = ?";
+            $params[] = $bio;
+        }
+        
+        $setClause[] = "updated_at = NOW()";
+        $params[] = $id; // Add ID for WHERE clause
+        
+        $sql = "UPDATE authors SET " . implode(', ', $setClause) . " WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
 
         $message = "Author updated successfully";
     } else {
         // Create new author
-        $stmt = $db->prepare("INSERT INTO authors (name, email, bio, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
-        $stmt->execute([$name, $email, $bio]);
+        $columns = ["name"];
+        $placeholders = ["?"];
+        $params = [$name];
+        
+        if ($hasEmailColumn) {
+            $columns[] = "email";
+            $placeholders[] = "?";
+            $params[] = $email;
+        }
+        
+        if ($hasBioColumn) {
+            $columns[] = "bio";
+            $placeholders[] = "?";
+            $params[] = $bio;
+        }
+        
+        $columns[] = "created_at";
+        $columns[] = "updated_at";
+        $placeholders[] = "NOW()";
+        $placeholders[] = "NOW()";
+        
+        $sql = "INSERT INTO authors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
 
         $message = "Author created successfully";
     }

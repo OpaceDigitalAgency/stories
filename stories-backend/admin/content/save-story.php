@@ -72,6 +72,9 @@ try {
 
     // Check if author_id column exists in stories table
     $hasAuthorIdColumn = in_array('author_id', $columns);
+    
+    // Check if author column exists in stories table
+    $hasAuthorColumn = in_array('author', $columns);
 
     // Prepare data for insert/update
     $data = [
@@ -84,8 +87,10 @@ try {
         $data['author_id'] = $author_id;
     }
     
-    // Always include author name for backward compatibility
-    $data['author'] = $author['name'];
+    // Include author name for backward compatibility if the column exists
+    if ($hasAuthorColumn) {
+        $data['author'] = $author['name'];
+    }
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {

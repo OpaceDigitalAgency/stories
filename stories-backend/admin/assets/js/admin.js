@@ -121,187 +121,32 @@ function initFormValidation() {
     var forms = document.querySelectorAll('.needs-validation');
     console.log('[INIT] Found forms:', forms.length); // DEBUG
     
-    // Loop over them and prevent submission
-    Array.prototype.slice.call(forms).forEach(function(form) {
-        console.log('[INIT] Attaching submit listener to form:', form.id); // DEBUG
-        
-        // DEBUG: Add click listener to submit button
+    // Note: The actual form submission is now handled by form-submission-fix.js
+    // This function now only handles form validation UI feedback
+    
+    // Add real-time validation feedback
+    document.querySelectorAll('.form-control, .form-select').forEach(function(input) {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else if (this.value !== '') {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
+    });
+    
+    // DEBUG: Add click listener to submit button
+    forms.forEach(function(form) {
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton) {
             submitButton.addEventListener('click', function(e) {
                 console.log('[BUTTON CLICK] Submit button clicked for form:', form.id);
             });
         } else {
-             console.warn('[INIT] Submit button not found for form:', form.id);
+            console.warn('[INIT] Submit button not found for form:', form.id);
         }
-        // END DEBUG
-        
-        // Add a capturing submit listener to see if it fires before others
-        form.addEventListener('submit', function(event) {
-            console.log('[FORM HANDLER - CAPTURING] Submit event triggered for form:', form.id); // DEBUG
-            // event.stopImmediatePropagation(); // Keep this for bubbling phase listener
-            // Don't prevent default here yet, let the bubbling listener handle it
-        }, true); // Use capturing phase
-
-        form.addEventListener('submit', function(event) {
-            console.log('[FORM HANDLER - BUBBLING] Submit event triggered for form:', form.id); // DEBUG
-            
-            // Ensure our handler runs first if possible
-            event.stopImmediatePropagation(); // Prevent other listeners on the same element from running
-            
-            if (!form.checkValidity()) {
-                console.log('[FORM HANDLER] Form invalid, stopping.'); // DEBUG
-                event.preventDefault();
-                event.stopPropagation();
-                
-                // Find the first invalid field and focus it
-                const invalidField = form.querySelector(':invalid');
-                if (invalidField) {
-                    invalidField.focus();
-                    
-                    // Show a notification for the error
-                    showNotification('Please correct the errors in the form before submitting.', 'danger');
-                }
-            } else {
-                // Prevent default form submission
-                console.log('[FORM HANDLER] Form valid, preventing default submission.'); // DEBUG
-                event.preventDefault();
-                
-                // Show loading overlay for form submissions
-                showLoading('Processing your request...');
-                
-                // Get form data
-                const formData = new FormData(form);
-                
-                // Add form identifier for debugging
-                formData.append('_form_id', form.id || 'unnamed_form');
-                
-                // Log form data for debugging
-                console.log('[FORM] Submitting form:', form.id || 'unnamed_form');
-                console.log('[FORM] Form data:', Array.from(formData.entries()));
-                
-                // Get form action URL
-                const originalActionUrl = form.getAttribute('action');
-                
-                // Determine method (POST for create, PUT for edit)
-                let method = 'POST';
-                let entityId = null;
-                const urlParams = new URLSearchParams(originalActionUrl.split('?')[1] || '');
-                
-                if (urlParams.get('action') === 'edit') {
-                    method = 'PUT';
-                    entityId = urlParams.get('id');
-                }
-
-                // Extract entity type from form ID (e.g., "stories-form" -> "stories")
-                const entityTypeMatch = form.id.match(/^([a-z-]+)-form$/);
-                const entityType = entityTypeMatch ? entityTypeMatch[1] : null;
-
-                // Construct the correct API endpoint URL
-                let apiUrl = '/api/v1/';
-                if (entityType) {
-                    apiUrl += entityType;
-                    if (method === 'PUT' && entityId) {
-                        apiUrl += '/' + entityId; // Assuming API uses ID for PUT/DELETE
-                    }
-                } else {
-                    console.error('[FORM] Could not determine entity type from form ID:', form.id);
-                    showNotification('Error: Could not determine API endpoint.', 'danger');
-                    hideLoading();
-                    return; // Stop submission if endpoint cannot be determined
-                }
-                
-                // Use our custom AJAX function to submit the form to the API
-                console.log('[FORM HANDLER] Attempting AJAX request to API:', apiUrl, 'with method:', method); // DEBUG
-                
-                // Use our custom AJAX function instead of fetch
-                ajaxRequest(
-                    apiUrl, // Use the constructed API URL
-                    method,
-                    formData,  // Pass FormData directly
-                    function(response) {
-                        // Success callback
-                        hideLoading();
-                        console.log('[FORM] Success response:', response);
-                        
-                        // Get success message from response or use default
-                        let successMessage = 'Form submitted successfully';
-                        if (response && response.message) {
-                            successMessage = response.message;
-                        }
-                        
-                        showNotification(successMessage, 'success');
-                        
-                        // Redirect to the list page
-                        const listUrl = actionUrl.split('?')[0];
-                        console.log('[FORM] Redirecting to:', listUrl);
-                        window.location.href = listUrl;
-                    },
-                    function(error) {
-                        // Error callback
-                        hideLoading();
-                        console.error('[FORM] Error response:', error);
-                        
-                        // Create a more detailed error message
-                        let errorMessage = 'Error: ' + error.message;
-                        
-                        // If we have detailed error information, display it
-                        if (error.details && error.details.errors) {
-                            const errorDetails = error.details.errors;
-                            errorMessage += '<ul class="mt-2 mb-0">';
-                            
-                            // Handle array of errors or object of errors
-                            if (Array.isArray(errorDetails)) {
-                                errorDetails.forEach(err => {
-                                    errorMessage += `<li>${err}</li>`;
-                                });
-                            } else {
-                                for (const field in errorDetails) {
-                                    if (Array.isArray(errorDetails[field])) {
-                                        errorDetails[field].forEach(err => {
-                                            errorMessage += `<li>${field}: ${err}</li>`;
-                                        });
-                                    } else {
-                                        errorMessage += `<li>${field}: ${errorDetails[field]}</li>`;
-                                    }
-                                }
-                            }
-                            
-                            errorMessage += '</ul>';
-                        }
-                        
-                        showNotification(errorMessage, 'danger');
-                        
-                        // Highlight fields with errors if we have field-specific errors
-                        if (error.details && error.details.errors && typeof error.details.errors === 'object') {
-                            for (const field in error.details.errors) {
-                                const inputField = form.querySelector(`[name="${field}"]`);
-                                if (inputField) {
-                                    inputField.classList.add('is-invalid');
-                                    
-                                    // Add error message below the field
-                                    const feedbackDiv = document.createElement('div');
-                                    feedbackDiv.className = 'invalid-feedback';
-                                    feedbackDiv.textContent = Array.isArray(error.details.errors[field])
-                                        ? error.details.errors[field].join(', ')
-                                        : error.details.errors[field];
-                                    
-                                    // Remove any existing feedback
-                                    const existingFeedback = inputField.parentNode.querySelector('.invalid-feedback');
-                                    if (existingFeedback) {
-                                        existingFeedback.remove();
-                                    }
-                                    
-                                    inputField.parentNode.appendChild(feedbackDiv);
-                                }
-                            }
-                        }
-                    }
-                );
-            }
-            
-            form.classList.add('was-validated');
-        }, false);
     });
     
     // Add real-time validation feedback

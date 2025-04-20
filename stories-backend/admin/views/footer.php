@@ -5,21 +5,19 @@
     <!-- Notification Container -->
     <div class="notification-container position-fixed top-0 end-0 p-3"></div>
 
-    <!-- Temporarily remove all JS includes except a minimal test script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM loaded, attaching minimal submit listener");
-            const form = document.querySelector('form.needs-validation');
-            if (form) {
-                console.log("Found form:", form.id);
-                form.addEventListener('submit', function(event) {
-                    console.log("[MINIMAL HANDLER] Submit event triggered!");
-                    event.preventDefault(); // Prevent actual submission
-                });
-            } else {
-                console.warn("Form with class 'needs-validation' not found.");
-            }
-        });
-    </script>
+    <!-- JavaScript Dependencies -->
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/jquery.min.js"></script>
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/flatpickr.min.js"></script>
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap-tagsinput.min.js"></script>
+    
+    <!-- CKEditor for rich text editing -->
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/ckeditor.js"></script>
+    
+    <!-- Form Submission Fix Script -->
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/form-submission-fix.js"></script>
+    
+    <!-- Admin JS (loaded last) -->
+    <script src="<?php echo ADMIN_URL; ?>/assets/js/admin.js"></script>
 </body>
 </html>

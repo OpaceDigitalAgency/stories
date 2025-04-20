@@ -64,14 +64,14 @@ foreach ($dirs as $dir) {
 // 1. Create or update config.php
 $configPath = __DIR__ . '/admin/includes/config.php';
 
-// Default database credentials for the Stories platform
+// Use correct database credentials
 $config = <<<'EOT'
 <?php
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories_fromtheweb';
-$db_user = 'stories_fromtheweb';
-$db_pass = 'stories_fromtheweb';
+$db_name = 'stories_db';
+$db_user = 'stories_user';
+$db_pass = '$tw1cac3*sOt';
 
 try {
     $db = new PDO(

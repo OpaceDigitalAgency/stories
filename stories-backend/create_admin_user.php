@@ -24,9 +24,9 @@ function output($message, $type = 'info') {
 
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories_fromtheweb';
-$db_user = 'stories_fromtheweb';
-$db_pass = 'stories_fromtheweb';
+$db_name = 'stories_db';
+$db_user = 'stories_user';
+$db_pass = '$tw1cac3*sOt';
 
 try {
     // Connect to database

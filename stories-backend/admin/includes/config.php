@@ -1,107 +1,49 @@
 <?php
-/**
- * Admin UI Configuration
- *
- * This file contains configuration settings for the admin UI.
- *
- * @package Stories Admin
- * @version 1.0.0
- */
-
-// Prevent any output before headers are sent
-if (ob_get_level() == 0) ob_start();
-
-// Error handling
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors to browser
-ini_set('log_errors', 1);
-ini_set('error_log', '/home/stories/api.storiesfromtheweb.org/logs/api-error.log');
-
-// Define the environment (development, testing, production)
-if (!defined('ENVIRONMENT')) {
-    define('ENVIRONMENT', 'development');
-}
-
-// Set error reporting based on environment
-if (ENVIRONMENT === 'development') {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-} else {
-    error_reporting(0);
-    ini_set('display_errors', 0);
-}
-
-// Define base paths
-if (!defined('BASE_PATH')) {
-    define('BASE_PATH', dirname(__DIR__));
-}
-if (!defined('ADMIN_URL')) {
-    // Use absolute URL for admin interface
-    // Always use a relative path so links stay on the admin host
-    define('ADMIN_URL', '/admin');
-}
-
-// Define the admin assets URL (always relative to ensure assets load from the same domain)
-if (!defined('ADMIN_ASSETS_URL')) {
-    // Use the full URL path to ensure assets load correctly
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    define('ADMIN_ASSETS_URL', $protocol . $host . '/admin');
-}
-if (!defined('API_URL')) {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    define('API_URL', $scheme . '://' . $host . '/api/v1');
-}
-
 // Database configuration
-$config['db'] = [
-    'host'     => 'localhost',      // Database host
-    'name'     => 'stories_db',     // Database name
-    'user'     => 'stories_user',   // Database username
-    'password' => '$tw1cac3*sOt',   // Database password - found in direct_login.php
-    'charset'  => 'utf8mb4',        // Character set
-    'port'     => 3306              // Database port
-];
+$db_host = 'localhost';
+$db_name = 'stories';
+$db_user = 'stories_user';
+$db_pass = 'your_password_here';
 
-// Security configuration
-$config['security'] = [
-    'jwt_secret'   => 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6', // Production JWT secret key
-    'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
-];
-
-// API configuration
-$config['api'] = [
-    'url' => API_URL,
-    'page_size' => 25,
-    'max_page_size' => 100
-];
-
-// Media configuration
-$config['media'] = [
-    'upload_dir'   => BASE_PATH . '/uploads/',
-    'max_file_size'=> 5242880, // 5MB
-    'allowed_types'=> ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    'base_url'     => '/admin/uploads/'  // Use absolute path for base_url
-];
-
-// Ensure uploads directory exists with proper permissions
-$uploadsDir = BASE_PATH . '/uploads/';
-if (!is_dir($uploadsDir)) {
-    mkdir($uploadsDir, 0755, true);
+try {
+    $db = new PDO(
+        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+        $db_user,
+        $db_pass,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+} catch (PDOException $e) {
+    die('Database connection failed: ' . $e->getMessage());
 }
+
+// Site configuration
+define('SITE_URL', 'https://api.storiesfromtheweb.org');
+define('ADMIN_EMAIL', 'admin@storiesfromtheweb.org');
+define('SESSION_LIFETIME', 7200); // 2 hours
 
 // Session configuration
-$config['session'] = [
-    'name'         => 'stories_admin_session',
-    'lifetime'     => 86400, // 24 hours
-    'path'         => '/',
-    'domain'       => '',
-    'secure'       => true, // Enabled for production with HTTPS
-    'httponly'     => true
-];
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_secure', 1);
+session_set_cookie_params([
+    'lifetime' => SESSION_LIFETIME,
+    'path' => '/',
+    'domain' => 'api.storiesfromtheweb.org',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
 
-// Make config available globally
-$GLOBALS['config'] = $config;
+// Error reporting
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+ini_set('error_log', __DIR__ . '/../logs/error.log');
 
-return $config;
+// Create logs directory if it doesn't exist
+if (!is_dir(__DIR__ . '/../logs')) {
+    mkdir(__DIR__ . '/../logs', 0755, true);
+}

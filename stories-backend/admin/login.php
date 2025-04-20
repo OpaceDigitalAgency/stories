@@ -1,148 +1,94 @@
 <?php
-/**
- * Login Page
- *
- * This page handles user authentication for the admin UI.
- *
- * @package Stories Admin
- * @version 1.0.0
- */
+require_once 'includes/config.php';
 
-// Prevent any output before headers are sent
-ob_start();
-
-// Error handling
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors to browser
-ini_set('log_errors', 1);
-ini_set('error_log', '/home/stories/api.storiesfromtheweb.org/logs/api-error.log');
-
-// Include required files
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/Database.php';
-require_once __DIR__ . '/includes/Auth.php';
-require_once __DIR__ . '/includes/Validator.php';
-
-// Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Initialize database
-$db = Database::getInstance($config['db']);
-
-// Initialize Auth
-Auth::init($config['security']);
-
-// Check if user is already logged in
-$user = Auth::checkAuth();
-if ($user) {
-    // Redirect to dashboard
-    header('Location: ' . ADMIN_URL . '/index.php');
+// If already logged in, redirect to dashboard
+if (isset($_SESSION['user_id'])) {
+    header("Location: dashboard.php");
     exit;
 }
 
-// Initialize variables
-$errors = [];
-$success = [];
-
-// Handle form submission
+// Handle login attempt
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validate required fields
-    if (!Validator::required($_POST, ['email', 'password'])) {
-        $errors = Validator::getErrors();
+    $email = $_POST['email'] ?? '';
+    $password = $_POST['password'] ?? '';
+    
+    $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'admin' LIMIT 1");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+    
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['last_activity'] = time();
+        
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+        
+        header("Location: dashboard.php");
+        exit;
     } else {
-        // Validate email format
-        if (!Validator::email($_POST['email'])) {
-            $errors = Validator::getErrors();
-        } else {
-            // Sanitize input
-            $email = Validator::sanitizeString($_POST['email']);
-            $password = $_POST['password']; // Don't sanitize password before verification
-            $remember = isset($_POST['remember']) ? (bool)$_POST['remember'] : false;
-            
-            // Authenticate user
-            $user = Auth::login($email, $password, $remember);
-            
-            if ($user) {
-                // Redirect to dashboard
-                header('Location: ' . ADMIN_URL . '/index.php');
-                exit;
-            } else {
-                $errors[] = 'Invalid email or password';
-            }
-        }
+        $error = 'Invalid credentials';
     }
 }
-
-// Get error messages from session
-if (isset($_SESSION['errors'])) {
-    $errors = array_merge($errors, $_SESSION['errors']);
-    unset($_SESSION['errors']);
-}
-
-// Get success messages from session
-if (isset($_SESSION['success'])) {
-    $success = array_merge($success, $_SESSION['success']);
-    unset($_SESSION['success']);
-}
-
-// Set page title
-$pageTitle = 'Login';
-
-// Include header without navbar
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - Stories Admin</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="<?php echo ADMIN_URL; ?>/assets/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="<?php echo ADMIN_URL; ?>/assets/css/all.min.css" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link href="<?php echo ADMIN_URL; ?>/assets/css/admin.css" rel="stylesheet">
+    <title>Login - Stories Admin</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .login-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .site-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .site-logo img {
+            max-width: 200px;
+            height: auto;
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container">
-        <!-- Display error messages -->
-        <?php if (!empty($errors)): ?>
-            <?php foreach ($errors as $error): ?>
-                <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                    <?php echo htmlspecialchars($error); ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            <?php endforeach; ?>
+<body>
+    <div class="login-card">
+        <div class="site-logo">
+            <img src="/stories_from_the_web_transparent.png" alt="Stories from the Web">
+        </div>
+        
+        <?php if ($error): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-
-        <!-- Display success messages -->
-        <?php if (!empty($success)): ?>
-            <?php foreach ($success as $message): ?>
-                <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                    <?php echo htmlspecialchars($message); ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        
+        <form method="POST" action="login.php">
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+            </div>
+            
+            <button type="submit" class="form-submit" style="width: 100%;">Login</button>
+        </form>
     </div>
-
-    <?php include __DIR__ . '/views/auth/login.php'; ?>
-
-    <!-- jQuery -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/jquery.min.js"></script>
-    
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
-    <script src="<?php echo ADMIN_URL; ?>/assets/js/admin.js"></script>
 </body>
-
-<?php ob_end_flush(); ?>
-
 </html>

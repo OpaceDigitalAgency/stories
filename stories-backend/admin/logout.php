@@ -1,34 +1,17 @@
 <?php
-/**
- * Logout Page
- * 
- * This page handles user logout for the admin UI.
- * 
- * @package Stories Admin
- * @version 1.0.0
- */
+session_start();
 
-// Include required files
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/Auth.php';
+// Clear all session data
+$_SESSION = array();
 
-// Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Destroy the session cookie
+if (isset($_COOKIE[session_name()])) {
+    setcookie(session_name(), '', time() - 3600, '/');
 }
 
-// Initialize Auth
-Auth::init($config['security']);
-
-// Logout user
-Auth::logout();
-
-// Set success message
-if (!isset($_SESSION['success'])) {
-    $_SESSION['success'] = [];
-}
-$_SESSION['success'][] = 'You have been successfully logged out.';
+// Destroy the session
+session_destroy();
 
 // Redirect to login page
-header('Location: ' . ADMIN_URL . '/login.php');
+header("Location: login.php");
 exit;

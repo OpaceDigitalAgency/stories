@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/config.php';
+session_start();
 
 // If already logged in, redirect to dashboard
 if (isset($_SESSION['user_id'])) {
@@ -13,21 +14,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     
-    $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'admin' LIMIT 1");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
-    
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['last_activity'] = time();
+    try {
+        // Get user by email
+        $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'admin' AND active = 1 LIMIT 1");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
         
-        // Regenerate session ID for security
-        session_regenerate_id(true);
-        
-        header("Location: dashboard.php");
-        exit;
-    } else {
-        $error = 'Invalid credentials';
+        if ($user && password_verify($password, $user['password'])) {
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['last_activity'] = time();
+            
+            // Regenerate session ID for security
+            session_regenerate_id(true);
+            
+            header("Location: dashboard.php");
+            exit;
+        } else {
+            $error = 'Invalid email or password';
+        }
+    } catch (PDOException $e) {
+        error_log("Login error: " . $e->getMessage());
+        $error = 'Login failed. Please try again.';
+    }
+}
+
+// For debugging
+if (isset($db)) {
+    try {
+        $stmt = $db->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+        $adminCount = $stmt->fetchColumn();
+        error_log("Number of admin users: " . $adminCount);
+    } catch (PDOException $e) {
+        error_log("Debug query error: " . $e->getMessage());
     }
 }
 ?>
@@ -79,7 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="login.php">
             <div class="form-group">
                 <label class="form-label" for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-input" required>
+                <input type="email" id="email" name="email" class="form-input" required 
+                       value="<?php echo htmlspecialchars($email ?? ''); ?>">
             </div>
             
             <div class="form-group">

@@ -1,79 +1,44 @@
 <?php
-require_once '../includes/auth.php';
-$auth = new Auth($db);
-$auth->requireLogin();
+require_once '../../simple_auth.php';
 
-// Get action from URL
-$action = $_GET['action'] ?? 'list';
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
 
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $message = '';
-    
-    switch ($_POST['action']) {
-        case 'create':
-            $stmt = $db->prepare("INSERT INTO stories (title, slug, excerpt, content, published_at) VALUES (?, ?, ?, ?, ?)");
-            if ($stmt->execute([
-                $_POST['title'],
-                $_POST['slug'],
-                $_POST['excerpt'],
-                $_POST['content'],
-                $_POST['published_at']
-            ])) {
-                $message = '<div class="success">Story created successfully</div>';
-                header('Location: /admin/content/stories.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-            
-        case 'update':
-            $stmt = $db->prepare("UPDATE stories SET title = ?, slug = ?, excerpt = ?, content = ?, published_at = ? WHERE id = ?");
-            if ($stmt->execute([
-                $_POST['title'],
-                $_POST['slug'],
-                $_POST['excerpt'],
-                $_POST['content'],
-                $_POST['published_at'],
-                $_POST['id']
-            ])) {
-                $message = '<div class="success">Story updated successfully</div>';
-                header('Location: /admin/content/stories.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-            
-        case 'delete':
-            $stmt = $db->prepare("DELETE FROM stories WHERE id = ?");
-            if ($stmt->execute([$_POST['id']])) {
-                $message = '<div class="success">Story deleted successfully</div>';
-                header('Location: /admin/content/stories.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-    }
-    
-    if (!$message) {
-        $message = '<div class="error">Operation failed</div>';
-    }
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if user is logged in
+if (!$user = SimpleAuth::check()) {
+    header("Location: ../login.php");
+    exit;
 }
 
-// Get story for edit form
-$story = null;
-if ($action === 'edit' && isset($_GET['id'])) {
-    $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
-    $stmt->execute([$_GET['id']]);
-    $story = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$story) {
-        header('Location: /admin/content/stories.php?message=' . urlencode('<div class="error">Story not found</div>'));
-        exit;
-    }
-}
+try {
+    // Connect to database
+    $db = new PDO(
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
 
-// Get all stories for list view
-$stories = [];
-if ($action === 'list') {
-    $stmt = $db->query("SELECT * FROM stories ORDER BY created_at DESC");
-    $stories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get all stories
+    $stories = $db->query("SELECT * FROM stories ORDER BY created_at DESC")->fetchAll();
+
+} catch (PDOException $e) {
+    error_log("Stories page error: " . $e->getMessage());
+    $error = "Error loading stories. Please try again.";
 }
 ?>
 <!DOCTYPE html>
@@ -81,110 +46,97 @@ if ($action === 'list') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Stories - Admin</title>
-    <link rel="stylesheet" href="/admin/assets/css/main.css">
+    <title>Stories - Admin</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
-    <nav class="nav">
-        <ul class="nav-list">
-            <li class="nav-item"><a href="/admin/index.php" class="nav-link">Dashboard</a></li>
-            <li class="nav-item dropdown">
-                <a href="#" class="nav-link">Content</a>
-                <div class="dropdown-content">
-                    <a href="/admin/content/stories.php" class="nav-link">Stories</a>
-                    <a href="/admin/content/blog-posts.php" class="nav-link">Blog Posts</a>
-                    <a href="/admin/content/games.php" class="nav-link">Games</a>
-                </div>
-            </li>
-            <li class="nav-item"><a href="/admin/logout.php" class="nav-link">Logout</a></li>
-        </ul>
-    </nav>
-
     <div class="container">
-        <?php if (isset($_GET['message'])): ?>
-            <?php echo $_GET['message']; ?>
+        <div class="user-info">
+            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
+            <form method="POST" action="../logout.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
+            </form>
+        </div>
+
+        <nav class="nav-menu">
+            <form method="GET" style="display: inline;">
+                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
+                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
+                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
+                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="games.php" class="nav-link">Games</button>
+                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
+                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+            </form>
+        </nav>
+
+        <div class="content-header">
+            <h1>Stories</h1>
+            <form method="GET" action="story-form.php" style="display: inline;">
+                <button type="submit" class="form-submit">Add New Story</button>
+            </form>
+        </div>
+
+        <?php if (isset($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <?php if ($action === 'list'): ?>
-            <div class="card">
-                <h1 class="card-title">Stories</h1>
-                <a href="?action=add" class="form-submit" style="display: inline-block; margin-bottom: 20px;">Add New Story</a>
-                
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Published</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($stories as $item): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($item['title']); ?></td>
-                                <td><?php echo htmlspecialchars($item['published_at']); ?></td>
-                                <td>
-                                    <a href="?action=edit&id=<?php echo $item['id']; ?>" class="form-submit">Edit</a>
-                                    <form method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure?');">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                        <button type="submit" class="form-submit" style="background: #dc3545;">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($action === 'add' || $action === 'edit'): ?>
-            <div class="card">
-                <h1 class="card-title"><?php echo $action === 'add' ? 'Add New Story' : 'Edit Story'; ?></h1>
-                
-                <form method="POST">
-                    <input type="hidden" name="action" value="<?php echo $action === 'add' ? 'create' : 'update'; ?>">
-                    <?php if ($action === 'edit'): ?>
-                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="title">Title</label>
-                        <input type="text" id="title" name="title" class="form-input" required 
-                               value="<?php echo $action === 'edit' ? htmlspecialchars($story['title']) : ''; ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="slug">Slug</label>
-                        <input type="text" id="slug" name="slug" class="form-input" required 
-                               value="<?php echo $action === 'edit' ? htmlspecialchars($story['slug']) : ''; ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="excerpt">Excerpt</label>
-                        <textarea id="excerpt" name="excerpt" class="form-input" rows="3"><?php 
-                            echo $action === 'edit' ? htmlspecialchars($story['excerpt']) : ''; 
-                        ?></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="content">Content</label>
-                        <textarea id="content" name="content" class="form-input" rows="10" required><?php 
-                            echo $action === 'edit' ? htmlspecialchars($story['content']) : ''; 
-                        ?></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="published_at">Publish Date</label>
-                        <input type="datetime-local" id="published_at" name="published_at" class="form-input" required
-                               value="<?php echo $action === 'edit' ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
-                    </div>
-                    
-                    <button type="submit" class="form-submit">Save Story</button>
-                    <a href="/admin/content/stories.php" class="form-submit" style="background: #6c757d;">Cancel</a>
-                </form>
-            </div>
-        <?php endif; ?>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($stories as $story): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($story['title']); ?></td>
+                        <td><?php echo htmlspecialchars($story['author']); ?></td>
+                        <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
+                        <td>
+                            <form method="GET" action="story-form.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                <button type="submit" class="form-submit">Edit</button>
+                            </form>
+                            <form method="POST" action="delete-story.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                <button type="submit" class="form-submit" style="background: #dc3545;"
+                                        onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
+    <style>
+        .nav-link {
+            background: none;
+            border: none;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .nav-link:hover {
+            background: #f5f5f5;
+        }
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .content-header h1 {
+            margin: 0;
+        }
+    </style>
 </body>
 </html>

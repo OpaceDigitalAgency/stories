@@ -122,7 +122,9 @@ try {
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
         <div class="user-info">
             Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <a href="logout.php" class="form-submit" style="background: #dc3545;">Logout</a>
+            <form method="POST" action="logout.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
+            </form>
         </div>
 
         <?php if (isset($error)): ?>
@@ -130,51 +132,65 @@ try {
         <?php endif; ?>
 
         <nav class="nav-menu">
-            <a href="content/stories.php">Stories</a>
-            <a href="content/blog-posts.php">Blog Posts</a>
-            <a href="content/authors.php">Authors</a>
-            <a href="content/tags.php">Tags</a>
-            <a href="content/games.php">Games</a>
-            <a href="content/directory-items.php">Directory</a>
-            <a href="content/ai-tools.php">AI Tools</a>
-            <a href="content/media.php">Media</a>
+            <form method="GET" style="display: inline;">
+                <button type="submit" formaction="content/stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="content/blog-posts.php" class="nav-link">Blog Posts</button>
+                <button type="submit" formaction="content/authors.php" class="nav-link">Authors</button>
+                <button type="submit" formaction="content/tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="content/games.php" class="nav-link">Games</button>
+                <button type="submit" formaction="content/directory-items.php" class="nav-link">Directory</button>
+                <button type="submit" formaction="content/ai-tools.php" class="nav-link">AI Tools</button>
+                <button type="submit" formaction="content/media.php" class="nav-link">Media</button>
+            </form>
         </nav>
 
         <div class="dashboard-grid">
             <div class="stat-card">
                 <h3>Stories</h3>
                 <div class="stat-number"><?php echo $stats['stories'] ?? 0; ?></div>
-                <a href="content/stories.php" class="form-submit">Manage Stories</a>
+                <form method="GET" action="content/stories.php">
+                    <button type="submit" class="form-submit">Manage Stories</button>
+                </form>
             </div>
             
             <div class="stat-card">
                 <h3>Blog Posts</h3>
                 <div class="stat-number"><?php echo $stats['blog_posts'] ?? 0; ?></div>
-                <a href="content/blog-posts.php" class="form-submit">Manage Posts</a>
+                <form method="GET" action="content/blog-posts.php">
+                    <button type="submit" class="form-submit">Manage Posts</button>
+                </form>
             </div>
             
             <div class="stat-card">
                 <h3>Authors</h3>
                 <div class="stat-number"><?php echo $stats['authors'] ?? 0; ?></div>
-                <a href="content/authors.php" class="form-submit">Manage Authors</a>
+                <form method="GET" action="content/authors.php">
+                    <button type="submit" class="form-submit">Manage Authors</button>
+                </form>
             </div>
             
             <div class="stat-card">
                 <h3>Games</h3>
                 <div class="stat-number"><?php echo $stats['games'] ?? 0; ?></div>
-                <a href="content/games.php" class="form-submit">Manage Games</a>
+                <form method="GET" action="content/games.php">
+                    <button type="submit" class="form-submit">Manage Games</button>
+                </form>
             </div>
             
             <div class="stat-card">
                 <h3>Directory Items</h3>
                 <div class="stat-number"><?php echo $stats['directory_items'] ?? 0; ?></div>
-                <a href="content/directory-items.php" class="form-submit">Manage Directory</a>
+                <form method="GET" action="content/directory-items.php">
+                    <button type="submit" class="form-submit">Manage Directory</button>
+                </form>
             </div>
             
             <div class="stat-card">
                 <h3>AI Tools</h3>
                 <div class="stat-number"><?php echo $stats['ai_tools'] ?? 0; ?></div>
-                <a href="content/ai-tools.php" class="form-submit">Manage AI Tools</a>
+                <form method="GET" action="content/ai-tools.php">
+                    <button type="submit" class="form-submit">Manage AI Tools</button>
+                </form>
             </div>
         </div>
 
@@ -208,5 +224,20 @@ try {
             </div>
         </div>
     </div>
+    <style>
+        .nav-link {
+            background: none;
+            border: none;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .nav-link:hover {
+            background: #f5f5f5;
+        }
+    </style>
 </body>
 </html>

@@ -89,7 +89,7 @@ EOT;
 
 safe_write_file(__DIR__ . '/admin/index.php', $index);
 
-// 3. Create login.php if it doesn't exist
+// 3. Create login.php
 $login = <<<'EOT'
 <?php
 session_start();
@@ -200,6 +200,7 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     color: #333;
+    background: #f8f9fa;
 }
 
 /* Forms */
@@ -229,6 +230,8 @@ body {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .form-submit:hover {
@@ -251,9 +254,45 @@ body {
     border-radius: 4px;
     margin-bottom: 20px;
 }
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Tables */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: bold;
+}
 EOT;
 
 safe_write_file(__DIR__ . '/admin/assets/css/main.css', $css);
+
+// 5. Create dashboard.php
+$dashboard = file_get_contents(__DIR__ . '/admin/dashboard.php');
+safe_write_file(__DIR__ . '/admin/dashboard.php', $dashboard);
+
+// 6. Create logout.php
+$logout = file_get_contents(__DIR__ . '/admin/logout.php');
+safe_write_file(__DIR__ . '/admin/logout.php', $logout);
 
 output("\nForced new admin interface!", 'success');
 output("Please:\n1. Clear your browser cache\n2. Visit /admin/login.php\n3. Verify JavaScript is blocked\n4. Test login functionality", 'info');

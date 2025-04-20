@@ -1,440 +1,142 @@
 <?php
-/**
- * Stories Admin Page
- * 
- * This page handles CRUD operations for stories.
- * 
- * @package Stories Admin
- * @version 1.0.0
- */
+require_once '../simple_auth.php';
 
-// Include required files
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/Database.php';
-require_once __DIR__ . '/includes/Auth.php';
-require_once __DIR__ . '/includes/ApiClient.php';
-require_once __DIR__ . '/includes/Validator.php';
-require_once __DIR__ . '/includes/FileUpload.php';
-require_once __DIR__ . '/includes/AdminPage.php';
-require_once __DIR__ . '/includes/CrudPage.php';
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
 
-/**
- * Stories Page Class
- */
-class StoriesPage extends CrudPage {
-    /**
-     * Constructor
-     */
-    public function __construct() {
-        parent::__construct();
-        
-        // Set page title
-        $this->pageTitle = 'Stories';
-        
-        // Set active menu
-        $this->activeMenu = 'stories';
-        
-        // Set entity name
-        $this->entityName = 'Story';
-        $this->entityNamePlural = 'Stories';
-        
-        // Set API endpoint
-        $this->endpoint = 'stories';
-        
-        // Set fields
-        $this->fields = [
-            [
-                'name' => 'title',
-                'label' => 'Title',
-                'type' => 'text',
-                'main' => true,
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => ''
-            ],
-            [
-                'name' => 'slug',
-                'label' => 'Slug',
-                'type' => 'text',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => '',
-                'help' => 'URL-friendly version of the title. Leave blank to generate automatically.'
-            ],
-            [
-                'name' => 'excerpt',
-                'label' => 'Excerpt',
-                'type' => 'textarea',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => '',
-                'help' => 'A short summary of the story.'
-            ],
-            [
-                'name' => 'content',
-                'label' => 'Content',
-                'type' => 'richtext',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => ''
-            ],
-            [
-                'name' => 'publishedAt',
-                'label' => 'Published Date',
-                'type' => 'datetime',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => date('Y-m-d H:i:s')
-            ],
-            [
-                'name' => 'featured',
-                'label' => 'Featured',
-                'type' => 'boolean',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => false,
-                'checkboxLabel' => 'Mark as featured'
-            ],
-            [
-                'name' => 'averageRating',
-                'label' => 'Average Rating',
-                'type' => 'number',
-                'list' => true,
-                'form' => false,
-                'view' => true,
-                'default' => 0,
-                'step' => 0.01,
-                'min' => 0,
-                'max' => 5
-            ],
-            [
-                'name' => 'reviewCount',
-                'label' => 'Review Count',
-                'type' => 'number',
-                'list' => false,
-                'form' => false,
-                'view' => true,
-                'default' => 0
-            ],
-            [
-                'name' => 'estimatedReadingTime',
-                'label' => 'Estimated Reading Time',
-                'type' => 'text',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => '',
-                'help' => 'e.g., "5 minutes"'
-            ],
-            [
-                'name' => 'isSponsored',
-                'label' => 'Sponsored',
-                'type' => 'boolean',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => false,
-                'checkboxLabel' => 'Mark as sponsored content'
-            ],
-            [
-                'name' => 'ageGroup',
-                'label' => 'Age Group',
-                'type' => 'text',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => '',
-                'help' => 'e.g., "5-8", "9-12", "13+"'
-            ],
-            [
-                'name' => 'needsModeration',
-                'label' => 'Needs Moderation',
-                'type' => 'boolean',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => true,
-                'checkboxLabel' => 'Requires moderation'
-            ],
-            [
-                'name' => 'isSelfPublished',
-                'label' => 'Self Published',
-                'type' => 'boolean',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => true,
-                'checkboxLabel' => 'Self-published content'
-            ],
-            [
-                'name' => 'isAIEnhanced',
-                'label' => 'AI Enhanced',
-                'type' => 'boolean',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => false,
-                'checkboxLabel' => 'Enhanced with AI'
-            ],
-            [
-                'name' => 'author',
-                'label' => 'Author',
-                'type' => 'relation',
-                'list' => true,
-                'form' => true,
-                'view' => true,
-                'default' => null,
-                'options' => []
-            ],
-            [
-                'name' => 'tags',
-                'label' => 'Tags',
-                'type' => 'relation',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => [],
-                'options' => []
-            ],
-            [
-                'name' => 'cover',
-                'label' => 'Cover Image',
-                'type' => 'image',
-                'list' => false,
-                'form' => true,
-                'view' => true,
-                'default' => null
-            ]
-        ];
-        
-        // Set required fields
-        $this->requiredFields = ['title', 'content', 'publishedAt'];
-        
-        // Set searchable fields
-        $this->searchableFields = ['title', 'excerpt', 'content'];
-        
-        // Set sortable fields
-        $this->sortableFields = ['id', 'title', 'publishedAt', 'featured', 'averageRating', 'needsModeration'];
-        
-        // Set default sort
-        $this->defaultSortField = 'publishedAt';
-        $this->defaultSortDirection = 'desc';
-    }
-    
-    /**
-     * Get create data
-     */
-    protected function getCreateData() {
-        parent::getCreateData();
-        
-        // Get authors for dropdown
-        $authors = $this->apiClient->get('authors', ['pageSize' => 100]);
-        $authorOptions = [];
-        
-        if ($authors && isset($authors['data'])) {
-            if (is_array($authors['data'])) {
-                foreach ($authors['data'] as $author) {
-                    if (isset($author['id'])) {
-                        $authorOptions[] = [
-                            'id' => $author['id'],
-                            'name' => isset($author['attributes']) && isset($author['attributes']['name']) 
-                                ? $author['attributes']['name'] 
-                                : ($author['name'] ?? 'Unknown')
-                        ];
-                    }
-                }
-            }
-        }
-        
-        // Update author field options
-        foreach ($this->fields as &$field) {
-            if ($field['name'] === 'author') {
-                $field['options'] = $authorOptions;
-                break;
-            }
-        }
-        
-        // Get tags for dropdown
-        $tags = $this->apiClient->get('tags', ['pageSize' => 100]);
-        $tagOptions = [];
-        
-        if ($tags && isset($tags['data'])) {
-            if (is_array($tags['data'])) {
-                foreach ($tags['data'] as $tag) {
-                    if (isset($tag['id'])) {
-                        $tagOptions[] = [
-                            'id' => $tag['id'],
-                            'name' => isset($tag['attributes']) && isset($tag['attributes']['name']) 
-                                ? $tag['attributes']['name'] 
-                                : ($tag['name'] ?? 'Unknown')
-                        ];
-                    }
-                }
-            }
-        }
-        
-        // Update tags field options
-        foreach ($this->fields as &$field) {
-            if ($field['name'] === 'tags') {
-                $field['options'] = $tagOptions;
-                break;
-            }
-        }
-    }
-    
-    /**
-     * Get edit data
-     */
-    protected function getEditData() {
-        parent::getEditData();
-        
-        // Get authors for dropdown
-        $authors = $this->apiClient->get('authors', ['pageSize' => 100]);
-        $authorOptions = [];
-        
-        if ($authors && isset($authors['data'])) {
-            if (is_array($authors['data'])) {
-                foreach ($authors['data'] as $author) {
-                    if (isset($author['id'])) {
-                        $authorOptions[] = [
-                            'id' => $author['id'],
-                            'name' => isset($author['attributes']) && isset($author['attributes']['name']) 
-                                ? $author['attributes']['name'] 
-                                : ($author['name'] ?? 'Unknown')
-                        ];
-                    }
-                }
-            }
-        }
-        
-        // Update author field options
-        foreach ($this->fields as &$field) {
-            if ($field['name'] === 'author') {
-                $field['options'] = $authorOptions;
-                break;
-            }
-        }
-        
-        // Get tags for dropdown
-        $tags = $this->apiClient->get('tags', ['pageSize' => 100]);
-        $tagOptions = [];
-        
-        if ($tags && isset($tags['data'])) {
-            if (is_array($tags['data'])) {
-                foreach ($tags['data'] as $tag) {
-                    if (isset($tag['id'])) {
-                        $tagOptions[] = [
-                            'id' => $tag['id'],
-                            'name' => isset($tag['attributes']) && isset($tag['attributes']['name']) 
-                                ? $tag['attributes']['name'] 
-                                : ($tag['name'] ?? 'Unknown')
-                        ];
-                    }
-                }
-            }
-        }
-        
-        // Update tags field options
-        foreach ($this->fields as &$field) {
-            if ($field['name'] === 'tags') {
-                $field['options'] = $tagOptions;
-                break;
-            }
-        }
-    }
-    
-    /**
-     * Handle create
-     */
-    protected function handleCreate() {
-        // Handle file upload
-        if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
-            // Create file upload instance
-            $fileUpload = new FileUpload($this->config['media']);
-            
-            // Upload file
-            $file = $fileUpload->upload($_FILES['cover'], 'story', 0, 'cover');
-            
-            if ($file) {
-                $_POST['cover'] = $file;
-            } else {
-                $this->errors = array_merge($this->errors, $fileUpload->getErrors());
-                return;
-            }
-        }
-        
-        // Generate slug if not provided
-        if (empty($_POST['slug']) && isset($_POST['title'])) {
-            $_POST['slug'] = Validator::generateSlug($_POST['title']);
-        }
-        
-        // Call parent method
-        parent::handleCreate();
-    }
-    
-    /**
-     * Handle edit
-     */
-    protected function handleEdit() {
-        // Handle file upload
-        if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
-            // Create file upload instance
-            $fileUpload = new FileUpload($this->config['media']);
-            
-            // Get item ID
-            $id = $this->getParam('id');
-            
-            // Upload file
-            $file = $fileUpload->upload($_FILES['cover'], 'story', $id, 'cover');
-            
-            if ($file) {
-                $_POST['cover'] = $file;
-            } else {
-                $this->errors = array_merge($this->errors, $fileUpload->getErrors());
-                return;
-            }
-        }
-        
-        // Generate slug if not provided
-        if (empty($_POST['slug']) && isset($_POST['title'])) {
-            $_POST['slug'] = Validator::generateSlug($_POST['title']);
-        }
-        
-        // Call parent method
-        parent::handleEdit();
-    }
-    
-    /**
-     * Get content template name
-     * 
-     * @return string Template name
-     */
-    protected function getContentTemplate() {
-        // Get current action
-        $action = $this->getParam('action', 'list');
-        
-        // Get template name based on action
-        switch ($action) {
-            case 'create':
-                return 'generic/form';
-            case 'edit':
-                return 'generic/form';
-            case 'view':
-                return 'generic/view';
-            case 'delete':
-                return 'generic/delete';
-            default:
-                return 'generic/list';
-        }
-    }
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if user is logged in
+if (!$user = SimpleAuth::check()) {
+    header("Location: login.php");
+    exit;
 }
 
-// Create and process the page
-$page = new StoriesPage();
-$page->process();
+try {
+    // Connect to database
+    $db = new PDO(
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+
+    // Get all stories
+    $stories = $db->query("SELECT * FROM stories ORDER BY created_at DESC")->fetchAll();
+
+} catch (PDOException $e) {
+    error_log("Stories page error: " . $e->getMessage());
+    $error = "Error loading stories. Please try again.";
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories - Admin</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
+            <form method="POST" action="logout.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
+            </form>
+        </div>
+
+        <nav class="nav-menu">
+            <form method="GET" style="display: inline;">
+                <button type="submit" formaction="dashboard.php" class="nav-link">Dashboard</button>
+                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
+                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
+                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="games.php" class="nav-link">Games</button>
+                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
+                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+            </form>
+        </nav>
+
+        <div class="content-header">
+            <h1>Stories</h1>
+            <form method="GET" action="story-form.php" style="display: inline;">
+                <button type="submit" class="form-submit">Add New Story</button>
+            </form>
+        </div>
+
+        <?php if (isset($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($stories as $story): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($story['title']); ?></td>
+                        <td><?php echo htmlspecialchars($story['author']); ?></td>
+                        <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
+                        <td>
+                            <form method="GET" action="story-form.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                <button type="submit" class="form-submit">Edit</button>
+                            </form>
+                            <form method="POST" action="delete-story.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                <button type="submit" class="form-submit" style="background: #dc3545;"
+                                        onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <style>
+        .nav-link {
+            background: none;
+            border: none;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .nav-link:hover {
+            background: #f5f5f5;
+        }
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .content-header h1 {
+            margin: 0;
+        }
+    </style>
+</body>
+</html>

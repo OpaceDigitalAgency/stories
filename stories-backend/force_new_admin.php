@@ -45,7 +45,73 @@ function safe_write_file($path, $content) {
     }
 }
 
-// 1. Force .htaccess rules
+// 0. Create required directories
+$dirs = [
+    __DIR__ . '/admin',
+    __DIR__ . '/admin/includes',
+    __DIR__ . '/admin/assets/css',
+    __DIR__ . '/admin/content',
+    __DIR__ . '/admin/logs'
+];
+
+foreach ($dirs as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+        output("Created directory: $dir", 'success');
+    }
+}
+
+// 1. Create config.php first
+$config = <<<'EOT'
+<?php
+// Database configuration
+$db_host = 'localhost';
+$db_name = 'stories';
+$db_user = 'stories_user';
+$db_pass = 'your_password_here';
+
+try {
+    $db = new PDO(
+        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+        $db_user,
+        $db_pass,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+} catch (PDOException $e) {
+    die('Database connection failed: ' . $e->getMessage());
+}
+
+// Site configuration
+define('SITE_URL', 'https://api.storiesfromtheweb.org');
+define('ADMIN_EMAIL', 'admin@storiesfromtheweb.org');
+define('SESSION_LIFETIME', 7200); // 2 hours
+
+// Session configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_secure', 1);
+session_set_cookie_params([
+    'lifetime' => SESSION_LIFETIME,
+    'path' => '/',
+    'domain' => 'api.storiesfromtheweb.org',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
+
+// Error reporting
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+ini_set('error_log', __DIR__ . '/../logs/error.log');
+EOT;
+
+safe_write_file(__DIR__ . '/admin/includes/config.php', $config);
+
+// 2. Force .htaccess rules
 $htaccess = <<<'EOT'
 # Block all JavaScript files
 <FilesMatch "\.js$">
@@ -76,11 +142,16 @@ DirectoryIndex login.php
     RewriteRule ^index\.php$ /admin/login.php [L,R=301]
     RewriteRule ^dashboard\.php$ /admin/login.php [L,R=301]
 </IfModule>
+
+# Protect session
+<IfModule mod_headers.c>
+    Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure;SameSite=Strict
+</IfModule>
 EOT;
 
 safe_write_file(__DIR__ . '/admin/.htaccess', $htaccess);
 
-// 2. Replace index.php with login redirect
+// 3. Replace index.php with login redirect
 $index = <<<'EOT'
 <?php
 header("Location: login.php");
@@ -89,105 +160,19 @@ EOT;
 
 safe_write_file(__DIR__ . '/admin/index.php', $index);
 
-// 3. Create login.php
-$login = <<<'EOT'
-<?php
-session_start();
-
-// If already logged in, redirect to dashboard
-if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
-    exit;
-}
-
-// Handle login attempt
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    require_once 'includes/config.php';
-    
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'admin' LIMIT 1");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
-    
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['last_activity'] = time();
-        header("Location: dashboard.php");
-        exit;
-    } else {
-        $error = 'Invalid credentials';
-    }
-}
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Stories Admin</title>
-    <link rel="stylesheet" href="assets/css/main.css">
-    <style>
-        body {
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .login-card {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-        .site-logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .site-logo img {
-            max-width: 200px;
-            height: auto;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-card">
-        <div class="site-logo">
-            <img src="/stories_from_the_web_transparent.png" alt="Stories from the Web">
-        </div>
-        
-        <?php if ($error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" action="login.php">
-            <div class="form-group">
-                <label class="form-label" for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-input" required>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input type="password" id="password" name="password" class="form-input" required>
-            </div>
-            
-            <button type="submit" class="form-submit" style="width: 100%;">Login</button>
-        </form>
-    </div>
-</body>
-</html>
-EOT;
-
+// 4. Create login.php
+$login = file_get_contents(__DIR__ . '/admin/login.php');
 safe_write_file(__DIR__ . '/admin/login.php', $login);
 
-// 4. Create main.css
+// 5. Create dashboard.php
+$dashboard = file_get_contents(__DIR__ . '/admin/dashboard.php');
+safe_write_file(__DIR__ . '/admin/dashboard.php', $dashboard);
+
+// 6. Create logout.php
+$logout = file_get_contents(__DIR__ . '/admin/logout.php');
+safe_write_file(__DIR__ . '/admin/logout.php', $logout);
+
+// 7. Create main.css
 $css = <<<'EOT'
 /* Reset */
 * {
@@ -286,13 +271,5 @@ EOT;
 
 safe_write_file(__DIR__ . '/admin/assets/css/main.css', $css);
 
-// 5. Create dashboard.php
-$dashboard = file_get_contents(__DIR__ . '/admin/dashboard.php');
-safe_write_file(__DIR__ . '/admin/dashboard.php', $dashboard);
-
-// 6. Create logout.php
-$logout = file_get_contents(__DIR__ . '/admin/logout.php');
-safe_write_file(__DIR__ . '/admin/logout.php', $logout);
-
 output("\nForced new admin interface!", 'success');
-output("Please:\n1. Clear your browser cache\n2. Visit /admin/login.php\n3. Verify JavaScript is blocked\n4. Test login functionality", 'info');
+output("Please:\n1. Update database credentials in includes/config.php\n2. Clear your browser cache\n3. Visit /admin/login.php\n4. Verify JavaScript is blocked\n5. Test login functionality", 'info');

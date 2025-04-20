@@ -1,0 +1,283 @@
+#!/bin/bash
+# Script to apply the Database.php fix
+
+# Set the path to the Database.php file
+DB_FILE="/home/stories/api.storiesfromtheweb.org/api/v1/Core/Database.php"
+BACKUP_FILE="/home/stories/api.storiesfromtheweb.org/api/v1/Core/Database.php.bak.$(date +%Y%m%d%H%M%S)"
+
+# Check if the file exists
+if [ ! -f "$DB_FILE" ]; then
+    echo "Error: Database.php file not found at $DB_FILE"
+    
+    # Try lowercase path
+    DB_FILE="/home/stories/api.storiesfromtheweb.org/api/v1/core/Database.php"
+    
+    if [ ! -f "$DB_FILE" ]; then
+        echo "Error: Database.php file not found at $DB_FILE either"
+        exit 1
+    fi
+    
+    BACKUP_FILE="/home/stories/api.storiesfromtheweb.org/api/v1/core/Database.php.bak.$(date +%Y%m%d%H%M%S)"
+    echo "Found Database.php at $DB_FILE"
+fi
+
+# Create a backup of the original file
+echo "Creating backup of original file at $BACKUP_FILE"
+cp "$DB_FILE" "$BACKUP_FILE"
+
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to create backup file"
+    exit 1
+fi
+
+echo "Backup created successfully"
+
+# Replace the file content
+echo "Replacing Database.php content..."
+
+cat > "$DB_FILE" << 'EOF'
+<?php
+/**
+ * Database Connection Class
+ * 
+ * This class handles the database connection and provides methods for
+ * executing queries with prepared statements for security.
+ * 
+ * @package Stories API
+ * @version 1.0.0
+ */
+
+namespace StoriesAPI\Core;
+
+use PDO;
+use PDOException;
+use Exception;
+
+class Database {
+    /**
+     * @var PDO The database connection
+     */
+    private $connection;
+    
+    /**
+     * @var array The database configuration
+     */
+    private $config;
+    
+    /**
+     * @var Database The singleton instance
+     */
+    private static $instance = null;
+    
+    /**
+     * Constructor - Private to enforce singleton pattern
+     * 
+     * @param array $config Database configuration
+     */
+    private function __construct(array $config) {
+        $this->config = $config;
+        $this->connect();
+    }
+    
+    /**
+     * Get the singleton instance
+     * 
+     * @param array $config Database configuration
+     * @return Database The database instance
+     */
+    public static function getInstance(array $config = null) {
+        if (self::$instance === null) {
+            if ($config === null) {
+                throw new Exception('Database configuration is required for the first initialization');
+            }
+            self::$instance = new self($config);
+        }
+        return self::$instance;
+    }
+    
+    /**
+     * Connect to the database
+     * 
+     * @throws PDOException If connection fails
+     */
+    private function connect() {
+        $dsn = "mysql:host={$this->config['host']};dbname={$this->config['name']};charset={$this->config['charset']};port={$this->config['port']}";
+        
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_PERSISTENT         => true,
+        ];
+        
+        // Enhanced logging for connection debugging
+        error_log("[DB CONNECTION ATTEMPT] Host: {$this->config['host']} | DB: {$this->config['name']} | User: {$this->config['user']} | Port: {$this->config['port']}");
+        
+        try {
+            $this->connection = new PDO($dsn, $this->config['user'], $this->config['password'], $options);
+            
+            if (!$this->connection) {
+                throw new \Exception('Database connection failed (no PDO handle)');
+            }
+            
+            error_log("[DB CONNECTION SUCCESS] Connected to database {$this->config['name']} as user {$this->config['user']}");
+        } catch (PDOException $e) {
+            // Log detailed error information for debugging
+            $errorMessage = "Database connection failed: " . $e->getMessage();
+            $errorCode = $e->getCode();
+            $errorFile = $e->getFile();
+            $errorLine = $e->getLine();
+            
+            error_log("[DB ERROR] Code: $errorCode | Message: $errorMessage | File: $errorFile | Line: $errorLine");
+            error_log("[DB CONFIG USED] Host: {$this->config['host']} | DB: {$this->config['name']} | User: {$this->config['user']} | Port: {$this->config['port']}");
+            
+            // Check for specific error conditions to provide more helpful messages
+            if (strpos($e->getMessage(), "Access denied") !== false) {
+                throw new Exception("Database authentication failed. Please check credentials.");
+            } elseif (strpos($e->getMessage(), "Unknown database") !== false) {
+                throw new Exception("Database not found. Please check database name.");
+            } elseif (strpos($e->getMessage(), "Connection refused") !== false) {
+                throw new Exception("Database server connection refused. Please check host and port.");
+            } else {
+                throw new Exception("Database connection failed. Please contact support with error code: " . date('YmdHis'));
+            }
+        }
+    }
+    
+    /**
+     * Get the database connection
+     * 
+     * @return PDO The database connection
+     */
+    public function getConnection() {
+        return $this->connection;
+    }
+    
+    /**
+     * Execute a query with parameters
+     * 
+     * @param string $query The SQL query
+     * @param array $params The parameters for the query
+     * @return \PDOStatement The prepared statement
+     * @throws Exception If query execution fails
+     */
+    public function query($query, $params = []) {
+        try {
+            $stmt = $this->connection->prepare($query);
+            $stmt->execute($params);
+            return $stmt;
+        } catch (PDOException $e) {
+            // Log detailed error information for debugging
+            $errorMessage = $e->getMessage();
+            $errorCode = $e->getCode();
+            $errorFile = $e->getFile();
+            $errorLine = $e->getLine();
+            
+            // Create a sanitized version of the query for logging (remove sensitive data)
+            $sanitizedQuery = preg_replace('/password\s*=\s*[^\s,)]+/i', 'password=***', $query);
+            
+            error_log("[QUERY ERROR] Code: $errorCode | Message: $errorMessage | Query: $sanitizedQuery | File: $errorFile | Line: $errorLine");
+            
+            // Check for specific error conditions
+            if ($e->getCode() == '23000') {
+                // Integrity constraint violation
+                if (strpos($errorMessage, "Duplicate entry") !== false) {
+                    throw new Exception("Record already exists with this information.");
+                } else {
+                    throw new Exception("Data integrity error. Please check your input.");
+                }
+            } elseif ($e->getCode() == '42S02') {
+                // Table not found
+                throw new Exception("Database schema error. Please contact support.");
+            } elseif ($e->getCode() == '42000') {
+                // Syntax error
+                throw new Exception("Database query syntax error. Please contact support.");
+            } else {
+                // Generic error with timestamp for log correlation
+                $errorId = date('YmdHis');
+                error_log("[ERROR ID: $errorId] " . $errorMessage);
+                
+                // Include more detailed error information for debugging
+                throw new Exception("Database operation failed. Reference ID: $errorId");
+            }
+        }
+    }
+    
+    /**
+     * Begin a transaction
+     * 
+     * @return bool True on success
+     */
+    public function beginTransaction() {
+        return $this->connection->beginTransaction();
+    }
+    
+    /**
+     * Commit a transaction
+     * 
+     * @return bool True on success
+     */
+    public function commit() {
+        return $this->connection->commit();
+    }
+    
+    /**
+     * Rollback a transaction
+     * 
+     * @return bool True on success
+     */
+    public function rollback() {
+        return $this->connection->rollBack();
+    }
+    
+    /**
+     * Get the last inserted ID
+     * 
+     * @return string The last inserted ID
+     */
+    public function lastInsertId() {
+        return $this->connection->lastInsertId();
+    }
+    
+    /**
+     * Close the database connection
+     */
+    public function close() {
+        $this->connection = null;
+    }
+    
+    /**
+     * Prevent cloning of the instance
+     */
+    private function __clone() {}
+    
+    /**
+     * Prevent unserialization of the instance
+     */
+    public function __wakeup() {
+        throw new Exception("Cannot unserialize singleton");
+    }
+}
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to replace Database.php content"
+    echo "Restoring backup..."
+    cp "$BACKUP_FILE" "$DB_FILE"
+    exit 1
+fi
+
+echo "Database.php content replaced successfully"
+
+# Set proper permissions
+echo "Setting proper permissions..."
+chmod 644 "$DB_FILE"
+
+echo "Fix applied successfully!"
+echo "You can now test the API endpoints:"
+echo "- https://api.storiesfromtheweb.org/api/v1/games"
+echo "- https://api.storiesfromtheweb.org/api/v1/directory-items"
+echo "- https://api.storiesfromtheweb.org/api/v1/ai-tools"
+echo ""
+echo "Then run the API format test:"
+echo "- https://api.storiesfromtheweb.org/test_api_format.php"

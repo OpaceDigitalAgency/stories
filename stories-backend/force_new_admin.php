@@ -63,40 +63,29 @@ foreach ($dirs as $dir) {
 
 // 1. Create or update config.php
 $configPath = __DIR__ . '/admin/includes/config.php';
-$existingConfig = [];
 
-// Try to get existing database credentials
-if (file_exists($configPath)) {
-    include $configPath;
-    $existingConfig = [
-        'db_host' => $db_host ?? 'localhost',
-        'db_name' => $db_name ?? 'stories',
-        'db_user' => $db_user ?? 'stories_user',
-        'db_pass' => $db_pass ?? 'your_password_here'
-    ];
-}
-
-$config = <<<EOT
+// Default database credentials for the Stories platform
+$config = <<<'EOT'
 <?php
 // Database configuration
-\$db_host = '{$existingConfig['db_host']}';
-\$db_name = '{$existingConfig['db_name']}';
-\$db_user = '{$existingConfig['db_user']}';
-\$db_pass = '{$existingConfig['db_pass']}';
+$db_host = 'localhost';
+$db_name = 'stories_fromtheweb';
+$db_user = 'stories_fromtheweb';
+$db_pass = 'stories_fromtheweb';
 
 try {
-    \$db = new PDO(
-        "mysql:host=\$db_host;dbname=\$db_name;charset=utf8mb4",
-        \$db_user,
-        \$db_pass,
+    $db = new PDO(
+        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+        $db_user,
+        $db_pass,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-} catch (PDOException \$e) {
-    die('Database connection failed: ' . \$e->getMessage());
+} catch (PDOException $e) {
+    die('Database connection failed: ' . $e->getMessage());
 }
 
 // Site configuration

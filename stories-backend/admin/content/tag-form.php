@@ -33,27 +33,25 @@ try {
         ]
     );
 
-    // Get all tags with usage counts
-    $query = "SELECT t.*, 
-              COUNT(DISTINCT st.story_id) as story_count,
-              COUNT(DISTINCT pt.post_id) as post_count
-              FROM tags t 
-              LEFT JOIN story_tags st ON t.id = st.tag_id
-              LEFT JOIN post_tags pt ON t.id = pt.tag_id
-              GROUP BY t.id
-              ORDER BY t.name ASC";
-    $tags = $db->query($query)->fetchAll();
+    // Get tag if editing
+    $tag = null;
+    if (isset($_GET['id'])) {
+        $stmt = $db->prepare("SELECT * FROM tags WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
+        $tag = $stmt->fetch();
+        
+        if (!$tag) {
+            header("Location: tags.php");
+            exit;
+        }
+    }
 
 } catch (PDOException $e) {
-    error_log("Tags page error: " . $e->getMessage());
-    $error = "Error loading tags. Please try again.";
+    error_log("Tag form error: " . $e->getMessage());
+    $error = "Error loading form data. Please try again.";
 }
 
-// Check for success/error messages
-if (isset($_SESSION['success'])) {
-    $success = $_SESSION['success'];
-    unset($_SESSION['success']);
-}
+// Check for error messages
 if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
@@ -64,7 +62,7 @@ if (isset($_SESSION['error'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tags - Admin</title>
+    <title><?php echo $tag ? 'Edit' : 'Add'; ?> Tag - Admin</title>
     <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
@@ -91,56 +89,45 @@ if (isset($_SESSION['error'])) {
         </nav>
 
         <div class="content-header">
-            <h1>Tags</h1>
-            <form method="GET" action="tag-form.php" style="display: inline;">
-                <button type="submit" class="form-submit">Add New Tag</button>
+            <h1><?php echo $tag ? 'Edit' : 'Add'; ?> Tag</h1>
+            <form method="GET" action="tags.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Tags</button>
             </form>
         </div>
-
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
 
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Slug</th>
-                    <th>Description</th>
-                    <th>Stories</th>
-                    <th>Blog Posts</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($tags as $tag): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($tag['name']); ?></td>
-                        <td><?php echo htmlspecialchars($tag['slug']); ?></td>
-                        <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . '...'); ?></td>
-                        <td><?php echo $tag['story_count']; ?></td>
-                        <td><?php echo $tag['post_count']; ?></td>
-                        <td>
-                            <form method="GET" action="tag-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <?php if ($tag['story_count'] == 0 && $tag['post_count'] == 0): ?>
-                                <form method="POST" action="delete-tag.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                    <button type="submit" class="form-submit" style="background: #dc3545;"
-                                            onclick="return confirm('Are you sure you want to delete this tag?')">Delete</button>
-                                </form>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <form method="POST" action="save-tag.php" class="content-form">
+            <?php if ($tag): ?>
+                <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+            <?php endif; ?>
+
+            <div class="form-group">
+                <label class="form-label" for="name">Name</label>
+                <input type="text" id="name" name="name" class="form-input" required
+                       value="<?php echo htmlspecialchars($tag['name'] ?? ''); ?>"
+                       onkeyup="generateSlug(this.value)">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="slug">Slug</label>
+                <input type="text" id="slug" name="slug" class="form-input" required
+                       value="<?php echo htmlspecialchars($tag['slug'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-input" rows="3"><?php 
+                    echo htmlspecialchars($tag['description'] ?? ''); 
+                ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="form-submit">Save Tag</button>
+            </div>
+        </form>
     </div>
     <style>
         .nav-link {
@@ -165,6 +152,21 @@ if (isset($_SESSION['error'])) {
         .content-header h1 {
             margin: 0;
         }
+        .content-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
+    <script>
+        function generateSlug(name) {
+            const slug = name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            document.getElementById('slug').value = slug;
+        }
+    </script>
 </body>
 </html>

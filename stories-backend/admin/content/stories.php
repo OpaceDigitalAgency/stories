@@ -33,12 +33,56 @@ try {
         ]
     );
 
-    // Get all stories
-    $stories = $db->query("SELECT * FROM stories ORDER BY created_at DESC")->fetchAll();
+    // Check if stories table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'stories'");
+    if ($stmt->rowCount() === 0) {
+        // Create stories table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS stories (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            author_id INT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
+
+    // Check if story_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_tags (
+            story_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (story_id, tag_id)
+        )");
+    }
+
+    // Get all stories with author names and tags
+    $query = "SELECT s.*, a.name as author_name, 
+              (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') 
+               FROM story_tags st 
+               JOIN tags t ON st.tag_id = t.id 
+               WHERE st.story_id = s.id) as tags
+              FROM stories s 
+              LEFT JOIN authors a ON s.author_id = a.id
+              ORDER BY s.created_at DESC";
+    $stories = $db->query($query)->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Stories page error: " . $e->getMessage());
     $error = "Error loading stories. Please try again.";
+    $stories = [];
+}
+
+// Check for success/error messages
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
+}
+if (isset($_SESSION['error'])) {
+    $error = $_SESSION['error'];
+    unset($_SESSION['error']);
 }
 ?>
 <!DOCTYPE html>
@@ -79,6 +123,10 @@ try {
             </form>
         </div>
 
+        <?php if (isset($success)): ?>
+            <div class="success"><?php echo htmlspecialchars($success); ?></div>
+        <?php endif; ?>
+
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
@@ -88,29 +136,39 @@ try {
                 <tr>
                     <th>Title</th>
                     <th>Author</th>
+                    <th>Tags</th>
                     <th>Created</th>
+                    <th>Updated</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($stories as $story): ?>
+                <?php if (empty($stories)): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($story['title']); ?></td>
-                        <td><?php echo htmlspecialchars($story['author']); ?></td>
-                        <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
-                        <td>
-                            <form method="GET" action="story-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <form method="POST" action="delete-story.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                <button type="submit" class="form-submit" style="background: #dc3545;"
-                                        onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
-                            </form>
-                        </td>
+                        <td colspan="6" class="text-center">No stories found. Add your first story!</td>
                     </tr>
-                <?php endforeach; ?>
+                <?php else: ?>
+                    <?php foreach ($stories as $story): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($story['title']); ?></td>
+                            <td><?php echo htmlspecialchars($story['author_name'] ?? 'Unknown'); ?></td>
+                            <td><?php echo htmlspecialchars($story['tags'] ?? ''); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($story['updated_at'])); ?></td>
+                            <td>
+                                <form method="GET" action="story-form.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                    <button type="submit" class="form-submit">Edit</button>
+                                </form>
+                                <form method="POST" action="delete-story.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                    <button type="submit" class="form-submit" style="background: #dc3545;"
+                                            onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -136,6 +194,10 @@ try {
         }
         .content-header h1 {
             margin: 0;
+        }
+        .text-center {
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </body>

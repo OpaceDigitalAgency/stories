@@ -33,20 +33,54 @@ try {
         ]
     );
 
+    // Check if tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS tags (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            slug VARCHAR(255) NOT NULL UNIQUE,
+            description TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
+
+    // Check if story_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_tags (
+            story_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (story_id, tag_id)
+        )");
+    }
+
+    // Check if post_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'post_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create post_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS post_tags (
+            post_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (post_id, tag_id)
+        )");
+    }
+
     // Get all tags with usage counts
     $query = "SELECT t.*, 
-              COUNT(DISTINCT st.story_id) as story_count,
-              COUNT(DISTINCT pt.post_id) as post_count
+              (SELECT COUNT(*) FROM story_tags WHERE tag_id = t.id) as story_count,
+              (SELECT COUNT(*) FROM post_tags WHERE tag_id = t.id) as post_count
               FROM tags t 
-              LEFT JOIN story_tags st ON t.id = st.tag_id
-              LEFT JOIN post_tags pt ON t.id = pt.tag_id
-              GROUP BY t.id
               ORDER BY t.name ASC";
     $tags = $db->query($query)->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Tags page error: " . $e->getMessage());
     $error = "Error loading tags. Please try again.";
+    $tags = [];
 }
 
 // Check for success/error messages
@@ -117,28 +151,34 @@ if (isset($_SESSION['error'])) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($tags as $tag): ?>
+                <?php if (empty($tags)): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($tag['name']); ?></td>
-                        <td><?php echo htmlspecialchars($tag['slug']); ?></td>
-                        <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . '...'); ?></td>
-                        <td><?php echo $tag['story_count']; ?></td>
-                        <td><?php echo $tag['post_count']; ?></td>
-                        <td>
-                            <form method="GET" action="tag-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <?php if ($tag['story_count'] == 0 && $tag['post_count'] == 0): ?>
-                                <form method="POST" action="delete-tag.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                    <button type="submit" class="form-submit" style="background: #dc3545;"
-                                            onclick="return confirm('Are you sure you want to delete this tag?')">Delete</button>
-                                </form>
-                            <?php endif; ?>
-                        </td>
+                        <td colspan="6" class="text-center">No tags found. Add your first tag!</td>
                     </tr>
-                <?php endforeach; ?>
+                <?php else: ?>
+                    <?php foreach ($tags as $tag): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($tag['name']); ?></td>
+                            <td><?php echo htmlspecialchars($tag['slug']); ?></td>
+                            <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . (strlen($tag['description'] ?? '') > 100 ? '...' : '')); ?></td>
+                            <td><?php echo $tag['story_count']; ?></td>
+                            <td><?php echo $tag['post_count']; ?></td>
+                            <td>
+                                <form method="GET" action="tag-form.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                                    <button type="submit" class="form-submit">Edit</button>
+                                </form>
+                                <?php if ($tag['story_count'] == 0 && $tag['post_count'] == 0): ?>
+                                    <form method="POST" action="delete-tag.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                                        <button type="submit" class="form-submit" style="background: #dc3545;"
+                                                onclick="return confirm('Are you sure you want to delete this tag?')">Delete</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -164,6 +204,10 @@ if (isset($_SESSION['error'])) {
         }
         .content-header h1 {
             margin: 0;
+        }
+        .text-center {
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </body>

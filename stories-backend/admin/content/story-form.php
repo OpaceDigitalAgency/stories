@@ -33,6 +33,31 @@ try {
         ]
     );
 
+    // Check if stories table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'stories'");
+    if ($stmt->rowCount() === 0) {
+        // Create stories table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS stories (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            author_id INT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
+
+    // Check if story_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_tags (
+            story_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (story_id, tag_id)
+        )");
+    }
+
     // Get story if editing
     $story = null;
     if (isset($_GET['id'])) {
@@ -47,9 +72,33 @@ try {
     }
 
     // Get authors for dropdown
+    $stmt = $db->query("SHOW TABLES LIKE 'authors'");
+    if ($stmt->rowCount() === 0) {
+        // Create authors table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS authors (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            bio TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
     $authors = $db->query("SELECT id, name FROM authors ORDER BY name")->fetchAll();
 
     // Get tags for dropdown
+    $stmt = $db->query("SHOW TABLES LIKE 'tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS tags (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            slug VARCHAR(255) NOT NULL UNIQUE,
+            description TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
     $tags = $db->query("SELECT id, name FROM tags ORDER BY name")->fetchAll();
 
     // Get story tags if editing
@@ -63,6 +112,12 @@ try {
 } catch (PDOException $e) {
     error_log("Story form error: " . $e->getMessage());
     $error = "Error loading form data. Please try again.";
+}
+
+// Check for error messages
+if (isset($_SESSION['error'])) {
+    $error = $_SESSION['error'];
+    unset($_SESSION['error']);
 }
 ?>
 <!DOCTYPE html>

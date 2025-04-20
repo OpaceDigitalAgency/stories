@@ -33,20 +33,48 @@ try {
         ]
     );
 
+    // Check if blog_posts table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
+    if ($stmt->rowCount() === 0) {
+        // Create blog_posts table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS blog_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            author_id INT NOT NULL,
+            content TEXT NOT NULL,
+            excerpt TEXT,
+            status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
+
+    // Check if post_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'post_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create post_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS post_tags (
+            post_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (post_id, tag_id)
+        )");
+    }
+
     // Get all blog posts with author names and tags
     $query = "SELECT bp.*, a.name as author_name, 
-              GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
+              (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') 
+               FROM post_tags pt 
+               JOIN tags t ON pt.tag_id = t.id 
+               WHERE pt.post_id = bp.id) as tags
               FROM blog_posts bp 
               LEFT JOIN authors a ON bp.author_id = a.id
-              LEFT JOIN post_tags pt ON bp.id = pt.post_id
-              LEFT JOIN tags t ON pt.tag_id = t.id
-              GROUP BY bp.id
               ORDER BY bp.created_at DESC";
     $posts = $db->query($query)->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Blog posts page error: " . $e->getMessage());
     $error = "Error loading blog posts. Please try again.";
+    $posts = [];
 }
 
 // Check for success/error messages
@@ -118,27 +146,33 @@ if (isset($_SESSION['error'])) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($posts as $post): ?>
+                <?php if (empty($posts)): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($post['title']); ?></td>
-                        <td><?php echo htmlspecialchars($post['author_name']); ?></td>
-                        <td><?php echo htmlspecialchars($post['tags'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($post['status']); ?></td>
-                        <td><?php echo date('M j, Y', strtotime($post['created_at'])); ?></td>
-                        <td><?php echo date('M j, Y', strtotime($post['updated_at'])); ?></td>
-                        <td>
-                            <form method="GET" action="post-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <form method="POST" action="delete-post.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
-                                <button type="submit" class="form-submit" style="background: #dc3545;"
-                                        onclick="return confirm('Are you sure you want to delete this post?')">Delete</button>
-                            </form>
-                        </td>
+                        <td colspan="7" class="text-center">No blog posts found. Add your first post!</td>
                     </tr>
-                <?php endforeach; ?>
+                <?php else: ?>
+                    <?php foreach ($posts as $post): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($post['title']); ?></td>
+                            <td><?php echo htmlspecialchars($post['author_name'] ?? 'Unknown'); ?></td>
+                            <td><?php echo htmlspecialchars($post['tags'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($post['status']); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($post['created_at'])); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($post['updated_at'])); ?></td>
+                            <td>
+                                <form method="GET" action="post-form.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
+                                    <button type="submit" class="form-submit">Edit</button>
+                                </form>
+                                <form method="POST" action="delete-post.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
+                                    <button type="submit" class="form-submit" style="background: #dc3545;"
+                                            onclick="return confirm('Are you sure you want to delete this post?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -164,6 +198,10 @@ if (isset($_SESSION['error'])) {
         }
         .content-header h1 {
             margin: 0;
+        }
+        .text-center {
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </body>

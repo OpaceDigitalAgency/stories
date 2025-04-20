@@ -33,20 +33,32 @@ try {
         ]
     );
 
+    // Check if authors table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'authors'");
+    if ($stmt->rowCount() === 0) {
+        // Create authors table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS authors (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            bio TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+    }
+
     // Get all authors with content counts
     $query = "SELECT a.*, 
-              COUNT(DISTINCT s.id) as story_count,
-              COUNT(DISTINCT bp.id) as post_count
+              (SELECT COUNT(*) FROM stories WHERE author_id = a.id) as story_count,
+              (SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id) as post_count
               FROM authors a 
-              LEFT JOIN stories s ON a.id = s.author_id
-              LEFT JOIN blog_posts bp ON a.id = bp.author_id
-              GROUP BY a.id
               ORDER BY a.name ASC";
     $authors = $db->query($query)->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Authors page error: " . $e->getMessage());
     $error = "Error loading authors. Please try again.";
+    $authors = [];
 }
 
 // Check for success/error messages
@@ -117,28 +129,34 @@ if (isset($_SESSION['error'])) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($authors as $author): ?>
+                <?php if (empty($authors)): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($author['name']); ?></td>
-                        <td><?php echo htmlspecialchars($author['email']); ?></td>
-                        <td><?php echo htmlspecialchars(substr($author['bio'] ?? '', 0, 100) . '...'); ?></td>
-                        <td><?php echo $author['story_count']; ?></td>
-                        <td><?php echo $author['post_count']; ?></td>
-                        <td>
-                            <form method="GET" action="author-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <?php if ($author['story_count'] == 0 && $author['post_count'] == 0): ?>
-                                <form method="POST" action="delete-author.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                    <button type="submit" class="form-submit" style="background: #dc3545;"
-                                            onclick="return confirm('Are you sure you want to delete this author?')">Delete</button>
-                                </form>
-                            <?php endif; ?>
-                        </td>
+                        <td colspan="6" class="text-center">No authors found. Add your first author!</td>
                     </tr>
-                <?php endforeach; ?>
+                <?php else: ?>
+                    <?php foreach ($authors as $author): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($author['name']); ?></td>
+                            <td><?php echo htmlspecialchars($author['email']); ?></td>
+                            <td><?php echo htmlspecialchars(substr($author['bio'] ?? '', 0, 100) . (strlen($author['bio'] ?? '') > 100 ? '...' : '')); ?></td>
+                            <td><?php echo $author['story_count']; ?></td>
+                            <td><?php echo $author['post_count']; ?></td>
+                            <td>
+                                <form method="GET" action="author-form.php" style="display: inline;">
+                                    <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+                                    <button type="submit" class="form-submit">Edit</button>
+                                </form>
+                                <?php if ($author['story_count'] == 0 && $author['post_count'] == 0): ?>
+                                    <form method="POST" action="delete-author.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+                                        <button type="submit" class="form-submit" style="background: #dc3545;"
+                                                onclick="return confirm('Are you sure you want to delete this author?')">Delete</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -164,6 +182,10 @@ if (isset($_SESSION['error'])) {
         }
         .content-header h1 {
             margin: 0;
+        }
+        .text-center {
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </body>

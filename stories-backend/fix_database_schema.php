@@ -63,6 +63,14 @@ try {
         output("Created stories table", 'success');
     }
     
+    // Check if author column exists in stories table
+    $hasAuthorColumn = false;
+    $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author'");
+    if ($stmt->rowCount() > 0) {
+        $hasAuthorColumn = true;
+        output("author column exists in stories table", 'info');
+    }
+    
     // Check if author_id column exists in stories table
     $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
     if ($stmt->rowCount() === 0) {
@@ -71,11 +79,17 @@ try {
         output("Added author_id column to stories table", 'success');
         
         // Update author_id based on author name if possible
-        $db->exec("UPDATE stories s 
-                  JOIN authors a ON s.author = a.name 
-                  SET s.author_id = a.id 
-                  WHERE s.author_id IS NULL");
-        output("Updated author_id values where possible", 'success');
+        if ($hasAuthorColumn) {
+            try {
+                $db->exec("UPDATE stories s 
+                          JOIN authors a ON s.author = a.name 
+                          SET s.author_id = a.id 
+                          WHERE s.author_id IS NULL");
+                output("Updated author_id values where possible", 'success');
+            } catch (PDOException $e) {
+                output("Could not update author_id values: " . $e->getMessage(), 'warning');
+            }
+        }
     } else {
         output("author_id column already exists in stories table", 'info');
     }

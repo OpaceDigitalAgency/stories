@@ -40,7 +40,6 @@ try {
         $db->exec("CREATE TABLE IF NOT EXISTS stories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
-            author VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
@@ -65,6 +64,14 @@ try {
         $columns[] = $row['Field'];
     }
 
+    // Determine the join condition based on available columns
+    $joinCondition = "1=0"; // Default to no join if neither column exists
+    if (in_array('author_id', $columns)) {
+        $joinCondition = "s.author_id = a.id";
+    } elseif (in_array('author', $columns)) {
+        $joinCondition = "s.author = a.name";
+    }
+
     // Get all stories with all available fields
     $query = "SELECT s.*, a.name as author_name, 
               (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') 
@@ -72,7 +79,7 @@ try {
                JOIN tags t ON st.tag_id = t.id 
                WHERE st.story_id = s.id) as tags
               FROM stories s 
-              LEFT JOIN authors a ON " . (in_array('author_id', $columns) ? "s.author_id = a.id" : "s.author = a.name") . "
+              LEFT JOIN authors a ON $joinCondition
               ORDER BY s.created_at DESC";
     $stories = $db->query($query)->fetchAll();
 

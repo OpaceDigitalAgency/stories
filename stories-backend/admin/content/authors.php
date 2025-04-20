@@ -47,10 +47,37 @@ try {
         )");
     }
 
+    // Check if stories table has author_id column
+    $hasStoriesAuthorId = false;
+    try {
+        $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+        $hasStoriesAuthorId = $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore
+    }
+
+    // Check if blog_posts table has author_id column
+    $hasBlogPostsAuthorId = false;
+    try {
+        $stmt = $db->query("SHOW COLUMNS FROM blog_posts LIKE 'author_id'");
+        $hasBlogPostsAuthorId = $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore
+    }
+
+    // Build the query based on available columns
+    $storyCountQuery = $hasStoriesAuthorId 
+        ? "(SELECT COUNT(*) FROM stories WHERE author_id = a.id)" 
+        : "0";
+    
+    $postCountQuery = $hasBlogPostsAuthorId 
+        ? "(SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id)" 
+        : "0";
+
     // Get all authors with content counts
     $query = "SELECT a.*, 
-              (SELECT COUNT(*) FROM stories WHERE author_id = a.id) as story_count,
-              (SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id) as post_count
+              $storyCountQuery as story_count,
+              $postCountQuery as post_count
               FROM authors a 
               ORDER BY a.name ASC";
     $authors = $db->query($query)->fetchAll();
@@ -186,6 +213,21 @@ if (isset($_SESSION['error'])) {
         .text-center {
             text-align: center;
             padding: 20px;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .table th {
+            background-color: #f5f5f5;
+        }
+        .table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
 </body>

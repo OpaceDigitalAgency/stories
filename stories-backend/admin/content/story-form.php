@@ -63,6 +63,13 @@ try {
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
         $columnInfo[$row['Field']] = $row;
+        
+        // Add required fields
+        if ($row['Null'] === 'NO' && $row['Default'] === null && !in_array($row['Field'], ['id', 'created_at', 'updated_at'])) {
+            if (!in_array($row['Field'], $requiredFields)) {
+                $requiredFields[] = $row['Field'];
+            }
+        }
     }
 
     // Get story if editing
@@ -160,7 +167,9 @@ if (isset($_SESSION['error'])) {
         <?php endif; ?>
 
         <div class="form-info">
-            <p><strong>Required fields:</strong> Title, Author, Content</p>
+            <p><strong>Required fields:</strong> <?php echo implode(', ', array_map(function($field) { 
+                return ucfirst(str_replace('_', ' ', $field)); 
+            }, $requiredFields)); ?></p>
         </div>
 
         <form method="POST" action="save-story.php" class="content-form">
@@ -203,11 +212,16 @@ if (isset($_SESSION['error'])) {
             <?php 
             // Check if slug field exists
             if (in_array('slug', $columns)): 
+                $isRequired = isset($columnInfo['slug']) && $columnInfo['slug']['Null'] === 'NO' && $columnInfo['slug']['Default'] === null;
             ?>
             <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
+                <label class="form-label" for="slug">
+                    Slug
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
                 <input type="text" id="slug" name="slug" class="form-input"
-                       value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
+                       value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>"
+                       <?php echo $isRequired ? 'required' : ''; ?>>
                 <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
             </div>
             <?php endif; ?>
@@ -215,10 +229,14 @@ if (isset($_SESSION['error'])) {
             <?php 
             // Check if featured field exists
             if (in_array('featured', $columns)): 
+                $isRequired = isset($columnInfo['featured']) && $columnInfo['featured']['Null'] === 'NO' && $columnInfo['featured']['Default'] === null;
             ?>
             <div class="form-group">
-                <label class="form-label" for="featured">Featured</label>
-                <select id="featured" name="featured" class="form-input">
+                <label class="form-label" for="featured">
+                    Featured
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
+                <select id="featured" name="featured" class="form-input" <?php echo $isRequired ? 'required' : ''; ?>>
                     <option value="0" <?php echo (isset($story['featured']) && $story['featured'] == 0) ? 'selected' : ''; ?>>No</option>
                     <option value="1" <?php echo (isset($story['featured']) && $story['featured'] == 1) ? 'selected' : ''; ?>>Yes</option>
                 </select>
@@ -226,13 +244,35 @@ if (isset($_SESSION['error'])) {
             <?php endif; ?>
 
             <?php 
-            // Check if published_at field exists
-            if (in_array('published_at', $columns)): 
+            // Check if is_sponsored field exists
+            if (in_array('is_sponsored', $columns)): 
+                $isRequired = isset($columnInfo['is_sponsored']) && $columnInfo['is_sponsored']['Null'] === 'NO' && $columnInfo['is_sponsored']['Default'] === null;
             ?>
             <div class="form-group">
-                <label class="form-label" for="published_at">Published at</label>
+                <label class="form-label" for="is_sponsored">
+                    Is Sponsored
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
+                <select id="is_sponsored" name="is_sponsored" class="form-input" <?php echo $isRequired ? 'required' : ''; ?>>
+                    <option value="0" <?php echo (isset($story['is_sponsored']) && $story['is_sponsored'] == 0) ? 'selected' : ''; ?>>No</option>
+                    <option value="1" <?php echo (isset($story['is_sponsored']) && $story['is_sponsored'] == 1) ? 'selected' : ''; ?>>Yes</option>
+                </select>
+            </div>
+            <?php endif; ?>
+
+            <?php 
+            // Check if published_at field exists
+            if (in_array('published_at', $columns)): 
+                $isRequired = isset($columnInfo['published_at']) && $columnInfo['published_at']['Null'] === 'NO' && $columnInfo['published_at']['Default'] === null;
+            ?>
+            <div class="form-group">
+                <label class="form-label" for="published_at">
+                    Published at
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
                 <input type="datetime-local" id="published_at" name="published_at" class="form-input"
-                       value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : date('Y-m-d\TH:i'); ?>">
+                       value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : date('Y-m-d\TH:i'); ?>"
+                       <?php echo $isRequired ? 'required' : ''; ?>>
                 <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
             </div>
             <?php endif; ?>
@@ -240,21 +280,30 @@ if (isset($_SESSION['error'])) {
             <?php 
             // Check if review_count field exists
             if (in_array('review_count', $columns)): 
+                $isRequired = isset($columnInfo['review_count']) && $columnInfo['review_count']['Null'] === 'NO' && $columnInfo['review_count']['Default'] === null;
             ?>
             <div class="form-group">
-                <label class="form-label" for="review_count">Review Count</label>
+                <label class="form-label" for="review_count">
+                    Review Count
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
                 <input type="number" id="review_count" name="review_count" class="form-input" min="0" step="1"
-                       value="<?php echo htmlspecialchars($story['review_count'] ?? '0'); ?>">
+                       value="<?php echo htmlspecialchars($story['review_count'] ?? '0'); ?>"
+                       <?php echo $isRequired ? 'required' : ''; ?>>
             </div>
             <?php endif; ?>
 
             <?php 
             // Check if average_rating field exists
             if (in_array('average_rating', $columns)): 
+                $isRequired = isset($columnInfo['average_rating']) && $columnInfo['average_rating']['Null'] === 'NO' && $columnInfo['average_rating']['Default'] === null;
             ?>
             <div class="form-group">
-                <label class="form-label" for="average_rating">Average Rating</label>
-                <select id="average_rating" name="average_rating" class="form-input">
+                <label class="form-label" for="average_rating">
+                    Average Rating
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
+                <select id="average_rating" name="average_rating" class="form-input" <?php echo $isRequired ? 'required' : ''; ?>>
                     <option value="0" <?php echo (isset($story['average_rating']) && $story['average_rating'] == 0) ? 'selected' : ''; ?>>0 - No Rating</option>
                     <option value="1" <?php echo (isset($story['average_rating']) && $story['average_rating'] == 1) ? 'selected' : ''; ?>>1 - Poor</option>
                     <option value="2" <?php echo (isset($story['average_rating']) && $story['average_rating'] == 2) ? 'selected' : ''; ?>>2 - Fair</option>
@@ -268,12 +317,56 @@ if (isset($_SESSION['error'])) {
             <?php 
             // Display remaining additional fields
             foreach ($additionalFields as $field): 
-                if (in_array($field, ['slug', 'featured', 'published_at', 'review_count', 'average_rating'])) continue;
+                if (in_array($field, ['slug', 'featured', 'is_sponsored', 'published_at', 'review_count', 'average_rating'])) continue;
+                
+                $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
+                $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
+                $isIntField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'int') !== false || strpos($columnInfo[$field]['Type'], 'tinyint') !== false);
+                $isDecimalField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'decimal') !== false || strpos($columnInfo[$field]['Type'], 'float') !== false || strpos($columnInfo[$field]['Type'], 'double') !== false);
+                $isEnumField = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'enum') !== false;
+                
+                // Extract enum values if it's an enum field
+                $enumValues = [];
+                if ($isEnumField && preg_match('/enum\((.*)\)/', $columnInfo[$field]['Type'], $matches)) {
+                    $enumString = $matches[1];
+                    preg_match_all("/'([^']*)'/", $enumString, $enumMatches);
+                    $enumValues = $enumMatches[1];
+                }
             ?>
                 <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo ucfirst(str_replace('_', ' ', $field)); ?></label>
-                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>">
+                    <label class="form-label" for="<?php echo $field; ?>">
+                        <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
+                        <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                    </label>
+                    
+                    <?php if ($isDateTime): ?>
+                        <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : date('Y-m-d\TH:i'); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                        <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+                    <?php elseif ($isEnumField && !empty($enumValues)): ?>
+                        <select id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input" <?php echo $isRequired ? 'required' : ''; ?>>
+                            <option value="">Select <?php echo ucfirst(str_replace('_', ' ', $field)); ?></option>
+                            <?php foreach ($enumValues as $value): ?>
+                                <option value="<?php echo $value; ?>"
+                                        <?php echo (isset($story[$field]) && $story[$field] == $value) ? 'selected' : ''; ?>>
+                                    <?php echo ucfirst($value); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php elseif ($isIntField): ?>
+                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input" min="0" step="1"
+                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <?php elseif ($isDecimalField): ?>
+                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input" min="0" step="0.1"
+                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <?php else: ?>
+                        <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
 

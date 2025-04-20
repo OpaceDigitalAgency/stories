@@ -49,6 +49,7 @@ try {
     $content = trim($_POST['content'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $featured = isset($_POST['featured']) ? (int)$_POST['featured'] : 0;
+    $is_sponsored = isset($_POST['is_sponsored']) ? (int)$_POST['is_sponsored'] : 0;
     $published_at = $_POST['published_at'] ?? '';
     $review_count = isset($_POST['review_count']) ? (int)$_POST['review_count'] : 0;
     $average_rating = isset($_POST['average_rating']) ? (float)$_POST['average_rating'] : 0;
@@ -70,9 +71,26 @@ try {
 
     // Get all columns from stories table
     $columns = [];
+    $columnInfo = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
+        $columnInfo[$row['Field']] = $row;
+    }
+
+    // Check for required fields
+    $requiredFields = ['title', 'author_id', 'content'];
+    foreach ($columnInfo as $field => $info) {
+        if ($info['Null'] === 'NO' && $info['Default'] === null && !in_array($field, ['id', 'created_at', 'updated_at'])) {
+            $requiredFields[] = $field;
+        }
+    }
+
+    // Validate all required fields
+    foreach ($requiredFields as $field) {
+        if (!isset($_POST[$field]) || $_POST[$field] === '') {
+            throw new Exception("Please fill in all required fields. Missing: " . ucfirst(str_replace('_', ' ', $field)));
+        }
     }
 
     // Generate slug from title if not provided
@@ -107,6 +125,11 @@ try {
         $data['featured'] = $featured;
     }
     
+    // Add is_sponsored if the column exists
+    if (in_array('is_sponsored', $columns)) {
+        $data['is_sponsored'] = $is_sponsored;
+    }
+    
     // Add published_at if the column exists
     if (in_array('published_at', $columns)) {
         if (!empty($published_at)) {
@@ -131,8 +154,28 @@ try {
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
-            $data[$key] = trim($value);
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'is_sponsored', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
+            // Handle integer fields
+            if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'int') !== false || strpos($columnInfo[$key]['Type'], 'tinyint') !== false)) {
+                $data[$key] = (int)$value;
+            }
+            // Handle decimal fields
+            else if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'decimal') !== false || strpos($columnInfo[$key]['Type'], 'float') !== false || strpos($columnInfo[$key]['Type'], 'double') !== false)) {
+                $data[$key] = (float)$value;
+            }
+            // Handle datetime fields
+            else if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
+                if (!empty($value)) {
+                    $date = new DateTime($value);
+                    $data[$key] = $date->format('Y-m-d H:i:s');
+                } else {
+                    $data[$key] = date('Y-m-d H:i:s');
+                }
+            }
+            // Handle other fields
+            else {
+                $data[$key] = trim($value);
+            }
         }
     }
 

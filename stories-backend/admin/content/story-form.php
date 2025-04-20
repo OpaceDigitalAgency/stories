@@ -49,9 +49,11 @@ try {
 
     // Get all columns from stories table
     $columns = [];
+    $columnInfo = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
+        $columnInfo[$row['Field']] = $row;
     }
 
     // Check if story_tags table exists
@@ -177,19 +179,23 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
+        <div class="form-info">
+            <p><strong>Required fields:</strong> Title, Author, Content</p>
+        </div>
+
         <form method="POST" action="save-story.php" class="content-form">
             <?php if ($story): ?>
                 <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
             <?php endif; ?>
 
             <div class="form-group">
-                <label class="form-label" for="title">Title</label>
+                <label class="form-label" for="title">Title <span class="required">*</span></label>
                 <input type="text" id="title" name="title" class="form-input" required
                        value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="author_id">Author</label>
+                <label class="form-label" for="author_id">Author <span class="required">*</span></label>
                 <select id="author_id" name="author_id" class="form-input" required>
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
@@ -208,7 +214,7 @@ if (isset($_SESSION['error'])) {
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="content">Content</label>
+                <label class="form-label" for="content">Content <span class="required">*</span></label>
                 <textarea id="content" name="content" class="form-input" rows="15" required><?php 
                     echo htmlspecialchars($story['content'] ?? ''); 
                 ?></textarea>
@@ -216,9 +222,25 @@ if (isset($_SESSION['error'])) {
 
             <?php foreach ($additionalFields as $field): ?>
                 <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo ucfirst(str_replace('_', ' ', $field)); ?></label>
-                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>">
+                    <?php 
+                    $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
+                    $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
+                    ?>
+                    <label class="form-label" for="<?php echo $field; ?>">
+                        <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
+                        <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                    </label>
+                    
+                    <?php if ($isDateTime): ?>
+                        <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : ''; ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                        <small>Format: YYYY-MM-DD HH:MM (leave empty for current date/time)</small>
+                    <?php else: ?>
+                        <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
 
@@ -299,6 +321,54 @@ if (isset($_SESSION['error'])) {
         .form-metadata p {
             margin: 5px 0;
         }
+        .form-info {
+            background: #e7f3ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .form-info p {
+            margin: 5px 0;
+        }
+        .required {
+            color: #dc3545;
+            margin-left: 3px;
+        }
+        small {
+            color: #666;
+            font-size: 12px;
+            display: block;
+            margin-top: 5px;
+        }
     </style>
+    <script>
+        // Auto-generate slug from title
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleInput = document.getElementById('title');
+            const slugInput = document.getElementById('slug');
+            
+            if (titleInput && slugInput) {
+                titleInput.addEventListener('input', function() {
+                    // Only auto-generate if slug is empty or hasn't been manually edited
+                    if (!slugInput.value || slugInput._autoGenerated) {
+                        const slug = titleInput.value
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '') // Remove special characters
+                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+                        
+                        slugInput.value = slug;
+                        slugInput._autoGenerated = true;
+                    }
+                });
+                
+                // Mark when user manually edits the slug
+                slugInput.addEventListener('input', function() {
+                    slugInput._autoGenerated = false;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -49,34 +49,12 @@ try {
     $content = trim($_POST['content'] ?? '');
     $excerpt = trim($_POST['excerpt'] ?? '');
     $status = $_POST['status'] ?? 'draft';
+    $slug = trim($_POST['slug'] ?? '');
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
-    if (empty($title) || empty($author_id) || empty($content)) {
+    if (empty($title) || empty($content)) {
         throw new Exception("Please fill in all required fields");
-    }
-
-    // Verify author exists
-    $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
-    $stmt->execute([$author_id]);
-    $author = $stmt->fetch();
-    if (!$author) {
-        throw new Exception("Selected author does not exist");
-    }
-
-    // Verify tags exist
-    if (!empty($tags)) {
-        $placeholders = str_repeat('?,', count($tags) - 1) . '?';
-        $stmt = $db->prepare("SELECT COUNT(*) FROM tags WHERE id IN ($placeholders)");
-        $stmt->execute($tags);
-        if ($stmt->fetchColumn() != count($tags)) {
-            throw new Exception("One or more selected tags do not exist");
-        }
-    }
-
-    // Validate status
-    if (!in_array($status, ['draft', 'published'])) {
-        throw new Exception("Invalid status value");
     }
 
     // Check if blog_posts table exists
@@ -122,9 +100,11 @@ try {
 
     // Get all columns from the blog table
     $columns = [];
+    $columnInfo = [];
     $stmt = $db->query("DESCRIBE $blogTableName");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
+        $columnInfo[$row['Field']] = $row;
     }
 
     // Check if author_id column exists
@@ -135,6 +115,93 @@ try {
     
     // Check if status column exists
     $hasStatusColumn = in_array('status', $columns);
+    
+    // Check if slug column exists
+    $hasSlugColumn = in_array('slug', $columns);
+
+    // Verify author exists if author_id is required
+    if ($hasAuthorIdColumn) {
+        if (empty($author_id)) {
+            throw new Exception("Please select an author");
+        }
+        
+        $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
+        $stmt->execute([$author_id]);
+        $author = $stmt->fetch();
+        if (!$author) {
+            throw new Exception("Selected author does not exist");
+        }
+    }
+
+    // Verify tags exist
+    if (!empty($tags)) {
+        $placeholders = str_repeat('?,', count($tags) - 1) . '?';
+        $stmt = $db->prepare("SELECT COUNT(*) FROM tags WHERE id IN ($placeholders)");
+        $stmt->execute($tags);
+        if ($stmt->fetchColumn() != count($tags)) {
+            throw new Exception("One or more selected tags do not exist");
+        }
+    }
+
+    // Validate status
+    if ($hasStatusColumn && !in_array($status, ['draft', 'published'])) {
+        throw new Exception("Invalid status value");
+    }
+
+    // Generate slug from title if not provided
+    if ($hasSlugColumn && empty($slug)) {
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+        $slug = trim($slug, '-');
+    }
+
+    // Generate excerpt from content if not provided
+    if ($hasExcerptColumn && empty($excerpt)) {
+        $excerpt = strip_tags($content);
+        if (strlen($excerpt) > 150) {
+            $excerpt = substr($excerpt, 0, 150) . '...';
+        }
+    }
+
+    // Prepare data for insert/update
+    $data = [
+        'title' => $title,
+        'content' => $content
+    ];
+    
+    if ($hasAuthorIdColumn) {
+        $data['author_id'] = $author_id;
+    }
+    
+    if ($hasExcerptColumn) {
+        $data['excerpt'] = $excerpt;
+    }
+    
+    if ($hasStatusColumn) {
+        $data['status'] = $status;
+    }
+    
+    if ($hasSlugColumn) {
+        $data['slug'] = $slug;
+    }
+
+    // Add any additional fields from the form
+    foreach ($_POST as $key => $value) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'slug', 'tags']) && in_array($key, $columns)) {
+            // Handle datetime fields
+            if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
+                if (!empty($value)) {
+                    // Convert HTML datetime-local format to MySQL datetime format
+                    $date = new DateTime($value);
+                    $data[$key] = $date->format('Y-m-d H:i:s');
+                } else if ($columnInfo[$key]['Null'] === 'NO' && $columnInfo[$key]['Default'] === null) {
+                    // If field is required and no value provided, use current datetime
+                    $data[$key] = date('Y-m-d H:i:s');
+                }
+            } else {
+                $data[$key] = trim($value);
+            }
+        }
+    }
 
     if ($id) {
         // Verify post exists
@@ -145,25 +212,12 @@ try {
         }
 
         // Update existing post
-        $setClause = ["title = ?"];
-        $params = [$title];
+        $setClause = [];
+        $params = [];
         
-        if ($hasAuthorIdColumn) {
-            $setClause[] = "author_id = ?";
-            $params[] = $author_id;
-        }
-        
-        $setClause[] = "content = ?";
-        $params[] = $content;
-        
-        if ($hasExcerptColumn) {
-            $setClause[] = "excerpt = ?";
-            $params[] = $excerpt;
-        }
-        
-        if ($hasStatusColumn) {
-            $setClause[] = "status = ?";
-            $params[] = $status;
+        foreach ($data as $key => $value) {
+            $setClause[] = "$key = ?";
+            $params[] = $value;
         }
         
         $setClause[] = "updated_at = NOW()";
@@ -180,40 +234,18 @@ try {
         $message = "Blog post updated successfully";
     } else {
         // Create new post
-        $columns = ["title"];
-        $placeholders = ["?"];
-        $params = [$title];
+        $columns = array_keys($data);
+        $placeholders = array_fill(0, count($columns), '?');
         
-        if ($hasAuthorIdColumn) {
-            $columns[] = "author_id";
-            $placeholders[] = "?";
-            $params[] = $author_id;
-        }
-        
-        $columns[] = "content";
-        $placeholders[] = "?";
-        $params[] = $content;
-        
-        if ($hasExcerptColumn) {
-            $columns[] = "excerpt";
-            $placeholders[] = "?";
-            $params[] = $excerpt;
-        }
-        
-        if ($hasStatusColumn) {
-            $columns[] = "status";
-            $placeholders[] = "?";
-            $params[] = $status;
-        }
-        
-        $columns[] = "created_at";
-        $columns[] = "updated_at";
-        $placeholders[] = "NOW()";
-        $placeholders[] = "NOW()";
+        // Add created_at and updated_at
+        $columns[] = 'created_at';
+        $columns[] = 'updated_at';
+        $placeholders[] = 'NOW()';
+        $placeholders[] = 'NOW()';
         
         $sql = "INSERT INTO $blogTableName (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute(array_values($data));
         $id = $db->lastInsertId();
 
         $message = "Blog post created successfully";

@@ -47,6 +47,7 @@ try {
     $title = trim($_POST['title'] ?? '');
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
+    $slug = trim($_POST['slug'] ?? '');
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
@@ -65,9 +66,11 @@ try {
 
     // Get all columns from stories table
     $columns = [];
+    $columnInfo = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
+        $columnInfo[$row['Field']] = $row;
     }
 
     // Check if author_id column exists in stories table
@@ -75,6 +78,15 @@ try {
     
     // Check if author column exists in stories table
     $hasAuthorColumn = in_array('author', $columns);
+    
+    // Check if slug column exists in stories table
+    $hasSlugColumn = in_array('slug', $columns);
+
+    // Generate slug from title if not provided
+    if ($hasSlugColumn && empty($slug)) {
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+        $slug = trim($slug, '-');
+    }
 
     // Prepare data for insert/update
     $data = [
@@ -91,11 +103,28 @@ try {
     if ($hasAuthorColumn) {
         $data['author'] = $author['name'];
     }
+    
+    // Add slug if the column exists
+    if ($hasSlugColumn) {
+        $data['slug'] = $slug;
+    }
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'tags']) && in_array($key, $columns)) {
-            $data[$key] = trim($value);
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'tags']) && in_array($key, $columns)) {
+            // Handle datetime fields
+            if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
+                if (!empty($value)) {
+                    // Convert HTML datetime-local format to MySQL datetime format
+                    $date = new DateTime($value);
+                    $data[$key] = $date->format('Y-m-d H:i:s');
+                } else if ($columnInfo[$key]['Null'] === 'NO' && $columnInfo[$key]['Default'] === null) {
+                    // If field is required and no value provided, use current datetime
+                    $data[$key] = date('Y-m-d H:i:s');
+                }
+            } else {
+                $data[$key] = trim($value);
+            }
         }
     }
 

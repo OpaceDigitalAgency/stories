@@ -76,9 +76,11 @@ try {
 
     // Get all columns from the blog table
     $columns = [];
+    $columnInfo = [];
     $stmt = $db->query("DESCRIBE $blogTableName");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
+        $columnInfo[$row['Field']] = $row;
     }
 
     // Check if author_id column exists
@@ -89,6 +91,9 @@ try {
     
     // Check if status column exists
     $hasStatusColumn = in_array('status', $columns);
+    
+    // Check if slug column exists
+    $hasSlugColumn = in_array('slug', $columns);
 
     // Get post if editing
     $post = null;
@@ -115,6 +120,14 @@ try {
         $stmt = $db->prepare("SELECT tag_id FROM $postTagsTableName WHERE post_id = ?");
         $stmt->execute([$post['id']]);
         $postTags = array_column($stmt->fetchAll(), 'tag_id');
+    }
+    
+    // Get additional fields from the database
+    $additionalFields = [];
+    foreach ($columns as $column) {
+        if (!in_array($column, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'created_at', 'updated_at'])) {
+            $additionalFields[] = $column;
+        }
     }
 
 } catch (PDOException $e) {
@@ -170,20 +183,34 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
+        <div class="form-info">
+            <p><strong>Required fields:</strong> Title<?php echo $hasAuthorIdColumn ? ', Author' : ''; ?>, Content</p>
+        </div>
+
         <form method="POST" action="save-post.php" class="content-form">
             <?php if ($post): ?>
                 <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
             <?php endif; ?>
 
             <div class="form-group">
-                <label class="form-label" for="title">Title</label>
+                <label class="form-label" for="title">Title <span class="required">*</span></label>
                 <input type="text" id="title" name="title" class="form-input" required
                        value="<?php echo htmlspecialchars($post['title'] ?? ''); ?>">
             </div>
 
+            <?php if ($hasSlugColumn): ?>
+            <div class="form-group">
+                <label class="form-label" for="slug">Slug</label>
+                <input type="text" id="slug" name="slug" class="form-input"
+                       value="<?php echo htmlspecialchars($post['slug'] ?? ''); ?>"
+                       placeholder="post-title-in-lowercase">
+                <small>Use lowercase letters, numbers, and hyphens only. No spaces. Will be auto-generated from title if left empty.</small>
+            </div>
+            <?php endif; ?>
+
             <?php if ($hasAuthorIdColumn): ?>
             <div class="form-group">
-                <label class="form-label" for="author_id">Author</label>
+                <label class="form-label" for="author_id">Author <span class="required">*</span></label>
                 <select id="author_id" name="author_id" class="form-input" required>
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
@@ -197,7 +224,7 @@ if (isset($_SESSION['error'])) {
             <?php endif; ?>
 
             <div class="form-group">
-                <label class="form-label" for="content">Content</label>
+                <label class="form-label" for="content">Content <span class="required">*</span></label>
                 <textarea id="content" name="content" class="form-input" rows="10" required><?php 
                     echo htmlspecialchars($post['content'] ?? ''); 
                 ?></textarea>
@@ -209,6 +236,7 @@ if (isset($_SESSION['error'])) {
                 <textarea id="excerpt" name="excerpt" class="form-input" rows="3"><?php 
                     echo htmlspecialchars($post['excerpt'] ?? ''); 
                 ?></textarea>
+                <small>A short summary of the post. If left empty, it will be auto-generated from the content.</small>
             </div>
             <?php endif; ?>
 
@@ -221,6 +249,30 @@ if (isset($_SESSION['error'])) {
                 </select>
             </div>
             <?php endif; ?>
+            
+            <?php foreach ($additionalFields as $field): ?>
+                <div class="form-group">
+                    <?php 
+                    $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
+                    $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
+                    ?>
+                    <label class="form-label" for="<?php echo $field; ?>">
+                        <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
+                        <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                    </label>
+                    
+                    <?php if ($isDateTime): ?>
+                        <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo isset($post[$field]) ? date('Y-m-d\TH:i', strtotime($post[$field])) : date('Y-m-d\TH:i'); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                        <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+                    <?php else: ?>
+                        <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                               value="<?php echo htmlspecialchars($post[$field] ?? ''); ?>"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
 
             <div class="form-group">
                 <label class="form-label">Tags</label>
@@ -239,6 +291,14 @@ if (isset($_SESSION['error'])) {
                 <button type="submit" class="form-submit">Save Post</button>
             </div>
         </form>
+        
+        <?php if ($post): ?>
+            <div class="form-metadata">
+                <p>Created: <?php echo date('M j, Y g:i A', strtotime($post['created_at'])); ?></p>
+                <p>Last Updated: <?php echo date('M j, Y g:i A', strtotime($post['updated_at'])); ?></p>
+                <p>ID: <?php echo $post['id']; ?></p>
+            </div>
+        <?php endif; ?>
     </div>
     <style>
         .nav-link {
@@ -268,6 +328,7 @@ if (isset($_SESSION['error'])) {
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .checkbox-group {
             display: grid;
@@ -279,6 +340,89 @@ if (isset($_SESSION['error'])) {
             align-items: center;
             gap: 5px;
         }
+        .form-metadata {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .form-metadata p {
+            margin: 5px 0;
+        }
+        .form-info {
+            background: #e7f3ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .form-info p {
+            margin: 5px 0;
+        }
+        .required {
+            color: #dc3545;
+            margin-left: 3px;
+        }
+        small {
+            color: #666;
+            font-size: 12px;
+            display: block;
+            margin-top: 5px;
+        }
     </style>
+    <script>
+        // Auto-generate slug from title
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleInput = document.getElementById('title');
+            const slugInput = document.getElementById('slug');
+            const excerptInput = document.getElementById('excerpt');
+            const contentInput = document.getElementById('content');
+            
+            if (titleInput && slugInput) {
+                titleInput.addEventListener('input', function() {
+                    // Only auto-generate if slug is empty or hasn't been manually edited
+                    if (!slugInput.value || slugInput._autoGenerated) {
+                        const slug = titleInput.value
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '') // Remove special characters
+                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+                        
+                        slugInput.value = slug;
+                        slugInput._autoGenerated = true;
+                    }
+                });
+                
+                // Mark when user manually edits the slug
+                slugInput.addEventListener('input', function() {
+                    slugInput._autoGenerated = false;
+                });
+            }
+            
+            // Auto-generate excerpt from content
+            if (contentInput && excerptInput) {
+                contentInput.addEventListener('input', function() {
+                    // Only auto-generate if excerpt is empty or hasn't been manually edited
+                    if (!excerptInput.value || excerptInput._autoGenerated) {
+                        // Get first 150 characters of content
+                        let excerpt = contentInput.value.replace(/<[^>]*>/g, '').trim();
+                        if (excerpt.length > 150) {
+                            excerpt = excerpt.substring(0, 150) + '...';
+                        }
+                        
+                        excerptInput.value = excerpt;
+                        excerptInput._autoGenerated = true;
+                    }
+                });
+                
+                // Mark when user manually edits the excerpt
+                excerptInput.addEventListener('input', function() {
+                    excerptInput._autoGenerated = false;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

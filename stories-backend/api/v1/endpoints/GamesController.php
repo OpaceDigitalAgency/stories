@@ -37,16 +37,19 @@ class GamesController extends BaseController {
         $filters = $this->getFilterParams($allowedFilterFields);
         
         try {
+            echo "<p>Building WHERE clause...</p>";
             // Build the WHERE clause
             $whereData = $this->buildWhereClause($filters);
             $whereClause = $whereData['clause'];
             $params = $whereData['params'];
+            echo "<p>WHERE clause built: $whereClause with params: " . json_encode($params) . "</p>";
             
             // Count total records
             $countQuery = "SELECT COUNT(*) as total FROM games $whereClause";
             echo "<p>Executing count query: $countQuery with params: " . json_encode($params) . "</p>";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
+            echo "<p>Total records: $total</p>";
             
             // Get games with pagination
             $query = "SELECT
@@ -60,9 +63,11 @@ class GamesController extends BaseController {
             echo "<p>Executing data query: $query with params: " . json_encode($params) . "</p>";
             $stmt = $this->db->query($query, $params);
             $games = $stmt->fetchAll();
+            echo "<p>Fetched games: " . json_encode($games) . "</p>";
             
             // Format games with the expected structure
             $formattedGames = Response::formatData($games);
+            echo "<p>Formatted games: " . json_encode($formattedGames) . "</p>";
             
             // Send paginated response
             Response::sendPaginated($formattedGames, $page, $pageSize, $total);

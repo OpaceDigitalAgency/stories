@@ -24,9 +24,9 @@ function output($message, $type = 'info') {
 
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories_fromtheweb';  // Changed to match config
-$db_user = 'stories_fromtheweb';  // Changed to match config
-$db_pass = 'stories_fromtheweb';  // Changed to match config
+$db_name = 'stories_db';     // Changed to match config
+$db_user = 'stories_user';   // Changed to match config
+$db_pass = '$tw1cac3*sOt';   // Changed to match config
 
 try {
     // Connect to database

@@ -1,9 +1,9 @@
 <?php
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories_fromtheweb';  // Changed to match original database name
-$db_user = 'stories_fromtheweb';  // Changed to match original user
-$db_pass = 'stories_fromtheweb';  // Changed to match original password
+$db_name = 'stories_db';     // Changed to match original config
+$db_user = 'stories_user';   // Changed to match original config
+$db_pass = '$tw1cac3*sOt';   // Changed to match original config
 
 try {
     $db = new PDO(

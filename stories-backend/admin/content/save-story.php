@@ -50,6 +50,9 @@ try {
     $slug = trim($_POST['slug'] ?? '');
     $featured = isset($_POST['featured']) ? $_POST['featured'] : 0;
     $published_at = $_POST['published_at'] ?? '';
+    $featured_image = $_POST['featured_image'] ?? null;
+    $review_count = isset($_POST['review_count']) ? $_POST['review_count'] : 0;
+    $average_rating = isset($_POST['average_rating']) ? $_POST['average_rating'] : 0;
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
@@ -89,6 +92,15 @@ try {
     
     // Check if published_at column exists in stories table
     $hasPublishedAtColumn = in_array('published_at', $columns);
+    
+    // Check if featured_image column exists in stories table
+    $hasFeaturedImageColumn = in_array('featured_image', $columns);
+    
+    // Check if review_count column exists in stories table
+    $hasReviewCountColumn = in_array('review_count', $columns);
+    
+    // Check if average_rating column exists in stories table
+    $hasAverageRatingColumn = in_array('average_rating', $columns);
 
     // Generate slug from title if not provided
     if ($hasSlugColumn && empty($slug)) {
@@ -142,10 +154,35 @@ try {
             $data['published_at'] = date('Y-m-d H:i:s');
         }
     }
+    
+    // Add featured_image if the column exists
+    if ($hasFeaturedImageColumn && !empty($featured_image)) {
+        $data['featured_image'] = $featured_image;
+    }
+    
+    // Add review_count if the column exists
+    if ($hasReviewCountColumn) {
+        // Ensure review_count is an integer
+        $data['review_count'] = intval($review_count);
+    }
+    
+    // Add average_rating if the column exists
+    if ($hasAverageRatingColumn) {
+        // Check if average_rating is a decimal field
+        $ratingType = isset($columnInfo['average_rating']) ? $columnInfo['average_rating']['Type'] : '';
+        $isDecimalField = strpos($ratingType, 'decimal') !== false || strpos($ratingType, 'float') !== false || strpos($ratingType, 'double') !== false;
+        
+        if ($isDecimalField) {
+            // Ensure average_rating is a decimal
+            $data['average_rating'] = floatval($average_rating);
+        } else {
+            $data['average_rating'] = $average_rating;
+        }
+    }
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'featured_image', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
             // Handle datetime fields
             if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
                 if (!empty($value)) {
@@ -156,7 +193,17 @@ try {
                     // If field is required and no value provided, use current datetime
                     $data[$key] = date('Y-m-d H:i:s');
                 }
-            } else {
+            } 
+            // Handle integer fields
+            else if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'int') !== false || strpos($columnInfo[$key]['Type'], 'tinyint') !== false)) {
+                $data[$key] = intval($value);
+            }
+            // Handle decimal fields
+            else if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'decimal') !== false || strpos($columnInfo[$key]['Type'], 'float') !== false || strpos($columnInfo[$key]['Type'], 'double') !== false)) {
+                $data[$key] = floatval($value);
+            }
+            // Handle other fields
+            else {
                 $data[$key] = trim($value);
             }
         }

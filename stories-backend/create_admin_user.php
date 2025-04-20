@@ -24,7 +24,7 @@ function output($message, $type = 'info') {
 
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories_db';
+$db_name = 'stories';
 $db_user = 'stories_user';
 $db_pass = '$tw1cac3*sOt';
 
@@ -44,11 +44,11 @@ try {
     // Current timestamp
     $now = date('Y-m-d H:i:s');
     
-    // Admin user details
+    // Admin user details - using existing credentials
     $admin = [
         'name' => 'Admin',
-        'email' => 'admin@storiesfromtheweb.org',
-        'password' => password_hash('admin123', PASSWORD_BCRYPT),
+        'email' => 'admin@example.com',  // Changed to match existing
+        'password' => password_hash('Pa55word!', PASSWORD_BCRYPT),  // Changed to match existing
         'role' => 'admin',
         'active' => 1,
         'created_at' => $now,
@@ -86,8 +86,8 @@ try {
     }
     
     output("\nAdmin login details:", 'info');
-    output("Email: admin@storiesfromtheweb.org", 'info');
-    output("Password: admin123", 'info');
+    output("Email: admin@example.com", 'info');
+    output("Password: Pa55word!", 'info');
     
 } catch (PDOException $e) {
     output("Database error: " . $e->getMessage(), 'error');

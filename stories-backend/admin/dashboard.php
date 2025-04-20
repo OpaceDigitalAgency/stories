@@ -1,5 +1,9 @@
 <?php
+require_once 'includes/config.php';
 session_start();
+
+// Debug session
+error_log("Session data: " . print_r($_SESSION, true));
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -7,26 +11,37 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'includes/config.php';
+try {
+    // Get user info
+    $stmt = $db->prepare("SELECT name, email FROM users WHERE id = ? AND active = 1");
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
 
-// Get user info
-$stmt = $db->prepare("SELECT name, email FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$user = $stmt->fetch();
+    if (!$user) {
+        // User not found or inactive, destroy session and redirect
+        session_destroy();
+        header("Location: login.php");
+        exit;
+    }
 
-// Get content statistics
-$stats = [
-    'stories' => $db->query("SELECT COUNT(*) FROM stories")->fetchColumn(),
-    'authors' => $db->query("SELECT COUNT(*) FROM authors")->fetchColumn(),
-    'blog_posts' => $db->query("SELECT COUNT(*) FROM blog_posts")->fetchColumn(),
-    'games' => $db->query("SELECT COUNT(*) FROM games")->fetchColumn(),
-    'directory_items' => $db->query("SELECT COUNT(*) FROM directory_items")->fetchColumn(),
-    'ai_tools' => $db->query("SELECT COUNT(*) FROM ai_tools")->fetchColumn()
-];
+    // Get content statistics
+    $stats = [
+        'stories' => $db->query("SELECT COUNT(*) FROM stories")->fetchColumn(),
+        'authors' => $db->query("SELECT COUNT(*) FROM authors")->fetchColumn(),
+        'blog_posts' => $db->query("SELECT COUNT(*) FROM blog_posts")->fetchColumn(),
+        'games' => $db->query("SELECT COUNT(*) FROM games")->fetchColumn(),
+        'directory_items' => $db->query("SELECT COUNT(*) FROM directory_items")->fetchColumn(),
+        'ai_tools' => $db->query("SELECT COUNT(*) FROM ai_tools")->fetchColumn()
+    ];
 
-// Get recent content
-$recentStories = $db->query("SELECT title, created_at FROM stories ORDER BY created_at DESC LIMIT 5")->fetchAll();
-$recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 5")->fetchAll();
+    // Get recent content
+    $recentStories = $db->query("SELECT title, created_at FROM stories ORDER BY created_at DESC LIMIT 5")->fetchAll();
+    $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 5")->fetchAll();
+
+} catch (PDOException $e) {
+    error_log("Dashboard error: " . $e->getMessage());
+    $error = "Error loading dashboard data. Please try again.";
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -102,6 +117,10 @@ $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY cre
             <a href="logout.php" class="form-submit" style="background: #dc3545;">Logout</a>
         </div>
 
+        <?php if (isset($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
         <nav class="nav-menu">
             <a href="content/stories.php">Stories</a>
             <a href="content/blog-posts.php">Blog Posts</a>
@@ -116,37 +135,37 @@ $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY cre
         <div class="dashboard-grid">
             <div class="stat-card">
                 <h3>Stories</h3>
-                <div class="stat-number"><?php echo $stats['stories']; ?></div>
+                <div class="stat-number"><?php echo $stats['stories'] ?? 0; ?></div>
                 <a href="content/stories.php" class="form-submit">Manage Stories</a>
             </div>
             
             <div class="stat-card">
                 <h3>Blog Posts</h3>
-                <div class="stat-number"><?php echo $stats['blog_posts']; ?></div>
+                <div class="stat-number"><?php echo $stats['blog_posts'] ?? 0; ?></div>
                 <a href="content/blog-posts.php" class="form-submit">Manage Posts</a>
             </div>
             
             <div class="stat-card">
                 <h3>Authors</h3>
-                <div class="stat-number"><?php echo $stats['authors']; ?></div>
+                <div class="stat-number"><?php echo $stats['authors'] ?? 0; ?></div>
                 <a href="content/authors.php" class="form-submit">Manage Authors</a>
             </div>
             
             <div class="stat-card">
                 <h3>Games</h3>
-                <div class="stat-number"><?php echo $stats['games']; ?></div>
+                <div class="stat-number"><?php echo $stats['games'] ?? 0; ?></div>
                 <a href="content/games.php" class="form-submit">Manage Games</a>
             </div>
             
             <div class="stat-card">
                 <h3>Directory Items</h3>
-                <div class="stat-number"><?php echo $stats['directory_items']; ?></div>
+                <div class="stat-number"><?php echo $stats['directory_items'] ?? 0; ?></div>
                 <a href="content/directory-items.php" class="form-submit">Manage Directory</a>
             </div>
             
             <div class="stat-card">
                 <h3>AI Tools</h3>
-                <div class="stat-number"><?php echo $stats['ai_tools']; ?></div>
+                <div class="stat-number"><?php echo $stats['ai_tools'] ?? 0; ?></div>
                 <a href="content/ai-tools.php" class="form-submit">Manage AI Tools</a>
             </div>
         </div>

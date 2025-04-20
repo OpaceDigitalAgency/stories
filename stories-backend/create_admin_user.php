@@ -24,9 +24,9 @@ function output($message, $type = 'info') {
 
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories';
-$db_user = 'stories_user';
-$db_pass = '$tw1cac3*sOt';
+$db_name = 'stories_fromtheweb';  // Changed to match config
+$db_user = 'stories_fromtheweb';  // Changed to match config
+$db_pass = 'stories_fromtheweb';  // Changed to match config
 
 try {
     // Connect to database
@@ -47,8 +47,8 @@ try {
     // Admin user details - using existing credentials
     $admin = [
         'name' => 'Admin',
-        'email' => 'admin@example.com',  // Changed to match existing
-        'password' => password_hash('Pa55word!', PASSWORD_BCRYPT),  // Changed to match existing
+        'email' => 'admin@example.com',  // Using existing admin email
+        'password' => password_hash('Pa55word!', PASSWORD_BCRYPT),  // Using existing admin password
         'role' => 'admin',
         'active' => 1,
         'created_at' => $now,

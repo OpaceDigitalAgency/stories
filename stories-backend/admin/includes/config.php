@@ -1,9 +1,9 @@
 <?php
 // Database configuration
 $db_host = 'localhost';
-$db_name = 'stories';
-$db_user = 'stories_user';
-$db_pass = 'your_password_here';
+$db_name = 'stories_fromtheweb';  // Changed to match original database name
+$db_user = 'stories_fromtheweb';  // Changed to match original user
+$db_pass = 'stories_fromtheweb';  // Changed to match original password
 
 try {
     $db = new PDO(
@@ -17,6 +17,7 @@ try {
         ]
     );
 } catch (PDOException $e) {
+    error_log("Database connection error: " . $e->getMessage());
     die('Database connection failed: ' . $e->getMessage());
 }
 

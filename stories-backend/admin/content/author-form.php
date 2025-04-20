@@ -33,27 +33,25 @@ try {
         ]
     );
 
-    // Get all authors with content counts
-    $query = "SELECT a.*, 
-              COUNT(DISTINCT s.id) as story_count,
-              COUNT(DISTINCT bp.id) as post_count
-              FROM authors a 
-              LEFT JOIN stories s ON a.id = s.author_id
-              LEFT JOIN blog_posts bp ON a.id = bp.author_id
-              GROUP BY a.id
-              ORDER BY a.name ASC";
-    $authors = $db->query($query)->fetchAll();
+    // Get author if editing
+    $author = null;
+    if (isset($_GET['id'])) {
+        $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
+        $author = $stmt->fetch();
+        
+        if (!$author) {
+            header("Location: authors.php");
+            exit;
+        }
+    }
 
 } catch (PDOException $e) {
-    error_log("Authors page error: " . $e->getMessage());
-    $error = "Error loading authors. Please try again.";
+    error_log("Author form error: " . $e->getMessage());
+    $error = "Error loading form data. Please try again.";
 }
 
-// Check for success/error messages
-if (isset($_SESSION['success'])) {
-    $success = $_SESSION['success'];
-    unset($_SESSION['success']);
-}
+// Check for error messages
 if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
@@ -64,7 +62,7 @@ if (isset($_SESSION['error'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authors - Admin</title>
+    <title><?php echo $author ? 'Edit' : 'Add'; ?> Author - Admin</title>
     <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
@@ -91,56 +89,44 @@ if (isset($_SESSION['error'])) {
         </nav>
 
         <div class="content-header">
-            <h1>Authors</h1>
-            <form method="GET" action="author-form.php" style="display: inline;">
-                <button type="submit" class="form-submit">Add New Author</button>
+            <h1><?php echo $author ? 'Edit' : 'Add'; ?> Author</h1>
+            <form method="GET" action="authors.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Authors</button>
             </form>
         </div>
-
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
 
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Bio</th>
-                    <th>Stories</th>
-                    <th>Blog Posts</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($authors as $author): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($author['name']); ?></td>
-                        <td><?php echo htmlspecialchars($author['email']); ?></td>
-                        <td><?php echo htmlspecialchars(substr($author['bio'] ?? '', 0, 100) . '...'); ?></td>
-                        <td><?php echo $author['story_count']; ?></td>
-                        <td><?php echo $author['post_count']; ?></td>
-                        <td>
-                            <form method="GET" action="author-form.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                <button type="submit" class="form-submit">Edit</button>
-                            </form>
-                            <?php if ($author['story_count'] == 0 && $author['post_count'] == 0): ?>
-                                <form method="POST" action="delete-author.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                    <button type="submit" class="form-submit" style="background: #dc3545;"
-                                            onclick="return confirm('Are you sure you want to delete this author?')">Delete</button>
-                                </form>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <form method="POST" action="save-author.php" class="content-form">
+            <?php if ($author): ?>
+                <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+            <?php endif; ?>
+
+            <div class="form-group">
+                <label class="form-label" for="name">Name</label>
+                <input type="text" id="name" name="name" class="form-input" required
+                       value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-input" required
+                       value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="bio">Bio</label>
+                <textarea id="bio" name="bio" class="form-input" rows="5"><?php 
+                    echo htmlspecialchars($author['bio'] ?? ''); 
+                ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="form-submit">Save Author</button>
+            </div>
+        </form>
     </div>
     <style>
         .nav-link {
@@ -164,6 +150,12 @@ if (isset($_SESSION['error'])) {
         }
         .content-header h1 {
             margin: 0;
+        }
+        .content-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </body>

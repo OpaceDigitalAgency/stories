@@ -44,6 +44,7 @@ class GamesController extends BaseController {
             
             // Count total records
             $countQuery = "SELECT COUNT(*) as total FROM games $whereClause";
+            echo "<p>Executing count query: $countQuery with params: " . json_encode($params) . "</p>";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
             
@@ -56,6 +57,7 @@ class GamesController extends BaseController {
                 $sortClause
                 LIMIT $offset, $pageSize";
             
+            echo "<p>Executing data query: $query with params: " . json_encode($params) . "</p>";
             $stmt = $this->db->query($query, $params);
             $games = $stmt->fetchAll();
             
@@ -65,6 +67,7 @@ class GamesController extends BaseController {
             // Send paginated response
             Response::sendPaginated($formattedGames, $page, $pageSize, $total);
         } catch (\Exception $e) {
+            echo "<p>Error fetching games: " . $e->getMessage() . "</p>";
             $this->serverError('Failed to fetch games: ' . $e->getMessage());
         }
     }

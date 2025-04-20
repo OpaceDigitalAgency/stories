@@ -24,6 +24,15 @@ class GamesController extends BaseController {
         $page = $pagination['page'];
         $pageSize = $pagination['pageSize'];
         $offset = ($page - 1) * $pageSize;
+        echo "<p>Connecting to database...</p>";
+        try {
+            $this->db->query("SELECT 1");
+            echo "<p>Database connection successful.</p>";
+        } catch (\Exception $e) {
+            echo "<p>Database connection failed: " . $e->getMessage() . "</p>";
+            $this->serverError('Database connection failed: ' . $e->getMessage());
+            return;
+        }
         
         // Get sort parameters
         $allowedSortFields = ['title', 'created_at'];

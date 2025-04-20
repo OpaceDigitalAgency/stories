@@ -40,11 +40,18 @@ try {
         $db->exec("CREATE TABLE IF NOT EXISTS stories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
-            author_id INT NOT NULL,
+            author VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
+    }
+
+    // Get all columns from stories table
+    $columns = [];
+    $stmt = $db->query("DESCRIBE stories");
+    while ($row = $stmt->fetch()) {
+        $columns[] = $row['Field'];
     }
 
     // Check if story_tags table exists
@@ -79,7 +86,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL,
-            bio TEXT,
+            bio TEXT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
@@ -94,7 +101,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             slug VARCHAR(255) NOT NULL UNIQUE,
-            description TEXT,
+            description TEXT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
@@ -107,6 +114,14 @@ try {
         $stmt = $db->prepare("SELECT tag_id FROM story_tags WHERE story_id = ?");
         $stmt->execute([$story['id']]);
         $storyTags = array_column($stmt->fetchAll(), 'tag_id');
+    }
+
+    // Get additional fields from the database
+    $additionalFields = [];
+    foreach ($columns as $column) {
+        if (!in_array($column, ['id', 'title', 'author', 'author_id', 'content', 'created_at', 'updated_at'])) {
+            $additionalFields[] = $column;
+        }
     }
 
 } catch (PDOException $e) {
@@ -179,7 +194,13 @@ if (isset($_SESSION['error'])) {
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
                         <option value="<?php echo $author['id']; ?>"
-                                <?php echo ($story['author_id'] ?? '') == $author['id'] ? 'selected' : ''; ?>>
+                                <?php 
+                                if (isset($story['author_id']) && $story['author_id'] == $author['id']) {
+                                    echo 'selected';
+                                } elseif (isset($story['author']) && $story['author'] == $author['name']) {
+                                    echo 'selected';
+                                }
+                                ?>>
                             <?php echo htmlspecialchars($author['name']); ?>
                         </option>
                     <?php endforeach; ?>
@@ -188,10 +209,18 @@ if (isset($_SESSION['error'])) {
 
             <div class="form-group">
                 <label class="form-label" for="content">Content</label>
-                <textarea id="content" name="content" class="form-input" rows="10" required><?php 
+                <textarea id="content" name="content" class="form-input" rows="15" required><?php 
                     echo htmlspecialchars($story['content'] ?? ''); 
                 ?></textarea>
             </div>
+
+            <?php foreach ($additionalFields as $field): ?>
+                <div class="form-group">
+                    <label class="form-label" for="<?php echo $field; ?>"><?php echo ucfirst(str_replace('_', ' ', $field)); ?></label>
+                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                           value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>">
+                </div>
+            <?php endforeach; ?>
 
             <div class="form-group">
                 <label class="form-label">Tags</label>
@@ -210,6 +239,14 @@ if (isset($_SESSION['error'])) {
                 <button type="submit" class="form-submit">Save Story</button>
             </div>
         </form>
+
+        <?php if ($story): ?>
+            <div class="form-metadata">
+                <p>Created: <?php echo date('M j, Y g:i A', strtotime($story['created_at'])); ?></p>
+                <p>Last Updated: <?php echo date('M j, Y g:i A', strtotime($story['updated_at'])); ?></p>
+                <p>ID: <?php echo $story['id']; ?></p>
+            </div>
+        <?php endif; ?>
     </div>
     <style>
         .nav-link {
@@ -239,6 +276,7 @@ if (isset($_SESSION['error'])) {
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .checkbox-group {
             display: grid;
@@ -249,6 +287,17 @@ if (isset($_SESSION['error'])) {
             display: flex;
             align-items: center;
             gap: 5px;
+        }
+        .form-metadata {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .form-metadata p {
+            margin: 5px 0;
         }
     </style>
 </body>

@@ -63,12 +63,35 @@ try {
         throw new Exception("Selected author does not exist");
     }
 
+    // Get all columns from stories table
+    $columns = [];
+    $stmt = $db->query("DESCRIBE stories");
+    while ($row = $stmt->fetch()) {
+        $columns[] = $row['Field'];
+    }
+
     // Check if author_id column exists in stories table
-    $hasAuthorIdColumn = true;
-    try {
-        $db->query("SELECT author_id FROM stories LIMIT 1");
-    } catch (PDOException $e) {
-        $hasAuthorIdColumn = false;
+    $hasAuthorIdColumn = in_array('author_id', $columns);
+
+    // Prepare data for insert/update
+    $data = [
+        'title' => $title,
+        'content' => $content
+    ];
+
+    // Add author data
+    if ($hasAuthorIdColumn) {
+        $data['author_id'] = $author_id;
+    }
+    
+    // Always include author name for backward compatibility
+    $data['author'] = $author['name'];
+
+    // Add any additional fields from the form
+    foreach ($_POST as $key => $value) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'tags']) && in_array($key, $columns)) {
+            $data[$key] = trim($value);
+        }
     }
 
     if ($id) {
@@ -80,13 +103,23 @@ try {
         }
 
         // Update existing story
-        if ($hasAuthorIdColumn) {
-            $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, author = ?, content = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$title, $author_id, $author['name'], $content, $id]);
-        } else {
-            $stmt = $db->prepare("UPDATE stories SET title = ?, author = ?, content = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$title, $author['name'], $content, $id]);
+        $setClause = [];
+        $updateData = [];
+        
+        foreach ($data as $key => $value) {
+            $setClause[] = "$key = ?";
+            $updateData[] = $value;
         }
+        
+        // Add updated_at
+        $setClause[] = "updated_at = NOW()";
+        
+        // Add ID at the end
+        $updateData[] = $id;
+        
+        $sql = "UPDATE stories SET " . implode(', ', $setClause) . " WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($updateData);
         
         // Delete existing tags
         $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
@@ -95,13 +128,18 @@ try {
         $message = "Story updated successfully";
     } else {
         // Create new story
-        if ($hasAuthorIdColumn) {
-            $stmt = $db->prepare("INSERT INTO stories (title, author_id, author, content, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
-            $stmt->execute([$title, $author_id, $author['name'], $content]);
-        } else {
-            $stmt = $db->prepare("INSERT INTO stories (title, author, content, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
-            $stmt->execute([$title, $author['name'], $content]);
-        }
+        $columns = array_keys($data);
+        $placeholders = array_fill(0, count($columns), '?');
+        
+        // Add created_at and updated_at
+        $columns[] = 'created_at';
+        $columns[] = 'updated_at';
+        $placeholders[] = 'NOW()';
+        $placeholders[] = 'NOW()';
+        
+        $sql = "INSERT INTO stories (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(array_values($data));
         $id = $db->lastInsertId();
 
         $message = "Story created successfully";

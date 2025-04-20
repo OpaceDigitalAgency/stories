@@ -40,7 +40,7 @@ try {
         $db->exec("CREATE TABLE IF NOT EXISTS stories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
-            author_id INT NOT NULL,
+            author VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
@@ -58,14 +58,21 @@ try {
         )");
     }
 
-    // Get all stories with author names and tags
+    // Get all columns from stories table
+    $columns = [];
+    $stmt = $db->query("DESCRIBE stories");
+    while ($row = $stmt->fetch()) {
+        $columns[] = $row['Field'];
+    }
+
+    // Get all stories with all available fields
     $query = "SELECT s.*, a.name as author_name, 
               (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') 
                FROM story_tags st 
                JOIN tags t ON st.tag_id = t.id 
                WHERE st.story_id = s.id) as tags
               FROM stories s 
-              LEFT JOIN authors a ON s.author_id = a.id
+              LEFT JOIN authors a ON " . (in_array('author_id', $columns) ? "s.author_id = a.id" : "s.author = a.name") . "
               ORDER BY s.created_at DESC";
     $stories = $db->query($query)->fetchAll();
 
@@ -131,46 +138,52 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>Tags</th>
-                    <th>Created</th>
-                    <th>Updated</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($stories)): ?>
+        <div class="table-container">
+            <table class="table">
+                <thead>
                     <tr>
-                        <td colspan="6" class="text-center">No stories found. Add your first story!</td>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Tags</th>
+                        <th>Content Preview</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($stories as $story): ?>
+                </thead>
+                <tbody>
+                    <?php if (empty($stories)): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($story['title']); ?></td>
-                            <td><?php echo htmlspecialchars($story['author_name'] ?? 'Unknown'); ?></td>
-                            <td><?php echo htmlspecialchars($story['tags'] ?? ''); ?></td>
-                            <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
-                            <td><?php echo date('M j, Y', strtotime($story['updated_at'])); ?></td>
-                            <td>
-                                <form method="GET" action="story-form.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                    <button type="submit" class="form-submit">Edit</button>
-                                </form>
-                                <form method="POST" action="delete-story.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                    <button type="submit" class="form-submit" style="background: #dc3545;"
-                                            onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
-                                </form>
-                            </td>
+                            <td colspan="8" class="text-center">No stories found. Add your first story!</td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php foreach ($stories as $story): ?>
+                            <tr>
+                                <td><?php echo $story['id']; ?></td>
+                                <td><?php echo htmlspecialchars($story['title']); ?></td>
+                                <td><?php echo htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown'); ?></td>
+                                <td><?php echo htmlspecialchars($story['tags'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars(substr($story['content'], 0, 100) . '...'); ?></td>
+                                <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
+                                <td><?php echo date('M j, Y', strtotime($story['updated_at'])); ?></td>
+                                <td>
+                                    <form method="GET" action="story-form.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                        <button type="submit" class="form-submit">Edit</button>
+                                    </form>
+                                    <form method="POST" action="delete-story.php" style="display: inline;">
+                                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                        <button type="submit" class="form-submit" style="background: #dc3545;"
+                                                onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
     <style>
         .nav-link {
@@ -198,6 +211,24 @@ if (isset($_SESSION['error'])) {
         .text-center {
             text-align: center;
             padding: 20px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .table th {
+            background-color: #f5f5f5;
+        }
+        .table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
 </body>

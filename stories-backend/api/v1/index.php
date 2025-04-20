@@ -57,6 +57,18 @@ $router->get('authors', 'StoriesAPI\Endpoints\AuthorsController', 'index');
 $router->get('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'show');
 $router->get('tags', 'StoriesAPI\Endpoints\TagsController', 'index');
 
+// Add routes for games
+$router->get('games', 'StoriesAPI\Endpoints\GamesController', 'index');
+$router->get('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'show');
+
+// Add routes for directory items
+$router->get('directory-items', 'StoriesAPI\Endpoints\DirectoryItemsController', 'index');
+$router->get('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'show');
+
+// Add routes for AI tools
+$router->get('ai-tools', 'StoriesAPI\Endpoints\AiToolsController', 'index');
+$router->get('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'show');
+
 // Protected routes (auth required)
 $router->post('stories', 'StoriesAPI\Endpoints\StoriesController', 'create', [$authMiddleware]);
 $router->put('stories/{id}', 'StoriesAPI\Endpoints\StoriesController', 'update', [$authMiddleware]);
@@ -69,6 +81,21 @@ $router->delete('authors/{id}', 'StoriesAPI\Endpoints\AuthorsController', 'delet
 $router->post('tags', 'StoriesAPI\Endpoints\TagsController', 'create', [$authMiddleware]);
 $router->put('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'update', [$authMiddleware]);
 $router->delete('tags/{id}', 'StoriesAPI\Endpoints\TagsController', 'delete', [$authMiddleware]);
+
+// Protected routes for games
+$router->post('games', 'StoriesAPI\Endpoints\GamesController', 'create', [$authMiddleware]);
+$router->put('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'update', [$authMiddleware]);
+$router->delete('games/{id}', 'StoriesAPI\Endpoints\GamesController', 'delete', [$authMiddleware]);
+
+// Protected routes for directory items
+$router->post('directory-items', 'StoriesAPI\Endpoints\DirectoryItemsController', 'create', [$authMiddleware]);
+$router->put('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'update', [$authMiddleware]);
+$router->delete('directory-items/{id}', 'StoriesAPI\Endpoints\DirectoryItemsController', 'delete', [$authMiddleware]);
+
+// Protected routes for AI tools
+$router->post('ai-tools', 'StoriesAPI\Endpoints\AiToolsController', 'create', [$authMiddleware]);
+$router->put('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'update', [$authMiddleware]);
+$router->delete('ai-tools/{id}', 'StoriesAPI\Endpoints\AiToolsController', 'delete', [$authMiddleware]);
 
 // Handle the request
 try {

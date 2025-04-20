@@ -1,79 +1,62 @@
 <?php
-require_once '../includes/auth.php';
-$auth = new Auth($db);
-$auth->requireLogin();
+require_once '../../simple_auth.php';
 
-// Get action from URL
-$action = $_GET['action'] ?? 'list';
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
 
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $message = '';
-    
-    switch ($_POST['action']) {
-        case 'create':
-            $stmt = $db->prepare("INSERT INTO blog_posts (title, slug, excerpt, content, published_at) VALUES (?, ?, ?, ?, ?)");
-            if ($stmt->execute([
-                $_POST['title'],
-                $_POST['slug'],
-                $_POST['excerpt'],
-                $_POST['content'],
-                $_POST['published_at']
-            ])) {
-                $message = '<div class="success">Blog post created successfully</div>';
-                header('Location: /admin/content/blog-posts.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-            
-        case 'update':
-            $stmt = $db->prepare("UPDATE blog_posts SET title = ?, slug = ?, excerpt = ?, content = ?, published_at = ? WHERE id = ?");
-            if ($stmt->execute([
-                $_POST['title'],
-                $_POST['slug'],
-                $_POST['excerpt'],
-                $_POST['content'],
-                $_POST['published_at'],
-                $_POST['id']
-            ])) {
-                $message = '<div class="success">Blog post updated successfully</div>';
-                header('Location: /admin/content/blog-posts.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-            
-        case 'delete':
-            $stmt = $db->prepare("DELETE FROM blog_posts WHERE id = ?");
-            if ($stmt->execute([$_POST['id']])) {
-                $message = '<div class="success">Blog post deleted successfully</div>';
-                header('Location: /admin/content/blog-posts.php?message=' . urlencode($message));
-                exit;
-            }
-            break;
-    }
-    
-    if (!$message) {
-        $message = '<div class="error">Operation failed</div>';
-    }
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if user is logged in
+if (!$user = SimpleAuth::check()) {
+    header("Location: ../login.php");
+    exit;
 }
 
-// Get blog post for edit form
-$post = null;
-if ($action === 'edit' && isset($_GET['id'])) {
-    $stmt = $db->prepare("SELECT * FROM blog_posts WHERE id = ?");
-    $stmt->execute([$_GET['id']]);
-    $post = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$post) {
-        header('Location: /admin/content/blog-posts.php?message=' . urlencode('<div class="error">Blog post not found</div>'));
-        exit;
-    }
+try {
+    // Connect to database
+    $db = new PDO(
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+
+    // Get all blog posts with author names and tags
+    $query = "SELECT bp.*, a.name as author_name, 
+              GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
+              FROM blog_posts bp 
+              LEFT JOIN authors a ON bp.author_id = a.id
+              LEFT JOIN post_tags pt ON bp.id = pt.post_id
+              LEFT JOIN tags t ON pt.tag_id = t.id
+              GROUP BY bp.id
+              ORDER BY bp.created_at DESC";
+    $posts = $db->query($query)->fetchAll();
+
+} catch (PDOException $e) {
+    error_log("Blog posts page error: " . $e->getMessage());
+    $error = "Error loading blog posts. Please try again.";
 }
 
-// Get all blog posts for list view
-$posts = [];
-if ($action === 'list') {
-    $stmt = $db->query("SELECT * FROM blog_posts ORDER BY created_at DESC");
-    $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Check for success/error messages
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
+}
+if (isset($_SESSION['error'])) {
+    $error = $_SESSION['error'];
+    unset($_SESSION['error']);
 }
 ?>
 <!DOCTYPE html>
@@ -81,110 +64,107 @@ if ($action === 'list') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Blog Posts - Admin</title>
-    <link rel="stylesheet" href="/admin/assets/css/main.css">
+    <title>Blog Posts - Admin</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
-    <nav class="nav">
-        <ul class="nav-list">
-            <li class="nav-item"><a href="/admin/index.php" class="nav-link">Dashboard</a></li>
-            <li class="nav-item dropdown">
-                <a href="#" class="nav-link">Content</a>
-                <div class="dropdown-content">
-                    <a href="/admin/content/stories.php" class="nav-link">Stories</a>
-                    <a href="/admin/content/blog-posts.php" class="nav-link">Blog Posts</a>
-                    <a href="/admin/content/games.php" class="nav-link">Games</a>
-                </div>
-            </li>
-            <li class="nav-item"><a href="/admin/logout.php" class="nav-link">Logout</a></li>
-        </ul>
-    </nav>
-
     <div class="container">
-        <?php if (isset($_GET['message'])): ?>
-            <?php echo $_GET['message']; ?>
+        <div class="user-info">
+            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
+            <form method="POST" action="../logout.php" style="display: inline;">
+                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
+            </form>
+        </div>
+
+        <nav class="nav-menu">
+            <form method="GET" style="display: inline;">
+                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
+                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
+                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
+                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="games.php" class="nav-link">Games</button>
+                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
+                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+            </form>
+        </nav>
+
+        <div class="content-header">
+            <h1>Blog Posts</h1>
+            <form method="GET" action="post-form.php" style="display: inline;">
+                <button type="submit" class="form-submit">Add New Post</button>
+            </form>
+        </div>
+
+        <?php if (isset($success)): ?>
+            <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
 
-        <?php if ($action === 'list'): ?>
-            <div class="card">
-                <h1 class="card-title">Blog Posts</h1>
-                <a href="?action=add" class="form-submit" style="display: inline-block; margin-bottom: 20px;">Add New Blog Post</a>
-                
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Published</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($posts as $item): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($item['title']); ?></td>
-                                <td><?php echo htmlspecialchars($item['published_at']); ?></td>
-                                <td>
-                                    <a href="?action=edit&id=<?php echo $item['id']; ?>" class="form-submit">Edit</a>
-                                    <form method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure?');">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                        <button type="submit" class="form-submit" style="background: #dc3545;">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+        <?php if (isset($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <?php if ($action === 'add' || $action === 'edit'): ?>
-            <div class="card">
-                <h1 class="card-title"><?php echo $action === 'add' ? 'Add New Blog Post' : 'Edit Blog Post'; ?></h1>
-                
-                <form method="POST">
-                    <input type="hidden" name="action" value="<?php echo $action === 'add' ? 'create' : 'update'; ?>">
-                    <?php if ($action === 'edit'): ?>
-                        <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="title">Title</label>
-                        <input type="text" id="title" name="title" class="form-input" required 
-                               value="<?php echo $action === 'edit' ? htmlspecialchars($post['title']) : ''; ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="slug">Slug</label>
-                        <input type="text" id="slug" name="slug" class="form-input" required 
-                               value="<?php echo $action === 'edit' ? htmlspecialchars($post['slug']) : ''; ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="excerpt">Excerpt</label>
-                        <textarea id="excerpt" name="excerpt" class="form-input" rows="3"><?php 
-                            echo $action === 'edit' ? htmlspecialchars($post['excerpt']) : ''; 
-                        ?></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="content">Content</label>
-                        <textarea id="content" name="content" class="form-input" rows="10" required><?php 
-                            echo $action === 'edit' ? htmlspecialchars($post['content']) : ''; 
-                        ?></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="published_at">Publish Date</label>
-                        <input type="datetime-local" id="published_at" name="published_at" class="form-input" required
-                               value="<?php echo $action === 'edit' ? date('Y-m-d\TH:i', strtotime($post['published_at'])) : ''; ?>">
-                    </div>
-                    
-                    <button type="submit" class="form-submit">Save Blog Post</button>
-                    <a href="/admin/content/blog-posts.php" class="form-submit" style="background: #6c757d;">Cancel</a>
-                </form>
-            </div>
-        <?php endif; ?>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Tags</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($posts as $post): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($post['title']); ?></td>
+                        <td><?php echo htmlspecialchars($post['author_name']); ?></td>
+                        <td><?php echo htmlspecialchars($post['tags'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($post['status']); ?></td>
+                        <td><?php echo date('M j, Y', strtotime($post['created_at'])); ?></td>
+                        <td><?php echo date('M j, Y', strtotime($post['updated_at'])); ?></td>
+                        <td>
+                            <form method="GET" action="post-form.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
+                                <button type="submit" class="form-submit">Edit</button>
+                            </form>
+                            <form method="POST" action="delete-post.php" style="display: inline;">
+                                <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
+                                <button type="submit" class="form-submit" style="background: #dc3545;"
+                                        onclick="return confirm('Are you sure you want to delete this post?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
+    <style>
+        .nav-link {
+            background: none;
+            border: none;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .nav-link:hover {
+            background: #f5f5f5;
+        }
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .content-header h1 {
+            margin: 0;
+        }
+    </style>
 </body>
 </html>

@@ -1,9 +1,21 @@
 <?php
-require_once 'includes/config.php';
-session_start();
+require_once '../simple_auth.php';
 
-// If already logged in, redirect to dashboard
-if (isset($_SESSION['user_id'])) {
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
+
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if already logged in
+if (SimpleAuth::check()) {
     header("Location: dashboard.php");
     exit;
 }
@@ -14,38 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     
-    try {
-        // Get user by email
-        $stmt = $db->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'admin' AND active = 1 LIMIT 1");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
-        
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['last_activity'] = time();
-            
-            // Regenerate session ID for security
-            session_regenerate_id(true);
-            
-            header("Location: dashboard.php");
-            exit;
-        } else {
-            $error = 'Invalid email or password';
-        }
-    } catch (PDOException $e) {
-        error_log("Login error: " . $e->getMessage());
-        $error = 'Login failed. Please try again.';
-    }
-}
-
-// For debugging
-if (isset($db)) {
-    try {
-        $stmt = $db->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
-        $adminCount = $stmt->fetchColumn();
-        error_log("Number of admin users: " . $adminCount);
-    } catch (PDOException $e) {
-        error_log("Debug query error: " . $e->getMessage());
+    if ($user = SimpleAuth::login($email, $password)) {
+        header("Location: dashboard.php");
+        exit;
+    } else {
+        $error = 'Invalid email or password';
+        error_log("Login failed for email: $email");
     }
 }
 ?>

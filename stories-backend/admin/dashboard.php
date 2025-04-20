@@ -1,30 +1,38 @@
 <?php
-require_once 'includes/config.php';
-session_start();
+require_once '../simple_auth.php';
 
-// Debug session
-error_log("Session data: " . print_r($_SESSION, true));
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
+
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
 
 // Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
+if (!$user = SimpleAuth::check()) {
     header("Location: login.php");
     exit;
 }
 
 try {
-    // Get user info
-    $stmt = $db->prepare("SELECT name, email FROM users WHERE id = ? AND active = 1");
-    $stmt->execute([$_SESSION['user_id']]);
-    $user = $stmt->fetch();
-
-    if (!$user) {
-        // User not found or inactive, destroy session and redirect
-        session_destroy();
-        header("Location: login.php");
-        exit;
-    }
-
     // Get content statistics
+    $db = new PDO(
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+
     $stats = [
         'stories' => $db->query("SELECT COUNT(*) FROM stories")->fetchColumn(),
         'authors' => $db->query("SELECT COUNT(*) FROM authors")->fetchColumn(),

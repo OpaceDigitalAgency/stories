@@ -1,16 +1,21 @@
 <?php
-session_start();
+require_once '../simple_auth.php';
 
-// Clear all session data
-$_SESSION = array();
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
 
-// Destroy the session cookie
-if (isset($_COOKIE[session_name()])) {
-    setcookie(session_name(), '', time() - 3600, '/');
-}
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
 
-// Destroy the session
-session_destroy();
+// Logout user
+SimpleAuth::logout();
 
 // Redirect to login page
 header("Location: login.php");

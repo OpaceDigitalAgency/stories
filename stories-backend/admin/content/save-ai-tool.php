@@ -46,7 +46,7 @@ try {
     $id = $_POST['id'] ?? null;
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $category_id = $_POST['category_id'] ?? null;
+    $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
     $tool_url = trim($_POST['tool_url'] ?? '');
     $pricing_type = $_POST['pricing_type'] ?? 'free';
     $price_info = trim($_POST['price_info'] ?? '');

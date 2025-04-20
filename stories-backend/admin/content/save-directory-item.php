@@ -46,7 +46,7 @@ try {
     $id = $_POST['id'] ?? null;
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $category_id = $_POST['category_id'] ?? null;
+    $category_id = !empty($_POST['category_id']) ? $_POST['category_id'] : null;
     $website_url = trim($_POST['website_url'] ?? '');
     $contact_email = trim($_POST['contact_email'] ?? '');
     $contact_phone = trim($_POST['contact_phone'] ?? '');

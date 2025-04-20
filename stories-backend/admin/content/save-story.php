@@ -48,6 +48,8 @@ try {
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
+    $featured = isset($_POST['featured']) ? $_POST['featured'] : 0;
+    $published_at = $_POST['published_at'] ?? '';
     $tags = $_POST['tags'] ?? [];
 
     // Validate required fields
@@ -81,6 +83,12 @@ try {
     
     // Check if slug column exists in stories table
     $hasSlugColumn = in_array('slug', $columns);
+    
+    // Check if featured column exists in stories table
+    $hasFeaturedColumn = in_array('featured', $columns);
+    
+    // Check if published_at column exists in stories table
+    $hasPublishedAtColumn = in_array('published_at', $columns);
 
     // Generate slug from title if not provided
     if ($hasSlugColumn && empty($slug)) {
@@ -108,10 +116,36 @@ try {
     if ($hasSlugColumn) {
         $data['slug'] = $slug;
     }
+    
+    // Add featured if the column exists
+    if ($hasFeaturedColumn) {
+        // Check if featured is an integer field
+        $featuredType = isset($columnInfo['featured']) ? $columnInfo['featured']['Type'] : '';
+        $isIntField = strpos($featuredType, 'int') !== false || strpos($featuredType, 'tinyint') !== false;
+        
+        if ($isIntField) {
+            // Ensure featured is an integer
+            $data['featured'] = empty($featured) ? 0 : 1;
+        } else {
+            $data['featured'] = $featured;
+        }
+    }
+    
+    // Add published_at if the column exists
+    if ($hasPublishedAtColumn) {
+        if (!empty($published_at)) {
+            // Convert HTML datetime-local format to MySQL datetime format
+            $date = new DateTime($published_at);
+            $data['published_at'] = $date->format('Y-m-d H:i:s');
+        } else {
+            // Use current datetime if empty
+            $data['published_at'] = date('Y-m-d H:i:s');
+        }
+    }
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'published_at', 'tags']) && in_array($key, $columns)) {
             // Handle datetime fields
             if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
                 if (!empty($value)) {

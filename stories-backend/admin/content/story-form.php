@@ -220,7 +220,50 @@ if (isset($_SESSION['error'])) {
                 ?></textarea>
             </div>
 
-            <?php foreach ($additionalFields as $field): ?>
+            <?php 
+            // Check if featured field exists
+            $hasFeaturedField = in_array('featured', $columns);
+            if ($hasFeaturedField): 
+                $featuredType = isset($columnInfo['featured']) ? $columnInfo['featured']['Type'] : '';
+                $isIntField = strpos($featuredType, 'int') !== false || strpos($featuredType, 'tinyint') !== false;
+            ?>
+            <div class="form-group">
+                <label class="form-label" for="featured">Featured</label>
+                <?php if ($isIntField): ?>
+                <select id="featured" name="featured" class="form-input">
+                    <option value="0" <?php echo (isset($story['featured']) && $story['featured'] == 0) ? 'selected' : ''; ?>>No</option>
+                    <option value="1" <?php echo (isset($story['featured']) && $story['featured'] == 1) ? 'selected' : ''; ?>>Yes</option>
+                </select>
+                <?php else: ?>
+                <input type="text" id="featured" name="featured" class="form-input"
+                       value="<?php echo htmlspecialchars($story['featured'] ?? ''); ?>">
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php 
+            // Check if published_at field exists
+            $hasPublishedAtField = in_array('published_at', $columns);
+            if ($hasPublishedAtField): 
+                $isRequired = isset($columnInfo['published_at']) && $columnInfo['published_at']['Null'] === 'NO' && $columnInfo['published_at']['Default'] === null;
+            ?>
+            <div class="form-group">
+                <label class="form-label" for="published_at">
+                    Published at
+                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                </label>
+                <input type="datetime-local" id="published_at" name="published_at" class="form-input"
+                       value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : date('Y-m-d\TH:i'); ?>"
+                       <?php echo $isRequired ? 'required' : ''; ?>>
+                <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+            </div>
+            <?php endif; ?>
+
+            <?php 
+            // Display remaining additional fields, excluding featured and published_at which we handled separately
+            foreach ($additionalFields as $field): 
+                if ($field === 'featured' || $field === 'published_at') continue;
+            ?>
                 <div class="form-group">
                     <?php 
                     $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
@@ -233,9 +276,9 @@ if (isset($_SESSION['error'])) {
                     
                     <?php if ($isDateTime): ?>
                         <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                               value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : ''; ?>"
+                               value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : date('Y-m-d\TH:i'); ?>"
                                <?php echo $isRequired ? 'required' : ''; ?>>
-                        <small>Format: YYYY-MM-DD HH:MM (leave empty for current date/time)</small>
+                        <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
                     <?php else: ?>
                         <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
                                value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"

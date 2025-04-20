@@ -60,22 +60,7 @@ class GamesController extends BaseController {
             $games = $stmt->fetchAll();
             
             // Format games with the expected structure
-            $formattedGames = [];
-            foreach ($games as $game) {
-                $formattedGames[] = [
-                    'id' => $game['id'],
-                    'attributes' => [
-                        'title' => $game['title'],
-                        'description' => $game['description'],
-                        'slug' => $game['slug'],
-                        'featured' => (bool)$game['featured'],
-                        'isPublished' => (bool)$game['is_published'],
-                        'publishedAt' => $game['publishedAt'],
-                        'createdAt' => $game['createdAt'],
-                        'updatedAt' => $game['updatedAt']
-                    ]
-                ];
-            }
+            $formattedGames = Response::formatData($games);
             
             // Send paginated response
             Response::sendPaginated($formattedGames, $page, $pageSize, $total);

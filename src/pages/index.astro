@@ -8,10 +8,11 @@ import SponsoredCarousel from '../components/SponsoredCarousel.astro';
 import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
+import ApiErrorMessage from '../components/ApiErrorMessage.astro';
 import { fetchFromApi } from '../lib/api';
 import '../styles/base.css';
 
-// Dynamic data arrays fetched from Strapi
+// Dynamic data arrays fetched from API
 let featuredStories = [];
 let mostLovedStories = [];
 let latestSelfPublishedStories = [];
@@ -19,7 +20,13 @@ let aiEnhancedStories = [];
 let sponsoredStories = [];
 let featuredAuthors = [];
 
+// Track API errors
+let apiError = false;
+let apiErrorDetails = null;
+let apiErrorEndpoint = null;
+
 try {
+  console.log('Fetching data from API...');
   // Fetch featured stories
   const featuredStoriesResponse = await fetchFromApi('stories', {
     filters: {
@@ -159,7 +166,10 @@ try {
     }
   })) || [];
 } catch (error) {
-  console.error('Error fetching data from Strapi:', error);
+  console.error('Error fetching data from API:', error);
+  apiError = true;
+  apiErrorDetails = error;
+  apiErrorEndpoint = error.endpoint || 'API';
 }
 ---
 
@@ -190,6 +200,11 @@ try {
     <NavHeader />
     
     <main class="flex-grow">
+      {apiError && (
+        <div class="container mx-auto px-4 py-4">
+          <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />
+        </div>
+      )}
       <!-- Hero Section (static design) -->
       <section class="relative py-16 md:py-24 overflow-hidden">
         <!-- Decorative blobs -->

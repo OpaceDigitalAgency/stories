@@ -33,18 +33,59 @@ try {
         ]
     );
 
+    // Initialize stats array
     $stats = [
-        'stories' => $db->query("SELECT COUNT(*) FROM stories")->fetchColumn(),
-        'authors' => $db->query("SELECT COUNT(*) FROM authors")->fetchColumn(),
-        'blog_posts' => $db->query("SELECT COUNT(*) FROM blog_posts")->fetchColumn(),
-        'games' => $db->query("SELECT COUNT(*) FROM games")->fetchColumn(),
-        'directory_items' => $db->query("SELECT COUNT(*) FROM directory_items")->fetchColumn(),
-        'ai_tools' => $db->query("SELECT COUNT(*) FROM ai_tools")->fetchColumn()
+        'stories' => 0,
+        'authors' => 0,
+        'blog_posts' => 0,
+        'games' => 0,
+        'directory_items' => 0,
+        'ai_tools' => 0
     ];
 
+    // Check if tables exist before querying
+    $tables = [
+        'stories',
+        'authors',
+        'blog_posts',
+        'games',
+        'directory_items',
+        'ai_tools'
+    ];
+
+    foreach ($tables as $table) {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$table'");
+            if ($stmt->rowCount() > 0) {
+                $stats[$table] = $db->query("SELECT COUNT(*) FROM $table")->fetchColumn();
+            }
+        } catch (PDOException $e) {
+            // Ignore errors for tables that don't exist
+            error_log("Dashboard error checking table $table: " . $e->getMessage());
+        }
+    }
+
     // Get recent content
-    $recentStories = $db->query("SELECT title, created_at FROM stories ORDER BY created_at DESC LIMIT 5")->fetchAll();
-    $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 5")->fetchAll();
+    $recentStories = [];
+    $recentPosts = [];
+
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'stories'");
+        if ($stmt->rowCount() > 0) {
+            $recentStories = $db->query("SELECT title, created_at FROM stories ORDER BY created_at DESC LIMIT 5")->fetchAll();
+        }
+    } catch (PDOException $e) {
+        error_log("Error getting recent stories: " . $e->getMessage());
+    }
+
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
+        if ($stmt->rowCount() > 0) {
+            $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 5")->fetchAll();
+        }
+    } catch (PDOException $e) {
+        error_log("Error getting recent posts: " . $e->getMessage());
+    }
 
 } catch (PDOException $e) {
     error_log("Dashboard error: " . $e->getMessage());
@@ -147,7 +188,7 @@ try {
         <div class="dashboard-grid">
             <div class="stat-card">
                 <h3>Stories</h3>
-                <div class="stat-number"><?php echo $stats['stories'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['stories']; ?></div>
                 <form method="GET" action="content/stories.php">
                     <button type="submit" class="form-submit">Manage Stories</button>
                 </form>
@@ -155,7 +196,7 @@ try {
             
             <div class="stat-card">
                 <h3>Blog Posts</h3>
-                <div class="stat-number"><?php echo $stats['blog_posts'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['blog_posts']; ?></div>
                 <form method="GET" action="content/blog-posts.php">
                     <button type="submit" class="form-submit">Manage Posts</button>
                 </form>
@@ -163,7 +204,7 @@ try {
             
             <div class="stat-card">
                 <h3>Authors</h3>
-                <div class="stat-number"><?php echo $stats['authors'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['authors']; ?></div>
                 <form method="GET" action="content/authors.php">
                     <button type="submit" class="form-submit">Manage Authors</button>
                 </form>
@@ -171,7 +212,7 @@ try {
             
             <div class="stat-card">
                 <h3>Games</h3>
-                <div class="stat-number"><?php echo $stats['games'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['games']; ?></div>
                 <form method="GET" action="content/games.php">
                     <button type="submit" class="form-submit">Manage Games</button>
                 </form>
@@ -179,7 +220,7 @@ try {
             
             <div class="stat-card">
                 <h3>Directory Items</h3>
-                <div class="stat-number"><?php echo $stats['directory_items'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['directory_items']; ?></div>
                 <form method="GET" action="content/directory-items.php">
                     <button type="submit" class="form-submit">Manage Directory</button>
                 </form>
@@ -187,7 +228,7 @@ try {
             
             <div class="stat-card">
                 <h3>AI Tools</h3>
-                <div class="stat-number"><?php echo $stats['ai_tools'] ?? 0; ?></div>
+                <div class="stat-number"><?php echo $stats['ai_tools']; ?></div>
                 <form method="GET" action="content/ai-tools.php">
                     <button type="submit" class="form-submit">Manage AI Tools</button>
                 </form>
@@ -197,30 +238,38 @@ try {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div class="recent-content">
                 <h3>Recent Stories</h3>
-                <ul class="recent-list">
-                    <?php foreach ($recentStories as $story): ?>
-                        <li>
-                            <?php echo htmlspecialchars($story['title']); ?>
-                            <small style="color: #666;">
-                                (<?php echo date('M j, Y', strtotime($story['created_at'])); ?>)
-                            </small>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <?php if (empty($recentStories)): ?>
+                    <p>No stories found.</p>
+                <?php else: ?>
+                    <ul class="recent-list">
+                        <?php foreach ($recentStories as $story): ?>
+                            <li>
+                                <?php echo htmlspecialchars($story['title']); ?>
+                                <small style="color: #666;">
+                                    (<?php echo date('M j, Y', strtotime($story['created_at'])); ?>)
+                                </small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
             </div>
 
             <div class="recent-content">
                 <h3>Recent Blog Posts</h3>
-                <ul class="recent-list">
-                    <?php foreach ($recentPosts as $post): ?>
-                        <li>
-                            <?php echo htmlspecialchars($post['title']); ?>
-                            <small style="color: #666;">
-                                (<?php echo date('M j, Y', strtotime($post['created_at'])); ?>)
-                            </small>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <?php if (empty($recentPosts)): ?>
+                    <p>No blog posts found.</p>
+                <?php else: ?>
+                    <ul class="recent-list">
+                        <?php foreach ($recentPosts as $post): ?>
+                            <li>
+                                <?php echo htmlspecialchars($post['title']); ?>
+                                <small style="color: #666;">
+                                    (<?php echo date('M j, Y', strtotime($post['created_at'])); ?>)
+                                </small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
             </div>
         </div>
     </div>

@@ -48,6 +48,43 @@ try {
     
     output("Connected to database successfully", 'success');
     
+    // Check if users table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'users'");
+    if ($stmt->rowCount() === 0) {
+        // Create users table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL DEFAULT 'user',
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+        output("Created users table", 'success');
+        
+        // Create default admin user if no users exist
+        $password = password_hash('admin123', PASSWORD_DEFAULT);
+        $db->exec("INSERT INTO users (name, email, password, role) VALUES ('Site Admin', 'admin@example.com', '$password', 'admin')");
+        output("Created default admin user (email: admin@example.com, password: admin123)", 'success');
+    }
+    
+    // Check if auth_tokens table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'auth_tokens'");
+    if ($stmt->rowCount() === 0) {
+        // Create auth_tokens table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS auth_tokens (
+            user_id INT NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id),
+            UNIQUE KEY (token)
+        )");
+        output("Created auth_tokens table", 'success');
+    }
+    
     // Check if stories table exists
     $stmt = $db->query("SHOW TABLES LIKE 'stories'");
     if ($stmt->rowCount() === 0) {

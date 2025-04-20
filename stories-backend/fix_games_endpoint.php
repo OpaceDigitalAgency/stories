@@ -1,7 +1,12 @@
 <?php
 /**
- * Script to fix the games endpoint by ensuring the correct controller is used
- * and addressing case sensitivity issues.
+ * Fix Games Endpoint
+ * 
+ * This script fixes the games endpoint that is still returning 500 errors.
+ * It will:
+ * 1. Check if the games table exists and create it if needed
+ * 2. Add sample data if the table is empty
+ * 3. Fix the GamesController to properly format the response
  */
 
 // Display all errors for debugging
@@ -9,187 +14,446 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-echo "<h1>Games Endpoint Fix</h1>";
+echo "<h1>Fix Games Endpoint</h1>";
 
-// Check for duplicate endpoints folders
+// Base paths
 $apiPath = __DIR__ . '/api/v1';
-echo "<h2>Checking for duplicate endpoints folders</h2>";
+$endpointsPath = $apiPath . '/endpoints';
 
-$lowerEndpointsPath = $apiPath . '/endpoints';
-$upperEndpointsPath = $apiPath . '/Endpoints';
+// Database connection parameters - adjust these to match your configuration
+$host = 'localhost';
+$dbname = 'stories';
+$username = 'stories_user';
+$password = 'stories_password';
 
-$lowerExists = is_dir($lowerEndpointsPath);
-$upperExists = is_dir($upperEndpointsPath);
-
-echo "<p>Lower case 'endpoints' folder exists: " . ($lowerExists ? 'Yes' : 'No') . "</p>";
-echo "<p>Upper case 'Endpoints' folder exists: " . ($upperExists ? 'Yes' : 'No') . "</p>";
-
-// Check for GamesController in both folders
-$lowerGamesController = $lowerEndpointsPath . '/GamesController.php';
-$upperGamesController = $upperEndpointsPath . '/GamesController.php';
-
-$lowerControllerExists = file_exists($lowerGamesController);
-$upperControllerExists = file_exists($upperGamesController);
-
-echo "<p>GamesController in lower case folder: " . ($lowerControllerExists ? 'Yes' : 'No') . "</p>";
-echo "<p>GamesController in upper case folder: " . ($upperControllerExists ? 'Yes' : 'No') . "</p>";
-
-// Check which controller is being loaded by the router
-echo "<h2>Checking router configuration</h2>";
-
-$routesFile = $apiPath . '/routes.php';
-if (file_exists($routesFile)) {
-    $routesContent = file_get_contents($routesFile);
-    echo "<p>Routes file exists. Checking for games endpoint configuration...</p>";
-    
-    // Look for games endpoint configuration
-    if (preg_match('/games.*?Controller/i', $routesContent, $matches)) {
-        echo "<p>Games endpoint configuration found: " . htmlspecialchars($matches[0]) . "</p>";
-    } else {
-        echo "<p>No games endpoint configuration found in routes file.</p>";
-    }
-} else {
-    echo "<p>Routes file not found at: " . $routesFile . "</p>";
-}
-
-// Check database connection for games table
-echo "<h2>Checking database connection and games table</h2>";
-
-// Include database configuration
-$dbConfigFile = $apiPath . '/config/database.php';
-if (file_exists($dbConfigFile)) {
-    include_once $dbConfigFile;
-    echo "<p>Database configuration file found.</p>";
-    
-    // Try to connect to the database
-    try {
-        if (class_exists('Database')) {
-            $db = new Database();
-            echo "<p>Database class found and instantiated.</p>";
-            
-            // Check if games table exists
-            $query = "SHOW TABLES LIKE 'games'";
-            $result = $db->query($query);
-            
-            if ($result && $result->rowCount() > 0) {
-                echo "<p>Games table exists. Checking structure...</p>";
-                
-                // Check table structure
-                $query = "DESCRIBE games";
-                $result = $db->query($query);
-                
-                if ($result) {
-                    echo "<p>Games table structure:</p><ul>";
-                    while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-                        echo "<li>" . $row['Field'] . " - " . $row['Type'] . "</li>";
-                    }
-                    echo "</ul>";
-                } else {
-                    echo "<p>Failed to get games table structure.</p>";
-                }
-            } else {
-                echo "<p>Games table does not exist!</p>";
-            }
-        } else {
-            echo "<p>Database class not found.</p>";
-        }
-    } catch (Exception $e) {
-        echo "<p>Database connection error: " . $e->getMessage() . "</p>";
-    }
-} else {
-    echo "<p>Database configuration file not found at: " . $dbConfigFile . "</p>";
-}
-
-// Recommendations
-echo "<h2>Recommendations</h2>";
-echo "<ul>";
-
-if ($lowerExists && $upperExists) {
-    echo "<li>Consolidate the duplicate endpoints folders. Keep the one that matches your naming convention.</li>";
-    
-    if ($lowerControllerExists && $upperControllerExists) {
-        echo "<li>Ensure only one copy of GamesController.php exists and is correctly referenced in the routes.</li>";
-    } else if ($lowerControllerExists) {
-        echo "<li>Update routes to use the lowercase endpoints folder.</li>";
-    } else if ($upperControllerExists) {
-        echo "<li>Update routes to use the uppercase Endpoints folder.</li>";
-    }
-}
-
-echo "<li>Check that the database connection parameters are correct.</li>";
-echo "<li>Verify that the games table exists and has the expected structure.</li>";
-echo "<li>Ensure the Response class is correctly formatting the data.</li>";
-echo "</ul>";
-
-// Automatic fixes
-echo "<h2>Automatic Fixes</h2>";
-
-// Fix 1: Ensure Response class has formatData method public
-$responseFile = $apiPath . '/Utils/Response.php';
-if (file_exists($responseFile)) {
-    $responseContent = file_get_contents($responseFile);
-    
-    // Check if formatData is private
-    if (strpos($responseContent, 'private static function formatData') !== false) {
-        // Make formatData public
-        $newContent = str_replace('private static function formatData', 'public static function formatData', $responseContent);
-        
-        if (file_put_contents($responseFile, $newContent)) {
-            echo "<p>✅ Made Response::formatData method public.</p>";
-        } else {
-            echo "<p>❌ Failed to update Response::formatData method.</p>";
-        }
-    } else if (strpos($responseContent, 'public static function formatData') !== false) {
-        echo "<p>✅ Response::formatData method is already public.</p>";
-    } else {
-        echo "<p>❓ Could not find formatData method in Response class.</p>";
-    }
-} else {
-    echo "<p>❌ Response file not found at: " . $responseFile . "</p>";
-}
-
-// Fix 2: Create a test script to directly query the games table
-$testScript = __DIR__ . '/test_games_table.php';
-$testContent = '<?php
-ini_set("display_errors", 1);
-ini_set("display_startup_errors", 1);
-error_reporting(E_ALL);
-
-echo "<h1>Games Table Test</h1>";
-
-// Include database configuration
-include_once __DIR__ . "/api/v1/config/database.php";
+echo "<h2>Database Connection</h2>";
+echo "<p>Attempting to connect to database: $dbname on $host</p>";
 
 try {
-    $db = new Database();
-    echo "<p>Database connected successfully.</p>";
+    // Create PDO connection
+    $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ];
     
-    // Query games table
-    $query = "SELECT * FROM games LIMIT 10";
-    $stmt = $db->query($query);
+    $pdo = new PDO($dsn, $username, $password, $options);
+    echo "<p style='color:green'>✅ Database connection successful!</p>";
     
-    if ($stmt) {
-        $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo "<p>Query executed successfully. Found " . count($games) . " games.</p>";
+    // Step 1: Check and fix games table
+    echo "<h2>Checking Games Table</h2>";
+    
+    $stmt = $pdo->query("SHOW TABLES LIKE 'games'");
+    $tableExists = $stmt->rowCount() > 0;
+    
+    if (!$tableExists) {
+        echo "<p style='color:orange'>⚠️ Games table does not exist. Creating it...</p>";
         
-        if (count($games) > 0) {
-            echo "<h2>Games Data</h2>";
-            echo "<pre>" . json_encode($games, JSON_PRETTY_PRINT) . "</pre>";
-        } else {
-            echo "<p>No games found in the database.</p>";
+        $sql = "CREATE TABLE games (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            slug VARCHAR(255) NOT NULL,
+            featured TINYINT(1) DEFAULT 0,
+            is_published TINYINT(1) DEFAULT 0,
+            published_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        
+        $pdo->exec($sql);
+        echo "<p style='color:green'>✅ Games table created successfully!</p>";
+        
+        // Add sample data
+        echo "<h3>Adding Sample Games</h3>";
+        
+        $sampleGames = [
+            [
+                'title' => 'Word Adventure',
+                'description' => 'A fun word-finding game that challenges your vocabulary',
+                'slug' => 'word-adventure',
+                'featured' => 1,
+                'is_published' => 1,
+                'published_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'title' => 'Story Quest',
+                'description' => 'Interactive storytelling game where your choices matter',
+                'slug' => 'story-quest',
+                'featured' => 1,
+                'is_published' => 1,
+                'published_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'title' => 'Puzzle Master',
+                'description' => 'Collection of brain-teasing puzzles for all ages',
+                'slug' => 'puzzle-master',
+                'featured' => 0,
+                'is_published' => 1,
+                'published_at' => date('Y-m-d H:i:s')
+            ]
+        ];
+        
+        $sql = "INSERT INTO games (title, description, slug, featured, is_published, published_at) 
+                VALUES (:title, :description, :slug, :featured, :is_published, :published_at)";
+        $stmt = $pdo->prepare($sql);
+        
+        foreach ($sampleGames as $game) {
+            $stmt->execute($game);
+            echo "<p>Added game: {$game['title']}</p>";
         }
     } else {
-        echo "<p>Failed to execute query.</p>";
+        echo "<p style='color:green'>✅ Games table exists.</p>";
+        
+        // Check if the table has data
+        $stmt = $pdo->query("SELECT COUNT(*) FROM games");
+        $count = $stmt->fetchColumn();
+        
+        if ($count == 0) {
+            echo "<p>Games table is empty. Adding sample data...</p>";
+            
+            // Add sample data
+            $sampleGames = [
+                [
+                    'title' => 'Word Adventure',
+                    'description' => 'A fun word-finding game that challenges your vocabulary',
+                    'slug' => 'word-adventure',
+                    'featured' => 1,
+                    'is_published' => 1,
+                    'published_at' => date('Y-m-d H:i:s')
+                ],
+                [
+                    'title' => 'Story Quest',
+                    'description' => 'Interactive storytelling game where your choices matter',
+                    'slug' => 'story-quest',
+                    'featured' => 1,
+                    'is_published' => 1,
+                    'published_at' => date('Y-m-d H:i:s')
+                ],
+                [
+                    'title' => 'Puzzle Master',
+                    'description' => 'Collection of brain-teasing puzzles for all ages',
+                    'slug' => 'puzzle-master',
+                    'featured' => 0,
+                    'is_published' => 1,
+                    'published_at' => date('Y-m-d H:i:s')
+                ]
+            ];
+            
+            $sql = "INSERT INTO games (title, description, slug, featured, is_published, published_at) 
+                    VALUES (:title, :description, :slug, :featured, :is_published, :published_at)";
+            $stmt = $pdo->prepare($sql);
+            
+            foreach ($sampleGames as $game) {
+                $stmt->execute($game);
+                echo "<p>Added game: {$game['title']}</p>";
+            }
+        } else {
+            echo "<p>Games table has $count records.</p>";
+        }
     }
-} catch (Exception $e) {
-    echo "<p>Error: " . $e->getMessage() . "</p>";
-}
-';
+    
+    // Check if endpoints directory exists
+    if (!is_dir($endpointsPath)) {
+        echo "<p style='color:orange'>⚠️ Endpoints directory not found at: $endpointsPath</p>";
+        
+        // Try uppercase version
+        $endpointsPath = $apiPath . '/Endpoints';
+        if (!is_dir($endpointsPath)) {
+            echo "<p style='color:red'>❌ Endpoints directory not found at: $endpointsPath</p>";
+            echo "<p>Please run the fix_controller_loading.php script first to consolidate controller folders.</p>";
+            exit;
+        } else {
+            echo "<p>Using uppercase Endpoints directory: $endpointsPath</p>";
+        }
+    } else {
+        echo "<p>Using lowercase endpoints directory: $endpointsPath</p>";
+    }
+    
+    // Step 2: Fix the GamesController
+    echo "<h2>Fixing Games Controller</h2>";
+    
+    $gamesController = $endpointsPath . '/GamesController.php';
+    
+    if (file_exists($gamesController)) {
+        echo "<p style='color:green'>✅ Games Controller found at: $gamesController</p>";
+        
+        // Create a backup
+        $backupFile = $gamesController . '.bak.' . date('YmdHis');
+        if (copy($gamesController, $backupFile)) {
+            echo "<p>Created backup at: $backupFile</p>";
+        }
+    } else {
+        echo "<p style='color:orange'>⚠️ Games Controller not found. Will create a new one.</p>";
+    }
+    
+    // Get the namespace based on the endpoints directory name
+    $namespaceSuffix = basename($endpointsPath);
+    
+    // Get the core namespace based on the Core directory name
+    $corePath = $apiPath . '/Core';
+    if (!is_dir($corePath)) {
+        $corePath = $apiPath . '/core';
+    }
+    $coreNamespaceSuffix = basename($corePath);
+    
+    // Create or update the controller
+    $controllerContent = <<<EOD
+<?php
+/**
+ * Games Controller
+ * 
+ * Handles API requests for games
+ */
 
-if (file_put_contents($testScript, $testContent)) {
-    echo "<p>✅ Created test script at: <a href='/test_games_table.php'>test_games_table.php</a></p>";
-} else {
-    echo "<p>❌ Failed to create test script.</p>";
-}
+namespace StoriesAPI\\$namespaceSuffix;
 
-echo "<p>Fix completed. Please check the recommendations and run the test script.</p>";
+use StoriesAPI\\$coreNamespaceSuffix\\Controller;
+use StoriesAPI\Utils\Response;
+
+class GamesController extends Controller {
+    /**
+     * Get a list of games
+     */
+    public function index() {
+        // Get pagination parameters
+        \$page = isset(\$_GET['page']) ? (int)\$_GET['page'] : 1;
+        \$pageSize = isset(\$_GET['pageSize']) ? (int)\$_GET['pageSize'] : 25;
+        
+        // Ensure valid pagination values
+        \$page = max(1, \$page);
+        \$pageSize = max(1, min(100, \$pageSize));
+        
+        // Calculate offset
+        \$offset = (\$page - 1) * \$pageSize;
+        
+        // Get filter parameters
+        \$filters = [];
+        if (isset(\$_GET['featured'])) {
+            \$filters['featured'] = \$_GET['featured'] === 'true' ? 1 : 0;
+        }
+        if (isset(\$_GET['isPublished'])) {
+            \$filters['is_published'] = \$_GET['isPublished'] === 'true' ? 1 : 0;
+        }
+        
+        // Get sort parameter
+        \$sortField = isset(\$_GET['sort']) ? \$_GET['sort'] : 'id';
+        \$sortDirection = 'ASC';
+        
+        // Check if sort field has a direction prefix
+        if (strpos(\$sortField, '-') === 0) {
+            \$sortField = substr(\$sortField, 1);
+            \$sortDirection = 'DESC';
+        }
+        
+        // Map frontend field names to database column names
+        \$fieldMap = [
+            'id' => 'id',
+            'title' => 'title',
+            'publishedAt' => 'published_at',
+            'createdAt' => 'created_at',
+            'updatedAt' => 'updated_at'
+        ];
+        
+        // Ensure the sort field is valid
+        if (!isset(\$fieldMap[\$sortField])) {
+            \$sortField = 'id';
+        }
+        
+        // Get the database column name
+        \$sortColumn = \$fieldMap[\$sortField];
+        
+        // Build the sort clause
+        \$sortClause = "ORDER BY \$sortColumn \$sortDirection";
+        
+        try {
+            // Build the WHERE clause
+            \$whereData = \$this->buildWhereClause(\$filters);
+            \$whereClause = \$whereData['clause'];
+            \$params = \$whereData['params'];
+            
+            // Count total records
+            \$countQuery = "SELECT COUNT(*) as total FROM games \$whereClause";
+            \$stmt = \$this->db->query(\$countQuery, \$params);
+            \$total = \$stmt->fetch()['total'];
+            
+            // Get games with pagination
+            \$query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
+                \$whereClause
+                \$sortClause
+                LIMIT \$offset, \$pageSize";
+            
+            \$stmt = \$this->db->query(\$query, \$params);
+            \$games = \$stmt->fetchAll();
+            
+            // Format games with the expected structure
+            \$formattedGames = Response::formatData(\$games);
+            
+            // Send paginated response
+            Response::sendPaginated(\$formattedGames, \$page, \$pageSize, \$total);
+        } catch (\Exception \$e) {
+            \$this->serverError('Failed to fetch games: ' . \$e->getMessage());
+        }
+    }
+    
+    /**
+     * Get a single game by ID
+     * 
+     * @param int \$id The game ID
+     */
+    public function show(\$id) {
+        try {
+            \$query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
+                WHERE id = :id";
+            
+            \$stmt = \$this->db->query(\$query, ['id' => \$id]);
+            \$game = \$stmt->fetch();
+            
+            if (!\$game) {
+                \$this->notFound('Game not found');
+                return;
+            }
+            
+            // Format game with the expected structure
+            \$formattedGame = Response::formatData(\$game);
+            
+            // Send success response
+            Response::sendSuccess(\$formattedGame);
+        } catch (\Exception \$e) {
+            \$this->serverError('Failed to fetch game: ' . \$e->getMessage());
+        }
+    }
+    
+    /**
+     * Build a WHERE clause based on filters
+     * 
+     * @param array \$filters The filters to apply
+     * @return array The WHERE clause and parameters
+     */
+    private function buildWhereClause(\$filters) {
+        \$where = [];
+        \$params = [];
+        
+        foreach (\$filters as \$key => \$value) {
+            \$where[] = "\$key = :\$key";
+            \$params[\$key] = \$value;
+        }
+        
+        \$whereClause = empty(\$where) ? '' : 'WHERE ' . implode(' AND ', \$where);
+        
+        return [
+            'clause' => \$whereClause,
+            'params' => \$params
+        ];
+    }
+}
+EOD;
+    
+    if (file_put_contents($gamesController, $controllerContent)) {
+        echo "<p style='color:green'>✅ Games Controller updated successfully!</p>";
+    } else {
+        echo "<p style='color:red'>❌ Failed to update Games Controller.</p>";
+    }
+    
+    // Step 3: Check routes file
+    echo "<h2>Checking Routes Configuration</h2>";
+    
+    $routesFile = $apiPath . '/routes.php';
+    
+    if (file_exists($routesFile)) {
+        echo "<p style='color:green'>✅ Routes file found at: $routesFile</p>";
+        
+        $routesContent = file_get_contents($routesFile);
+        
+        if (strpos($routesContent, 'games') === false) {
+            echo "<p style='color:orange'>⚠️ Games route not found in routes file. Adding it...</p>";
+            
+            // Create a backup
+            $backupFile = $routesFile . '.bak.' . date('YmdHis');
+            if (copy($routesFile, $backupFile)) {
+                echo "<p>Created backup of routes file at: $backupFile</p>";
+            }
+            
+            // Add games route
+            $routeToAdd = "\n// Games routes\n\$router->get('/games', 'StoriesAPI\\$namespaceSuffix\\GamesController@index');\n\$router->get('/games/{id}', 'StoriesAPI\\$namespaceSuffix\\GamesController@show');\n";
+            
+            // Find a good place to add the route
+            $pos = strrpos($routesContent, '?>');
+            if ($pos !== false) {
+                $newContent = substr($routesContent, 0, $pos) . $routeToAdd . substr($routesContent, $pos);
+            } else {
+                $newContent = $routesContent . $routeToAdd;
+            }
+            
+            if (file_put_contents($routesFile, $newContent)) {
+                echo "<p style='color:green'>✅ Added games routes to routes file.</p>";
+            } else {
+                echo "<p style='color:red'>❌ Failed to update routes file.</p>";
+            }
+        } else {
+            echo "<p style='color:green'>✅ Games route already exists in routes file.</p>";
+            
+            // Check if the namespace is correct
+            $pattern = "/games.*?StoriesAPI\\\\([^\\\\]+)\\\\GamesController/";
+            if (preg_match($pattern, $routesContent, $matches)) {
+                $routeNamespace = $matches[1];
+                if ($routeNamespace !== $namespaceSuffix) {
+                    echo "<p style='color:orange'>⚠️ Games route is using a different namespace: $routeNamespace. Updating...</p>";
+                    
+                    // Create a backup
+                    $backupFile = $routesFile . '.bak.' . date('YmdHis');
+                    if (copy($routesFile, $backupFile)) {
+                        echo "<p>Created backup of routes file at: $backupFile</p>";
+                    }
+                    
+                    // Update the namespace
+                    $newContent = preg_replace("/StoriesAPI\\\\$routeNamespace\\\\GamesController/", "StoriesAPI\\$namespaceSuffix\\GamesController", $routesContent);
+                    
+                    if (file_put_contents($routesFile, $newContent)) {
+                        echo "<p style='color:green'>✅ Updated games route namespace in routes file.</p>";
+                    } else {
+                        echo "<p style='color:red'>❌ Failed to update routes file.</p>";
+                    }
+                } else {
+                    echo "<p style='color:green'>✅ Games route is using the correct namespace.</p>";
+                }
+            }
+        }
+    } else {
+        echo "<p style='color:red'>❌ Routes file not found at: $routesFile</p>";
+    }
+    
+    // Step 4: Test the games endpoint
+    echo "<h2>Testing Games Endpoint</h2>";
+    
+    // Get the base URL
+    $baseUrl = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    $baseUrl = "$protocol://$baseUrl";
+    
+    // Build the API URL
+    $apiUrl = "$baseUrl/api/v1/games";
+    
+    echo "<p>Testing games endpoint at: $apiUrl</p>";
+    echo "<p>You can manually test the endpoint by visiting: <a href='$apiUrl' target='_blank'>$apiUrl</a></p>";
+    
+    echo "<h2>Next Steps</h2>";
+    echo "<p>Now test the API endpoints using the <a href='test_api_format.php'>test_api_format.php</a> script.</p>";
+    
+} catch (PDOException $e) {
+    echo "<p style='color:red'>❌ Database error: " . $e->getMessage() . "</p>";
+    
+    echo "<h2>Troubleshooting</h2>";
+    echo "<ol>";
+    echo "<li>Check that the database credentials are correct. Run the <a href='fix_database_credentials.php'>fix_database_credentials.php</a> script to update them.</li>";
+    echo "<li>Make sure the database exists and is accessible.</li>";
+    echo "<li>Verify that the user has permission to create tables.</li>";
+    echo "</ol>";
+}

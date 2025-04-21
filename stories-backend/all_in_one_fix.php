@@ -1,728 +1,813 @@
 <?php
 /**
- * ALL-IN-ONE FIX
+ * All-in-One Fix Script
  * 
- * This script fixes EVERYTHING in one go:
- * 1. Completely replaces the index.php file with a new dashboard
- * 2. Completely replaces the header.php file with top and side navigation
- * 3. Completely replaces the footer.php file
- * 4. Fixes author and tag dropdowns
- * 5. Creates favicon.ico file
- * 6. Blocks ALL JavaScript permanently
- * 
- * RUN THIS SCRIPT ONCE AND EVERYTHING WILL BE FIXED PERMANENTLY
+ * This script combines all the fixes into a single script that can be run to fix all issues at once.
+ * It will:
+ * 1. Fix case sensitivity issues with folders and files
+ * 2. Fix the Response class to make formatData method public
+ * 3. Fix controller loading issues
+ * 4. Fix database table structure
+ * 5. Test the API endpoints
  */
 
-// Enable error reporting
+// Display all errors for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Check if running in web or CLI mode
-$isWeb = php_sapi_name() !== 'cli';
+echo "<h1>All-in-One Fix Script</h1>";
 
-// Function to output text based on environment
-function output($text, $isHtml = false) {
-    global $isWeb;
-    if ($isWeb) {
-        echo $isHtml ? $text : nl2br(htmlspecialchars($text)) . "<br>";
+// Base paths
+$apiPath = __DIR__ . '/api/v1';
+$utilsPath = $apiPath . '/Utils';
+$configPath = $apiPath . '/config';
+
+// Database connection parameters - adjust these to match your configuration
+$host = 'localhost';
+$dbname = 'stories';
+$username = 'stories_user';
+$password = 'stories_password';
+
+// Step 1: Fix case sensitivity issues
+echo "<h2>Step 1: Fix Case Sensitivity Issues</h2>";
+
+// Check for duplicate endpoints folders
+$lowerEndpointsPath = $apiPath . '/endpoints';
+$upperEndpointsPath = $apiPath . '/Endpoints';
+
+$lowerExists = is_dir($lowerEndpointsPath);
+$upperExists = is_dir($upperEndpointsPath);
+
+echo "<p>Lower case 'endpoints' folder exists: " . ($lowerExists ? 'Yes' : 'No') . "</p>";
+echo "<p>Upper case 'Endpoints' folder exists: " . ($upperExists ? 'Yes' : 'No') . "</p>";
+
+// Decide which folder to keep
+$targetFolder = null;
+$sourceFolder = null;
+
+if ($lowerExists && $upperExists) {
+    echo "<p style='color:orange'>⚠️ Both endpoints folders exist. This can cause case sensitivity issues.</p>";
+    
+    // Count files in each folder to decide which to keep
+    $lowerFiles = glob($lowerEndpointsPath . '/*.php');
+    $upperFiles = glob($upperEndpointsPath . '/*.php');
+    
+    echo "<p>Files in lower case folder: " . count($lowerFiles) . "</p>";
+    echo "<p>Files in upper case folder: " . count($upperFiles) . "</p>";
+    
+    // Keep the folder with more files, or the uppercase one if equal
+    if (count($upperFiles) >= count($lowerFiles)) {
+        $targetFolder = $upperEndpointsPath;
+        $sourceFolder = $lowerEndpointsPath;
+        echo "<p>Decision: Keep the upper case 'Endpoints' folder and move files from the lower case folder.</p>";
     } else {
-        echo $text . ($isHtml ? '' : "\n");
+        $targetFolder = $lowerEndpointsPath;
+        $sourceFolder = $upperEndpointsPath;
+        echo "<p>Decision: Keep the lower case 'endpoints' folder and move files from the upper case folder.</p>";
     }
-}
-
-// Set content type for web
-if ($isWeb) {
-    header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html>
-<html>
-<head>
-    <title>ALL-IN-ONE FIX</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-        h1, h2, h3 { color: #333; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .success { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        .warning { color: orange; font-weight: bold; }
-        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
-        .progress-bar { 
-            background-color: #f3f3f3; 
-            border-radius: 13px; 
-            padding: 3px; 
-            margin-bottom: 20px;
-        }
-        .progress-bar-fill { 
-            background-color: #4CAF50; 
-            height: 20px; 
-            border-radius: 10px; 
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            color: white;
-            transition: width 0.5s;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>ALL-IN-ONE FIX</h1>
-        <div class="progress-bar">
-            <div class="progress-bar-fill" style="width: 0%">0%</div>
-        </div>';
-}
-
-output("ALL-IN-ONE FIX");
-output("=============");
-output("");
-
-// Update progress
-function updateProgress($percent, $text) {
-    global $isWeb;
-    if ($isWeb) {
-        echo "<script>
-            document.querySelector('.progress-bar-fill').style.width = '$percent%';
-            document.querySelector('.progress-bar-fill').textContent = '$percent%';
-        </script>";
-        echo "<div class='success'>$text</div>";
-        ob_flush();
-        flush();
-    } else {
-        output("[$percent%] $text");
-    }
-}
-
-// Step 1: Create a favicon.ico file in MULTIPLE locations to ensure it's found
-output("Step 1: Creating favicon.ico file in MULTIPLE locations...");
-updateProgress(5, "Creating favicon.ico files...");
-
-// Define the favicon data (a simple 1x1 transparent ICO file)
-$faviconData = base64_decode('AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAA==');
-
-// Create favicon.ico in multiple locations
-$faviconLocations = [
-    __DIR__ . '/admin/favicon.ico',
-    __DIR__ . '/admin/assets/favicon.ico',
-    __DIR__ . '/favicon.ico',
-    '/home/stories/api.storiesfromtheweb.org/admin/favicon.ico',
-    '/home/stories/api.storiesfromtheweb.org/favicon.ico'
-];
-
-foreach ($faviconLocations as $faviconPath) {
-    if (file_put_contents($faviconPath, $faviconData)) {
-        if ($isWeb) output("<div class='success'>Created favicon.ico file: $faviconPath</div>", true);
-        else output("Created favicon.ico file: $faviconPath");
-    } else {
-        if ($isWeb) output("<div class='error'>Failed to create favicon.ico file: $faviconPath</div>", true);
-        else output("Error: Failed to create favicon.ico file: $faviconPath");
-    }
-}
-
-// Step 2: Create a CSS file for the improved admin interface
-updateProgress(10, "Creating CSS file...");
-output("Step 2: Creating CSS file for improved admin interface...");
-$adminCssContent = '/* Improved Admin Interface CSS */
-
-/* Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Base */
-body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background-color: #f8f9fa;
-}
-
-/* Layout */
-.admin-container {
-    display: flex;
-    min-height: 100vh;
-    flex-direction: column;
-}
-
-.admin-main {
-    display: flex;
-    flex: 1;
-}
-
-/* Top Navigation */
-.admin-header {
-    background-color: #4a6cf7;
-    color: white;
-    padding: 0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.admin-navbar {
-    display: flex;
-    align-items: center;
-    height: 60px;
-}
-
-.admin-brand {
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    font-size: 20px;
-    font-weight: bold;
-    text-decoration: none;
-    color: white;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.admin-brand:hover {
-    text-decoration: none;
-    color: white;
-}
-
-.admin-nav {
-    display: flex;
-    height: 100%;
-}
-
-.admin-nav-item {
-    height: 100%;
-}
-
-.admin-nav-link {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    padding: 0 20px;
-    color: white;
-    text-decoration: none;
-}
-
-.admin-nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    text-decoration: none;
-    color: white;
-}
-
-.admin-nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Side Navigation */
-.admin-sidebar {
-    width: 250px;
-    background-color: white;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
-    padding: 20px 0;
-}
-
-.admin-sidebar-section {
-    margin-bottom: 20px;
-}
-
-.admin-sidebar-title {
-    padding: 10px 20px;
-    margin: 0;
-    font-size: 16px;
-    color: #333;
-    font-weight: bold;
-    border-bottom: 1px solid #eee;
-}
-
-.admin-sidebar-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.admin-sidebar-item {
-    margin: 0;
-}
-
-.admin-sidebar-link {
-    display: block;
-    padding: 10px 20px;
-    color: #333;
-    text-decoration: none;
-}
-
-.admin-sidebar-link:hover {
-    background-color: #f5f5f5;
-    text-decoration: none;
-}
-
-.admin-sidebar-link.active {
-    background-color: #e9ecef;
-    border-left: 3px solid #4a6cf7;
-    padding-left: 17px;
-}
-
-/* Content Area */
-.admin-content {
-    flex: 1;
-    padding: 20px;
-}
-
-/* Dashboard Cards */
-.dashboard-section {
-    margin-bottom: 30px;
-}
-
-.dashboard-title {
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
-.dashboard-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.dashboard-card {
-    background-color: white;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    padding: 20px;
-}
-
-.dashboard-card-title {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #4a6cf7;
-}
-
-.dashboard-card-count {
-    font-size: 36px;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.dashboard-card-link {
-    display: inline-block;
-    padding: 8px 15px;
-    background-color: #f5f5f5;
-    color: #333;
-    text-decoration: none;
-    border-radius: 3px;
-}
-
-.dashboard-card-link:hover {
-    background-color: #e9ecef;
-    text-decoration: none;
-}
-
-/* Tables */
-.admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-}
-
-.admin-table th,
-.admin-table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.admin-table th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-}
-
-.admin-table tr:hover {
-    background-color: #f5f5f5;
-}
-
-/* Forms */
-.admin-form {
-    background-color: white;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-}
-
-.form-select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-}
-
-/* Buttons */
-.btn {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: #4a6cf7;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background-color: #3a5bd7;
-    text-decoration: none;
-    color: white;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-/* Alerts */
-.alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 3px;
-}
-
-.alert-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.alert-warning {
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeeba;
-}
-
-/* Hide loading overlay */
-.loading-overlay {
-    display: none !important;
-}
-
-/* Hide spinner */
-.spinner-border {
-    display: none !important;
-}
-
-/* Show button text */
-.button-text {
-    display: inline !important;
-}
-';
-
-$adminCssPath = __DIR__ . '/admin/assets/css/improved-admin.css';
-if (file_put_contents($adminCssPath, $adminCssContent)) {
-    if ($isWeb) output("<div class='success'>Created improved admin CSS file: $adminCssPath</div>", true);
-    else output("Created improved admin CSS file: $adminCssPath");
+} elseif ($lowerExists) {
+    echo "<p>Only the lower case 'endpoints' folder exists. No consolidation needed.</p>";
+    $targetFolder = $lowerEndpointsPath;
+} elseif ($upperExists) {
+    echo "<p>Only the upper case 'Endpoints' folder exists. No consolidation needed.</p>";
+    $targetFolder = $upperEndpointsPath;
 } else {
-    if ($isWeb) output("<div class='error'>Failed to create improved admin CSS file</div>", true);
-    else output("Error: Failed to create improved admin CSS file");
+    echo "<p style='color:red'>❌ No endpoints folder found! Creating one...</p>";
+    
+    // Create the Endpoints folder (uppercase, as it's more conventional in PHP)
+    $targetFolder = $upperEndpointsPath;
+    if (mkdir($targetFolder, 0755, true)) {
+        echo "<p style='color:green'>✅ Created Endpoints folder at: $targetFolder</p>";
+    } else {
+        echo "<p style='color:red'>❌ Failed to create Endpoints folder.</p>";
+        exit;
+    }
 }
 
-// Step 3: Create a new header file with top and side navigation
-updateProgress(20, "Creating new header file...");
-output("Step 3: Creating new header file with top and side navigation...");
-$headerContent = '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="<?php echo isset($_SESSION[\'csrf_token\']) ? $_SESSION[\'csrf_token\'] : \'\'; ?>">
-    <title><?php echo isset($pageTitle) ? $pageTitle : "Admin"; ?> - Stories Admin</title>
+// Consolidate files if needed
+if ($sourceFolder && $targetFolder) {
+    echo "<h3>Consolidating Controller Files</h3>";
     
-    <!-- Bootstrap CSS -->
-    <link href="https://api.storiesfromtheweb.org/admin/assets/css/bootstrap.min.css" rel="stylesheet">
+    $sourceFiles = glob($sourceFolder . '/*.php');
     
-    <!-- Font Awesome (Local) -->
-    <link href="https://api.storiesfromtheweb.org/admin/assets/css/all.min.css" rel="stylesheet">
-    
-    <!-- Improved Admin CSS -->
-    <link href="/admin/assets/css/improved-admin.css" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link href="https://api.storiesfromtheweb.org/admin/assets/css/admin.css" rel="stylesheet">
-    
-    <!-- Favicon -->
-    <link rel="icon" href="/admin/favicon.ico" type="image/x-icon">
-</head>
-<body>
-    <div class="admin-container">
-        <!-- Top Navigation -->
-        <header class="admin-header">
-            <nav class="admin-navbar">
-                <a href="/admin/index.php" class="admin-brand">Stories Admin</a>
-                <div class="admin-nav">
-                    <div class="admin-nav-item">
-                        <a href="/admin/index.php" class="admin-nav-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'index.php\' ? \' active\' : \'\'; ?>">Dashboard</a>
-                    </div>
-                    <div class="admin-nav-item">
-                        <a href="/admin/stories.php" class="admin-nav-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'stories.php\' ? \' active\' : \'\'; ?>">Stories</a>
-                    </div>
-                    <div class="admin-nav-item">
-                        <a href="/admin/blog-posts.php" class="admin-nav-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'blog-posts.php\' ? \' active\' : \'\'; ?>">Blog</a>
-                    </div>
-                    <div class="admin-nav-item">
-                        <a href="/admin/authors.php" class="admin-nav-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'authors.php\' ? \' active\' : \'\'; ?>">Authors</a>
-                    </div>
-                    <div class="admin-nav-item">
-                        <a href="/admin/tags.php" class="admin-nav-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'tags.php\' ? \' active\' : \'\'; ?>">Tags</a>
-                    </div>
-                    <div class="admin-nav-item">
-                        <a href="/admin/logout.php" class="admin-nav-link">Logout</a>
-                    </div>
-                </div>
-            </nav>
-        </header>
-        
-        <!-- Main Content -->
-        <div class="admin-main">
-            <!-- Side Navigation -->
-            <aside class="admin-sidebar">
-                <div class="admin-sidebar-section">
-                    <h3 class="admin-sidebar-title">Content</h3>
-                    <ul class="admin-sidebar-menu">
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/stories.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'stories.php\' ? \' active\' : \'\'; ?>">Stories</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/blog-posts.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'blog-posts.php\' ? \' active\' : \'\'; ?>">Blog Posts</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/games.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'games.php\' ? \' active\' : \'\'; ?>">Games</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/directory-items.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'directory-items.php\' ? \' active\' : \'\'; ?>">Directory Items</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/ai-tools.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'ai-tools.php\' ? \' active\' : \'\'; ?>">AI Tools</a>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="admin-sidebar-section">
-                    <h3 class="admin-sidebar-title">Management</h3>
-                    <ul class="admin-sidebar-menu">
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/authors.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'authors.php\' ? \' active\' : \'\'; ?>">Authors</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/tags.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'tags.php\' ? \' active\' : \'\'; ?>">Tags</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/media.php" class="admin-sidebar-link<?php echo basename($_SERVER[\'PHP_SELF\']) == \'media.php\' ? \' active\' : \'\'; ?>">Media</a>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="admin-sidebar-section">
-                    <h3 class="admin-sidebar-title">Add New</h3>
-                    <ul class="admin-sidebar-menu">
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/stories.php?action=add" class="admin-sidebar-link">Add Story</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/blog-posts.php?action=add" class="admin-sidebar-link">Add Blog Post</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/authors.php?action=add" class="admin-sidebar-link">Add Author</a>
-                        </li>
-                        <li class="admin-sidebar-item">
-                            <a href="/admin/tags.php?action=add" class="admin-sidebar-link">Add Tag</a>
-                        </li>
-                    </ul>
-                </div>
-            </aside>
+    if (count($sourceFiles) > 0) {
+        foreach ($sourceFiles as $sourceFile) {
+            $fileName = basename($sourceFile);
+            $targetFile = $targetFolder . '/' . $fileName;
             
-            <!-- Content Area -->
-            <main class="admin-content">
-';
+            // Check if the file already exists in the target folder
+            if (file_exists($targetFile)) {
+                echo "<p>File $fileName already exists in target folder. Comparing content...</p>";
+                
+                $sourceContent = file_get_contents($sourceFile);
+                $targetContent = file_get_contents($targetFile);
+                
+                if ($sourceContent === $targetContent) {
+                    echo "<p>Files are identical. Keeping the target file.</p>";
+                } else {
+                    echo "<p style='color:orange'>⚠️ Files have different content. Creating a backup of the target file.</p>";
+                    $backupFile = $targetFile . '.bak.' . date('YmdHis');
+                    if (copy($targetFile, $backupFile)) {
+                        echo "<p>Created backup at: $backupFile</p>";
+                    }
+                    
+                    // Use the newer file
+                    if (filemtime($sourceFile) > filemtime($targetFile)) {
+                        echo "<p>Source file is newer. Copying to target folder.</p>";
+                        if (copy($sourceFile, $targetFile)) {
+                            echo "<p style='color:green'>✅ Copied $fileName to target folder.</p>";
+                        } else {
+                            echo "<p style='color:red'>❌ Failed to copy $fileName to target folder.</p>";
+                        }
+                    } else {
+                        echo "<p>Target file is newer. Keeping it.</p>";
+                    }
+                }
+            } else {
+                // File doesn't exist in target folder, copy it
+                if (copy($sourceFile, $targetFile)) {
+                    echo "<p style='color:green'>✅ Copied $fileName to target folder.</p>";
+                } else {
+                    echo "<p style='color:red'>❌ Failed to copy $fileName to target folder.</p>";
+                }
+            }
+        }
+    } else {
+        echo "<p>No files found in the source folder.</p>";
+    }
+}
 
-$headerPath = __DIR__ . '/admin/views/header.php';
-if (!file_exists($headerPath)) {
-    // Try to find the header file
-    $possibleHeaderFiles = [
-        __DIR__ . '/admin/views/header.php',
-        __DIR__ . '/admin/includes/header.php',
-        __DIR__ . '/admin/header.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/views/header.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/includes/header.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/header.php'
-    ];
+// Step 2: Fix the Response class
+echo "<h2>Step 2: Fix Response Class</h2>";
+
+// Check if Utils directory exists
+if (!is_dir($utilsPath)) {
+    echo "<p>Utils directory does not exist. Creating it...</p>";
+    if (mkdir($utilsPath, 0755, true)) {
+        echo "<p style='color:green'>✅ Created Utils directory.</p>";
+    } else {
+        echo "<p style='color:red'>❌ Failed to create Utils directory.</p>";
+    }
+}
+
+// Path to the Response class
+$responseFile = $utilsPath . '/Response.php';
+
+if (file_exists($responseFile)) {
+    echo "<p style='color:green'>✅ Response file found at: $responseFile</p>";
     
-    foreach ($possibleHeaderFiles as $file) {
-        if (file_exists($file)) {
-            $headerPath = $file;
-            output("Found header file: $headerPath");
-            break;
+    // Read the file content
+    $content = file_get_contents($responseFile);
+    
+    // Check if formatData method is private
+    $isPrivate = strpos($content, 'private static function formatData') !== false;
+    $isPublic = strpos($content, 'public static function formatData') !== false;
+    
+    if ($isPrivate) {
+        echo "<p style='color:orange'>⚠️ The formatData method is private. Changing to public...</p>";
+        
+        // Create a backup of the original file
+        $backupFile = $responseFile . '.bak.' . date('YmdHis');
+        if (copy($responseFile, $backupFile)) {
+            echo "<p>Created a backup of the original Response class at: $backupFile</p>";
+        }
+        
+        // Make formatData public
+        $newContent = str_replace('private static function formatData', 'public static function formatData', $content);
+        
+        if (file_put_contents($responseFile, $newContent)) {
+            echo "<p style='color:green'>✅ Successfully made formatData method public!</p>";
+        } else {
+            echo "<p style='color:red'>❌ Failed to update the Response class.</p>";
+        }
+    } elseif ($isPublic) {
+        echo "<p style='color:green'>✅ The formatData method is already public.</p>";
+    } else {
+        echo "<p style='color:red'>❌ Could not find the formatData method in the Response class.</p>";
+        
+        // Add the formatData method if it doesn't exist
+        echo "<h3>Adding formatData Method</h3>";
+        
+        // Find the class closing brace
+        $classEnd = strrpos($content, '}');
+        
+        if ($classEnd !== false) {
+            $formatDataMethod = <<<'EOD'
+
+    /**
+     * Format data to ensure it has the correct structure with attributes
+     * 
+     * @param array $data The data to format
+     * @return array The formatted data
+     */
+    public static function formatData($data) {
+        // If data is already in the correct format, check if attributes needs fixing
+        if (isset($data['id']) && isset($data['attributes'])) {
+            // Check for nested attributes
+            if (isset($data['attributes']['attributes'])) {
+                $data['attributes'] = $data['attributes']['attributes'];
+            }
+            return $data;
+        }
+        
+        // If data is an array of items, format each item
+        if (is_array($data) && !isset($data['id']) && !isset($data['attributes']) && !empty($data)) {
+            $formattedData = [];
+            foreach ($data as $item) {
+                if (is_array($item) && isset($item['id'])) {
+                    // Format each item
+                    $attributes = [];
+                    foreach ($item as $key => $value) {
+                        if ($key !== 'id') {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                    
+                    $formattedData[] = [
+                        'id' => $item['id'],
+                        'attributes' => $attributes
+                    ];
+                } else {
+                    // If item doesn't have an ID, keep it as is
+                    $formattedData[] = $item;
+                }
+            }
+            return $formattedData;
+        }
+        
+        // Format a single item
+        $id = $data['id'] ?? null;
+        if ($id === null) {
+            // If no ID, return data as is
+            return $data;
+        }
+        
+        // Create attributes array
+        $attributes = [];
+        foreach ($data as $key => $value) {
+            if ($key !== 'id') {
+                $attributes[$key] = $value;
+            }
+        }
+        
+        // Return formatted data
+        return [
+            'id' => $id,
+            'attributes' => $attributes
+        ];
+    }
+EOD;
+            
+            // Insert the method before the class closing brace
+            $newContent = substr($content, 0, $classEnd) . $formatDataMethod . "\n" . substr($content, $classEnd);
+            
+            if (file_put_contents($responseFile, $newContent)) {
+                echo "<p style='color:green'>✅ Successfully added formatData method to the Response class!</p>";
+            } else {
+                echo "<p style='color:red'>❌ Failed to update the Response class.</p>";
+            }
+        } else {
+            echo "<p style='color:red'>❌ Could not find the end of the Response class.</p>";
+        }
+    }
+} else {
+    echo "<p style='color:red'>❌ Response file not found at: $responseFile</p>";
+    
+    // Create a new Response class
+    echo "<h3>Creating Response Class</h3>";
+    
+    $responseClass = <<<'EOD'
+<?php
+/**
+ * API Response Utility Class
+ * 
+ * This class handles formatting API responses to match the expected format
+ * by the Astro frontend.
+ * 
+ * @package Stories API
+ * @version 1.0.0
+ */
+
+namespace StoriesAPI\Utils;
+
+class Response {
+    /**
+     * @var bool Debug mode flag
+     */
+    public static $debugMode = false;
+    
+    /**
+     * Format a successful response
+     * 
+     * @param array $data The data to include in the response
+     * @param array $meta Additional metadata
+     * @param int $statusCode HTTP status code
+     * @return array The formatted response
+     */
+    public static function success($data, $meta = [], $statusCode = 200) {
+        // Set the HTTP response code
+        http_response_code($statusCode);
+        
+        // Format the response to match Strapi format expected by the frontend
+        $response = [
+            'data' => $data,
+            'meta' => $meta
+        ];
+        
+        // If meta doesn't include pagination and data is an array, add default pagination
+        if (!isset($meta['pagination']) && is_array($data)) {
+            $response['meta']['pagination'] = [
+                'page' => 1,
+                'pageSize' => count($data),
+                'pageCount' => 1,
+                'total' => count($data)
+            ];
+        }
+        
+        return $response;
+    }
+    
+    /**
+     * Format a paginated response
+     * 
+     * @param array $data The data to include in the response
+     * @param int $page Current page number
+     * @param int $pageSize Items per page
+     * @param int $total Total number of items
+     * @param array $additionalMeta Additional metadata
+     * @param int $statusCode HTTP status code
+     * @return array The formatted response
+     */
+    public static function paginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
+        // Set the HTTP response code
+        http_response_code($statusCode);
+        
+        // Calculate page count
+        $pageCount = ceil($total / $pageSize);
+        
+        // Format pagination metadata
+        $pagination = [
+            'page' => (int)$page,
+            'pageSize' => (int)$pageSize,
+            'pageCount' => (int)$pageCount,
+            'total' => (int)$total
+        ];
+        
+        // Add pagination headers for frontend consumption
+        header('X-Total-Count: ' . $total);
+        header('X-Pagination-Page: ' . $page);
+        header('X-Pagination-Page-Size: ' . $pageSize);
+        header('X-Pagination-Page-Count: ' . $pageCount);
+        
+        // Merge additional metadata with pagination
+        $meta = array_merge(['pagination' => $pagination], $additionalMeta);
+        
+        // Return the formatted response
+        return self::success($data, $meta, $statusCode);
+    }
+    
+    /**
+     * Format an error response
+     * 
+     * @param string $message Error message
+     * @param int $statusCode HTTP status code
+     * @param array $errors Detailed error information
+     * @return array The formatted error response
+     */
+    public static function error($message, $statusCode = 400, $errors = []) {
+        // Set the HTTP response code
+        http_response_code($statusCode);
+        
+        // Format the error response
+        $response = [
+            'error' => true,
+            'message' => $message,
+            'statusCode' => $statusCode
+        ];
+        
+        // Add detailed errors if provided
+        if (!empty($errors)) {
+            $response['errors'] = $errors;
+        }
+        
+        return $response;
+    }
+    
+    /**
+     * Send the response as JSON
+     * 
+     * @param array $data The response data
+     */
+    public static function json($data) {
+        // Set content type header
+        header('Content-Type: application/json; charset=UTF-8');
+        
+        // Make sure there's no output before JSON
+        if (ob_get_length() > 0) {
+            ob_clean();
+        }
+        
+        // Encode the data
+        $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        
+        // Check for JSON encoding errors
+        if ($json === false) {
+            error_log("JSON encoding error: " . json_last_error_msg());
+            
+            // Try to sanitize data
+            $cleanData = self::sanitizeDataForJson($data);
+            $json = json_encode($cleanData);
+            
+            if ($json === false) {
+                // If still failing, return a simple error response
+                $errorJson = '{"error":true,"message":"Internal server error: Unable to encode response","statusCode":500}';
+                echo $errorJson;
+                exit;
+            }
+        }
+        
+        // Output the JSON response
+        echo $json;
+        exit;
+    }
+    
+    /**
+     * Sanitize data for JSON encoding
+     *
+     * @param mixed $data The data to sanitize
+     * @return mixed Sanitized data
+     */
+    private static function sanitizeDataForJson($data) {
+        if (is_array($data)) {
+            $clean = [];
+            foreach ($data as $key => $value) {
+                $clean[$key] = self::sanitizeDataForJson($value);
+            }
+            return $clean;
+        } elseif (is_object($data)) {
+            $clean = new \stdClass();
+            foreach (get_object_vars($data) as $key => $value) {
+                $clean->$key = self::sanitizeDataForJson($value);
+            }
+            return $clean;
+        } elseif (is_string($data)) {
+            // Remove invalid UTF-8 characters
+            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+        } else {
+            return $data;
         }
     }
     
-    if (!file_exists($headerPath)) {
-        if ($isWeb) output("<div class='error'>Header file not found</div>", true);
-        else output("Error: Header file not found");
+    /**
+     * Format data to ensure it has the correct structure with attributes
+     * 
+     * @param array $data The data to format
+     * @return array The formatted data
+     */
+    public static function formatData($data) {
+        // If data is already in the correct format, check if attributes needs fixing
+        if (isset($data['id']) && isset($data['attributes'])) {
+            // Check for nested attributes
+            if (isset($data['attributes']['attributes'])) {
+                $data['attributes'] = $data['attributes']['attributes'];
+            }
+            return $data;
+        }
+        
+        // If data is an array of items, format each item
+        if (is_array($data) && !isset($data['id']) && !isset($data['attributes']) && !empty($data)) {
+            $formattedData = [];
+            foreach ($data as $item) {
+                if (is_array($item) && isset($item['id'])) {
+                    // Format each item
+                    $attributes = [];
+                    foreach ($item as $key => $value) {
+                        if ($key !== 'id') {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                    
+                    $formattedData[] = [
+                        'id' => $item['id'],
+                        'attributes' => $attributes
+                    ];
+                } else {
+                    // If item doesn't have an ID, keep it as is
+                    $formattedData[] = $item;
+                }
+            }
+            return $formattedData;
+        }
+        
+        // Format a single item
+        $id = $data['id'] ?? null;
+        if ($id === null) {
+            // If no ID, return data as is
+            return $data;
+        }
+        
+        // Create attributes array
+        $attributes = [];
+        foreach ($data as $key => $value) {
+            if ($key !== 'id') {
+                $attributes[$key] = $value;
+            }
+        }
+        
+        // Return formatted data
+        return [
+            'id' => $id,
+            'attributes' => $attributes
+        ];
+    }
+    
+    /**
+     * Send a success response as JSON
+     * 
+     * @param array $data The data to include in the response
+     * @param array $meta Additional metadata
+     * @param int $statusCode HTTP status code
+     */
+    public static function sendSuccess($data, $meta = [], $statusCode = 200) {
+        // Format data if needed
+        $formatted = self::formatData($data);
+        
+        // Send the response
+        self::json(self::success($formatted, $meta, $statusCode));
+    }
+    
+    /**
+     * Send a paginated response as JSON
+     * 
+     * @param array $data The data to include in the response
+     * @param int $page Current page number
+     * @param int $pageSize Items per page
+     * @param int $total Total number of items
+     * @param array $additionalMeta Additional metadata
+     * @param int $statusCode HTTP status code
+     */
+    public static function sendPaginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
+        // Check if data is already formatted
+        $isFormatted = true;
+        if (is_array($data)) {
+            foreach ($data as $item) {
+                if (!isset($item['id']) || !isset($item['attributes'])) {
+                    $isFormatted = false;
+                    break;
+                }
+            }
+        }
+        
+        $formattedData = $isFormatted ? $data : self::formatData($data);
+        self::json(self::paginated($formattedData, $page, $pageSize, $total, $additionalMeta, $statusCode));
+    }
+    
+    /**
+     * Send an error response as JSON
+     * 
+     * @param string $message Error message
+     * @param int $statusCode HTTP status code
+     * @param array $errors Detailed error information
+     */
+    public static function sendError($message, $statusCode = 400, $errors = []) {
+        self::json(self::error($message, $statusCode, $errors));
+    }
+}
+EOD;
+    
+    if (file_put_contents($responseFile, $responseClass)) {
+        echo "<p style='color:green'>✅ Successfully created Response class at: $responseFile</p>";
+    } else {
+        echo "<p style='color:red'>❌ Failed to create Response class.</p>";
     }
 }
 
-if (file_exists($headerPath)) {
-    // Backup the header file
-    $backupFile = $headerPath . '.bak.' . date('YmdHis');
-    if (!copy($headerPath, $backupFile)) {
-        if ($isWeb) output("<div class='warning'>Failed to create backup of header file</div>", true);
-        else output("Warning: Failed to create backup of header file");
-    } else {
-        output("Backup created: $backupFile");
-    }
-    
-    // Write the new header content
-    if (file_put_contents($headerPath, $headerContent)) {
-        if ($isWeb) output("<div class='success'>Replaced header file with improved navigation</div>", true);
-        else output("Replaced header file with improved navigation");
-    } else {
-        if ($isWeb) output("<div class='error'>Failed to replace header file</div>", true);
-        else output("Error: Failed to replace header file");
-    }
-}
+// Step 3: Fix controller loading issues
+echo "<h2>Step 3: Fix Controller Loading Issues</h2>";
 
-// Step 4: Create a new footer file
-updateProgress(30, "Creating new footer file...");
-output("Step 4: Creating new footer file...");
-$footerContent = '            </main>
-        </div>
-    </div>
-</body>
-</html>';
-
-$footerPath = __DIR__ . '/admin/views/footer.php';
-if (!file_exists($footerPath)) {
-    // Try to find the footer file
-    $possibleFooterFiles = [
-        __DIR__ . '/admin/views/footer.php',
-        __DIR__ . '/admin/includes/footer.php',
-        __DIR__ . '/admin/footer.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/views/footer.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/includes/footer.php',
-        '/home/stories/api.storiesfromtheweb.org/admin/footer.php'
-    ];
+// Check for GamesController in the target folder
+$gamesController = $targetFolder . '/GamesController.php';
+if (file_exists($gamesController)) {
+    echo "<p style='color:green'>✅ GamesController found at: $gamesController</p>";
     
-    foreach ($possibleFooterFiles as $file) {
-        if (file_exists($file)) {
-            $footerPath = $file;
-            output("Found footer file: $footerPath");
-            break;
+    // Check the namespace
+    $content = file_get_contents($gamesController);
+    $targetFolderName = basename($targetFolder);
+    $expectedNamespace = "namespace StoriesAPI\\$targetFolderName;";
+    
+    if (strpos($content, $expectedNamespace) === false) {
+        echo "<p style='color:orange'>⚠️ GamesController may have the wrong namespace. Fixing...</p>";
+        
+        // Create a backup of the original file
+        $backupFile = $gamesController . '.bak.' . date('YmdHis');
+        if (copy($gamesController, $backupFile)) {
+            echo "<p>Created a backup of the original GamesController at: $backupFile</p>";
+        }
+        
+        // Try to find the actual namespace
+        if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
+            $actualNamespace = $matches[1];
+            echo "<p>Actual namespace: " . htmlspecialchars($actualNamespace) . "</p>";
+            echo "<p>Expected namespace: " . htmlspecialchars("StoriesAPI\\$targetFolderName") . "</p>";
+            
+            // Update the namespace
+            $newContent = str_replace($actualNamespace, "StoriesAPI\\$targetFolderName", $content);
+            
+            if (file_put_contents($gamesController, $newContent)) {
+                echo "<p style='color:green'>✅ Updated namespace in GamesController.</p>";
+            } else {
+                echo "<p style='color:red'>❌ Failed to update namespace in GamesController.</p>";
+            }
+        } else {
+            echo "<p style='color:red'>❌ Could not find namespace in GamesController.</p>";
+        }
+    } else {
+        echo "<p style='color:green'>✅ GamesController has the correct namespace.</p>";
+    }
+} else {
+    echo "<p style='color:red'>❌ GamesController not found in the target folder!</p>";
+    
+    // Create a basic GamesController
+    echo "<h3>Creating GamesController</h3>";
+    
+    $targetFolderName = basename($targetFolder);
+    $controllerContent = <<<EOD
+<?php
+/**
+ * Games Controller
+ * 
+ * Handles API requests for games
+ */
+
+namespace StoriesAPI\\$targetFolderName;
+
+use StoriesAPI\Core\Controller;
+use StoriesAPI\Utils\Response;
+
+class GamesController extends Controller {
+    /**
+     * Get a list of games
+     */
+    public function index() {
+        // Get pagination parameters
+        \$page = isset(\$_GET['page']) ? (int)\$_GET['page'] : 1;
+        \$pageSize = isset(\$_GET['pageSize']) ? (int)\$_GET['pageSize'] : 25;
+        
+        // Ensure valid pagination values
+        \$page = max(1, \$page);
+        \$pageSize = max(1, min(100, \$pageSize));
+        
+        // Calculate offset
+        \$offset = (\$page - 1) * \$pageSize;
+        
+        // Get filter parameters
+        \$filters = [];
+        if (isset(\$_GET['featured'])) {
+            \$filters['featured'] = \$_GET['featured'] === 'true' ? 1 : 0;
+        }
+        if (isset(\$_GET['isPublished'])) {
+            \$filters['is_published'] = \$_GET['isPublished'] === 'true' ? 1 : 0;
+        }
+        
+        // Get sort parameter
+        \$sortField = isset(\$_GET['sort']) ? \$_GET['sort'] : 'id';
+        \$sortDirection = 'ASC';
+        
+        // Check if sort field has a direction prefix
+        if (strpos(\$sortField, '-') === 0) {
+            \$sortField = substr(\$sortField, 1);
+            \$sortDirection = 'DESC';
+        }
+        
+        // Map frontend field names to database column names
+        \$fieldMap = [
+            'id' => 'id',
+            'title' => 'title',
+            'publishedAt' => 'published_at',
+            'createdAt' => 'created_at',
+            'updatedAt' => 'updated_at'
+        ];
+        
+        // Ensure the sort field is valid
+        if (!isset(\$fieldMap[\$sortField])) {
+            \$sortField = 'id';
+        }
+        
+        // Get the database column name
+        \$sortColumn = \$fieldMap[\$sortField];
+        
+        // Build the sort clause
+        \$sortClause = "ORDER BY \$sortColumn \$sortDirection";
+        
+        try {
+            // Connect to database
+            echo "<p>Connecting to database...</p>";
+            try {
+                \$this->db->query("SELECT 1");
+                echo "<p>Database connection successful.</p>";
+            } catch (\Exception \$e) {
+                echo "<p>Database connection failed: " . \$e->getMessage() . "</p>";
+                \$this->serverError('Database connection failed: ' . \$e->getMessage());
+                return;
+            }
+            
+            // Build the WHERE clause
+            echo "<p>Building WHERE clause...</p>";
+            \$whereData = \$this->buildWhereClause(\$filters);
+            \$whereClause = \$whereData['clause'];
+            \$params = \$whereData['params'];
+            echo "<p>WHERE clause built: \$whereClause with params: " . json_encode(\$params) . "</p>";
+            
+            // Count total records
+            \$countQuery = "SELECT COUNT(*) as total FROM games \$whereClause";
+            echo "<p>Executing count query: \$countQuery with params: " . json_encode(\$params) . "</p>";
+            \$stmt = \$this->db->query(\$countQuery, \$params);
+            \$total = \$stmt->fetch()['total'];
+            echo "<p>Total records: \$total</p>";
+            
+            // Get games with pagination
+            \$query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
+                \$whereClause
+                \$sortClause
+                LIMIT \$offset, \$pageSize";
+            
+            echo "<p>Executing data query: \$query with params: " . json_encode(\$params) . "</p>";
+            \$stmt = \$this->db->query(\$query, \$params);
+            \$games = \$stmt->fetchAll();
+            echo "<p>Fetched games: " . json_encode(\$games) . "</p>";
+            
+            // Format games with the expected structure
+            \$formattedGames = Response::formatData(\$games);
+            echo "<p>Formatted games: " . json_encode(\$formattedGames) . "</p>";
+            
+            // Send paginated response
+            Response::sendPaginated(\$formattedGames, \$page, \$pageSize, \$total);
+        } catch (\Exception \$e) {
+            echo "<p>Error fetching games: " . \$e->getMessage() . "</p>";
+            \$this->serverError('Failed to fetch games: ' . \$e->getMessage());
         }
     }
     
-    if (!file_exists($footerPath)) {
-        if ($isWeb) output("<div class='error'>Footer file not found</div>", true);
-        else output("Error: Footer file not found");
-    }
-}
-
-if (file_exists($footerPath)) {
-    // Backup the footer file
-    $backupFile = $footerPath . '.bak.' . date('YmdHis');
-    if (!copy($footerPath, $backupFile)) {
-        if ($isWeb) output("<div class='warning'>Failed to create backup of footer file</div>", true);
-        else output("Warning: Failed to create backup of footer file");
-    } else {
-        output("Backup created: $backupFile");
-    }
-    
-    // Write the new footer content
-    if (file_put_contents($footerPath, $footerContent)) {
-        if ($isWeb) output("<div class='success'>Replaced footer file</div>", true);
-        else output("Replaced footer file");
-    } else {
-        if ($isWeb) output("<div class='error'>Failed to replace footer file</div>", true);
-        else output("Error: Failed to replace footer file");
-    }
-}
-
-// Step 5: Create a completely new index.php file
-updateProgress(40, "Creating new index.php file...");
-output("Step 5: Creating new index.php file...");
-$indexContent = '<?php
-$pageTitle = "Dashboard";
-include_once __DIR__ . "/views/header.php";
-
-// Function to get content count
-function getContentCount($type) {
-    global $db;
-    
-    // Try to get count from database
-    try {
-        $stmt = $db->prepare("SELECT COUNT(*) FROM " . $type);
-        $stmt->execute();
-        return $stmt->fetchColumn();
-    } catch (PDOException $e) {
-        // Return sample data if database query fails
-        switch ($type) {
-            case "stories": return 5;
-            case "blog_posts": return 3;
-            case "authors": return 2;
-            case "tags": return 10;
-            case "games": return 4;
-            case "directory_items": return 6;
-            case "ai_tools": return 2;
-            default: return 0;
+    /**
+     * Get a single game by ID
+     * 
+     * @param int \$id The game ID
+     */
+    public function show(\$id) {
+        try {
+            \$query = "SELECT
+                id, title, description, slug, featured, is_published,
+                published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt
+                FROM games
+                WHERE id = :id";
+            
+            \$stmt = \$this->db->query(\$query, ['id' => \$id]);
+            \$game = \$stmt->fetch();
+            
+            if (!\$game) {
+                \$this->notFound('Game not found');
+                return;
+            }
+            
+            // Format game with the expected structure
+            \$formattedGame = Response::formatData(\$game);
+            
+            // Send success response
+            Response::sendSuccess(\$formattedGame);
+        } catch (\Exception \$e) {
+            \$this->serverError('Failed to fetch game: ' . \$e->getMessage());
         }
     }
-}
-
-// Get counts
-$storiesCount = getContentCount("stories");
-$blogPostsCount = getContentCount("blog_posts");
-$authorsCount = getContentCount("authors");
-$tagsCount = getContentCount("tags");
-$gamesCount = getContentCount("games");
-$directoryItemsCount = getContentCount("directory_items");
-$aiToolsCount = getContentCount("ai_tools");
-?>
-
-<h1 class="dashboard-title">Dashboard</h1>
-
-<div class="dashboard-section">
-    <h2>Welcome to Stories Admin</h2>
-    <p>Manage your content, authors, and more from this dashboard.</p>
-</div>
-
-<div class="dashboard-section">
-    <h2>Content Statistics</h2>
     
-    <div class="dashboard-cards">
-        <div class="dashboard-card">
-            <h3 class="dashboard-card-title">Stories</h3>
+    /**
+     * Build a WHERE clause based on filters
+     * 
+     * @param array \$filters The filters to apply
+     * @return array The WHERE clause and parameters
+     */
+    private function buildWhereClause(\$filters) {
+        \$where = [];
+        \$params = [];
+        
+        foreach (\$filters as \$key => \$value) {
+            \$where[] = "\$key = :\$key";
+            \$params[\$key] = \$value;
+        }
+        
+        \$whereClause = empty(\$where) ? '' : 'WHERE ' . implode(' AND ', \$where);
+        
+        return [
+            'clause' => \$whereClause,
+            'params' => \$params
+        ];
+    }
+}
+EOD;
+    
+    if (file_put_contents($gamesController, $controllerContent)) {
+        echo "<p style='color:green'>✅ Created GamesController at: $gamesController</p>";
+    } else {

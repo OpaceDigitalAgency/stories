@@ -217,25 +217,23 @@ class CaseSensitivityFixer {
 
                     // Fix file path references in require/include statements
                     $patterns = [
-                        // require/include with single quotes
-                        "/(require|require_once|include|include_once)([^;]*?['\"])([^'\"]*?\/)$old(\/)([^'\"]*?)(['\"]\s*;)/i",
-                        // require/include with double quotes
-                        '/(require|require_once|include|include_once)([^;]*?["\'])([^"\']*)?\/' . $old . '\/([^"\']*?)(["\'])\s*;/i',
+                        // require/include statements
+                        "/(require|require_once|include|include_once)\s*['\"].*?\/$old\/.*?['\"];/i",
                         // __DIR__ references
-                        "/__DIR__\s*\.\s*(['\"])([^'\"]*?\/)$old(\/)([^'\"]*?)(['\"]\s*)/i"
+                        "/__DIR__\s*\.\s*['\"].*?\/$old\/.*?['\"]/i"
                     ];
 
                     foreach ($patterns as $pattern) {
-                        if (preg_match($pattern, $content)) {
-                            $content = preg_replace(
-                                $pattern,
-                                function($matches) use ($new) {
-                                    // Replace old directory name with new while preserving the rest
-                                    $matches[0] = str_replace('/' . strtolower($new) . '/', '/' . $new . '/', $matches[0]);
-                                    return $matches[0];
-                                },
-                                $content
-                            );
+                        $content = preg_replace_callback(
+                            $pattern,
+                            function($matches) use ($old, $new) {
+                                return str_replace("/$old/", "/$new/", $matches[0]);
+                            },
+                            $content,
+                            -1,
+                            $count
+                        );
+                        if ($count > 0) {
                             $modified = true;
                         }
                     }

@@ -9,6 +9,41 @@ ini_set('display_errors', 1);
 
 // HTML header
 header('Content-Type: text/html; charset=utf-8');
+
+// Function to recursively delete a directory
+function rrmdir($dir) {
+    if (is_dir($dir)) {
+        $objects = scandir($dir);
+        foreach ($objects as $object) {
+            if ($object != "." && $object != "..") {
+                if (is_dir($dir . "/" . $object)) {
+                    rrmdir($dir . "/" . $object);
+                } else {
+                    unlink($dir . "/" . $object);
+                }
+            }
+        }
+        rmdir($dir);
+    }
+}
+
+// Function to recursively copy a directory
+function rcopy($src, $dst) {
+    if (is_dir($src)) {
+        if (!is_dir($dst)) {
+            mkdir($dst, 0755, true);
+        }
+        $files = scandir($src);
+        foreach ($files as $file) {
+            if ($file != "." && $file != "..") {
+                rcopy("$src/$file", "$dst/$file");
+            }
+        }
+    } else if (file_exists($src)) {
+        copy($src, $dst);
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html>
@@ -57,41 +92,35 @@ header('Content-Type: text/html; charset=utf-8');
             ];
             
             try {
-                // Create capitalized directories
-                foreach ($directories as $old => $new) {
-                    $newPath = $baseDir . '/' . $new;
-                    if (!is_dir($newPath)) {
-                        if (mkdir($newPath, 0755, true)) {
-                            echo "<p class='success'>✓ Created directory: $new</p>";
-                        }
-                    }
-                }
-                
-                // Move files
                 foreach ($directories as $old => $new) {
                     $oldPath = $baseDir . '/' . $old;
                     $newPath = $baseDir . '/' . $new;
+                    $tempPath = $baseDir . '/' . $old . '_temp';
                     
                     if (is_dir($oldPath)) {
-                        echo "<h3>Moving files from $old to $new</h3>";
+                        echo "<h3>Processing $old → $new</h3>";
                         
-                        $files = glob($oldPath . '/*');
-                        foreach ($files as $file) {
-                            $filename = basename($file);
-                            $newFile = $newPath . '/' . $filename;
-                            
-                            if (rename($file, $newFile)) {
-                                echo "<p class='success'>✓ Moved: $filename</p>";
-                            } else {
-                                echo "<p class='error'>Failed to move: $filename</p>";
-                            }
+                        // Step 1: Move to temp directory
+                        if (is_dir($tempPath)) {
+                            rrmdir($tempPath);
                         }
-                        
-                        // Remove old directory if empty
-                        if (count(glob($oldPath . '/*')) === 0) {
-                            if (rmdir($oldPath)) {
-                                echo "<p class='success'>✓ Removed old directory: $old</p>";
+                        if (rename($oldPath, $tempPath)) {
+                            echo "<p class='success'>✓ Moved to temporary directory</p>";
+                            
+                            // Step 2: Create new directory
+                            if (!is_dir($newPath)) {
+                                mkdir($newPath, 0755, true);
                             }
+                            
+                            // Step 3: Copy files
+                            rcopy($tempPath, $newPath);
+                            echo "<p class='success'>✓ Copied files to new directory</p>";
+                            
+                            // Step 4: Remove temp directory
+                            rrmdir($tempPath);
+                            echo "<p class='success'>✓ Cleaned up temporary directory</p>";
+                        } else {
+                            echo "<p class='error'>Failed to move directory</p>";
                         }
                     }
                 }
@@ -114,11 +143,16 @@ header('Content-Type: text/html; charset=utf-8');
                 
                 echo "<h3>$old → $new</h3>";
                 if (is_dir($oldPath)) {
-                    $files = glob($oldPath . '/*');
-                    echo "<p>Files to move: " . count($files) . "</p>";
+                    $iterator = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($oldPath, RecursiveDirectoryIterator::SKIP_DOTS),
+                        RecursiveIteratorIterator::SELF_FIRST
+                    );
+                    
                     echo "<ul>";
-                    foreach ($files as $file) {
-                        echo "<li>" . basename($file) . "</li>";
+                    foreach ($iterator as $file) {
+                        if ($file->isFile()) {
+                            echo "<li>" . str_replace($oldPath . '/', '', $file->getPathname()) . "</li>";
+                        }
                     }
                     echo "</ul>";
                 }

@@ -15,8 +15,8 @@ ini_set('display_errors', 1);
 ini_set('max_execution_time', 300); // 5 minutes
 
 // Configuration
-define('API_DIR', __DIR__);
-define('BACKUP_DIR', dirname(API_DIR) . '/backups/' . date('Ymd_His'));
+define('API_DIR', __DIR__ . '/api/v1');
+define('BACKUP_DIR', __DIR__ . '/backups/' . date('Ymd_His'));
 
 // HTML header
 header('Content-Type: text/html; charset=utf-8');

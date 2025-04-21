@@ -7,7 +7,7 @@
 
 // Get router instance
 if (!isset($router)) {
-    $config = require __DIR__ . '/config/config.php';
+    $config = require __DIR__ . '/Config/config.php';
     $router = new StoriesAPI\Core\Router($config);
 }
 

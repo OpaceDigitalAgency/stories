@@ -19,24 +19,24 @@ class AiToolsController extends BaseController {
      * Get all AI tools with pagination, filtering, and sorting
      */
     public function index() {
-        // Get pagination parameters
-        $pagination = $this->getPaginationParams();
-        $page = $pagination['page'];
-        $pageSize = $pagination['pageSize'];
-        $offset = ($page - 1) * $pageSize;
-        
-        // Get sort parameters
-        $allowedSortFields = ['title', 'created_at', 'rating'];
-        $sort = $this->getSortParams($allowedSortFields);
-        $sortField = $sort['field'] ?? 'created_at';
-        $sortDirection = $sort['direction'] ?? 'DESC';
-        $sortClause = "ORDER BY $sortField $sortDirection";
-        
-        // Get filter parameters
-        $allowedFilterFields = ['title', 'slug', 'featured', 'is_published', 'category_id', 'pricing_type'];
-        $filters = $this->getFilterParams($allowedFilterFields);
-        
         try {
+            // Get pagination parameters
+            $pagination = $this->getPaginationParams();
+            $page = $pagination['page'];
+            $pageSize = $pagination['pageSize'];
+            $offset = ($page - 1) * $pageSize;
+            
+            // Get sort parameters
+            $allowedSortFields = ['title', 'created_at', 'rating'];
+            $sort = parent::getSortParams($allowedSortFields);
+            $sortField = $sort['field'] ?? 'created_at';
+            $sortDirection = $sort['direction'] ?? 'DESC';
+            $sortClause = "ORDER BY $sortField $sortDirection";
+            
+            // Get filter parameters
+            $allowedFilterFields = ['title', 'slug', 'featured', 'is_published', 'category_id', 'pricing_type'];
+            $filters = $this->getFilterParams($allowedFilterFields);
+            
             // Build the WHERE clause
             $whereData = $this->buildWhereClause($filters);
             $whereClause = $whereData['clause'];

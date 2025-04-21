@@ -1,5 +1,5 @@
 <?php
-namespace StoriesAPI\core;
+namespace StoriesAPI\Core;
 
 use StoriesAPI\Utils\Response;
 

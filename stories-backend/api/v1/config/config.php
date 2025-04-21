@@ -1,4 +1,6 @@
 <?php
+namespace StoriesAPI\Config;
+
 /**
  * Configuration file for the Stories API
  * 

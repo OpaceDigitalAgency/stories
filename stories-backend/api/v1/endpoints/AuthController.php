@@ -296,7 +296,7 @@ class AuthController extends BaseController {
             global $config;
             if (!isset($config['security']) || !isset($config['security']['jwt_secret'])) {
                 error_log("EMERGENCY FIX: Loading config for Auth class");
-                $config = require __DIR__ . '/../../config/config.php';
+                $config = require __DIR__ . '/../../Config/config.php';
             }
             
             // Re-initialize Auth with config to ensure JWT secret is set

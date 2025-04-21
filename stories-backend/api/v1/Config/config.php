@@ -26,11 +26,11 @@ if (ENVIRONMENT === 'development') {
 // Database configuration
 $config['db'] = [
     'host'     => 'localhost',      // Database host
-    'name'     => 'stories_db',     // Database name
+    'name'     => 'stories_api',    // Database name
     'user'     => 'stories_user',   // Database username
-    'password' => '$tw1cac3*sOt',   // Database password - found in direct_login.php
+    'password' => '$tw1cac3*sOt',   // Database password
     'charset'  => 'utf8mb4',        // Character set
-    'port'     => 3306              // Database port
+    'port'     => 3306             // Database port
 ];
 
 // API configuration
@@ -44,7 +44,7 @@ $config['api'] = [
 
 // Security configuration
 $config['security'] = [
-    'jwt_secret'   => 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6', // Production JWT secret key
+    'jwt_secret'   => 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6', // JWT secret key
     'token_expiry' => 86400,                 // Token expiry time in seconds (24 hours)
     'cors' => [
         'allowed_origins' => [
@@ -68,5 +68,9 @@ $config['media'] = [
     'allowed_types'=> ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     'base_url'     => '/uploads/'
 ];
+
+// Enable error logging
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../../logs/php-errors.log');
 
 return $config;

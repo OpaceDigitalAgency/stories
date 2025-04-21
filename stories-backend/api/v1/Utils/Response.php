@@ -10,14 +10,34 @@ class Response {
      */
     private static function json($data, $status = 200) {
         http_response_code($status);
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         
         // Clear any output buffers
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
+
+        // Ensure proper UTF-8 encoding
+        if (is_array($data)) {
+            array_walk_recursive($data, function(&$item) {
+                if (is_string($item)) {
+                    $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
+                }
+            });
+        }
         
-        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        // Encode with error handling
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            error_log("JSON encoding error: " . json_last_error_msg());
+            $error = [
+                'status' => 'error',
+                'message' => 'Internal server error: Failed to encode response'
+            ];
+            echo json_encode($error);
+        } else {
+            echo $json;
+        }
         exit;
     }
     

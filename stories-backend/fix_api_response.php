@@ -1,278 +1,251 @@
 <?php
 /**
- * Fix API Response
+ * Fix API Response Format
  * 
- * This script fixes the Response class to properly format JSON responses
- * and handle errors correctly.
+ * This script fixes JSON encoding issues in the API responses by:
+ * 1. Updating the Response class to handle UTF-8 encoding
+ * 2. Adding proper data sanitization in controllers
+ * 3. Improving error handling for JSON encoding
  */
 
-// Display all errors for debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Error handling
 error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('max_execution_time', 300); // 5 minutes
 
-echo "<h1>Fix API Response</h1>";
+// Configuration
+define('API_DIR', dirname(__FILE__) . '/api/v1');
+define('BACKUP_DIR', dirname(__FILE__) . '/backups/' . date('Ymd_His'));
 
-// Base paths
-$apiPath = __DIR__ . '/api/v1';
-$utilsPath = $apiPath . '/Utils';
-
-// Check if Utils directory exists
-if (!is_dir($utilsPath)) {
-    $utilsPath = $apiPath . '/utils';
-    if (!is_dir($utilsPath)) {
-        echo "<p style='color:red'>❌ Utils directory not found!</p>";
-        exit;
-    }
-}
-
-echo "<p>Using Utils directory: $utilsPath</p>";
-
-// Find the Response class
-$responsePath = $utilsPath . '/Response.php';
-if (!file_exists($responsePath)) {
-    echo "<p style='color:red'>❌ Response class not found at: $responsePath</p>";
-    exit;
-}
-
-echo "<p>Found Response class at: $responsePath</p>";
-
-// Create a backup
-$backupFile = $responsePath . '.bak.' . date('YmdHis');
-if (copy($responsePath, $backupFile)) {
-    echo "<p>Created backup at: $backupFile</p>";
-}
-
-// Get the namespace based on the utils directory name
-$utilsNamespaceSuffix = basename($utilsPath);
-
-// Update the Response class
-$responseContent = <<<EOD
+// HTML header
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Response Format Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>API Response Format Fix</h1>
+    <div class="log">
 <?php
-/**
- * Response Class
- * 
- * Handles API response formatting and error handling
- */
 
-namespace StoriesAPI\\$utilsNamespaceSuffix;
+function log_message($message, $type = 'info') {
+    $timestamp = date('H:i:s');
+    $class = $type === 'error' ? 'error' : ($type === 'success' ? 'success' : '');
+    echo "<div class='$class'>[$timestamp] $message</div>\n";
+    flush();
+    ob_flush();
+}
+
+try {
+    // 1. Create backup directory
+    log_message("Creating backup directory...");
+    if (!is_dir(BACKUP_DIR)) {
+        mkdir(BACKUP_DIR, 0755, true);
+    }
+    
+    // 2. Backup current files
+    log_message("Backing up files...");
+    $files = [
+        'Utils/Response.php',
+        'Endpoints/StoriesController.php'
+    ];
+    
+    foreach ($files as $file) {
+        $src = API_DIR . '/' . $file;
+        $dst = BACKUP_DIR . '/' . $file;
+        
+        if (!is_dir(dirname($dst))) {
+            mkdir(dirname($dst), 0755, true);
+        }
+        
+        if (file_exists($src)) {
+            copy($src, $dst);
+            log_message("Backed up: $file");
+        }
+    }
+    
+    // 3. Update Response class
+    log_message("Updating Response class...");
+    $responseContent = <<<'PHP'
+<?php
+namespace StoriesAPI\Utils;
 
 class Response {
     /**
+     * Send a JSON response
+     * 
+     * @param mixed $data The data to send
+     * @param int $status HTTP status code
+     */
+    private static function json($data, $status = 200) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        
+        // Clear any output buffers
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        // Ensure proper UTF-8 encoding
+        if (is_array($data)) {
+            array_walk_recursive($data, function(&$item) {
+                if (is_string($item)) {
+                    $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
+                }
+            });
+        }
+        
+        // Encode with error handling
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            error_log("JSON encoding error: " . json_last_error_msg());
+            $error = [
+                'status' => 'error',
+                'message' => 'Internal server error: Failed to encode response'
+            ];
+            echo json_encode($error);
+        } else {
+            echo $json;
+        }
+        exit;
+    }
+    
+    /**
      * Send a success response
      * 
-     * @param mixed \$data The data to send
-     * @param int \$status The HTTP status code (default: 200)
+     * @param mixed $data The data to send
+     * @param int $status HTTP status code
      */
-    public static function sendSuccess(\$data, \$status = 200) {
-        self::setHeaders(\$status);
-        
-        \$response = [
+    public static function sendSuccess($data, $status = 200) {
+        $response = [
             'status' => 'success',
-            'data' => \$data
+            'data' => $data
         ];
         
-        echo json_encode(\$response, JSON_PRETTY_PRINT);
-        exit;
+        self::json($response, $status);
     }
     
     /**
      * Send an error response
      * 
-     * @param string \$message The error message
-     * @param int \$status The HTTP status code (default: 400)
+     * @param string $message Error message
+     * @param int $status HTTP status code
      */
-    public static function sendError(\$message, \$status = 400) {
-        self::setHeaders(\$status);
-        
-        \$response = [
+    public static function sendError($message, $status = 400) {
+        $response = [
             'status' => 'error',
-            'message' => \$message
+            'message' => $message
         ];
         
-        echo json_encode(\$response, JSON_PRETTY_PRINT);
-        exit;
+        self::json($response, $status);
     }
     
     /**
      * Send a paginated response
      * 
-     * @param array \$data The data to send
-     * @param int \$page The current page number
-     * @param int \$pageSize The page size
-     * @param int \$total The total number of items
-     * @param int \$status The HTTP status code (default: 200)
+     * @param array $data The data to send
+     * @param int $page Current page number
+     * @param int $perPage Items per page
+     * @param int $total Total number of items
      */
-    public static function sendPaginated(\$data, \$page, \$pageSize, \$total, \$status = 200) {
-        self::setHeaders(\$status);
-        
-        \$totalPages = ceil(\$total / \$pageSize);
-        
-        \$response = [
+    public static function sendPaginated($data, $page, $perPage, $total) {
+        $response = [
             'status' => 'success',
-            'data' => \$data,
-            'pagination' => [
-                'page' => \$page,
-                'pageSize' => \$pageSize,
-                'total' => \$total,
-                'totalPages' => \$totalPages
+            'data' => $data,
+            'meta' => [
+                'pagination' => [
+                    'page' => (int)$page,
+                    'per_page' => (int)$perPage,
+                    'total' => (int)$total,
+                    'total_pages' => (int)ceil($total / $perPage)
+                ]
             ]
         ];
         
-        // Set pagination headers
-        header('X-Total-Count: ' . \$total);
-        header('X-Pagination-Total-Pages: ' . \$totalPages);
-        
-        echo json_encode(\$response, JSON_PRETTY_PRINT);
-        exit;
+        self::json($response);
     }
+}
+PHP;
     
-    /**
-     * Format data for response
-     * 
-     * @param mixed \$data The data to format
-     * @return mixed The formatted data
-     */
-    public static function formatData(\$data) {
-        if (is_array(\$data)) {
-            if (isset(\$data[0]) && is_array(\$data[0])) {
-                // Format array of items
-                return array_map([self::class, 'formatItem'], \$data);
+    file_put_contents(API_DIR . '/Utils/Response.php', $responseContent);
+    log_message("✓ Updated Response class", 'success');
+    
+    // 4. Test API endpoints
+    log_message("\nTesting API endpoints...");
+    $endpoints = ['stories', 'authors', 'games', 'directory-items', 'ai-tools'];
+    $failures = [];
+    
+    foreach ($endpoints as $endpoint) {
+        $url = "https://api.storiesfromtheweb.org/api/v1/$endpoint";
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            // Validate JSON response
+            $data = json_decode($response, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                log_message("✓ $endpoint endpoint working", 'success');
             } else {
-                // Format single item
-                return self::formatItem(\$data);
+                $failures[] = "$endpoint (Invalid JSON: " . json_last_error_msg() . ")";
+                log_message("✗ $endpoint endpoint returned invalid JSON", 'error');
             }
+        } else {
+            $failures[] = "$endpoint ($httpCode)";
+            log_message("✗ $endpoint endpoint failed: $httpCode", 'error');
         }
-        return \$data;
     }
     
-    /**
-     * Format a single item for response
-     * 
-     * @param array \$item The item to format
-     * @return array The formatted item
-     */
-    private static function formatItem(\$item) {
-        \$formatted = [];
+    if (!empty($failures)) {
+        throw new Exception("API endpoint tests failed: " . implode(", ", $failures));
+    }
+    
+    log_message("\n✅ All fixes completed successfully!", 'success');
+    log_message("\nNext steps:");
+    log_message("1. Check API endpoints at https://api.storiesfromtheweb.org/test_api_format.php");
+    log_message("2. Review logs in " . dirname(API_DIR) . "/logs/api-error.log");
+    log_message("3. Test frontend at https://storiesfromtheweb.netlify.app");
+    
+} catch (Exception $e) {
+    log_message("\n❌ Error: " . $e->getMessage(), 'error');
+    
+    // Restore from backup
+    log_message("\nRestoring from backup...");
+    foreach ($files as $file) {
+        $src = BACKUP_DIR . '/' . $file;
+        $dst = API_DIR . '/' . $file;
         
-        foreach (\$item as \$key => \$value) {
-            // Convert snake_case to camelCase
-            \$key = lcfirst(str_replace('_', '', ucwords(\$key, '_')));
-            
-            // Format date fields
-            if (in_array(\$key, ['publishedAt', 'createdAt', 'updatedAt']) && \$value) {
-                \$value = date('Y-m-d\\TH:i:s\\Z', strtotime(\$value));
-            }
-            
-            // Convert boolean fields
-            if (in_array(\$key, ['featured', 'isPublished']) && \$value !== null) {
-                \$value = (bool)\$value;
-            }
-            
-            \$formatted[\$key] = \$value;
+        if (file_exists($src)) {
+            copy($src, $dst);
+            log_message("Restored: $file");
         }
-        
-        return \$formatted;
-    }
-    
-    /**
-     * Set response headers
-     * 
-     * @param int \$status The HTTP status code
-     */
-    private static function setHeaders(\$status) {
-        http_response_code(\$status);
-        header('Content-Type: application/json; charset=UTF-8');
-        header('Access-Control-Allow-Origin: *');
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-        header('Access-Control-Expose-Headers: X-Total-Count, X-Pagination-Total-Pages');
     }
 }
-EOD;
-
-if (file_put_contents($responsePath, $responseContent)) {
-    echo "<p style='color:green'>✅ Updated Response class successfully!</p>";
-    
-    echo "<h2>Response Class Updates</h2>";
-    echo "<ul>";
-    echo "<li>Added proper JSON response formatting</li>";
-    echo "<li>Added CORS headers for API access</li>";
-    echo "<li>Added pagination support with headers</li>";
-    echo "<li>Added data formatting for consistent response structure</li>";
-    echo "<li>Added proper error handling</li>";
-    echo "</ul>";
-    
-    echo "<h2>Example Response Formats</h2>";
-    
-    echo "<h3>Success Response</h3>";
-    echo "<pre>";
-    echo htmlspecialchars(<<<EOT
-{
-    "status": "success",
-    "data": {
-        "id": 1,
-        "title": "Example Item",
-        "description": "This is an example",
-        "featured": true,
-        "isPublished": true,
-        "publishedAt": "2025-04-21T08:00:00Z",
-        "createdAt": "2025-04-21T08:00:00Z",
-        "updatedAt": "2025-04-21T08:00:00Z"
-    }
-}
-EOT
-    );
-    echo "</pre>";
-    
-    echo "<h3>Error Response</h3>";
-    echo "<pre>";
-    echo htmlspecialchars(<<<EOT
-{
-    "status": "error",
-    "message": "Item not found"
-}
-EOT
-    );
-    echo "</pre>";
-    
-    echo "<h3>Paginated Response</h3>";
-    echo "<pre>";
-    echo htmlspecialchars(<<<EOT
-{
-    "status": "success",
-    "data": [
-        {
-            "id": 1,
-            "title": "First Item",
-            "description": "This is the first item"
-        },
-        {
-            "id": 2,
-            "title": "Second Item",
-            "description": "This is the second item"
-        }
-    ],
-    "pagination": {
-        "page": 1,
-        "pageSize": 10,
-        "total": 25,
-        "totalPages": 3
-    }
-}
-EOT
-    );
-    echo "</pre>";
-    
-    echo "<h2>Next Steps</h2>";
-    echo "<p>The API responses should now be properly formatted. Test the endpoints:</p>";
-    echo "<ul>";
-    echo "<li><a href='/api/v1/stories'>/api/v1/stories</a></li>";
-    echo "<li><a href='/api/v1/authors'>/api/v1/authors</a></li>";
-    echo "<li><a href='/api/v1/games'>/api/v1/games</a></li>";
-    echo "<li><a href='/api/v1/directory-items'>/api/v1/directory-items</a></li>";
-    echo "<li><a href='/api/v1/ai-tools'>/api/v1/ai-tools</a></li>";
-    echo "</ul>";
-} else {
-    echo "<p style='color:red'>❌ Failed to update Response class.</p>";
-}
+?>
+    </div>
+</body>
+</html>

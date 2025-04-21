@@ -3,39 +3,25 @@
  * API Routes Configuration
  *
  * This file defines all the API routes and their corresponding controllers.
- *
- * @package Stories API
- * @version 1.0.0
  */
 
 // Use the router passed from index.php
-// If $router is not defined, create a new instance (for direct access)
 if (!isset($router)) {
+    $config = require __DIR__ . '/config/config.php';
     $router = new StoriesAPI\Core\Router($config);
-    error_log("Created new router instance in routes.php");
-} else {
-    error_log("Using existing router instance from index.php");
 }
-
-// Add a debug log to confirm this file is being loaded
-error_log("ROUTES.PHP IS BEING LOADED - " . date('Y-m-d H:i:s'));
 
 // Add CORS middleware globally
 $corsMiddleware = new StoriesAPI\Middleware\CorsMiddleware($config['security']['cors']);
 $router->addGlobalMiddleware($corsMiddleware);
 
-// Create simple auth middleware instance
+// Create auth middleware instance
 $authMiddleware = new StoriesAPI\Middleware\SimpleAuthMiddleware($config);
 
 // Authentication routes
 $router->post('auth/login', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
 $router->post('auth/logout', 'StoriesAPI\Endpoints\SimpleAuthController', 'logout');
 $router->get('auth/me', 'StoriesAPI\Endpoints\SimpleAuthController', 'me', [$authMiddleware]);
-
-// Keep old routes for backward compatibility but point to new controller
-$router->post('auth/register', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
-$router->post('auth/refresh', 'StoriesAPI\Endpoints\SimpleAuthController', 'login');
-$router->put('auth/profile', 'StoriesAPI\Endpoints\SimpleAuthController', 'me', [$authMiddleware]);
 
 // Public routes (no auth required)
 $router->get('tags', 'StoriesAPI\Endpoints\TagsController', 'index');

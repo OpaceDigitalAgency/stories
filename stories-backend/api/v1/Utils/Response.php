@@ -1,344 +1,135 @@
 <?php
-/**
- * API Response Utility Class
- * 
- * This class handles formatting API responses to match the expected format
- * by the Astro frontend.
- * 
- * @package Stories API
- * @version 1.0.0
- */
-
 namespace StoriesAPI\Utils;
 
 class Response {
     /**
-     * @var bool Debug mode flag
-     */
-    public static $debugMode = false;
-    /**
-     * Format a successful response
+     * Send a success response
      * 
-     * @param array $data The data to include in the response
-     * @param array $meta Additional metadata
-     * @param int $statusCode HTTP status code
-     * @return array The formatted response
+     * @param mixed $data The data to send
+     * @param int $status The HTTP status code
      */
-    public static function success($data, $meta = [], $statusCode = 200) {
-        // Set the HTTP response code
-        http_response_code($statusCode);
+    public static function sendSuccess($data, $status = 200) {
+        self::setHeaders($status);
         
-        // Format the response to match Strapi format expected by the frontend
         $response = [
-            'data' => $data,
-            'meta' => $meta
+            'status' => 'success',
+            'data' => $data
         ];
         
-        // If meta doesn't include pagination and data is an array, add default pagination
-        if (!isset($meta['pagination']) && is_array($data)) {
-            $response['meta']['pagination'] = [
-                'page' => 1,
-                'pageSize' => count($data),
-                'pageCount' => 1,
-                'total' => count($data)
-            ];
-        }
-        
-        return $response;
-    }
-    
-    /**
-     * Format a paginated response
-     * 
-     * @param array $data The data to include in the response
-     * @param int $page Current page number
-     * @param int $pageSize Items per page
-     * @param int $total Total number of items
-     * @param array $additionalMeta Additional metadata
-     * @param int $statusCode HTTP status code
-     * @return array The formatted response
-     */
-    public static function paginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
-        // Set the HTTP response code
-        http_response_code($statusCode);
-        
-        // Calculate page count
-        $pageCount = ceil($total / $pageSize);
-        
-        // Format pagination metadata
-        $pagination = [
-            'page' => (int)$page,
-            'pageSize' => (int)$pageSize,
-            'pageCount' => (int)$pageCount,
-            'total' => (int)$total
-        ];
-        
-        // Add pagination headers for frontend consumption
-        header('X-Total-Count: ' . $total);
-        header('X-Pagination-Page: ' . $page);
-        header('X-Pagination-Page-Size: ' . $pageSize);
-        header('X-Pagination-Page-Count: ' . $pageCount);
-        
-        // Merge additional metadata with pagination
-        $meta = array_merge(['pagination' => $pagination], $additionalMeta);
-        
-        // Return the formatted response
-        return self::success($data, $meta, $statusCode);
-    }
-    
-    /**
-     * Format an error response
-     * 
-     * @param string $message Error message
-     * @param int $statusCode HTTP status code
-     * @param array $errors Detailed error information
-     * @return array The formatted error response
-     */
-    public static function error($message, $statusCode = 400, $errors = []) {
-        // Set the HTTP response code
-        http_response_code($statusCode);
-        
-        // Format the error response
-        $response = [
-            'error' => true,
-            'message' => $message,
-            'statusCode' => $statusCode
-        ];
-        
-        // Add detailed errors if provided
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-        
-        return $response;
-    }
-    
-    /**
-     * Send the response as JSON
-     * 
-     * @param array $data The response data
-     */
-    public static function json($data) {
-        // Add debugging
-        error_log("Response::json - Starting JSON encoding");
-        
-        // Set content type header - ALWAYS set to JSON regardless of debug mode
-        header('Content-Type: application/json; charset=UTF-8');
-        
-        // Debug: Log the data being encoded
-        error_log("Response::json - Data type: " . gettype($data));
-        if (is_array($data)) {
-            error_log("Response::json - Top-level keys: " . implode(", ", array_keys($data)));
-            if (isset($data['data'])) {
-                error_log("Response::json - Data structure: " . json_encode(array_keys($data['data'])));
-            }
-        }
-        
-        // Make sure there's no output before JSON
-        if (ob_get_length() > 0) {
-            $output = ob_get_clean();
-            error_log("Response::json - Cleared output buffer: " . substr($output, 0, 200));
-        }
-        
-        // Encode the data with simpler options to avoid encoding issues
-        error_log("Response::json - Encoding data to JSON");
-        $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-        
-        // Check for JSON encoding errors
-        if ($json === false) {
-            error_log("Response::json - JSON encoding error: " . json_last_error_msg());
-            
-            // Try to identify problematic data
-            error_log("Response::json - Attempting to sanitize data");
-            $cleanData = self::sanitizeDataForJson($data);
-            $json = json_encode($cleanData);
-            
-            if ($json === false) {
-                // If still failing, return a simple error response
-                error_log("Response::json - JSON encoding still failing after sanitization");
-                $errorJson = '{"error":true,"message":"Internal server error: Unable to encode response","statusCode":500}';
-                
-                // Always output JSON error response regardless of debug mode
-                error_log("Response::json - Sending error JSON response");
-                echo $errorJson;
-                exit;
-            } else {
-                error_log("Response::json - Sanitization successful");
-            }
-        }
-        
-        // Output the JSON response - ALWAYS output JSON regardless of debug mode
-        error_log("Response::json - Sending JSON response (length: " . strlen($json) . ")");
-        echo $json;
+        echo json_encode($response, JSON_PRETTY_PRINT);
         exit;
     }
     
     /**
-     * Sanitize data for JSON encoding
-     *
-     * @param mixed $data The data to sanitize
-     * @return mixed Sanitized data
-     */
-    private static function sanitizeDataForJson($data) {
-        if (is_array($data)) {
-            $clean = [];
-            foreach ($data as $key => $value) {
-                $clean[$key] = self::sanitizeDataForJson($value);
-            }
-            return $clean;
-        } elseif (is_object($data)) {
-            $clean = new \stdClass();
-            foreach (get_object_vars($data) as $key => $value) {
-                $clean->$key = self::sanitizeDataForJson($value);
-            }
-            return $clean;
-        } elseif (is_string($data)) {
-            // Remove invalid UTF-8 characters
-            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
-        } else {
-            return $data;
-        }
-    }
-    
-    /**
-     * Format data to ensure it has the correct structure with attributes
+     * Send an error response
      * 
-     * @param array $data The data to format
-     * @return array The formatted data
+     * @param string $message The error message
+     * @param int $status The HTTP status code
      */
-    private static function formatData($data) {
-        // If data is already in the correct format, check if attributes needs fixing
-        if (isset($data['id']) && isset($data['attributes'])) {
-            // Check for nested attributes
-            if (isset($data['attributes']['attributes'])) {
-                $data['attributes'] = $data['attributes']['attributes'];
-            }
-            return $data;
-        }
+    public static function sendError($message, $status = 400) {
+        self::setHeaders($status);
         
-        // If data is an array of items, format each item
-        if (is_array($data) && !isset($data['id']) && !isset($data['attributes']) && !empty($data)) {
-            $formattedData = [];
-            foreach ($data as $item) {
-                if (is_array($item) && isset($item['id'])) {
-                    // Format each item
-                    $attributes = [];
-                    foreach ($item as $key => $value) {
-                        if ($key !== 'id') {
-                            $attributes[$key] = $value;
-                        }
-                    }
-                    
-                    $formattedData[] = [
-                        'id' => $item['id'],
-                        'attributes' => $attributes
-                    ];
-                } else {
-                    // If item doesn't have an ID, keep it as is
-                    $formattedData[] = $item;
-                }
-            }
-            return $formattedData;
-        }
-        
-        // Format a single item
-        $id = $data['id'] ?? null;
-        if ($id === null) {
-            // If no ID, return data as is
-            return $data;
-        }
-        
-        // Create attributes array
-        $attributes = [];
-        foreach ($data as $key => $value) {
-            if ($key !== 'id') {
-                $attributes[$key] = $value;
-            }
-        }
-        
-        // Return formatted data
-        return [
-            'id' => $id,
-            'attributes' => $attributes
+        $response = [
+            'status' => 'error',
+            'message' => $message
         ];
-    }
-    
-    /**
-     * Send a success response as JSON
-     * 
-     * @param array $data The data to include in the response
-     * @param array $meta Additional metadata
-     * @param int $statusCode HTTP status code
-     */
-    public static function sendSuccess($data, $meta = [], $statusCode = 200) {
-        // Add debugging
-        error_log("Response::sendSuccess - Starting with status code: " . $statusCode);
-        error_log("Response::sendSuccess - Data type: " . gettype($data));
-        if (is_array($data)) {
-            error_log("Response::sendSuccess - Data keys: " . implode(", ", array_keys($data)));
-        }
         
-        // Check if data is already formatted with a 'data' key
-        if (is_array($data) && isset($data['id']) && !isset($data['data'])) {
-            // This is a single entity response, don't wrap it in another 'data' key
-            error_log("Response::sendSuccess - Single entity response detected");
-            $formatted = self::formatData($data);
-            error_log("Response::sendSuccess - Formatted data: " . json_encode($formatted));
-            self::json(['data' => $formatted, 'meta' => $meta]);
-        } else {
-            // Use the standard success method for other cases
-            error_log("Response::sendSuccess - Standard response");
-            $formatted = self::formatData($data);
-            error_log("Response::sendSuccess - Formatted data: " . json_encode($formatted));
-            self::json(self::success($formatted, $meta, $statusCode));
-        }
+        echo json_encode($response, JSON_PRETTY_PRINT);
+        exit;
     }
     
     /**
-     * Send a paginated response as JSON
+     * Send a paginated response
      * 
-     * @param array $data The data to include in the response
-     * @param int $page Current page number
-     * @param int $pageSize Items per page
-     * @param int $total Total number of items
-     * @param array $additionalMeta Additional metadata
-     * @param int $statusCode HTTP status code
+     * @param array $data The data to send
+     * @param int $page The current page number
+     * @param int $pageSize The page size
+     * @param int $total The total number of items
+     * @param int $status The HTTP status code
      */
-    public static function sendPaginated($data, $page, $pageSize, $total, $additionalMeta = [], $statusCode = 200) {
-        // Check if data is already formatted
-        $isFormatted = true;
+    public static function sendPaginated($data, $page, $pageSize, $total, $status = 200) {
+        self::setHeaders($status);
+        
+        $totalPages = ceil($total / $pageSize);
+        
+        $response = [
+            'status' => 'success',
+            'data' => $data,
+            'pagination' => [
+                'page' => $page,
+                'pageSize' => $pageSize,
+                'total' => $total,
+                'totalPages' => $totalPages
+            ]
+        ];
+        
+        // Set pagination headers
+        header('X-Total-Count: ' . $total);
+        header('X-Pagination-Total-Pages: ' . $totalPages);
+        
+        echo json_encode($response, JSON_PRETTY_PRINT);
+        exit;
+    }
+    
+    /**
+     * Format data for response
+     * 
+     * @param mixed $data The data to format
+     * @return mixed The formatted data
+     */
+    public static function formatData($data) {
         if (is_array($data)) {
-            foreach ($data as $item) {
-                if (!isset($item['id']) || !isset($item['attributes'])) {
-                    $isFormatted = false;
-                    break;
-                }
+            if (isset($data[0]) && is_array($data[0])) {
+                // Format array of items
+                return array_map([self::class, 'formatItem'], $data);
+            } else {
+                // Format single item
+                return self::formatItem($data);
             }
         }
-        
-        $formattedData = $isFormatted ? $data : self::formatData($data);
-        self::json(self::paginated($formattedData, $page, $pageSize, $total, $additionalMeta, $statusCode));
+        return $data;
     }
     
     /**
-     * Send an error response as JSON
+     * Format a single item for response
      * 
-     * @param string $message Error message
-     * @param int $statusCode HTTP status code
-     * @param array $errors Detailed error information
+     * @param array $item The item to format
+     * @return array The formatted item
      */
-    public static function sendError($message, $statusCode = 400, $errors = []) {
-        // Check if token expiration was detected
-        if ($statusCode == 401 && isset($GLOBALS['token_expired']) && $GLOBALS['token_expired']) {
-            // Add token expiration information to the message
-            $message = 'Authentication token has expired. Please refresh your token or log in again.';
+    private static function formatItem($item) {
+        $formatted = [];
+        
+        foreach ($item as $key => $value) {
+            // Convert snake_case to camelCase
+            $key = lcfirst(str_replace('_', '', ucwords($key, '_')));
             
-            // Add a specific error code for token expiration
-            $errors['code'] = 'token_expired';
+            // Format date fields
+            if (in_array($key, ['publishedAt', 'createdAt', 'updatedAt']) && $value) {
+                $value = date('Y-m-d\\TH:i:s\\Z', strtotime($value));
+            }
             
-            error_log("Sending token expired error response");
+            // Convert boolean fields
+            if (in_array($key, ['featured', 'isPublished']) && $value !== null) {
+                $value = (bool)$value;
+            }
+            
+            $formatted[$key] = $value;
         }
         
-        self::json(self::error($message, $statusCode, $errors));
+        return $formatted;
+    }
+    
+    /**
+     * Set response headers
+     * 
+     * @param int $status The HTTP status code
+     */
+    private static function setHeaders($status) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+        header('Access-Control-Expose-Headers: X-Total-Count, X-Pagination-Total-Pages');
     }
 }

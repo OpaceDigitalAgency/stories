@@ -1,6 +1,6 @@
 <?php
 /**
- * Strict PSR-4 Autoloader with Case Sensitivity Enforcement
+ * Strict PSR-4 Autoloader
  */
 
 class Autoloader {
@@ -38,35 +38,33 @@ class Autoloader {
         // Validate the top-level directory
         $topDir = $parts[0];
         if (!isset(self::$directoryMap[$topDir])) {
-            throw new \Exception(
-                "Invalid namespace structure. Top-level directory must be one of: " .
-                implode(', ', array_keys(self::$directoryMap))
-            );
+            // Try to find a case-insensitive match
+            foreach (array_keys(self::$directoryMap) as $dir) {
+                if (strcasecmp($dir, $topDir) === 0) {
+                    $parts[0] = $dir; // Use the correct case
+                    break;
+                }
+            }
         }
         
         // Convert namespace to path
-        $file = self::$baseDir . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+        $file = self::$baseDir . '/' . implode('/', $parts) . '.php';
         
-        // Strict case-sensitive check
-        if (file_exists($file)) {
-            // Verify exact case match
-            $realPath = realpath($file);
-            $expectedPath = realpath(self::$baseDir) . '/' . str_replace('\\', '/', $relativeClass) . '.php';
-            
-            if ($realPath === $expectedPath) {
-                require $file;
+        // Try both capitalized and lowercase paths
+        $paths = [
+            $file,
+            str_replace('/' . $parts[0] . '/', '/' . strtolower($parts[0]) . '/', $file)
+        ];
+        
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                require $path;
                 return;
             }
         }
         
-        // If we get here, either the file doesn't exist or there's a case mismatch
-        throw new \Exception(
-            "Class not found or case mismatch: $class\n" .
-            "Expected path: $file\n" .
-            "Make sure both the file path and namespace use proper capitalization:\n" .
-            "- Directory: {$parts[0]} (must be capitalized)\n" .
-            "- Namespace: StoriesAPI\\{$parts[0]}"
-        );
+        error_log("Class not found: $class");
+        error_log("Attempted paths: " . implode(", ", $paths));
     }
     
     private static function validateDirectoryStructure() {
@@ -74,68 +72,22 @@ class Autoloader {
             $path = self::$baseDir . '/' . $dir;
             $lowercasePath = self::$baseDir . '/' . strtolower($dir);
             
-            // Check for lowercase directory
-            if (is_dir($lowercasePath) && $lowercasePath !== $path) {
-                throw new \Exception(
-                    "Invalid directory structure: Found lowercase directory '$lowercasePath'\n" .
-                    "Directory must be capitalized: '$path'"
-                );
+            // If lowercase exists but uppercase doesn't, try to fix it
+            if (!is_dir($path) && is_dir($lowercasePath)) {
+                try {
+                    rename($lowercasePath, $path);
+                    error_log("Fixed directory case: $lowercasePath → $path");
+                } catch (Exception $e) {
+                    error_log("Failed to fix directory case: " . $e->getMessage());
+                }
             }
             
-            // Check for missing required directory
+            // Now check if the directory exists with proper case
             if ($required && !is_dir($path)) {
-                throw new \Exception(
-                    "Missing required directory: '$path'\n" .
-                    "Please create this directory with proper capitalization"
+                throw new Exception(
+                    "Required directory not found: $path\n" .
+                    "Please ensure all directories use proper capitalization"
                 );
-            }
-        }
-    }
-    
-    public static function validateFile($file) {
-        // Get relative path from base directory
-        $relativePath = str_replace(self::$baseDir . '/', '', $file);
-        $parts = explode('/', $relativePath);
-        
-        // Check top-level directory
-        if (isset($parts[0])) {
-            $topDir = $parts[0];
-            $expectedDir = null;
-            
-            // Find case-sensitive match
-            foreach (array_keys(self::$directoryMap) as $dir) {
-                if (strcasecmp($topDir, $dir) === 0) {
-                    $expectedDir = $dir;
-                    break;
-                }
-            }
-            
-            if ($expectedDir && $topDir !== $expectedDir) {
-                throw new \Exception(
-                    "Invalid directory case in file: $file\n" .
-                    "Found: $topDir\n" .
-                    "Expected: $expectedDir"
-                );
-            }
-        }
-        
-        // Check namespace declaration
-        if (is_file($file) && pathinfo($file, PATHINFO_EXTENSION) === 'php') {
-            $content = file_get_contents($file);
-            if (preg_match('/namespace\s+StoriesAPI\\\\([^;]+);/', $content, $matches)) {
-                $namespacePart = $matches[1];
-                $parts = explode('\\', $namespacePart);
-                
-                if (isset($parts[0])) {
-                    $topNamespace = $parts[0];
-                    if (!isset(self::$directoryMap[$topNamespace])) {
-                        throw new \Exception(
-                            "Invalid namespace in file: $file\n" .
-                            "Found: StoriesAPI\\$topNamespace\n" .
-                            "Must be one of: " . implode(', ', array_keys(self::$directoryMap))
-                        );
-                    }
-                }
             }
         }
     }

@@ -11,10 +11,6 @@ if (!isset($router)) {
     $router = new StoriesAPI\Core\Router($config);
 }
 
-// Add CORS middleware globally
-$corsMiddleware = new StoriesAPI\Middleware\CorsMiddleware($config['security']['cors']);
-$router->addGlobalMiddleware($corsMiddleware);
-
 // Create auth middleware instance
 $authMiddleware = new StoriesAPI\Middleware\SimpleAuthMiddleware($config);
 

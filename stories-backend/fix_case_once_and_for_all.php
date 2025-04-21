@@ -67,7 +67,13 @@ class CaseSensitivityFixer {
             // 6. Add prevention measures
             $this->addPreventionMeasures();
 
-            $this->log[] = "\n✅ All fixes completed successfully!";
+            // 7. Verify fixes
+            $remainingIssues = $this->verifyFixes();
+            if (!empty($remainingIssues)) {
+                throw new Exception("Some case sensitivity issues remain:\n" . implode("\n", $remainingIssues));
+            }
+
+            $this->log[] = "\n✅ All fixes completed and verified successfully!";
         } catch (Exception $e) {
             $this->log[] = "\n❌ Error occurred: " . $e->getMessage();
             // Restore from backup
@@ -76,6 +82,52 @@ class CaseSensitivityFixer {
         }
 
         $this->outputResults();
+    }
+
+    private function verifyFixes() {
+        $issues = [];
+        $finder = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($this->baseDir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        // Check directory structure
+        foreach ($this->correctCases as $old => $new) {
+            if (is_dir($this->baseDir . '/' . $old)) {
+                $issues[] = "Directory still exists with incorrect case: {$old}";
+            }
+            if (!is_dir($this->baseDir . '/' . $new)) {
+                $issues[] = "Directory missing with correct case: {$new}";
+            }
+        }
+
+        // Check file contents
+        foreach ($finder as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $content = file_get_contents($file->getPathname());
+                
+                // Check for incorrect namespace references
+                foreach ($this->correctCases as $old => $new) {
+                    $oldNs = "StoriesAPI\\" . $old . "\\";
+                    if (strpos($content, $oldNs) !== false) {
+                        $issues[] = "Found incorrect namespace reference in {$file->getPathname()}: {$oldNs}";
+                    }
+                }
+
+                // Check for incorrect path references
+                if (preg_match_all('/(require|require_once|include|include_once)([^;]*?[\'"]([^\'"]*)[\'"]\s*;)/i', $content, $matches)) {
+                    foreach ($matches[3] as $path) {
+                        foreach ($this->correctCases as $old => $new) {
+                            if (strpos($path, '/' . $old . '/') !== false) {
+                                $issues[] = "Found incorrect path reference in {$file->getPathname()}: {$path}";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $issues;
     }
 
     private function createBackup() {
@@ -153,18 +205,65 @@ class CaseSensitivityFixer {
                 $content = file_get_contents($file->getPathname());
                 $modified = false;
                 
+                // Update namespace references
                 foreach ($this->correctCases as $old => $new) {
+                    // Fix namespace references (e.g., StoriesAPI\core\)
                     $oldNs = "StoriesAPI\\" . $old . "\\";
                     $newNs = "StoriesAPI\\" . $new . "\\";
                     if (strpos($content, $oldNs) !== false) {
                         $content = str_replace($oldNs, $newNs, $content);
                         $modified = true;
                     }
+
+                    // Fix file path references in require/include statements
+                    $patterns = [
+                        // require/include with single quotes
+                        "/(require|require_once|include|include_once)([^;]*?['\"])([^'\"]*?\/)$old(\/)([^'\"]*?)(['\"]\s*;)/i",
+                        // require/include with double quotes
+                        '/(require|require_once|include|include_once)([^;]*?["\'])([^"\']*)?\/' . $old . '\/([^"\']*?)(["\'])\s*;/i',
+                        // __DIR__ references
+                        "/__DIR__\s*\.\s*(['\"])([^'\"]*?\/)$old(\/)([^'\"]*?)(['\"]\s*)/i"
+                    ];
+
+                    foreach ($patterns as $pattern) {
+                        if (preg_match($pattern, $content)) {
+                            $content = preg_replace(
+                                $pattern,
+                                function($matches) use ($new) {
+                                    // Replace old directory name with new while preserving the rest
+                                    $matches[0] = str_replace('/' . strtolower($new) . '/', '/' . $new . '/', $matches[0]);
+                                    return $matches[0];
+                                },
+                                $content
+                            );
+                            $modified = true;
+                        }
+                    }
+
+                    // Fix other file path references
+                    $pathPatterns = [
+                        // Absolute paths
+                        ["'" . DIRECTORY_SEPARATOR . $old . DIRECTORY_SEPARATOR, "'" . DIRECTORY_SEPARATOR . $new . DIRECTORY_SEPARATOR],
+                        ['"' . DIRECTORY_SEPARATOR . $old . DIRECTORY_SEPARATOR, '"' . DIRECTORY_SEPARATOR . $new . DIRECTORY_SEPARATOR],
+                        // Relative paths
+                        ["'" . $old . "/", "'" . $new . "/"],
+                        ['"' . $old . "/", '"' . $new . "/"],
+                        // Mixed paths
+                        ["'" . $old . "\\", "'" . $new . "\\"],
+                        ['"' . $old . "\\", '"' . $new . "\\"]
+                    ];
+
+                    foreach ($pathPatterns as [$oldPath, $newPath]) {
+                        if (strpos($content, $oldPath) !== false) {
+                            $content = str_replace($oldPath, $newPath, $content);
+                            $modified = true;
+                        }
+                    }
                 }
                 
                 if ($modified) {
                     file_put_contents($file->getPathname(), $content);
-                    $this->log[] = "Updated namespace references in: " . $file->getPathname();
+                    $this->log[] = "Updated references in: " . $file->getPathname();
                 }
             }
         }

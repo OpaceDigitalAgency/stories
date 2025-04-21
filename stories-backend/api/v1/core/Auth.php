@@ -1,141 +1,59 @@
 <?php
-/**
- * Authentication Core Class
- * 
- * This class handles JWT token generation, validation, and user authentication.
- * 
- * @package Stories API
- * @version 1.0.0
- */
+namespace StoriesAPI\core;
 
-namespace StoriesAPI\Core;
-
-use Exception;
-use StoriesAPI\Core\Database;
+use StoriesAPI\Utils\Response;
 
 class Auth {
-    /**
-     * @var string JWT secret key
-     */
-    private static $jwtSecret;
+    private static $config;
     
-    /**
-     * @var int Token expiry time in seconds
-     */
-    private static $tokenExpiry;
-    
-    /**
-     * Initialize the Auth class with configuration
-     * 
-     * @param array $config Security configuration
-     */
     public static function init($config) {
-        // Check if config is properly set
-        if (!isset($config['jwt_secret']) || empty($config['jwt_secret'])) {
-            error_log("Auth::init - JWT secret is not set or empty in config");
-            // Use a fallback secret from environment or hardcoded value
-            self::$jwtSecret = getenv('JWT_SECRET') ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
-        } else {
-            self::$jwtSecret = $config['jwt_secret'];
-        }
-        
-        // Check if token expiry is properly set
-        if (!isset($config['token_expiry']) || empty($config['token_expiry'])) {
-            error_log("Auth::init - Token expiry is not set or empty in config");
-            // Use a fallback expiry time (24 hours)
-            self::$tokenExpiry = 86400;
-        } else {
-            self::$tokenExpiry = $config['token_expiry'];
-        }
-        
-        error_log("Auth::init - JWT secret length: " . strlen(self::$jwtSecret) . ", Token expiry: " . self::$tokenExpiry);
+        self::$config = $config;
     }
     
-    /**
-     * Generate a JWT token
-     * 
-     * @param array $payload Token payload data
-     * @return string The generated JWT token
-     */
-    public static function generateToken($payload) {
-        // Add issued at and expiry time to payload
-        $issuedAt = time();
-        $payload['iat'] = $issuedAt;
-        $payload['exp'] = $issuedAt + self::$tokenExpiry;
-        
-        // Create JWT header
-        $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
-        $header = self::base64UrlEncode($header);
-        
-        // Create JWT payload
-        $payload = json_encode($payload);
-        $payload = self::base64UrlEncode($payload);
-        
-        // Create signature
-        // Ensure JWT secret is not null
-        $secret = self::$jwtSecret ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
-        $signature = hash_hmac('sha256', "$header.$payload", $secret, true);
-        $signature = self::base64UrlEncode($signature);
-        
-        // Create JWT token
-        return "$header.$payload.$signature";
-    }
-    
-    /**
-     * Validate a JWT token
-     * 
-     * @param string $token The JWT token to validate
-     * @return array|bool The token payload if valid, false otherwise
-     */
     public static function validateToken($token) {
-        // Split token into parts
-        $parts = explode('.', $token);
-        if (count($parts) !== 3) {
-            error_log("Token validation failed: Invalid token format");
+        try {
+            if (empty($token)) {
+                return false;
+            }
+            
+            $db = new Database(self::$config['db']);
+            
+            $query = "SELECT * FROM users WHERE auth_token = ? AND token_expires > NOW() LIMIT 1";
+            $stmt = $db->query($query, [$token]);
+            
+            if ($stmt->rowCount() === 0) {
+                return false;
+            }
+            
+            return $stmt->fetch();
+        } catch (\Exception $e) {
+            error_log("Token validation failed: " . $e->getMessage());
             return false;
         }
-        
-        list($header, $payload, $signature) = $parts;
-        
-        // Verify signature
-        // Ensure JWT secret is not null
-        $secret = self::$jwtSecret ?: 'a8f5e167d9f8b3c2e7b6d4a1c9e8d7f6';
-        $valid = hash_hmac('sha256', "$header.$payload", $secret, true);
-        $valid = self::base64UrlEncode($valid);
-        
-        if ($signature !== $valid) {
-            error_log("Token validation failed: Invalid signature");
-            return false;
-        }
-        
-        // Decode payload
-        $payload = json_decode(self::base64UrlDecode($payload), true);
-        
-        // Check if token has expired
-        if (isset($payload['exp']) && $payload['exp'] < time()) {
-            // Set a global variable to indicate token expiration
-            // This will be used by the Response class to include an expiration message
-            $GLOBALS['token_expired'] = true;
-            error_log("Token validation failed: Token expired at " . date('Y-m-d H:i:s', $payload['exp']));
-            return false;
-        }
-        
-        return $payload;
     }
     
-    /**
-     * Authenticate a user with email and password
-     * 
-     * @param string $email User email
-     * @param string $password User password
-     * @return array|bool User data if authenticated, false otherwise
-     */
-    public static function authenticate($email, $password) {
+    public static function generateToken($userId) {
         try {
-            $db = Database::getInstance();
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
             
-            // Get user by email
-            $query = "SELECT id, name, email, password, role FROM users WHERE email = ? AND active = 1 LIMIT 1";
+            $db = new Database(self::$config['db']);
+            
+            $query = "UPDATE users SET auth_token = ?, token_expires = ? WHERE id = ?";
+            $db->query($query, [$token, $expires, $userId]);
+            
+            return $token;
+        } catch (\Exception $e) {
+            error_log("Token generation failed: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public static function login($email, $password) {
+        try {
+            $db = new Database(self::$config['db']);
+            
+            $query = "SELECT * FROM users WHERE email = ? LIMIT 1";
             $stmt = $db->query($query, [$email]);
             
             if ($stmt->rowCount() === 0) {
@@ -144,206 +62,36 @@ class Auth {
             
             $user = $stmt->fetch();
             
-            // Verify password
             if (!password_verify($password, $user['password'])) {
                 return false;
             }
             
-            // Remove password from user data
-            unset($user['password']);
+            $token = self::generateToken($user['id']);
             
-            return $user;
-        } catch (Exception $e) {
-            error_log("Authentication error: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Get user by ID
-     * 
-     * @param int $userId User ID
-     * @return array|bool User data if found, false otherwise
-     */
-    public static function getUserById($userId) {
-        try {
-            $db = Database::getInstance();
-            
-            // Get user by ID
-            $query = "SELECT id, name, email, role FROM users WHERE id = ? AND active = 1 LIMIT 1";
-            $stmt = $db->query($query, [$userId]);
-            
-            if ($stmt->rowCount() === 0) {
+            if (!$token) {
                 return false;
             }
             
-            return $stmt->fetch();
-        } catch (Exception $e) {
-            error_log("Get user error: " . $e->getMessage());
+            return [
+                'user' => $user,
+                'token' => $token
+            ];
+        } catch (\Exception $e) {
+            error_log("Login failed: " . $e->getMessage());
             return false;
         }
     }
     
-    /**
-     * Hash a password
-     * 
-     * @param string $password Password to hash
-     * @return string Hashed password
-     */
-    public static function hashPassword($password) {
-        return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    }
-    
-    /**
-     * Get the current authenticated user from the request
-     * 
-     * @return array|bool User data if authenticated, false otherwise
-     */
-    public static function getCurrentUser() {
-        // Get Authorization header
-        $headers = getallheaders();
-        $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-        
-        // Check if token exists
-        if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            return false;
-        }
-        
-        // Validate token
-        $token = $matches[1];
-        $payload = self::validateToken($token);
-        
-        if (!$payload || !isset($payload['user_id'])) {
-            return false;
-        }
-        
-        // Get user data
-        return self::getUserById($payload['user_id']);
-    }
-    
-    /**
-     * Check if user has required role
-     * 
-     * @param array $user User data
-     * @param string|array $roles Required roles
-     * @return bool True if user has required role
-     */
-    public static function hasRole($user, $roles) {
-        if (!$user || !isset($user['role'])) {
-            return false;
-        }
-        
-        if (is_array($roles)) {
-            return in_array($user['role'], $roles);
-        }
-        
-        return $user['role'] === $roles;
-    }
-    
-    /**
-     * Base64 URL encode
-     * 
-     * @param string $data Data to encode
-     * @return string Base64 URL encoded data
-     */
-    private static function base64UrlEncode($data) {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-    
-    /**
-     * Base64 URL decode
-     * 
-     * @param string $data Data to decode
-     * @return string Decoded data
-     */
-    private static function base64UrlDecode($data) {
-        return base64_decode(strtr($data, '-_', '+/'));
-    }
-    
-    /**
-     * Validate CSRF token
-     *
-     * @param string $token CSRF token to validate
-     * @return bool True if token is valid
-     */
-    public static function validateCsrfToken($token) {
-        // For now, return true to bypass CSRF validation
-        // This will be properly implemented later
-        return true;
-        
-        // Proper implementation would look something like this:
-        /*
+    public static function logout($token) {
         try {
-            // Get the session token
-            $sessionToken = $_SESSION['csrf_token'] ?? null;
+            $db = new Database(self::$config['db']);
             
-            // Check if token matches
-            if (!$sessionToken || $token !== $sessionToken) {
-                error_log("CSRF token validation failed: Token mismatch");
-                return false;
-            }
+            $query = "UPDATE users SET auth_token = NULL, token_expires = NULL WHERE auth_token = ?";
+            $db->query($query, [$token]);
             
             return true;
         } catch (\Exception $e) {
-            error_log("CSRF token validation error: " . $e->getMessage());
-            return false;
-        }
-        */
-    }
-    
-    /**
-     * Refresh a user's authentication token
-     *
-     * @param int $userId User ID
-     * @param bool $checkExpiration Whether to check if token is about to expire
-     * @param int $expirationThreshold Seconds threshold for token expiration (default: 30)
-     * @return string|bool New token if successful, false otherwise
-     */
-    public static function refreshToken($userId, $checkExpiration = false, $expirationThreshold = 30) {
-        try {
-            // Get user data
-            $user = self::getUserById($userId);
-            
-            if (!$user) {
-                error_log("Auth::refreshToken - Invalid user ID: $userId");
-                return false;
-            }
-            
-            // If checking expiration, validate the current token first
-            if ($checkExpiration) {
-                // Get Authorization header
-                $headers = getallheaders();
-                $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-                
-                // Check if token exists
-                if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-                    $token = $matches[1];
-                    $payload = self::validateToken($token);
-                    
-                    // If token is valid and not about to expire, return false
-                    if ($payload && isset($payload['exp'])) {
-                        $expiresIn = $payload['exp'] - time();
-                        if ($expiresIn > $expirationThreshold) {
-                            // Token is still valid and not about to expire
-                            return false;
-                        }
-                        // Otherwise, token is about to expire, so continue with refresh
-                        error_log("Auth::refreshToken - Token expires in $expiresIn seconds, refreshing");
-                    }
-                }
-            }
-            
-            // Generate new JWT token
-            $token = self::generateToken([
-                'user_id' => $user['id'],
-                'role' => $user['role']
-            ]);
-            
-            error_log("Auth::refreshToken - Token refreshed successfully for user ID: $userId");
-            
-            return $token;
-        } catch (\Exception $e) {
-            error_log("Auth::refreshToken - Error: " . $e->getMessage());
+            error_log("Logout failed: " . $e->getMessage());
             return false;
         }
     }

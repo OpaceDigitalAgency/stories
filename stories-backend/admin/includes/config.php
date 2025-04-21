@@ -1,50 +1,53 @@
 <?php
+/**
+ * Admin Configuration File
+ * 
+ * This file contains configuration settings for the admin interface.
+ */
+
 // Database configuration
-$db_host = 'localhost';
-$db_name = 'stories_db';     // Changed to match original config
-$db_user = 'stories_user';   // Changed to match original config
-$db_pass = '$tw1cac3*sOt';   // Changed to match original config
-
-try {
-    $db = new PDO(
-        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
-        $db_user,
-        $db_pass,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
-} catch (PDOException $e) {
-    error_log("Database connection error: " . $e->getMessage());
-    die('Database connection failed: ' . $e->getMessage());
-}
-
-// Site configuration
-define('SITE_URL', 'https://api.storiesfromtheweb.org');
-define('ADMIN_EMAIL', 'admin@storiesfromtheweb.org');
-define('SESSION_LIFETIME', 7200); // 2 hours
-
-// Session configuration
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 1);
-session_set_cookie_params([
-    'lifetime' => SESSION_LIFETIME,
-    'path' => '/',
-    'domain' => 'api.storiesfromtheweb.org',
-    'secure' => true,
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
+$config = [
+    'db' => [
+        'host'     => 'localhost',      // Database host
+        'name'     => 'stories_db',     // Database name
+        'user'     => 'stories_user',   // Database username
+        'password' => '$tw1cac3*sOt',   // Database password
+        'charset'  => 'utf8mb4',        // Character set
+        'port'     => 3306             // Database port
+    ],
+    'api' => [
+        'base_url' => 'https://api.storiesfromtheweb.org/api/v1',
+        'timeout'  => 30,
+        'debug'    => true
+    ],
+    'auth' => [
+        'session_lifetime' => 86400, // 24 hours
+        'cookie_secure'    => true,
+        'cookie_httponly'  => true,
+        'cookie_samesite'  => 'Strict'
+    ],
+    'upload' => [
+        'max_size'      => 5242880, // 5MB
+        'allowed_types' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        'upload_path'   => __DIR__ . '/../uploads/',
+        'public_path'   => '/uploads/'
+    ]
+];
 
 // Error reporting
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-ini_set('error_log', __DIR__ . '/../logs/error.log');
-
-// Create logs directory if it doesn't exist
-if (!is_dir(__DIR__ . '/../logs')) {
-    mkdir(__DIR__ . '/../logs', 0755, true);
+if ($config['api']['debug']) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
 }
+
+// Session configuration
+ini_set('session.cookie_lifetime', $config['auth']['session_lifetime']);
+ini_set('session.gc_maxlifetime', $config['auth']['session_lifetime']);
+ini_set('session.cookie_secure', $config['auth']['cookie_secure']);
+ini_set('session.cookie_httponly', $config['auth']['cookie_httponly']);
+ini_set('session.cookie_samesite', $config['auth']['cookie_samesite']);
+
+return $config;

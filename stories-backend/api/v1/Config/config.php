@@ -26,7 +26,7 @@ if (ENVIRONMENT === 'development') {
 // Database configuration
 $config['db'] = [
     'host'     => 'localhost',      // Database host
-    'name'     => 'stories_api',    // Database name
+    'name'     => 'stories_db',     // Database name - matches the actual database name
     'user'     => 'stories_user',   // Database username
     'password' => '$tw1cac3*sOt',   // Database password
     'charset'  => 'utf8mb4',        // Character set

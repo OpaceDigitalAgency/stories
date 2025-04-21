@@ -82,7 +82,16 @@ $expectedNamespaces = [
                 if ($expectedDir) {
                     // Check namespace declaration
                     $content = file_get_contents($file->getPathname());
-                    if (preg_match('/namespace\s+StoriesAPI\\\\([^;\\\\]+)/', $content, $matches)) {
+                    if ($dir === 'Config' && !preg_match('/namespace/', $content)) {
+                        echo "<p class='error'>Missing namespace declaration</p>";
+                        if (isset($_POST['fix']) && $_POST['fix'] === 'true') {
+                            $newContent = "<?php\nnamespace StoriesAPI\\Config;\n\n" . substr($content, 5);
+                            file_put_contents($file->getPathname(), $newContent);
+                            echo "<p class='success'>Fixed: Added namespace StoriesAPI\\Config</p>";
+                        } else {
+                            $issues[] = $relativePath;
+                        }
+                    } elseif (preg_match('/namespace\s+StoriesAPI\\\\([^;\\\\]+)/', $content, $matches)) {
                         $declaredNamespace = $matches[1];
                         if ($declaredNamespace !== $expectedDir) {
                             echo "<p class='error'>Incorrect namespace: StoriesAPI\\$declaredNamespace (should be StoriesAPI\\$expectedDir)</p>";

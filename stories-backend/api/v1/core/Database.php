@@ -1,22 +1,9 @@
 <?php
-/**
- * Database Connection Class
- * 
- * This class handles the database connection and provides methods for
- * executing queries with prepared statements for security.
- * 
- * @package Stories API
- * @version 1.0.0
- */
-
 namespace StoriesAPI\Core;
 
 use PDO;
 use PDOException;
 use Exception;
-
-// Define DEBUG_MODE constant
-define('StoriesAPI\Core\DEBUG_MODE', false);
 
 class Database {
     /**
@@ -30,34 +17,13 @@ class Database {
     private $config;
     
     /**
-     * @var Database The singleton instance
-     */
-    private static $instance = null;
-    
-    /**
-     * Constructor - Private to enforce singleton pattern
+     * Constructor
      * 
      * @param array $config Database configuration
      */
-    private function __construct(array $config) {
+    public function __construct(array $config) {
         $this->config = $config;
         $this->connect();
-    }
-    
-    /**
-     * Get the singleton instance
-     * 
-     * @param array $config Database configuration
-     * @return Database The database instance
-     */
-    public static function getInstance(array $config = null) {
-        if (self::$instance === null) {
-            if ($config === null) {
-                throw new Exception('Database configuration is required for the first initialization');
-            }
-            self::$instance = new self($config);
-        }
-        return self::$instance;
     }
     
     /**
@@ -82,7 +48,7 @@ class Database {
             $this->connection = new PDO($dsn, $this->config['user'], $this->config['password'], $options);
             
             if (!$this->connection) {
-                throw new \Exception('Database connection failed (no PDO handle)');
+                throw new Exception('Database connection failed (no PDO handle)');
             }
             
             error_log("[DB CONNECTION SUCCESS] Connected to database {$this->config['name']} as user {$this->config['user']}");
@@ -107,15 +73,6 @@ class Database {
                 throw new Exception("Database connection failed. Please contact support with error code: " . date('YmdHis'));
             }
         }
-    }
-    
-    /**
-     * Get the database connection
-     * 
-     * @return PDO The database connection
-     */
-    public function getConnection() {
-        return $this->connection;
     }
     
     /**
@@ -161,13 +118,7 @@ class Database {
                 // Generic error with timestamp for log correlation
                 $errorId = date('YmdHis');
                 error_log("[ERROR ID: $errorId] " . $errorMessage);
-                
-                // Include more detailed error information for debugging
-                if (DEBUG_MODE) {
-                    throw new Exception("Database operation failed. Error: " . $errorMessage . ". Reference ID: $errorId");
-                } else {
-                    throw new Exception("Database operation failed. Reference ID: $errorId");
-                }
+                throw new Exception("Database operation failed. Reference ID: $errorId");
             }
         }
     }
@@ -213,17 +164,5 @@ class Database {
      */
     public function close() {
         $this->connection = null;
-    }
-    
-    /**
-     * Prevent cloning of the instance
-     */
-    private function __clone() {}
-    
-    /**
-     * Prevent unserialization of the instance
-     */
-    public function __wakeup() {
-        throw new Exception("Cannot unserialize singleton");
     }
 }

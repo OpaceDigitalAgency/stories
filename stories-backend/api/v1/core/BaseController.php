@@ -1,14 +1,4 @@
 <?php
-/**
- * Base Controller Class
- * 
- * This class serves as the base for all API controllers, providing
- * common functionality for handling requests and responses.
- * 
- * @package Stories API
- * @version 1.0.0
- */
-
 namespace StoriesAPI\Core;
 
 use StoriesAPI\Core\Database;
@@ -52,9 +42,22 @@ class BaseController {
      * 
      * @param array $config Configuration
      */
-    public function __construct($config) {
-        $this->config = $config;
-        $this->db = Database::getInstance($config['db']);
+    public function __construct($config = null) {
+        if ($config) {
+            $this->config = $config;
+        } else {
+            // Load config if not provided
+            $this->config = require __DIR__ . '/../config/config.php';
+        }
+
+        // Initialize database connection
+        try {
+            $this->db = new Database($this->config['db']);
+        } catch (\PDOException $e) {
+            error_log("Database connection failed: " . $e->getMessage());
+            throw $e;
+        }
+
         $this->parseRequest();
     }
     
@@ -68,25 +71,6 @@ class BaseController {
             $method = strtoupper($_POST['_method']);
         }
         
-        // Temporarily disable CSRF validation to restore functionality
-        // We'll implement proper CSRF validation later
-        
-        // Original CSRF validation code:
-        /*
-        if ($method !== 'GET') {
-            $csrfToken = isset($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : null;
-            if (!$csrfToken) {
-                // Check form data for token if not in header
-                $csrfToken = isset($_POST['_csrf_token']) ? $_POST['_csrf_token'] : null;
-            }
-            
-            if (!$csrfToken || !Auth::validateCsrfToken($csrfToken)) {
-                $this->forbidden('Invalid CSRF token');
-                exit;
-            }
-        }
-        */
-        
         // Parse query parameters
         $this->query = $_GET;
         
@@ -94,7 +78,6 @@ class BaseController {
         $this->request = [];
         $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
         
-        // Handle different content types
         if (strpos($contentType, 'application/json') !== false) {
             // Parse JSON request body
             $input = file_get_contents('php://input');
@@ -150,9 +133,18 @@ class BaseController {
             }
         }
     }
+
+    /**
+     * Set URL parameters
+     *
+     * @param array $params URL parameters
+     */
+    public function setParams($params) {
+        $this->params = $params;
+    }
     
     /**
-     * Get pagination parameters from request
+     * Get pagination parameters
      * 
      * @return array Pagination parameters
      */
@@ -165,7 +157,7 @@ class BaseController {
     }
     
     /**
-     * Get sort parameters from request
+     * Get sort parameters
      * 
      * @param array $allowedFields Allowed fields to sort by
      * @return array|null Sort parameters
@@ -178,7 +170,7 @@ class BaseController {
     }
     
     /**
-     * Get filter parameters from request
+     * Get filter parameters
      * 
      * @param array $allowedFields Allowed fields to filter by
      * @return array Filter parameters
@@ -243,102 +235,5 @@ class BaseController {
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
         return ['clause' => $whereClause, 'params' => $params];
-    }
-    
-    /**
-     * Format data to match Strapi response format
-     * 
-     * @param array $data Data to format
-     * @param string $idField ID field name
-     * @return array Formatted data
-     */
-    protected function formatStrapiResponse($data, $idField = 'id') {
-        $formatted = [];
-        
-        foreach ($data as $item) {
-            $id = $item[$idField];
-            unset($item[$idField]);
-            
-            $formatted[] = [
-                'id' => $id,
-                'attributes' => $item
-            ];
-        }
-        
-        return $formatted;
-    }
-    
-    /**
-     * Send a 404 Not Found response
-     * 
-     * @param string $message Error message
-     */
-    protected function notFound($message = 'Resource not found') {
-        Response::sendError($message, 404);
-    }
-    
-    /**
-     * Send a 400 Bad Request response
-     * 
-     * @param string $message Error message
-     * @param array $errors Detailed error information
-     */
-    protected function badRequest($message = 'Bad request', $errors = []) {
-        Response::sendError($message, 400, $errors);
-    }
-    
-    /**
-     * Send a 401 Unauthorized response
-     * 
-     * @param string $message Error message
-     */
-    protected function unauthorized($message = 'Unauthorized') {
-        Response::sendError($message, 401);
-    }
-    
-    /**
-     * Send a 403 Forbidden response
-     * 
-     * @param string $message Error message
-     */
-    protected function forbidden($message = 'Forbidden') {
-        Response::sendError($message, 403);
-    }
-    
-    /**
-     * Send a 500 Internal Server Error response
-     * 
-     * @param string $message Error message
-     */
-    protected function serverError($message = 'Internal server error') {
-        Response::sendError($message, 500);
-    }
-    
-    /**
-     * Set URL parameters
-     *
-     * @param array $params URL parameters
-     */
-    public function setParams($params) {
-        $this->params = $params;
-    }
-    
-    /**
-     * Validate authentication token
-     *
-     * @param string $token JWT token
-     * @return array|null User data if valid, null if invalid
-     */
-    protected function validateToken($token) {
-        try {
-            // Implement your token validation logic here
-            // For example, using JWT:
-            $key = $this->config['jwt']['secret'];
-            $decoded = \Firebase\JWT\JWT::decode($token, $key, array('HS256'));
-            return (array)$decoded->data;
-        } catch (\Exception $e) {
-            error_log("Token validation failed: " . $e->getMessage());
-            return null;
-        }
     }
 }

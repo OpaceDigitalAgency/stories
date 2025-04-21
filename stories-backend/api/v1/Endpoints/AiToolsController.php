@@ -30,6 +30,10 @@ class AiToolsController extends BaseController {
             $allowedSortFields = ['title', 'created_at', 'rating'];
             $sort = parent::getSortParams($allowedSortFields);
             $sortField = $sort['field'] ?? 'created_at';
+            
+            // Add table alias to sort field
+            $sortField = 't.' . $sortField;
+            
             $sortDirection = $sort['direction'] ?? 'DESC';
             $sortClause = "ORDER BY $sortField $sortDirection";
             
@@ -43,7 +47,7 @@ class AiToolsController extends BaseController {
             $params = $whereData['params'];
             
             // Count total records
-            $countQuery = "SELECT COUNT(*) as total FROM ai_tools $whereClause";
+            $countQuery = "SELECT COUNT(*) as total FROM ai_tools t $whereClause";
             $stmt = $this->db->query($countQuery, $params);
             $total = $stmt->fetch()['total'];
             

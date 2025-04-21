@@ -17,28 +17,62 @@ class Response {
             ob_end_clean();
         }
 
-        // Ensure proper UTF-8 encoding
-        if (is_array($data)) {
-            array_walk_recursive($data, function(&$item) {
-                if (is_string($item)) {
-                    $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
-                }
-            });
-        }
+        // Process data before encoding
+        $processedData = self::processDataForJson($data);
         
         // Encode with error handling
-        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = json_encode($processedData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($json === false) {
             error_log("JSON encoding error: " . json_last_error_msg());
+            error_log("Data that failed to encode: " . print_r($processedData, true));
             $error = [
                 'status' => 'error',
-                'message' => 'Internal server error: Failed to encode response'
+                'message' => 'Internal server error: Failed to encode response',
+                'debug' => json_last_error_msg()
             ];
             echo json_encode($error);
         } else {
             echo $json;
         }
         exit;
+    }
+
+    /**
+     * Process data before JSON encoding
+     *
+     * @param mixed $data The data to process
+     * @return mixed The processed data
+     */
+    private static function processDataForJson($data) {
+        if (is_array($data)) {
+            $result = [];
+            foreach ($data as $key => $value) {
+                // Process each array element
+                $result[$key] = self::processDataForJson($value);
+            }
+            return $result;
+        } elseif (is_object($data)) {
+            // Convert objects to arrays
+            return self::processDataForJson((array)$data);
+        } elseif (is_string($data)) {
+            // Handle strings
+            $processed = mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+            return $processed === '' ? null : $processed;
+        } elseif ($data === '') {
+            // Convert empty strings to null
+            return null;
+        } elseif (is_bool($data)) {
+            // Ensure booleans are actual booleans
+            return (bool)$data;
+        } elseif (is_numeric($data)) {
+            // Handle numbers
+            return is_float($data) ? (float)$data : (int)$data;
+        } elseif ($data === null) {
+            // Keep null values as null
+            return null;
+        }
+        
+        return $data;
     }
     
     /**

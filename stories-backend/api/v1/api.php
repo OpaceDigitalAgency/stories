@@ -39,7 +39,7 @@ try {
     $offset = ($page - 1) * $pageSize;
 
     // Get sort params
-    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'created_at:desc';
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'publishedAt:desc';
     list($sortField, $sortDir) = explode(':', $sort);
     // Map frontend field names to database columns
     $sortFieldMap = [

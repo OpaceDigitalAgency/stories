@@ -81,40 +81,13 @@ try {
             while ($row = $stmt->fetch()) {
                 $story = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'slug' => $row['slug'],
-                        'content' => $row['content'],
-                        'excerpt' => $row['excerpt'],
-                        'publishedAt' => $row['created_at'],
-                        'featured' => (bool)$row['featured'],
-                        'averageRating' => (float)$row['average_rating'],
-                        'reviewCount' => (int)$row['review_count'],
-                        'estimatedReadingTime' => $row['estimated_reading_time'],
-                        'isSponsored' => (bool)$row['is_sponsored'],
-                        'ageGroup' => $row['age_group'],
-                        'needsModeration' => (bool)$row['needs_moderation'],
-                        'isSelfPublished' => (bool)$row['is_self_published'],
-                        'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
-                        'cover' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['cover_url'],
-                                    'width' => 800,
-                                    'height' => 600,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
-                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225],
-                                        'medium' => ['url' => $row['cover_url'], 'width' => 500, 'height' => 375],
-                                        'large' => ['url' => $row['cover_url'], 'width' => 800, 'height' => 600]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'title' => $row['title'],
+                    'slug' => $row['slug'],
+                    'excerpt' => $row['excerpt'],
+                    'content' => $row['content'],
+                    'publishedAt' => $row['created_at'],
+                    'rating' => (float)$row['average_rating'],
+                    'coverImage' => $row['cover_url']
                 ];
                 
                 // Add author if exists
@@ -123,46 +96,17 @@ try {
                     $slugs = explode(',', $row['author_slugs']);
                     $avatars = explode(',', $row['author_avatars']);
                     
-                    $story['attributes']['author'] = [
-                        'data' => [
-                            'id' => 1,
-                            'attributes' => [
-                                'name' => $names[0],
-                                'slug' => $slugs[0],
-                                'avatar' => [
-                                    'data' => [
-                                        'id' => 1,
-                                        'attributes' => [
-                                            'url' => $avatars[0],
-                                            'width' => 200,
-                                            'height' => 200,
-                                            'formats' => [
-                                                'thumbnail' => ['url' => $avatars[0], 'width' => 50, 'height' => 50],
-                                                'small' => ['url' => $avatars[0], 'width' => 100, 'height' => 100]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
+                    $story['author'] = [
+                        'name' => $names[0],
+                        'slug' => $slugs[0],
+                        'avatar' => $avatars[0]
                     ];
                 }
 
                 // Add tags if exist
                 if ($row['tag_names']) {
                     $tagNames = explode(',', $row['tag_names']);
-                    $tagSlugs = explode(',', $row['tag_slugs']);
-                    $tags = [];
-                    foreach ($tagNames as $i => $name) {
-                        $tags[] = [
-                            'id' => $i + 1,
-                            'attributes' => [
-                                'name' => $name,
-                                'slug' => $tagSlugs[$i]
-                            ]
-                        ];
-                    }
-                    $story['attributes']['tags'] = ['data' => $tags];
+                    $story['tags'] = $tagNames;
                 }
                 
                 $stories[] = $story;
@@ -194,28 +138,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $authors[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['name'],
-                        'slug' => $row['slug'],
-                        'bio' => $row['bio'],
-                        'avatar' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['avatar_url'],
-                                    'width' => 200,
-                                    'height' => 200,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['avatar_url'], 'width' => 50, 'height' => 50],
-                                        'small' => ['url' => $row['avatar_url'], 'width' => 100, 'height' => 100]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'storyCount' => (int)$row['story_count'],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'name' => $row['name'],
+                    'slug' => $row['slug'],
+                    'bio' => $row['bio'],
+                    'avatar' => $row['avatar_url'],
+                    'storyCount' => (int)$row['story_count']
                 ];
             }
             
@@ -249,71 +176,27 @@ try {
             while ($row = $stmt->fetch()) {
                 $post = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'slug' => $row['slug'],
-                        'content' => $row['content'],
-                        'excerpt' => $row['excerpt'],
-                        'publishedAt' => $row['created_at'],
-                        'cover' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['cover_url'],
-                                    'width' => 800,
-                                    'height' => 600,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
-                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225],
-                                        'medium' => ['url' => $row['cover_url'], 'width' => 500, 'height' => 375],
-                                        'large' => ['url' => $row['cover_url'], 'width' => 800, 'height' => 600]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'author' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'name' => $row['author_name'],
-                                    'slug' => $row['author_slug'],
-                                    'avatar' => [
-                                        'data' => [
-                                            'id' => 1,
-                                            'attributes' => [
-                                                'url' => $row['author_avatar'],
-                                                'width' => 200,
-                                                'height' => 200,
-                                                'formats' => [
-                                                    'thumbnail' => ['url' => $row['author_avatar'], 'width' => 50, 'height' => 50],
-                                                    'small' => ['url' => $row['author_avatar'], 'width' => 100, 'height' => 100]
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'title' => $row['title'],
+                    'slug' => $row['slug'],
+                    'content' => $row['content'],
+                    'excerpt' => $row['excerpt'],
+                    'publishedAt' => $row['created_at'],
+                    'coverImage' => $row['cover_url']
                 ];
+
+                // Add author if exists
+                if ($row['author_name']) {
+                    $post['author'] = [
+                        'name' => $row['author_name'],
+                        'slug' => $row['author_slug'],
+                        'avatar' => $row['author_avatar']
+                    ];
+                }
 
                 // Add tags if exist
                 if ($row['tag_names']) {
                     $tagNames = explode(',', $row['tag_names']);
-                    $tagSlugs = explode(',', $row['tag_slugs']);
-                    $tags = [];
-                    foreach ($tagNames as $i => $name) {
-                        $tags[] = [
-                            'id' => $i + 1,
-                            'attributes' => [
-                                'name' => $name,
-                                'slug' => $tagSlugs[$i]
-                            ]
-                        ];
-                    }
-                    $post['attributes']['tags'] = ['data' => $tags];
+                    $post['tags'] = $tagNames;
                 }
 
                 $posts[] = $post;
@@ -340,28 +223,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $games[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['genre'],
-                        'thumbnail' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['cover_url'],
-                                    'width' => 800,
-                                    'height' => 600,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
-                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'title' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['genre'],
+                    'thumbnail' => $row['cover_url']
                 ];
             }
             
@@ -386,28 +252,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $items[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['cover_url'],
-                                    'width' => 200,
-                                    'height' => 200,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 50, 'height' => 50],
-                                        'small' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 100]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url']
                 ];
             }
             
@@ -432,28 +281,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $tools[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'id' => 1,
-                                'attributes' => [
-                                    'url' => $row['cover_url'],
-                                    'width' => 200,
-                                    'height' => 200,
-                                    'formats' => [
-                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 50, 'height' => 50],
-                                        'small' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 100]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url']
                 ];
             }
             
@@ -483,14 +315,10 @@ try {
             while ($row = $stmt->fetch()) {
                 $tags[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['name'],
-                        'slug' => $row['slug'],
-                        'storyCount' => (int)$row['story_count'],
-                        'postCount' => (int)$row['post_count'],
-                        'createdAt' => $row['created_at'],
-                        'updatedAt' => $row['updated_at']
-                    ]
+                    'name' => $row['name'],
+                    'slug' => $row['slug'],
+                    'storyCount' => (int)$row['story_count'],
+                    'postCount' => (int)$row['post_count']
                 ];
             }
             

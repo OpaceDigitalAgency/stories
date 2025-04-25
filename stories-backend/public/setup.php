@@ -39,19 +39,6 @@ header('Content-Type: text/html; charset=utf-8');
         }
 
         // Create tables in correct order
-        $db->exec("CREATE TABLE media (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            url VARCHAR(255) NOT NULL,
-            mime_type VARCHAR(100),
-            width INT,
-            height INT,
-            size INT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-        echo "<p class='success'>✓ Created table: media</p>";
-
         $db->exec("CREATE TABLE authors (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -81,15 +68,15 @@ header('Content-Type: text/html; charset=utf-8');
             slug VARCHAR(255) NOT NULL UNIQUE,
             is_published BOOLEAN DEFAULT TRUE,
             featured BOOLEAN DEFAULT FALSE,
-            average_rating DECIMAL(3,1) DEFAULT 0,
-            review_count INT DEFAULT 0,
+            average_rating DECIMAL(3,1) DEFAULT 4.5,
+            review_count INT DEFAULT 10,
             estimated_reading_time VARCHAR(50) DEFAULT '5 minutes',
             is_sponsored BOOLEAN DEFAULT FALSE,
-            age_group VARCHAR(50) DEFAULT '6-8 years',
+            age_group VARCHAR(50) DEFAULT '12+',
             needs_moderation BOOLEAN DEFAULT FALSE,
             is_self_published BOOLEAN DEFAULT TRUE,
             is_ai_enhanced BOOLEAN DEFAULT FALSE,
-            cover_url VARCHAR(255) DEFAULT 'https://storiesfromtheweb.org/default-cover.jpg',
+            cover_url VARCHAR(255) DEFAULT 'https://example.com/cover.jpg',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -194,8 +181,8 @@ header('Content-Type: text/html; charset=utf-8');
 
         // Add sample data
         $db->exec("INSERT INTO authors (name, slug, bio, avatar_url, is_published) VALUES 
-            ('John Doe', 'john-doe', 'A test author', 'https://storiesfromtheweb.org/authors/john-doe.jpg', TRUE),
-            ('Jane Smith', 'jane-smith', 'Another test author', 'https://storiesfromtheweb.org/authors/jane-smith.jpg', TRUE)");
+            ('John Doe', 'john-doe', 'A test author', 'https://example.com/avatar1.jpg', TRUE),
+            ('Jane Smith', 'jane-smith', 'Another test author', 'https://example.com/avatar2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample authors</p>";
 
         $db->exec("INSERT INTO tags (name, slug) VALUES 
@@ -210,9 +197,9 @@ header('Content-Type: text/html; charset=utf-8');
             estimated_reading_time, is_sponsored, age_group, cover_url, is_published
         ) VALUES 
             ('Example Story', 'example-story', 'Full story content here...', 'This is an example story...', 
-            TRUE, 4.5, 10, '5 minutes', FALSE, '6-8 years', 'https://storiesfromtheweb.org/stories/example-story.jpg', TRUE),
+            TRUE, 4.5, 10, '5 minutes', FALSE, '12+', 'https://example.com/cover.jpg', TRUE),
             ('Another Story', 'another-story', 'More story content...', 'Another great story...', 
-            FALSE, 4.0, 5, '3 minutes', FALSE, '3-5 years', 'https://storiesfromtheweb.org/stories/another-story.jpg', TRUE)");
+            FALSE, 4.0, 5, '3 minutes', FALSE, '8+', 'https://example.com/cover2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample stories</p>";
 
         $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES (1, 1), (2, 2)");
@@ -222,26 +209,26 @@ header('Content-Type: text/html; charset=utf-8');
         echo "<p class='success'>✓ Added story tags</p>";
 
         $db->exec("INSERT INTO blog_posts (title, slug, content, excerpt, author_id, cover_url, is_published) VALUES
-            ('Writing Tips for Children', 'writing-tips-for-children', 'Full blog post content...', 'Learn how to write for children...', 1, 'https://storiesfromtheweb.org/blog/writing-tips.jpg', TRUE),
-            ('The Importance of Reading', 'importance-of-reading', 'More blog content...', 'Why reading matters...', 2, 'https://storiesfromtheweb.org/blog/reading.jpg', TRUE)");
+            ('Writing Tips for Children', 'writing-tips-for-children', 'Full blog post content...', 'Learn how to write for children...', 1, 'https://example.com/blog1.jpg', TRUE),
+            ('The Importance of Reading', 'importance-of-reading', 'More blog content...', 'Why reading matters...', 2, 'https://example.com/blog2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample blog posts</p>";
 
         $db->exec("INSERT INTO post_tags (post_id, tag_id) VALUES (1, 4), (2, 4)");
         echo "<p class='success'>✓ Added blog post tags</p>";
 
         $db->exec("INSERT INTO games (title, slug, description, website_url, genre, platform, developer, publisher, cover_url, is_published) VALUES 
-            ('Test Game', 'test-game', 'Test game description', 'http://example.com', 'Action', 'PC', 'Test Dev', 'Test Pub', 'https://storiesfromtheweb.org/games/test-game.jpg', TRUE),
-            ('Another Game', 'another-game', 'More game content', 'http://example.org', 'RPG', 'Console', 'Dev2', 'Pub2', 'https://storiesfromtheweb.org/games/another-game.jpg', TRUE)");
+            ('Test Game', 'test-game', 'Test game description', 'http://example.com', 'Action', 'PC', 'Test Dev', 'Test Pub', 'https://example.com/game1.jpg', TRUE),
+            ('Another Game', 'another-game', 'More game content', 'http://example.org', 'RPG', 'Console', 'Dev2', 'Pub2', 'https://example.com/game2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample games</p>";
 
         $db->exec("INSERT INTO directory_items (title, slug, description, website_url, category, rating, price_range, cover_url, is_published) VALUES 
-            ('Test Directory', 'test-directory', 'Test directory description', 'http://example.com', 'Category1', 4.5, 'Free', 'https://storiesfromtheweb.org/directory/test-directory.jpg', TRUE),
-            ('Another Directory', 'another-directory', 'More directory content', 'http://example.org', 'Category2', 4.0, 'Premium', 'https://storiesfromtheweb.org/directory/another-directory.jpg', TRUE)");
+            ('Test Directory', 'test-directory', 'Test directory description', 'http://example.com', 'Category1', 4.5, 'Free', 'https://example.com/dir1.jpg', TRUE),
+            ('Another Directory', 'another-directory', 'More directory content', 'http://example.org', 'Category2', 4.0, 'Premium', 'https://example.com/dir2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample directory items</p>";
 
         $db->exec("INSERT INTO ai_tools (title, slug, description, website_url, category, pricing_type, featured, cover_url, is_published) VALUES 
-            ('Test AI Tool', 'test-ai-tool', 'Test tool description', 'http://example.com', 'Category1', 'Free', TRUE, 'https://storiesfromtheweb.org/ai-tools/test-tool.jpg', TRUE),
-            ('Another AI Tool', 'another-ai-tool', 'More tool content', 'http://example.org', 'Category2', 'Paid', FALSE, 'https://storiesfromtheweb.org/ai-tools/another-tool.jpg', TRUE)");
+            ('Test AI Tool', 'test-ai-tool', 'Test tool description', 'http://example.com', 'Category1', 'Free', TRUE, 'https://example.com/tool1.jpg', TRUE),
+            ('Another AI Tool', 'another-ai-tool', 'More tool content', 'http://example.org', 'Category2', 'Paid', FALSE, 'https://example.com/tool2.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample AI tools</p>";
 
         echo "<h2>Setup Complete</h2>";

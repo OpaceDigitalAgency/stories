@@ -35,8 +35,8 @@ try {
     
     // Get pagination params
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 25;
-    $offset = ($page - 1) * $per_page;
+    $pageSize = isset($_GET['pageSize']) ? (int)$_GET['pageSize'] : 25;
+    $offset = ($page - 1) * $pageSize;
 
     // Simple router
     switch ($path) {
@@ -53,7 +53,7 @@ try {
                    WHERE s.is_published = 1 
                    GROUP BY s.id
                    ORDER BY s.created_at DESC
-                   LIMIT $offset, $per_page";
+                   LIMIT $offset, $pageSize";
             
             $stmt = $db->query($sql);
             $stories = [];
@@ -64,8 +64,8 @@ try {
                     'attributes' => [
                         'title' => $row['title'],
                         'slug' => $row['slug'],
-                        'excerpt' => $row['excerpt'],
                         'content' => $row['content'],
+                        'excerpt' => $row['excerpt'],
                         'publishedAt' => $row['created_at'],
                         'featured' => (bool)$row['featured'],
                         'averageRating' => (float)$row['average_rating'],
@@ -76,7 +76,22 @@ try {
                         'needsModeration' => (bool)$row['needs_moderation'],
                         'isSelfPublished' => (bool)$row['is_self_published'],
                         'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
-                        'coverUrl' => $row['cover_url'],
+                        'cover' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['cover_url'],
+                                    'width' => 800,
+                                    'height' => 600,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
+                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225],
+                                        'medium' => ['url' => $row['cover_url'], 'width' => 500, 'height' => 375],
+                                        'large' => ['url' => $row['cover_url'], 'width' => 800, 'height' => 600]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
                     ]
@@ -87,8 +102,13 @@ try {
                     $names = explode(',', $row['author_names']);
                     $slugs = explode(',', $row['author_slugs']);
                     $story['attributes']['author'] = [
-                        'name' => $names[0],
-                        'slug' => $slugs[0]
+                        'data' => [
+                            'id' => 1,
+                            'attributes' => [
+                                'name' => $names[0],
+                                'slug' => $slugs[0]
+                            ]
+                        ]
                     ];
                 }
                 
@@ -96,14 +116,13 @@ try {
             }
             
             echo json_encode([
-                'status' => 'success',
                 'data' => $stories,
                 'meta' => [
                     'pagination' => [
                         'page' => $page,
-                        'per_page' => $per_page,
-                        'total' => $total,
-                        'total_pages' => ceil($total / $per_page)
+                        'pageSize' => $pageSize,
+                        'pageCount' => ceil($total / $pageSize),
+                        'total' => $total
                     ]
                 ]
             ]);
@@ -126,7 +145,20 @@ try {
                         'name' => $row['name'],
                         'slug' => $row['slug'],
                         'bio' => $row['bio'],
-                        'avatarUrl' => $row['avatar_url'],
+                        'avatar' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['avatar_url'],
+                                    'width' => 200,
+                                    'height' => 200,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['avatar_url'], 'width' => 50, 'height' => 50],
+                                        'small' => ['url' => $row['avatar_url'], 'width' => 100, 'height' => 100]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'storyCount' => (int)$row['story_count'],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
@@ -134,7 +166,17 @@ try {
                 ];
             }
             
-            echo json_encode(['status' => 'success', 'data' => $authors]);
+            echo json_encode([
+                'data' => $authors,
+                'meta' => [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => count($authors),
+                        'pageCount' => 1,
+                        'total' => count($authors)
+                    ]
+                ]
+            ]);
             break;
             
         case 'games':
@@ -162,7 +204,17 @@ try {
                 ];
             }
             
-            echo json_encode(['status' => 'success', 'data' => $games]);
+            echo json_encode([
+                'data' => $games,
+                'meta' => [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => count($games),
+                        'pageCount' => 1,
+                        'total' => count($games)
+                    ]
+                ]
+            ]);
             break;
             
         case 'directory-items':
@@ -187,7 +239,17 @@ try {
                 ];
             }
             
-            echo json_encode(['status' => 'success', 'data' => $items]);
+            echo json_encode([
+                'data' => $items,
+                'meta' => [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => count($items),
+                        'pageCount' => 1,
+                        'total' => count($items)
+                    ]
+                ]
+            ]);
             break;
             
         case 'ai-tools':
@@ -215,14 +277,26 @@ try {
                 ];
             }
             
-            echo json_encode(['status' => 'success', 'data' => $tools]);
+            echo json_encode([
+                'data' => $tools,
+                'meta' => [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => count($tools),
+                        'pageCount' => 1,
+                        'total' => count($tools)
+                    ]
+                ]
+            ]);
             break;
             
         default:
             http_response_code(404);
             echo json_encode([
-                'status' => 'error',
-                'message' => 'Endpoint not found'
+                'error' => [
+                    'status' => 404,
+                    'message' => 'Endpoint not found'
+                ]
             ]);
     }
 } catch (Exception $e) {
@@ -231,8 +305,10 @@ try {
     
     http_response_code(500);
     echo json_encode([
-        'status' => 'error',
-        'message' => 'Internal server error',
-        'debug' => $e->getMessage() // Remove this in production
+        'error' => [
+            'status' => 500,
+            'message' => 'Internal server error',
+            'debug' => $e->getMessage() // Remove this in production
+        ]
     ]);
 }

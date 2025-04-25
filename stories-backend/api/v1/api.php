@@ -1,7 +1,7 @@
 <?php
 // Error handling
 error_reporting(E_ALL);
-ini_set('display_errors', 1); // Enable errors temporarily for debugging
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../../logs/php-errors.log');
 
@@ -29,39 +29,73 @@ try {
         exit;
     }
 
-    // Get request path
+    // Get request path and query params
     $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
     $path = str_replace('api/v1/', '', $path);
+    
+    // Get pagination params
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $per_page = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 25;
+    $offset = ($page - 1) * $per_page;
 
     // Simple router
     switch ($path) {
         case 'stories':
+            // Get total count
+            $countStmt = $db->query("SELECT COUNT(*) FROM stories WHERE is_published = 1");
+            $total = $countStmt->fetchColumn();
+            
+            // Get stories with authors
             $sql = "SELECT s.*, GROUP_CONCAT(a.name) as author_names, GROUP_CONCAT(a.slug) as author_slugs
                    FROM stories s 
                    LEFT JOIN story_authors sa ON s.id = sa.story_id
                    LEFT JOIN authors a ON sa.author_id = a.id
                    WHERE s.is_published = 1 
                    GROUP BY s.id
-                   ORDER BY s.created_at DESC";
+                   ORDER BY s.created_at DESC
+                   LIMIT $offset, $per_page";
+            
             $stmt = $db->query($sql);
-            $stories = $stmt->fetchAll();
-
-            // Format author data
-            foreach ($stories as &$story) {
-                if ($story['author_names']) {
-                    $names = explode(',', $story['author_names']);
-                    $slugs = explode(',', $story['author_slugs']);
-                    $story['authors'] = array_map(function($name, $slug) {
-                        return ['name' => $name, 'slug' => $slug];
-                    }, $names, $slugs);
-                } else {
-                    $story['authors'] = [];
+            $stories = [];
+            
+            while ($row = $stmt->fetch()) {
+                $story = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'title' => $row['title'],
+                        'content' => $row['content'],
+                        'slug' => $row['slug'],
+                        'isPublished' => (bool)$row['is_published'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+                
+                // Add author if exists
+                if ($row['author_names']) {
+                    $names = explode(',', $row['author_names']);
+                    $slugs = explode(',', $row['author_slugs']);
+                    $story['attributes']['author'] = [
+                        'name' => $names[0],
+                        'slug' => $slugs[0]
+                    ];
                 }
-                unset($story['author_names']);
-                unset($story['author_slugs']);
+                
+                $stories[] = $story;
             }
-
-            echo json_encode(['status' => 'success', 'data' => $stories]);
+            
+            echo json_encode([
+                'status' => 'success',
+                'data' => $stories,
+                'meta' => [
+                    'pagination' => [
+                        'page' => $page,
+                        'per_page' => $per_page,
+                        'total' => $total,
+                        'total_pages' => ceil($total / $per_page)
+                    ]
+                ]
+            ]);
             break;
             
         case 'authors':
@@ -72,29 +106,105 @@ try {
                    GROUP BY a.id
                    ORDER BY a.name ASC";
             $stmt = $db->query($sql);
-            $data = $stmt->fetchAll();
-            echo json_encode(['status' => 'success', 'data' => $data]);
+            $authors = [];
+            
+            while ($row = $stmt->fetch()) {
+                $authors[] = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'name' => $row['name'],
+                        'slug' => $row['slug'],
+                        'bio' => $row['bio'],
+                        'avatarUrl' => $row['avatar_url'],
+                        'storyCount' => (int)$row['story_count'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+            }
+            
+            echo json_encode(['status' => 'success', 'data' => $authors]);
             break;
             
         case 'games':
             $sql = "SELECT * FROM games WHERE is_published = 1 ORDER BY title ASC";
             $stmt = $db->query($sql);
-            $data = $stmt->fetchAll();
-            echo json_encode(['status' => 'success', 'data' => $data]);
+            $games = [];
+            
+            while ($row = $stmt->fetch()) {
+                $games[] = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'title' => $row['title'],
+                        'description' => $row['description'],
+                        'slug' => $row['slug'],
+                        'genre' => $row['genre'],
+                        'platform' => $row['platform'],
+                        'developer' => $row['developer'],
+                        'publisher' => $row['publisher'],
+                        'releaseDate' => $row['release_date'],
+                        'rating' => (float)$row['rating'],
+                        'price' => (float)$row['price'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+            }
+            
+            echo json_encode(['status' => 'success', 'data' => $games]);
             break;
             
         case 'directory-items':
             $sql = "SELECT * FROM directory_items WHERE is_published = 1 ORDER BY title ASC";
             $stmt = $db->query($sql);
-            $data = $stmt->fetchAll();
-            echo json_encode(['status' => 'success', 'data' => $data]);
+            $items = [];
+            
+            while ($row = $stmt->fetch()) {
+                $items[] = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'title' => $row['title'],
+                        'description' => $row['description'],
+                        'slug' => $row['slug'],
+                        'websiteUrl' => $row['website_url'],
+                        'category' => $row['category'],
+                        'rating' => (float)$row['rating'],
+                        'priceRange' => $row['price_range'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+            }
+            
+            echo json_encode(['status' => 'success', 'data' => $items]);
             break;
             
         case 'ai-tools':
             $sql = "SELECT * FROM ai_tools WHERE is_published = 1 ORDER BY title ASC";
             $stmt = $db->query($sql);
-            $data = $stmt->fetchAll();
-            echo json_encode(['status' => 'success', 'data' => $data]);
+            $tools = [];
+            
+            while ($row = $stmt->fetch()) {
+                $tools[] = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'title' => $row['title'],
+                        'description' => $row['description'],
+                        'slug' => $row['slug'],
+                        'websiteUrl' => $row['website_url'],
+                        'category' => $row['category'],
+                        'pricingType' => $row['pricing_type'],
+                        'priceInfo' => $row['price_info'],
+                        'features' => $row['features'],
+                        'rating' => (float)$row['rating'],
+                        'featured' => (bool)$row['featured'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+            }
+            
+            echo json_encode(['status' => 'success', 'data' => $tools]);
             break;
             
         default:

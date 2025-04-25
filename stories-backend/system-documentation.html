@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories from the Web - System Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+        }
+        .note {
+            background-color: #ffffcc;
+            padding: 15px;
+            border-left: 5px solid #ffcc00;
+            margin: 15px 0;
+        }
+        .warning {
+            background-color: #ffeeee;
+            padding: 15px;
+            border-left: 5px solid #ff0000;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #eeffee;
+            padding: 15px;
+            border-left: 5px solid #00cc00;
+            margin: 15px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.9em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stories from the Web - System Documentation</h1>
+        
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#architecture">System Architecture</a></li>
+            <li><a href="#database">Database Schema</a></li>
+            <li><a href="#api">API Endpoints</a></li>
+            <li><a href="#authentication">Authentication System</a></li>
+            <li><a href="#admin">Admin Interface</a></li>
+            <li><a href="#frontend">Frontend Integration</a></li>
+            <li><a href="#deployment">Deployment Process</a></li>
+            <li><a href="#issues">Known Issues and Solutions</a></li>
+        </ul>
+        
+        <h2 id="architecture">System Architecture</h2>
+        <p>The Stories from the Web platform uses a modern architecture with separate backend and frontend components:</p>
+        
+        <pre>
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Astro Frontend │────▶│   PHP REST API  │────▶│  MySQL Database │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        </pre>
+        
+        <h3>Backend Components</h3>
+        <ul>
+            <li><strong>PHP REST API</strong>: Custom PHP framework providing RESTful endpoints</li>
+            <li><strong>Authentication System</strong>: JWT-based authentication for secure API access</li>
+            <li><strong>Admin Interface</strong>: PHP-based admin panel for content management</li>
+            <li><strong>MySQL Database</strong>: Relational database storing all content and user data</li>
+        </ul>
+        
+        <h3>Frontend Components</h3>
+        <ul>
+            <li><strong>Astro Framework</strong>: Modern static site generator with dynamic capabilities</li>
+            <li><strong>Tailwind CSS</strong>: Utility-first CSS framework for styling</li>
+            <li><strong>TypeScript</strong>: Typed JavaScript for improved developer experience</li>
+        </ul>
+        
+        <h2 id="database">Database Schema</h2>
+        
+        <h3>Core Tables</h3>
+        <ul>
+            <li><strong>stories</strong>: Main content table for stories</li>
+            <li><strong>authors</strong>: Information about story authors</li>
+            <li><strong>tags</strong>: Categories and tags for content</li>
+            <li><strong>users</strong>: User accounts for authentication</li>
+            <li><strong>blog_posts</strong>: Blog content</li>
+            <li><strong>games</strong>: Interactive story games</li>
+            <li><strong>directory_items</strong>: Directory listings</li>
+            <li><strong>ai_tools</strong>: AI tool listings</li>
+        </ul>
+        
+        <h3>Relationship Tables</h3>
+        <ul>
+            <li><strong>story_tags</strong>: Many-to-many relationship between stories and tags</li>
+            <li><strong>author_stories</strong>: Many-to-many relationship between authors and stories</li>
+        </ul>
+        
+        <h2 id="api">API Endpoints</h2>
+        
+        <h3>Authentication Endpoints</h3>
+        <ul>
+            <li><code>POST /api/v1/auth/login</code>: Authenticate user and get JWT token</li>
+            <li><code>POST /api/v1/auth/logout</code>: Invalidate current token</li>
+            <li><code>GET /api/v1/auth/me</code>: Get current user information</li>
+            <li><code>POST /api/v1/auth/refresh</code>: Refresh JWT token</li>
+        </ul>
+        
+        <h3>Content Endpoints</h3>
+        <ul>
+            <li><code>GET /api/v1/stories</code>: List all stories</li>
+            <li><code>GET /api/v1/stories/{id}</code>: Get specific story</li>
+            <li><code>POST /api/v1/stories</code>: Create new story</li>
+            <li><code>PUT /api/v1/stories/{id}</code>: Update existing story</li>
+            <li><code>DELETE /api/v1/stories/{id}</code>: Delete story</li>
+        </ul>
+        
+        <p>Similar endpoints exist for authors, tags, blog posts, games, directory items, and AI tools.</p>
+        
+        <h2 id="authentication">Authentication System</h2>
+        
+        <h3>JWT Authentication</h3>
+        <p>The system uses JSON Web Tokens (JWT) for authentication:</p>
+        <ul>
+            <li>Tokens are issued upon successful login</li>
+            <li>Tokens contain user ID and role information</li>
+            <li>Tokens expire after a configurable time period</li>
+            <li>Protected endpoints require a valid token</li>
+        </ul>
+        
+        <h3>Authentication Flow</h3>
+        <pre>
+1. Client sends credentials to /auth/login
+2. Server validates credentials and issues JWT
+3. Client includes JWT in Authorization header
+4. Server validates JWT for protected endpoints
+5. Server refreshes JWT when needed
+        </pre>
+        
+        <h3>Middleware</h3>
+        <p>Authentication is handled by middleware classes:</p>
+        <ul>
+            <li><code>AuthMiddleware</code>: Standard JWT validation</li>
+            <li><code>SimpleAuthMiddleware</code>: Simplified authentication for admin interface</li>
+        </ul>
+        
+        <h2 id="admin">Admin Interface</h2>
+        
+        <h3>Overview</h3>
+        <p>The admin interface provides a web-based UI for managing all content:</p>
+        <ul>
+            <li>Dashboard with overview statistics</li>
+            <li>Content management for all content types</li>
+            <li>User management</li>
+            <li>Media library</li>
+        </ul>
+        
+        <h3>Admin Architecture</h3>
+        <div class="warning">
+            <p><strong>Important:</strong> The admin interface uses a JavaScript-free architecture to ensure reliability and prevent recurring issues. Any attempts to add JavaScript will be blocked by security headers.</p>
+        </div>
+        <p>The admin interface uses a simplified architecture focused on reliability:</p>
+        <ul>
+            <li><strong>Direct Form Submissions</strong>: Pure HTML forms submit directly to PHP processors</li>
+            <li><strong>CSS-Only UI</strong>: Navigation and interactive elements use CSS without JavaScript</li>
+            <li><strong>Session Auth</strong>: Simple session-based authentication without JWT complexity</li>
+            <li><strong>Server-Side Processing</strong>: All data operations handled directly by PHP</li>
+        </ul>
+        
+        <h3>Form Submission Process</h3>
+        <p>The admin interface uses direct form submissions for reliability:</p>
+        <pre>
+1. User submits HTML form
+2. Form data sent directly to PHP processor
+3. Server validates input and performs operation
+4. User is redirected with success/error message
+5. No JavaScript intermediary required
+        </pre>
+
+        <div class="note">
+            <p><strong>Security Note:</strong> JavaScript is explicitly blocked via Content-Security-Policy headers and .htaccess rules to prevent accidental reintroduction of client-side dependencies.</p>
+        </div>
+        
+        <h2 id="frontend">Frontend Integration</h2>
+        
+        <h3>API Integration</h3>
+        <p>The Astro frontend integrates with the API using TypeScript:</p>
+        <pre>
+// src/lib/api.ts
+export async function fetchStories() {
+  const response = await fetch('https://api.storiesfromtheweb.org/api/v1/stories');
+  return await response.json();
+}
+        </pre>
+        
+        <h3>Data Flow</h3>
+        <p>Content flows from the API to the frontend:</p>
+        <pre>
+1. Astro page requests data during build or client-side
+2. API returns JSON data
+3. Data is rendered using Astro components
+4. Interactive elements use client-side JavaScript
+        </pre>
+        
+        <h2 id="deployment">Deployment Process</h2>
+        
+        <h3>Backend Deployment</h3>
+        <p>The backend is deployed to a shared hosting environment:</p>
+        <ol>
+            <li>Code is pushed to GitHub repository</li>
+            <li>Files are transferred to server via FTP or Git</li>
+            <li>Database migrations are applied if needed</li>
+        </ol>
+        
+        <h3>Frontend Deployment</h3>
+        <p>The frontend is deployed to Netlify:</p>
+        <ol>
+            <li>Code is pushed to GitHub repository</li>
+            <li>Netlify detects changes and triggers build</li>
+            <li>Astro builds static files</li>
+            <li>Files are deployed to Netlify CDN</li>
+        </ol>
+        
+        <h2 id="issues">Known Issues and Solutions</h2>
+        
+        <h3>Case Sensitivity Enforcement</h3>
+        <div class="success">
+            <p><strong>Previous Issue:</strong> Recurring case sensitivity issues due to inconsistent directory naming and permissive autoloading.</p>
+            <p><strong>Permanent Solution:</strong></p>
+            <ul>
+                <li><strong>Directory Structure:</strong> Enforced consistent capitalization:
+                    <ul>
+                        <li>core → Core</li>
+                        <li>middleware → Middleware</li>
+                        <li>endpoints → Endpoints</li>
+                        <li>utils → Utils</li>
+                    </ul>
+                </li>
+                <li><strong>Code Cleanup:</strong>
+                    <ul>
+                        <li>Removed all backup/temporary files (.bak, .orig)</li>
+                        <li>Updated namespace references in routes.php</li>
+                        <li>Added .htaccess files to prevent direct file access</li>
+                    </ul>
+                </li>
+                <li><strong>Strict PSR-4 Enforcement:</strong>
+                    <ul>
+                        <li>Removed case-insensitive fallback from autoloader</li>
+                        <li>Added exception throwing for case mismatches</li>
+                        <li>Prevents masking of case sensitivity issues</li>
+                    </ul>
+                </li>
+            </ul>
+            <p><strong>Tools:</strong></p>
+            <ul>
+                <li><code>permanent_case_fix.php</code> - Comprehensive fix script that enforces correct casing and prevents recurrence</li>
+                <li><code>case_sensitivity_scan.php</code> - Verification tool for ongoing monitoring</li>
+            </ul>
+            <p><strong>Status:</strong> Case sensitivity is now strictly enforced at both the filesystem and code level.</p>
+        </div>
+
+        <h3>Frontend-Backend Integration Issues</h3>
+        <div class="warning">
+            <p><strong>Current Issue:</strong> Frontend (Netlify) not displaying content from backend API.</p>
+            <p><strong>Root Causes:</strong></p>
+            <ul>
+                <li>API URL configuration needs updating</li>
+                <li>CORS (Cross-Origin Resource Sharing) configuration required</li>
+                <li>Error handling improvements needed</li>
+                <li>Authentication token management to be enhanced</li>
+            </ul>
+            <p><strong>Solution Plan:</strong> See API_CONNECTIVITY_FIX.md for detailed implementation steps.</p>
+        </div>
+        
+        <h3>Authentication Issues</h3>
+        <div class="note">
+            <p><strong>Issue:</strong> JWT token validation may fail due to configuration differences.</p>
+            <p><strong>Solution:</strong> Ensure JWT secret is consistent across environments and token format is correct.</p>
+            <p><strong>Tools:</strong> <code>test_jwt_secret.php</code> and <code>test_token_refresh.php</code> can diagnose token issues.</p>
+        </div>
+        
+        <h3>Admin Form Submission Issues</h3>
+        <div class="success">
+            <p><strong>Issue:</strong> Admin interface form submissions may get stuck in "Processing" state.</p>
+            <p><strong>Root Cause:</strong> JavaScript form handler not properly processing API responses.</p>
+            <p><strong>Solution:</strong> Updated admin JavaScript to properly handle API responses and provide clear feedback.</p>
+            <p><strong>Implementation:</strong> Modified <code>admin/assets/js/admin.js</code> to improve form submission handling.</p>
+        </div>
+        
+        <h3>API Response Format Issues</h3>
+        <div class="note">
+            <p><strong>Issue:</strong> API may return responses in unexpected formats.</p>
+            <p><strong>Solution:</strong> Ensure consistent response formatting and proper error handling in API controllers.</p>
+            <p><strong>Tools:</strong> <code>debug_api_calls.php</code> can test API endpoints and verify response formats.</p>
+        </div>
+        
+        <h3>Database Write Issues</h3>
+        <div class="success">
+            <p><strong>Issue:</strong> Database write operations may fail due to authentication or permission issues.</p>
+            <p><strong>Root Cause:</strong> Missing <code>SimpleAuthMiddleware</code> class referenced in routes.php.</p>
+            <p><strong>Solution:</strong> Created <code>SimpleAuthMiddleware.php</code> to handle authentication properly.</p>
+            <p><strong>Implementation:</strong> Added middleware class and updated routes configuration.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Last updated: April 19, 2025</p>
+            <h3>Recent Updates</h3>
+            <ul>
+                <li><strong>2025-04-19:</strong> Added documentation for admin form submission fix and database write issues</li>
+                <li><strong>2025-04-15:</strong> Updated deployment process documentation</li>
+                <li><strong>2025-04-10:</strong> Added case sensitivity troubleshooting section</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

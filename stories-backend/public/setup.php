@@ -57,13 +57,13 @@ header('Content-Type: text/html; charset=utf-8');
             featured BOOLEAN DEFAULT FALSE,
             average_rating DECIMAL(3,1) DEFAULT 0,
             review_count INT DEFAULT 0,
-            estimated_reading_time VARCHAR(50),
+            estimated_reading_time VARCHAR(50) DEFAULT '5 minutes',
             is_sponsored BOOLEAN DEFAULT FALSE,
-            age_group VARCHAR(50),
+            age_group VARCHAR(50) DEFAULT '6-8 years',
             needs_moderation BOOLEAN DEFAULT FALSE,
             is_self_published BOOLEAN DEFAULT TRUE,
             is_ai_enhanced BOOLEAN DEFAULT FALSE,
-            cover_url VARCHAR(255),
+            cover_url VARCHAR(255) DEFAULT 'https://storiesfromtheweb.org/default-cover.jpg',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -131,8 +131,8 @@ header('Content-Type: text/html; charset=utf-8');
 
         // Add sample data
         $db->exec("INSERT INTO authors (name, slug, bio, avatar_url, is_published) VALUES 
-            ('John Doe', 'john-doe', 'A test author', 'https://example.com/avatar1.jpg', TRUE),
-            ('Jane Smith', 'jane-smith', 'Another test author', 'https://example.com/avatar2.jpg', TRUE)");
+            ('John Doe', 'john-doe', 'A test author', 'https://storiesfromtheweb.org/authors/john-doe.jpg', TRUE),
+            ('Jane Smith', 'jane-smith', 'Another test author', 'https://storiesfromtheweb.org/authors/jane-smith.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample authors</p>";
 
         $db->exec("INSERT INTO stories (
@@ -140,9 +140,9 @@ header('Content-Type: text/html; charset=utf-8');
             estimated_reading_time, is_sponsored, age_group, cover_url, is_published
         ) VALUES 
             ('Example Story', 'example-story', 'Full story content here...', 'This is an example story...', 
-            TRUE, 4.5, 10, '5 minutes', FALSE, '12+', 'https://example.com/cover.jpg', TRUE),
+            TRUE, 4.5, 10, '5 minutes', FALSE, '6-8 years', 'https://storiesfromtheweb.org/stories/example-story.jpg', TRUE),
             ('Another Story', 'another-story', 'More story content...', 'Another great story...', 
-            FALSE, 4.0, 5, '3 minutes', FALSE, '8+', 'https://example.com/cover2.jpg', TRUE)");
+            FALSE, 4.0, 5, '3 minutes', FALSE, '3-5 years', 'https://storiesfromtheweb.org/stories/another-story.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample stories</p>";
 
         $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES (1, 1), (2, 2)");

@@ -11,7 +11,58 @@
 - Build an admin interface for content management
 
 ## Current Issues
-- None at this time. All identified issues have been fixed.
+- Frontend-Backend Integration:
+  * Frontend (Netlify) not displaying content from backend API
+  * API URL configuration needs updating
+  * CORS (Cross-Origin Resource Sharing) configuration required
+  * Error handling improvements needed
+  * Authentication token management to be enhanced
+  * See API_CONNECTIVITY_FIX.md for detailed implementation plan
+
+## Case Sensitivity Enforcement Plan
+
+### 1. Initial Cleanup (All Environments)
+1. Run permanent_case_fix.php which will:
+   - Remove duplicate directories (e.g., both "core" and "Core")
+   - Move files from wrong-case to correct-case directories
+   - Delete all backup/temporary files (*.bak, *.orig)
+   - Update namespace references
+   - Install strict PSR-4 autoloader
+
+### 2. Prevention Measures
+1. Git Configuration:
+   ```bash
+   # Add to .git/config
+   [core]
+       ignorecase = false
+   ```
+
+2. Deployment Process:
+   - Add check_case_sensitivity.php to deployment pipeline
+   - Block deployments if case issues are found
+   - Prevent backup file creation on production
+
+3. Development Guidelines:
+   - Use correct capitalization:
+     * Core/ (not core/)
+     * Middleware/ (not middleware/)
+     * Endpoints/ (not endpoints/)
+     * Utils/ (not utils/)
+   - No backup files in version control
+   - Run case sensitivity check before commits
+
+### 4. Monitoring
+1. Regular Checks:
+   - Weekly scan for case mismatches
+   - Alert if backup files are found
+   - Verify autoloader strict mode
+
+2. Documentation:
+   - Update coding standards
+   - Document correct directory structure
+   - Add case sensitivity section to onboarding
+
+See permanent_case_fix.php for implementation details.
 
 ## Previous Issues (Fixed)
 - Login authentication issue:

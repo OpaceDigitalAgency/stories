@@ -273,11 +273,53 @@ export async function fetchStories() {
         
         <h2 id="issues">Known Issues and Solutions</h2>
         
-        <h3>Case Sensitivity Issues</h3>
-        <div class="note">
-            <p><strong>Issue:</strong> File paths may have case sensitivity issues on different servers.</p>
-            <p><strong>Solution:</strong> Use consistent casing in all file references and imports.</p>
-            <p><strong>Tools:</strong> <code>case_dir_audit.php</code> and <code>case_sensitivity_scan.php</code> can identify case sensitivity issues.</p>
+        <h3>Case Sensitivity Enforcement</h3>
+        <div class="success">
+            <p><strong>Previous Issue:</strong> Recurring case sensitivity issues due to inconsistent directory naming and permissive autoloading.</p>
+            <p><strong>Permanent Solution:</strong></p>
+            <ul>
+                <li><strong>Directory Structure:</strong> Enforced consistent capitalization:
+                    <ul>
+                        <li>core → Core</li>
+                        <li>middleware → Middleware</li>
+                        <li>endpoints → Endpoints</li>
+                        <li>utils → Utils</li>
+                    </ul>
+                </li>
+                <li><strong>Code Cleanup:</strong>
+                    <ul>
+                        <li>Removed all backup/temporary files (.bak, .orig)</li>
+                        <li>Updated namespace references in routes.php</li>
+                        <li>Added .htaccess files to prevent direct file access</li>
+                    </ul>
+                </li>
+                <li><strong>Strict PSR-4 Enforcement:</strong>
+                    <ul>
+                        <li>Removed case-insensitive fallback from autoloader</li>
+                        <li>Added exception throwing for case mismatches</li>
+                        <li>Prevents masking of case sensitivity issues</li>
+                    </ul>
+                </li>
+            </ul>
+            <p><strong>Tools:</strong></p>
+            <ul>
+                <li><code>permanent_case_fix.php</code> - Comprehensive fix script that enforces correct casing and prevents recurrence</li>
+                <li><code>case_sensitivity_scan.php</code> - Verification tool for ongoing monitoring</li>
+            </ul>
+            <p><strong>Status:</strong> Case sensitivity is now strictly enforced at both the filesystem and code level.</p>
+        </div>
+
+        <h3>Frontend-Backend Integration Issues</h3>
+        <div class="warning">
+            <p><strong>Current Issue:</strong> Frontend (Netlify) not displaying content from backend API.</p>
+            <p><strong>Root Causes:</strong></p>
+            <ul>
+                <li>API URL configuration needs updating</li>
+                <li>CORS (Cross-Origin Resource Sharing) configuration required</li>
+                <li>Error handling improvements needed</li>
+                <li>Authentication token management to be enhanced</li>
+            </ul>
+            <p><strong>Solution Plan:</strong> See API_CONNECTIVITY_FIX.md for detailed implementation steps.</p>
         </div>
         
         <h3>Authentication Issues</h3>

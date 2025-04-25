@@ -52,6 +52,10 @@ try {
     $sortField = $sortFieldMap[$sortField] ?? 'created_at';
     $sortDir = strtoupper($sortDir);
 
+    // Get populate param
+    $populate = isset($_GET['populate']) ? $_GET['populate'] : '';
+    $shouldPopulate = $populate === '*';
+
     // Simple router
     switch ($path) {
         case 'stories':
@@ -59,21 +63,28 @@ try {
             $countStmt = $db->query("SELECT COUNT(*) FROM stories WHERE is_published = 1");
             $total = $countStmt->fetchColumn();
             
-            // Get stories with authors and tags
-            $sql = "SELECT s.*, GROUP_CONCAT(DISTINCT a.name) as author_names, 
+            // Get stories with authors and tags if populate=*
+            $sql = "SELECT s.* ";
+            if ($shouldPopulate) {
+                $sql .= ", GROUP_CONCAT(DISTINCT a.name) as author_names, 
                           GROUP_CONCAT(DISTINCT a.slug) as author_slugs,
                           GROUP_CONCAT(DISTINCT a.avatar_url) as author_avatars,
                           GROUP_CONCAT(DISTINCT t.name) as tag_names,
-                          GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
-                   FROM stories s 
-                   LEFT JOIN story_authors sa ON s.id = sa.story_id
-                   LEFT JOIN authors a ON sa.author_id = a.id
-                   LEFT JOIN story_tags st ON s.id = st.story_id
-                   LEFT JOIN tags t ON st.tag_id = t.id
-                   WHERE s.is_published = 1 
-                   GROUP BY s.id
-                   ORDER BY s.$sortField $sortDir
-                   LIMIT $offset, $pageSize";
+                          GROUP_CONCAT(DISTINCT t.slug) as tag_slugs ";
+                $sql .= "FROM stories s 
+                        LEFT JOIN story_authors sa ON s.id = sa.story_id
+                        LEFT JOIN authors a ON sa.author_id = a.id
+                        LEFT JOIN story_tags st ON s.id = st.story_id
+                        LEFT JOIN tags t ON st.tag_id = t.id ";
+            } else {
+                $sql .= "FROM stories s ";
+            }
+            $sql .= "WHERE s.is_published = 1 ";
+            if ($shouldPopulate) {
+                $sql .= "GROUP BY s.id ";
+            }
+            $sql .= "ORDER BY s.$sortField $sortDir
+                    LIMIT $offset, $pageSize";
             
             $stmt = $db->query($sql);
             $stories = [];
@@ -87,6 +98,15 @@ try {
                         'excerpt' => $row['excerpt'],
                         'content' => $row['content'],
                         'publishedAt' => $row['created_at'],
+                        'featured' => (bool)$row['featured'],
+                        'averageRating' => (float)$row['average_rating'],
+                        'reviewCount' => (int)$row['review_count'],
+                        'estimatedReadingTime' => $row['estimated_reading_time'],
+                        'isSponsored' => (bool)$row['is_sponsored'],
+                        'ageGroup' => $row['age_group'],
+                        'needsModeration' => (bool)$row['needs_moderation'],
+                        'isSelfPublished' => (bool)$row['is_self_published'],
+                        'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
                         'cover' => [
                             'data' => [
                                 'attributes' => [
@@ -97,8 +117,8 @@ try {
                     ]
                 ];
                 
-                // Add author if exists
-                if ($row['author_names']) {
+                // Add author if exists and populate=*
+                if ($shouldPopulate && $row['author_names']) {
                     $names = explode(',', $row['author_names']);
                     $slugs = explode(',', $row['author_slugs']);
                     $avatars = explode(',', $row['author_avatars']);
@@ -120,8 +140,8 @@ try {
                     ];
                 }
 
-                // Add tags if exist
-                if ($row['tag_names']) {
+                // Add tags if exist and populate=*
+                if ($shouldPopulate && $row['tag_names']) {
                     $tagNames = explode(',', $row['tag_names']);
                     $tagSlugs = explode(',', $row['tag_slugs']);
                     $tags = [];
@@ -153,17 +173,27 @@ try {
             break;
             
         case 'authors':
-            $sql = "SELECT a.*, COUNT(sa.story_id) as story_count 
-                   FROM authors a
-                   LEFT JOIN story_authors sa ON a.id = sa.author_id
-                   WHERE a.is_published = 1
-                   GROUP BY a.id
-                   ORDER BY a.name ASC";
+            $sql = "SELECT a.*, COUNT(sa.story_id) as story_count ";
+            if ($shouldPopulate) {
+                $sql .= ", GROUP_CONCAT(DISTINCT s.id) as story_ids,
+                          GROUP_CONCAT(DISTINCT s.title) as story_titles,
+                          GROUP_CONCAT(DISTINCT s.slug) as story_slugs,
+                          GROUP_CONCAT(DISTINCT s.cover_url) as story_covers ";
+            }
+            $sql .= "FROM authors a
+                    LEFT JOIN story_authors sa ON a.id = sa.author_id ";
+            if ($shouldPopulate) {
+                $sql .= "LEFT JOIN stories s ON sa.story_id = s.id ";
+            }
+            $sql .= "WHERE a.is_published = 1
+                    GROUP BY a.id
+                    ORDER BY a.name ASC";
+            
             $stmt = $db->query($sql);
             $authors = [];
             
             while ($row = $stmt->fetch()) {
-                $authors[] = [
+                $author = [
                     'id' => $row['id'],
                     'attributes' => [
                         'name' => $row['name'],
@@ -175,10 +205,38 @@ try {
                                     'url' => $row['avatar_url']
                                 ]
                             ]
-                        ],
-                        'storyCount' => (int)$row['story_count']
+                        ]
                     ]
                 ];
+
+                // Add stories if populate=*
+                if ($shouldPopulate && $row['story_ids']) {
+                    $storyIds = explode(',', $row['story_ids']);
+                    $storyTitles = explode(',', $row['story_titles']);
+                    $storySlugs = explode(',', $row['story_slugs']);
+                    $storyCovers = explode(',', $row['story_covers']);
+                    
+                    $stories = [];
+                    foreach ($storyIds as $i => $id) {
+                        $stories[] = [
+                            'id' => (int)$id,
+                            'attributes' => [
+                                'title' => $storyTitles[$i],
+                                'slug' => $storySlugs[$i],
+                                'cover' => [
+                                    'data' => [
+                                        'attributes' => [
+                                            'url' => $storyCovers[$i]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ];
+                    }
+                    $author['attributes']['stories'] = ['data' => $stories];
+                }
+                
+                $authors[] = $author;
             }
             
             echo json_encode([
@@ -195,16 +253,24 @@ try {
             break;
 
         case 'blog-posts':
-            $sql = "SELECT p.*, a.name as author_name, a.slug as author_slug, a.avatar_url as author_avatar,
-                          GROUP_CONCAT(t.name) as tag_names, GROUP_CONCAT(t.slug) as tag_slugs
-                   FROM blog_posts p
-                   LEFT JOIN authors a ON p.author_id = a.id
-                   LEFT JOIN post_tags pt ON p.id = pt.post_id
-                   LEFT JOIN tags t ON pt.tag_id = t.id
-                   WHERE p.is_published = 1
-                   GROUP BY p.id
-                   ORDER BY p.$sortField $sortDir
-                   LIMIT $offset, $pageSize";
+            $sql = "SELECT p.* ";
+            if ($shouldPopulate) {
+                $sql .= ", a.name as author_name, a.slug as author_slug, a.avatar_url as author_avatar,
+                          GROUP_CONCAT(t.name) as tag_names, GROUP_CONCAT(t.slug) as tag_slugs ";
+            }
+            $sql .= "FROM blog_posts p ";
+            if ($shouldPopulate) {
+                $sql .= "LEFT JOIN authors a ON p.author_id = a.id
+                        LEFT JOIN post_tags pt ON p.id = pt.post_id
+                        LEFT JOIN tags t ON pt.tag_id = t.id ";
+            }
+            $sql .= "WHERE p.is_published = 1 ";
+            if ($shouldPopulate) {
+                $sql .= "GROUP BY p.id ";
+            }
+            $sql .= "ORDER BY p.$sortField $sortDir
+                    LIMIT $offset, $pageSize";
+            
             $stmt = $db->query($sql);
             $posts = [];
             
@@ -227,8 +293,8 @@ try {
                     ]
                 ];
 
-                // Add author if exists
-                if ($row['author_name']) {
+                // Add author if populate=*
+                if ($shouldPopulate && $row['author_name']) {
                     $post['attributes']['author'] = [
                         'data' => [
                             'attributes' => [
@@ -246,8 +312,8 @@ try {
                     ];
                 }
 
-                // Add tags if exist
-                if ($row['tag_names']) {
+                // Add tags if populate=*
+                if ($shouldPopulate && $row['tag_names']) {
                     $tagNames = explode(',', $row['tag_names']);
                     $tagSlugs = explode(',', $row['tag_slugs']);
                     $tags = [];

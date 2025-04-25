@@ -4,11 +4,12 @@ RewriteEngine On
 # Set base directory
 RewriteBase /
 
+# Allow direct access to public directory and setup script
+RewriteRule ^public/ - [L]
+RewriteRule ^setup\.php$ - [L]
+
 # Route all API requests to api.php
 RewriteRule ^api/v1/(.*)$ api/v1/api.php [QSA,L]
-
-# Allow direct access to public directory
-RewriteRule ^public/ - [L]
 
 # Prevent directory listing
 Options -Indexes

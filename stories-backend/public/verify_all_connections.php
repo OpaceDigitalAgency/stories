@@ -82,6 +82,45 @@ header('Content-Type: text/html; charset=utf-8');
                 echo "<p class='success'>✓ All configurations match</p>";
             }
             
+            // Test MySQL server connection first
+            echo "<h2>MySQL Server Connection</h2>";
+            $mysqli = new mysqli(
+                $apiConfig['db']['host'],
+                $apiConfig['db']['user'],
+                $apiConfig['db']['password'],
+                null,
+                $apiConfig['db']['port']
+            );
+            
+            if ($mysqli->connect_error) {
+                throw new Exception("Failed to connect to MySQL server: " . $mysqli->connect_error);
+            }
+            
+            echo "<p class='success'>✓ Successfully connected to MySQL server</p>";
+            
+            // Check if database exists
+            echo "<h2>Database Check</h2>";
+            $result = $mysqli->query("SHOW DATABASES LIKE '" . $apiConfig['db']['name'] . "'");
+            if ($result->num_rows === 0) {
+                echo "<p class='error'>✗ Database '" . $apiConfig['db']['name'] . "' does not exist</p>";
+                
+                if (isset($_GET['create']) && $_GET['create'] === 'true') {
+                    $mysqli->query("CREATE DATABASE IF NOT EXISTS `" . $apiConfig['db']['name'] . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                    echo "<p class='success'>✓ Created database '" . $apiConfig['db']['name'] . "'</p>";
+                } else {
+                    echo "<p><a href='verify_all_connections.php?create=true'>Create database</a></p>";
+                }
+            } else {
+                echo "<p class='success'>✓ Database exists</p>";
+            }
+            
+            // Set character set at server level
+            $mysqli->set_charset($apiConfig['db']['charset']);
+            echo "<p class='success'>✓ Character set " . $apiConfig['db']['charset'] . " set successfully</p>";
+            
+            // Close server connection
+            $mysqli->close();
+            
             // Test API database connection
             echo "<h2>API Database Connection</h2>";
             require_once __DIR__ . '/../api/v1/Core/Database.php';
@@ -122,6 +161,11 @@ header('Content-Type: text/html; charset=utf-8');
                         $stmt = $adminDb->query("SELECT COUNT(*) as count FROM $table");
                         $count = $stmt->fetch()['count'];
                         echo "<p>Row count: $count</p>";
+                        
+                        // Check character set
+                        $stmt = $adminDb->query("SHOW TABLE STATUS LIKE ?", [$table]);
+                        $status = $stmt->fetch();
+                        echo "<p>Character set: " . $status['Collation'] . "</p>";
                     } else {
                         echo "<p class='error'>✗ Table does not exist</p>";
                     }
@@ -160,6 +204,7 @@ header('Content-Type: text/html; charset=utf-8');
             echo "<li>Verify database credentials in both config files</li>";
             echo "<li>Ensure database exists and is accessible</li>";
             echo "<li>Check if required tables exist</li>";
+            echo "<li>Verify character set support is enabled in MySQL</li>";
             echo "</ol>";
             echo "</div>";
         }

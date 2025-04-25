@@ -1,12 +1,23 @@
 <?php
 namespace StoriesAPI\Core;
 
+use PDO;
+use PDOException;
+
+/**
+ * Database Class
+ * 
+ * Handles database connections for the API
+ */
 class Database {
     private $pdo;
     private $config;
     
-    public function __construct($config) {
-        $this->config = $config;
+    public function __construct($config = null) {
+        if ($config === null) {
+            $config = require __DIR__ . '/../Config/config.php';
+        }
+        $this->config = $config['db'];
         $this->connect();
     }
     
@@ -21,19 +32,20 @@ class Database {
             );
             
             $options = [
-                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-                \PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
             ];
             
-            $this->pdo = new \PDO(
+            $this->pdo = new PDO(
                 $dsn,
                 $this->config['user'],
                 $this->config['password'],
                 $options
             );
-        } catch (\PDOException $e) {
-            throw new \Exception('Database connection failed: ' . $e->getMessage());
+        } catch (PDOException $e) {
+            error_log("Database connection failed: " . $e->getMessage());
+            throw new \Exception("Database connection failed: " . $e->getMessage());
         }
     }
     
@@ -42,8 +54,9 @@ class Database {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
             return $stmt;
-        } catch (\PDOException $e) {
-            throw new \Exception('Query failed: ' . $e->getMessage());
+        } catch (PDOException $e) {
+            error_log("Query failed: " . $e->getMessage());
+            throw new \Exception("Query failed: " . $e->getMessage());
         }
     }
     

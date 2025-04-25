@@ -38,6 +38,11 @@ try {
     $pageSize = isset($_GET['pageSize']) ? (int)$_GET['pageSize'] : 25;
     $offset = ($page - 1) * $pageSize;
 
+    // Get sort params
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'publishedAt:desc';
+    list($sortField, $sortDir) = explode(':', $sort);
+    $sortDir = strtoupper($sortDir);
+
     // Simple router
     switch ($path) {
         case 'stories':
@@ -46,13 +51,14 @@ try {
             $total = $countStmt->fetchColumn();
             
             // Get stories with authors
-            $sql = "SELECT s.*, GROUP_CONCAT(a.name) as author_names, GROUP_CONCAT(a.slug) as author_slugs
+            $sql = "SELECT s.*, GROUP_CONCAT(a.name) as author_names, GROUP_CONCAT(a.slug) as author_slugs,
+                          GROUP_CONCAT(a.avatar_url) as author_avatars
                    FROM stories s 
                    LEFT JOIN story_authors sa ON s.id = sa.story_id
                    LEFT JOIN authors a ON sa.author_id = a.id
                    WHERE s.is_published = 1 
                    GROUP BY s.id
-                   ORDER BY s.created_at DESC
+                   ORDER BY s.$sortField $sortDir
                    LIMIT $offset, $pageSize";
             
             $stmt = $db->query($sql);
@@ -101,12 +107,28 @@ try {
                 if ($row['author_names']) {
                     $names = explode(',', $row['author_names']);
                     $slugs = explode(',', $row['author_slugs']);
+                    $avatars = explode(',', $row['author_avatars']);
+                    
                     $story['attributes']['author'] = [
                         'data' => [
                             'id' => 1,
                             'attributes' => [
                                 'name' => $names[0],
-                                'slug' => $slugs[0]
+                                'slug' => $slugs[0],
+                                'avatar' => [
+                                    'data' => [
+                                        'id' => 1,
+                                        'attributes' => [
+                                            'url' => $avatars[0],
+                                            'width' => 200,
+                                            'height' => 200,
+                                            'formats' => [
+                                                'thumbnail' => ['url' => $avatars[0], 'width' => 50, 'height' => 50],
+                                                'small' => ['url' => $avatars[0], 'width' => 100, 'height' => 100]
+                                            ]
+                                        ]
+                                    ]
+                                ]
                             ]
                         ]
                     ];

@@ -63,8 +63,7 @@ try {
             $sql = "SELECT s.*, GROUP_CONCAT(DISTINCT a.name) as author_names, 
                           GROUP_CONCAT(DISTINCT a.slug) as author_slugs,
                           GROUP_CONCAT(DISTINCT a.avatar_url) as author_avatars,
-                          GROUP_CONCAT(DISTINCT t.name) as tag_names,
-                          GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
+                          GROUP_CONCAT(DISTINCT t.name) as tag_names
                    FROM stories s 
                    LEFT JOIN story_authors sa ON s.id = sa.story_id
                    LEFT JOIN authors a ON sa.author_id = a.id
@@ -81,20 +80,13 @@ try {
             while ($row = $stmt->fetch()) {
                 $story = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'slug' => $row['slug'],
-                        'excerpt' => $row['excerpt'],
-                        'content' => $row['content'],
-                        'publishedAt' => $row['created_at'],
-                        'cover' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $row['title'],
+                    'slug' => $row['slug'],
+                    'excerpt' => $row['excerpt'],
+                    'content' => $row['content'],
+                    'publishedAt' => $row['created_at'],
+                    'rating' => (float)$row['average_rating'],
+                    'coverImage' => $row['cover_url']
                 ];
                 
                 // Add author if exists
@@ -103,37 +95,16 @@ try {
                     $slugs = explode(',', $row['author_slugs']);
                     $avatars = explode(',', $row['author_avatars']);
                     
-                    $story['attributes']['author'] = [
-                        'data' => [
-                            'attributes' => [
-                                'name' => $names[0],
-                                'slug' => $slugs[0],
-                                'avatar' => [
-                                    'data' => [
-                                        'attributes' => [
-                                            'url' => $avatars[0]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
+                    $story['author'] = [
+                        'name' => $names[0],
+                        'slug' => $slugs[0],
+                        'avatar' => $avatars[0]
                     ];
                 }
 
                 // Add tags if exist
                 if ($row['tag_names']) {
-                    $tagNames = explode(',', $row['tag_names']);
-                    $tagSlugs = explode(',', $row['tag_slugs']);
-                    $tags = [];
-                    foreach ($tagNames as $i => $name) {
-                        $tags[] = [
-                            'attributes' => [
-                                'name' => $name,
-                                'slug' => $tagSlugs[$i]
-                            ]
-                        ];
-                    }
-                    $story['attributes']['tags'] = ['data' => $tags];
+                    $story['tags'] = explode(',', $row['tag_names']);
                 }
                 
                 $stories[] = $story;
@@ -165,19 +136,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $authors[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['name'],
-                        'slug' => $row['slug'],
-                        'bio' => $row['bio'],
-                        'avatar' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['avatar_url']
-                                ]
-                            ]
-                        ],
-                        'storyCount' => (int)$row['story_count']
-                    ]
+                    'name' => $row['name'],
+                    'slug' => $row['slug'],
+                    'bio' => $row['bio'],
+                    'avatar' => $row['avatar_url'],
+                    'storyCount' => (int)$row['story_count']
                 ];
             }
             
@@ -196,7 +159,7 @@ try {
 
         case 'blog-posts':
             $sql = "SELECT p.*, a.name as author_name, a.slug as author_slug, a.avatar_url as author_avatar,
-                          GROUP_CONCAT(t.name) as tag_names, GROUP_CONCAT(t.slug) as tag_slugs
+                          GROUP_CONCAT(t.name) as tag_names
                    FROM blog_posts p
                    LEFT JOIN authors a ON p.author_id = a.id
                    LEFT JOIN post_tags pt ON p.id = pt.post_id
@@ -211,55 +174,26 @@ try {
             while ($row = $stmt->fetch()) {
                 $post = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'slug' => $row['slug'],
-                        'content' => $row['content'],
-                        'excerpt' => $row['excerpt'],
-                        'publishedAt' => $row['created_at'],
-                        'cover' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $row['title'],
+                    'slug' => $row['slug'],
+                    'content' => $row['content'],
+                    'excerpt' => $row['excerpt'],
+                    'publishedAt' => $row['created_at'],
+                    'coverImage' => $row['cover_url']
                 ];
 
                 // Add author if exists
                 if ($row['author_name']) {
-                    $post['attributes']['author'] = [
-                        'data' => [
-                            'attributes' => [
-                                'name' => $row['author_name'],
-                                'slug' => $row['author_slug'],
-                                'avatar' => [
-                                    'data' => [
-                                        'attributes' => [
-                                            'url' => $row['author_avatar']
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
+                    $post['author'] = [
+                        'name' => $row['author_name'],
+                        'slug' => $row['author_slug'],
+                        'avatar' => $row['author_avatar']
                     ];
                 }
 
                 // Add tags if exist
                 if ($row['tag_names']) {
-                    $tagNames = explode(',', $row['tag_names']);
-                    $tagSlugs = explode(',', $row['tag_slugs']);
-                    $tags = [];
-                    foreach ($tagNames as $i => $name) {
-                        $tags[] = [
-                            'attributes' => [
-                                'name' => $name,
-                                'slug' => $tagSlugs[$i]
-                            ]
-                        ];
-                    }
-                    $post['attributes']['tags'] = ['data' => $tags];
+                    $post['tags'] = explode(',', $row['tag_names']);
                 }
 
                 $posts[] = $post;
@@ -286,19 +220,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $games[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['genre'],
-                        'thumbnail' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['genre'],
+                    'thumbnail' => $row['cover_url']
                 ];
             }
             
@@ -323,19 +249,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $items[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url']
                 ];
             }
             
@@ -360,19 +278,11 @@ try {
             while ($row = $stmt->fetch()) {
                 $tools[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url']
                 ];
             }
             
@@ -402,12 +312,10 @@ try {
             while ($row = $stmt->fetch()) {
                 $tags[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['name'],
-                        'slug' => $row['slug'],
-                        'storyCount' => (int)$row['story_count'],
-                        'postCount' => (int)$row['post_count']
-                    ]
+                    'name' => $row['name'],
+                    'slug' => $row['slug'],
+                    'storyCount' => (int)$row['story_count'],
+                    'postCount' => (int)$row['post_count']
                 ];
             }
             

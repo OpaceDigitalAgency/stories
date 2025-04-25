@@ -47,7 +47,7 @@ try {
         'createdAt' => 'created_at',
         'updatedAt' => 'updated_at',
         'title' => 'title',
-        'name' => 'name'
+        'name' => 'title'
     ];
     $sortField = $sortFieldMap[$sortField] ?? 'created_at';
     $sortDir = strtoupper($sortDir);
@@ -343,14 +343,22 @@ try {
                     'attributes' => [
                         'title' => $row['title'],
                         'description' => $row['description'],
-                        'slug' => $row['slug'],
-                        'genre' => $row['genre'],
-                        'platform' => $row['platform'],
-                        'developer' => $row['developer'],
-                        'publisher' => $row['publisher'],
-                        'releaseDate' => $row['release_date'],
-                        'rating' => (float)$row['rating'],
-                        'price' => (float)$row['price'],
+                        'url' => $row['website_url'],
+                        'category' => $row['genre'],
+                        'thumbnail' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['cover_url'],
+                                    'width' => 800,
+                                    'height' => 600,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
+                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
                     ]
@@ -379,13 +387,24 @@ try {
                 $items[] = [
                     'id' => $row['id'],
                     'attributes' => [
-                        'title' => $row['title'],
+                        'name' => $row['title'],
                         'description' => $row['description'],
-                        'slug' => $row['slug'],
-                        'websiteUrl' => $row['website_url'],
+                        'url' => $row['website_url'],
                         'category' => $row['category'],
-                        'rating' => (float)$row['rating'],
-                        'priceRange' => $row['price_range'],
+                        'logo' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['cover_url'],
+                                    'width' => 200,
+                                    'height' => 200,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 50, 'height' => 50],
+                                        'small' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 100]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
                     ]
@@ -414,16 +433,24 @@ try {
                 $tools[] = [
                     'id' => $row['id'],
                     'attributes' => [
-                        'title' => $row['title'],
+                        'name' => $row['title'],
                         'description' => $row['description'],
-                        'slug' => $row['slug'],
-                        'websiteUrl' => $row['website_url'],
+                        'url' => $row['website_url'],
                         'category' => $row['category'],
-                        'pricingType' => $row['pricing_type'],
-                        'priceInfo' => $row['price_info'],
-                        'features' => $row['features'],
-                        'rating' => (float)$row['rating'],
-                        'featured' => (bool)$row['featured'],
+                        'logo' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['cover_url'],
+                                    'width' => 200,
+                                    'height' => 200,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 50, 'height' => 50],
+                                        'small' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 100]
+                                    ]
+                                ]
+                            ]
+                        ],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
                     ]

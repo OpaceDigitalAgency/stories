@@ -142,6 +142,7 @@ header('Content-Type: text/html; charset=utf-8');
             title VARCHAR(255) NOT NULL,
             description TEXT,
             slug VARCHAR(255) NOT NULL UNIQUE,
+            website_url VARCHAR(255),
             genre VARCHAR(100),
             platform VARCHAR(100),
             developer VARCHAR(255),
@@ -149,6 +150,7 @@ header('Content-Type: text/html; charset=utf-8');
             release_date DATE,
             rating DECIMAL(3,1) DEFAULT 0,
             price DECIMAL(10,2) DEFAULT 0,
+            cover_url VARCHAR(255),
             is_published BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -164,6 +166,7 @@ header('Content-Type: text/html; charset=utf-8');
             category VARCHAR(100),
             rating DECIMAL(3,1) DEFAULT 0,
             price_range VARCHAR(50),
+            cover_url VARCHAR(255),
             is_published BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -182,6 +185,7 @@ header('Content-Type: text/html; charset=utf-8');
             features TEXT,
             rating DECIMAL(3,1) DEFAULT 0,
             featured BOOLEAN DEFAULT FALSE,
+            cover_url VARCHAR(255),
             is_published BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -225,19 +229,19 @@ header('Content-Type: text/html; charset=utf-8');
         $db->exec("INSERT INTO post_tags (post_id, tag_id) VALUES (1, 4), (2, 4)");
         echo "<p class='success'>✓ Added blog post tags</p>";
 
-        $db->exec("INSERT INTO games (title, slug, description, genre, platform, developer, publisher, is_published) VALUES 
-            ('Test Game', 'test-game', 'Test game description', 'Action', 'PC', 'Test Dev', 'Test Pub', TRUE),
-            ('Another Game', 'another-game', 'More game content', 'RPG', 'Console', 'Dev2', 'Pub2', TRUE)");
+        $db->exec("INSERT INTO games (title, slug, description, website_url, genre, platform, developer, publisher, cover_url, is_published) VALUES 
+            ('Test Game', 'test-game', 'Test game description', 'http://example.com', 'Action', 'PC', 'Test Dev', 'Test Pub', 'https://storiesfromtheweb.org/games/test-game.jpg', TRUE),
+            ('Another Game', 'another-game', 'More game content', 'http://example.org', 'RPG', 'Console', 'Dev2', 'Pub2', 'https://storiesfromtheweb.org/games/another-game.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample games</p>";
 
-        $db->exec("INSERT INTO directory_items (title, slug, description, website_url, category, rating, price_range, is_published) VALUES 
-            ('Test Item', 'test-item', 'Test item description', 'http://example.com', 'Category1', 4.5, 'Free', TRUE),
-            ('Another Item', 'another-item', 'More item content', 'http://example.org', 'Category2', 4.0, 'Premium', TRUE)");
+        $db->exec("INSERT INTO directory_items (title, slug, description, website_url, category, rating, price_range, cover_url, is_published) VALUES 
+            ('Test Directory', 'test-directory', 'Test directory description', 'http://example.com', 'Category1', 4.5, 'Free', 'https://storiesfromtheweb.org/directory/test-directory.jpg', TRUE),
+            ('Another Directory', 'another-directory', 'More directory content', 'http://example.org', 'Category2', 4.0, 'Premium', 'https://storiesfromtheweb.org/directory/another-directory.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample directory items</p>";
 
-        $db->exec("INSERT INTO ai_tools (title, slug, description, website_url, category, pricing_type, featured, is_published) VALUES 
-            ('Test Tool', 'test-tool', 'Test tool description', 'http://example.com', 'Category1', 'Free', TRUE, TRUE),
-            ('Another Tool', 'another-tool', 'More tool content', 'http://example.org', 'Category2', 'Paid', FALSE, TRUE)");
+        $db->exec("INSERT INTO ai_tools (title, slug, description, website_url, category, pricing_type, featured, cover_url, is_published) VALUES 
+            ('Test AI Tool', 'test-ai-tool', 'Test tool description', 'http://example.com', 'Category1', 'Free', TRUE, 'https://storiesfromtheweb.org/ai-tools/test-tool.jpg', TRUE),
+            ('Another AI Tool', 'another-ai-tool', 'More tool content', 'http://example.org', 'Category2', 'Paid', FALSE, 'https://storiesfromtheweb.org/ai-tools/another-tool.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample AI tools</p>";
 
         echo "<h2>Setup Complete</h2>";

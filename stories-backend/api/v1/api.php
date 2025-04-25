@@ -92,29 +92,21 @@ try {
             while ($row = $stmt->fetch()) {
                 $story = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'slug' => $row['slug'],
-                        'excerpt' => $row['excerpt'],
-                        'content' => $row['content'],
-                        'publishedAt' => $row['created_at'],
-                        'featured' => (bool)$row['featured'],
-                        'averageRating' => (float)$row['average_rating'],
-                        'reviewCount' => (int)$row['review_count'],
-                        'estimatedReadingTime' => $row['estimated_reading_time'],
-                        'isSponsored' => (bool)$row['is_sponsored'],
-                        'ageGroup' => $row['age_group'],
-                        'needsModeration' => (bool)$row['needs_moderation'],
-                        'isSelfPublished' => (bool)$row['is_self_published'],
-                        'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
-                        'cover' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $row['title'],
+                    'slug' => $row['slug'],
+                    'excerpt' => $row['excerpt'],
+                    'content' => $row['content'],
+                    'publishedAt' => date('c', strtotime($row['created_at'])), // Convert to ISO-8601
+                    'featured' => (bool)$row['featured'],
+                    'rating' => (float)$row['average_rating'],
+                    'reviewCount' => (int)$row['review_count'],
+                    'estimatedReadingTime' => $row['estimated_reading_time'],
+                    'isSponsored' => (bool)$row['is_sponsored'],
+                    'ageGroup' => $row['age_group'],
+                    'needsModeration' => (bool)$row['needs_moderation'],
+                    'isSelfPublished' => (bool)$row['is_self_published'],
+                    'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
+                    'coverImage' => $row['cover_url']
                 ];
                 
                 // Add author if exists and populate=*
@@ -123,53 +115,24 @@ try {
                     $slugs = explode(',', $row['author_slugs']);
                     $avatars = explode(',', $row['author_avatars']);
                     
-                    $story['attributes']['author'] = [
-                        'data' => [
-                            'attributes' => [
-                                'name' => $names[0],
-                                'slug' => $slugs[0],
-                                'avatar' => [
-                                    'data' => [
-                                        'attributes' => [
-                                            'url' => $avatars[0]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
+                    $story['author'] = [
+                        'name' => $names[0],
+                        'slug' => $slugs[0],
+                        'avatar' => $avatars[0]
                     ];
                 }
 
                 // Add tags if exist and populate=*
                 if ($shouldPopulate && $row['tag_names']) {
                     $tagNames = explode(',', $row['tag_names']);
-                    $tagSlugs = explode(',', $row['tag_slugs']);
-                    $tags = [];
-                    foreach ($tagNames as $i => $name) {
-                        $tags[] = [
-                            'attributes' => [
-                                'name' => $name,
-                                'slug' => $tagSlugs[$i]
-                            ]
-                        ];
-                    }
-                    $story['attributes']['tags'] = ['data' => $tags];
+                    $story['tags'] = $tagNames;
                 }
                 
                 $stories[] = $story;
             }
             
-            echo json_encode([
-                'data' => $stories,
-                'meta' => [
-                    'pagination' => [
-                        'page' => $page,
-                        'pageSize' => $pageSize,
-                        'pageCount' => ceil($total / $pageSize),
-                        'total' => $total
-                    ]
-                ]
-            ]);
+            // Return just the array of stories without pagination wrapper
+            echo json_encode($stories);
             break;
             
         case 'authors':

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Example Story",
+    "slug": "example-story",
+    "excerpt": "This is an example story...",
+    "content": "Full story content here...",
+    "publishedAt": "2025-04-25T16:07:17Z",
+    "featured": true,
+    "rating": 4.5,
+    "reviewCount": 10,
+    "estimatedReadingTime": "5 minutes",
+    "isSponsored": false,
+    "ageGroup": "12+",
+    "needsModeration": false,
+    "isSelfPublished": true,
+    "isAIEnhanced": false,
+    "coverImage": "https://example.com/cover.jpg",
+    "tags": ["Fiction"],
+    "author": {
+      "name": "John Doe",
+      "slug": "john-doe",
+      "avatar": "https://example.com/john.jpg"
+    }
+  }
+]

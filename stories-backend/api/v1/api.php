@@ -63,9 +63,20 @@ try {
                     'id' => $row['id'],
                     'attributes' => [
                         'title' => $row['title'],
-                        'content' => $row['content'],
                         'slug' => $row['slug'],
-                        'isPublished' => (bool)$row['is_published'],
+                        'excerpt' => $row['excerpt'],
+                        'content' => $row['content'],
+                        'publishedAt' => $row['created_at'],
+                        'featured' => (bool)$row['featured'],
+                        'averageRating' => (float)$row['average_rating'],
+                        'reviewCount' => (int)$row['review_count'],
+                        'estimatedReadingTime' => $row['estimated_reading_time'],
+                        'isSponsored' => (bool)$row['is_sponsored'],
+                        'ageGroup' => $row['age_group'],
+                        'needsModeration' => (bool)$row['needs_moderation'],
+                        'isSelfPublished' => (bool)$row['is_self_published'],
+                        'isAIEnhanced' => (bool)$row['is_ai_enhanced'],
+                        'coverUrl' => $row['cover_url'],
                         'createdAt' => $row['created_at'],
                         'updatedAt' => $row['updated_at']
                     ]

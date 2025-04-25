@@ -3,34 +3,84 @@ namespace StoriesAPI\Core;
 
 use StoriesAPI\Utils\Response;
 
+/**
+ * Base Controller Class
+ * 
+ * All API controllers extend this class to inherit common functionality
+ */
 class BaseController {
-    protected $request;
-    protected $query;
-    protected $params;
-    protected $config;
     protected $db;
-    protected $method;
+    protected $config;
+    protected $request;
+    protected $params;
     
-    public function __construct($config) {
-        $this->config = $config;
-        $this->db = new Database($config['db']);
-        $this->parseRequest();
+    public function __construct($config = null) {
+        try {
+            // Load config if not provided
+            if ($config === null) {
+                $config = require __DIR__ . '/../Config/config.php';
+            }
+            $this->config = $config;
+            
+            // Initialize database
+            $this->db = new Database($config);
+            
+            // Parse request data
+            $this->parseRequest();
+            
+        } catch (\Exception $e) {
+            // Log error
+            error_log("Controller initialization failed: " . $e->getMessage());
+            
+            // Send error response
+            Response::sendError("Internal server error", 500);
+        }
+    }
+    
+    /**
+     * Execute controller action with error handling
+     */
+    public function execute($action) {
+        try {
+            // Check if action exists
+            if (!method_exists($this, $action)) {
+                Response::sendError("Action not found", 404);
+                return;
+            }
+            
+            // Call the action
+            return $this->$action();
+            
+        } catch (\PDOException $e) {
+            // Log database error
+            error_log("Database error: " . $e->getMessage());
+            Response::sendError("Database error occurred", 500);
+            
+        } catch (\Exception $e) {
+            // Log general error
+            error_log("Controller error: " . $e->getMessage());
+            Response::sendError("Internal server error", 500);
+        }
     }
     
     protected function parseRequest() {
-        $this->query = $_GET;
-        $this->request = [];
+        // Get request body
+        $input = file_get_contents('php://input');
         
-        $this->method = $_SERVER['REQUEST_METHOD'];
-        $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
-        
-        if (strpos($contentType, 'application/json') !== false) {
-            $input = file_get_contents('php://input');
-            $data = json_decode($input, true) ?? [];
-            $this->request = $data;
-        } else if ($this->method !== 'GET') {
-            $this->request = $_POST;
+        // Parse JSON input
+        if (!empty($input)) {
+            $this->request = json_decode($input, true);
+            
+            // Handle JSON decode errors
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Response::sendError("Invalid JSON in request body", 400);
+            }
+        } else {
+            $this->request = [];
         }
+        
+        // Initialize params
+        $this->params = [];
     }
     
     public function setParams($params) {
@@ -38,52 +88,40 @@ class BaseController {
     }
     
     protected function getPaginationParams() {
-        $page = isset($this->query['page']) ? (int)$this->query['page'] : 1;
-        $pageSize = isset($this->query['pageSize']) ? (int)$this->query['pageSize'] : $this->config['api']['page_size'];
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $pageSize = isset($_GET['pageSize']) ? (int)$_GET['pageSize'] : $this->config['api']['page_size'];
+        
+        // Validate page
+        if ($page < 1) {
+            $page = 1;
+        }
+        
+        // Validate page size
+        if ($pageSize < 1) {
+            $pageSize = $this->config['api']['page_size'];
+        }
+        if ($pageSize > $this->config['api']['max_page_size']) {
+            $pageSize = $this->config['api']['max_page_size'];
+        }
+        
         return [
-            'page' => max(1, $page),
-            'pageSize' => min($pageSize, $this->config['api']['max_page_size'])
+            'page' => $page,
+            'pageSize' => $pageSize
         ];
     }
     
-    protected function notFound($message = 'Not found') {
-        Response::sendError($message, 404);
-    }
-    
-    protected function badRequest($message = 'Bad request') {
-        Response::sendError($message, 400);
-    }
-    
-    protected function unauthorized($message = 'Unauthorized') {
-        Response::sendError($message, 401);
-    }
-    
-    protected function forbidden($message = 'Forbidden') {
-        Response::sendError($message, 403);
-    }
-    
-    protected function serverError($message = 'Internal server error') {
-        Response::sendError($message, 500);
-    }
-
-    /**
-     * Get sort parameters from query string
-     *
-     * @param array $allowedFields List of allowed sort fields
-     * @return array Sort parameters
-     */
-    protected function getSortParams(array $allowedFields) : array {
-        $field = isset($this->query['sort']) ? trim($this->query['sort']) : null;
-        $direction = isset($this->query['order']) ? strtoupper(trim($this->query['order'])) : 'DESC';
+    protected function getSortParams($allowedFields = []) {
+        $field = isset($_GET['sortBy']) ? $_GET['sortBy'] : null;
+        $direction = isset($_GET['sortDirection']) ? strtoupper($_GET['sortDirection']) : null;
         
         // Validate sort field
         if ($field && !in_array($field, $allowedFields)) {
-            $field = null;
+            Response::sendError("Invalid sort field: $field", 400);
         }
         
         // Validate sort direction
-        if (!in_array($direction, ['ASC', 'DESC'])) {
-            $direction = 'DESC';
+        if ($direction && !in_array($direction, ['ASC', 'DESC'])) {
+            Response::sendError("Invalid sort direction: $direction", 400);
         }
         
         return [
@@ -91,59 +129,29 @@ class BaseController {
             'direction' => $direction
         ];
     }
-
-    /**
-     * Get filter parameters from query string
-     *
-     * @param array $allowedFields List of allowed filter fields
-     * @return array Filter parameters
-     */
-    protected function getFilterParams(array $allowedFields) : array {
+    
+    protected function getFilterParams($allowedFields = []) {
         $filters = [];
         
-        foreach ($allowedFields as $field) {
-            if (isset($this->query[$field])) {
-                $filters[$field] = trim($this->query[$field]);
+        foreach ($_GET as $key => $value) {
+            if (in_array($key, $allowedFields)) {
+                $filters[$key] = $value;
             }
         }
         
         return $filters;
     }
-
-    /**
-     * Build WHERE clause from filter parameters
-     *
-     * @param array $filters Filter parameters
-     * @return array WHERE clause and parameters
-     */
-    protected function buildWhereClause(array $filters) : array {
-        $where = [];
-        $params = [];
-        
-        foreach ($filters as $field => $value) {
-            if ($value === '') {
-                continue;
+    
+    protected function validateRequired($data, $fields) {
+        foreach ($fields as $field) {
+            if (!isset($data[$field]) || $data[$field] === '') {
+                Response::sendError("Missing required field: $field", 400);
             }
-            
-            // Handle boolean fields
-            if (in_array($field, ['featured', 'isSponsored'])) {
-                $dbField = $field === 'isSponsored' ? 'is_sponsored' : $field;
-                $where[] = "s.$dbField = ?";
-                $params[] = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
-                continue;
-            }
-            
-            // Handle text fields
-            $dbField = $field === 'ageGroup' ? 'age_group' : $field;
-            $where[] = "s.$dbField LIKE ?";
-            $params[] = "%$value%";
         }
-        
-        $clause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-        
-        return [
-            'clause' => $clause,
-            'params' => $params
-        ];
+        return true;
+    }
+    
+    protected function sanitizeString($string) {
+        return htmlspecialchars(strip_tags(trim($string)));
     }
 }

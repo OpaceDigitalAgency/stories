@@ -1,6 +1,13 @@
 <?php
 namespace StoriesAPI\Core;
 
+use StoriesAPI\Utils\Response;
+
+/**
+ * Router Class
+ * 
+ * Handles routing of API requests to appropriate controllers
+ */
 class Router {
     private $routes = [];
     private $config;
@@ -36,47 +43,62 @@ class Router {
     }
     
     public function handle() {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = trim(str_replace('/api/v1/', '', $path), '/');
-        
-        foreach ($this->routes as $route) {
-            $pattern = $this->pathToPattern($route['path']);
+        try {
+            // Get request method and path
+            $method = $_SERVER['REQUEST_METHOD'];
+            $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+            $path = trim(str_replace('/api/v1/', '', $path), '/');
             
-            if ($method === $route['method'] && preg_match($pattern, $path, $matches)) {
-                // Extract route parameters
-                $params = [];
-                preg_match_all('/{([^}]+)}/', $route['path'], $paramNames);
-                array_shift($matches); // Remove full match
-                
-                foreach ($paramNames[1] as $index => $name) {
-                    $params[$name] = $matches[$index] ?? null;
-                }
-                
-                // Run middleware
-                foreach ($route['middleware'] as $middleware) {
-                    $result = $middleware->handle();
-                    if ($result === false) {
-                        return;
-                    }
-                }
-                
-                // Create controller instance
-                $controller = new $route['controller']($this->config);
-                $controller->setParams($params);
-                
-                // Call action
-                return $controller->{$route['action']}();
+            // Handle OPTIONS requests for CORS
+            if ($method === 'OPTIONS') {
+                header('Access-Control-Allow-Origin: *');
+                header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+                header('Access-Control-Allow-Headers: Content-Type, Authorization');
+                header('Access-Control-Max-Age: 86400'); // 24 hours
+                exit;
             }
+            
+            // Find matching route
+            foreach ($this->routes as $route) {
+                $pattern = $this->pathToPattern($route['path']);
+                
+                if ($method === $route['method'] && preg_match($pattern, $path, $matches)) {
+                    // Extract route parameters
+                    $params = [];
+                    preg_match_all('/{([^}]+)}/', $route['path'], $paramNames);
+                    array_shift($matches); // Remove full match
+                    
+                    foreach ($paramNames[1] as $index => $name) {
+                        $params[$name] = $matches[$index] ?? null;
+                    }
+                    
+                    // Run middleware
+                    foreach ($route['middleware'] as $middleware) {
+                        $instance = new $middleware($this->config);
+                        if (!$instance->handle()) {
+                            return;
+                        }
+                    }
+                    
+                    // Create controller instance
+                    $controller = new $route['controller']($this->config);
+                    $controller->setParams($params);
+                    
+                    // Execute the action
+                    return $controller->execute($route['action']);
+                }
+            }
+            
+            // No route found
+            Response::sendError('Route not found', 404);
+            
+        } catch (\Exception $e) {
+            // Log error
+            error_log("Router error: " . $e->getMessage());
+            
+            // Send error response
+            Response::sendError('Internal server error', 500);
         }
-        
-        // No route found
-        header('Content-Type: application/json');
-        http_response_code(404);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Route not found'
-        ]);
     }
     
     private function pathToPattern($path) {

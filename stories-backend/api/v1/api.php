@@ -39,8 +39,17 @@ try {
     $offset = ($page - 1) * $pageSize;
 
     // Get sort params
-    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'publishedAt:desc';
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'created_at:desc';
     list($sortField, $sortDir) = explode(':', $sort);
+    // Map frontend field names to database columns
+    $sortFieldMap = [
+        'publishedAt' => 'created_at',
+        'createdAt' => 'created_at',
+        'updatedAt' => 'updated_at',
+        'title' => 'title',
+        'name' => 'name'
+    ];
+    $sortField = $sortFieldMap[$sortField] ?? 'created_at';
     $sortDir = strtoupper($sortDir);
 
     // Simple router
@@ -50,12 +59,17 @@ try {
             $countStmt = $db->query("SELECT COUNT(*) FROM stories WHERE is_published = 1");
             $total = $countStmt->fetchColumn();
             
-            // Get stories with authors
-            $sql = "SELECT s.*, GROUP_CONCAT(a.name) as author_names, GROUP_CONCAT(a.slug) as author_slugs,
-                          GROUP_CONCAT(a.avatar_url) as author_avatars
+            // Get stories with authors and tags
+            $sql = "SELECT s.*, GROUP_CONCAT(DISTINCT a.name) as author_names, 
+                          GROUP_CONCAT(DISTINCT a.slug) as author_slugs,
+                          GROUP_CONCAT(DISTINCT a.avatar_url) as author_avatars,
+                          GROUP_CONCAT(DISTINCT t.name) as tag_names,
+                          GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
                    FROM stories s 
                    LEFT JOIN story_authors sa ON s.id = sa.story_id
                    LEFT JOIN authors a ON sa.author_id = a.id
+                   LEFT JOIN story_tags st ON s.id = st.story_id
+                   LEFT JOIN tags t ON st.tag_id = t.id
                    WHERE s.is_published = 1 
                    GROUP BY s.id
                    ORDER BY s.$sortField $sortDir
@@ -133,6 +147,23 @@ try {
                         ]
                     ];
                 }
+
+                // Add tags if exist
+                if ($row['tag_names']) {
+                    $tagNames = explode(',', $row['tag_names']);
+                    $tagSlugs = explode(',', $row['tag_slugs']);
+                    $tags = [];
+                    foreach ($tagNames as $i => $name) {
+                        $tags[] = [
+                            'id' => $i + 1,
+                            'attributes' => [
+                                'name' => $name,
+                                'slug' => $tagSlugs[$i]
+                            ]
+                        ];
+                    }
+                    $story['attributes']['tags'] = ['data' => $tags];
+                }
                 
                 $stories[] = $story;
             }
@@ -196,6 +227,106 @@ try {
                         'pageSize' => count($authors),
                         'pageCount' => 1,
                         'total' => count($authors)
+                    ]
+                ]
+            ]);
+            break;
+
+        case 'blog-posts':
+            $sql = "SELECT p.*, a.name as author_name, a.slug as author_slug, a.avatar_url as author_avatar,
+                          GROUP_CONCAT(t.name) as tag_names, GROUP_CONCAT(t.slug) as tag_slugs
+                   FROM blog_posts p
+                   LEFT JOIN authors a ON p.author_id = a.id
+                   LEFT JOIN post_tags pt ON p.id = pt.post_id
+                   LEFT JOIN tags t ON pt.tag_id = t.id
+                   WHERE p.is_published = 1
+                   GROUP BY p.id
+                   ORDER BY p.$sortField $sortDir
+                   LIMIT $offset, $pageSize";
+            $stmt = $db->query($sql);
+            $posts = [];
+            
+            while ($row = $stmt->fetch()) {
+                $post = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'title' => $row['title'],
+                        'slug' => $row['slug'],
+                        'content' => $row['content'],
+                        'excerpt' => $row['excerpt'],
+                        'publishedAt' => $row['created_at'],
+                        'cover' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'url' => $row['cover_url'],
+                                    'width' => 800,
+                                    'height' => 600,
+                                    'formats' => [
+                                        'thumbnail' => ['url' => $row['cover_url'], 'width' => 100, 'height' => 75],
+                                        'small' => ['url' => $row['cover_url'], 'width' => 300, 'height' => 225],
+                                        'medium' => ['url' => $row['cover_url'], 'width' => 500, 'height' => 375],
+                                        'large' => ['url' => $row['cover_url'], 'width' => 800, 'height' => 600]
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'author' => [
+                            'data' => [
+                                'id' => 1,
+                                'attributes' => [
+                                    'name' => $row['author_name'],
+                                    'slug' => $row['author_slug'],
+                                    'avatar' => [
+                                        'data' => [
+                                            'id' => 1,
+                                            'attributes' => [
+                                                'url' => $row['author_avatar'],
+                                                'width' => 200,
+                                                'height' => 200,
+                                                'formats' => [
+                                                    'thumbnail' => ['url' => $row['author_avatar'], 'width' => 50, 'height' => 50],
+                                                    'small' => ['url' => $row['author_avatar'], 'width' => 100, 'height' => 100]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+
+                // Add tags if exist
+                if ($row['tag_names']) {
+                    $tagNames = explode(',', $row['tag_names']);
+                    $tagSlugs = explode(',', $row['tag_slugs']);
+                    $tags = [];
+                    foreach ($tagNames as $i => $name) {
+                        $tags[] = [
+                            'id' => $i + 1,
+                            'attributes' => [
+                                'name' => $name,
+                                'slug' => $tagSlugs[$i]
+                            ]
+                        ];
+                    }
+                    $post['attributes']['tags'] = ['data' => $tags];
+                }
+
+                $posts[] = $post;
+            }
+            
+            echo json_encode([
+                'data' => $posts,
+                'meta' => [
+                    'pagination' => [
+                        'page' => $page,
+                        'pageSize' => $pageSize,
+                        'pageCount' => ceil($total / $pageSize),
+                        'total' => $total
                     ]
                 ]
             ]);
@@ -307,6 +438,43 @@ try {
                         'pageSize' => count($tools),
                         'pageCount' => 1,
                         'total' => count($tools)
+                    ]
+                ]
+            ]);
+            break;
+
+        case 'tags':
+            $sql = "SELECT t.*, COUNT(DISTINCT st.story_id) as story_count, COUNT(DISTINCT pt.post_id) as post_count
+                   FROM tags t
+                   LEFT JOIN story_tags st ON t.id = st.tag_id
+                   LEFT JOIN post_tags pt ON t.id = pt.tag_id
+                   GROUP BY t.id
+                   ORDER BY t.name ASC";
+            $stmt = $db->query($sql);
+            $tags = [];
+            
+            while ($row = $stmt->fetch()) {
+                $tags[] = [
+                    'id' => $row['id'],
+                    'attributes' => [
+                        'name' => $row['name'],
+                        'slug' => $row['slug'],
+                        'storyCount' => (int)$row['story_count'],
+                        'postCount' => (int)$row['post_count'],
+                        'createdAt' => $row['created_at'],
+                        'updatedAt' => $row['updated_at']
+                    ]
+                ];
+            }
+            
+            echo json_encode([
+                'data' => $tags,
+                'meta' => [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => count($tags),
+                        'pageCount' => 1,
+                        'total' => count($tags)
                     ]
                 ]
             ]);

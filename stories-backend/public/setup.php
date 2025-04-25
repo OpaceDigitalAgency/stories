@@ -28,13 +28,30 @@ header('Content-Type: text/html; charset=utf-8');
         );
 
         // Drop all tables
-        $tables = ['story_authors', 'stories', 'authors', 'games', 'directory_items', 'ai_tools'];
+        $tables = [
+            'story_tags', 'post_tags', 'story_authors', 'blog_posts', 
+            'stories', 'authors', 'tags', 'games', 'directory_items', 
+            'ai_tools', 'media'
+        ];
         foreach ($tables as $table) {
             $db->exec("DROP TABLE IF EXISTS $table");
             echo "<p class='success'>✓ Dropped table: $table</p>";
         }
 
         // Create tables in correct order
+        $db->exec("CREATE TABLE media (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            url VARCHAR(255) NOT NULL,
+            mime_type VARCHAR(100),
+            width INT,
+            height INT,
+            size INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: media</p>";
+
         $db->exec("CREATE TABLE authors (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -46,6 +63,15 @@ header('Content-Type: text/html; charset=utf-8');
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         echo "<p class='success'>✓ Created table: authors</p>";
+
+        $db->exec("CREATE TABLE tags (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            slug VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: tags</p>";
 
         $db->exec("CREATE TABLE stories (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -69,6 +95,21 @@ header('Content-Type: text/html; charset=utf-8');
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         echo "<p class='success'>✓ Created table: stories</p>";
 
+        $db->exec("CREATE TABLE blog_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            content TEXT,
+            excerpt TEXT,
+            slug VARCHAR(255) NOT NULL UNIQUE,
+            is_published BOOLEAN DEFAULT TRUE,
+            author_id INT,
+            cover_url VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: blog_posts</p>";
+
         $db->exec("CREATE TABLE story_authors (
             story_id INT,
             author_id INT,
@@ -77,6 +118,24 @@ header('Content-Type: text/html; charset=utf-8');
             FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         echo "<p class='success'>✓ Created table: story_authors</p>";
+
+        $db->exec("CREATE TABLE story_tags (
+            story_id INT,
+            tag_id INT,
+            PRIMARY KEY (story_id, tag_id),
+            FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: story_tags</p>";
+
+        $db->exec("CREATE TABLE post_tags (
+            post_id INT,
+            tag_id INT,
+            PRIMARY KEY (post_id, tag_id),
+            FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: post_tags</p>";
 
         $db->exec("CREATE TABLE games (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -135,6 +194,13 @@ header('Content-Type: text/html; charset=utf-8');
             ('Jane Smith', 'jane-smith', 'Another test author', 'https://storiesfromtheweb.org/authors/jane-smith.jpg', TRUE)");
         echo "<p class='success'>✓ Added sample authors</p>";
 
+        $db->exec("INSERT INTO tags (name, slug) VALUES 
+            ('Fiction', 'fiction'),
+            ('Fantasy', 'fantasy'),
+            ('Adventure', 'adventure'),
+            ('Educational', 'educational')");
+        echo "<p class='success'>✓ Added sample tags</p>";
+
         $db->exec("INSERT INTO stories (
             title, slug, content, excerpt, featured, average_rating, review_count, 
             estimated_reading_time, is_sponsored, age_group, cover_url, is_published
@@ -147,6 +213,17 @@ header('Content-Type: text/html; charset=utf-8');
 
         $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES (1, 1), (2, 2)");
         echo "<p class='success'>✓ Added story-author relationships</p>";
+
+        $db->exec("INSERT INTO story_tags (story_id, tag_id) VALUES (1, 1), (1, 2), (2, 1), (2, 3)");
+        echo "<p class='success'>✓ Added story tags</p>";
+
+        $db->exec("INSERT INTO blog_posts (title, slug, content, excerpt, author_id, cover_url, is_published) VALUES
+            ('Writing Tips for Children', 'writing-tips-for-children', 'Full blog post content...', 'Learn how to write for children...', 1, 'https://storiesfromtheweb.org/blog/writing-tips.jpg', TRUE),
+            ('The Importance of Reading', 'importance-of-reading', 'More blog content...', 'Why reading matters...', 2, 'https://storiesfromtheweb.org/blog/reading.jpg', TRUE)");
+        echo "<p class='success'>✓ Added sample blog posts</p>";
+
+        $db->exec("INSERT INTO post_tags (post_id, tag_id) VALUES (1, 4), (2, 4)");
+        echo "<p class='success'>✓ Added blog post tags</p>";
 
         $db->exec("INSERT INTO games (title, slug, description, genre, platform, developer, publisher, is_published) VALUES 
             ('Test Game', 'test-game', 'Test game description', 'Action', 'PC', 'Test Dev', 'Test Pub', TRUE),
@@ -168,6 +245,8 @@ header('Content-Type: text/html; charset=utf-8');
         echo "<ul>";
         echo "<li><a href='/api/v1/stories'>/api/v1/stories</a></li>";
         echo "<li><a href='/api/v1/authors'>/api/v1/authors</a></li>";
+        echo "<li><a href='/api/v1/blog-posts'>/api/v1/blog-posts</a></li>";
+        echo "<li><a href='/api/v1/tags'>/api/v1/tags</a></li>";
         echo "<li><a href='/api/v1/games'>/api/v1/games</a></li>";
         echo "<li><a href='/api/v1/directory-items'>/api/v1/directory-items</a></li>";
         echo "<li><a href='/api/v1/ai-tools'>/api/v1/ai-tools</a></li>";

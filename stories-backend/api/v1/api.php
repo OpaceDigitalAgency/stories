@@ -36,26 +36,41 @@ try {
     // Simple router
     switch ($path) {
         case 'stories':
-            $sql = "SELECT * FROM stories WHERE is_published = 1 ORDER BY created_at DESC";
+            $sql = "SELECT s.*, GROUP_CONCAT(a.name) as author_names, GROUP_CONCAT(a.slug) as author_slugs
+                   FROM stories s 
+                   LEFT JOIN story_authors sa ON s.id = sa.story_id
+                   LEFT JOIN authors a ON sa.author_id = a.id
+                   WHERE s.is_published = 1 
+                   GROUP BY s.id
+                   ORDER BY s.created_at DESC";
             $stmt = $db->query($sql);
             $stories = $stmt->fetchAll();
 
-            // Get author info for each story
+            // Format author data
             foreach ($stories as &$story) {
-                if ($story['author_id']) {
-                    $authorSql = "SELECT name, slug FROM authors WHERE id = ?";
-                    $authorStmt = $db->prepare($authorSql);
-                    $authorStmt->execute([$story['author_id']]);
-                    $author = $authorStmt->fetch();
-                    $story['author'] = $author ?: null;
+                if ($story['author_names']) {
+                    $names = explode(',', $story['author_names']);
+                    $slugs = explode(',', $story['author_slugs']);
+                    $story['authors'] = array_map(function($name, $slug) {
+                        return ['name' => $name, 'slug' => $slug];
+                    }, $names, $slugs);
+                } else {
+                    $story['authors'] = [];
                 }
+                unset($story['author_names']);
+                unset($story['author_slugs']);
             }
 
             echo json_encode(['status' => 'success', 'data' => $stories]);
             break;
             
         case 'authors':
-            $sql = "SELECT * FROM authors WHERE is_published = 1 ORDER BY name ASC";
+            $sql = "SELECT a.*, COUNT(sa.story_id) as story_count 
+                   FROM authors a
+                   LEFT JOIN story_authors sa ON a.id = sa.author_id
+                   WHERE a.is_published = 1
+                   GROUP BY a.id
+                   ORDER BY a.name ASC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);

@@ -27,14 +27,30 @@ header('Content-Type: text/html; charset=utf-8');
             ]
         );
 
-        // Drop existing tables in reverse order
-        $tables = ['stories', 'authors', 'games', 'directory_items', 'ai_tools'];
+        // First, drop any existing foreign key constraints
+        $tables = ['story_authors', 'stories', 'authors', 'games', 'directory_items', 'ai_tools'];
         foreach ($tables as $table) {
             try {
+                // Get foreign key constraints
+                $sql = "SELECT CONSTRAINT_NAME 
+                       FROM information_schema.TABLE_CONSTRAINTS 
+                       WHERE TABLE_SCHEMA = 'stories_db' 
+                       AND TABLE_NAME = '$table' 
+                       AND CONSTRAINT_TYPE = 'FOREIGN KEY'";
+                $stmt = $db->query($sql);
+                $constraints = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Drop each constraint
+                foreach ($constraints as $constraint) {
+                    $db->exec("ALTER TABLE $table DROP FOREIGN KEY $constraint");
+                    echo "<p class='success'>✓ Dropped constraint: $constraint from $table</p>";
+                }
+                
+                // Now drop the table
                 $db->exec("DROP TABLE IF EXISTS $table");
                 echo "<p class='success'>✓ Dropped table: $table</p>";
             } catch (PDOException $e) {
-                echo "<p class='error'>✗ Error dropping table $table: " . $e->getMessage() . "</p>";
+                echo "<p class='error'>✗ Error with table $table: " . $e->getMessage() . "</p>";
             }
         }
 
@@ -57,12 +73,19 @@ header('Content-Type: text/html; charset=utf-8');
             content TEXT,
             slug VARCHAR(255) NOT NULL UNIQUE,
             is_published BOOLEAN DEFAULT FALSE,
-            author_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         echo "<p class='success'>✓ Created table: stories</p>";
+
+        $db->exec("CREATE TABLE story_authors (
+            story_id INT,
+            author_id INT,
+            PRIMARY KEY (story_id, author_id),
+            FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE,
+            FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        echo "<p class='success'>✓ Created table: story_authors</p>";
 
         $db->exec("CREATE TABLE games (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -121,10 +144,13 @@ header('Content-Type: text/html; charset=utf-8');
             ('Jane Smith', 'jane-smith', 'Another test author', TRUE)");
         echo "<p class='success'>✓ Added sample authors</p>";
 
-        $db->exec("INSERT INTO stories (title, slug, content, author_id, is_published) VALUES 
-            ('Test Story', 'test-story', 'Test content', 1, TRUE),
-            ('Another Story', 'another-story', 'More test content', 2, TRUE)");
+        $db->exec("INSERT INTO stories (title, slug, content, is_published) VALUES 
+            ('Test Story', 'test-story', 'Test content', TRUE),
+            ('Another Story', 'another-story', 'More test content', TRUE)");
         echo "<p class='success'>✓ Added sample stories</p>";
+
+        $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES (1, 1), (2, 2)");
+        echo "<p class='success'>✓ Added story-author relationships</p>";
 
         $db->exec("INSERT INTO games (title, slug, description, is_published) VALUES 
             ('Test Game', 'test-game', 'Test game description', TRUE),

@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - /usr/bin/git pull --no-ff origin main    # keep server clone in sync

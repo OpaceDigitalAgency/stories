@@ -37,35 +37,39 @@ $method = $_SERVER['REQUEST_METHOD'];
 try {
     switch ($path) {
         case 'stories':
-            $sql = "SELECT * FROM stories ORDER BY created_at DESC";
+            $sql = "SELECT s.*, a.name as author_name, a.slug as author_slug 
+                   FROM stories s 
+                   LEFT JOIN authors a ON s.author_id = a.id 
+                   WHERE s.is_published = TRUE 
+                   ORDER BY s.created_at DESC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);
             break;
             
         case 'authors':
-            $sql = "SELECT * FROM authors ORDER BY name ASC";
+            $sql = "SELECT * FROM authors WHERE is_published = TRUE ORDER BY name ASC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);
             break;
             
         case 'games':
-            $sql = "SELECT * FROM games ORDER BY title ASC";
+            $sql = "SELECT * FROM games WHERE is_published = TRUE ORDER BY title ASC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);
             break;
             
         case 'directory-items':
-            $sql = "SELECT * FROM directory_items ORDER BY title ASC";
+            $sql = "SELECT * FROM directory_items WHERE is_published = TRUE ORDER BY title ASC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);
             break;
             
         case 'ai-tools':
-            $sql = "SELECT * FROM ai_tools ORDER BY title ASC";
+            $sql = "SELECT * FROM ai_tools WHERE is_published = TRUE ORDER BY title ASC";
             $stmt = $db->query($sql);
             $data = $stmt->fetchAll();
             echo json_encode(['status' => 'success', 'data' => $data]);

@@ -96,24 +96,31 @@ try {
             $whereConditions = ["s.is_published = 1"];
             $params = [];
             
+            // Debug log all GET parameters
+            error_log("API GET parameters: " . json_encode($_GET));
+            
             // Add filter for featured stories
             if (isset($_GET['featured']) && $_GET['featured'] == 1) {
                 $whereConditions[] = "s.featured = 1";
+                error_log("Adding featured=1 filter");
             }
             
             // Add filter for sponsored stories
             if (isset($_GET['is_sponsored']) && $_GET['is_sponsored'] == 1) {
                 $whereConditions[] = "s.is_sponsored = 1";
+                error_log("Adding is_sponsored=1 filter");
             }
             
             // Add filter for self-published stories
             if (isset($_GET['is_self_published']) && $_GET['is_self_published'] == 1) {
                 $whereConditions[] = "s.is_self_published = 1";
+                error_log("Adding is_self_published=1 filter");
             }
             
             // Add filter for AI-enhanced stories
             if (isset($_GET['is_ai_enhanced']) && $_GET['is_ai_enhanced'] == 1) {
                 $whereConditions[] = "s.is_ai_enhanced = 1";
+                error_log("Adding is_ai_enhanced=1 filter");
             }
             
             // Handle filter parameter (direct query string)

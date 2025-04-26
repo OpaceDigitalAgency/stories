@@ -167,9 +167,11 @@ src/
 
 1. **API Client** (`src/lib/api.ts`):
    - Handles all communication with the backend API
-   - Manages authentication tokens
-   - Implements error handling and retry logic
+   - Implements error handling
    - Provides typed interfaces for API responses
+   - Maps API response fields to component props
+   - Supports flat data structure from API
+   - Includes resource-specific fetch functions for each content type
 
 2. **Page Components**:
    - Each page is an Astro component that fetches data and renders content
@@ -399,29 +401,61 @@ All API endpoints return responses in a consistent flat array format:
 [
   {
     "id": 1,
-    "title": "Example Item",
-    "slug": "example-item",
-    "other_fields": "values"
+    "title": "Example Story",
+    "slug": "example-story",
+    "excerpt": "This is a sample story excerpt",
+    "cover_url": "https://example.com/images/story1.jpg",
+    "publishedAt": "2025-04-15T10:30:00Z"
   },
   {
     "id": 2,
-    "title": "Another Item",
-    "slug": "another-item",
-    "other_fields": "values"
+    "title": "Another Story",
+    "slug": "another-story",
+    "excerpt": "Another sample story excerpt",
+    "cover_url": "https://example.com/images/story2.jpg",
+    "publishedAt": "2025-04-14T14:45:00Z"
   }
 ]
 ```
 
-Single item responses return a single object:
+The frontend maps these fields to component props:
+- `title` → `title`
+- `excerpt` → `excerpt`
+- `cover_url` → `coverImage`
+- `slug` → `slug`
+- `publishedAt` → `publishDate`
 
-```json
-{
-  "id": 1,
-  "title": "Example Item",
-  "slug": "example-item",
-  "other_fields": "values"
-}
-```
+For authors:
+- `name` → `name`
+- `bio` → `bio`
+- `avatar_url` → `avatar`
+- `slug` → `slug`
+
+For games:
+- `title` → `title`
+- `description` → `description`
+- `cover_url` → `coverImage`
+- `slug` → `slug`
+- `price` → `price`
+- `rating` → `rating`
+
+For directory items:
+- `title` → `title`
+- `description` → `description`
+- `cover_url` → `coverImage`
+- `slug` → `slug`
+- `category` → `category`
+- `rating` → `rating`
+- `price_range` → `priceRange`
+
+For AI tools:
+- `title` → `title`
+- `description` → `description`
+- `cover_url` → `coverImage`
+- `slug` → `slug`
+- `category` → `category`
+- `pricing_type` → `pricingType`
+- `featured` → `featured`
 
 Error responses use a standard format:
 

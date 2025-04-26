@@ -43,11 +43,13 @@ if ($config['api']['debug']) {
     ini_set('display_errors', 0);
 }
 
-// Session configuration
-ini_set('session.cookie_lifetime', $config['auth']['session_lifetime']);
-ini_set('session.gc_maxlifetime', $config['auth']['session_lifetime']);
-ini_set('session.cookie_secure', $config['auth']['cookie_secure']);
-ini_set('session.cookie_httponly', $config['auth']['cookie_httponly']);
-ini_set('session.cookie_samesite', $config['auth']['cookie_samesite']);
+// Session configuration - only set if session hasn't started yet
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_lifetime', $config['auth']['session_lifetime']);
+    ini_set('session.gc_maxlifetime', $config['auth']['session_lifetime']);
+    ini_set('session.cookie_secure', $config['auth']['cookie_secure']);
+    ini_set('session.cookie_httponly', $config['auth']['cookie_httponly']);
+    ini_set('session.cookie_samesite', $config['auth']['cookie_samesite']);
+}
 
 return $config;

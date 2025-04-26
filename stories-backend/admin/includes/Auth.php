@@ -1,20 +1,65 @@
 <?php
-namespace Admin;
-
-use PDO;
-use PDOException;
-
 /**
  * Auth Class
- * 
+ *
  * Handles authentication for the admin interface
  */
 class Auth {
     private static $instance = null;
+    private static $config = null;
     private $db;
     
+    /**
+     * Initialize Auth with configuration
+     *
+     * @param array $config Security configuration
+     */
+    public static function init($config) {
+        self::$config = $config;
+    }
+    
+    /**
+     * Check if user is authenticated
+     *
+     * @return array|bool User data or false if not authenticated
+     */
+    public static function checkAuth() {
+        // Start session if not already started
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Check if user is logged in
+        if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+            return false;
+        }
+        
+        // Check session timeout
+        $timeout = self::$config['session_lifetime'] ?? 3600;
+        
+        if (isset($_SESSION['admin_login_time']) &&
+            (time() - $_SESSION['admin_login_time']) > $timeout) {
+            // Session expired, log out
+            self::logout();
+            return false;
+        }
+        
+        // Update login time
+        $_SESSION['admin_login_time'] = time();
+        
+        // Return user data
+        return [
+            'id' => $_SESSION['admin_user_id'] ?? 0,
+            'username' => $_SESSION['admin_username'] ?? 'Admin'
+        ];
+    }
+    
     private function __construct() {
-        $this->db = Database::getInstance();
+        // Include Database class
+        require_once __DIR__ . '/Database.php';
+        
+        // Get database instance
+        $this->db = new Database();
     }
     
     public static function getInstance() {
@@ -61,7 +106,10 @@ class Auth {
         }
     }
     
-    public function logout() {
+    /**
+     * Logout the current user
+     */
+    public static function logout() {
         // Start session if not already started
         if (session_status() === PHP_SESSION_NONE) {
             session_start();

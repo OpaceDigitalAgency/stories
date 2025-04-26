@@ -1,12 +1,7 @@
 <?php
-namespace Admin;
-
-use PDO;
-use PDOException;
-
 /**
  * Database Class
- * 
+ *
  * Handles database connections for the admin interface
  */
 class Database {

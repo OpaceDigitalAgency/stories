@@ -3,24 +3,39 @@ import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
-import { fetchStories } from '../../lib/api';
+import { fetchBlogPosts } from '../../lib/api';
 import '../../styles/base.css';
 
 // Fetch blog posts
-const stories = await fetchStories();
-// Since we don't have a specific blog type, we'll use all stories for now
-// In the future, we could add a 'type' field to the Story interface
-const blogPosts = stories;
+let blogPosts = [];
+let categories = [];
+let error = null;
 
-// Extract categories from blog posts - handle null/undefined tags safely
-const allCategories = blogPosts.map(post => {
-  if (post.tags && Array.isArray(post.tags) && post.tags.length > 0) {
-    return post.tags[0];
+try {
+  // Fetch blog posts from API
+  blogPosts = await fetchBlogPosts();
+  
+  // Safely extract categories from blog posts
+  const allCategories = [];
+  
+  if (Array.isArray(blogPosts)) {
+    blogPosts.forEach(post => {
+      if (post && post.tags && Array.isArray(post.tags) && post.tags.length > 0) {
+        allCategories.push(post.tags[0]);
+      } else {
+        allCategories.push('Uncategorized');
+      }
+    });
   }
-  return 'Uncategorized';
-});
-const uniqueCategories = [...new Set(allCategories)];
-const categories = uniqueCategories.map(name => ({ name }));
+  
+  // Get unique categories
+  categories = [...new Set(allCategories)].map(name => ({ name }));
+} catch (e) {
+  console.error('Error fetching blog data:', e);
+  error = e.message;
+  blogPosts = [];
+  categories = [];
+}
 
 // Page metadata
 const title = 'Blog | Stories From The Web';
@@ -72,6 +87,17 @@ const description = 'Read our latest blog posts about children\'s literature, ed
       </div>
     </section>
     
+    {error && (
+      <section class="py-8 bg-white border-b">
+        <div class="container mx-auto px-4">
+          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline"> {error}</span>
+          </div>
+        </div>
+      </section>
+    )}
+    
     <!-- Categories Section -->
     <section class="py-8 bg-white border-b">
       <div class="container mx-auto px-4">
@@ -103,7 +129,7 @@ const description = 'Read our latest blog posts about children\'s literature, ed
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div class="rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
               <img 
-                src={blogPosts[0].coverImage || '/images/default-cover.svg'} 
+                src={typeof blogPosts[0].coverImage === 'string' ? blogPosts[0].coverImage : '/images/default-cover.svg'} 
                 alt={blogPosts[0].title} 
                 class="w-full h-auto object-cover"
               />
@@ -111,7 +137,7 @@ const description = 'Read our latest blog posts about children\'s literature, ed
             
             <div>
               <div class="flex flex-wrap gap-3 mb-4">
-                {blogPosts[0].tags?.map(tag => (
+                {blogPosts[0].tags && Array.isArray(blogPosts[0].tags) && blogPosts[0].tags.map(tag => (
                   <TagBadge tag={tag} size="md" />
                 ))}
               </div>
@@ -131,7 +157,7 @@ const description = 'Read our latest blog posts about children\'s literature, ed
                   <a href={`/authors/${blogPosts[0].author.slug}`} class="flex items-center group">
                     <div class="w-10 h-10 rounded-full overflow-hidden mr-3 border-2 border-white shadow-md">
                       <img 
-                        src={blogPosts[0].author.avatar || '/images/default-avatar.svg'} 
+                        src={typeof blogPosts[0].author.avatar === 'string' ? blogPosts[0].author.avatar : '/images/default-avatar.svg'} 
                         alt={blogPosts[0].author.name} 
                         class="w-full h-full object-cover"
                       />
@@ -184,13 +210,13 @@ const description = 'Read our latest blog posts about children\'s literature, ed
                   <a href={`/blog/${post.slug}`} class="block relative">
                     <div class="relative h-48 overflow-hidden">
                       <img 
-                        src={post.coverImage || '/images/default-cover.svg'} 
+                        src={typeof post.coverImage === 'string' ? post.coverImage : '/images/default-cover.svg'} 
                         alt={post.title} 
                         class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                       />
                       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
                       
-                      {post.tags && post.tags.length > 0 && (
+                      {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
                         <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
                           {post.tags.slice(0, 2).map(tag => (
                             <TagBadge tag={tag} size="sm" />
@@ -223,7 +249,7 @@ const description = 'Read our latest blog posts about children\'s literature, ed
                         <a href={`/authors/${post.author.slug}`} class="flex items-center group">
                           <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
                             <img 
-                              src={post.author.avatar || '/images/default-avatar.svg'} 
+                              src={typeof post.author.avatar === 'string' ? post.author.avatar : '/images/default-avatar.svg'} 
                               alt={post.author.name} 
                               class="w-full h-full object-cover"
                             />
@@ -263,33 +289,6 @@ const description = 'Read our latest blog posts about children\'s literature, ed
             </svg>
             <p class="text-text-secondary font-bold text-xl mb-3">No blog posts available at the moment.</p>
             <p class="text-text-secondary/70 text-lg">Check back soon for new articles!</p>
-          </div>
-        )}
-        
-        <!-- Pagination -->
-        {blogPosts.length > 9 && (
-          <div class="flex justify-center mt-16">
-            <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">
-                <span class="sr-only">Previous</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-              </a>
-              <a href="#" aria-current="page" class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary-50 text-sm font-medium text-primary">1</a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">2</a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">3</a>
-              <span class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary">...</span>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">8</a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">9</a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">10</a>
-              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">
-                <span class="sr-only">Next</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-              </a>
-            </nav>
           </div>
         )}
       </div>

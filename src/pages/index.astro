@@ -36,65 +36,78 @@ try {
     sort: 'publishedAt:desc',
     pagination: { limit: 3 }
   });
-  featuredStories = featuredStoriesResponse.data?.map(item => ({
-    title: item.attributes?.title || '',
-    excerpt: item.attributes?.excerpt || '',
-    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+
+
+
+  // --- NEW plain‐fetch code against your flat JSON API ---
+  
+  console.log('Fetching featured stories…');
+  const resFeatured = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/stories?featured=true&sort=publishedAt:desc&pagination[limit]=3`
+  );
+  const rawFeatured = await resFeatured.json();    // flat array of story objects
+  featuredStories = rawFeatured.map(item => ({
+    title:       item.title,
+    excerpt:     item.excerpt,
+    coverImage:  item.coverImage,                 // matches your PHP API’s "coverImage" key
     author: {
-      name: item.attributes?.author?.data?.attributes?.name || '',
-      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-      slug: item.attributes?.author?.data?.attributes?.slug || ''
+      name:      item.author.name,
+      avatar:    item.author.avatar,
+      slug:      item.author.slug
     },
-    rating: item.attributes?.averageRating || 0,
-    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
-    slug: item.attributes?.slug || '',
-    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+    rating:      item.rating,
+    tags:        item.tags,
+    slug:        item.slug,
+    publishDate: new Date(item.publishedAt)
   })) || [];
+
+
+  // --- NEW ---
 
   // Fetch most loved stories
-  const mostLovedStoriesResponse = await fetchFromApi('stories', {
-    sort: 'averageRating:desc',
-    populate: '*',
-    pagination: { limit: 6 }
-  });
-  mostLovedStories = mostLovedStoriesResponse.data?.map(item => ({
-    title: item.attributes?.title || '',
-    excerpt: item.attributes?.excerpt || '',
-    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
-    author: {
-      name: item.attributes?.author?.data?.attributes?.name || '',
-      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-      slug: item.attributes?.author?.data?.attributes?.slug || ''
+  console.log('Fetching most-loved stories…');
+  const resLoved = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/stories?sort=rating:desc&pagination[limit]=6`
+  );
+  const rawLoved = await resLoved.json();
+  mostLovedStories = rawLoved.map(item => ({
+    title:       item.title,
+    excerpt:     item.excerpt,
+    coverImage:  item.coverImage,
+    author: { 
+      name:      item.author.name,
+      avatar:    item.author.avatar,
+      slug:      item.author.slug
     },
-    rating: item.attributes?.averageRating || 0,
-    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
-    slug: item.attributes?.slug || '',
-    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
-  })) || [];
+    rating:      item.rating,
+    tags:        item.tags,
+    slug:        item.slug,
+    publishDate: new Date(item.publishedAt)
+  }))|| [];
+
+
+  // --- NEW ---
 
   // Fetch latest self-published stories
-  const selfPublishedStoriesResponse = await fetchFromApi('stories', {
-    filters: {
-      isSelfPublished: true
+  console.log('Fetching self-published stories…');
+  const resSelf = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/stories?isSelfPublished=true&sort=publishedAt:desc&pagination[limit]=6`
+  );
+  const rawSelf = await resSelf.json();
+  latestSelfPublishedStories = rawSelf.map(item => ({
+    title:       item.title,
+    excerpt:     item.excerpt,
+    coverImage:  item.coverImage,
+    author: { 
+      name:      item.author.name,
+      avatar:    item.author.avatar,
+      slug:      item.author.slug
     },
-    populate: '*',
-    sort: 'publishedAt:desc',
-    pagination: { limit: 6 }
-  });
-  latestSelfPublishedStories = selfPublishedStoriesResponse.data?.map(item => ({
-    title: item.attributes?.title || '',
-    excerpt: item.attributes?.excerpt || '',
-    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
-    author: {
-      name: item.attributes?.author?.data?.attributes?.name || '',
-      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-      slug: item.attributes?.author?.data?.attributes?.slug || ''
-    },
-    rating: item.attributes?.averageRating || 0,
-    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
-    slug: item.attributes?.slug || '',
-    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
-  })) || [];
+    rating:      item.rating,
+    tags:        item.tags,
+    slug:        item.slug,
+    publishDate: new Date(item.publishedAt)
+  }))|| [];
 
   // Fetch AI-enhanced stories
   const aiEnhancedStoriesResponse = await fetchFromApi('stories', {

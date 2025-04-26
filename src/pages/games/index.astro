@@ -1,30 +1,14 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromApi, type ApiResponse, type Game } from '../../lib/api';
+import { fetchGames, type Game } from '../../lib/api';
 import '../../styles/base.css';
 
 // Fetch games from API
-const gamesResponse = await fetchFromApi('games', {
-  populate: '*',
-  sort: 'title:asc'
-}) as StrapiResponse<Game>;
+const games = await fetchGames();
 
-const games = gamesResponse.data.map(game => ({
-  title: game.attributes.title,
-  description: game.attributes.description,
-  image: game.attributes.thumbnail?.data?.attributes?.url || '',
-  color: game.attributes.color || 'primary',
-  comingSoon: game.attributes.comingSoon || false,
-  url: game.attributes.url
-}));
-
-// Fetch age groups from API
-const ageGroupsResponse = await fetchFromApi('game-age-groups', {
-  sort: 'order:asc'
-}) as StrapiResponse<{ name: string }>;
-
-const ageGroups = ageGroupsResponse.data.map(group => group.attributes.name);
+// Define age groups
+const ageGroups = ['3-5 years', '6-8 years', '9-12 years'];
 ---
 
 <html lang="en">
@@ -94,18 +78,13 @@ const ageGroups = ageGroupsResponse.data.map(group => group.attributes.name);
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {games.map(game => (
-              <div class={`bg-${game.color}/10 rounded-xl overflow-hidden shadow-playful group hover:shadow-lg transition-all duration-300`}>
+              <div class="bg-white rounded-xl overflow-hidden shadow-playful group hover:shadow-lg transition-all duration-300">
                 <div class="relative h-48 overflow-hidden">
                   <img 
-                    src={game.image} 
+                    src={game.coverImage} 
                     alt={game.title} 
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  {game.comingSoon && (
-                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span class="px-4 py-2 bg-tertiary/90 text-white text-lg font-bold rounded-full">Coming Soon</span>
-                    </div>
-                  )}
                 </div>
                 
                 <div class="p-6">
@@ -114,28 +93,17 @@ const ageGroups = ageGroupsResponse.data.map(group => group.attributes.name);
                     {game.description}
                   </p>
                   
-                  <button 
-                    class={`btn btn-${game.color} w-full py-2 shadow-playful btn-playful ${game.comingSoon ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={game.comingSoon}
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">Rating: {game.rating}/5</span>
+                    <span class="text-sm text-gray-600">${game.price}</span>
+                  </div>
+                  
+                  <a 
+                    href={`/games/${game.slug}`}
+                    class="mt-4 block w-full text-center py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
                   >
-                    <span class="flex items-center justify-center">
-                      {game.comingSoon ? (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Coming Soon
-                        </>
-                      ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-                          </svg>
-                          Play Now
-                        </>
-                      )}
-                    </span>
-                  </button>
+                    Learn More
+                  </a>
                 </div>
               </div>
             ))}

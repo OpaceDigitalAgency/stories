@@ -1,23 +1,11 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromApi, type ApiResponse, type AiTool } from '../../lib/api';
+import { fetchAiTools, type AiTool } from '../../lib/api';
 import '../../styles/base.css';
 
 // Fetch AI tools from API
-const aiToolsResponse = await fetchFromApi('ai-tools', {
-  populate: '*',
-  sort: 'title:asc'
-}) as StrapiResponse<AiTool>;
-
-const aiTools = aiToolsResponse.data.map(tool => ({
-  title: tool.attributes.name,
-  description: tool.attributes.description,
-  icon: tool.attributes.icon || '',
-  color: tool.attributes.color || 'primary',
-  comingSoon: tool.attributes.comingSoon || false,
-  url: tool.attributes.url
-}));
+const aiTools = await fetchAiTools();
 ---
 
 <html lang="en">
@@ -74,51 +62,37 @@ const aiTools = aiToolsResponse.data.map(tool => ({
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {aiTools.map(tool => (
-              <div class={`bg-${tool.color}/10 rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300`}>
-                <!-- Decorative elements -->
-                <div class={`absolute -top-10 -right-10 w-40 h-40 bg-${tool.color}/10 rounded-full blur-xl`}></div>
-                
+              <div class="bg-white rounded-xl p-6 shadow-playful relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <div class="relative z-10">
-                  <div class={`w-16 h-16 bg-${tool.color}/20 rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`w-8 h-8 text-${tool.color}`}>
-                      <Fragment set:html={tool.icon} />
-                    </svg>
+                  {tool.featured && (
+                    <div class="absolute top-0 right-0 bg-accent text-white px-3 py-1 text-sm rounded-bl-xl">
+                      Featured
+                    </div>
+                  )}
+                  
+                  <img 
+                    src={tool.coverImage} 
+                    alt={tool.title}
+                    class="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                  
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-display font-bold text-text-primary">{tool.title}</h3>
+                    <span class="text-sm text-gray-600">{tool.pricingType}</span>
                   </div>
                   
-                  <div class="flex items-center justify-center mb-4">
-                    <h3 class="text-xl font-display font-bold text-text-primary text-center">{tool.title}</h3>
-                    {tool.comingSoon && (
-                      <span class="ml-2 px-2 py-1 bg-tertiary/20 text-tertiary text-xs rounded-full">Coming Soon</span>
-                    )}
-                  </div>
-                  
-                  <p class="text-text-secondary mb-6 text-center">
+                  <p class="text-text-secondary mb-6">
                     {tool.description}
                   </p>
                   
-                  <div class="text-center">
-                    <button 
-                      class={`btn btn-${tool.color} py-2 px-6 shadow-playful btn-playful ${tool.comingSoon ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={tool.comingSoon}
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">{tool.category}</span>
+                    <a 
+                      href={`/ai-tools/${tool.slug}`}
+                      class="btn bg-primary text-white px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
                     >
-                      <span class="flex items-center justify-center">
-                        {tool.comingSoon ? (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Coming Soon
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205L12 12m6.894 5.785l-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864l-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
-                            </svg>
-                            Try Now
-                          </>
-                        )}
-                      </span>
-                    </button>
+                      Learn More
+                    </a>
                   </div>
                 </div>
               </div>

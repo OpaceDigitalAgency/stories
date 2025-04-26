@@ -2,13 +2,10 @@
 /**
  * Directory Items Admin Page
  * 
- * This page handles CRUD operations for directory items.
- * 
  * @package Stories Admin
  * @version 1.0.0
  */
 
-// Include required files
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/Database.php';
 require_once __DIR__ . '/includes/Auth.php';
@@ -18,33 +15,19 @@ require_once __DIR__ . '/includes/FileUpload.php';
 require_once __DIR__ . '/includes/AdminPage.php';
 require_once __DIR__ . '/includes/CrudPage.php';
 
-/**
- * Directory Items Page Class
- */
 class DirectoryItemsPage extends CrudPage {
-    /**
-     * Constructor
-     */
     public function __construct() {
         parent::__construct();
         
-        // Set page title
         $this->pageTitle = 'Directory Items';
-        
-        // Set active menu
         $this->activeMenu = 'directory-items';
-        
-        // Set entity name
         $this->entityName = 'Directory Item';
         $this->entityNamePlural = 'Directory Items';
-        
-        // Set API endpoint
         $this->endpoint = 'directory-items';
         
-        // Set fields
         $this->fields = [
             [
-                'name' => 'title',  // Changed from 'name' to match database field
+                'name' => 'name',
                 'label' => 'Name',
                 'type' => 'text',
                 'main' => true,
@@ -52,7 +35,7 @@ class DirectoryItemsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'api_field' => 'title' // API field name matches database field
+                'api_field' => 'name'
             ],
             [
                 'name' => 'description',
@@ -62,10 +45,10 @@ class DirectoryItemsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'api_field' => 'description' // API field name
+                'api_field' => 'description'
             ],
             [
-                'name' => 'website_url',  // Changed from 'url' to match database field
+                'name' => 'url',
                 'label' => 'URL',
                 'type' => 'text',
                 'list' => true,
@@ -73,7 +56,7 @@ class DirectoryItemsPage extends CrudPage {
                 'view' => true,
                 'default' => '',
                 'help' => 'Full URL including https://',
-                'api_field' => 'website_url' // API field name matches database field
+                'api_field' => 'url'
             ],
             [
                 'name' => 'category',
@@ -84,39 +67,43 @@ class DirectoryItemsPage extends CrudPage {
                 'view' => true,
                 'default' => '',
                 'options' => [
-                    ['value' => 'Resources', 'label' => 'Resources'],
-                    ['value' => 'Libraries', 'label' => 'Libraries'],
-                    ['value' => 'Schools', 'label' => 'Schools'],
-                    ['value' => 'Publishers', 'label' => 'Publishers'],
-                    ['value' => 'Bookstores', 'label' => 'Bookstores'],
-                    ['value' => 'Organizations', 'label' => 'Organizations'],
-                    ['value' => 'Other', 'label' => 'Other']
+                    ['value' => 'Category1', 'label' => 'Category1'],
+                    ['value' => 'Category2', 'label' => 'Category2']
                 ],
-                'api_field' => 'category' // API field name
+                'api_field' => 'category'
             ],
             [
-                'name' => 'cover_url',  // Changed from 'logo' to match database field
+                'name' => 'logo',
                 'label' => 'Logo',
                 'type' => 'image',
                 'list' => false,
                 'form' => true,
                 'view' => true,
                 'default' => null,
-                'api_field' => 'logo' // API field name
+                'api_field' => 'logo'
             ],
             [
-                'name' => 'featured',
-                'label' => 'Featured',
-                'type' => 'boolean',
+                'name' => 'rating',
+                'label' => 'Rating',
+                'type' => 'number',
                 'list' => true,
                 'form' => true,
                 'view' => true,
-                'default' => false,
-                'checkboxLabel' => 'Featured item',
-                'api_field' => 'featured' // API field name
+                'default' => 0,
+                'api_field' => 'rating'
             ],
             [
-                'name' => 'is_published',
+                'name' => 'priceRange',
+                'label' => 'Price Range',
+                'type' => 'text',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => '',
+                'api_field' => 'priceRange'
+            ],
+            [
+                'name' => 'isPublished',
                 'label' => 'Published',
                 'type' => 'boolean',
                 'list' => true,
@@ -124,88 +111,21 @@ class DirectoryItemsPage extends CrudPage {
                 'view' => true,
                 'default' => true,
                 'checkboxLabel' => 'Published',
-                'api_field' => 'isPublished' // API field name
+                'api_field' => 'isPublished'
             ]
         ];
         
-        // Set required fields
         $this->requiredFields = ['name', 'url', 'category'];
-        
-        // Set searchable fields
         $this->searchableFields = ['name', 'description', 'url'];
-        
-        // Set sortable fields
         $this->sortableFields = ['id', 'name', 'category'];
-        
-        // Set default sort
-        $this->defaultSortField = 'title';
+        $this->defaultSortField = 'name';
         $this->defaultSortDirection = 'asc';
     }
-    
-    /**
-     * Handle create
-     */
-    protected function handleCreate() {
-        // Handle file upload
-        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
-            // Create file upload instance
-            $fileUpload = new FileUpload($this->config['media']);
-            
-            // Upload file
-            $file = $fileUpload->upload($_FILES['cover_url'], 'directory_item', 0, 'cover_url');
-            
-            if ($file) {
-                $_POST['cover_url'] = $file;
-            } else {
-                $this->errors = array_merge($this->errors, $fileUpload->getErrors());
-                return;
-            }
-        }
-        
-        // Call parent method
-        parent::handleCreate();
-    }
-    
-    /**
-     * Handle edit
-     */
-    protected function handleEdit() {
-        // Handle file upload
-        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
-            // Create file upload instance
-            $fileUpload = new FileUpload($this->config['media']);
-            
-            // Get item ID
-            $id = $this->getParam('id');
-            
-            // Upload file
-            $file = $fileUpload->upload($_FILES['cover_url'], 'directory_item', $id, 'cover_url');
-            
-            if ($file) {
-                $_POST['cover_url'] = $file;
-            } else {
-                $this->errors = array_merge($this->errors, $fileUpload->getErrors());
-                return;
-            }
-        }
-        
-        // Call parent method
-        parent::handleEdit();
-    }
-    
-    /**
-     * Get content template name
-     * 
-     * @return string Template name
-     */
+
     protected function getContentTemplate() {
-        // Get current action
         $action = $this->getParam('action', 'list');
-        
-        // Get template name based on action
         switch ($action) {
             case 'create':
-                return 'generic/form';
             case 'edit':
                 return 'generic/form';
             case 'view':
@@ -218,6 +138,6 @@ class DirectoryItemsPage extends CrudPage {
     }
 }
 
-// Create and process the page
 $page = new DirectoryItemsPage();
 $page->process();
+

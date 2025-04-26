@@ -45,7 +45,14 @@ try {
         // Execute each statement
         foreach ($statements as $statement) {
             echo "Executing: " . substr($statement, 0, 50) . "...\n";
-            $db->exec($statement);
+            try {
+                $db->exec($statement);
+                echo "  Success!\n";
+            } catch (PDOException $e) {
+                echo "  Warning: " . $e->getMessage() . "\n";
+                echo "  Continuing with next statement...\n";
+                // Continue execution instead of stopping on error
+            }
         }
         
         // Commit transaction

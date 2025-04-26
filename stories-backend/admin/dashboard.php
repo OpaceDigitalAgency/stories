@@ -65,26 +65,47 @@ try {
         }
     }
 
-    // Get recent content
-    $recentStories = [];
-    $recentPosts = [];
-
-    try {
-        $stmt = $db->query("SHOW TABLES LIKE 'stories'");
-        if ($stmt->rowCount() > 0) {
-            $recentStories = $db->query("SELECT title, created_at FROM stories ORDER BY created_at DESC LIMIT 5")->fetchAll();
+    // Get recent content for each content type
+    $contentTypes = [
+        'stories' => ['title', 'created_at', 'id'],
+        'blog_posts' => ['title', 'created_at', 'id'],
+        'authors' => ['name', 'created_at', 'id'],
+        'games' => ['title', 'created_at', 'id'],
+        'directory_items' => ['name', 'created_at', 'id'],
+        'ai_tools' => ['name', 'created_at', 'id']
+    ];
+    
+    $recentContent = [];
+    
+    foreach ($contentTypes as $table => $fields) {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$table'");
+            if ($stmt->rowCount() > 0) {
+                // Check if the table has these columns
+                $columnsExist = true;
+                foreach ($fields as $field) {
+                    if ($field !== 'id') { // ID is always expected
+                        $checkColumn = $db->query("SHOW COLUMNS FROM `$table` LIKE '$field'");
+                        if ($checkColumn->rowCount() === 0) {
+                            $columnsExist = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($columnsExist) {
+                    $titleField = $fields[0]; // First field is the title/name
+                    $dateField = $fields[1];  // Second field is the date
+                    $idField = $fields[2];    // Third field is the id
+                    
+                    $query = "SELECT `$idField` as id, `$titleField` as title, `$dateField` as created_at FROM `$table` ORDER BY `$dateField` DESC LIMIT 5";
+                    $recentContent[$table] = $db->query($query)->fetchAll();
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("Error getting recent $table: " . $e->getMessage());
+            $recentContent[$table] = [];
         }
-    } catch (PDOException $e) {
-        error_log("Error getting recent stories: " . $e->getMessage());
-    }
-
-    try {
-        $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
-        if ($stmt->rowCount() > 0) {
-            $recentPosts = $db->query("SELECT title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 5")->fetchAll();
-        }
-    } catch (PDOException $e) {
-        error_log("Error getting recent posts: " . $e->getMessage());
     }
 
 } catch (PDOException $e) {
@@ -98,82 +119,32 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Stories Admin</title>
-    <link rel="stylesheet" href="assets/css/main.css">
-    <style>
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #4a6cf7;
-            margin: 10px 0;
-        }
-        .nav-menu {
-            background: white;
-            padding: 15px;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .nav-menu a {
-            display: inline-block;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .nav-menu a:hover {
-            background: #f5f5f5;
-        }
-        .recent-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .recent-list {
-            list-style: none;
-            padding: 0;
-        }
-        .recent-list li {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .recent-list li:last-child {
-            border: none;
-        }
-        .user-info {
-            text-align: right;
-            margin-bottom: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                <button type="submit" formaction="dashboard.php" class="nav-link active">Dashboard</button>
                 <button type="submit" formaction="content/stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="content/blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="content/authors.php" class="nav-link">Authors</button>
@@ -185,108 +156,381 @@ try {
             </form>
         </nav>
 
+        <div class="page-header mb-4">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-description">Welcome to the Stories Admin Dashboard. Manage all your content from here.</p>
+        </div>
+
         <div class="dashboard-grid">
             <div class="stat-card">
                 <h3>Stories</h3>
                 <div class="stat-number"><?php echo $stats['stories']; ?></div>
-                <form method="GET" action="content/stories.php">
-                    <button type="submit" class="form-submit">Manage Stories</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/stories.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/story-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
             
             <div class="stat-card">
                 <h3>Blog Posts</h3>
                 <div class="stat-number"><?php echo $stats['blog_posts']; ?></div>
-                <form method="GET" action="content/blog-posts.php">
-                    <button type="submit" class="form-submit">Manage Posts</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/blog-posts.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/post-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
             
             <div class="stat-card">
                 <h3>Authors</h3>
                 <div class="stat-number"><?php echo $stats['authors']; ?></div>
-                <form method="GET" action="content/authors.php">
-                    <button type="submit" class="form-submit">Manage Authors</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/authors.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/author-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
             
             <div class="stat-card">
                 <h3>Games</h3>
                 <div class="stat-number"><?php echo $stats['games']; ?></div>
-                <form method="GET" action="content/games.php">
-                    <button type="submit" class="form-submit">Manage Games</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/games.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/game-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
             
             <div class="stat-card">
                 <h3>Directory Items</h3>
                 <div class="stat-number"><?php echo $stats['directory_items']; ?></div>
-                <form method="GET" action="content/directory-items.php">
-                    <button type="submit" class="form-submit">Manage Directory</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/directory-items.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/directory-item-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
             
             <div class="stat-card">
                 <h3>AI Tools</h3>
                 <div class="stat-number"><?php echo $stats['ai_tools']; ?></div>
-                <form method="GET" action="content/ai-tools.php">
-                    <button type="submit" class="form-submit">Manage AI Tools</button>
-                </form>
+                <div class="stat-actions">
+                    <form method="GET" action="content/ai-tools.php" style="margin-right: 0.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                    </form>
+                    <form method="GET" action="content/ai-tool-form.php">
+                        <button type="submit" class="btn btn-success btn-sm">Add New</button>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="recent-content">
-                <h3>Recent Stories</h3>
-                <?php if (empty($recentStories)): ?>
-                    <p>No stories found.</p>
-                <?php else: ?>
-                    <ul class="recent-list">
-                        <?php foreach ($recentStories as $story): ?>
-                            <li>
-                                <?php echo htmlspecialchars($story['title']); ?>
-                                <small style="color: #666;">
-                                    (<?php echo date('M j, Y', strtotime($story['created_at'])); ?>)
-                                </small>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
+        <!-- Recent Content Sections with CSS-only Expand/Collapse -->
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Recent Content</h2>
             </div>
-
-            <div class="recent-content">
-                <h3>Recent Blog Posts</h3>
-                <?php if (empty($recentPosts)): ?>
-                    <p>No blog posts found.</p>
-                <?php else: ?>
-                    <ul class="recent-list">
-                        <?php foreach ($recentPosts as $post): ?>
-                            <li>
-                                <?php echo htmlspecialchars($post['title']); ?>
-                                <small style="color: #666;">
-                                    (<?php echo date('M j, Y', strtotime($post['created_at'])); ?>)
-                                </small>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
+            
+            <!-- Stories Section -->
+            <div class="section-body">
+                <input type="checkbox" id="toggle-stories" class="collapsible-toggle" checked>
+                <div class="collapsible">
+                    <label for="toggle-stories" class="collapsible-header">
+                        Stories
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['stories'])): ?>
+                            <p class="p-3">No stories found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['stories'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-story.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/story-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-story.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this story?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Blog Posts Section -->
+                <input type="checkbox" id="toggle-blog-posts" class="collapsible-toggle" checked>
+                <div class="collapsible">
+                    <label for="toggle-blog-posts" class="collapsible-header">
+                        Blog Posts
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['blog_posts'])): ?>
+                            <p class="p-3">No blog posts found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['blog_posts'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-post.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/post-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-post.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this post?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Authors Section -->
+                <input type="checkbox" id="toggle-authors" class="collapsible-toggle">
+                <div class="collapsible">
+                    <label for="toggle-authors" class="collapsible-header">
+                        Authors
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['authors'])): ?>
+                            <p class="p-3">No authors found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['authors'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-author.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/author-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-author.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this author?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Games Section -->
+                <input type="checkbox" id="toggle-games" class="collapsible-toggle">
+                <div class="collapsible">
+                    <label for="toggle-games" class="collapsible-header">
+                        Games
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['games'])): ?>
+                            <p class="p-3">No games found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['games'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-game.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/game-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-game.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this game?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Directory Items Section -->
+                <input type="checkbox" id="toggle-directory" class="collapsible-toggle">
+                <div class="collapsible">
+                    <label for="toggle-directory" class="collapsible-header">
+                        Directory Items
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['directory_items'])): ?>
+                            <p class="p-3">No directory items found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['directory_items'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-directory-item.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/directory-item-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-directory-item.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this directory item?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- AI Tools Section -->
+                <input type="checkbox" id="toggle-ai-tools" class="collapsible-toggle">
+                <div class="collapsible">
+                    <label for="toggle-ai-tools" class="collapsible-header">
+                        AI Tools
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['ai_tools'])): ?>
+                            <p class="p-3">No AI tools found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['ai_tools'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-ai-tool.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="GET" action="content/ai-tool-form.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <span class="icon-edit"></span> Edit
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/delete-ai-tool.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this AI tool?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-    </style>
 </body>
 </html>

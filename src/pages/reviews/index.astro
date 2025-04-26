@@ -233,7 +233,7 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
               Share your thoughts on a story you've read to help other parents, teachers, and young readers find their next favorite book.
             </p>
             
-            <form class="space-y-4">
+            <form class="space-y-4" action="/api/v1/submit-review.php" method="POST" id="review-form">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label for="story" class="block text-sm font-medium text-gray-700 mb-1">Story Title</label>
@@ -251,10 +251,10 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
                 </div>
                 
                 <div>
-                  <label for="age-group" class="block text-sm font-medium text-gray-700 mb-1">Age Group</label>
-                  <select 
-                    id="age-group" 
-                    name="age-group" 
+                  <label for="age_group" class="block text-sm font-medium text-gray-700 mb-1">Age Group</label>
+                  <select
+                    id="age_group"
+                    name="age_group"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
                     required
                   >
@@ -267,11 +267,11 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
               </div>
               
               <div>
-                <label for="review-title" class="block text-sm font-medium text-gray-700 mb-1">Review Title</label>
-                <input 
-                  type="text" 
-                  id="review-title" 
-                  name="review-title" 
+                <label for="review_title" class="block text-sm font-medium text-gray-700 mb-1">Review Title</label>
+                <input
+                  type="text"
+                  id="review_title"
+                  name="review_title"
                   class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
                   placeholder="Summarize your thoughts in a few words"
                   required
@@ -279,11 +279,11 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
               </div>
               
               <div>
-                <label for="review-content" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
-                <textarea 
-                  id="review-content" 
-                  name="review-content" 
-                  rows="4" 
+                <label for="review_content" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
+                <textarea
+                  id="review_content"
+                  name="review_content"
+                  rows="4"
                   class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
                   placeholder="Share your experience with this story."
                   required
@@ -304,23 +304,110 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
                     const ratingInput = document.getElementById('rating');
                     
                     if (ratingStarsContainer && ratingInput) {
-                      ratingStarsContainer.addEventListener('rating-changed', (event) => {
-                        ratingInput.value = event.detail.rating;
-                      });
+                      // The event is dispatched on the component ID, not the container
+                      const ratingComponent = ratingStarsContainer.querySelector('div[id^="rating-stars-"]');
+                      
+                      if (ratingComponent) {
+                        ratingComponent.addEventListener('rating-changed', (event) => {
+                          ratingInput.value = event.detail.rating;
+                          console.log('Rating changed to:', event.detail.rating);
+                        });
+                      }
                     }
                   });
                 </script>
               </div>
               
               <div class="text-center">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   class="py-2 px-6 bg-secondary text-white rounded-md hover:bg-secondary/90 transition-colors font-medium"
+                  id="submit-review-btn"
                 >
                   Submit Review
                 </button>
               </div>
+              
+              <!-- Success message (hidden by default) -->
+              <div id="review-success" class="mt-4 p-4 bg-green-100 text-green-800 rounded-lg hidden">
+                <p class="text-center font-medium">Thank you for your review! It has been submitted successfully.</p>
+              </div>
+              
+              <!-- Error message (hidden by default) -->
+              <div id="review-error" class="mt-4 p-4 bg-red-100 text-red-800 rounded-lg hidden">
+                <p class="text-center font-medium">There was an error submitting your review. Please try again.</p>
+              </div>
             </form>
+            
+            <script>
+              document.addEventListener('DOMContentLoaded', () => {
+                const form = document.getElementById('review-form');
+                const submitBtn = document.getElementById('submit-review-btn');
+                const successMsg = document.getElementById('review-success');
+                const errorMsg = document.getElementById('review-error');
+                
+                if (form) {
+                  form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    // Hide any previous messages
+                    successMsg.classList.add('hidden');
+                    errorMsg.classList.add('hidden');
+                    
+                    // Disable submit button
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Submitting...';
+                    
+                    try {
+                      // Get form data
+                      const formData = new FormData(form);
+                      
+                      // Convert to JSON
+                      const data = {};
+                      formData.forEach((value, key) => {
+                        data[key] = value;
+                      });
+                      
+                      // Send request
+                      const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                      });
+                      
+                      const result = await response.json();
+                      
+                      if (response.ok && result.success) {
+                        // Show success message
+                        successMsg.classList.remove('hidden');
+                        
+                        // Reset form
+                        form.reset();
+                        
+                        // Reload the page after 2 seconds to show updated ratings
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 2000);
+                      } else {
+                        // Show error message
+                        errorMsg.classList.remove('hidden');
+                        console.error('Error submitting review:', result);
+                      }
+                    } catch (error) {
+                      // Show error message
+                      errorMsg.classList.remove('hidden');
+                      console.error('Error submitting review:', error);
+                    } finally {
+                      // Re-enable submit button
+                      submitBtn.disabled = false;
+                      submitBtn.textContent = 'Submit Review';
+                    }
+                  });
+                }
+              });
+            </script>
           </div>
         </div>
       </section>

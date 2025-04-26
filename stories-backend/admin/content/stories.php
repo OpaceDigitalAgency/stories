@@ -99,7 +99,7 @@ try {
         error_log("Number of unique stories: " . count($stories));
         
         // Then for each story, try to get the author information from story_authors table
-        foreach ($stories as &$story) {
+        foreach ($stories as $index => $storyItem) {
             try {
                 // Get author from story_authors table
                 $stmt = $db->prepare("
@@ -108,18 +108,18 @@ try {
                     JOIN authors a ON sa.author_id = a.id
                     WHERE sa.story_id = ?
                 ");
-                $stmt->execute([$story['id']]);
+                $stmt->execute([$storyItem['id']]);
                 $author = $stmt->fetch();
                 
                 if ($author) {
-                    $story['author_id'] = $author['id'];
-                    $story['author_name'] = $author['name'];
+                    $stories[$index]['author_id'] = $author['id'];
+                    $stories[$index]['author_name'] = $author['name'];
                 } else {
-                    $story['author_name'] = 'Unknown';
+                    $stories[$index]['author_name'] = 'Unknown';
                 }
             } catch (Exception $e) {
-                error_log("Error fetching author for story ID " . $story['id'] . ": " . $e->getMessage());
-                $story['author_name'] = 'Unknown';
+                error_log("Error fetching author for story ID " . $storyItem['id'] . ": " . $e->getMessage());
+                $stories[$index]['author_name'] = 'Unknown';
             }
             
             // Get tags for the story
@@ -130,21 +130,21 @@ try {
                     JOIN tags t ON st.tag_id = t.id
                     WHERE st.story_id = ?
                 ");
-                $stmt->execute([$story['id']]);
+                $stmt->execute([$storyItem['id']]);
                 $tags = $stmt->fetch();
                 
                 if ($tags && isset($tags['tags'])) {
-                    $story['tags'] = $tags['tags'];
+                    $stories[$index]['tags'] = $tags['tags'];
                 } else {
-                    $story['tags'] = '';
+                    $stories[$index]['tags'] = '';
                 }
             } catch (Exception $e) {
-                error_log("Error fetching tags for story ID " . $story['id'] . ": " . $e->getMessage());
-                $story['tags'] = '';
+                error_log("Error fetching tags for story ID " . $storyItem['id'] . ": " . $e->getMessage());
+                $stories[$index]['tags'] = '';
             }
             
             // Debug log for author information
-            error_log("Story ID: " . $story['id'] . ", Author ID: " . ($story['author_id'] ?? 'null') . ", Author Name: " . ($story['author_name'] ?? 'null'));
+            error_log("Story ID: " . $storyItem['id'] . ", Author ID: " . ($stories[$index]['author_id'] ?? 'null') . ", Author Name: " . ($stories[$index]['author_name'] ?? 'null'));
         }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());

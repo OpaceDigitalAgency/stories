@@ -1,13 +1,20 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
+import RatingStars from '../../components/RatingStars.astro';
+import { fetchStories } from '../../lib/api';
 import '../../styles/base.css';
 
+// Fetch stories from API
+const stories = await fetchStories();
+
+// Sort stories by rating (highest first)
+const sortedStories = [...stories].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
 // Filter options
-// Filter options will be fetched from API
-const ageGroups = [];
-const reviewerTypes = [];
-const sortOptions = [];
+const ageGroups = ['0-2 years', '3-5 years', '6-8 years', '9-12 years', '13+ years'];
+const reviewerTypes = ['Parent', 'Teacher', 'Librarian', 'Child'];
+const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
 ---
 
 <html lang="en">
@@ -129,9 +136,69 @@ const sortOptions = [];
                 </div>
               </div>
               
-              <!-- Reviews Placeholder -->
+              <!-- Reviews List -->
               <div class="space-y-6">
-                {/* Reviews will be fetched from API */}
+                {sortedStories.length > 0 ? (
+                  sortedStories.map(story => (
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+                      <div class="flex flex-col md:flex-row gap-4">
+                        <div class="md:w-1/4">
+                          <a href={`/stories/${story.slug}`} class="block">
+                            <img
+                              src={story.coverImage || '/images/default-cover.svg'}
+                              alt={story.title}
+                              class="w-full h-40 object-cover rounded-lg shadow-sm"
+                            />
+                          </a>
+                        </div>
+                        <div class="md:w-3/4">
+                          <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold">
+                              <a href={`/stories/${story.slug}`} class="text-text-primary hover:text-primary transition-colors">
+                                {story.title}
+                              </a>
+                            </h3>
+                            {story.rating > 0 && (
+                              <div class="flex-shrink-0">
+                                <RatingStars rating={story.rating} size="sm" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {story.author && (
+                            <p class="text-sm text-text-secondary mb-2">
+                              By <a href={`/authors/${story.author.slug}`} class="text-secondary hover:text-secondary/80 transition-colors">
+                                {story.author.name}
+                              </a>
+                            </p>
+                          )}
+                          
+                          <p class="text-text-secondary mb-4 line-clamp-2">
+                            {story.excerpt || "No excerpt available."}
+                          </p>
+                          
+                          <div class="flex justify-between items-center">
+                            <div class="flex gap-2">
+                              {story.tags && story.tags.slice(0, 3).map(tag => (
+                                <span class="text-xs bg-neutral-100 text-text-secondary px-2 py-1 rounded-full">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                            
+                            <div class="text-sm text-text-secondary">
+                              {story.reviewCount || 0} {story.reviewCount === 1 ? 'review' : 'reviews'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div class="bg-white p-8 rounded-xl shadow-md text-center">
+                    <p class="text-text-secondary">No stories with reviews found.</p>
+                  </div>
+                )}
               </div>
               
               <!-- Pagination -->
@@ -177,7 +244,9 @@ const sortOptions = [];
                     required
                   >
                     <option value="" disabled selected>Select a story</option>
-                    {/* Story options will be fetched from API */}
+                    {stories.map(story => (
+                      <option value={story.slug}>{story.title}</option>
+                    ))}
                   </select>
                 </div>
                 
@@ -224,11 +293,23 @@ const sortOptions = [];
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
                 <div class="flex items-center">
-                  <div class="flex text-gray-400">
-                    ★★★★★
+                  <div data-rating-stars>
+                    <RatingStars rating={3} size="md" interactive={true} />
                   </div>
-                  <span class="ml-2 text-sm text-gray-500">Click to rate</span>
+                  <input type="hidden" id="rating" name="rating" value="3" />
                 </div>
+                <script>
+                  document.addEventListener('DOMContentLoaded', () => {
+                    const ratingStarsContainer = document.querySelector('[data-rating-stars]');
+                    const ratingInput = document.getElementById('rating');
+                    
+                    if (ratingStarsContainer && ratingInput) {
+                      ratingStarsContainer.addEventListener('rating-changed', (event) => {
+                        ratingInput.value = event.detail.rating;
+                      });
+                    }
+                  });
+                </script>
               </div>
               
               <div class="text-center">

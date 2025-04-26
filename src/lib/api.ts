@@ -20,6 +20,7 @@ export interface Story {
   needsModeration?: boolean;
   needs_moderation?: boolean; // API response field
   rating?: number;
+  reviewCount?: number;
   tags?: string[];
   author?: Author;
 }
@@ -157,7 +158,8 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     isAiEnhanced: Boolean(item.is_ai_enhanced),
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
-    rating: Number(item.rating) || 0,
+    rating: Number(item.average_rating) || 0,
+    reviewCount: Number(item.review_count) || 0,
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
@@ -242,7 +244,8 @@ export async function fetchStory(slug: string): Promise<Story> {
     isAiEnhanced: Boolean(item.is_ai_enhanced),
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
-    rating: Number(item.rating) || 0,
+    rating: Number(item.average_rating) || 0,
+    reviewCount: Number(item.review_count) || 0,
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {

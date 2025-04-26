@@ -9,154 +9,23 @@ import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
 import ApiErrorMessage from '../components/ApiErrorMessage.astro';
+import { fetchStories, fetchAuthors } from '../lib/api';
 import '../styles/base.css';
 
-// Dynamic data arrays fetched from API
-let featuredStories = [];
-let mostLovedStories = [];
-let latestSelfPublishedStories = [];
-let aiEnhancedStories = [];
-let sponsoredStories = [];
-let featuredAuthors = [];
+export const prerender = true;
+
+// Fetch data at build time
+const featuredStories = await fetchStories(1, 3);
+const mostLovedStories = await fetchStories(1, 6);
+const latestSelfPublishedStories = await fetchStories(1, 6);
+const aiEnhancedStories = await fetchStories(1, 6);
+const sponsoredStories = await fetchStories(1, 6);
+const featuredAuthors = await fetchAuthors();
 
 // Track API errors
 let apiError = false;
 let apiErrorDetails = null;
 let apiErrorEndpoint = null;
-
-try {
-  console.log('Fetching data from API...');
-
-  // Fetch featured stories
-  console.log('Fetching featured stories…');
-  const resFeatured = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/stories?featured=true&sort=publishedAt:desc&pagination[limit]=3`
-  );
-  const rawFeatured = await resFeatured.json();
-  featuredStories = rawFeatured.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.coverImage,
-    author: {
-      name: item.author.name,
-      avatar: item.author.avatar,
-      slug: item.author.slug
-    },
-    rating: item.rating,
-    tags: item.tags,
-    slug: item.slug,
-    publishDate: new Date(item.publishedAt)
-  })) || [];
-
-  // Fetch most loved stories
-  console.log('Fetching most-loved stories…');
-  const resLoved = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/stories?sort=rating:desc&pagination[limit]=6`
-  );
-  const rawLoved = await resLoved.json();
-  mostLovedStories = rawLoved.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.coverImage,
-    author: {
-      name: item.author.name,
-      avatar: item.author.avatar,
-      slug: item.author.slug
-    },
-    rating: item.rating,
-    tags: item.tags,
-    slug: item.slug,
-    publishDate: new Date(item.publishedAt)
-  })) || [];
-
-  // Fetch latest self-published stories
-  console.log('Fetching self-published stories…');
-  const resSelf = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/stories?isSelfPublished=true&sort=publishedAt:desc&pagination[limit]=6`
-  );
-  const rawSelf = await resSelf.json();
-  latestSelfPublishedStories = rawSelf.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.coverImage,
-    author: {
-      name: item.author.name,
-      avatar: item.author.avatar,
-      slug: item.author.slug
-    },
-    rating: item.rating,
-    tags: item.tags,
-    slug: item.slug,
-    publishDate: new Date(item.publishedAt)
-  })) || [];
-
-  // Fetch AI-enhanced stories
-  console.log('Fetching AI-enhanced stories…');
-  const resAI = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/stories?isAIEnhanced=true&sort=publishedAt:desc&pagination[limit]=6`
-  );
-  const rawAI = await resAI.json();
-  aiEnhancedStories = rawAI.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.coverImage,
-    author: {
-      name: item.author.name,
-      avatar: item.author.avatar,
-      slug: item.author.slug
-    },
-    rating: item.rating,
-    tags: item.tags,
-    slug: item.slug,
-    publishDate: new Date(item.publishedAt)
-  })) || [];
-
-  // Fetch sponsored stories
-  console.log('Fetching sponsored stories…');
-  const resSponsored = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/stories?isSponsored=true&sort=publishedAt:desc&pagination[limit]=6`
-  );
-  const rawSponsored = await resSponsored.json();
-  sponsoredStories = rawSponsored.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.coverImage,
-    author: {
-      name: item.author.name,
-      avatar: item.author.avatar,
-      slug: item.author.slug
-    },
-    rating: item.rating,
-    tags: item.tags,
-    slug: item.slug,
-    publishDate: new Date(item.publishedAt),
-    sponsored: true
-  })) || [];
-
-  // Fetch featured authors
-  console.log('Fetching featured authors…');
-  const resAuthors = await fetch(
-    `${import.meta.env.PUBLIC_API_URL}/authors?featured=true&pagination[limit]=2`
-  );
-  const rawAuthors = await resAuthors.json();
-  featuredAuthors = rawAuthors.map(item => ({
-    name: item.name,
-    avatar: item.avatar,
-    bio: item.bio,
-    slug: item.slug,
-    storyCount: item.storyCount,
-    socialLinks: {
-      twitter: item.twitter || '',
-      instagram: item.instagram || '',
-      website: item.website || ''
-    }
-  })) || [];
-} catch (error) {
-  console.error('Error fetching data from API:', error);
-  apiError = true;
-  apiErrorDetails = error;
-  apiErrorEndpoint = error.endpoint || 'API';
-}
 ---
 
 <html lang="en">

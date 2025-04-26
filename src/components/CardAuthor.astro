@@ -21,7 +21,7 @@ const extendedAuthor = author as ExtendedAuthor;
     <a href={`/authors/${author.slug}`} class="block group perspective-1000">
       <div class="relative transform-style-3d hover:translate-z-4 transition-transform duration-300">
         <img
-          src={author.avatar?.url || '/images/default-avatar.jpg'}
+          src={author.avatar || '/images/default-avatar.jpg'}
           alt={author.name}
           class="w-24 h-24 rounded-full object-cover border-4 border-accent shadow-xl mb-4 transform group-hover:scale-110 transition-all duration-300"
         />
@@ -52,7 +52,7 @@ const extendedAuthor = author as ExtendedAuthor;
     <div class="flex justify-center gap-6 mt-6">
       {extendedAuthor.socialLinks.twitter && (
         <a
-          href={author.socialLinks.twitter}
+          href={extendedAuthor.socialLinks.twitter}
           target="_blank"
           rel="noopener noreferrer"
           class="text-text-secondary hover:text-primary transition-all duration-300 transform hover:scale-110 hover:shadow-glow group"
@@ -66,7 +66,7 @@ const extendedAuthor = author as ExtendedAuthor;
       
       {extendedAuthor.socialLinks.instagram && (
         <a 
-          href={author.socialLinks.instagram} 
+          href={extendedAuthor.socialLinks.instagram} 
           target="_blank" 
           rel="noopener noreferrer"
           class="text-text-secondary hover:text-primary transition-all duration-300 transform hover:scale-110 hover:shadow-glow group"
@@ -80,7 +80,7 @@ const extendedAuthor = author as ExtendedAuthor;
       
       {extendedAuthor.socialLinks.website && (
         <a 
-          href={author.socialLinks.website} 
+          href={extendedAuthor.socialLinks.website} 
           target="_blank" 
           rel="noopener noreferrer"
           class="text-text-secondary hover:text-primary transition-all duration-300 transform hover:scale-110 hover:shadow-glow group"

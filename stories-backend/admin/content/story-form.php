@@ -170,11 +170,19 @@ try {
                 ?></textarea>
             </div>
 
+            <?php
+            // Handle cover image fields - use cover_image if it exists, otherwise use cover_url
+            $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' : 
+                              (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
+            
+            if ($coverImageField):
+            ?>
             <div class="form-group">
-                <label class="form-label" for="cover_image">Cover Image URL</label>
-                <input type="text" id="cover_image" name="cover_image" class="form-input"
-                       value="<?php echo htmlspecialchars($story['cover_image'] ?? ''); ?>">
+                <label class="form-label" for="<?php echo $coverImageField; ?>">Cover Image URL</label>
+                <input type="text" id="<?php echo $coverImageField; ?>" name="<?php echo $coverImageField; ?>" class="form-input"
+                       value="<?php echo htmlspecialchars($story[$coverImageField] ?? ''); ?>">
             </div>
+            <?php endif; ?>
 
             <div class="form-row">
                 <div class="form-group form-group-half">
@@ -185,8 +193,8 @@ try {
                 
                 <div class="form-group form-group-half">
                     <label class="form-check-label" for="is_published">Published</label>
-                    <input type="checkbox" id="is_published" name="is_published" value="1" 
-                           <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?> 
+                    <input type="checkbox" id="is_published" name="is_published" value="1"
+                           <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?>
                            class="form-check-input">
                 </div>
             </div>
@@ -194,37 +202,24 @@ try {
             <div class="form-row">
                 <div class="form-group form-group-half">
                     <label class="form-check-label" for="featured">Featured</label>
-                    <input type="checkbox" id="featured" name="featured" value="1" 
-                           <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?> 
+                    <input type="checkbox" id="featured" name="featured" value="1"
+                           <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?>
                            class="form-check-input">
                 </div>
                 
                 <div class="form-group form-group-half">
                     <label class="form-check-label" for="is_sponsored">Sponsored</label>
-                    <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1" 
-                           <?php echo (isset($story['is_sponsored']) && $story['is_sponsored']) ? "checked" : ""; ?> 
+                    <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1"
+                           <?php echo (isset($story['is_sponsored']) && $story['is_sponsored']) ? "checked" : ""; ?>
                            class="form-check-input">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Tags</label>
-                <div class="checkbox-group">
-                    <?php foreach ($tags as $tag): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
-                                   <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
-                            <?php echo htmlspecialchars($tag['name']); ?>
-                        </label>
-                    <?php endforeach; ?>
                 </div>
             </div>
 
             <?php 
             // Display remaining additional fields
             foreach ($additionalFields as $field): 
-                // Skip fields that are already handled above
-                if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at'])) continue;
+                // Skip fields that are already handled above or will be handled below
+                if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at', 'cover_image', 'cover_url', 'slug', 'excerpt'])) continue;
                 
                 $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
                 $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
@@ -291,6 +286,20 @@ try {
                            <?php echo $isRequired ? 'required' : ''; ?>>
                 </div>
             <?php endif; endforeach; ?>
+
+            <!-- Tags section moved to the bottom -->
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                <div class="checkbox-group">
+                    <?php foreach ($tags as $tag): ?>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
+                                   <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
+                            <?php echo htmlspecialchars($tag['name']); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
             <div class="form-group">
                 <button type="submit" class="form-submit">Save Story</button>

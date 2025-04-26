@@ -12,8 +12,13 @@ const stories = await fetchStories();
 // In the future, we could add a 'type' field to the Story interface
 const blogPosts = stories;
 
-// Extract categories from blog posts
-const allCategories = blogPosts.map(post => post.tags?.[0] || 'Uncategorized');
+// Extract categories from blog posts - handle null/undefined tags safely
+const allCategories = blogPosts.map(post => {
+  if (post.tags && Array.isArray(post.tags) && post.tags.length > 0) {
+    return post.tags[0];
+  }
+  return 'Uncategorized';
+});
 const uniqueCategories = [...new Set(allCategories)];
 const categories = uniqueCategories.map(name => ({ name }));
 

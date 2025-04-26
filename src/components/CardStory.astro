@@ -10,11 +10,17 @@ const defaultCoverImage = '/images/default-cover.svg';
 const defaultAvatarImage = '/images/default-avatar.svg';
 
 // Handle cover image - directly use the URL from the API
-let coverImageUrl = story?.coverImage || defaultCoverImage;
+let coverImageUrl = defaultCoverImage;
+if (story?.coverImage && typeof story.coverImage === 'string') {
+  coverImageUrl = story.coverImage;
+}
 console.log("Cover image URL:", coverImageUrl); // Debug log
 
 // Handle author avatar - directly use the URL from the API
-let authorAvatarUrl = story?.author?.avatar || defaultAvatarImage;
+let authorAvatarUrl = defaultAvatarImage;
+if (story?.author?.avatar && typeof story.author.avatar === 'string') {
+  authorAvatarUrl = story.author.avatar;
+}
 console.log("Author avatar URL:", authorAvatarUrl); // Debug log
 
 // Format date if available
@@ -60,7 +66,7 @@ const formattedDate = story.publishDate
         </a>
       </h3>
       
-      {story.rating && (
+      {story.rating && typeof story.rating === 'number' && (
         <div class="ml-2 flex-shrink-0">
           <RatingStars rating={story.rating} size="sm" />
         </div>

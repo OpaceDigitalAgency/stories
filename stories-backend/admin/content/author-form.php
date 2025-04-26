@@ -149,6 +149,14 @@ if (isset($_SESSION['error'])) {
             </div>
 
             <div class="form-group">
+                <label class="form-label" for="avatar_url">Avatar URL</label>
+                <input type="text" id="avatar_url" name="avatar_url" class="form-input"
+                       value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>"
+                       placeholder="https://example.com/avatar.jpg">
+                <small>Enter a URL to the author's avatar image. Leave empty to use the default avatar.</small>
+            </div>
+
+            <div class="form-group">
                 <button type="submit" class="form-submit">Save Author</button>
             </div>
         </form>

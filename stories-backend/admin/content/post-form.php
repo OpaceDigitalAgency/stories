@@ -240,15 +240,13 @@ if (isset($_SESSION['error'])) {
             </div>
             <?php endif; ?>
 
-            <?php if ($hasStatusColumn): ?>
-            <div class="form-group">
-                <label class="form-label" for="status">Status</label>
-                <select id="status" name="status" class="form-input" required>
-                    <option value="draft" <?php echo isset($post['status']) && $post['status'] == 'draft' ? 'selected' : ''; ?>>Draft</option>
-                    <option value="published" <?php echo isset($post['status']) && $post['status'] == 'published' ? 'selected' : ''; ?>>Published</option>
-                </select>
+            <div class="form-group checkbox-field">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_published" value="1"
+                           <?php echo (!isset($post['is_published']) || $post['is_published'] == 1) ? 'checked' : ''; ?>>
+                    Published
+                </label>
             </div>
-            <?php endif; ?>
             
             <?php foreach ($additionalFields as $field): ?>
                 <div class="form-group">

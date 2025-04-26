@@ -1,6 +1,41 @@
+<details> 
+<summary><code>src/lib/api.ts</code></summary>
+
+/**
+ * Simple wrapper around fetch() for your flat JSON API.
+ * Never touches `window` or `document`, so it's safe in SSR.
+ */
+export async function fetchFromApi<T = any>(
+  endpoint: string,
+  params: Record<string, string | number | boolean> = {}
+): Promise<T> {
+  // Build the URL
+  const base = import.meta.env.PUBLIC_API_URL;
+  if (!base) {
+    throw new Error('PUBLIC_API_URL is not defined');
+  }
+  const url = new URL(`${base}/${endpoint}`);
+
+  // Append query params
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, String(value));
+  });
+
+  // Perform the request
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+  return (await res.json()) as T;
+}
+</details>
+
+
+
 // Define API response types
 
-export interface ApiResponse<T> {
+/* export interface ApiResponse<T> {
   data: ApiData<T>[];
   meta: {
     pagination: {
@@ -344,4 +379,4 @@ export const fetchFromApi = async (endpoint: string, params: ApiParams = {}, ret
       };
     }
   }
-};
+}; */

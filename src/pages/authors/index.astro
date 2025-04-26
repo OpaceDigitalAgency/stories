@@ -82,12 +82,7 @@ const regularAuthors = authors.slice(3);
             <h2 class="text-3xl font-display font-bold text-gray-800 mb-8 fancy-underline">Featured Authors</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredAuthors.map(author => (
-                <CardAuthor 
-                  name={author.name}
-                  bio={author.bio}
-                  avatar={author.avatar}
-                  slug={author.slug}
-                />
+                <CardAuthor author={author} />
               ))}
             </div>
           </div>
@@ -114,12 +109,7 @@ const regularAuthors = authors.slice(3);
           <!-- Authors Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {regularAuthors.map(author => (
-              <CardAuthor 
-                name={author.name}
-                bio={author.bio}
-                avatar={author.avatar}
-                slug={author.slug}
-              />
+              <CardAuthor author={author} />
             ))}
             
             <!-- Become an Author Card -->

@@ -1,41 +1,30 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Footer    from '../../components/Footer.astro';
 import CardAuthor from '../../components/CardAuthor.astro';
-import { fetchFromApi, type ApiResponse, type Author } from '../../lib/api';
+import { fetchFromApi } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
 
-// Fetch all authors from API
-const authorsResponse = await fetchFromApi('authors', {
-  populate: '*',
+// ▶ FETCH flat array of authors
+const rawAuthors = await fetchFromApi('authors', {
   sort: 'name:asc'
-}) as ApiResponse<Author>;
+}) as any[];            // flat array of { id, name, slug, bio, avatar_url, … }
 
-// Process authors data
-const authors = authorsResponse.data.map(item => {
-  return {
-    id: item.id,
-    name: item.attributes.name || '',
-    avatar: item.attributes.avatar?.data?.attributes?.url || '',
-    bio: item.attributes.bio || '',
-    slug: item.attributes.slug || '',
-    storyCount: item.attributes.storyCount || 0,
-    featured: item.attributes.featured || false,
-    socialLinks: {
-      twitter: item.attributes.twitter || '',
-      instagram: item.attributes.instagram || '',
-      website: item.attributes.website || ''
-    }
-  };
-});
+// ▶ MAP to the props your components expect
+const authors = rawAuthors.map(item => ({
+  id:     item.id,
+  name:   item.name || '',
+  slug:   item.slug || '',
+  bio:    item.bio  || '',
+  avatar: item.avatar_url || ''
+}));
 
-// Get featured authors
-const featuredAuthors = authors.filter(author => author.featured);
-
-// Get regular authors (non-featured)
-const regularAuthors = authors.filter(author => !author.featured);
+// ▶ If you still want “featured” vs “regular”, you can filter by some flag—
+//    e.g. item.is_published, or just split the first N off as “featured”.
+const featuredAuthors = authors.slice(0, 3);
+const regularAuthors  = authors.slice(3);
 ---
 
 <html lang="en">

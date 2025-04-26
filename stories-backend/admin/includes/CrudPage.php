@@ -54,6 +54,35 @@ class CrudPage extends AdminPage
        ================================================================ */
     protected function getListData (): void
     {
+        
+
+
+            // — Temporary DEBUG OUTPUT — 
+    // (will print at top of your admin list page)
+    $debugParams = json_encode($params ?? []);
+    echo '<pre style="background:#fee;border:1px solid #f00;padding:10px;">';
+    echo "CRUDPAGE DEBUG — endpoint={$this->endpoint}\n";
+    echo "Params: $debugParams\n\n";
+
+    $response = $this->apiClient->get($this->endpoint, $params);
+
+    if ($response === false) {
+        // Show the error message from ApiClient
+        $fmtErr = $this->apiClient->getFormattedError();
+        echo "Response Error: $fmtErr\n";
+        echo '</pre>';
+        // Stop here so you can see it
+        exit;
+    }
+
+    // If OK, dump the raw response and then halt
+    echo "Raw Response:\n" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT)) . "\n";
+    echo '</pre>';
+    exit;
+
+
+
+
         /* ---------- build query string ---------- */
         $page          = max(1,  (int) $this->getParam('page',     1));
         $pageSize      = max(1,  (int) $this->getParam('pageSize', $this->itemsPerPage));

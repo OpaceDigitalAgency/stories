@@ -75,12 +75,23 @@ try {
     // Get all stories with all available fields
     try {
         // First get all stories
-        // Use DISTINCT to avoid duplicate stories
-        $query = "SELECT DISTINCT s.* FROM stories s ORDER BY s.created_at DESC";
+        $query = "SELECT s.* FROM stories s ORDER BY s.created_at DESC";
         $stories = $db->query($query)->fetchAll();
         
         // Debug log the number of stories
         error_log("Number of stories fetched: " . count($stories));
+        
+        // Create a temporary array to store unique stories by ID
+        $uniqueStories = [];
+        foreach ($stories as $story) {
+            // Only keep one instance of each story ID
+            $uniqueStories[$story['id']] = $story;
+        }
+        
+        // Replace the stories array with the unique stories
+        $stories = array_values($uniqueStories);
+        
+        error_log("Number of unique stories: " . count($stories));
         
         // Then for each story, try to get the author information from story_authors table
         foreach ($stories as &$story) {

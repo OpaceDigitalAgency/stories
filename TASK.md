@@ -1,226 +1,43 @@
-# Tasks
+# Stories From The Web - Task List
 
-## Active Tasks
-None
+## Completed Tasks ✅
 
-## Completed Tasks
-13. Resolve JWT refresh & token-consistency bug that breaks Admin CRUD ✓
-    - Added Auth::refreshToken() method to API Core to issue new tokens when expiration is ≤ now+30s ✓
-    - Enhanced AuthMiddleware.php to check if cookie & session tokens differ and use the newer one ✓
-    - Updated AdminPage::ensureTokenConsistency() to validate tokens on every page load ✓
-    - Improved ApiClient.php to retry the original request after token refresh ✓
-    - Enhanced src/lib/api.ts to handle 401 errors, refresh token, and retry ✓
-    - Created PHPUnit tests for login, expiry, refresh, and successful operations after auto-refresh ✓
-    - Updated system-documentation.html with sequence diagram and moved issues to resolved list ✓
+### Frontend
+- Fixed section filtering on the homepage
+  - AI-Enhanced section now only shows stories with the "AI Enhanced" flag
+  - Self-Published section now only shows stories with the "Self Published" flag
+  - Sponsored section now only shows stories with the "Sponsored" flag
+- Updated "Much Loved" section to sort by average rating
 
-1. Fix remaining admin panel issues ✓
-   - Unblock external scripts & styles (CSP) ✓
-   - Load jQuery + Bootstrap before dependent plugins ✓
-   - Retire the missing initDropdowns() helper ✓
-   - Restore Font Awesome icons ✓
-   - Send the JWT on every admin → API request ✓
-   - Fix media.php & CKEditor ✓
-   - Ensure CRUD buttons work ✓
-   - Clean-up tasks ✓
+### Backend
+- Fixed form saving issues in the admin panel
+  - Added explicit handling for all boolean fields
+  - Fixed author selection not saving properly
+  - Added debug logging for troubleshooting
 
-12. Fix Authentication Issues in Admin Panel ✓
-    - Fixed authentication issues that were preventing CRUD operations from working ✓
-    - Implemented consistent JWT token storage in both session and cookie ✓
-    - Created an automatic token refresh mechanism for expired tokens ✓
-    - Enhanced session management with token consistency checks ✓
-    - Added proper error handling for authentication failures ✓
-    - Created a new API endpoint for token refresh ✓
+### Documentation
+- Created PLANNING.md with architecture decisions and solutions
+- Created PROGRESS.md to track changes
+- Created README.md with project overview
+- Created TASK.md to track tasks
 
-11. Fix Admin Panel CRUD Operations ✓
-    - Fixed issues with add, delete, and edit save functions not working on any admin page ✓
-    - Enhanced client-side AJAX handling with improved error messages ✓
-    - Fixed delete operations to use the proper DELETE HTTP method ✓
-    - Improved authentication and token handling ✓
-    - Added comprehensive logging for all CRUD operations ✓
-1. Fix Login Authentication Issue ✓
-   - Fix the issue where the main login page always returns "Invalid credentials" ✓
-   - Create a proper admin user with a correctly hashed password ✓
-   - Remove the direct_login.php backdoor for security ✓
-   - Protect the admin/includes/ directory from direct access ✓
-   - Document the solution in LOGIN_FIX.md ✓
-   - Fix Content Security Policy to allow external resources from CDNs ✓
-   - Fix JavaScript form interception issue by removing "needs-validation" class ✓
+## Pending Tasks 🔄
 
-2. Fix Media Page HTTP 500 Error ✓
-   - Debug and fix the FileUpload class configuration ✓
-   - Ensure proper upload directory paths and permissions ✓
-   - Fix media file handling in the admin interface ✓
+### Testing
+- Test all changes to ensure they work as expected
+- Verify that each section shows the correct stories
+- Verify that form fields save properly in the admin panel
 
-3. Improve Dashboard UI/UX ✓
-   - Add recent content for all content types (not just stories) ✓
-   - Improve admin button labeling and intuitiveness ✓
-   - Enhance overall dashboard design and usability ✓
+### Improvements
+- Add more robust error handling for API calls
+- Improve UI feedback when saving forms in the admin panel
+- Consider adding pagination for story sections
+- Add more filtering options for stories
 
-4. Fix Missing Data in Content Type Admin Pages ✓
-   - Fix data mapping issues in the CrudPage class ✓
-   - Ensure proper display of titles, author information, and other missing data ✓
-   - Improve data presentation in list and detail views ✓
+## Backlog 📝
 
-5. Enhance Overall Admin Interface Design ✓
-   - Improve navigation and information architecture ✓
-   - Standardize UI components across all admin pages ✓
-   - Add better visual cues and feedback for user actions ✓
-
-6. Fix PHP API HTTP 500 errors and autoloader issues ✓
-   - Rename folders to match namespace case (endpoints → Endpoints, utils → Utils, core → Core) ✓
-   - Fix error reporting in development mode (changed environment to 'development') ✓
-   - Fix error log path in .htaccess (created logs directory and updated path) ✓
-   - Simplify autoloader to pure PSR-4 ✓
-   - Align test script with the real bootstrap ✓
-   - Add direct include of Router class as a sanity check ✓
-
-7. Fix admin panel styling ✓
-   - Fix initial CSS path issue ✓
-   - Fix Content Security Policy (CSP) issues with CSS files ✓
-
-8. Fix PHP errors in admin panel ✓
-   - Resolve missing AdminPage class error in stories.php ✓
-   - Fix multiple constant definitions in config.php ✓
-   - Resolve missing AdminPage class error in all other admin pages ✓
-
-9. Fix API returning HTML instead of JSON responses ✓
-   - Test if the current code is being executed ✓
-   - Fix case sensitivity issues with directory paths ✓
-   - Fix protected property access in Router and BaseController ✓
-   - Resolve OpCache issues ✓
-   - Fix CSP blocking jQuery by adding CDN domains to script-src in .htaccess ✓
-   - Fix Font Awesome 404s by using CDN version ✓
-   - Set absolute error log path in .htaccess ✓
-
-## Backlog
-- None
-
-## Subtasks
-### Fix remaining admin panel issues
-1. Unblock external scripts & styles (CSP)
-   - Update Content Security Policy in admin/.htaccess to allow external resources
-   - Add cdn.ckeditor.com to script-src directive
-   - Test by hard-refreshing /admin/index.php and verifying no CSP warnings
-
-2. Load jQuery + Bootstrap before dependent plugins
-   - Ensure jQuery and Bootstrap are loaded before other plugins in all admin layouts
-   - Fix script loading order in footer.php
-   - Test by reloading a list page and checking for "reading fn" errors
-
-3. Retire the missing initDropdowns() helper
-   - Comment out or delete the call to initDropdowns() in admin.js
-   - Test to confirm no "initDropdowns is not defined" message
-
-4. Restore Font Awesome icons
-   - Copy font files to admin/assets/webfonts/ directory
-   - Update CSS references to use local files
-   - Test to ensure icons render properly
-
-5. Send the JWT on every admin → API request
-   - Update ApiClient.php to include JWT token in all requests
-   - Test dashboard to ensure API errors disappear and lists populate with data
-
-6. Fix media.php & CKEditor
-   - Ensure CKEditor script URL matches the CSP whitelist
-   - Test media.php to ensure it loads properly with CKEditor active
-
-7. Ensure CRUD buttons work
-   - Test add, edit, delete functionality on stories.php
-   - Verify successful operations refresh the list and show success messages
-
-8. Clean-up tasks
-   - Remove temporary files (simple_login.php, direct_login.php, etc.)
-   - Replace CDN links with local assets where appropriate
-   - Commit final working version
-
-### Fix Login Authentication Issue (COMPLETED)
-- Analyze the authentication flow in admin/login.php and Auth.php ✓
-- Examine direct_login.php to understand how it bypasses password verification ✓
-- Create SQL script (create_admin_user.sql) to insert/update admin user with proper password hash ✓
-- Create PHP script (create_admin.php) to execute the SQL and create/update the admin user ✓
-- Create security script (secure_system.php) to remove backdoor and protect includes directory ✓
-- Create documentation (LOGIN_FIX.md) explaining the issue and solution ✓
-
-### Fix admin panel styling (COMPLETED)
-- Check if CSS files exist in the admin/assets/css directory ✓
-- Ensure CSS files are properly linked in the admin panel templates ✓
-- Add missing CSS files if needed ✓
-- Download CSS files from CDN sources to local server ✓
-- Update header.php to use local CSS files instead of CDN links ✓
-- Resolve Content Security Policy (CSP) issues ✓
-
-### Fix missing AdminPage class (COMPLETED)
-- Check if AdminPage.php file exists ✓
-- Ensure AdminPage.php is properly included in stories.php ✓
-- Ensure AdminPage.php is properly included in all other admin pages (blog-posts.php, authors.php, directory-items.php, games.php, ai-tools.php, tags.php) ✓
-- Create AdminPage.php if it doesn't exist ✓
-
-### Fix multiple constant definitions (COMPLETED)
-- Modify config.php to prevent multiple definitions of constants ✓
-
-### Fix PHP API HTTP 500 errors and autoloader issues (COMPLETED)
-- Rename folders to match namespace case: ✓
-  - Rename api/v1/endpoints/ → api/v1/Endpoints/ ✓
-  - Rename api/v1/utils/ → api/v1/Utils/ ✓
-  - Rename api/v1/core/ → api/v1/Core/ ✓
-- Fix error reporting in development mode: ✓
-  - Changed environment from 'production' to 'development' in config.php ✓
-- Fix error log path: ✓
-  - Created logs directory in stories-backend folder ✓
-  - Updated .htaccess to point to logs/api-error.log ✓
-- Fix autoloader implementation: ✓
-  - Simplified autoloader to pure PSR-4 in index.php ✓
-  - Added direct include of Router class as a sanity check ✓
-  - Aligned test script with the real bootstrap ✓
-10. Fix Dashboard Data Display and Stories API Endpoint ✓
-    - Document the complete database schema in PLANNING.md for reference ✓
-    - Fix dashboard data display to accurately reflect the database structure ✓
-    - Add missing fields to the dashboard for all content types ✓
-    - Remove inconsistent fields not present in the database schema ✓
-    - Fix Stories API endpoint 500 Server Error when accessing individual stories ✓
-    - Remove reference to non-existent `cover_url` column in the database query ✓
-## Active Task
-- Diagnose and fix why the admin API is not performing save/update/delete (CRUD) operations, despite authentication working.
-
-### Subtasks
-1. Analyze test_admin_api.php to understand test logic and error output.
-2. Review api/index.php for routing and error handling.
-3. Inspect a sample controller (AuthorsController.php) for CRUD logic and error handling.
-4. Check .htaccess and CORS settings.
-5. Synthesize findings and propose/implement fixes.
-## Admin Interface Rebuild
-
-### Completed ✅
-1. Created ADMIN_REBUILD_PLAN.md with JavaScript-free architecture
-2. Updated system-documentation.html to document new approach
-3. Implemented create_pure_html_admin.php for core setup
-4. Created stories.php as template for content management
-
-### In Progress 🔄
-1. Create remaining content management pages:
-   - blog-posts.php
-   - authors.php
-   - tags.php
-   - games.php
-   - directory-items.php
-   - ai-tools.php
-   - media.php
-
-### To Do 📋
-1. Test all CRUD operations across content types
-2. Verify form validation and error handling
-3. Test navigation and UI components
-4. Add CSRF protection to forms
-5. Create user management interface
-6. Add media upload functionality
-7. Implement search and filtering
-8. Add pagination for large datasets
-
-### Validation Checklist
-- [ ] All forms submit without JavaScript
-- [ ] Navigation works without JavaScript
-- [ ] Security headers prevent JavaScript execution
-- [ ] Session authentication works correctly
-- [ ] CRUD operations work for all content types
-- [ ] Error handling provides clear feedback
-- [ ] UI is responsive and user-friendly
+### Features
+- Implement user authentication for story submission
+- Add commenting functionality for stories
+- Implement rating system for stories
+- Add search functionality for stories and authors

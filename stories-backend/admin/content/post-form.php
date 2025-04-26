@@ -20,6 +20,20 @@ if (!$user = SimpleAuth::check()) {
     exit;
 }
 
+// Initialize variables
+$post = null;
+$authors = [];
+$tags = [];
+$postTags = [];
+$error = null;
+$additionalFields = [];
+$columns = [];
+$columnInfo = [];
+
+// Determine blog table name
+$blogTableName = 'blog_posts';
+$postTagsTableName = 'post_tags';
+
 try {
     // Connect to database
     $db = new PDO(
@@ -32,71 +46,29 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-
-    // Check if blog_posts table exists
-    $blogTableName = 'blog_posts';
-    $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
-    if ($stmt->rowCount() === 0) {
-        // Check if blog table exists instead
-        $stmt = $db->query("SHOW TABLES LIKE 'blog'");
-        if ($stmt->rowCount() > 0) {
-            $blogTableName = 'blog';
-        } else {
-            // Create blog_posts table if neither exists
-            $db->exec("CREATE TABLE IF NOT EXISTS blog_posts (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                author_id INT NOT NULL,
-                content TEXT NOT NULL,
-                excerpt TEXT,
-                is_published TINYINT(1) DEFAULT 1,
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
-            )");
-        }
-    }
-
-    // Check if post_tags table exists
-    $postTagsTableName = 'post_tags';
-    $stmt = $db->query("SHOW TABLES LIKE 'post_tags'");
-    if ($stmt->rowCount() === 0) {
-        // Check if blog_tags table exists instead
-        $stmt = $db->query("SHOW TABLES LIKE 'blog_tags'");
-        if ($stmt->rowCount() > 0) {
-            $postTagsTableName = 'blog_tags';
-        } else {
-            // Create post_tags table if neither exists
-            $db->exec("CREATE TABLE IF NOT EXISTS post_tags (
-                post_id INT NOT NULL,
-                tag_id INT NOT NULL,
-                PRIMARY KEY (post_id, tag_id)
-            )");
-        }
-    }
-
-    // Get all columns from the blog table
-    $columns = [];
-    $columnInfo = [];
-    $stmt = $db->query("DESCRIBE $blogTableName");
-    while ($row = $stmt->fetch()) {
-        $columns[] = $row['Field'];
-        $columnInfo[$row['Field']] = $row;
-    }
-
-    // Check if author_id column exists
-    $hasAuthorIdColumn = in_array('author_id', $columns);
     
-    // Check if excerpt column exists
+    // Get table columns
+    $stmt = $db->query("SHOW TABLES LIKE '$blogTableName'");
+    if ($stmt->rowCount() > 0) {
+        $stmt = $db->query("SHOW COLUMNS FROM $blogTableName");
+        $columns = array_column($stmt->fetchAll(), 'Field');
+        
+        // Get column information for validation
+        $stmt = $db->query("SHOW COLUMNS FROM $blogTableName");
+        $columnInfo = [];
+        while ($row = $stmt->fetch()) {
+            $columnInfo[$row['Field']] = $row;
+        }
+    } else {
+        $error = "Blog posts table not found. Please check your database setup.";
+    }
+    
+    // Check for specific columns
+    $hasSlugColumn = in_array('slug', $columns);
+    $hasAuthorIdColumn = in_array('author_id', $columns);
     $hasExcerptColumn = in_array('excerpt', $columns);
     
-    // Check if status column exists
-    $hasStatusColumn = in_array('status', $columns);
-    
-    // Check if slug column exists
-    $hasSlugColumn = in_array('slug', $columns);
-
     // Get post if editing
-    $post = null;
     if (isset($_GET['id'])) {
         $stmt = $db->prepare("SELECT * FROM $blogTableName WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -150,25 +122,34 @@ if (isset($_SESSION['error'])) {
     <link rel="stylesheet" href="../assets/css/main.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <form method="GET" action="dashboard.php" style="display: inline;">
+                <button type="submit" class="nav-link">Dashboard</button>
             </form>
-        </div>
-
-        <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+            <form method="GET" action="stories.php" style="display: inline;">
+                <button type="submit" class="nav-link">Stories</button>
+            </form>
+            <form method="GET" action="blog-posts.php" style="display: inline;">
+                <button type="submit" class="nav-link active">Blog</button>
+            </form>
+            <form method="GET" action="authors.php" style="display: inline;">
+                <button type="submit" class="nav-link">Authors</button>
+            </form>
+            <form method="GET" action="games.php" style="display: inline;">
+                <button type="submit" class="nav-link">Games</button>
+            </form>
+            <form method="GET" action="directory-items.php" style="display: inline;">
+                <button type="submit" class="nav-link">Directory</button>
+            </form>
+            <form method="GET" action="ai-tools.php" style="display: inline;">
+                <button type="submit" class="nav-link">AI Tools</button>
+            </form>
+            <form method="GET" action="tags.php" style="display: inline;">
+                <button type="submit" class="nav-link">Tags</button>
+            </form>
+            <form method="GET" action="media.php" style="display: inline;">
+                <button type="submit" class="nav-link">Media</button>
             </form>
         </nav>
 
@@ -179,12 +160,12 @@ if (isset($_SESSION['error'])) {
             </form>
         </div>
 
-        <?php if (isset($error)): ?>
+        <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <div class="form-info">
-            <p><strong>Required fields:</strong> Title<?php echo $hasAuthorIdColumn ? ', Author' : ''; ?>, Content</p>
+            <p><strong>Required fields:</strong> Title, Content<?php echo $hasAuthorIdColumn ? ', Author' : ''; ?></p>
         </div>
 
         <form method="POST" action="save-post.php" class="content-form">
@@ -195,7 +176,8 @@ if (isset($_SESSION['error'])) {
             <div class="form-group">
                 <label class="form-label" for="title">Title <span class="required">*</span></label>
                 <input type="text" id="title" name="title" class="form-input" required
-                       value="<?php echo htmlspecialchars($post['title'] ?? ''); ?>">
+                       value="<?php echo htmlspecialchars($post['title'] ?? ''); ?>"
+                       onkeyup="generateSlug(this.value)">
             </div>
 
             <?php if ($hasSlugColumn): ?>
@@ -249,11 +231,28 @@ if (isset($_SESSION['error'])) {
             </div>
             
             <?php foreach ($additionalFields as $field): ?>
+                <?php 
+                $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
+                $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
+                $isBooleanField = isset($columnInfo[$field]) && (
+                    (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) || 
+                    (strpos($field, 'is_') === 0) || 
+                    (strpos($field, 'has_') === 0) || 
+                    (strpos($field, 'needs_') === 0)
+                );
+                ?>
+                
+                <?php if ($isBooleanField): ?>
+                <div class="form-group checkbox-field">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="1"
+                               <?php echo (isset($post[$field]) && $post[$field] == 1) ? 'checked' : ''; ?>>
+                        <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
+                        <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
+                    </label>
+                </div>
+                <?php else: ?>
                 <div class="form-group">
-                    <?php 
-                    $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
-                    $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
-                    ?>
                     <label class="form-label" for="<?php echo $field; ?>">
                         <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
                         <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
@@ -270,6 +269,7 @@ if (isset($_SESSION['error'])) {
                                <?php echo $isRequired ? 'required' : ''; ?>>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
             <?php endforeach; ?>
 
             <div class="form-group">
@@ -299,6 +299,20 @@ if (isset($_SESSION['error'])) {
         <?php endif; ?>
     </div>
     <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .admin-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
         .nav-link {
             background: none;
             border: none;
@@ -311,6 +325,10 @@ if (isset($_SESSION['error'])) {
         }
         .nav-link:hover {
             background: #f5f5f5;
+        }
+        .nav-link.active {
+            background: #007bff;
+            color: white;
         }
         .content-header {
             display: flex;
@@ -328,99 +346,89 @@ if (isset($_SESSION['error'])) {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .form-input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .form-submit {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .form-submit:hover {
+            background: #0069d9;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .form-info {
+            background: #e2f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .required {
+            color: #dc3545;
+        }
         .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 10px;
         }
         .checkbox-label {
             display: flex;
             align-items: center;
             gap: 5px;
+            cursor: pointer;
         }
         .form-metadata {
-            background: #f5f5f5;
+            background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 20px;
             font-size: 14px;
-            color: #666;
-        }
-        .form-metadata p {
-            margin: 5px 0;
-        }
-        .form-info {
-            background: #e7f3ff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .form-info p {
-            margin: 5px 0;
-        }
-        .required {
-            color: #dc3545;
-            margin-left: 3px;
+            color: #6c757d;
         }
         small {
-            color: #666;
+            color: #6c757d;
             font-size: 12px;
             display: block;
             margin-top: 5px;
         }
     </style>
     <script>
-        // Auto-generate slug from title
-        document.addEventListener('DOMContentLoaded', function() {
-            const titleInput = document.getElementById('title');
+        function generateSlug(title) {
             const slugInput = document.getElementById('slug');
-            const excerptInput = document.getElementById('excerpt');
-            const contentInput = document.getElementById('content');
-            
-            if (titleInput && slugInput) {
-                titleInput.addEventListener('input', function() {
-                    // Only auto-generate if slug is empty or hasn't been manually edited
-                    if (!slugInput.value || slugInput._autoGenerated) {
-                        const slug = titleInput.value
-                            .toLowerCase()
-                            .replace(/[^\w\s-]/g, '') // Remove special characters
-                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
-                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-                        
-                        slugInput.value = slug;
-                        slugInput._autoGenerated = true;
-                    }
-                });
-                
-                // Mark when user manually edits the slug
-                slugInput.addEventListener('input', function() {
-                    slugInput._autoGenerated = false;
-                });
+            if (slugInput && !slugInput.value) {
+                const slug = title.toLowerCase()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-');
+                slugInput.value = slug;
             }
-            
-            // Auto-generate excerpt from content
-            if (contentInput && excerptInput) {
-                contentInput.addEventListener('input', function() {
-                    // Only auto-generate if excerpt is empty or hasn't been manually edited
-                    if (!excerptInput.value || excerptInput._autoGenerated) {
-                        // Get first 150 characters of content
-                        let excerpt = contentInput.value.replace(/<[^>]*>/g, '').trim();
-                        if (excerpt.length > 150) {
-                            excerpt = excerpt.substring(0, 150) + '...';
-                        }
-                        
-                        excerptInput.value = excerpt;
-                        excerptInput._autoGenerated = true;
-                    }
-                });
-                
-                // Mark when user manually edits the excerpt
-                excerptInput.addEventListener('input', function() {
-                    excerptInput._autoGenerated = false;
-                });
-            }
-        });
+        }
     </script>
 </body>
 </html>

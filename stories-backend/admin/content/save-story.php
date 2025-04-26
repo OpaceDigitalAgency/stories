@@ -114,6 +114,17 @@ try {
         error_log("Setting author_id to: " . $author_id);
     }
     
+    // Verify author exists
+    $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
+    $stmt->execute([$author_id]);
+    $authorData = $stmt->fetch();
+    
+    if (!$authorData) {
+        throw new Exception("Selected author does not exist or could not be verified");
+    }
+    
+    error_log("Verified author: ID=" . $authorData['id'] . ", Name=" . $authorData['name']);
+    
     // Include author name for backward compatibility
     if (in_array('author', $columns)) {
         $data['author'] = $author['name'];

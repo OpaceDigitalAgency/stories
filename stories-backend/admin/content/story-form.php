@@ -36,7 +36,13 @@ try {
     // Get story if editing
     $story = null;
     if (isset($_GET['id'])) {
-        $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
+        // Join with authors table to get author information
+        $stmt = $db->prepare("
+            SELECT s.*, a.name as author_name
+            FROM stories s
+            LEFT JOIN authors a ON s.author_id = a.id
+            WHERE s.id = ?
+        ");
         $stmt->execute([$_GET['id']]);
         $story = $stmt->fetch();
         
@@ -44,6 +50,10 @@ try {
             header("Location: stories.php");
             exit;
         }
+        
+        // Debug log for author information
+        error_log("Story author_id: " . ($story['author_id'] ?? 'null'));
+        error_log("Story author_name: " . ($story['author_name'] ?? 'null'));
     }
 
     // Get authors for dropdown
@@ -149,11 +159,14 @@ try {
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
                         <option value="<?php echo $author['id']; ?>"
-                                <?php echo ($story['author_id'] ?? '') == $author['id'] ? 'selected' : ''; ?>>
+                                <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($author['name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (isset($story['author_id']) && isset($story['author_name'])): ?>
+                    <small>Current author: <?php echo htmlspecialchars($story['author_name']); ?></small>
+                <?php endif; ?>
             </div>
 
             <div class="form-group">

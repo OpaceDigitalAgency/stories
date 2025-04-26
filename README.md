@@ -25,6 +25,11 @@ We've addressed several issues with the platform:
    - Author selection now saves properly
    - All form fields are properly processed and stored in the database
 
+3. **Fixed Author Display Issues**: Authors now display correctly in the admin interface
+   - Authors are properly shown in the stories list
+   - The correct author is selected when editing a story
+   - Added verification to ensure selected authors exist
+
 3. **Improved "Much Loved" Section**: This section now displays stories sorted by their average rating in descending order
 
 ## Technical Details

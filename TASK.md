@@ -15,6 +15,11 @@
   - Fixed author selection not saving properly
   - Added debug logging for troubleshooting
 
+- Fixed author display issues in the admin interface
+  - Modified SQL queries to properly join with the authors table
+  - Updated the story form to display the current author when editing
+  - Added verification to ensure selected authors exist
+
 ### Documentation
 - Created PLANNING.md with architecture decisions and solutions
 - Created PROGRESS.md to track changes

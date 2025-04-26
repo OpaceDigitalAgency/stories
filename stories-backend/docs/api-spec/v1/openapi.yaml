@@ -1,0 +1,177 @@
+openapi: 3.0.0
+info:
+  title: Stories from the Web API
+  description: API for Stories from the Web platform
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Default API server
+
+paths:
+  /directory-items:
+    get:
+      summary: Get directory items
+      description: Returns a list of directory items
+      parameters:
+        - name: populate
+          in: query
+          description: Whether to populate related entities
+          schema:
+            type: string
+            enum: ['*']
+        - name: sort
+          in: query
+          description: Field to sort by, with optional direction prefix (- for descending)
+          schema:
+            type: string
+            example: 'title:asc'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectoryItem'
+
+  /ai-tools:
+    get:
+      summary: Get AI tools
+      description: Returns a list of AI tools
+      parameters:
+        - name: populate
+          in: query
+          description: Whether to populate related entities
+          schema:
+            type: string
+            enum: ['*']
+        - name: sort
+          in: query
+          description: Field to sort by, with optional direction prefix (- for descending)
+          schema:
+            type: string
+            example: 'title:asc'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiTool'
+
+components:
+  schemas:
+    DirectoryItem:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - url
+        - category
+        - logo
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        name:
+          type: string
+          description: Name of the directory item
+        description:
+          type: string
+          description: Description of the directory item
+        url:
+          type: string
+          description: URL of the directory item
+        category:
+          type: string
+          description: Category of the directory item
+        logo:
+          type: string
+          description: URL to the logo image
+        rating:
+          type: number
+          format: float
+          description: Rating of the directory item
+        priceRange:
+          type: string
+          description: Price range of the directory item
+        slug:
+          type: string
+          description: URL-friendly slug
+        isPublished:
+          type: boolean
+          description: Whether the item is published
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    AiTool:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - url
+        - category
+        - logo
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        name:
+          type: string
+          description: Name of the AI tool
+        description:
+          type: string
+          description: Description of the AI tool
+        url:
+          type: string
+          description: URL of the AI tool
+        category:
+          type: string
+          description: Category of the AI tool
+        logo:
+          type: string
+          description: URL to the logo image
+        slug:
+          type: string
+          description: URL-friendly slug
+        isPublished:
+          type: boolean
+          description: Whether the tool is published
+        pricingType:
+          type: string
+          enum: [free, freemium, paid]
+          description: Type of pricing model
+        priceInfo:
+          type: string
+          nullable: true
+          description: Detailed pricing information
+        features:
+          type: string
+          description: Features of the AI tool
+        rating:
+          type: number
+          format: float
+          description: Rating of the AI tool
+        featured:
+          type: boolean
+          description: Whether the tool is featured
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp

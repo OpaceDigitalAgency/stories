@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": "Story Writing Guide",
+    "description": "A comprehensive guide to writing compelling stories",
+    "url": "https://example.com/guides/story-writing",
+    "category": "guides",
+    "logo": "https://example.com/images/story-writing-guide.jpg",
+    "rating": 4.5,
+    "priceRange": "Free",
+    "slug": "story-writing-guide",
+    "isPublished": true,
+    "createdAt": "2025-04-25T16:07:17Z",
+    "updatedAt": "2025-04-25T16:07:17Z"
+  },
+  {
+    "id": 2,
+    "name": "Children's Book Publishers",
+    "description": "Directory of publishers specializing in children's books",
+    "url": "https://example.com/publishers/childrens",
+    "category": "publishers",
+    "logo": "https://example.com/images/childrens-book-publishers.jpg",
+    "rating": 4.0,
+    "priceRange": "Premium",
+    "slug": "childrens-book-publishers",
+    "isPublished": true,
+    "createdAt": "2025-04-25T16:07:17Z",
+    "updatedAt": "2025-04-25T16:07:17Z"
+  }
+]

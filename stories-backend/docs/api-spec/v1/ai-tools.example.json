@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1,
+    "name": "Story Generator",
+    "description": "AI-powered tool to generate story ideas and outlines",
+    "url": "https://example.com/tools/story-generator",
+    "category": "writing",
+    "logo": "https://example.com/images/story-generator.jpg",
+    "slug": "story-generator",
+    "isPublished": true,
+    "pricingType": "freemium",
+    "priceInfo": "Free basic version, $9.99/month for premium",
+    "features": "Plot generation, character development, scene ideas",
+    "rating": 4.5,
+    "featured": true,
+    "createdAt": "2025-04-25T16:07:17Z",
+    "updatedAt": "2025-04-25T16:07:17Z"
+  },
+  {
+    "id": 2,
+    "name": "Character Creator",
+    "description": "Create detailed character profiles with AI assistance",
+    "url": "https://example.com/tools/character-creator",
+    "category": "writing",
+    "logo": "https://example.com/images/character-creator.jpg",
+    "slug": "character-creator",
+    "isPublished": true,
+    "pricingType": "free",
+    "priceInfo": null,
+    "features": "Character profiles, personality traits, backstory generation",
+    "rating": 4.0,
+    "featured": true,
+    "createdAt": "2025-04-25T16:07:17Z",
+    "updatedAt": "2025-04-25T16:07:17Z"
+  }
+]

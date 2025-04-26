@@ -70,13 +70,14 @@ try {
     if (latestSelfPublishedStories.length === 0) {
       console.log('No self-published stories found, using fallback');
       latestSelfPublishedStories = allStories.filter(story => story.isSelfPublished).slice(0, 6);
-      if (latestSelfPublishedStories.length === 0) {
-        latestSelfPublishedStories = allStories.slice(0, 6);
-      }
+      // Don't fall back to all stories if none are self-published
+      // if (latestSelfPublishedStories.length === 0) {
+      //   latestSelfPublishedStories = allStories.slice(0, 6);
+      // }
     }
   } catch (err) {
     console.error('Error fetching self-published stories:', err);
-    latestSelfPublishedStories = allStories.slice(0, 6);
+    latestSelfPublishedStories = allStories.filter(story => story.isSelfPublished).slice(0, 6);
   }
   
   try {
@@ -86,13 +87,14 @@ try {
     if (aiEnhancedStories.length === 0) {
       console.log('No AI-enhanced stories found, using fallback');
       aiEnhancedStories = allStories.filter(story => story.isAiEnhanced).slice(0, 6);
-      if (aiEnhancedStories.length === 0) {
-        aiEnhancedStories = allStories.slice(0, 6);
-      }
+      // Don't fall back to all stories if none are AI-enhanced
+      // if (aiEnhancedStories.length === 0) {
+      //   aiEnhancedStories = allStories.slice(0, 6);
+      // }
     }
   } catch (err) {
     console.error('Error fetching AI-enhanced stories:', err);
-    aiEnhancedStories = allStories.slice(0, 6);
+    aiEnhancedStories = allStories.filter(story => story.isAiEnhanced).slice(0, 6);
   }
   
   try {
@@ -103,13 +105,14 @@ try {
     if (sponsoredStories.length === 0) {
       console.log('No sponsored stories found, using fallback');
       sponsoredStories = allStories.filter(story => story.sponsored).slice(0, 6);
-      if (sponsoredStories.length === 0) {
-        sponsoredStories = allStories.slice(0, 6);
-      }
+      // Don't fall back to all stories if none are sponsored
+      // if (sponsoredStories.length === 0) {
+      //   sponsoredStories = allStories.slice(0, 6);
+      // }
     }
   } catch (err) {
     console.error('Error fetching sponsored stories:', err);
-    sponsoredStories = allStories.slice(0, 6);
+    sponsoredStories = allStories.filter(story => story.sponsored).slice(0, 6);
   }
   
   featuredAuthors = await fetchAuthors();

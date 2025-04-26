@@ -1,5 +1,10 @@
 <?php
-// Simply output the raw source of api.php so we can be 100% sure it's deployed
-echo '<pre>';
-echo htmlspecialchars(file_get_contents(__DIR__ . '/api.php'));
-echo '</pre>';
+// debug_dump.php
+
+// Bypass any router auth/logic:
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode([
+  'debug' => 'hello from debug_dump',
+  'time'  => date('c')
+]);
+exit;

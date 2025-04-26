@@ -8,6 +8,8 @@ import SponsoredCarousel from '../../components/SponsoredCarousel.astro';
 import { fetchStories, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
+export const prerender = true;
+
 // Fetch stories from API
 const stories = await fetchStories(1, 10);
 
@@ -180,13 +182,7 @@ const popularTags = [...new Set(stories.flatMap(story => story.tags || []))].sli
               
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stories.map(story => (
-                  <CardStory 
-                    title={story.title}
-                    excerpt={story.excerpt}
-                    coverImage={story.coverImage}
-                    slug={story.slug}
-                    publishDate={story.publishDate}
-                  />
+                  <CardStory story={story} />
                 ))}
               </div>
               

@@ -173,21 +173,29 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stories - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="stories.php" class="nav-link active">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
                 <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
@@ -198,10 +206,15 @@ if (isset($_SESSION['error'])) {
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1>Stories</h1>
-            <form method="GET" action="story-form.php" style="display: inline;">
-                <button type="submit" class="form-submit">Add New Story</button>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title">Stories</h1>
+                <p class="page-description">Manage all your stories from here.</p>
+            </div>
+            <form method="GET" action="story-form.php">
+                <button type="submit" class="btn btn-success">
+                    <span class="icon-edit"></span> Add New Story
+                </button>
             </form>
         </div>
 
@@ -243,15 +256,27 @@ if (isset($_SESSION['error'])) {
                                 <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
                                 <td><?php echo date('M j, Y', strtotime($story['updated_at'])); ?></td>
                                 <td>
-                                    <form method="GET" action="story-form.php" style="display: inline;">
-                                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                        <button type="submit" class="form-submit">Edit</button>
-                                    </form>
-                                    <form method="POST" action="delete-story.php" style="display: inline;">
-                                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                        <button type="submit" class="form-submit" style="background: #dc3545;"
-                                                onclick="return confirm('Are you sure you want to delete this story?')">Delete</button>
-                                    </form>
+                                    <div class="table-actions">
+                                        <form method="GET" action="view-story.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                            <button type="submit" class="btn btn-info btn-sm">
+                                                <span class="icon-view"></span> View
+                                            </button>
+                                        </form>
+                                        <form method="GET" action="story-form.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <span class="icon-edit"></span> Edit
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="delete-story.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm" 
+                                                    onclick="return confirm('Are you sure you want to delete this story?')">
+                                                <span class="icon-delete"></span> Delete
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -260,51 +285,5 @@ if (isset($_SESSION['error'])) {
             </table>
         </div>
     </div>
-    <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .content-header h1 {
-            margin: 0;
-        }
-        .text-center {
-            text-align: center;
-            padding: 20px;
-        }
-        .table-container {
-            overflow-x: auto;
-        }
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .table th, .table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        .table th {
-            background-color: #f5f5f5;
-        }
-        .table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-    </style>
 </body>
 </html>

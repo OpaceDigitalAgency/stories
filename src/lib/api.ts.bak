@@ -1,0 +1,17 @@
+rc/lib/api.ts</path>
+<content lines="5-11">
+export interface Story {
+  title: string;
+  excerpt: string;
+  coverImage: string;
+  slug: string;
+  publishDate: string;
+  featured?: boolean;
+  sponsored?: boolean;
+  isAiEnhanced?: boolean;
+  isSelfPublished?: boolean;
+  needsModeration?: boolean;
+  rating?: number;
+  tags?: string[];
+  author?: Author;
+}

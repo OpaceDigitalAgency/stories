@@ -98,27 +98,43 @@ interface StoryFilters {
 
 // Resource-specific fetch functions with proper mapping
 export async function fetchStories(page = 1, limit = 10, filters: StoryFilters = {}): Promise<Story[]> {
+  // Default parameters
   const params: Record<string, string | number | boolean> = {
-    'sort': 'publishedAt:desc',
     'pagination[limit]': limit,
     'pagination[page]': page
   };
   
-  // Add filters
-  if (filters.featured !== undefined) {
-    params['filters[featured][$eq]'] = filters.featured;
-  }
-  if (filters.sponsored !== undefined) {
-    params['filters[is_sponsored][$eq]'] = filters.sponsored;
-  }
-  if (filters.isSelfPublished !== undefined) {
-    params['filters[is_self_published][$eq]'] = filters.isSelfPublished;
-  }
-  if (filters.isAiEnhanced !== undefined) {
-    params['filters[is_ai_enhanced][$eq]'] = filters.isAiEnhanced;
-  }
-  if (filters.sort) {
+  // Set default sort if not specified in filters
+  if (!filters.sort) {
+    params['sort'] = 'publishedAt:desc';
+  } else {
     params['sort'] = filters.sort;
+  }
+  
+  // Add filters only if they're defined
+  // Using a more lenient approach to avoid breaking the API
+  try {
+    console.log("Applying filters:", JSON.stringify(filters));
+    
+    // Only apply filters if they're explicitly set to true
+    // This prevents filtering out stories when the filter isn't explicitly true
+    if (filters.featured === true) {
+      params['filters[featured][$eq]'] = true;
+    }
+    
+    if (filters.sponsored === true) {
+      params['filters[is_sponsored][$eq]'] = true;
+    }
+    
+    if (filters.isSelfPublished === true) {
+      params['filters[is_self_published][$eq]'] = true;
+    }
+    
+    if (filters.isAiEnhanced === true) {
+      params['filters[is_ai_enhanced][$eq]'] = true;
+    }
+  } catch (error) {
+    console.error("Error applying filters:", error);
   }
   
   const raw = await fetchApi<any[]>('/stories', params);

@@ -106,14 +106,6 @@ try {
         'content' => $content
     ];
 
-    // Add author data - ensure author_id is always included
-    if (in_array('author_id', $columns)) {
-        $data['author_id'] = $author_id;
-        
-        // Debug log for author_id
-        error_log("Setting author_id to: " . $author_id);
-    }
-    
     // Verify author exists
     $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
     $stmt->execute([$author_id]);
@@ -239,6 +231,18 @@ try {
             $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
             $stmt->execute([$id]);
         }
+        
+        // Delete existing author relationships
+        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+        if ($stmt->rowCount() > 0) {
+            $stmt = $db->prepare("DELETE FROM story_authors WHERE story_id = ?");
+            $stmt->execute([$id]);
+            
+            // Add new author relationship
+            $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+            $stmt->execute([$id, $author_id]);
+            error_log("Updated story_authors relationship: story_id=$id, author_id=$author_id");
+        }
 
         $message = "Story updated successfully";
     } else {
@@ -256,6 +260,14 @@ try {
         $stmt = $db->prepare($sql);
         $stmt->execute(array_values($data));
         $id = $db->lastInsertId();
+        
+        // Add author relationship for new story
+        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+        if ($stmt->rowCount() > 0) {
+            $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+            $stmt->execute([$id, $author_id]);
+            error_log("Created story_authors relationship: story_id=$id, author_id=$author_id");
+        }
 
         $message = "Story created successfully";
     }

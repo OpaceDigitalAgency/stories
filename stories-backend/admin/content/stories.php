@@ -78,25 +78,27 @@ try {
         $query = "SELECT s.* FROM stories s ORDER BY s.created_at DESC";
         $stories = $db->query($query)->fetchAll();
         
-        // Then for each story, try to get the author information
+        // Then for each story, try to get the author information from story_authors table
         foreach ($stories as &$story) {
-            // Get author information if author_id exists
-            if (isset($story['author_id']) && $story['author_id']) {
-                try {
-                    $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
-                    $stmt->execute([$story['author_id']]);
-                    $author = $stmt->fetch();
-                    
-                    if ($author) {
-                        $story['author_name'] = $author['name'];
-                    } else {
-                        $story['author_name'] = 'Unknown';
-                    }
-                } catch (Exception $e) {
-                    error_log("Error fetching author for story ID " . $story['id'] . ": " . $e->getMessage());
+            try {
+                // Get author from story_authors table
+                $stmt = $db->prepare("
+                    SELECT a.id, a.name
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = ?
+                ");
+                $stmt->execute([$story['id']]);
+                $author = $stmt->fetch();
+                
+                if ($author) {
+                    $story['author_id'] = $author['id'];
+                    $story['author_name'] = $author['name'];
+                } else {
                     $story['author_name'] = 'Unknown';
                 }
-            } else {
+            } catch (Exception $e) {
+                error_log("Error fetching author for story ID " . $story['id'] . ": " . $e->getMessage());
                 $story['author_name'] = 'Unknown';
             }
             

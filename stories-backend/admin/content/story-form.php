@@ -47,22 +47,21 @@ try {
                 exit;
             }
             
-            // Now try to get author information
+            // Now try to get author information from story_authors table
             try {
-                if (isset($story['author_id']) && $story['author_id']) {
-                    $stmt = $db->prepare("
-                        SELECT a.id as author_id, a.name as author_name
-                        FROM authors a
-                        WHERE a.id = ?
-                    ");
-                    $stmt->execute([$story['author_id']]);
-                    $author = $stmt->fetch();
-                    
-                    if ($author) {
-                        $story['author_name'] = $author['author_name'];
-                        // Make sure author_id is set correctly
-                        $story['author_id'] = $author['author_id'];
-                    }
+                $stmt = $db->prepare("
+                    SELECT a.id as author_id, a.name as author_name
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = ?
+                ");
+                $stmt->execute([$story['id']]);
+                $author = $stmt->fetch();
+                
+                if ($author) {
+                    $story['author_name'] = $author['author_name'];
+                    $story['author_id'] = $author['author_id'];
+                    error_log("Found author for story: " . $author['author_name'] . " (ID: " . $author['author_id'] . ")");
                 }
             } catch (Exception $e) {
                 error_log("Error fetching author: " . $e->getMessage());

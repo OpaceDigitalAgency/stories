@@ -74,16 +74,29 @@ try {
 
     // Get all stories with all available fields
     try {
-        // Simple direct query to get all stories
+        // Get all stories
         $query = "SELECT * FROM stories ORDER BY created_at DESC";
-        $stories = $db->query($query)->fetchAll();
+        $allStories = $db->query($query)->fetchAll();
         
-        error_log("Number of stories fetched: " . count($stories));
+        error_log("Number of stories fetched: " . count($allStories));
         
-        // Debug log all stories
-        foreach ($stories as $story) {
-            error_log("Story ID: " . $story['id'] . ", Title: " . $story['title']);
+        // Create a new array to store unique stories by ID
+        $stories = [];
+        $seenIds = [];
+        
+        // Only add each story ID once
+        foreach ($allStories as $story) {
+            $id = $story['id'];
+            if (!in_array($id, $seenIds)) {
+                $stories[] = $story;
+                $seenIds[] = $id;
+                error_log("Adding story ID: " . $id . ", Title: " . $story['title']);
+            } else {
+                error_log("Skipping duplicate story ID: " . $id . ", Title: " . $story['title']);
+            }
         }
+        
+        error_log("Number of unique stories: " . count($stories));
         
         // Then for each story, try to get the author information from story_authors table
         foreach ($stories as &$story) {

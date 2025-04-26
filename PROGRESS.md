@@ -4,6 +4,9 @@
 - Fixed issue with all sections showing the same stories by adding proper filtering parameters to API calls
 - Fixed form saving issues in the admin panel for boolean fields like "Is Self Published" and "AI Enhanced"
 - Fixed author selection not saving properly by adding debug logging and ensuring proper processing
+- Fixed author display issues in the stories list and edit form
+- Updated SQL queries to properly join with the authors table
+- Added verification to ensure selected authors exist
 - Updated "Much Loved" section to sort by average_rating in descending order
 - Created documentation in PLANNING.md to explain the changes and architecture
 

@@ -73,15 +73,20 @@ try {
     }
 
     // Get all stories with all available fields
-    $query = "SELECT s.*, a.name as author_name, 
-              (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') 
-               FROM story_tags st 
-               JOIN tags t ON st.tag_id = t.id 
+    $query = "SELECT s.*, a.name as author_name, a.id as author_id,
+              (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ')
+               FROM story_tags st
+               JOIN tags t ON st.tag_id = t.id
                WHERE st.story_id = s.id) as tags
-              FROM stories s 
+              FROM stories s
               LEFT JOIN authors a ON $joinCondition
               ORDER BY s.created_at DESC";
     $stories = $db->query($query)->fetchAll();
+    
+    // Debug log for author information
+    foreach ($stories as $story) {
+        error_log("Story ID: " . $story['id'] . ", Author ID: " . ($story['author_id'] ?? 'null') . ", Author Name: " . ($story['author_name'] ?? 'null'));
+    }
 
 } catch (PDOException $e) {
     error_log("Stories page error: " . $e->getMessage());

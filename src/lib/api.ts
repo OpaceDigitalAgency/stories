@@ -179,3 +179,6 @@ export async function fetchAuthor(slug: string): Promise<Author> {
     slug: item.slug
   };
 }
+
+// Export fetchFromApi as an alias for backward compatibility
+export const fetchFromApi = fetchApi;

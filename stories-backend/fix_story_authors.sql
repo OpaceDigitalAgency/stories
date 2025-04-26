@@ -1,11 +1,14 @@
--- First, clear existing story_authors relationships to avoid duplicates
-DELETE FROM story_authors;
+-- First, check if the relationship already exists before trying to insert
+-- This prevents the duplicate key error
 
--- Insert relationships for each story
--- This assumes that stories with ID 1 should be authored by John Doe (ID 1)
--- and stories with ID 2 should be authored by Jane Smith (ID 2)
+-- Delete existing relationships for story 1 if any
+DELETE FROM story_authors WHERE story_id = 1;
+
+-- Insert relationship for story 1 with John Doe (ID 1)
 INSERT INTO story_authors (story_id, author_id) VALUES (1, 1);
-INSERT INTO story_authors (story_id, author_id) VALUES (2, 2);
+
+-- We don't need to modify story 2's relationship since it already exists
+-- The error showed "Duplicate entry '2-2'" which means story 2 is already linked to author 2
 
 -- Update the stories table to ensure proper flags for filtering
 -- Make story 1 featured and sponsored

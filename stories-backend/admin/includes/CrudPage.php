@@ -45,67 +45,87 @@ class CrudPage extends AdminPage {
         }
     }
 
-    protected function getListData() {
-        $page = $this->getParam('page', 1);
-        $pageSize = $this->getParam('pageSize', $this->itemsPerPage);
-        $sortField = $this->getParam('sort', $this->defaultSortField);
+        /**
+     * Get list data
+     */
+    protected function getListData()
+    {
+        // ---------- build query ----------
+        $page          = $this->getParam('page', 1);
+        $pageSize      = $this->getParam('pageSize', $this->itemsPerPage);
+        $sortField     = $this->getParam('sort', $this->defaultSortField);
         $sortDirection = $this->getParam('direction', $this->defaultSortDirection);
+        $search        = $this->getParam('search', '');
 
-        if (!in_array($sortField, $this->sortableFields)) $sortField = $this->defaultSortField;
-        if (!in_array($sortDirection, ['asc', 'desc'])) $sortDirection = $this->defaultSortDirection;
+        if (!in_array($sortField, $this->sortableFields))    $sortField     = $this->defaultSortField;
+        if (!in_array($sortDirection, ['asc', 'desc']))      $sortDirection = $this->defaultSortDirection;
 
-        $params = ['page' => $page, 'pageSize' => $pageSize, 'sort' => ($sortDirection === 'desc' ? '-' : '') . $sortField];
-        if ($search = $this->getParam('search', '')) {
+        $params = [
+            'page'     => $page,
+            'pageSize' => $pageSize,
+            'sort'     => ($sortDirection === 'desc' ? '-' : '') . $sortField,
+        ];
+        if ($search) {
             foreach ($this->searchableFields as $field) {
                 $params[$field] = ['like' => $search];
             }
         }
 
+        // ---------- first attempt ----------
+        error_log("CrudPage::getListData – primary request to {$this->endpoint} with " . json_encode($params));
         $response = $this->apiClient->get($this->endpoint, $params);
 
-        if (!$response) {
-            $this->setError('Failed to fetch ' . $this->entityNamePlural);
+        // ---------- fallback (no page / pageSize / sort) ----------
+        if ($response === false) {
+            error_log("CrudPage::getListData – primary request failed, retrying without pagination/sort");
+            $response = $this->apiClient->get($this->endpoint, $search ? [$search] : []);
+        }
+
+        // ---------- bail out if still no data ----------
+        if ($response === false) {
+            $error = $this->apiClient->getFormattedError();
+            $this->setError('Failed to fetch ' . $this->entityNamePlural . ($error ? ': ' . $error : ''));
             return;
         }
 
-        $items = [];
+        /* ---------- normal processing from here down ---------- */
+        // Accept either Strapi-style {"data":[…],"meta":{…}} or flat [ … ]
+        $items = isset($response['data']) ? $response['data'] : $response;
 
-        if (isset($response['data'])) {
-            $items = $response['data'];
-        } elseif (is_array($response)) {
-            $items = $response;
-        }
+        // synthesize minimal pagination if API didn’t provide one
+        $pagination = $response['meta']['pagination'] ?? [
+            'page'      => 1,
+            'pageSize'  => count($items),
+            'pageCount' => 1,
+            'total'     => count($items),
+        ];
 
+        // map attributes so the templates can use a consistent structure
         foreach ($items as &$item) {
-            if (isset($item['attributes']['attributes'])) {
-                $item['attributes'] = $item['attributes']['attributes'];
-            } elseif (isset($item['attributes'])) {
-                $item['attributes'] = $item['attributes'];
-            } else {
-                // If flat structure, wrap fields inside 'attributes'
-                $attributes = [];
-                foreach ($item as $k => $v) {
-                    if (!in_array($k, ['id', 'type', 'links', 'meta', 'relationships'])) {
-                        $attributes[$k] = $v;
-                    }
-                }
-                $item['attributes'] = $attributes;
+            if (!isset($item['attributes'])) {
+                $attr = $item;
+                unset($attr['id']);
+                $item = ['id' => $item['id'] ?? null, 'attributes' => $attr];
+            }
+            foreach ($this->fields as $f) {
+                if (!isset($f['api_field'])) continue;
+                $api   = $f['api_field'];
+                $admin = $f['name'];
+                if (isset($item[$api]))                       $item['attributes'][$admin] = $item[$api];
+                elseif (isset($item['attributes'][$api]))    $item['attributes'][$admin] = $item['attributes'][$api];
             }
         }
 
-        $this->data['items'] = $items;
-        $this->data['pagination'] = $response['meta']['pagination'] ?? [
-            'page' => $page,
-            'pageSize' => $pageSize,
-            'pageCount' => 1,
-            'total' => count($items)
-        ];
-        $this->data['sort'] = ['field' => $sortField, 'direction' => $sortDirection];
-        $this->data['search'] = $search;
-        $this->data['fields'] = $this->fields;
-        $this->data['entityName'] = $this->entityName;
+        // push to the view
+        $this->data['items']        = $items;
+        $this->data['pagination']   = $pagination;
+        $this->data['sort']         = ['field' => $sortField, 'direction' => $sortDirection];
+        $this->data['search']       = $search;
+        $this->data['fields']       = $this->fields;
+        $this->data['entityName']   = $this->entityName;
         $this->data['entityNamePlural'] = $this->entityNamePlural;
     }
+
 
     protected function getCreateData() {
         $this->data['fields'] = $this->fields;

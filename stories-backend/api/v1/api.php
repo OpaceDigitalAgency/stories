@@ -392,17 +392,17 @@ try {
             while ($row = $stmt->fetch()) {
                 $items[] = [
                     'id' => $row['id'],
-                    'name' => $row['title'],
+                    'title' => $row['title'],  // Use database field name for consistency
                     'description' => $row['description'],
-                    'url' => $row['website_url'],
+                    'website_url' => $row['website_url'],  // Use database field name for consistency
                     'category' => $row['category'],
-                    'logo' => $row['cover_url'],
+                    'cover_url' => $row['cover_url'],  // Use database field name for consistency
                     'rating' => isset($row['rating']) ? (float)$row['rating'] : null,
-                    'priceRange' => isset($row['price_range']) ? $row['price_range'] : null,
+                    'price_range' => isset($row['price_range']) ? $row['price_range'] : null,  // Use database field name
                     'slug' => isset($row['slug']) ? $row['slug'] : null,
-                    'isPublished' => (bool)$row['is_published'],
-                    'createdAt' => isset($row['created_at']) ? date('c', strtotime($row['created_at'])) : null,
-                    'updatedAt' => isset($row['updated_at']) ? date('c', strtotime($row['updated_at'])) : null
+                    'is_published' => (bool)$row['is_published'],  // Use database field name
+                    'created_at' => isset($row['created_at']) ? date('c', strtotime($row['created_at'])) : null,
+                    'updated_at' => isset($row['updated_at']) ? date('c', strtotime($row['updated_at'])) : null
                 ];
             }
             
@@ -418,22 +418,22 @@ try {
             while ($row = $stmt->fetch()) {
                 $tool = [
                     'id' => $row['id'],
-                    'name' => $row['title'],
+                    'title' => $row['title'],  // Use database field name for consistency
                     'description' => $row['description'],
-                    'url' => $row['website_url'],
+                    'website_url' => $row['website_url'],  // Use database field name for consistency
                     'category' => $row['category'],
-                    'logo' => $row['cover_url'],
+                    'cover_url' => $row['cover_url'],  // Use database field name for consistency
                     'slug' => isset($row['slug']) ? $row['slug'] : null,
-                    'isPublished' => (bool)$row['is_published']
+                    'is_published' => (bool)$row['is_published']  // Use database field name
                 ];
                 
                 // Add optional fields if they exist
                 if (isset($row['pricing_type'])) {
-                    $tool['pricingType'] = $row['pricing_type'];
+                    $tool['pricing_type'] = $row['pricing_type'];  // Use database field name
                 }
                 
                 if (isset($row['price_info'])) {
-                    $tool['priceInfo'] = $row['price_info'];
+                    $tool['price_info'] = $row['price_info'];  // Use database field name
                 }
                 
                 if (isset($row['features'])) {
@@ -449,11 +449,11 @@ try {
                 }
                 
                 if (isset($row['created_at'])) {
-                    $tool['createdAt'] = date('c', strtotime($row['created_at']));
+                    $tool['created_at'] = date('c', strtotime($row['created_at']));  // Use database field name
                 }
                 
                 if (isset($row['updated_at'])) {
-                    $tool['updatedAt'] = date('c', strtotime($row['updated_at']));
+                    $tool['updated_at'] = date('c', strtotime($row['updated_at']));  // Use database field name
                 }
                 
                 $tools[] = $tool;

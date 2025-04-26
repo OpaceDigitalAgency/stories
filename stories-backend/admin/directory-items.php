@@ -44,7 +44,7 @@ class DirectoryItemsPage extends CrudPage {
         // Set fields
         $this->fields = [
             [
-                'name' => 'name',
+                'name' => 'title',  // Changed from 'name' to match database field
                 'label' => 'Name',
                 'type' => 'text',
                 'main' => true,
@@ -52,7 +52,7 @@ class DirectoryItemsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'api_field' => 'name' // API field name
+                'api_field' => 'title' // API field name matches database field
             ],
             [
                 'name' => 'description',
@@ -65,7 +65,7 @@ class DirectoryItemsPage extends CrudPage {
                 'api_field' => 'description' // API field name
             ],
             [
-                'name' => 'url',
+                'name' => 'website_url',  // Changed from 'url' to match database field
                 'label' => 'URL',
                 'type' => 'text',
                 'list' => true,
@@ -73,7 +73,7 @@ class DirectoryItemsPage extends CrudPage {
                 'view' => true,
                 'default' => '',
                 'help' => 'Full URL including https://',
-                'api_field' => 'url' // API field name
+                'api_field' => 'website_url' // API field name matches database field
             ],
             [
                 'name' => 'category',
@@ -95,7 +95,7 @@ class DirectoryItemsPage extends CrudPage {
                 'api_field' => 'category' // API field name
             ],
             [
-                'name' => 'logo',
+                'name' => 'cover_url',  // Changed from 'logo' to match database field
                 'label' => 'Logo',
                 'type' => 'image',
                 'list' => false,
@@ -138,7 +138,7 @@ class DirectoryItemsPage extends CrudPage {
         $this->sortableFields = ['id', 'name', 'category'];
         
         // Set default sort
-        $this->defaultSortField = 'name';
+        $this->defaultSortField = 'title';
         $this->defaultSortDirection = 'asc';
     }
     
@@ -147,15 +147,15 @@ class DirectoryItemsPage extends CrudPage {
      */
     protected function handleCreate() {
         // Handle file upload
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
             // Create file upload instance
             $fileUpload = new FileUpload($this->config['media']);
             
             // Upload file
-            $file = $fileUpload->upload($_FILES['logo'], 'directory_item', 0, 'logo');
+            $file = $fileUpload->upload($_FILES['cover_url'], 'directory_item', 0, 'cover_url');
             
             if ($file) {
-                $_POST['logo'] = $file;
+                $_POST['cover_url'] = $file;
             } else {
                 $this->errors = array_merge($this->errors, $fileUpload->getErrors());
                 return;
@@ -171,7 +171,7 @@ class DirectoryItemsPage extends CrudPage {
      */
     protected function handleEdit() {
         // Handle file upload
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
             // Create file upload instance
             $fileUpload = new FileUpload($this->config['media']);
             
@@ -179,10 +179,10 @@ class DirectoryItemsPage extends CrudPage {
             $id = $this->getParam('id');
             
             // Upload file
-            $file = $fileUpload->upload($_FILES['logo'], 'directory_item', $id, 'logo');
+            $file = $fileUpload->upload($_FILES['cover_url'], 'directory_item', $id, 'cover_url');
             
             if ($file) {
-                $_POST['logo'] = $file;
+                $_POST['cover_url'] = $file;
             } else {
                 $this->errors = array_merge($this->errors, $fileUpload->getErrors());
                 return;

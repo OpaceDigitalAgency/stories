@@ -10,6 +10,48 @@
 - Provide tools for authors to publish and manage their content
 - Build an admin interface for content management
 
+## Current Architecture
+
+The Stories from the Web platform uses a modern architecture with separate backend and frontend components:
+
+### Backend Components
+- **PHP REST API**: Custom PHP framework providing RESTful endpoints
+- **Authentication System**: JWT-based authentication for secure API access
+- **Admin Interface**: PHP-based admin panel for content management
+- **MySQL Database**: Relational database storing all content and user data
+
+### Frontend Components
+- **Astro Framework**: Modern static site generator with dynamic capabilities
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **TypeScript**: Typed JavaScript for improved developer experience
+
+### API Response Format
+All API endpoints now use a standardized flat array format:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Example Item",
+    "slug": "example-item",
+    "other_fields": "values"
+  },
+  {
+    "id": 2,
+    "title": "Another Item",
+    "slug": "another-item",
+    "other_fields": "values"
+  }
+]
+```
+
+### Admin Interface Architecture
+The admin interface uses a simplified architecture focused on reliability:
+- **Direct Form Submissions**: Pure HTML forms submit directly to PHP processors
+- **CSS-Only UI**: Navigation and interactive elements use CSS without JavaScript
+- **Session Auth**: Simple session-based authentication without JWT complexity
+- **Server-Side Processing**: All data operations handled directly by PHP
+
 ## Current Issues
 - Frontend-Backend Integration:
   * Frontend (Netlify) not displaying content from backend API
@@ -85,6 +127,7 @@ See permanent_case_fix.php for implementation details.
     - Test scripts not using the same autoloader bootstrap
   - Error reporting turned off in development mode (fixed)
   - Error logging pointing to non-existent path (fixed)
+
 ## Database Schema
 
 This section documents the database schema based on `stories-backend/database.sql`.
@@ -103,5 +146,22 @@ This section documents the database schema based on `stories-backend/database.sq
 *   **games**: `id`, `title`, `description`, `url`, `category`, `created_at`, `updated_at`
 *   **ai_tools**: `id`, `name`, `description`, `url`, `category`, `created_at`, `updated_at`
 *   **media**: `id`, `entity_type`, `entity_id`, `type`, `url`, `width`, `height`, `alt_text`, `created_at`
+
+## Comprehensive Cleanup Initiative
+
+A comprehensive cleanup and documentation initiative has been completed to standardize the codebase, fix inconsistencies, and provide detailed documentation. See the following documents for details:
+
+- [Project Cleanup Summary](project-cleanup-summary.md) - Overview of the cleanup initiative
+- [Stories Cleanup Plan](stories-cleanup-plan.md) - Comprehensive plan for cleaning up and standardizing the codebase
+- [System Architecture](system-architecture.md) - Detailed documentation of the system architecture
+- [Database Schema](database-schema.md) - Complete documentation of the database schema
+- [API Documentation](api-documentation.md) - Comprehensive documentation of all API endpoints
+- [PHP Scripts Cleanup Guide](php-scripts-cleanup-guide.md) - Guide for cleaning up PHP scripts
+- [Implementation Plan](implementation-plan.md) - Detailed implementation plan
+
 ## Upcoming
-- JWT refresh overhaul: Implementing robust token refresh mechanism to fix recurring 401 failures in Admin CRUD operations. This will ensure expired JWTs auto-refresh, maintain consistency between cookie and PHP session storage, and allow clients to retry the original request after refresh.
+- Implementation of the comprehensive cleanup and standardization plan
+- API standardization to ensure consistent response formats
+- PHP scripts cleanup to remove obsolete and redundant scripts
+- Admin interface improvements for better reliability and usability
+- Comprehensive documentation updates

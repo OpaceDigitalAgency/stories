@@ -424,33 +424,22 @@ try {
             while ($row = $stmt->fetch()) {
                 $items[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url'],
+                    'rating' => isset($row['rating']) ? (float)$row['rating'] : null,
+                    'priceRange' => isset($row['price_range']) ? $row['price_range'] : null,
+                    'slug' => isset($row['slug']) ? $row['slug'] : null,
+                    'isPublished' => (bool)$row['is_published'],
+                    'createdAt' => isset($row['created_at']) ? date('c', strtotime($row['created_at'])) : null,
+                    'updatedAt' => isset($row['updated_at']) ? date('c', strtotime($row['updated_at'])) : null
                 ];
             }
             
-            echo json_encode([
-                'data' => $items,
-                'meta' => [
-                    'pagination' => [
-                        'page' => 1,
-                        'pageSize' => count($items),
-                        'pageCount' => 1,
-                        'total' => count($items)
-                    ]
-                ]
-            ]);
+            // Return flat array of items without pagination wrapper
+            echo json_encode($items);
             break;
             
         case 'ai-tools':
@@ -459,35 +448,51 @@ try {
             $tools = [];
             
             while ($row = $stmt->fetch()) {
-                $tools[] = [
+                $tool = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['category'],
-                        'logo' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'name' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['category'],
+                    'logo' => $row['cover_url'],
+                    'slug' => isset($row['slug']) ? $row['slug'] : null,
+                    'isPublished' => (bool)$row['is_published']
                 ];
+                
+                // Add optional fields if they exist
+                if (isset($row['pricing_type'])) {
+                    $tool['pricingType'] = $row['pricing_type'];
+                }
+                
+                if (isset($row['price_info'])) {
+                    $tool['priceInfo'] = $row['price_info'];
+                }
+                
+                if (isset($row['features'])) {
+                    $tool['features'] = $row['features'];
+                }
+                
+                if (isset($row['rating'])) {
+                    $tool['rating'] = (float)$row['rating'];
+                }
+                
+                if (isset($row['featured'])) {
+                    $tool['featured'] = (bool)$row['featured'];
+                }
+                
+                if (isset($row['created_at'])) {
+                    $tool['createdAt'] = date('c', strtotime($row['created_at']));
+                }
+                
+                if (isset($row['updated_at'])) {
+                    $tool['updatedAt'] = date('c', strtotime($row['updated_at']));
+                }
+                
+                $tools[] = $tool;
             }
             
-            echo json_encode([
-                'data' => $tools,
-                'meta' => [
-                    'pagination' => [
-                        'page' => 1,
-                        'pageSize' => count($tools),
-                        'pageCount' => 1,
-                        'total' => count($tools)
-                    ]
-                ]
-            ]);
+            // Return flat array of tools without pagination wrapper
+            echo json_encode($tools);
             break;
 
         case 'tags':

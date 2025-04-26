@@ -36,7 +36,7 @@ try {
             'id' => $stories[0]['id'],
             'featured' => 1,
             'is_sponsored' => 1,
-            'is_self_published' => 0,
+            'is_self_published' => 1,  // Set to 1 to appear in Self-Published section
             'is_ai_enhanced' => 0
         ];
         
@@ -45,8 +45,8 @@ try {
             'id' => $stories[1]['id'],
             'featured' => 0,
             'is_sponsored' => 0,
-            'is_self_published' => 1,
-            'is_ai_enhanced' => 1
+            'is_self_published' => 1,  // Set to 1 to appear in Self-Published section
+            'is_ai_enhanced' => 1      // Set to 1 to appear in AI-Enhanced section
         ];
     }
     

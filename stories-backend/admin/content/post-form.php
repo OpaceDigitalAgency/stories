@@ -49,7 +49,7 @@ try {
                 author_id INT NOT NULL,
                 content TEXT NOT NULL,
                 excerpt TEXT,
-                status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+                is_published TINYINT(1) DEFAULT 1,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
             )");

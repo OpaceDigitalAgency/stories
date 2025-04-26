@@ -126,3 +126,17 @@ export interface PartnerBadgesProps {
   /** Optional class names to apply */
   className?: string;
 }
+export interface AIRecommendationBoxProps {
+  /** The recommended story data (optional with default) */
+  story?: {
+    title: string;
+    slug: string;
+    author: {
+      name: string;
+    };
+  };
+  /** Recommendation text (optional with default) */
+  recommendationText?: string;
+  /** Optional class names to apply */
+  className?: string;
+}

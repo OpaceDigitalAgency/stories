@@ -267,5 +267,52 @@ export async function fetchAuthor(slug: string): Promise<Author> {
   };
 }
 
+// Fetch blog posts
+export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<string, any> = {}): Promise<any[]> {
+  // Default parameters
+  const params: Record<string, string | number | boolean> = {
+    'pagination[limit]': limit,
+    'pagination[page]': page
+  };
+  
+  // Set default sort if not specified in filters
+  if (!filters.sort) {
+    params['sort'] = 'created_at:desc';
+  } else {
+    params['sort'] = filters.sort;
+  }
+  
+  // Add any additional filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key !== 'sort') {
+      params[key] = value;
+    }
+  });
+  
+  console.log("Fetching blog posts with params:", JSON.stringify(params));
+  
+  try {
+    const raw = await fetchApi<any[]>('/blog-posts', params);
+    return raw.map(item => ({
+      id: item.id,
+      title: item.title,
+      excerpt: item.excerpt || '',
+      content: item.content || '',
+      coverImage: item.cover_url || '',
+      slug: item.slug,
+      publishDate: item.created_at || '',
+      author: item.author_id ? {
+        id: item.author_id,
+        name: 'Author ' + item.author_id, // This will be replaced with actual author data
+        slug: 'author-' + item.author_id,
+        avatar: '/images/default-avatar.svg'
+      } : undefined
+    }));
+  } catch (error) {
+    console.error("Error fetching blog posts:", error);
+    return [];
+  }
+}
+
 // Export fetchFromApi as an alias for backward compatibility
 export const fetchFromApi = fetchApi;

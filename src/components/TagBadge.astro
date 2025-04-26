@@ -27,21 +27,33 @@ const hoverClasses = clickable ? "hover:translate-z-4 hover:scale-110 hover:shad
 const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasses} ${className}`;
 
 // Format tag for URL (lowercase, replace spaces with hyphens)
-// Ensure tag is a string before calling toLowerCase
-const tagSlug = typeof tag === 'string'
-  ? tag.toLowerCase().replace(/\s+/g, '-')
-  : String(tag).toLowerCase().replace(/\s+/g, '-');
+// Ensure tag is a string and handle objects properly
+let tagText = '';
+let tagSlug = '';
+
+if (typeof tag === 'string') {
+  tagText = tag;
+  tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
+} else if (tag && typeof tag === 'object') {
+  // If tag is an object, try to get the name property
+  tagText = tag.name || tag.title || JSON.stringify(tag);
+  tagSlug = (tag.slug || tagText).toLowerCase().replace(/\s+/g, '-');
+} else {
+  // Fallback for any other type
+  tagText = String(tag || 'Tag');
+  tagSlug = tagText.toLowerCase().replace(/\s+/g, '-');
+}
 ---
 
 {clickable ? (
-  <a href={`/tags/${tagSlug}`} class={classes} data-tag={tag}>
-    <span class="relative z-10">{tag}</span>
+  <a href={`/tags/${tagSlug}`} class={classes} data-tag={tagText}>
+    <span class="relative z-10">{tagText}</span>
     <div class="absolute inset-0 bg-gradient-to-r from-current/0 via-current/30 to-current/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full animate-shimmer"></div>
     <div class="absolute inset-0 bg-white/10 rounded-full scale-0 group-hover:scale-125 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-sm"></div>
     <div class="absolute inset-0 bg-current/5 rounded-full scale-0 group-hover:scale-150 opacity-0 group-hover:opacity-100 transition-all duration-500 blur-lg"></div>
   </a>
 ) : (
-  <span class={classes} data-tag={tag}>
-    <span class="relative z-10">{tag}</span>
+  <span class={classes} data-tag={tagText}>
+    <span class="relative z-10">{tagText}</span>
   </span>
 )}

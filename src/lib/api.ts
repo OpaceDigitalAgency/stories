@@ -120,18 +120,23 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     // This matches the backend API implementation
     if (filters.featured === true) {
       params['featured'] = 1;
+      console.log("Setting featured=1 filter");
     }
     
+    // Map 'sponsored' to 'is_sponsored' for the API
     if (filters.sponsored === true) {
       params['is_sponsored'] = 1;
+      console.log("Setting is_sponsored=1 filter");
     }
     
     if (filters.isSelfPublished === true) {
       params['is_self_published'] = 1;
+      console.log("Setting is_self_published=1 filter");
     }
     
     if (filters.isAiEnhanced === true) {
       params['is_ai_enhanced'] = 1;
+      console.log("Setting is_ai_enhanced=1 filter");
     }
     
     // Log the final params for debugging

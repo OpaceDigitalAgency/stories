@@ -243,6 +243,19 @@ try {
             $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
             $stmt->execute([$id, $author_id]);
             error_log("Updated story_authors relationship: story_id=$id, author_id=$author_id");
+            
+            // Debug log all story_authors relationships
+            $allRelationships = $db->query("SELECT sa.story_id, s.title, sa.author_id, a.name
+                                           FROM story_authors sa
+                                           JOIN stories s ON sa.story_id = s.id
+                                           JOIN authors a ON sa.author_id = a.id")->fetchAll();
+            
+            foreach ($allRelationships as $rel) {
+                error_log("Story-Author relationship: Story ID: " . $rel['story_id'] .
+                         ", Title: " . $rel['title'] .
+                         ", Author ID: " . $rel['author_id'] .
+                         ", Name: " . $rel['name']);
+            }
         }
 
         $message = "Story updated successfully";

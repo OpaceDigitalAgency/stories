@@ -292,28 +292,59 @@ class CrudPage extends AdminPage {
             error_log("CrudPage::getListData - Successful response for {$this->endpoint}: " . substr(json_encode($response), 0, 200) . '...');
         }
         
-        // Set data
-        $items = $response && isset($response['data']) ? $response['data'] : [];
+        // Set data - handle both response formats (flat array or nested with 'data' key)
+        $items = [];
+        
+        if ($response) {
+            if (isset($response['data'])) {
+                // Nested format with 'data' key
+                $items = $response['data'];
+                error_log("CrudPage::getListData - Response has 'data' key with " . count($items) . " items");
+            } else if (is_array($response) && !empty($response) && isset($response[0])) {
+                // Flat array format
+                $items = $response;
+                error_log("CrudPage::getListData - Response is a flat array with " . count($items) . " items");
+                
+                // Create a pagination structure if it doesn't exist
+                if (!isset($response['meta']) || !isset($response['meta']['pagination'])) {
+                    $response['meta'] = [
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'pageCount' => 1,
+                            'total' => count($items)
+                        ]
+                    ];
+                }
+            } else {
+                error_log("CrudPage::getListData - Unexpected response format: " . json_encode($response));
+            }
+        } else {
+            error_log("CrudPage::getListData - No response received");
+        }
         
         // Process each item to ensure consistent data structure
         foreach ($items as &$item) {
             // Handle nested attributes structure (attributes.attributes)
-            if (isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
+            if (isset($item['attributes']) && isset($item['attributes']['attributes']) && is_array($item['attributes']['attributes'])) {
                 // Move nested attributes up one level
                 $item['attributes'] = $item['attributes']['attributes'];
             }
             
-            // Ensure attributes array exists
-            if ((!isset($item['attributes']) || empty($item['attributes'])) && !empty($item)) {
-                // If no attributes array but we have data, create an attributes array
-                $item['attributes'] = [];
+            // Handle flat structure (no attributes key)
+            if (!isset($item['attributes'])) {
+                // Create attributes array from item properties
+                $attributes = [];
+                $reservedKeys = ['id', 'type', 'links', 'meta', 'relationships'];
                 
-                // Move any non-special fields to attributes
                 foreach ($item as $key => $value) {
-                    if (!in_array($key, ['id', 'type', 'links', 'meta', 'relationships'])) {
-                        $item['attributes'][$key] = $value;
+                    if (!in_array($key, $reservedKeys)) {
+                        $attributes[$key] = $value;
                     }
                 }
+                
+                // Set attributes
+                $item['attributes'] = $attributes;
             }
             
             // Process relation fields

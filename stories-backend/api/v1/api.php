@@ -230,18 +230,14 @@ try {
             while ($row = $stmt->fetch()) {
                 $author = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'name' => $row['name'],
-                        'slug' => $row['slug'],
-                        'bio' => $row['bio'],
-                        'avatar' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['avatar_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'name' => $row['name'],
+                    'slug' => $row['slug'],
+                    'bio' => $row['bio'],
+                    'avatar' => $row['avatar_url'],
+                    'featured' => isset($row['featured']) ? (bool)$row['featured'] : false,
+                    'isPublished' => (bool)$row['is_published'],
+                    'createdAt' => isset($row['created_at']) ? date('c', strtotime($row['created_at'])) : null,
+                    'updatedAt' => isset($row['updated_at']) ? date('c', strtotime($row['updated_at'])) : null
                 ];
 
                 // Add stories if populate=*
@@ -253,38 +249,23 @@ try {
                     
                     $stories = [];
                     foreach ($storyIds as $i => $id) {
-                        $stories[] = [
-                            'id' => (int)$id,
-                            'attributes' => [
+                        if (isset($storyTitles[$i]) && isset($storySlugs[$i]) && isset($storyCovers[$i])) {
+                            $stories[] = [
+                                'id' => (int)$id,
                                 'title' => $storyTitles[$i],
                                 'slug' => $storySlugs[$i],
-                                'cover' => [
-                                    'data' => [
-                                        'attributes' => [
-                                            'url' => $storyCovers[$i]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ];
+                                'coverImage' => $storyCovers[$i]
+                            ];
+                        }
                     }
-                    $author['attributes']['stories'] = ['data' => $stories];
+                    $author['stories'] = $stories;
                 }
                 
                 $authors[] = $author;
             }
             
-            echo json_encode([
-                'data' => $authors,
-                'meta' => [
-                    'pagination' => [
-                        'page' => 1,
-                        'pageSize' => count($authors),
-                        'pageCount' => 1,
-                        'total' => count($authors)
-                    ]
-                ]
-            ]);
+            // Return flat array of authors without pagination wrapper
+            echo json_encode($authors);
             break;
 
         case 'blog-posts':
@@ -387,33 +368,20 @@ try {
             while ($row = $stmt->fetch()) {
                 $games[] = [
                     'id' => $row['id'],
-                    'attributes' => [
-                        'title' => $row['title'],
-                        'description' => $row['description'],
-                        'url' => $row['website_url'],
-                        'category' => $row['genre'],
-                        'thumbnail' => [
-                            'data' => [
-                                'attributes' => [
-                                    'url' => $row['cover_url']
-                                ]
-                            ]
-                        ]
-                    ]
+                    'title' => $row['title'],
+                    'description' => $row['description'],
+                    'url' => $row['website_url'],
+                    'category' => $row['genre'],
+                    'thumbnail' => $row['cover_url'],
+                    'slug' => isset($row['slug']) ? $row['slug'] : null,
+                    'isPublished' => (bool)$row['is_published'],
+                    'createdAt' => isset($row['created_at']) ? date('c', strtotime($row['created_at'])) : null,
+                    'updatedAt' => isset($row['updated_at']) ? date('c', strtotime($row['updated_at'])) : null
                 ];
             }
             
-            echo json_encode([
-                'data' => $games,
-                'meta' => [
-                    'pagination' => [
-                        'page' => 1,
-                        'pageSize' => count($games),
-                        'pageCount' => 1,
-                        'total' => count($games)
-                    ]
-                ]
-            ]);
+            // Return flat array of games without pagination wrapper
+            echo json_encode($games);
             break;
             
         case 'directory-items':

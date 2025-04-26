@@ -1,5 +1,3 @@
-rc/pages/stories/index.astro</path>
-<content lines="1-9">
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
@@ -9,3 +7,158 @@ import PremiumBlock from '../../components/PremiumBlock.astro';
 import SponsoredCarousel from '../../components/SponsoredCarousel.astro';
 import { fetchStories } from '../../lib/api';
 import '../../styles/base.css';
+
+// Fetch stories from API
+const stories = await fetchStories();
+
+// Popular tags
+const popularTags = [
+  'Adventure', 'Fantasy', 'Mystery', 'Science Fiction', 
+  'Historical', 'Educational', 'Animals', 'Friendship'
+];
+
+// Page metadata
+const title = 'Stories | Stories From The Web';
+const description = 'Discover amazing stories for all ages. Browse our collection of children\'s stories, educational tales, and more.';
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <!-- Hero Section -->
+    <section class="relative py-20 overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-3xl mx-auto text-center mb-16">
+          <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Discover Amazing Stories
+          </h1>
+          <p class="text-lg text-text-secondary mb-8">
+            Explore our collection of captivating stories for all ages. From educational tales to thrilling adventures, find the perfect story for your next reading session.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
+            <input 
+              type="text" 
+              placeholder="Search for stories, authors, or topics..." 
+              class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+            />
+            <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Popular Tags -->
+        <div class="mb-16">
+          <h2 class="text-xl font-bold text-text-primary mb-6 text-center">Popular Categories</h2>
+          <div class="flex flex-wrap justify-center gap-3">
+            {popularTags.map(tag => (
+              <TagBadge tag={tag} size="md" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Featured Stories -->
+    <section class="py-16 bg-white">
+      <div class="container">
+        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          Featured Stories
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 perspective-1000">
+          {stories.slice(0, 8).map((story, index) => (
+            <div 
+              class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+              style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+            >
+              <CardStory story={story} className="rounded-xl shadow-md hover:shadow-lg transition" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+    
+    <!-- Premium Content Block -->
+    <section class="py-16">
+      <div class="container">
+        <PremiumBlock 
+          title="Unlock Premium Stories" 
+          description="Get access to exclusive content, personalized recommendations, and more with our premium subscription."
+          buttonText="Try Premium Free"
+          buttonLink="/premium"
+          badgeType="featured"
+        />
+      </div>
+    </section>
+    
+    <!-- Sponsored Stories -->
+    <SponsoredCarousel 
+      title="Sponsored Stories" 
+      viewAllLink="/sponsored" 
+      stories={stories.filter(s => s.sponsored).slice(0, 4)} 
+      carouselId="sponsored-carousel"
+    />
+  </main>
+  
+  <Footer />
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+    
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+  </style>
+</body>
+</html>

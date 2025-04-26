@@ -125,7 +125,7 @@ try {
     // Get additional fields from the database
     $additionalFields = [];
     foreach ($columns as $column) {
-        if (!in_array($column, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'created_at', 'updated_at'])) {
+        if (!in_array($column, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'is_published', 'created_at', 'updated_at'])) {
             $additionalFields[] = $column;
         }
     }

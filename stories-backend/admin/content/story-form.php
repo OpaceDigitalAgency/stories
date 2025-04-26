@@ -172,7 +172,7 @@ try {
 
             <?php
             // Handle cover image fields - use cover_image if it exists, otherwise use cover_url
-            $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' : 
+            $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' :
                               (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
             
             if ($coverImageField):
@@ -184,40 +184,42 @@ try {
             </div>
             <?php endif; ?>
 
-            <div class="form-row">
-                <div class="form-group form-group-half">
-                    <label class="form-label" for="published_at">Publish Date</label>
-                    <input type="datetime-local" id="published_at" name="published_at" class="form-input"
-                           value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
-                </div>
-                
-                <div class="form-group form-group-half">
+            <div class="form-group">
+                <label class="form-label" for="published_at">Publish Date</label>
+                <input type="datetime-local" id="published_at" name="published_at" class="form-input"
+                       value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
+            </div>
+            
+            <!-- Group all checkboxes together -->
+            <h3 class="form-section-title">Options</h3>
+            <div class="checkbox-section">
+                <div class="form-group checkbox-group-item">
                     <label class="form-check-label" for="is_published">Published</label>
                     <input type="checkbox" id="is_published" name="is_published" value="1"
                            <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?>
                            class="form-check-input">
                 </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group form-group-half">
+                
+                <div class="form-group checkbox-group-item">
                     <label class="form-check-label" for="featured">Featured</label>
                     <input type="checkbox" id="featured" name="featured" value="1"
                            <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?>
                            class="form-check-input">
                 </div>
                 
-                <div class="form-group form-group-half">
+                <div class="form-group checkbox-group-item">
                     <label class="form-check-label" for="is_sponsored">Sponsored</label>
                     <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1"
                            <?php echo (isset($story['is_sponsored']) && $story['is_sponsored']) ? "checked" : ""; ?>
                            class="form-check-input">
                 </div>
-            </div>
 
-            <?php 
-            // Display remaining additional fields
-            foreach ($additionalFields as $field): 
+            <?php
+            // Collect boolean fields and non-boolean fields separately
+            $booleanFields = [];
+            $nonBooleanFields = [];
+            
+            foreach ($additionalFields as $field) {
                 // Skip fields that are already handled above or will be handled below
                 if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at', 'cover_image', 'cover_url', 'slug', 'excerpt'])) continue;
                 
@@ -227,32 +229,47 @@ try {
                 $isDecimalField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'decimal') !== false || strpos($columnInfo[$field]['Type'], 'float') !== false || strpos($columnInfo[$field]['Type'], 'double') !== false);
                 $isEnumField = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'enum') !== false;
                 $isBooleanField = isset($columnInfo[$field]) && (
-                    (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) || 
-                    (strpos($field, 'is_') === 0) || 
-                    (strpos($field, 'has_') === 0) || 
+                    (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) ||
+                    (strpos($field, 'is_') === 0) ||
+                    (strpos($field, 'has_') === 0) ||
                     (strpos($field, 'needs_') === 0)
                 );
+                
+                if ($isBooleanField) {
+                    $booleanFields[] = $field;
+                } else {
+                    $nonBooleanFields[] = [
+                        'field' => $field,
+                        'isRequired' => $isRequired,
+                        'isDateTime' => $isDateTime,
+                        'isIntField' => $isIntField,
+                        'isDecimalField' => $isDecimalField,
+                        'isEnumField' => $isEnumField
+                    ];
+                }
+            }
+            
+            // Display non-boolean fields first
+            foreach ($nonBooleanFields as $fieldData):
+                $field = $fieldData['field'];
+                $isRequired = $fieldData['isRequired'];
+                $isDateTime = $fieldData['isDateTime'];
+                $isIntField = $fieldData['isIntField'];
+                $isDecimalField = $fieldData['isDecimalField'];
+                $isEnumField = $fieldData['isEnumField'];
                 
                 // Format field label
                 $label = ucwords(str_replace('_', ' ', $field));
                 
-                // Determine field type
-                if ($isBooleanField):
+                if ($isDateTime):
             ?>
-                <div class="form-group">
-                    <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="1" 
-                           <?php echo (isset($story[$field]) && $story[$field]) ? "checked" : ""; ?> 
-                           class="form-check-input">
-                </div>
-            <?php elseif ($isDateTime): ?>
                 <div class="form-group">
                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
                     <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
                            value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : ''; ?>"
                            <?php echo $isRequired ? 'required' : ''; ?>>
                 </div>
-            <?php elseif ($isEnumField): 
+            <?php elseif ($isEnumField):
                 // Extract enum values
                 preg_match("/enum\(([^)]+)\)/", $columnInfo[$field]['Type'], $matches);
                 $enumValues = $matches[1] ? str_getcsv($matches[1], ',', "'") : [];
@@ -286,6 +303,23 @@ try {
                            <?php echo $isRequired ? 'required' : ''; ?>>
                 </div>
             <?php endif; endforeach; ?>
+            
+            <!-- Add all boolean fields to the checkbox section -->
+            <?php if (!empty($booleanFields)): ?>
+            <div class="checkbox-section">
+                <?php foreach ($booleanFields as $field):
+                    // Format field label
+                    $label = ucwords(str_replace('_', ' ', $field));
+                ?>
+                <div class="form-group checkbox-group-item">
+                    <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                    <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="1"
+                           <?php echo (isset($story[$field]) && $story[$field]) ? "checked" : ""; ?>
+                           class="form-check-input">
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Tags section moved to the bottom -->
             <div class="form-group">
@@ -360,6 +394,27 @@ try {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
+        }
+        .form-section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .checkbox-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .checkbox-group-item {
+            margin-bottom: 0;
         }
     </style>
 </body>

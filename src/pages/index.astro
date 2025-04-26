@@ -29,12 +29,51 @@ let apiErrorDetails = null;
 let apiErrorEndpoint = null;
 
 try {
-  featuredStories = await fetchStories(1, 3, { featured: true });
-  // Ensure "Most Loved" shows stories with highest ratings
-  mostLovedStories = await fetchStories(1, 6, { sort: 'average_rating:desc' });
-  latestSelfPublishedStories = await fetchStories(1, 6, { isSelfPublished: true });
-  aiEnhancedStories = await fetchStories(1, 6, { isAiEnhanced: true });
-  sponsoredStories = await fetchStories(1, 6, { sponsored: true });
+  // Fetch all stories first as a fallback
+  const allStories = await fetchStories(1, 12);
+  
+  // Try to fetch specific categories, but fall back to all stories if they fail
+  try {
+    featuredStories = await fetchStories(1, 3, { featured: true });
+    if (featuredStories.length === 0) featuredStories = allStories.slice(0, 3);
+  } catch (err) {
+    console.error('Error fetching featured stories:', err);
+    featuredStories = allStories.slice(0, 3);
+  }
+  
+  try {
+    // Ensure "Most Loved" shows stories with highest ratings
+    mostLovedStories = await fetchStories(1, 6, { sort: 'average_rating:desc' });
+    if (mostLovedStories.length === 0) mostLovedStories = allStories.slice(0, 6);
+  } catch (err) {
+    console.error('Error fetching most loved stories:', err);
+    mostLovedStories = allStories.slice(0, 6);
+  }
+  
+  try {
+    latestSelfPublishedStories = await fetchStories(1, 6, { isSelfPublished: true });
+    if (latestSelfPublishedStories.length === 0) latestSelfPublishedStories = allStories.slice(0, 6);
+  } catch (err) {
+    console.error('Error fetching self-published stories:', err);
+    latestSelfPublishedStories = allStories.slice(0, 6);
+  }
+  
+  try {
+    aiEnhancedStories = await fetchStories(1, 6, { isAiEnhanced: true });
+    if (aiEnhancedStories.length === 0) aiEnhancedStories = allStories.slice(0, 6);
+  } catch (err) {
+    console.error('Error fetching AI-enhanced stories:', err);
+    aiEnhancedStories = allStories.slice(0, 6);
+  }
+  
+  try {
+    sponsoredStories = await fetchStories(1, 6, { sponsored: true });
+    if (sponsoredStories.length === 0) sponsoredStories = allStories.slice(0, 6);
+  } catch (err) {
+    console.error('Error fetching sponsored stories:', err);
+    sponsoredStories = allStories.slice(0, 6);
+  }
+  
   featuredAuthors = await fetchAuthors();
 } catch (e) {
   console.error('Error fetching data:', e);

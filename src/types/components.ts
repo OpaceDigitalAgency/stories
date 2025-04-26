@@ -141,6 +141,13 @@ export interface AIRecommendationBoxProps {
   className?: string;
 }
 
+export interface SignUpPromptsProps {
+  /** The type of prompt to display */
+  type: 'author' | 'reader' | 'educator';
+  /** Optional class names to apply */
+  className?: string;
+}
+
 export interface EducatorSectionProps {
   /** The educator data */
   educator: {

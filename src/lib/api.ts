@@ -153,7 +153,8 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
     rating: Number(item.rating) || 0,
-    tags: item.tags || [],
+    tags: Array.isArray(item.tags) ? item.tags :
+          (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
       name: item.author.name,
       bio: item.author.bio || '',
@@ -237,7 +238,8 @@ export async function fetchStory(slug: string): Promise<Story> {
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
     rating: Number(item.rating) || 0,
-    tags: item.tags || [],
+    tags: Array.isArray(item.tags) ? item.tags :
+          (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
       name: item.author.name,
       bio: item.author.bio || '',

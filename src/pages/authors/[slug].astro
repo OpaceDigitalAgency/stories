@@ -5,22 +5,23 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
-import { fetchAuthors, fetchAuthor, fetchStories, type Author, type Story } from '../../lib/api';
+import { fetchAuthors, fetchStories, type Author, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const rawAuthors = await fetchAuthors();
-  return rawAuthors.map(item => ({
-    params: { slug: item.slug }
+  const authors = await fetchAuthors();
+  return authors.map(author => ({
+    params: { slug: author.slug }
   }));
 }
 
 const { slug } = Astro.params;
 
-// Fetch author data
-const author = await fetchAuthor(slug);
+// Fetch all authors and find the one we want
+const authors = await fetchAuthors();
+const author = authors.find(a => a.slug === slug);
 
 if (!author) {
   return new Response('Author not found', { status: 404 });
@@ -128,11 +129,7 @@ const formattedJoinDate = new Intl.DateTimeFormat('en-US', {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stories.map(story => (
               <CardStory 
-                title={story.title}
-                excerpt={story.excerpt}
-                coverImage={story.coverImage}
-                slug={story.slug}
-                publishDate={story.publishDate}
+                story={story}
               />
             ))}
           </div>

@@ -140,3 +140,17 @@ export interface AIRecommendationBoxProps {
   /** Optional class names to apply */
   className?: string;
 }
+
+export interface EducatorSectionProps {
+  /** The educator data */
+  educator: {
+    name: string;
+    title?: string;
+    institution?: string;
+    avatar?: {
+      url: string;
+    };
+  };
+  /** Optional class names to apply */
+  className?: string;
+}

@@ -1,41 +1,20 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromApi, type ApiResponse, type BlogPost } from '../../lib/api';
+import { fetchFromApi } from '../../lib/api';
 import '../../styles/base.css';
 
-// Fetch blog post categories
-const categoriesResponse = await fetchFromApi('blog-categories', {
-  sort: 'name:asc'
-}) as StrapiResponse<{ name: string }>;
+export const prerender = true;
 
-const categories = categoriesResponse.data.map(category => category.attributes.name);
+// Fetch blog post categories
+const categories = await fetchFromApi('blog-categories', {
+  'sort': 'name:asc'
+});
 
 // Fetch blog posts
-const blogPostsResponse = await fetchFromApi('blog-posts', {
-  populate: '*',
-  sort: 'publishedAt:desc'
-}) as StrapiResponse<BlogPost>;
-
-const blogPosts = blogPostsResponse.data.map(post => {
-  // Ensure post and attributes exist before accessing properties
-  if (!post || !post.attributes) {
-    console.error('Invalid blog post structure:', post);
-    return null;
-  }
-  
-  return {
-    title: post.attributes.title || 'Untitled Post',
-    excerpt: post.attributes.excerpt || '',
-    image: post.attributes.cover?.data?.attributes?.url || '',
-    category: post.attributes.category?.data?.attributes?.name || '',
-    author: post.attributes.author?.data?.attributes?.name || '',
-    // Add null check for publishedAt
-    date: post.attributes.publishedAt ? new Date(post.attributes.publishedAt) : new Date(),
-    slug: post.attributes.slug || '',
-    featured: post.attributes.featured || false
-  };
-}).filter(Boolean); // Remove any null items
+const blogPosts = await fetchFromApi('blog-posts', {
+  'sort': 'publishedAt:desc'
+});
 
 // Get featured and regular posts
 const featuredPost = blogPosts.find(post => post.featured) || blogPosts[0];
@@ -105,8 +84,8 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
               All Posts
             </a>
             {categories.map(category => (
-              <a href={`/blog/category/${category.toLowerCase().replace(/\s+/g, '-')}`} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-medium transition-colors">
-                {category}
+              <a href={`/blog/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-medium transition-colors">
+                {category.name}
               </a>
             ))}
           </div>
@@ -124,7 +103,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                 <div class="md:w-1/2">
                   <div class="h-64 md:h-full bg-gray-200">
                     <img 
-                      src={featuredPost.image} 
+                      src={featuredPost.cover_url} 
                       alt={featuredPost.title} 
                       class="w-full h-full object-cover"
                     />
@@ -137,7 +116,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                       {featuredPost.category}
                     </span>
                     <span class="text-gray-500 text-sm ml-4">
-                      {featuredPost.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {new Date(featuredPost.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
                   
@@ -152,7 +131,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                   </p>
                   
                   <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">By {featuredPost.author}</span>
+                    <span class="text-sm text-gray-600">By {featuredPost.author?.name || 'Anonymous'}</span>
                     
                     <a href={`/blog/${featuredPost.slug}`} class="text-primary hover:text-primary/80 font-medium flex items-center">
                       Read More
@@ -179,7 +158,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                 <a href={`/blog/${post.slug}`} class="block">
                   <div class="h-48 bg-gray-200">
                     <img 
-                      src={post.image} 
+                      src={post.cover_url} 
                       alt={post.title} 
                       class="w-full h-full object-cover"
                     />
@@ -191,7 +170,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                         {post.category}
                       </span>
                       <span class="text-gray-500 text-xs ml-3">
-                        {post.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                     
@@ -204,7 +183,7 @@ const regularPosts = blogPosts.filter(post => post !== featuredPost);
                     </p>
                     
                     <div class="flex items-center justify-between">
-                      <span class="text-xs text-gray-600">By {post.author}</span>
+                      <span class="text-xs text-gray-600">By {post.author?.name || 'Anonymous'}</span>
                       
                       <span class="text-primary hover:text-primary/80 text-sm font-medium flex items-center">
                         Read More

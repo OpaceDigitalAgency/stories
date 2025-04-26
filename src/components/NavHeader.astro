@@ -21,11 +21,12 @@ const currentPath = Astro.url.pathname;
 
 <header class="sticky top-0 z-50 py-4">
   <!-- Background with enhanced blur effect -->
-  <!-- Removed blur effect div that was covering the logo -->
+  <div class="absolute inset-0 bg-white/90 backdrop-blur-md"></div>
   
-  <!-- Removed decorative elements that were potentially covering the logo -->
+  <!-- Decorative gradient for sticky header -->
+  <div class="absolute inset-0 bg-gradient-to-b from-white/80 to-neutral-50/80"></div>
   
-  <div class="container mx-auto px-4 flex items-center h-20 relative" style="display:flex;">
+  <div class="container mx-auto px-4 flex items-center h-20 relative">
     <!-- Logo -->
     <a href="/" class="inline-block" style="display:inline-block">
       <img
@@ -37,7 +38,7 @@ const currentPath = Astro.url.pathname;
     </a>
     
     <!-- Desktop Navigation -->
-    <nav class="flex items-center space-x-4" style="display:flex">
+    <nav class="hidden md:flex items-center space-x-4">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
@@ -94,7 +95,7 @@ const currentPath = Astro.url.pathname;
     <!-- Mobile menu button -->
     <button
       id="mobile-menu-button"
-      class="md:hidden flex items-center p-2 rounded-xl text-text-primary hover:text-primary hover:bg-neutral-dark transition-all duration-300"
+      class="ml-auto md:hidden flex items-center p-2 rounded-xl text-text-primary hover:text-primary hover:bg-neutral-dark transition-all duration-300"
       aria-label="Toggle menu"
     >
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">

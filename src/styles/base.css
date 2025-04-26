@@ -51,7 +51,7 @@
   }
   
   .container {
-    @apply mx-auto px-4 max-w-7xl;
+    @apply mx-auto px-4 w-full max-w-7xl;
   }
   
   /* Card styles */
@@ -101,7 +101,7 @@
   /* Section styles */
   /* Section styles with flowing gradients */
   .section {
-    @apply relative py-16 md:py-24 overflow-hidden;
+    @apply relative py-16 md:py-24 overflow-hidden w-full;
   }
 
   .section::before {

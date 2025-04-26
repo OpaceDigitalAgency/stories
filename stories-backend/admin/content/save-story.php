@@ -48,8 +48,9 @@ try {
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
-    $featured = isset($_POST['featured']) ? (int)$_POST['featured'] : 0;
-    $is_sponsored = isset($_POST['is_sponsored']) ? (int)$_POST['is_sponsored'] : 0;
+    $featured = isset($_POST['featured']) ? 1 : 0;
+    $is_published = isset($_POST['is_published']) ? 1 : 0;
+    $is_sponsored = isset($_POST['is_sponsored']) ? 1 : 0;
     $published_at = $_POST['published_at'] ?? '';
     $review_count = isset($_POST['review_count']) ? (int)$_POST['review_count'] : 0;
     $average_rating = isset($_POST['average_rating']) ? (float)$_POST['average_rating'] : 0;
@@ -120,9 +121,13 @@ try {
         $data['slug'] = $slug;
     }
     
-    // Add featured if the column exists
+    // Add featured and is_published if the columns exist
     if (in_array('featured', $columns)) {
         $data['featured'] = $featured;
+    }
+    
+    if (in_array('is_published', $columns)) {
+        $data['is_published'] = $is_published;
     }
     
     // Add is_sponsored if the column exists

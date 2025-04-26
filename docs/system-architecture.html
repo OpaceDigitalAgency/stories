@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stories from the Web - System Architecture</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,8 +12,12 @@
             margin: 0;
             padding: 20px;
             color: #333;
+        }
+        .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
         }
         h1, h2, h3, h4 {
             color: #2c3e50;
@@ -92,252 +96,854 @@
             margin-bottom: 10px;
             color: #2c3e50;
         }
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .tech-stack-item {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .tech-stack-item h4 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .folder-structure {
+            font-family: monospace;
+            white-space: pre;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .environment-details {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .code-block {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .navigation {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .navigation ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .navigation ul ul {
+            padding-left: 20px;
+        }
+        .navigation a {
+            color: #2c3e50;
+            text-decoration: none;
+<h1>Stories from the Web - System Architecture</h1>
+
+            <section id="overview">
+                <h2>Project Overview</h2>
+                <p>Stories from the Web is a platform for sharing and discovering stories, with additional features for games, directory listings, and AI tools. The platform consists of two main components:</p>
+                <ol>
+                    <li><strong>Public Frontend</strong>: A user-facing website where visitors can browse and read stories, explore games, view directory listings, and discover AI tools.</li>
+                    <li><strong>Admin Backend</strong>: A content management system where administrators and authors can create, edit, and manage content.</li>
+                </ol>
+                <p>The platform is designed with a clear separation between the frontend and backend, communicating through a RESTful API. This architecture allows for independent development and deployment of each component.</p>
+            </section>
+
+            <section id="tech-stack">
+                <h2>Complete Tech Stack</h2>
+                <div class="tech-stack">
+                    <div class="tech-stack-item">
+                        <h4>Frontend</h4>
+                        <ul>
+                            <li><strong>Framework</strong>: Astro.js (v2.x)</li>
+                            <li><strong>Styling</strong>: Tailwind CSS</li>
+                            <li><strong>Language</strong>: TypeScript</li>
+                            <li><strong>Build Tool</strong>: Vite (integrated with Astro)</li>
+                            <li><strong>Package Manager</strong>: npm</li>
+                            <li><strong>Deployment</strong>: Netlify</li>
+                        </ul>
+                    </div>
+                    <div class="tech-stack-item">
+                        <h4>Backend</h4>
+                        <ul>
+                            <li><strong>Language</strong>: PHP (v8.3.x)</li>
+                            <li><strong>Database</strong>: MySQL (v8.0.x)</li>
+                            <li><strong>Server</strong>: Apache (on cPanel shared hosting)</li>
+                            <li><strong>Authentication</strong>: Custom JWT implementation</li>
+                            <li><strong>Deployment</strong>: cPanel Git Version Control</li>
+                        </ul>
+                    </div>
+                    <div class="tech-stack-item">
+                        <h4>Development Tools</h4>
+                        <ul>
+                            <li><strong>Version Control</strong>: Git (GitHub)</li>
+                            <li><strong>IDE</strong>: Visual Studio Code (recommended)</li>
+                            <li><strong>API Testing</strong>: Postman or browser-based tools</li>
+                            <li><strong>Database Management</strong>: phpMyAdmin (via cPanel)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="environments">
+                <h2>Environment Details</h2>
+                <div class="environment-details">
+                    <h3>Production Environments</h3>
+                    <h4>Frontend</h4>
+                    <ul>
+                        <li><strong>URL</strong>: <a href="https://storiesfromtheweb.netlify.app/">https://storiesfromtheweb.netlify.app/</a></li>
+                        <li><strong>Hosting</strong>: Netlify</li>
+                        <li><strong>Repository</strong>: <a href="https://github.com/OpaceDigitalAgency/stories">https://github.com/OpaceDigitalAgency/stories</a></li>
+                        <li><strong>Branch</strong>: main</li>
+                        <li><strong>Deployment</strong>: Automatic on push to main branch</li>
+                    </ul>
+                    <h4>Backend</h4>
+                    <ul>
+                        <li><strong>API URL</strong>: <a href="https://api.storiesfromtheweb.org/">https://api.storiesfromtheweb.org/</a></li>
+                        <li><strong>Admin URL</strong>: <a href="https://api.storiesfromtheweb.org/admin/">https://api.storiesfromtheweb.org/admin/</a></li>
+                        <li><strong>Hosting</strong>: cPanel shared hosting</li>
+                        <li><strong>Repository</strong>: <a href="https://github.com/OpaceDigitalAgency/stories">https://github.com/OpaceDigitalAgency/stories</a></li>
+                        <li><strong>Branch</strong>: main</li>
+                        <li><strong>Deployment</strong>: Manual via cPanel Git Version Control</li>
+                    </ul>
+                </div>
+            </section>
+            display: block;
+<section id="architecture">
+                <h2>Architecture Components</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">High-Level Architecture</div>
+                    <div class="mermaid">
+graph TD
+    A[Frontend - Astro.js] -->|API Requests| B[Backend - PHP API]
+    B -->|Database Queries| C[MySQL Database]
+    D[Admin Interface] -->|CRUD Operations| B
+    D -->|Direct Access| C
+    E[Users] -->|View Content| A
+    F[Content Creators] -->|Manage Content| D
+                    </div>
+                </div>
+
+                <h3>Component Interactions</h3>
+                <p>The components interact through well-defined interfaces:</p>
+                <ol>
+                    <li><strong>Frontend to Backend</strong>: The Astro.js frontend communicates with the PHP backend through RESTful API endpoints. All data requests and updates are handled via these endpoints.</li>
+                    <li><strong>Backend to Database</strong>: The PHP backend handles database operations using PDO for secure and efficient database access. All queries are parameterized to prevent SQL injection.</li>
+                    <li><strong>Admin Interface</strong>: A separate PHP-based interface provides content management capabilities. It uses direct form submissions for reliability and minimal JavaScript dependencies.</li>
+                    <li><strong>Authentication Flow</strong>: JWT tokens are used for API authentication, while session-based authentication is used for the admin interface.</li>
+                </ol>
+
+                <div class="note">
+                    <h4>Key Design Decisions</h4>
+                    <ul>
+                        <li><strong>Separation of Concerns</strong>: Frontend and backend are completely separate, allowing independent development and deployment.</li>
+                        <li><strong>API-First Design</strong>: All functionality is exposed through a RESTful API, making it easy to add new clients in the future.</li>
+                        <li><strong>JavaScript-Free Admin</strong>: The admin interface uses pure HTML/CSS to ensure reliability and prevent common JavaScript-related issues.</li>
+                        <li><strong>Security Focus</strong>: Authentication, input validation, and data sanitization are implemented at multiple levels.</li>
+                    </ul>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Data Flow</div>
+                    <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant Database
+    
+    User->>Frontend: Visit Page
+    Frontend->>API: Request Data
+    API->>Database: Query Data
+    Database-->>API: Return Results
+    API-->>Frontend: JSON Response
+    Frontend-->>User: Render Content
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Authentication Flow</div>
+                    <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant AdminInterface
+    participant API
+    participant Database
+    
+    User->>AdminInterface: Enter credentials
+    AdminInterface->>API: POST /auth/login
+    API->>Database: Verify credentials
+    Database-->>API: Credentials valid
+    API->>API: Generate JWT token
+    API->>Database: Store token
+    API-->>AdminInterface: Return token
+    AdminInterface->>AdminInterface: Store token in cookie
+    AdminInterface-->>User: Redirect to dashboard
+                    </div>
+                </div>
+            </section>
+            padding: 5px 0;
+        }
+        .navigation a:hover {
+            color: #3498db;
+        }
+        .content {
+            margin-right: 280px;
+        }
+        @media print {
+            .navigation {
+                display: none;
+            }
+            .content {
+                margin-right: 0;
+            }
+        }
+        @media (max-width: 1200px) {
+<section id="database">
+                <h2>Database Schema</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Entity Relationship Diagram</div>
+                    <div class="mermaid">
+erDiagram
+    STORIES ||--o{ STORY_AUTHORS : has
+    STORIES ||--o{ STORY_TAGS : has
+    AUTHORS ||--o{ STORY_AUTHORS : belongs_to
+    TAGS ||--o{ STORY_TAGS : belongs_to
+    BLOG_POSTS ||--o{ POST_TAGS : has
+    TAGS ||--o{ POST_TAGS : belongs_to
+    USERS ||--|| AUTH_TOKENS : has
+    
+    STORIES {
+        int id PK
+        string title
+        string slug
+        text content
+        text excerpt
+        boolean is_published
+        boolean featured
+        decimal average_rating
+        string cover_url
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    AUTHORS {
+        int id PK
+        string name
+        string slug
+        text bio
+        string avatar_url
+        boolean is_published
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    TAGS {
+        int id PK
+        string name
+        string slug
+        timestamp created_at
+        timestamp updated_at
+    }
+                    </div>
+                </div>
+
+                <h3>Database Design</h3>
+                <div class="note">
+                    <h4>Design Principles</h4>
+                    <ul>
+                        <li><strong>Normalization</strong>: Tables are normalized to reduce redundancy and maintain data integrity</li>
+                        <li><strong>Relationships</strong>: Foreign keys maintain referential integrity between tables</li>
+                        <li><strong>Indexing</strong>: Appropriate indexes on frequently queried fields for performance</li>
+                        <li><strong>Soft Deletes</strong>: Records are marked as unpublished rather than deleted</li>
+                        <li><strong>Timestamps</strong>: All tables include created_at and updated_at for tracking</li>
+                    </ul>
+                </div>
+
+                <h3>Key Tables</h3>
+                <div class="code-block">
+                    <h4>1. Content Tables</h4>
+                    <table>
+                        <tr>
+                            <th>Table</th>
+                            <th>Purpose</th>
+                            <th>Key Fields</th>
+                        </tr>
+                        <tr>
+                            <td><code>stories</code></td>
+                            <td>Main content table for stories</td>
+                            <td>id, title, slug, content, excerpt, is_published, featured</td>
+                        </tr>
+                        <tr>
+                            <td><code>authors</code></td>
+                            <td>Information about story authors</td>
+                            <td>id, name, slug, bio, avatar_url, is_published</td>
+                        </tr>
+                        <tr>
+                            <td><code>blog_posts</code></td>
+                            <td>Blog content</td>
+                            <td>id, title, slug, content, excerpt, author_id</td>
+                        </tr>
+                        <tr>
+                            <td><code>games</code></td>
+                            <td>Interactive story games</td>
+                            <td>id, title, description, url, genre, platform</td>
+                        </tr>
+                        <tr>
+                            <td><code>directory_items</code></td>
+                            <td>Directory listings</td>
+                            <td>id, title, description, url, category_id, rating</td>
+                        </tr>
+                        <tr>
+                            <td><code>ai_tools</code></td>
+                            <td>AI tool listings</td>
+                            <td>id, title, description, url, category_id, pricing_type</td>
+                        </tr>
+                    </table>
+
+                    <h4>2. Relationship Tables</h4>
+                    <table>
+                        <tr>
+                            <th>Table</th>
+                            <th>Purpose</th>
+                            <th>Fields</th>
+                        </tr>
+                        <tr>
+                            <td><code>story_authors</code></td>
+                            <td>Links stories to authors (many-to-many)</td>
+                            <td>story_id, author_id</td>
+                        </tr>
+                        <tr>
+                            <td><code>story_tags</code></td>
+                            <td>Links stories to tags (many-to-many)</td>
+                            <td>story_id, tag_id</td>
+                        </tr>
+                        <tr>
+                            <td><code>post_tags</code></td>
+                            <td>Links blog posts to tags (many-to-many)</td>
+                            <td>post_id, tag_id</td>
+                        </tr>
+                    </table>
+
+                    <h4>Example Queries</h4>
+                    <pre><code>-- Get all published stories with their authors
+SELECT s.*, GROUP_CONCAT(a.name) as authors
+FROM stories s
+LEFT JOIN story_authors sa ON s.id = sa.story_id
+LEFT JOIN authors a ON sa.author_id = a.id
+WHERE s.is_published = 1
+GROUP BY s.id;
+
+-- Get all stories with a specific tag
+SELECT s.*
+FROM stories s
+JOIN story_tags st ON s.id = st.story_id
+JOIN tags t ON st.tag_id = t.id
+WHERE t.slug = 'fantasy'
+AND s.is_published = 1;
+
+-- Get latest blog posts with author info
+SELECT b.*, a.name as author_name
+FROM blog_posts b
+LEFT JOIN authors a ON b.author_id = a.id
+WHERE b.is_published = 1
+ORDER BY b.created_at DESC
+LIMIT 10;</code></pre>
+                </div>
+            </section>
+            .navigation {
+                position: static;
+                max-width: none;
+                margin-bottom: 20px;
+            }
+            .content {
+                margin-right: 0;
+            }
+<section id="api">
+                <h2>API Documentation</h2>
+                
+                <div class="note">
+                    <h4>API Design Principles</h4>
+                    <ul>
+                        <li><strong>RESTful</strong>: Follows REST principles for resource naming and HTTP methods</li>
+                        <li><strong>Consistent</strong>: All endpoints follow the same response format</li>
+                        <li><strong>Secure</strong>: Authentication and authorization for protected endpoints</li>
+                        <li><strong>Documented</strong>: Clear documentation and examples for all endpoints</li>
+                    </ul>
+                </div>
+
+                <h3>Base URL</h3>
+                <p>All API endpoints are relative to:</p>
+                <pre><code>https://api.storiesfromtheweb.org/api/v1</code></pre>
+
+                <h3>Content Endpoints</h3>
+                <table>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Authentication</th>
+                    </tr>
+                    <tr>
+                        <td><code>/stories</code></td>
+                        <td>GET</td>
+                        <td>List all stories</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><code>/stories/{id}</code></td>
+                        <td>GET</td>
+                        <td>Get specific story</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><code>/authors</code></td>
+                        <td>GET</td>
+                        <td>List all authors</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><code>/authors/{id}</code></td>
+                        <td>GET</td>
+                        <td>Get specific author</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><code>/admin/stories</code></td>
+                        <td>POST</td>
+                        <td>Create new story</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>/admin/stories/{id}</code></td>
+                        <td>PUT</td>
+                        <td>Update story</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>/admin/stories/{id}</code></td>
+                        <td>DELETE</td>
+                        <td>Delete story</td>
+                        <td>Yes</td>
+                    </tr>
+                </table>
+
+                <h3>Response Format</h3>
+                <div class="code-block">
+                    <h4>Success Response (List)</h4>
+                    <pre><code>[
+  {
+    "id": 1,
+    "title": "Example Story",
+    "slug": "example-story",
+    "excerpt": "Story excerpt...",
+    "content": "Full story content...",
+    "publishedAt": "2025-04-26T09:17:50+01:00"
+  },
+  {
+    "id": 2,
+    "title": "Another Story",
+    "slug": "another-story",
+    "excerpt": "Another excerpt...",
+    "content": "More content...",
+    "publishedAt": "2025-04-26T09:17:50+01:00"
+  }
+]</code></pre>
+
+                    <h4>Success Response (Single Item)</h4>
+                    <pre><code>{
+  "id": 1,
+  "title": "Example Story",
+  "slug": "example-story",
+  "excerpt": "Story excerpt...",
+  "content": "Full story content...",
+  "publishedAt": "2025-04-26T09:17:50+01:00"
+}</code></pre>
+
+                    <h4>Error Response</h4>
+                    <pre><code>{
+  "error": {
+    "status": 404,
+    "message": "Story not found"
+  }
+}</code></pre>
+                </div>
+
+                <h3>Example API Usage</h3>
+                <div class="code-block">
+                    <h4>Fetch Stories (TypeScript)</h4>
+                    <pre><code>// Using the API client
+import { fetchFromApi } from '../lib/api';
+
+const getStories = async () => {
+  try {
+    const stories = await fetchFromApi('stories', {
+      page: 1,
+      pageSize: 10,
+      sort: 'publishedAt:desc'
+    });
+    return stories;
+  } catch (error) {
+    console.error('Error fetching stories:', error);
+    return [];
+  }
+};</code></pre>
+
+                    <h4>Create Story (PHP)</h4>
+                    <pre><code>// Using the admin API client
+$client = new ApiClient();
+$response = $client->post('/admin/stories', [
+    'title' => 'New Story',
+    'content' => 'Story content...',
+    'excerpt' => 'Story excerpt...',
+    'is_published' => true
+]);
+
+if ($response->isSuccess()) {
+    $story = $response->getData();
+    // Handle success
+} else {
+    $error = $response->getError();
+    // Handle error
+}</code></pre>
+                </div>
+
+                <div class="note">
+                    <h4>API Best Practices</h4>
+                    <ul>
+                        <li><strong>Rate Limiting</strong>: API requests are limited to prevent abuse</li>
+                        <li><strong>Caching</strong>: Responses include appropriate cache headers</li>
+                        <li><strong>Validation</strong>: All input is validated before processing</li>
+                        <li><strong>Error Handling</strong>: Clear error messages for troubleshooting</li>
+                    </ul>
+                </div>
+            </section>
+        }
     </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="navigation">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#tech-stack">Tech Stack</a></li>
+                <li><a href="#environments">Environments</a></li>
+<section id="deployment">
+                <h2>Deployment Architecture</h2>
+                
+                <div class="diagram-container">
+                    <div class="diagram-title">Deployment Flow</div>
+                    <div class="mermaid">
+graph TD
+    A[GitHub Repository] -->|Push| B[Netlify CI/CD]
+    B -->|Build| C[Netlify CDN]
+    A -->|Manual Deploy| D[cPanel Git Version Control]
+    D -->|Deploy| E[Shared Hosting]
+    E -->|Serves| F[PHP API]
+    E -->|Serves| G[Admin Interface]
+    E -->|Connects to| H[MySQL Database]
+    C -->|API Requests| F
+                    </div>
+                </div>
+
+                <h3>Frontend Deployment (Netlify)</h3>
+                <div class="code-block">
+                    <h4>Configuration (netlify.toml)</h4>
+                    <pre><code>[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+
+[context.production.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+
+[context.deploy-preview.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"</code></pre>
+
+                    <h4>Deployment Process</h4>
+                    <ol>
+                        <li>Developer pushes changes to GitHub repository</li>
+                        <li>Netlify automatically detects changes</li>
+                        <li>Netlify runs the build command: <code>npm run build</code></li>
+                        <li>Astro generates static HTML, CSS, and JavaScript</li>
+                        <li>Files are deployed to Netlify's CDN</li>
+                        <li>Site is available at https://storiesfromtheweb.netlify.app/</li>
+                    </ol>
+                </div>
+
+                <h3>Backend Deployment (cPanel Git Version Control)</h3>
+                <div class="code-block">
+                    <h4>Configuration (.cpanel.yml)</h4>
+                    <pre><code>---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - /bin/cp -R stories-backend/check_auth_status.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/direct_login.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/go_to_dashboard.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/logout.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/.htaccess $DEPLOYPATH
+    - /bin/cp -R stories-backend/admin $DEPLOYPATH
+    - /bin/cp -R stories-backend/api $DEPLOYPATH</code></pre>
+
+                    <h4>Deployment Process</h4>
+                    <ol>
+                        <li>Developer pushes changes to GitHub repository</li>
+                        <li>Administrator logs in to cPanel</li>
+                        <li>Navigates to Git Version Control</li>
+                        <li>Selects the "stories" repository</li>
+                        <li>Clicks "Update from Remote" to pull latest changes</li>
+                        <li>Clicks "Deploy HEAD Commit" to deploy</li>
+                        <li>Files are copied according to .cpanel.yml configuration</li>
+                        <li>Changes are live at https://api.storiesfromtheweb.org/</li>
+                    </ol>
+
+                    <h4>Access Details</h4>
+                    <ul>
+                        <li><strong>cPanel URL</strong>: https://cpanel.storiesfromtheweb.org/</li>
+                        <li><strong>Username</strong>: Contact administrator for credentials</li>
+                        <li><strong>Git repository</strong>: https://github.com/OpaceDigitalAgency/stories</li>
+                    </ul>
+                </div>
+
+                <h3>Server Configuration</h3>
+                <div class="code-block">
+                    <h4>Apache Configuration (.htaccess)</h4>
+                    <pre><code># Protect sensitive files
+<FilesMatch "\.(sql|log|ini|json)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow access to specific PHP files
+<FilesMatch "^(index\.php|direct_login\.php|check_auth_status\.php|go_to_dashboard\.php|logout\.php)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Enable CORS for API
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "https://storiesfromtheweb.netlify.app"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# Handle preflight OPTIONS requests
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]</code></pre>
+
+                    <h4>PHP Configuration</h4>
+                    <pre><code>; php.ini settings
+memory_limit = 256M
+upload_max_filesize = 10M
+post_max_size = 10M
+max_execution_time = 30
+display_errors = Off
+log_errors = On
+error_log = /path/to/php-errors.log
+date.timezone = 'UTC'</code></pre>
+                </div>
+
+                <div class="note">
+                    <h4>Deployment Best Practices</h4>
+                    <ul>
+                        <li><strong>Version Control</strong>: All changes must be committed to Git</li>
+                        <li><strong>Testing</strong>: Test changes in staging environment first</li>
+                        <li><strong>Backups</strong>: Create database backups before major changes</li>
+                        <li><strong>Monitoring</strong>: Monitor logs and performance after deployment</li>
+                        <li><strong>Rollback Plan</strong>: Have a plan for rolling back changes if needed</li>
+                    </ul>
+                </div>
+            </section>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#frontend">Frontend</a></li>
+                <li><a href="#backend">Backend</a></li>
+                <li><a href="#database">Database</a></li>
+                <li><a href="#api">API</a></li>
+                <li><a href="#authentication">Authentication</a></li>
+                <li><a href="#deployment">Deployment</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+            </ul>
+        </nav>
+
+        <div class="content">
+            <!-- Previous content here -->
+        </div>
+    </div>
+
     <script>
+        // Initialize Mermaid
         mermaid.initialize({
             startOnLoad: true,
             theme: 'default',
             securityLevel: 'loose',
             fontFamily: 'Arial',
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            },
+            er: {
+                padding: 20
+            },
+            sequence: {
+                padding: 20,
+                boxMargin: 20
+            }
         });
-    </script>
-</head>
-<body>
-    <h1>Stories from the Web - System Architecture</h1>
 
-    <h2>Table of Contents</h2>
-    <ul>
-        <li><a href="#overview">System Overview</a></li>
-        <li><a href="#architecture">Architecture Components</a></li>
-        <li><a href="#database">Database Schema</a></li>
-        <li><a href="#api">API Endpoints</a></li>
-        <li><a href="#authentication">Authentication Flow</a></li>
-        <li><a href="#dataflow">Data Flow Diagrams</a></li>
-        <li><a href="#deployment">Deployment Architecture</a></li>
-    </ul>
+        // Wait for the document to load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all Mermaid diagrams
+<section id="getting-started">
+                <h2>Getting Started Guide</h2>
 
-    <h2 id="overview">System Overview</h2>
-    <p>Stories from the Web is a platform for sharing and discovering stories with the following key components:</p>
-    <ul>
-        <li><strong>Frontend</strong>: Astro.js-based static site with dynamic capabilities</li>
-        <li><strong>Backend API</strong>: PHP-based RESTful API</li>
-        <li><strong>Admin Interface</strong>: PHP-based content management system</li>
-        <li><strong>Database</strong>: MySQL relational database</li>
-    </ul>
+                <h3>For New Developers</h3>
+                <div class="code-block">
+                    <h4>1. Setup Development Environment</h4>
+                    <pre><code># Clone repository
+git clone https://github.com/OpaceDigitalAgency/stories.git
+cd stories
 
-    <h2 id="architecture">Architecture Components</h2>
+# Install dependencies
+npm install
 
-    <div class="diagram-container">
-        <div class="diagram-title">High-Level Architecture</div>
-        <div class="mermaid">
-            graph TD
-                A[Frontend - Astro.js] -->|API Requests| B[Backend - PHP API]
-                B -->|Database Queries| C[MySQL Database]
-                D[Admin Interface] -->|CRUD Operations| B
-                D -->|Direct Access| C
-                E[Users] -->|View Content| A
-                F[Content Creators] -->|Manage Content| D
+# Start development server
+npm run dev</code></pre>
+
+                    <h4>2. Backend Setup</h4>
+                    <pre><code># Configure local web server to point to stories-backend directory
+# Import database
+mysql -u root -p stories_db < stories-backend/database/stories_db_26.04.25_1337.sql
+
+# Update database configuration
+# Edit stories-backend/api/v1/config/config.php with your database credentials</code></pre>
+
+                    <h4>3. Environment Variables</h4>
+                    <pre><code># Create .env file in project root
+PUBLIC_API_URL=http://localhost/stories-backend/api/v1
+
+# Update database credentials in config.php
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'your_username',
+    'password' => 'your_password'
+];</code></pre>
+                </div>
+
+                <h3>Access Points</h3>
+                <div class="code-block">
+                    <table>
+                        <tr>
+                            <th>Component</th>
+                            <th>URL</th>
+                            <th>Credentials</th>
+                        </tr>
+                        <tr>
+                            <td>Frontend</td>
+                            <td>http://localhost:3000</td>
+                            <td>N/A</td>
+                        </tr>
+                        <tr>
+                            <td>Backend API</td>
+                            <td>http://localhost/stories-backend/api/v1</td>
+                            <td>N/A</td>
+                        </tr>
+                        <tr>
+                            <td>Admin Interface</td>
+                            <td>http://localhost/stories-backend/admin</td>
+                            <td>admin@storiesfromtheweb.org / password123 (development only)</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h3>For AI Assistants</h3>
+                <div class="note">
+                    <h4>Key Considerations</h4>
+                    <ul>
+                        <li><strong>Project Structure</strong>:
+                            <ul>
+                                <li>Frontend code is in <code>src/</code> directory</li>
+                                <li>Backend code is in <code>stories-backend/</code> directory</li>
+                                <li>Database schema is in <code>stories-backend/database/</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>API Conventions</strong>:
+                            <ul>
+                                <li>All endpoints return flat array responses</li>
+                                <li>Authentication uses JWT tokens in Authorization header</li>
+                                <li>Error responses include status and message</li>
+                            </ul>
+                        </li>
+                        <li><strong>Development Workflow</strong>:
+                            <ul>
+                                <li>Frontend changes are automatically deployed to Netlify</li>
+                                <li>Backend changes require manual deployment via cPanel</li>
+                                <li>Database changes should be documented in SQL files</li>
+                            </ul>
+                        </li>
+                        <li><strong>Documentation</strong>:
+                            <ul>
+                                <li>Refer to this document for comprehensive architecture overview</li>
+                                <li>Check specific documentation files for detailed information</li>
+                                <li>Update documentation when making significant changes</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>Important Documentation References</h3>
+                <div class="code-block">
+                    <ul>
+                        <li><a href="../README.md">README.md</a> - Project overview and basic information</li>
+                        <li><a href="../PLANNING.md">PLANNING.md</a> - Project architecture, goals, and constraints</li>
+                        <li><a href="../PROGRESS.md">PROGRESS.md</a> - Log of completed work</li>
+                        <li><a href="../API_CONNECTIVITY_FIX.md">API_CONNECTIVITY_FIX.md</a> - Guide for fixing API connectivity issues</li>
+                        <li><a href="../stories-cleanup-plan.md">Stories Cleanup Plan</a> - Comprehensive plan for cleaning up the codebase</li>
+                        <li><a href="../database-schema.md">Database Schema</a> - Complete documentation of the database schema</li>
+                        <li><a href="../api-documentation.md">API Documentation</a> - Comprehensive documentation of all API endpoints</li>
+                        <li><a href="../php-scripts-cleanup-guide.md">PHP Scripts Cleanup Guide</a> - Guide for cleaning up PHP scripts</li>
+                        <li><a href="../implementation-plan.md">Implementation Plan</a> - Detailed implementation plan</li>
+                        <li><a href="consolidated-deployment-guide.md">Consolidated Deployment Guide</a> - Comprehensive guide for deploying the platform</li>
+                    </ul>
+                </div>
+            </section>
         </div>
     </div>
-
-    <h3>Component Details</h3>
-
-    <h4>Frontend (Astro.js)</h4>
-    <ul>
-        <li><strong>Purpose</strong>: Public-facing website for users to discover and read content</li>
-        <li><strong>Technology</strong>: Astro.js, TypeScript, Tailwind CSS</li>
-        <li><strong>Deployment</strong>: Netlify (https://storiesfromtheweb.netlify.app/)</li>
-        <li><strong>Key Components</strong>:
-            <ul>
-                <li>Story pages</li>
-                <li>Author profiles</li>
-                <li>Game listings</li>
-                <li>Directory listings</li>
-                <li>AI tool listings</li>
-                <li>Blog posts</li>
-            </ul>
-        </li>
-    </ul>
-
-    <h4>Backend API (PHP)</h4>
-    <ul>
-        <li><strong>Purpose</strong>: Provide data to frontend and admin interface</li>
-        <li><strong>Technology</strong>: Custom PHP framework</li>
-        <li><strong>Deployment</strong>: cPanel shared hosting</li>
-        <li><strong>Key Components</strong>:
-            <ul>
-                <li>RESTful endpoints</li>
-                <li>Authentication system</li>
-                <li>Data validation</li>
-                <li>Error handling</li>
-            </ul>
-        </li>
-    </ul>
-
-    <h2 id="database">Database Schema</h2>
-
-    <div class="diagram-container">
-        <div class="diagram-title">Entity Relationship Diagram</div>
-        <div class="mermaid">
-            erDiagram
-                STORIES ||--o{ STORY_AUTHORS : has
-                STORIES ||--o{ STORY_TAGS : has
-                AUTHORS ||--o{ STORY_AUTHORS : belongs_to
-                TAGS ||--o{ STORY_TAGS : belongs_to
-                BLOG_POSTS ||--o{ POST_TAGS : has
-                TAGS ||--o{ POST_TAGS : belongs_to
-                USERS ||--|| AUTH_TOKENS : has
-                
-                STORIES {
-                    int id PK
-                    string title
-                    string slug
-                    text content
-                    text excerpt
-                    boolean is_published
-                    boolean featured
-                    decimal average_rating
-                    string cover_url
-                    timestamp created_at
-                    timestamp updated_at
-                }
-                
-                AUTHORS {
-                    int id PK
-                    string name
-                    string slug
-                    text bio
-                    string avatar_url
-                    boolean is_published
-                    timestamp created_at
-                    timestamp updated_at
-                }
-                
-                TAGS {
-                    int id PK
-                    string name
-                    string slug
-                    timestamp created_at
-                    timestamp updated_at
-                }
-        </div>
-    </div>
-
-    <h2 id="authentication">Authentication Flow</h2>
-
-    <div class="diagram-container">
-        <div class="diagram-title">Login Process</div>
-        <div class="mermaid">
-            sequenceDiagram
-                participant User
-                participant AdminInterface
-                participant API
-                participant Database
-                
-                User->>AdminInterface: Enter credentials
-                AdminInterface->>API: POST /auth/login
-                API->>Database: Verify credentials
-                Database-->>API: Credentials valid
-                API->>API: Generate JWT token
-                API->>Database: Store token
-                API-->>AdminInterface: Return token
-                AdminInterface->>AdminInterface: Store token in cookie
-                AdminInterface-->>User: Redirect to dashboard
-        </div>
-    </div>
-
-    <div class="diagram-container">
-        <div class="diagram-title">API Request Authentication</div>
-        <div class="mermaid">
-            sequenceDiagram
-                participant Frontend
-                participant API
-                participant Database
-                
-                Frontend->>API: Request with JWT token
-                API->>API: Validate token
-                alt Token valid
-                    API->>Database: Process request
-                    Database-->>API: Return data
-                    API-->>Frontend: Return response
-                else Token expired
-                    API-->>Frontend: 401 Unauthorized
-                    Frontend->>API: Request token refresh
-                    API->>API: Generate new token
-                    API-->>Frontend: Return new token
-                    Frontend->>API: Retry original request
-                end
-        </div>
-    </div>
-
-    <h2 id="dataflow">Data Flow Diagrams</h2>
-
-    <div class="diagram-container">
-        <div class="diagram-title">Content Viewing Flow</div>
-        <div class="mermaid">
-            sequenceDiagram
-                participant User
-                participant Frontend
-                participant API
-                participant Database
-                
-                User->>Frontend: Visit stories page
-                Frontend->>API: GET /api/v1/stories
-                API->>Database: Query stories
-                Database-->>API: Return stories data
-                API-->>Frontend: JSON response
-                Frontend->>Frontend: Render stories
-                Frontend-->>User: Display stories
-                
-                User->>Frontend: Click on story
-                Frontend->>API: GET /api/v1/stories/{id}
-                API->>Database: Query story details
-                Database-->>API: Return story data
-                API-->>Frontend: JSON response
-                Frontend->>Frontend: Render story
-                Frontend-->>User: Display story
-        </div>
-    </div>
-
-    <h2 id="deployment">Deployment Architecture</h2>
-
-    <div class="diagram-container">
-        <div class="diagram-title">Production Environment</div>
-        <div class="mermaid">
-            graph TD
-                A[GitHub Repository] -->|Push| B[Netlify CI/CD]
-                B -->|Build| C[Netlify CDN]
-                A -->|Manual Deploy| D[cPanel Git Deployment]
-                D -->|Deploy| E[Shared Hosting]
-                E -->|Serves| F[PHP API]
-                E -->|Serves| G[Admin Interface]
-                E -->|Connects to| H[MySQL Database]
-                C -->|API Requests| F
-        </div>
-    </div>
-
-    <h3>Deployment Process</h3>
-    <ol>
-        <li><strong>Frontend Deployment</strong>
-            <ul>
-                <li>Code pushed to GitHub repository</li>
-                <li>Netlify automatically builds and deploys</li>
-                <li>Static files served from Netlify CDN</li>
-            </ul>
-        </li>
-        <li><strong>Backend Deployment</strong>
-            <ul>
-                <li>Code pushed to GitHub repository</li>
-                <li>Login to cPanel</li>
-                <li>Use Git Version Control to pull changes</li>
-                <li>Deploy HEAD commit</li>
-            </ul>
-        </li>
-    </ol>
 
     <script>
-        // Initialize all mermaid diagrams
-        mermaid.init();
+        // Initialize all Mermaid diagrams after the content is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        });
+    </script>
+</body>
+</html>
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        });
     </script>
 </body>
 </html>

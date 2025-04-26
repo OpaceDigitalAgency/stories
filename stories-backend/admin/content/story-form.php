@@ -226,20 +226,27 @@ if (isset($_SESSION['error'])) {
             </div>
             <?php endif; ?>
 
-            <?php 
+            <?php
             // Check if featured field exists
-            if (in_array('featured', $columns)): 
-                $isRequired = isset($columnInfo['featured']) && $columnInfo['featured']['Null'] === 'NO' && $columnInfo['featured']['Default'] === null;
-            ?>
+            if (in_array('featured', $columns)): ?>
             <div class="form-group">
-                <label class="form-label" for="featured">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="featured" value="1"
+                           <?php echo (isset($story['featured']) && $story['featured'] == 1) ? 'checked' : ''; ?>>
                     Featured
-                    <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
                 </label>
-                <select id="featured" name="featured" class="form-input" <?php echo $isRequired ? 'required' : ''; ?>>
-                    <option value="0" <?php echo (isset($story['featured']) && $story['featured'] == 0) ? 'selected' : ''; ?>>No</option>
-                    <option value="1" <?php echo (isset($story['featured']) && $story['featured'] == 1) ? 'selected' : ''; ?>>Yes</option>
-                </select>
+            </div>
+            <?php endif; ?>
+
+            <?php
+            // Check if is_published field exists
+            if (in_array('is_published', $columns)): ?>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_published" value="1"
+                           <?php echo (!isset($story['is_published']) || $story['is_published'] == 1) ? 'checked' : ''; ?>>
+                    Published
+                </label>
             </div>
             <?php endif; ?>
 

@@ -187,7 +187,7 @@ if (isset($_SESSION['error'])) {
             <div class="form-group checkbox-field">
                 <label class="checkbox-label">
                     <input type="checkbox" name="is_published" value="1"
-                           <?php echo (isset($item['is_published']) && $item['is_published'] == 1) ? 'checked' : ''; ?>>
+                           <?php echo (!isset($item['is_published']) || $item['is_published'] == 1) ? 'checked' : ''; ?>>
                     Published
                 </label>
             </div>

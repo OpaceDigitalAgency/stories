@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin API Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        .endpoint-card { margin-bottom: 20px; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 300px; overflow: auto; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Admin API Viewer</h1>
+        <p class="lead">Use this page to view data from the API endpoints directly.</p>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Directory Items</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchEndpoint('directory-items')">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="directory-items-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading directory items...</p>
+                        </div>
+                        <pre id="directory-items-data">Click "Load Data" to fetch directory items</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">AI Tools</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchEndpoint('ai-tools')">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="ai-tools-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading AI tools...</p>
+                        </div>
+                        <pre id="ai-tools-data">Click "Load Data" to fetch AI tools</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Games</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchEndpoint('games')">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="games-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading games...</p>
+                        </div>
+                        <pre id="games-data">Click "Load Data" to fetch games</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Authors</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchEndpoint('authors')">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="authors-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading authors...</p>
+                        </div>
+                        <pre id="authors-data">Click "Load Data" to fetch authors</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Stories</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchEndpoint('stories')">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="stories-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading stories...</p>
+                        </div>
+                        <pre id="stories-data">Click "Load Data" to fetch stories</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card endpoint-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Custom Endpoint</h5>
+                        <button class="btn btn-primary btn-sm" onclick="fetchCustomEndpoint()">Load Data</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="custom-endpoint" placeholder="Enter endpoint (e.g., blog-posts)">
+                        </div>
+                        <div id="custom-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading data...</p>
+                        </div>
+                        <pre id="custom-data">Enter an endpoint and click "Load Data"</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <h4 class="alert-heading">Instructions</h4>
+            <p>This page allows you to view data directly from the API endpoints. Click the "Load Data" button for each endpoint to fetch and display the data.</p>
+            <p>If you're seeing data here but not in the admin interface, there might be an issue with the admin interface code.</p>
+            <p>You can also use the Custom Endpoint section to fetch data from any other endpoint.</p>
+        </div>
+    </div>
+    
+    <script>
+        function fetchEndpoint(endpoint) {
+            // Show loading indicator
+            document.getElementById(`${endpoint}-loading`).style.display = 'block';
+            document.getElementById(`${endpoint}-data`).textContent = 'Loading...';
+            
+            // Fetch data from API
+            fetch(`/api/v1/${endpoint}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Format and display data
+                    const formattedData = JSON.stringify(data, null, 2);
+                    document.getElementById(`${endpoint}-data`).textContent = formattedData;
+                })
+                .catch(error => {
+                    // Display error
+                    document.getElementById(`${endpoint}-data`).textContent = `Error: ${error.message}`;
+                })
+                .finally(() => {
+                    // Hide loading indicator
+                    document.getElementById(`${endpoint}-loading`).style.display = 'none';
+                });
+        }
+        
+        function fetchCustomEndpoint() {
+            const endpoint = document.getElementById('custom-endpoint').value.trim();
+            
+            if (!endpoint) {
+                document.getElementById('custom-data').textContent = 'Please enter an endpoint';
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('custom-loading').style.display = 'block';
+            document.getElementById('custom-data').textContent = 'Loading...';
+            
+            // Fetch data from API
+            fetch(`/api/v1/${endpoint}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Format and display data
+                    const formattedData = JSON.stringify(data, null, 2);
+                    document.getElementById('custom-data').textContent = formattedData;
+                })
+                .catch(error => {
+                    // Display error
+                    document.getElementById('custom-data').textContent = `Error: ${error.message}`;
+                })
+                .finally(() => {
+                    // Hide loading indicator
+                    document.getElementById('custom-loading').style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html>

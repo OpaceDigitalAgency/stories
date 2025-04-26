@@ -22,6 +22,8 @@ A comprehensive cleanup and documentation initiative has been completed to stand
 ### Additional Documentation
 - [Documentation Index](docs/documentation-index.md) - Central index for all documentation
 - [System Architecture with Diagrams](docs/system-architecture.md) - System architecture with mermaid diagrams
+- [Comprehensive System Architecture](docs/comprehensive-system-architecture.md) - Complete and detailed system architecture documentation with explanations of all components
+- [System Architecture (HTML)](docs/system-architecture.html) - Interactive HTML version with Mermaid.js diagrams
 - [Consolidated Deployment Guide](docs/consolidated-deployment-guide.md) - Comprehensive deployment guide
 
 ### Historical Documentation

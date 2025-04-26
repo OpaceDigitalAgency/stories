@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories from the Web - System Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+        }
+        .note {
+            background-color: #ffffcc;
+            padding: 15px;
+            border-left: 5px solid #ffcc00;
+            margin: 15px 0;
+        }
+        .warning {
+            background-color: #ffeeee;
+            padding: 15px;
+            border-left: 5px solid #ff0000;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #eeffee;
+            padding: 15px;
+            border-left: 5px solid #00cc00;
+            margin: 15px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .mermaid {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .diagram-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+        .diagram-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+    </style>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            fontFamily: 'Arial',
+        });
+    </script>
+</head>
+<body>
+    <h1>Stories from the Web - System Architecture</h1>
+
+    <h2>Table of Contents</h2>
+    <ul>
+        <li><a href="#overview">System Overview</a></li>
+        <li><a href="#architecture">Architecture Components</a></li>
+        <li><a href="#database">Database Schema</a></li>
+        <li><a href="#api">API Endpoints</a></li>
+        <li><a href="#authentication">Authentication Flow</a></li>
+        <li><a href="#dataflow">Data Flow Diagrams</a></li>
+        <li><a href="#deployment">Deployment Architecture</a></li>
+    </ul>
+
+    <h2 id="overview">System Overview</h2>
+    <p>Stories from the Web is a platform for sharing and discovering stories with the following key components:</p>
+    <ul>
+        <li><strong>Frontend</strong>: Astro.js-based static site with dynamic capabilities</li>
+        <li><strong>Backend API</strong>: PHP-based RESTful API</li>
+        <li><strong>Admin Interface</strong>: PHP-based content management system</li>
+        <li><strong>Database</strong>: MySQL relational database</li>
+    </ul>
+
+    <h2 id="architecture">Architecture Components</h2>
+
+    <div class="diagram-container">
+        <div class="diagram-title">High-Level Architecture</div>
+        <div class="mermaid">
+            graph TD
+                A[Frontend - Astro.js] -->|API Requests| B[Backend - PHP API]
+                B -->|Database Queries| C[MySQL Database]
+                D[Admin Interface] -->|CRUD Operations| B
+                D -->|Direct Access| C
+                E[Users] -->|View Content| A
+                F[Content Creators] -->|Manage Content| D
+        </div>
+    </div>
+
+    <h3>Component Details</h3>
+
+    <h4>Frontend (Astro.js)</h4>
+    <ul>
+        <li><strong>Purpose</strong>: Public-facing website for users to discover and read content</li>
+        <li><strong>Technology</strong>: Astro.js, TypeScript, Tailwind CSS</li>
+        <li><strong>Deployment</strong>: Netlify (https://storiesfromtheweb.netlify.app/)</li>
+        <li><strong>Key Components</strong>:
+            <ul>
+                <li>Story pages</li>
+                <li>Author profiles</li>
+                <li>Game listings</li>
+                <li>Directory listings</li>
+                <li>AI tool listings</li>
+                <li>Blog posts</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>Backend API (PHP)</h4>
+    <ul>
+        <li><strong>Purpose</strong>: Provide data to frontend and admin interface</li>
+        <li><strong>Technology</strong>: Custom PHP framework</li>
+        <li><strong>Deployment</strong>: cPanel shared hosting</li>
+        <li><strong>Key Components</strong>:
+            <ul>
+                <li>RESTful endpoints</li>
+                <li>Authentication system</li>
+                <li>Data validation</li>
+                <li>Error handling</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2 id="database">Database Schema</h2>
+
+    <div class="diagram-container">
+        <div class="diagram-title">Entity Relationship Diagram</div>
+        <div class="mermaid">
+            erDiagram
+                STORIES ||--o{ STORY_AUTHORS : has
+                STORIES ||--o{ STORY_TAGS : has
+                AUTHORS ||--o{ STORY_AUTHORS : belongs_to
+                TAGS ||--o{ STORY_TAGS : belongs_to
+                BLOG_POSTS ||--o{ POST_TAGS : has
+                TAGS ||--o{ POST_TAGS : belongs_to
+                USERS ||--|| AUTH_TOKENS : has
+                
+                STORIES {
+                    int id PK
+                    string title
+                    string slug
+                    text content
+                    text excerpt
+                    boolean is_published
+                    boolean featured
+                    decimal average_rating
+                    string cover_url
+                    timestamp created_at
+                    timestamp updated_at
+                }
+                
+                AUTHORS {
+                    int id PK
+                    string name
+                    string slug
+                    text bio
+                    string avatar_url
+                    boolean is_published
+                    timestamp created_at
+                    timestamp updated_at
+                }
+                
+                TAGS {
+                    int id PK
+                    string name
+                    string slug
+                    timestamp created_at
+                    timestamp updated_at
+                }
+        </div>
+    </div>
+
+    <h2 id="authentication">Authentication Flow</h2>
+
+    <div class="diagram-container">
+        <div class="diagram-title">Login Process</div>
+        <div class="mermaid">
+            sequenceDiagram
+                participant User
+                participant AdminInterface
+                participant API
+                participant Database
+                
+                User->>AdminInterface: Enter credentials
+                AdminInterface->>API: POST /auth/login
+                API->>Database: Verify credentials
+                Database-->>API: Credentials valid
+                API->>API: Generate JWT token
+                API->>Database: Store token
+                API-->>AdminInterface: Return token
+                AdminInterface->>AdminInterface: Store token in cookie
+                AdminInterface-->>User: Redirect to dashboard
+        </div>
+    </div>
+
+    <div class="diagram-container">
+        <div class="diagram-title">API Request Authentication</div>
+        <div class="mermaid">
+            sequenceDiagram
+                participant Frontend
+                participant API
+                participant Database
+                
+                Frontend->>API: Request with JWT token
+                API->>API: Validate token
+                alt Token valid
+                    API->>Database: Process request
+                    Database-->>API: Return data
+                    API-->>Frontend: Return response
+                else Token expired
+                    API-->>Frontend: 401 Unauthorized
+                    Frontend->>API: Request token refresh
+                    API->>API: Generate new token
+                    API-->>Frontend: Return new token
+                    Frontend->>API: Retry original request
+                end
+        </div>
+    </div>
+
+    <h2 id="dataflow">Data Flow Diagrams</h2>
+
+    <div class="diagram-container">
+        <div class="diagram-title">Content Viewing Flow</div>
+        <div class="mermaid">
+            sequenceDiagram
+                participant User
+                participant Frontend
+                participant API
+                participant Database
+                
+                User->>Frontend: Visit stories page
+                Frontend->>API: GET /api/v1/stories
+                API->>Database: Query stories
+                Database-->>API: Return stories data
+                API-->>Frontend: JSON response
+                Frontend->>Frontend: Render stories
+                Frontend-->>User: Display stories
+                
+                User->>Frontend: Click on story
+                Frontend->>API: GET /api/v1/stories/{id}
+                API->>Database: Query story details
+                Database-->>API: Return story data
+                API-->>Frontend: JSON response
+                Frontend->>Frontend: Render story
+                Frontend-->>User: Display story
+        </div>
+    </div>
+
+    <h2 id="deployment">Deployment Architecture</h2>
+
+    <div class="diagram-container">
+        <div class="diagram-title">Production Environment</div>
+        <div class="mermaid">
+            graph TD
+                A[GitHub Repository] -->|Push| B[Netlify CI/CD]
+                B -->|Build| C[Netlify CDN]
+                A -->|Manual Deploy| D[cPanel Git Deployment]
+                D -->|Deploy| E[Shared Hosting]
+                E -->|Serves| F[PHP API]
+                E -->|Serves| G[Admin Interface]
+                E -->|Connects to| H[MySQL Database]
+                C -->|API Requests| F
+        </div>
+    </div>
+
+    <h3>Deployment Process</h3>
+    <ol>
+        <li><strong>Frontend Deployment</strong>
+            <ul>
+                <li>Code pushed to GitHub repository</li>
+                <li>Netlify automatically builds and deploys</li>
+                <li>Static files served from Netlify CDN</li>
+            </ul>
+        </li>
+        <li><strong>Backend Deployment</strong>
+            <ul>
+                <li>Code pushed to GitHub repository</li>
+                <li>Login to cPanel</li>
+                <li>Use Git Version Control to pull changes</li>
+                <li>Deploy HEAD commit</li>
+            </ul>
+        </li>
+    </ol>
+
+    <script>
+        // Initialize all mermaid diagrams
+        mermaid.init();
+    </script>
+</body>
+</html>

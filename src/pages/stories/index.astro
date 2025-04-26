@@ -5,50 +5,11 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import PremiumBlock from '../../components/PremiumBlock.astro';
 import SponsoredCarousel from '../../components/SponsoredCarousel.astro';
-import { fetchFromApi, type ApiResponse, type Story } from '../../lib/api';
+import { fetchStories, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
 // Fetch stories from API
-const storiesResponse = await fetchFromApi('stories', {
-  populate: '*',
-  sort: 'publishedAt:desc'
-}) as StrapiResponse<Story>;
-
-const stories = storiesResponse.data.map(item => {
-  // Ensure item and attributes exist before accessing properties
-  if (!item || !item.attributes) {
-    console.error('Invalid story item structure:', item);
-    return null;
-  }
-  
-  return {
-    id: item.id,
-    title: item.attributes.title || 'Untitled Story',
-    slug: item.attributes.slug || '',
-    excerpt: item.attributes.excerpt || '',
-    coverImage: item.attributes.cover?.data?.attributes?.url || '',
-    author: {
-      name: item.attributes.author?.data?.attributes?.name || '',
-      avatar: item.attributes.author?.data?.attributes?.avatar?.data?.attributes?.url || ''
-    },
-    // Add null check for publishedAt
-    publishedAt: item.attributes.publishedAt ? new Date(item.attributes.publishedAt).toLocaleDateString() : new Date().toLocaleDateString(),
-    tags: item.attributes.tags?.data?.map(tag => tag.attributes.name) || []
-  };
-}).filter(Boolean); // Remove any null items
-
-// Fetch featured blocks from API
-const featuredBlocksResponse = await fetchFromApi('featured-blocks', {
-  populate: '*'
-}) as StrapiResponse<any>;
-
-const featuredBlocks = featuredBlocksResponse.data.map(block => ({
-  type: block.attributes.type,
-  title: block.attributes.title,
-  description: block.attributes.description,
-  image: block.attributes.image?.data?.attributes?.url || '',
-  link: block.attributes.link
-}));
+const stories = await fetchStories(1, 10);
 
 // Filter options
 const ageGroups = ['0-2 years', '3-5 years', '6-8 years', '9-12 years'];
@@ -56,7 +17,7 @@ const lengths = ['Short (< 5 min)', 'Medium (5-15 min)', 'Long (> 15 min)'];
 const sortOptions = ['Most Recent', 'Most Popular', 'Highest Rated'];
 
 // Get unique tags from stories for the popular tags section
-const popularTags = [...new Set(stories.flatMap(story => story.tags))].slice(0, 8);
+const popularTags = [...new Set(stories.flatMap(story => story.tags || []))].slice(0, 8);
 ---
 
 <html lang="en">
@@ -217,27 +178,15 @@ const popularTags = [...new Set(stories.flatMap(story => story.tags))].slice(0, 
                 </div>
               </div>
               
-              <!-- Premium/Sponsored Blocks -->
-              {featuredBlocks.length > 0 && (
-                <div class="mb-10">
-                  <h3 class="text-xl font-display font-bold text-gray-800 mb-6">Featured Content</h3>
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {featuredBlocks.map(block => (
-                      <PremiumBlock
-                        type={block.type}
-                        title={block.title}
-                        description={block.description}
-                        image={block.image}
-                        link={block.link}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stories.map(story => (
-                  <CardStory {...story} />
+                  <CardStory 
+                    title={story.title}
+                    excerpt={story.excerpt}
+                    coverImage={story.coverImage}
+                    slug={story.slug}
+                    publishDate={story.publishDate}
+                  />
                 ))}
               </div>
               

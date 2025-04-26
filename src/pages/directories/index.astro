@@ -1,32 +1,33 @@
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
-import { fetchFromApi, type ApiResponse } from '../../lib/api';
+import { fetchDirectoryItems, type DirectoryItem } from '../../lib/api';
 import '../../styles/base.css';
 
-// Fetch directory categories from API
-const categoriesResponse = await fetchFromApi('directory-categories', {
-  populate: '*'
-}) as StrapiResponse<any>;
+// Fetch directory items from API
+const items = await fetchDirectoryItems();
 
-const categories = categoriesResponse.data.map(item => ({
-  title: item.attributes.title,
-  description: item.attributes.description,
-  icon: item.attributes.icon,
-  link: item.attributes.link,
-  color: item.attributes.color
-})) || [];
-
-// If no categories are found, provide default structure
-if (categories.length === 0) {
-  categories.push({
-    title: "Books",
-    description: "Browse our collection",
+// Define static categories
+const categories = [
+  {
+    title: "Educational Tools",
+    description: "Learning resources and teaching materials",
     icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
-    link: "/stories",
     color: "primary"
-  });
-}
+  },
+  {
+    title: "Reading Materials",
+    description: "Books, stories, and literature resources",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
+    color: "secondary"
+  },
+  {
+    title: "Teaching Resources",
+    description: "Lesson plans and classroom materials",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
+    color: "accent"
+  }
+];
 ---
 
 <html lang="en">
@@ -89,34 +90,60 @@ if (categories.length === 0) {
         <div class="container mx-auto px-4">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {categories.map(category => (
-              <a 
-                href={category.link}
-                class={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow group ${
-                  category.color === "primary" ? "hover:bg-primary/5" :
-                  category.color === "secondary" ? "hover:bg-secondary/5" :
-                  category.color === "accent" ? "hover:bg-accent/5" :
-                  "hover:bg-gray-50"
-                }`}
-              >
+              <div class={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow group ${
+                category.color === "primary" ? "hover:bg-primary/5" :
+                category.color === "secondary" ? "hover:bg-secondary/5" :
+                "hover:bg-accent/5"
+              }`}>
                 <div class={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
                   category.color === "primary" ? "bg-primary/10 text-primary" :
                   category.color === "secondary" ? "bg-secondary/10 text-secondary" :
-                  category.color === "accent" ? "bg-accent/10 text-accent" :
-                  "bg-gray-100 text-gray-600"
+                  "bg-accent/10 text-accent"
                 }`}>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                     <Fragment set:html={category.icon} />
                   </svg>
                 </div>
                 
-                <h2 class={`text-xl font-display font-bold mb-2 group-hover:text-${category.color}`}>
-                  {category.title}
-                </h2>
-                
-                <p class="text-gray-600">
-                  {category.description}
-                </p>
-              </a>
+                <h2 class="text-xl font-display font-bold mb-2">{category.title}</h2>
+                <p class="text-gray-600">{category.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Directory Items -->
+      <section class="py-12 bg-gray-50">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-display font-bold text-gray-800 mb-8">Featured Resources</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {items.map(item => (
+              <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <img 
+                  src={item.coverImage} 
+                  alt={item.title}
+                  class="w-full h-48 object-cover"
+                />
+                <div class="p-6">
+                  <h3 class="text-xl font-bold mb-2">{item.title}</h3>
+                  <p class="text-gray-600 mb-4">{item.description}</p>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-500">{item.category}</span>
+                    <span class="text-sm text-gray-500">Price Range: {item.priceRange}</span>
+                  </div>
+                  <div class="mt-4 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">Rating:</span>
+                    <span class="text-sm font-medium">{item.rating}/5</span>
+                  </div>
+                  <a 
+                    href={`/directories/${item.slug}`}
+                    class="mt-4 block w-full text-center py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Learn More
+                  </a>
+                </div>
+              </div>
             ))}
           </div>
         </div>

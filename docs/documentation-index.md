@@ -16,15 +16,20 @@ The following documentation files have been created as part of the comprehensive
 
 1. [**Stories Cleanup Plan**](../stories-cleanup-plan.md) - Comprehensive plan for cleaning up and standardizing the codebase
 2. [**System Architecture**](system-architecture.md) - Detailed documentation of the system architecture with diagrams
-3. [**Database Schema**](../database-schema.md) - Complete documentation of the database schema
-4. [**API Documentation**](../api-documentation.md) - Comprehensive documentation of all API endpoints
-5. [**PHP Scripts Cleanup Guide**](../php-scripts-cleanup-guide.md) - Guide for cleaning up PHP scripts
-6. [**Implementation Plan**](../implementation-plan.md) - Detailed implementation plan
-7. [**Project Cleanup Summary**](../project-cleanup-summary.md) - Summary and index of all documentation
+3. [**Comprehensive System Architecture**](comprehensive-system-architecture.md) - Complete and detailed system architecture documentation with explanations of all components
+4. [**Database Schema**](../database-schema.md) - Complete documentation of the database schema
+5. [**API Documentation**](../api-documentation.md) - Comprehensive documentation of all API endpoints
+6. [**PHP Scripts Cleanup Guide**](../php-scripts-cleanup-guide.md) - Guide for cleaning up PHP scripts
+7. [**Implementation Plan**](../implementation-plan.md) - Detailed implementation plan
+8. [**Project Cleanup Summary**](../project-cleanup-summary.md) - Summary and index of all documentation
 
 ### Consolidated Documentation
 
-8. [**Consolidated Deployment Guide**](consolidated-deployment-guide.md) - Comprehensive guide for deploying the platform, consolidating information from various deployment-related files
+9. [**Consolidated Deployment Guide**](consolidated-deployment-guide.md) - Comprehensive guide for deploying the platform, consolidating information from various deployment-related files
+
+### Visual Documentation
+
+10. [**System Architecture (HTML)**](system-architecture.html) - Interactive HTML version of the system architecture with Mermaid.js diagrams
 
 ## Existing Documentation
 
@@ -56,7 +61,7 @@ Based on the analysis of existing documentation, here are recommendations for wh
 5. **FTP_DEPLOYMENT.md** - Replace with [Consolidated Deployment Guide](consolidated-deployment-guide.md)
 6. **GIT_DEPLOYMENT.md** - Replace with [Consolidated Deployment Guide](consolidated-deployment-guide.md)
 7. **GITHUB_DEPLOY.md** - Replace with [Consolidated Deployment Guide](consolidated-deployment-guide.md)
-8. **system-documentation.html** - Replace with [System Architecture](system-architecture.md)
+8. **system-documentation.html** - Replace with [Comprehensive System Architecture](comprehensive-system-architecture.md) and [System Architecture (HTML)](system-architecture.html)
 
 ### Files to Keep for Reference
 
@@ -89,6 +94,8 @@ The recommended documentation structure is as follows:
 ├── docs/                           # Documentation directory
 │   ├── documentation-index.md      # This file
 │   ├── system-architecture.md      # System architecture with diagrams
+│   ├── system-architecture.html    # Interactive HTML version with diagrams
+│   ├── comprehensive-system-architecture.md # Complete system architecture documentation
 │   └── consolidated-deployment-guide.md # Consolidated deployment guide
 └── API_CONNECTIVITY_FIX.md         # Reference for API connectivity issues
 ```

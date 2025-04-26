@@ -1,4 +1,4 @@
-<?php
+have y<?php
 /**
  * Fix Games Endpoint Config
  * 

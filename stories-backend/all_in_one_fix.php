@@ -701,30 +701,15 @@ class GamesController extends Controller {
         \$sortClause = "ORDER BY \$sortColumn \$sortDirection";
         
         try {
-            // Connect to database
-            echo "<p>Connecting to database...</p>";
-            try {
-                \$this->db->query("SELECT 1");
-                echo "<p>Database connection successful.</p>";
-            } catch (\Exception \$e) {
-                echo "<p>Database connection failed: " . \$e->getMessage() . "</p>";
-                \$this->serverError('Database connection failed: ' . \$e->getMessage());
-                return;
-            }
-            
             // Build the WHERE clause
-            echo "<p>Building WHERE clause...</p>";
             \$whereData = \$this->buildWhereClause(\$filters);
             \$whereClause = \$whereData['clause'];
             \$params = \$whereData['params'];
-            echo "<p>WHERE clause built: \$whereClause with params: " . json_encode(\$params) . "</p>";
             
             // Count total records
             \$countQuery = "SELECT COUNT(*) as total FROM games \$whereClause";
-            echo "<p>Executing count query: \$countQuery with params: " . json_encode(\$params) . "</p>";
             \$stmt = \$this->db->query(\$countQuery, \$params);
             \$total = \$stmt->fetch()['total'];
-            echo "<p>Total records: \$total</p>";
             
             // Get games with pagination
             \$query = "SELECT
@@ -735,19 +720,15 @@ class GamesController extends Controller {
                 \$sortClause
                 LIMIT \$offset, \$pageSize";
             
-            echo "<p>Executing data query: \$query with params: " . json_encode(\$params) . "</p>";
             \$stmt = \$this->db->query(\$query, \$params);
             \$games = \$stmt->fetchAll();
-            echo "<p>Fetched games: " . json_encode(\$games) . "</p>";
             
             // Format games with the expected structure
             \$formattedGames = Response::formatData(\$games);
-            echo "<p>Formatted games: " . json_encode(\$formattedGames) . "</p>";
             
             // Send paginated response
             Response::sendPaginated(\$formattedGames, \$page, \$pageSize, \$total);
         } catch (\Exception \$e) {
-            echo "<p>Error fetching games: " . \$e->getMessage() . "</p>";
             \$this->serverError('Failed to fetch games: ' . \$e->getMessage());
         }
     }
@@ -811,3 +792,31 @@ EOD;
     if (file_put_contents($gamesController, $controllerContent)) {
         echo "<p style='color:green'>✅ Created GamesController at: $gamesController</p>";
     } else {
+        echo "<p style='color:red'>❌ Failed to create GamesController.</p>";
+    }
+}
+
+// Check routes file
+echo "<h3>Checking Routes Configuration</h3>";
+
+$routesFile = $apiPath . '/routes.php';
+if (file_exists($routesFile)) {
+    echo "<p>Routes file found at: $routesFile</p>";
+    
+    // Read the routes file
+    $routesContent = file_get_contents($routesFile);
+    
+    // Check for games endpoint configuration
+    if (preg_match('/games.*?Controller/i', $routesContent, $matches)) {
+        echo "<p>Games endpoint configuration found: " . htmlspecialchars($matches[0]) . "</p>";
+        
+        // Check if the path is correct
+        $targetFolderName = basename($targetFolder);
+        $correctNamespace = "StoriesAPI\\$targetFolderName\\GamesController";
+        $correctNamespaceEscaped = str_replace('\\', '\\\\', $correctNamespace);
+        
+        if (strpos($routesContent, $correctNamespace) === false && !preg_match("/$correctNamespaceEscaped/", $routesContent)) {
+            echo "<p style='color:orange'>⚠️ The routes file may be using the wrong namespace for GamesController. Fixing...</p>";
+            
+            // Create a backup of the original file
+            $backupFile = $routesFile . '.bak.' . date('YmdHis');

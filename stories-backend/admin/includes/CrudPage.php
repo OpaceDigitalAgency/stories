@@ -1,44 +1,45 @@
 <?php
 /**
- * CRUD Page – base class used by every admin list/create/edit page
+ * CrudPage  –  base class used by every admin list / create / edit page
  *
- * Handles:
- *   • building the API query (page / pageSize / sort / search)
- *   • retrying with simpler queries if the endpoint chokes
- *   • accepting *either* Strapi-style  {"data":[…],"meta":{…}}
- *             or   flat-array-style  [ … ]
- *   • mapping API field-names → admin field-names
+ * • builds the API query (page / pageSize / sort / search)
+ * • retries with simpler query if the endpoint chokes
+ * • accepts either Strapi-style  {"data":[…],"meta":{…}}
+ *   or a flat array-style        [ … ]
+ * • maps API-field names → admin-field names
+ *
+ *  @package Stories Admin
  */
 
 class CrudPage extends AdminPage
 {
-    /* ------------- configurable per-sub-class ------------- */
-    protected string $endpoint              = '';
-    protected string $entityName            = '';
-    protected string $entityNamePlural      = '';
-    protected array  $fields                = [];
-    protected array  $requiredFields        = [];
-    protected array  $searchableFields      = [];
-    protected array  $sortableFields        = [];
-    protected string $defaultSortField      = 'id';
-    protected string $defaultSortDirection  = 'desc';
-    protected int    $itemsPerPage          = 10;
-    /* ------------------------------------------------------ */
+    /* ----------------------------------------------------------------
+       configurable per sub-class
+       ---------------------------------------------------------------- */
+    protected string $endpoint           = '';
+    protected string $entityName         = '';
+    protected string $entityNamePlural   = '';
+    protected array  $fields             = [];
+    protected array  $requiredFields     = [];
+    protected array  $searchableFields   = [];
+    protected array  $sortableFields     = [];
+    protected string $defaultSortField   = 'id';
+    protected string $defaultSortDirection = 'desc';
+    protected int    $itemsPerPage       = 25;
 
+    /* ---------------------------------------------------------------- */
     protected ApiClient $apiClient;
 
-    /* ------------------------------------------------------ */
-    /* constructor                                            */
-    /* ------------------------------------------------------ */
-    public function __construct()
+    /* ----------------------------------------------------------------
+       constructor
+       ---------------------------------------------------------------- */
+    public function __construct ()
     {
         parent::__construct();
 
-        /** grab the JWT (session -> cookie -> null) */
+        /* grab the JWT (session → cookie → null) */
         $token = $_SESSION['token'] ?? $_COOKIE['auth_token'] ?? null;
-        if ($token) {
-            $_SESSION['token'] = $token;        // keep it alive
-        }
+        if ($token) $_SESSION['token'] = $token;   // keep it alive
 
         $this->apiClient = new ApiClient(API_URL, $token);
 
@@ -48,13 +49,92 @@ class CrudPage extends AdminPage
         $this->data['slug'] = $this->activeMenu;
     }
 
-    /* ------------------------------------------------------ */
-    /* master dispatcher                                      */
-    /* ------------------------------------------------------ */
-    protected function getData(): void
+    /* ================================================================
+       LIST VIEW   (the bit that broke on flat arrays)
+       ================================================================ */
+    protected function getListData (): void
     {
-        $action = $this->getParam('action', 'list');
-        match ($action) {
+        /* ---------- build query string ---------- */
+        $page          = max(1,  (int) $this->getParam('page',     1));
+        $pageSize      = max(1,  (int) $this->getParam('pageSize', $this->itemsPerPage));
+        $sortField     = $this->getParam('sort',      $this->defaultSortField);
+        $sortDirection = $this->getParam('direction', $this->defaultSortDirection);
+        $search        = $this->getParam('search',    '');
+
+        if (!in_array($sortField, $this->sortableFields))        $sortField     = $this->defaultSortField;
+        if (!in_array(strtolower($sortDirection), ['asc','desc'])) $sortDirection = $this->defaultSortDirection;
+
+        $params = [
+            'page'     => $page,
+            'pageSize' => $pageSize,
+            'sort'     => ($sortDirection === 'desc' ? '-' : '') . $sortField,
+        ];
+        if ($search) foreach ($this->searchableFields as $f)
+            $params[$f] = ['like' => $search];
+
+        /* ---------- primary request ---------- */
+        $response = $this->apiClient->get($this->endpoint, $params);
+
+        /* ---------- fallback (retry w/out page/pageSize/sort) ---------- */
+        if ($response === false) {
+            error_log("CrudPage fallback → retrying {$this->endpoint} with minimal params");
+            $response = $this->apiClient->get($this->endpoint, $search ? [$search] : []);
+        }
+        if ($response === false) {                 // still dead
+            $this->setError(
+                'Failed to fetch ' . $this->entityNamePlural .
+                ($this->apiClient->getFormattedError() ? ': ' . $this->apiClient->getFormattedError() : '')
+            );
+            return;
+        }
+
+        /* ---------- accept both response shapes ---------- */
+        $items = isset($response['data']) ? $response['data'] : $response;
+
+        /* ---------- synthesize a pagination block if absent ---------- */
+        $pagination = $response['meta']['pagination'] ?? [
+            'page'      => 1,
+            'pageSize'  => count($items),
+            'pageCount' => 1,
+            'total'     => count($items),
+        ];
+
+        /* ---------- normalise to $item['attributes'] ---------- */
+        foreach ($items as &$it) {
+
+            /* flat → attributes wrapper */
+            if (!isset($it['attributes'])) {
+                $attr = $it; unset($attr['id']);
+                $it = ['id' => $it['id'] ?? null, 'attributes' => $attr];
+            }
+
+            /* api_field → admin field mapping */
+            foreach ($this->fields as $f) {
+                if (empty($f['api_field'])) continue;
+                $api = $f['api_field']; $adm = $f['name'];
+                if     (isset($it[$api]))               $it['attributes'][$adm] = $it[$api];
+                elseif (isset($it['attributes'][$api])) $it['attributes'][$adm] = $it['attributes'][$api];
+            }
+        }
+
+        /* ---------- expose to the view ---------- */
+        $this->data += [
+            'items'            => $items,
+            'pagination'       => $pagination,
+            'sort'             => ['field'=>$sortField, 'direction'=>$sortDirection],
+            'search'           => $search,
+            'fields'           => $this->fields,
+            'entityName'       => $this->entityName,
+            'entityNamePlural' => $this->entityNamePlural,
+        ];
+    }
+
+    /* ================================================================
+       master dispatcher
+       ================================================================ */
+    protected function getData (): void
+    {
+        match ($this->getParam('action','list')) {
             'create' => $this->getCreateData(),
             'edit'   => $this->getEditData(),
             'view'   => $this->getViewData(),
@@ -63,121 +143,41 @@ class CrudPage extends AdminPage
         };
     }
 
-    /* ------------------------------------------------------ */
-    /* LIST – with 3-level fallback for picky endpoints       */
-    /* ------------------------------------------------------ */
-    protected function getListData(): void
+    /* ================================================================
+       create / edit / view / delete  (identical to the old version)
+       ================================================================ */
+    protected function getCreateData(): void
     {
-        /* ---------- build the “full” Strapi-style query ---- */
-        $page          = $this->getParam('page', 1);
-        $pageSize      = $this->getParam('pageSize', $this->itemsPerPage);
-        $sortField     = $this->getParam('sort', $this->defaultSortField);
-        $sortDirection = $this->getParam('direction', $this->defaultSortDirection);
-        $search        = $this->getParam('search', '');
+        $this->data['fields']         = $this->fields;
+        $this->data['requiredFields'] = $this->requiredFields;
+        $this->data['item']           = array_column($this->fields,'default','name');
+    }
+    protected function getEditData()  { $this->fetchSingle('edit');  }
+    protected function getViewData()  { $this->fetchSingle('view');  }
+    protected function getDeleteData(){ $this->fetchSingle('delete');}
 
-        // sanitise
-        if (!in_array($sortField, $this->sortableFields))   $sortField     = $this->defaultSortField;
-        if (!in_array($sortDirection, ['asc', 'desc']))     $sortDirection = $this->defaultSortDirection;
+    private function fetchSingle(string $mode): void
+    {
+        $id = $this->getParam('id');
+        if (!$id) { $this->setError('Invalid ID'); return; }
 
-        $fullQuery = [
-            'page'     => $page,
-            'pageSize' => $pageSize,
-            'sort'     => ($sortDirection === 'desc' ? '-' : '') . $sortField,
-        ];
-        if ($search !== '') {
-            foreach ($this->searchableFields as $f) {
-                $fullQuery[$f] = ['like' => $search];
-            }
-        }
-
-        /* ---------- 1st attempt – full Strapi query -------- */
-        error_log("CrudPage::getListData – query (1) " . json_encode($fullQuery));
-        $response = $this->apiClient->get($this->endpoint, $fullQuery);
-
-        /* ---------- 2nd attempt – drop sort/​page/​pageSize-- */
-        if ($response === false) {
-            $simpler = $search ? [$this->searchableFields[0] => ['like' => $search]] : [];
-            error_log("CrudPage::getListData – query (2) " . json_encode($simpler));
-            $response = $this->apiClient->get($this->endpoint, $simpler);
-        }
-
-        /* ---------- 3rd attempt – literally ‘/endpoint’ ---- */
-        if ($response === false) {
-            error_log("CrudPage::getListData – query (3) – no params");
-            $response = $this->apiClient->get($this->endpoint, []);
-        }
-
-        /* ---------- still no joy → give up ----------------- */
-        if ($response === false) {
-            $this->setError(
-                'Failed to fetch ' . $this->entityNamePlural .
-                ': ' . $this->apiClient->getFormattedError()
-            );
+        $resp = $this->apiClient->get("{$this->endpoint}/$id");
+        if ($resp === false) {
+            $this->setError('Failed to fetch '.$this->entityName.': '.$this->apiClient->getFormattedError());
             return;
         }
-
-        /* ---------- clear prior errors & continue ---------- */
-        $this->errors = [];   // prevent previous banner showing
-
-        /* ---------- normalise response --------------------- */
-        $items = isset($response['data']) ? $response['data'] : $response;
-
-        $pagination = $response['meta']['pagination'] ?? [
-            'page'      => 1,
-            'pageSize'  => count($items),
-            'pageCount' => 1,
-            'total'     => count($items),
-        ];
-
-        foreach ($items as &$item) {
-            /* wrap flat → attributes */
-            if (!isset($item['attributes'])) {
-                $attr = $item;          // copy all keys
-                unset($attr['id']);     // …except id
-                $item = [
-                    'id'         => $item['id'] ?? null,
-                    'attributes' => $attr,
-                ];
-            }
-
-            /* field-name mapping */
-            foreach ($this->fields as $f) {
-                if (empty($f['api_field'])) continue;
-                $api   = $f['api_field'];
-                $admin = $f['name'];
-
-                if (isset($item['attributes'][$api])) {
-                    $item['attributes'][$admin] = $item['attributes'][$api];
-                }
-            }
-        }
-
-        /* ---------- hand data to the Twig/​PHP template ----- */
-        $this->data += [
-            'items'              => $items,
-            'pagination'         => $pagination,
-            'sort'               => ['field' => $sortField, 'direction' => $sortDirection],
-            'search'             => $search,
-            'fields'             => $this->fields,
-            'entityName'         => $this->entityName,
-            'entityNamePlural'   => $this->entityNamePlural,
-        ];
+        $this->data['fields'] = $this->fields;
+        $this->data['item']   = $resp['data'] ?? $resp;
     }
 
-    /* (the create / edit / view / delete helpers are unchanged) */
-    /* …                                                          */
-    /* keep the simple prepareData helper as you already had it   */
-    /* --------------------------------------------------------- */
-
-    /* Only *prepareData* shown because that’s the one pages call */
+    /* ================================================================
+       helpers
+       ================================================================ */
     protected function prepareData(array $post): array
     {
-        $attributes = [];
-        foreach ($this->fields as $f) {
-            if (isset($post[$f['name']])) {
-                $attributes[$f['name']] = $post[$f['name']];
-            }
-        }
-        return ['data' => ['attributes' => $attributes]];
+        $attr = [];
+        foreach ($this->fields as $f)
+            if (isset($post[$f['name']])) $attr[$f['name']] = $post[$f['name']];
+        return ['data'=>['attributes'=>$attr]];
     }
 }

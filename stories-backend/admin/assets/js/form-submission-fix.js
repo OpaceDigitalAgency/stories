@@ -75,11 +75,52 @@
         // Get form data
         const formData = new FormData(form);
         const formObject = {};
+        
+        // Map field names based on content type
         formData.forEach((value, key) => {
-            formObject[key] = value;
+            // Handle field mapping for different content types
+            if (contentType === 'directory-items') {
+                // Map directory-items fields
+                if (key === 'name') formObject['name'] = value;
+                else if (key === 'description') formObject['description'] = value;
+                else if (key === 'url') formObject['url'] = value;
+                else if (key === 'category') formObject['category'] = value;
+                else if (key === 'logo') formObject['logo'] = value;
+                else if (key === 'featured') formObject['featured'] = value;
+                else if (key === 'is_published') formObject['isPublished'] = value;
+                else formObject[key] = value;
+            }
+            else if (contentType === 'ai-tools') {
+                // Map ai-tools fields
+                if (key === 'name') formObject['name'] = value;
+                else if (key === 'description') formObject['description'] = value;
+                else if (key === 'url') formObject['url'] = value;
+                else if (key === 'category') formObject['category'] = value;
+                else if (key === 'logo') formObject['logo'] = value;
+                else if (key === 'pricing_type') formObject['pricingType'] = value;
+                else if (key === 'featured') formObject['featured'] = value;
+                else if (key === 'is_published') formObject['isPublished'] = value;
+                else formObject[key] = value;
+            }
+            else if (contentType === 'games') {
+                // Map games fields
+                if (key === 'title') formObject['title'] = value;
+                else if (key === 'description') formObject['description'] = value;
+                else if (key === 'url') formObject['url'] = value;
+                else if (key === 'category') formObject['category'] = value;
+                else if (key === 'thumbnail') formObject['thumbnail'] = value;
+                else if (key === 'ageGroup') formObject['ageGroup'] = value;
+                else if (key === 'slug') formObject['slug'] = value;
+                else if (key === 'is_published') formObject['isPublished'] = value;
+                else formObject[key] = value;
+            }
+            else {
+                // Default mapping for other content types
+                formObject[key] = value;
+            }
         });
         
-        console.log('[FORM FIX] Form data:', formObject);
+        console.log('[FORM FIX] Mapped form data:', formObject);
         
         // Show loading message (already shown by the original form handler)
         

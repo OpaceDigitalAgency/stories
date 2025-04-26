@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize loading indicators
     initLoadingIndicators();
     
+    // Initialize API data loading
+    initApiDataLoading();
+    
     // Initialize dropdowns
     // initDropdowns();  // Commented out as this function is not properly defined
     
@@ -960,4 +963,200 @@ function showNotification(message, type = 'success', duration = 5000) {
     notification.addEventListener('closed.bs.alert', function() {
         notification.remove();
     });
+}
+
+/**
+ * Initialize API data loading
+ * This function handles loading data from the API for admin pages
+ */
+function initApiDataLoading() {
+    console.log('[INIT] Running initApiDataLoading...');
+    
+    // Check if we're on a list page
+    const listContainer = document.querySelector('.list-container');
+    if (!listContainer) return;
+    
+    // Get the current page type from the URL or page title
+    let pageType = '';
+    const pageTitle = document.querySelector('h1');
+    
+    if (window.location.href.includes('directory-items.php')) {
+        pageType = 'directory-items';
+    } else if (window.location.href.includes('ai-tools.php')) {
+        pageType = 'ai-tools';
+    } else if (window.location.href.includes('games.php')) {
+        pageType = 'games';
+    } else if (pageTitle) {
+        // Try to determine page type from title
+        const titleText = pageTitle.textContent.trim().toLowerCase();
+        if (titleText.includes('directory')) {
+            pageType = 'directory-items';
+        } else if (titleText.includes('ai tools')) {
+            pageType = 'ai-tools';
+        } else if (titleText.includes('games')) {
+            pageType = 'games';
+        }
+    }
+    
+    if (!pageType) {
+        console.log('[API LOAD] Could not determine page type');
+        return;
+    }
+    
+    console.log('[API LOAD] Page type:', pageType);
+    
+    // Get the error message container
+    const errorContainer = document.querySelector('.alert-danger');
+    if (errorContainer && (errorContainer.textContent.includes('Error loading') || errorContainer.textContent.includes('No data found'))) {
+        console.log('[API LOAD] Error container found, attempting to load data directly');
+        
+        // Show loading indicator
+        const loadingHtml = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Loading data...</p></div>';
+        listContainer.innerHTML = loadingHtml;
+        
+        // Fetch data directly from the API
+        fetch('/api/v1/' + pageType)
+            .then(response => {
+                console.log('[API LOAD] API response:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[API LOAD] Data loaded:', data);
+                
+                // Check if data is valid
+                if (!data || (Array.isArray(data) && data.length === 0)) {
+                    listContainer.innerHTML = '<div class="alert alert-info">No items found. Click the button above to add your first item.</div>';
+                    return;
+                }
+                
+                // Process the data based on page type
+                let items = [];
+                
+                if (Array.isArray(data)) {
+                    // Flat array format
+                    items = data;
+                } else if (data.data && Array.isArray(data.data)) {
+                    // Nested format with data key
+                    items = data.data;
+                } else {
+                    console.error('[API LOAD] Unexpected data format:', data);
+                    listContainer.innerHTML = '<div class="alert alert-danger">Error processing data. Unexpected format.</div>';
+                    return;
+                }
+                
+                // Create table HTML
+                let tableHtml = '<table class="table table-striped">';
+                
+                // Add table header based on page type
+                if (pageType === 'directory-items') {
+                    tableHtml += `
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>URL</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                    `;
+                } else if (pageType === 'ai-tools') {
+                    tableHtml += `
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Pricing</th>
+                                <th>Featured</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                    `;
+                } else if (pageType === 'games') {
+                    tableHtml += `
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>URL</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                    `;
+                }
+                
+                // Add table body
+                tableHtml += '<tbody>';
+                
+                // Add rows for each item
+                items.forEach(item => {
+                    // Get item data based on format
+                    const itemData = item.attributes ? item.attributes : item;
+                    const itemId = item.id;
+                    
+                    // Add row based on page type
+                    if (pageType === 'directory-items') {
+                        tableHtml += `
+                            <tr>
+                                <td>${itemId}</td>
+                                <td>${itemData.name || ''}</td>
+                                <td>${itemData.category || ''}</td>
+                                <td><a href="${itemData.url || '#'}" target="_blank">${itemData.url || ''}</a></td>
+                                <td>${itemData.isPublished ? 'Yes' : 'No'}</td>
+                                <td>
+                                    <a href="?action=edit&id=${itemId}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="?action=delete&id=${itemId}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    } else if (pageType === 'ai-tools') {
+                        tableHtml += `
+                            <tr>
+                                <td>${itemId}</td>
+                                <td>${itemData.name || ''}</td>
+                                <td>${itemData.category || ''}</td>
+                                <td>${itemData.pricingType || ''}</td>
+                                <td>${itemData.featured ? 'Yes' : 'No'}</td>
+                                <td>${itemData.isPublished ? 'Yes' : 'No'}</td>
+                                <td>
+                                    <a href="?action=edit&id=${itemId}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="?action=delete&id=${itemId}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    } else if (pageType === 'games') {
+                        tableHtml += `
+                            <tr>
+                                <td>${itemId}</td>
+                                <td>${itemData.title || ''}</td>
+                                <td>${itemData.category || ''}</td>
+                                <td><a href="${itemData.url || '#'}" target="_blank">${itemData.url || ''}</a></td>
+                                <td>${itemData.isPublished ? 'Yes' : 'No'}</td>
+                                <td>
+                                    <a href="?action=edit&id=${itemId}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="?action=delete&id=${itemId}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                tableHtml += '</tbody></table>';
+                
+                // Update the container
+                listContainer.innerHTML = tableHtml;
+                
+                // Re-initialize delete confirmations for the new buttons
+                initDeleteConfirmations();
+            })
+            .catch(error => {
+                console.error('[API LOAD] Error loading data:', error);
+                listContainer.innerHTML = '<div class="alert alert-danger">Error loading data: ' + error.message + '</div>';
+            });
+    }
 }

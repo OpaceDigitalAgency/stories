@@ -51,7 +51,8 @@ class GamesPage extends CrudPage {
                 'list' => true,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'title' // API field name
             ],
             [
                 'name' => 'description',
@@ -60,7 +61,8 @@ class GamesPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'description' // API field name
             ],
             [
                 'name' => 'url',
@@ -70,7 +72,8 @@ class GamesPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'help' => 'Full URL including https:// or relative path if hosted on this site'
+                'help' => 'Full URL including https:// or relative path if hosted on this site',
+                'api_field' => 'url' // API field name
             ],
             [
                 'name' => 'category',
@@ -88,7 +91,8 @@ class GamesPage extends CrudPage {
                     ['value' => 'Quiz', 'label' => 'Quiz'],
                     ['value' => 'Memory', 'label' => 'Memory'],
                     ['value' => 'Other', 'label' => 'Other']
-                ]
+                ],
+                'api_field' => 'category' // API field name
             ],
             [
                 'name' => 'ageGroup',
@@ -98,7 +102,8 @@ class GamesPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'help' => 'e.g., "5-8", "9-12", "13+"'
+                'help' => 'e.g., "5-8", "9-12", "13+"',
+                'api_field' => 'ageGroup' // API field name
             ],
             [
                 'name' => 'thumbnail',
@@ -107,7 +112,29 @@ class GamesPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => null
+                'default' => null,
+                'api_field' => 'thumbnail' // API field name
+            ],
+            [
+                'name' => 'slug',
+                'label' => 'Slug',
+                'type' => 'text',
+                'list' => false,
+                'form' => true,
+                'view' => true,
+                'default' => '',
+                'api_field' => 'slug' // API field name
+            ],
+            [
+                'name' => 'is_published',
+                'label' => 'Published',
+                'type' => 'boolean',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => true,
+                'checkboxLabel' => 'Published',
+                'api_field' => 'isPublished' // API field name
             ]
         ];
         

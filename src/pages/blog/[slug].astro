@@ -1,0 +1,229 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import { fetchFromApi } from '../../lib/api';
+import '../../styles/base.css';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const blogPosts = await fetchFromApi('blog-posts', {
+    'sort': 'publishedAt:desc'
+  });
+  
+  return blogPosts.map(post => ({
+    params: { slug: post.slug }
+  }));
+}
+
+const { slug } = Astro.params;
+
+// Fetch all blog posts and find the one we want
+const blogPosts = await fetchFromApi('blog-posts', {
+  'sort': 'publishedAt:desc'
+});
+
+const post = blogPosts.find(p => p.slug === slug);
+
+if (!post) {
+  return new Response('Blog post not found', { status: 404 });
+}
+
+// Format the date
+const formattedDate = new Date(post.publishedAt).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+
+// Get related posts (same category, excluding current post)
+const relatedPosts = blogPosts
+  .filter(p => p.category === post.category && p.slug !== slug)
+  .slice(0, 3);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{post.title} | Stories From The Web</title>
+    <meta name="description" content={post.excerpt} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={`https://storiesfromtheweb.org/blog/${slug}`} />
+    <meta property="og:title" content={`${post.title} | Stories From The Web`} />
+    <meta property="og:description" content={post.excerpt} />
+    <meta property="og:image" content={post.cover_url} />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={`https://storiesfromtheweb.org/blog/${slug}`} />
+    <meta property="twitter:title" content={`${post.title} | Stories From The Web`} />
+    <meta property="twitter:description" content={post.excerpt} />
+    <meta property="twitter:image" content={post.cover_url} />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "${post.title}",
+        "image": "${post.cover_url}",
+        "datePublished": "${post.publishedAt}",
+        "author": {
+          "@type": "Person",
+          "name": "${post.author?.name || 'Anonymous'}"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Stories From The Web",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://storiesfromtheweb.org/logo.png"
+          }
+        },
+        "description": "${post.excerpt}"
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral">
+    <NavHeader />
+    
+    <main class="flex-grow">
+      <!-- Hero Section -->
+      <section class="relative">
+        <div class="absolute inset-0 bg-gradient-to-b from-black/70 to-transparent z-10"></div>
+        <img 
+          src={post.cover_url} 
+          alt={post.title} 
+          class="w-full h-64 md:h-96 object-cover"
+        />
+        <div class="container mx-auto px-4 relative z-20 -mt-32 md:-mt-40 pb-6">
+          <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4">
+              <div>
+                <div class="mb-2">
+                  <span class="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                    {post.category}
+                  </span>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-2">
+                  {post.title}
+                </h1>
+                <div class="flex items-center text-gray-600 text-sm">
+                  <span>{formattedDate}</span>
+                  <span class="mx-2">•</span>
+                  <span>By {post.author?.name || 'Anonymous'}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Post Content -->
+            <div class="prose prose-lg max-w-none">
+              <p class="text-lg font-medium text-gray-700 mb-6">{post.excerpt}</p>
+              <div set:html={post.content} />
+            </div>
+            
+            <!-- Tags -->
+            {post.tags && post.tags.length > 0 && (
+              <div class="mt-8 pt-6 border-t">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">Tags</h3>
+                <div class="flex flex-wrap gap-2">
+                  {post.tags.map(tag => (
+                    <a href={`/blog/tag/${tag.toLowerCase().replace(/\s+/g, '-')}`} class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-colors">
+                      {tag}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+      
+      <!-- Related Posts Section -->
+      {relatedPosts.length > 0 && (
+        <section class="py-12 bg-neutral-dark">
+          <div class="container mx-auto px-4">
+            <h2 class="text-2xl font-display font-bold text-text-primary mb-8">Related Posts</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {relatedPosts.map(relatedPost => (
+                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                  <a href={`/blog/${relatedPost.slug}`} class="block">
+                    <div class="h-48 bg-gray-200">
+                      <img 
+                        src={relatedPost.cover_url} 
+                        alt={relatedPost.title} 
+                        class="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    <div class="p-6">
+                      <div class="flex items-center mb-3">
+                        <span class="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                          {relatedPost.category}
+                        </span>
+                        <span class="text-gray-500 text-xs ml-3">
+                          {new Date(relatedPost.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      
+                      <h3 class="text-xl font-display font-bold text-text-primary mb-3 hover:text-primary transition-colors">
+                        {relatedPost.title}
+                      </h3>
+                      
+                      <p class="text-text-secondary text-sm mb-4 line-clamp-2">
+                        {relatedPost.excerpt}
+                      </p>
+                    </div>
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+      
+      <!-- Newsletter Section -->
+      <section class="py-16 bg-gradient-to-r from-primary/10 to-accent/10">
+        <div class="container mx-auto px-4 max-w-4xl text-center">
+          <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Subscribe to Our Newsletter</h2>
+          <p class="text-text-secondary text-lg mb-8">
+            Get the latest news, events, and stories delivered straight to your inbox.
+          </p>
+          
+          <form class="max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="Your email address"
+                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-primary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
+              >
+                <span class="flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                  Subscribe
+                </span>
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

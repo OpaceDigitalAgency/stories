@@ -1,5 +1,14 @@
-rc/components/CardStory.astro</path>
-<content lines="28-32">
+---
+import type { CardStoryProps } from '../types/components';
+import TagBadge from './TagBadge.astro';
+import RatingStars from './RatingStars.astro';
+
+const { story, className = '' } = Astro.props as CardStoryProps;
+
+// Default images
+const defaultCoverImage = '/images/default-cover.svg';
+const defaultAvatarImage = '/images/default-avatar.svg';
+
 // Handle cover image - directly use the URL from the API
 let coverImageUrl = story?.coverImage || defaultCoverImage;
 console.log("Cover image URL:", coverImageUrl); // Debug log
@@ -7,3 +16,84 @@ console.log("Cover image URL:", coverImageUrl); // Debug log
 // Handle author avatar - directly use the URL from the API
 let authorAvatarUrl = story?.author?.avatar || defaultAvatarImage;
 console.log("Author avatar URL:", authorAvatarUrl); // Debug log
+
+// Format date if available
+const formattedDate = story.publishDate 
+  ? new Date(story.publishDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  : null;
+---
+
+<article class={`card-story bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform-style-3d hover:translate-z-4 ${className}`}>
+  <a href={`/stories/${story.slug}`} class="block relative">
+    <div class="relative h-48 overflow-hidden">
+      <img 
+        src={coverImageUrl} 
+        alt={story.title} 
+        class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
+      
+      {story.tags && story.tags.length > 0 && (
+        <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
+          {story.tags.slice(0, 2).map(tag => (
+            <TagBadge tag={tag} size="sm" />
+          ))}
+          {story.tags.length > 2 && (
+            <span class="text-xs text-white bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+              +{story.tags.length - 2}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  </a>
+  
+  <div class="p-5">
+    <div class="flex justify-between items-start mb-3">
+      <h3 class="text-lg font-bold text-text-primary line-clamp-2 hover:text-primary transition-colors duration-300">
+        <a href={`/stories/${story.slug}`}>
+          {story.title}
+        </a>
+      </h3>
+      
+      {story.rating && (
+        <div class="ml-2 flex-shrink-0">
+          <RatingStars rating={story.rating} size="sm" />
+        </div>
+      )}
+    </div>
+    
+    {story.excerpt && (
+      <p class="text-sm text-text-secondary mb-4 line-clamp-3">
+        {story.excerpt}
+      </p>
+    )}
+    
+    <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
+      {story.author && (
+        <a href={`/authors/${story.author.slug}`} class="flex items-center group">
+          <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
+            <img 
+              src={authorAvatarUrl} 
+              alt={story.author.name} 
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">
+            {story.author.name}
+          </span>
+        </a>
+      )}
+      
+      {formattedDate && (
+        <span class="text-xs text-text-secondary/70">
+          {formattedDate}
+        </span>
+      )}
+    </div>
+  </div>
+</article>

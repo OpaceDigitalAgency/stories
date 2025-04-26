@@ -60,7 +60,7 @@ interface ApiResponse<T> {
 }
 
 // Helper function to build URL with query parameters
-const buildUrl = (endpoint: string, params: Record<string, string | number | boolean> = {}) => {
+export const buildUrl = (endpoint: string, params: Record<string, string | number | boolean> = {}) => {
   const url = new URL(`${API_URL}${endpoint}`);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, String(value));
@@ -69,7 +69,7 @@ const buildUrl = (endpoint: string, params: Record<string, string | number | boo
 };
 
 // Generic fetch function with error handling
-async function fetchApi<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+export async function fetchApi<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
   const url = buildUrl(endpoint, params);
   const response = await fetch(url);
   

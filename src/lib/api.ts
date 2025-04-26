@@ -119,20 +119,23 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     // Only apply filters if they're explicitly set to true
     // This prevents filtering out stories when the filter isn't explicitly true
     if (filters.featured === true) {
-      params['filters[featured][$eq]'] = true;
+      params['filters[featured]'] = 1;
     }
     
     if (filters.sponsored === true) {
-      params['filters[is_sponsored][$eq]'] = true;
+      params['filters[is_sponsored]'] = 1;
     }
     
     if (filters.isSelfPublished === true) {
-      params['filters[is_self_published][$eq]'] = true;
+      params['filters[is_self_published]'] = 1;
     }
     
     if (filters.isAiEnhanced === true) {
-      params['filters[is_ai_enhanced][$eq]'] = true;
+      params['filters[is_ai_enhanced]'] = 1;
     }
+    
+    // Log the final params for debugging
+    console.log("Final API params:", JSON.stringify(params));
   } catch (error) {
     console.error("Error applying filters:", error);
   }

@@ -73,19 +73,60 @@ try {
     }
 
     // Get all stories with all available fields
-    $query = "SELECT s.*, a.name as author_name, a.id as author_id,
-              (SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ')
-               FROM story_tags st
-               JOIN tags t ON st.tag_id = t.id
-               WHERE st.story_id = s.id) as tags
-              FROM stories s
-              LEFT JOIN authors a ON $joinCondition
-              ORDER BY s.created_at DESC";
-    $stories = $db->query($query)->fetchAll();
-    
-    // Debug log for author information
-    foreach ($stories as $story) {
-        error_log("Story ID: " . $story['id'] . ", Author ID: " . ($story['author_id'] ?? 'null') . ", Author Name: " . ($story['author_name'] ?? 'null'));
+    try {
+        // First get all stories
+        $query = "SELECT s.* FROM stories s ORDER BY s.created_at DESC";
+        $stories = $db->query($query)->fetchAll();
+        
+        // Then for each story, try to get the author information
+        foreach ($stories as &$story) {
+            // Get author information if author_id exists
+            if (isset($story['author_id']) && $story['author_id']) {
+                try {
+                    $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
+                    $stmt->execute([$story['author_id']]);
+                    $author = $stmt->fetch();
+                    
+                    if ($author) {
+                        $story['author_name'] = $author['name'];
+                    } else {
+                        $story['author_name'] = 'Unknown';
+                    }
+                } catch (Exception $e) {
+                    error_log("Error fetching author for story ID " . $story['id'] . ": " . $e->getMessage());
+                    $story['author_name'] = 'Unknown';
+                }
+            } else {
+                $story['author_name'] = 'Unknown';
+            }
+            
+            // Get tags for the story
+            try {
+                $stmt = $db->prepare("
+                    SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
+                    FROM story_tags st
+                    JOIN tags t ON st.tag_id = t.id
+                    WHERE st.story_id = ?
+                ");
+                $stmt->execute([$story['id']]);
+                $tags = $stmt->fetch();
+                
+                if ($tags && isset($tags['tags'])) {
+                    $story['tags'] = $tags['tags'];
+                } else {
+                    $story['tags'] = '';
+                }
+            } catch (Exception $e) {
+                error_log("Error fetching tags for story ID " . $story['id'] . ": " . $e->getMessage());
+                $story['tags'] = '';
+            }
+            
+            // Debug log for author information
+            error_log("Story ID: " . $story['id'] . ", Author ID: " . ($story['author_id'] ?? 'null') . ", Author Name: " . ($story['author_name'] ?? 'null'));
+        }
+    } catch (Exception $e) {
+        error_log("Error fetching stories: " . $e->getMessage());
+        $stories = [];
     }
 
 } catch (PDOException $e) {

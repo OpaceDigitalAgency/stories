@@ -48,7 +48,7 @@ try {
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
     $excerpt = trim($_POST['excerpt'] ?? '');
-    $status = $_POST['status'] ?? 'draft';
+    $is_published = isset($_POST['is_published']) ? 1 : 0;
     $slug = trim($_POST['slug'] ?? '');
     $tags = $_POST['tags'] ?? [];
 
@@ -73,7 +73,7 @@ try {
                 author_id INT NOT NULL,
                 content TEXT NOT NULL,
                 excerpt TEXT,
-                status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+                is_published TINYINT(1) DEFAULT 1,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
             )");
@@ -143,10 +143,6 @@ try {
         }
     }
 
-    // Validate status
-    if ($hasStatusColumn && !in_array($status, ['draft', 'published'])) {
-        throw new Exception("Invalid status value");
-    }
 
     // Generate slug from title if not provided
     if ($hasSlugColumn && empty($slug)) {
@@ -176,9 +172,8 @@ try {
         $data['excerpt'] = $excerpt;
     }
     
-    if ($hasStatusColumn) {
-        $data['status'] = $status;
-    }
+    // Add is_published field
+    $data['is_published'] = $is_published;
     
     if ($hasSlugColumn) {
         $data['slug'] = $slug;
@@ -186,7 +181,7 @@ try {
 
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'slug', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'excerpt', 'is_published', 'slug', 'tags']) && in_array($key, $columns)) {
             // Handle datetime fields
             if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
                 if (!empty($value)) {

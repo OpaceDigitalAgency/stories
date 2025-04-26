@@ -1,7 +1,21 @@
 ---
 import type { AIRecommendationBoxProps } from '../types/components';
 
-const { story, recommendationText, className = '' } = Astro.props as AIRecommendationBoxProps;
+// Default values for when props are not provided
+const defaultRecommendationText = "Based on your reading history, we think you might enjoy these stories. Tell us more about your preferences to get better recommendations.";
+const defaultStory = {
+  title: "The Adventure Begins",
+  slug: "the-adventure-begins",
+  author: {
+    name: "Stories Team"
+  }
+};
+
+const { 
+  story = defaultStory, 
+  recommendationText = defaultRecommendationText, 
+  className = '' 
+} = Astro.props as AIRecommendationBoxProps;
 ---
 
 <div class={`bg-gradient-to-br from-[#f4edff] to-[#e3f4ff] rounded-xl shadow-lg p-6 ${className}`}>

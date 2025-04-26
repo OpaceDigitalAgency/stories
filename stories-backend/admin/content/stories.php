@@ -74,28 +74,16 @@ try {
 
     // Get all stories with all available fields
     try {
-        // Get a list of all story IDs first
-        $query = "SELECT DISTINCT id FROM stories ORDER BY created_at DESC";
-        $storyIds = $db->query($query)->fetchAll(PDO::FETCH_COLUMN);
-        
-        error_log("Story IDs: " . implode(', ', $storyIds));
-        
-        // Initialize stories array
-        $stories = [];
-        
-        // Fetch each story by ID to ensure we only get one copy
-        foreach ($storyIds as $id) {
-            $query = "SELECT * FROM stories WHERE id = ? LIMIT 1";
-            $stmt = $db->prepare($query);
-            $stmt->execute([$id]);
-            $story = $stmt->fetch();
-            
-            if ($story) {
-                $stories[] = $story;
-            }
-        }
+        // Simple direct query to get all stories
+        $query = "SELECT * FROM stories ORDER BY created_at DESC";
+        $stories = $db->query($query)->fetchAll();
         
         error_log("Number of stories fetched: " . count($stories));
+        
+        // Debug log all stories
+        foreach ($stories as $story) {
+            error_log("Story ID: " . $story['id'] . ", Title: " . $story['title']);
+        }
         
         // Then for each story, try to get the author information from story_authors table
         foreach ($stories as &$story) {

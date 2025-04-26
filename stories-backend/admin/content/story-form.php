@@ -36,24 +36,48 @@ try {
     // Get story if editing
     $story = null;
     if (isset($_GET['id'])) {
-        // Join with authors table to get author information
-        $stmt = $db->prepare("
-            SELECT s.*, a.name as author_name
-            FROM stories s
-            LEFT JOIN authors a ON s.author_id = a.id
-            WHERE s.id = ?
-        ");
-        $stmt->execute([$_GET['id']]);
-        $story = $stmt->fetch();
-        
-        if (!$story) {
+        try {
+            // First try to get just the story without the join to ensure we can at least load the basic data
+            $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
+            $stmt->execute([$_GET['id']]);
+            $story = $stmt->fetch();
+            
+            if (!$story) {
+                header("Location: stories.php");
+                exit;
+            }
+            
+            // Now try to get author information
+            try {
+                if (isset($story['author_id']) && $story['author_id']) {
+                    $stmt = $db->prepare("
+                        SELECT a.id as author_id, a.name as author_name
+                        FROM authors a
+                        WHERE a.id = ?
+                    ");
+                    $stmt->execute([$story['author_id']]);
+                    $author = $stmt->fetch();
+                    
+                    if ($author) {
+                        $story['author_name'] = $author['author_name'];
+                        // Make sure author_id is set correctly
+                        $story['author_id'] = $author['author_id'];
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error fetching author: " . $e->getMessage());
+                // Continue even if author fetch fails
+            }
+            
+            // Debug log for story and author information
+            error_log("Story ID: " . $story['id']);
+            error_log("Story author_id: " . ($story['author_id'] ?? 'null'));
+            error_log("Story author_name: " . ($story['author_name'] ?? 'null'));
+        } catch (Exception $e) {
+            error_log("Error loading story: " . $e->getMessage());
             header("Location: stories.php");
             exit;
         }
-        
-        // Debug log for author information
-        error_log("Story author_id: " . ($story['author_id'] ?? 'null'));
-        error_log("Story author_name: " . ($story['author_name'] ?? 'null'));
     }
 
     // Get authors for dropdown

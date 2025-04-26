@@ -6,13 +6,19 @@ export interface Story {
   title: string;
   excerpt: string;
   coverImage: string;
+  cover_url?: string; // API response field
   slug: string;
   publishDate: string;
+  publishedAt?: string; // API response field
   featured?: boolean;
   sponsored?: boolean;
+  is_sponsored?: boolean; // API response field
   isAiEnhanced?: boolean;
+  is_ai_enhanced?: boolean; // API response field
   isSelfPublished?: boolean;
+  is_self_published?: boolean; // API response field
   needsModeration?: boolean;
+  needs_moderation?: boolean; // API response field
   rating?: number;
   tags?: string[];
   author?: Author;
@@ -22,6 +28,7 @@ export interface Author {
   name: string;
   bio: string;
   avatar: string;
+  avatar_url?: string; // API response field
   slug: string;
 }
 
@@ -29,6 +36,7 @@ export interface Game {
   title: string;
   description: string;
   coverImage: string;
+  cover_url?: string; // API response field
   slug: string;
   price: number;
   rating: number;
@@ -38,19 +46,23 @@ export interface DirectoryItem {
   title: string;
   description: string;
   coverImage: string;
+  cover_url?: string; // API response field
   slug: string;
   category: string;
   rating: number;
   priceRange: string;
+  price_range?: string; // API response field
 }
 
 export interface AiTool {
   title: string;
   description: string;
   coverImage: string;
+  cover_url?: string; // API response field
   slug: string;
   category: string;
   pricingType: string;
+  pricing_type?: string; // API response field
   featured: boolean;
 }
 
@@ -77,7 +89,7 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
 
 // Resource-specific fetch functions with proper mapping
 export async function fetchStories(page = 1, limit = 10): Promise<Story[]> {
-  const raw = await fetchApi<Story[]>('/stories', {
+  const raw = await fetchApi<any[]>('/stories', {
     'sort': 'publishedAt:desc',
     'pagination[limit]': limit,
     'pagination[page]': page
@@ -85,9 +97,9 @@ export async function fetchStories(page = 1, limit = 10): Promise<Story[]> {
   return raw.map(item => ({
     title: item.title,
     excerpt: item.excerpt,
-    coverImage: item.cover_url,
+    coverImage: item.cover_url || '',
     slug: item.slug,
-    publishDate: item.publishedAt,
+    publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),
     sponsored: Boolean(item.is_sponsored),
     isAiEnhanced: Boolean(item.is_ai_enhanced),
@@ -105,73 +117,73 @@ export async function fetchStories(page = 1, limit = 10): Promise<Story[]> {
 }
 
 export async function fetchAuthors(): Promise<Author[]> {
-  const raw = await fetchApi<Author[]>('/authors', {
+  const raw = await fetchApi<any[]>('/authors', {
     'sort': 'name:asc'
   });
   return raw.map(item => ({
     name: item.name,
-    bio: item.bio,
-    avatar: item.avatar_url,
+    bio: item.bio || '',
+    avatar: item.avatar_url || '',
     slug: item.slug
   }));
 }
 
 export async function fetchGames(): Promise<Game[]> {
-  const raw = await fetchApi<Game[]>('/games', {
+  const raw = await fetchApi<any[]>('/games', {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
     title: item.title,
-    description: item.description,
-    coverImage: item.cover_url,
+    description: item.description || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
-    price: item.price,
-    rating: item.rating
+    price: Number(item.price) || 0,
+    rating: Number(item.rating) || 0
   }));
 }
 
 export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
-  const raw = await fetchApi<DirectoryItem[]>('/directory-items', {
+  const raw = await fetchApi<any[]>('/directory-items', {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
     title: item.title,
-    description: item.description,
-    coverImage: item.cover_url,
+    description: item.description || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
-    category: item.category,
-    rating: item.rating,
-    priceRange: item.price_range
+    category: item.category || '',
+    rating: Number(item.rating) || 0,
+    priceRange: item.price_range || ''
   }));
 }
 
 export async function fetchAiTools(): Promise<AiTool[]> {
-  const raw = await fetchApi<AiTool[]>('/ai-tools', {
+  const raw = await fetchApi<any[]>('/ai-tools', {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
     title: item.title,
-    description: item.description,
-    coverImage: item.cover_url,
+    description: item.description || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
-    category: item.category,
-    pricingType: item.pricing_type,
-    featured: item.featured
+    category: item.category || '',
+    pricingType: item.pricing_type || '',
+    featured: Boolean(item.featured)
   }));
 }
 
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story> {
-  const raw = await fetchApi<Story[]>('/stories', {
+  const raw = await fetchApi<any[]>('/stories', {
     'filters[slug][$eq]': slug
   });
   const item = raw[0];
   return {
     title: item.title,
-    excerpt: item.excerpt,
-    coverImage: item.cover_url,
+    excerpt: item.excerpt || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
-    publishDate: item.publishedAt,
+    publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),
     sponsored: Boolean(item.is_sponsored),
     isAiEnhanced: Boolean(item.is_ai_enhanced),
@@ -189,14 +201,14 @@ export async function fetchStory(slug: string): Promise<Story> {
 }
 
 export async function fetchAuthor(slug: string): Promise<Author> {
-  const raw = await fetchApi<Author[]>('/authors', {
+  const raw = await fetchApi<any[]>('/authors', {
     'filters[slug][$eq]': slug
   });
   const item = raw[0];
   return {
     name: item.name,
-    bio: item.bio,
-    avatar: item.avatar_url,
+    bio: item.bio || '',
+    avatar: item.avatar_url || '',
     slug: item.slug
   };
 }

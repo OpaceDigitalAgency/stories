@@ -323,6 +323,33 @@ try {
                         <?php endforeach; ?>
                     </select>
                 </div>
+            <?php elseif ($field === 'average_rating'): ?>
+                <div class="form-group">
+                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                    <div class="flex items-center">
+                        <input type="range" id="<?php echo $field; ?>_slider" class="form-input w-3/4"
+                               min="0" max="5" step="0.1"
+                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                               oninput="document.getElementById('<?php echo $field; ?>').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;">
+                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input w-1/4 ml-2"
+                               min="0" max="5" step="0.1"
+                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                               oninput="document.getElementById('<?php echo $field; ?>_slider').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;"
+                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span id="<?php echo $field; ?>_display" class="text-lg font-bold"><?php echo htmlspecialchars($story[$field] ?? '0'); ?></span> / 5
+                    </div>
+                </div>
+            <?php elseif ($field === 'review_count'): ?>
+                <div class="form-group">
+                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                    <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
+                           min="0" step="1"
+                           value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                           <?php echo $isRequired ? 'required' : ''; ?>>
+                    <small>Number of reviews for this story</small>
+                </div>
             <?php elseif ($isIntField || $isDecimalField): ?>
                 <div class="form-group">
                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -451,6 +478,81 @@ try {
         }
         .checkbox-group-item {
             margin-bottom: 0;
+        }
+        
+        /* Slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            transition: background .15s ease-in-out;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #3a7bc8;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border: 0;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            transition: background .15s ease-in-out;
+        }
+        
+        input[type="range"]::-moz-range-thumb:hover {
+            background: #3a7bc8;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .w-3\/4 {
+            width: 75%;
+        }
+        
+        .w-1\/4 {
+            width: 25%;
+        }
+        
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-lg {
+            font-size: 1.125rem;
+        }
+        
+        .font-bold {
+            font-weight: bold;
         }
     </style>
 </body>

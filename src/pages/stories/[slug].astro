@@ -166,10 +166,12 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           </div>
           
           <!-- Reviews Section -->
-          <ReviewSection 
-            itemType="story" 
-            itemId={story.id || slug} 
+          <ReviewSection
+            itemType="story"
+            itemId={story.id || slug}
             itemName={story.title}
+            rating={story.rating || 0}
+            reviewCount={story.reviewCount || 0}
           />
         </div>
       </div>

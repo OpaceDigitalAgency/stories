@@ -91,6 +91,10 @@ export interface ReviewSectionProps {
   itemId: number | string;
   /** Name of the content */
   itemName: string;
+  /** Rating value (0-5) */
+  rating?: number;
+  /** Number of reviews */
+  reviewCount?: number;
   /** Optional class names to apply to the section */
   className?: string;
 }

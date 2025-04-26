@@ -296,6 +296,8 @@ class CrudPage extends AdminPage {
         $items = [];
         
         if ($response) {
+            error_log("CrudPage::getListData - Raw response: " . substr(json_encode($response), 0, 500));
+            
             if (isset($response['data'])) {
                 // Nested format with 'data' key
                 $items = $response['data'];
@@ -316,6 +318,20 @@ class CrudPage extends AdminPage {
                         ]
                     ];
                 }
+            } else if (is_array($response) && !empty($response)) {
+                // Single item response (not in an array)
+                error_log("CrudPage::getListData - Response appears to be a single item, not in an array");
+                $items = [$response];
+                
+                // Create a pagination structure
+                $response['meta'] = [
+                    'pagination' => [
+                        'page' => 1,
+                        'pageSize' => 1,
+                        'pageCount' => 1,
+                        'total' => 1
+                    ]
+                ];
             } else {
                 error_log("CrudPage::getListData - Unexpected response format: " . json_encode($response));
             }
@@ -345,6 +361,27 @@ class CrudPage extends AdminPage {
                 
                 // Set attributes
                 $item['attributes'] = $attributes;
+            }
+            
+            // Map API fields to admin fields using api_field property
+            $mappedAttributes = [];
+            foreach ($this->fields as $field) {
+                if (isset($field['api_field'])) {
+                    $apiField = $field['api_field'];
+                    $adminField = $field['name'];
+                    
+                    // Check if the API field exists in the item or its attributes
+                    if (isset($item[$apiField])) {
+                        $mappedAttributes[$adminField] = $item[$apiField];
+                    } else if (isset($item['attributes'][$apiField])) {
+                        $mappedAttributes[$adminField] = $item['attributes'][$apiField];
+                    }
+                }
+            }
+            
+            // If we have mapped attributes, use them
+            if (!empty($mappedAttributes)) {
+                $item['attributes'] = array_merge($item['attributes'], $mappedAttributes);
             }
             
             // Process relation fields

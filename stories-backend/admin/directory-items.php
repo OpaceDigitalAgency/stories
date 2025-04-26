@@ -51,7 +51,8 @@ class DirectoryItemsPage extends CrudPage {
                 'list' => true,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'name' // API field name
             ],
             [
                 'name' => 'description',
@@ -60,7 +61,8 @@ class DirectoryItemsPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'description' // API field name
             ],
             [
                 'name' => 'url',
@@ -70,7 +72,8 @@ class DirectoryItemsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'help' => 'Full URL including https://'
+                'help' => 'Full URL including https://',
+                'api_field' => 'url' // API field name
             ],
             [
                 'name' => 'category',
@@ -88,7 +91,8 @@ class DirectoryItemsPage extends CrudPage {
                     ['value' => 'Bookstores', 'label' => 'Bookstores'],
                     ['value' => 'Organizations', 'label' => 'Organizations'],
                     ['value' => 'Other', 'label' => 'Other']
-                ]
+                ],
+                'api_field' => 'category' // API field name
             ],
             [
                 'name' => 'logo',
@@ -97,7 +101,30 @@ class DirectoryItemsPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => null
+                'default' => null,
+                'api_field' => 'logo' // API field name
+            ],
+            [
+                'name' => 'featured',
+                'label' => 'Featured',
+                'type' => 'boolean',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => false,
+                'checkboxLabel' => 'Featured item',
+                'api_field' => 'featured' // API field name
+            ],
+            [
+                'name' => 'is_published',
+                'label' => 'Published',
+                'type' => 'boolean',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => true,
+                'checkboxLabel' => 'Published',
+                'api_field' => 'isPublished' // API field name
             ]
         ];
         

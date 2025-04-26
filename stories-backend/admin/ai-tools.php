@@ -51,7 +51,8 @@ class AiToolsPage extends CrudPage {
                 'list' => true,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'name' // API field name
             ],
             [
                 'name' => 'description',
@@ -60,7 +61,8 @@ class AiToolsPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => ''
+                'default' => '',
+                'api_field' => 'description' // API field name
             ],
             [
                 'name' => 'url',
@@ -70,7 +72,8 @@ class AiToolsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'help' => 'Full URL including https:// or relative path if hosted on this site'
+                'help' => 'Full URL including https:// or relative path if hosted on this site',
+                'api_field' => 'url' // API field name
             ],
             [
                 'name' => 'category',
@@ -88,17 +91,23 @@ class AiToolsPage extends CrudPage {
                     ['value' => 'Summarization', 'label' => 'Summarization'],
                     ['value' => 'Learning', 'label' => 'Learning'],
                     ['value' => 'Other', 'label' => 'Other']
-                ]
+                ],
+                'api_field' => 'category' // API field name
             ],
             [
-                'name' => 'free',
-                'label' => 'Free',
-                'type' => 'boolean',
+                'name' => 'pricing_type',
+                'label' => 'Pricing Type',
+                'type' => 'select',
                 'list' => true,
                 'form' => true,
                 'view' => true,
-                'default' => true,
-                'checkboxLabel' => 'Free to use'
+                'default' => 'free',
+                'options' => [
+                    ['value' => 'free', 'label' => 'Free'],
+                    ['value' => 'freemium', 'label' => 'Freemium'],
+                    ['value' => 'paid', 'label' => 'Paid']
+                ],
+                'api_field' => 'pricingType' // API field name
             ],
             [
                 'name' => 'logo',
@@ -107,7 +116,30 @@ class AiToolsPage extends CrudPage {
                 'list' => false,
                 'form' => true,
                 'view' => true,
-                'default' => null
+                'default' => null,
+                'api_field' => 'logo' // API field name
+            ],
+            [
+                'name' => 'featured',
+                'label' => 'Featured',
+                'type' => 'boolean',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => false,
+                'checkboxLabel' => 'Featured tool',
+                'api_field' => 'featured' // API field name
+            ],
+            [
+                'name' => 'is_published',
+                'label' => 'Published',
+                'type' => 'boolean',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => true,
+                'checkboxLabel' => 'Published',
+                'api_field' => 'isPublished' // API field name
             ]
         ];
         

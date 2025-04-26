@@ -51,10 +51,10 @@ let apiErrorEndpoint = null;
     <meta property="twitter:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
     <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image.jpg" />
   </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
+  <body class="min-h-screen flex flex-col bg-neutral w-full">
     <NavHeader />
     
-    <main class="flex-grow">
+    <main class="flex-grow w-full">
       {apiError && (
         <div class="container mx-auto px-4 py-4">
           <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />

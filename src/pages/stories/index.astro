@@ -61,10 +61,10 @@ const popularTags = [...new Set(stories.flatMap(story => story.tags || []))].sli
       }
     </script>
   </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
+  <body class="min-h-screen flex flex-col bg-neutral w-full">
     <NavHeader />
     
-    <main class="flex-grow">
+    <main class="flex-grow w-full">
       <!-- Hero Section -->
       <section class="bg-gradient-to-r from-secondary/90 to-primary/90 text-white py-12">
         <div class="container mx-auto px-4">

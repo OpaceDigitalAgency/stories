@@ -1,5 +1,3 @@
-rc/pages/index.astro</path>
-<content lines="1-15">
 ---
 import NavHeader from '../components/NavHeader.astro';
 import Footer from '../components/Footer.astro';
@@ -16,3 +14,140 @@ import { fetchStories, fetchAuthors } from '../lib/api';
 import '../styles/base.css';
 
 export const prerender = true;
+
+// Fetch data
+let featuredStories = [];
+let recentStories = [];
+let popularAuthors = [];
+let error = null;
+
+try {
+  const stories = await fetchStories(1, 12);
+  
+  // Split stories into featured and recent
+  featuredStories = stories.filter(story => story.featured).slice(0, 4);
+  recentStories = stories.slice(0, 8);
+  
+  // Fetch popular authors
+  popularAuthors = await fetchAuthors();
+} catch (e) {
+  console.error('Error fetching data:', e);
+  error = e.message;
+}
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stories From The Web - Discover Amazing Stories</title>
+  <meta name="description" content="Discover amazing stories from talented writers around the world. Read, write, and connect with a community of storytellers.">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gradient-to-b from-primary-50 to-white dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-100">
+  <NavHeader />
+  
+  <main class="container mx-auto px-4 py-8">
+    {error ? (
+      <ApiErrorMessage message={error} />
+    ) : (
+      <>
+        <!-- Hero Section -->
+        <section class="py-12 md:py-20">
+          <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-accent-500 dark:from-primary-400 dark:to-accent-300">
+              Discover Amazing Stories
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-gray-600 dark:text-gray-300">
+              Read, write, and connect with a community of storytellers
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+              <a href="/stories" class="btn-primary">
+                Browse Stories
+              </a>
+              <a href="/publish" class="btn-secondary">
+                Start Writing
+              </a>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Featured Stories -->
+        {featuredStories.length > 0 && (
+          <section class="py-12">
+            <div class="flex justify-between items-center mb-8">
+              <h2 class="text-2xl md:text-3xl font-bold">
+                <span class="text-primary-600 dark:text-primary-400">Featured</span> Stories
+              </h2>
+              <a href="/stories" class="text-accent-600 dark:text-accent-400 font-medium hover:underline">
+                View All →
+              </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredStories.map(story => (
+                <div class="relative">
+                  <div class="absolute top-4 right-4 z-10">
+                    <SponsoredBadge type="featured" size="sm" />
+                  </div>
+                  <CardStory story={story} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        
+        <!-- Story Carousel -->
+        <StoryCarousel 
+          title="Recently Published" 
+          viewAllLink="/stories"
+          stories={recentStories}
+          carouselId="recent-stories"
+        />
+        
+        <!-- Sponsored Content -->
+        <SponsoredCarousel 
+          title="Sponsored Stories" 
+          viewAllLink="/stories"
+          stories={recentStories.filter(s => s.sponsored).length ? recentStories.filter(s => s.sponsored) : recentStories.slice(0, 4)}
+          carouselId="sponsored-stories"
+        />
+        
+        <!-- AI Recommendations -->
+        <AIRecommendationBox />
+        
+        <!-- Popular Authors -->
+        {popularAuthors.length > 0 && (
+          <section class="py-12">
+            <div class="flex justify-between items-center mb-8">
+              <h2 class="text-2xl md:text-3xl font-bold">
+                <span class="text-primary-600 dark:text-primary-400">Popular</span> Authors
+              </h2>
+              <a href="/authors" class="text-accent-600 dark:text-accent-400 font-medium hover:underline">
+                View All →
+              </a>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {popularAuthors.slice(0, 4).map(author => (
+                <CardAuthor author={author} />
+              ))}
+            </div>
+          </section>
+        )}
+        
+        <!-- Educator Section -->
+        <EducatorSection />
+        
+        <!-- Sign Up Prompts -->
+        <SignUpPrompts />
+      </>
+    )}
+  </main>
+  
+  <Footer />
+</body>
+</html>

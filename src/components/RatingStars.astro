@@ -8,12 +8,15 @@ interface ExtendedRatingStarsProps extends RatingStarsProps {
 }
 
 const {
-  rating,
+  rating: rawRating,
   className = '',
   maxRating = 5,
   size = 'md',
   interactive = false
 } = Astro.props as ExtendedRatingStarsProps;
+
+// Ensure rating is a valid number
+const rating = typeof rawRating === 'number' ? rawRating : 0;
 
 // Calculate the number of full, half, and empty stars
 const fullStars = Math.floor(rating);

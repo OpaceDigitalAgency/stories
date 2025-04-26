@@ -13,6 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 class SimpleAuth {
     private static $db = null;
+    private static $secret = 'your-secret-key-here'; // Add a simple secret key
     
     /**
      * Initialize the database connection
@@ -67,7 +68,13 @@ class SimpleAuth {
             $_SESSION['auth_token'] = $token;
             
             // Set cookie for persistent login
-            setcookie('auth_token', $token, time() + 86400, '/', '', false, true);
+            setcookie('auth_token', $token, [
+                'expires' => time() + 86400,
+                'path' => '/',
+                'secure' => true,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
             
             return $user;
         } catch (Exception $e) {
@@ -112,7 +119,13 @@ class SimpleAuth {
         unset($_SESSION['auth_token']);
         
         // Clear cookie
-        setcookie('auth_token', '', time() - 3600, '/', '', false, true);
+        setcookie('auth_token', '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
     }
     
     /**
@@ -125,7 +138,7 @@ class SimpleAuth {
         $data = "$userId|$role|$timestamp|$random";
         
         // Add a simple signature
-        $signature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
+        $signature = hash_hmac('sha256', $data, self::$secret);
         $token = base64_encode("$data|$signature");
         
         // Store token in database for validation
@@ -159,7 +172,7 @@ class SimpleAuth {
             
             // Verify signature
             $data = "$userId|$role|$timestamp|$random";
-            $expectedSignature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
+            $expectedSignature = hash_hmac('sha256', $data, self::$secret);
             
             if ($signature !== $expectedSignature) {
                 return false;

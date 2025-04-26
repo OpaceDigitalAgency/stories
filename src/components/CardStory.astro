@@ -1,9 +1,5 @@
 rc/components/CardStory.astro</path>
-<content lines="24-32">
-// Default image path
-const defaultCoverImage = '/images/default-cover.svg';
-const defaultAvatarImage = '/images/default-avatar.svg';
-
+<content lines="28-32">
 // Handle cover image - directly use the URL from the API
 let coverImageUrl = story?.coverImage || defaultCoverImage;
 console.log("Cover image URL:", coverImageUrl); // Debug log

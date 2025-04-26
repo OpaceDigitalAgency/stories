@@ -8,6 +8,14 @@ export interface Story {
   coverImage: string;
   slug: string;
   publishDate: string;
+  featured?: boolean;
+  sponsored?: boolean;
+  isAiEnhanced?: boolean;
+  isSelfPublished?: boolean;
+  needsModeration?: boolean;
+  rating?: number;
+  tags?: string[];
+  author?: Author;
 }
 
 export interface Author {
@@ -79,7 +87,20 @@ export async function fetchStories(page = 1, limit = 10): Promise<Story[]> {
     excerpt: item.excerpt,
     coverImage: item.cover_url,
     slug: item.slug,
-    publishDate: item.publishedAt
+    publishDate: item.publishedAt,
+    featured: Boolean(item.featured),
+    sponsored: Boolean(item.is_sponsored),
+    isAiEnhanced: Boolean(item.is_ai_enhanced),
+    isSelfPublished: Boolean(item.is_self_published),
+    needsModeration: Boolean(item.needs_moderation),
+    rating: Number(item.rating) || 0,
+    tags: item.tags || [],
+    author: item.author ? {
+      name: item.author.name,
+      bio: item.author.bio || '',
+      avatar: item.author.avatar_url || '',
+      slug: item.author.slug
+    } : undefined
   }));
 }
 
@@ -150,7 +171,20 @@ export async function fetchStory(slug: string): Promise<Story> {
     excerpt: item.excerpt,
     coverImage: item.cover_url,
     slug: item.slug,
-    publishDate: item.publishedAt
+    publishDate: item.publishedAt,
+    featured: Boolean(item.featured),
+    sponsored: Boolean(item.is_sponsored),
+    isAiEnhanced: Boolean(item.is_ai_enhanced),
+    isSelfPublished: Boolean(item.is_self_published),
+    needsModeration: Boolean(item.needs_moderation),
+    rating: Number(item.rating) || 0,
+    tags: item.tags || [],
+    author: item.author ? {
+      name: item.author.name,
+      bio: item.author.bio || '',
+      avatar: item.author.avatar_url || '',
+      slug: item.author.slug
+    } : undefined
   };
 }
 

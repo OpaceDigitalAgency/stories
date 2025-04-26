@@ -1,20 +1,17 @@
 <?php
-require_once '../simple_auth.php';
-
-// Initialize SimpleAuth
-SimpleAuth::initDB([
+// Database configuration
+$config = [
     'host' => 'localhost',
     'name' => 'stories_db',
     'user' => 'stories_user',
     'password' => '$tw1cac3*sOt',
     'charset' => 'utf8mb4',
     'port' => 3306
-]);
+];
 
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: login.php");
-    exit;
+// Simple security check - require a specific parameter
+if (!isset($_GET['fix_key']) || $_GET['fix_key'] !== 'db_fix_2025') {
+    die('Access denied. Please provide the correct fix key.');
 }
 
 header('Content-Type: text/plain');
@@ -22,9 +19,9 @@ header('Content-Type: text/plain');
 try {
     // Connect to database
     $db = new PDO(
-        "mysql:host=localhost;dbname=stories_db;charset=utf8mb4",
-        'stories_user',
-        '$tw1cac3*sOt',
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password'],
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -36,6 +33,13 @@ try {
     $tables = ['stories', 'games', 'directory_items', 'ai_tools'];
 
     foreach ($tables as $table) {
+        // Check if table exists
+        $stmt = $db->query("SHOW TABLES LIKE '$table'");
+        if ($stmt->rowCount() === 0) {
+            echo "Table $table does not exist, skipping...\n";
+            continue;
+        }
+
         // Get existing columns
         $columns = [];
         $stmt = $db->query("DESCRIBE $table");

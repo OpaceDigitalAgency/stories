@@ -8,10 +8,12 @@ import '../../styles/base.css';
 
 // Fetch blog posts
 const stories = await fetchStories();
-const blogPosts = stories.filter(story => story.type === 'blog');
+// Since we don't have a specific blog type, we'll use all stories for now
+// In the future, we could add a 'type' field to the Story interface
+const blogPosts = stories;
 
 // Extract categories from blog posts
-const allCategories = blogPosts.map(post => post.category || 'Uncategorized');
+const allCategories = blogPosts.map(post => post.tags?.[0] || 'Uncategorized');
 const uniqueCategories = [...new Set(allCategories)];
 const categories = uniqueCategories.map(name => ({ name }));
 

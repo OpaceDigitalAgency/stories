@@ -1,21 +1,368 @@
-rc/pages/blog/index.astro</path>
-<content lines="79-93">
-      <!-- Categories Section -->
-      <section class="py-8 bg-white border-b">
-        <div class="container mx-auto px-4">
-          <div class="flex flex-wrap gap-2 justify-center">
-            <a href="/blog" class="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium">
-              All Posts
-            </a>
-            {categories.length > 0 ? (
-              categories.map(category => (
-                <a href={`/blog/category/${category.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized'}`} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-medium transition-colors">
-                  {category.name || 'Uncategorized'}
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import { fetchStories } from '../../lib/api';
+import '../../styles/base.css';
+
+// Fetch blog posts
+const stories = await fetchStories();
+const blogPosts = stories.filter(story => story.type === 'blog');
+
+// Extract categories from blog posts
+const allCategories = blogPosts.map(post => post.category || 'Uncategorized');
+const uniqueCategories = [...new Set(allCategories)];
+const categories = uniqueCategories.map(name => ({ name }));
+
+// Page metadata
+const title = 'Blog | Stories From The Web';
+const description = 'Read our latest blog posts about children\'s literature, educational resources, and more.';
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <!-- Hero Section -->
+    <section class="relative py-20 overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-3xl mx-auto text-center mb-16">
+          <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Blog
+          </h1>
+          <p class="text-lg text-text-secondary mb-8">
+            Insights, tips, and stories about children's literature, education, and the joy of reading. Stay updated with our latest articles and resources.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
+            <input 
+              type="text" 
+              placeholder="Search blog posts..." 
+              class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+            />
+            <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Categories Section -->
+    <section class="py-8 bg-white border-b">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-wrap gap-2 justify-center">
+          <a href="/blog" class="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium">
+            All Posts
+          </a>
+          {categories.length > 0 ? (
+            categories.map(category => (
+              <a href={`/blog/category/${category.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized'}`} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm font-medium transition-colors">
+                {category.name || 'Uncategorized'}
+              </a>
+            ))
+          ) : (
+            <span class="px-4 py-2 bg-gray-100 text-gray-500 rounded-full text-sm font-medium">No categories available</span>
+          )}
+        </div>
+      </div>
+    </section>
+    
+    <!-- Featured Post -->
+    {blogPosts.length > 0 && (
+      <section class="py-16">
+        <div class="container">
+          <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Featured Post
+          </h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div class="rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+              <img 
+                src={blogPosts[0].coverImage || '/images/default-cover.svg'} 
+                alt={blogPosts[0].title} 
+                class="w-full h-auto object-cover"
+              />
+            </div>
+            
+            <div>
+              <div class="flex flex-wrap gap-3 mb-4">
+                {blogPosts[0].tags?.map(tag => (
+                  <TagBadge tag={tag} size="md" />
+                ))}
+              </div>
+              
+              <h3 class="text-2xl md:text-3xl font-bold text-text-primary mb-4">
+                <a href={`/blog/${blogPosts[0].slug}`} class="hover:text-primary transition-colors duration-300">
+                  {blogPosts[0].title}
                 </a>
-              ))
-            ) : (
-              <span class="px-4 py-2 bg-gray-100 text-gray-500 rounded-full text-sm font-medium">No categories available</span>
-            )}
+              </h3>
+              
+              <p class="text-text-secondary mb-6">
+                {blogPosts[0].excerpt || 'Click to read this featured blog post.'}
+              </p>
+              
+              <div class="flex items-center mb-6">
+                {blogPosts[0].author && (
+                  <a href={`/authors/${blogPosts[0].author.slug}`} class="flex items-center group">
+                    <div class="w-10 h-10 rounded-full overflow-hidden mr-3 border-2 border-white shadow-md">
+                      <img 
+                        src={blogPosts[0].author.avatar || '/images/default-avatar.svg'} 
+                        alt={blogPosts[0].author.name} 
+                        class="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <span class="block text-sm font-bold text-text-primary group-hover:text-primary transition-colors duration-300">
+                        {blogPosts[0].author.name}
+                      </span>
+                      {blogPosts[0].publishDate && (
+                        <span class="text-xs text-text-secondary">
+                          {new Date(blogPosts[0].publishDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                )}
+              </div>
+              
+              <a 
+                href={`/blog/${blogPosts[0].slug}`} 
+                class="inline-block bg-primary text-white font-bold py-3 px-6 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
+              >
+                Read More
+              </a>
+            </div>
           </div>
         </div>
       </section>
+    )}
+    
+    <!-- All Blog Posts -->
+    <section class="py-16 bg-white">
+      <div class="container">
+        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          Latest Articles
+        </h2>
+        
+        {blogPosts.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 perspective-1000">
+            {blogPosts.slice(1).map((post, index) => (
+              <div 
+                class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+                style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+              >
+                <article class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+                  <a href={`/blog/${post.slug}`} class="block relative">
+                    <div class="relative h-48 overflow-hidden">
+                      <img 
+                        src={post.coverImage || '/images/default-cover.svg'} 
+                        alt={post.title} 
+                        class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                      />
+                      <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
+                      
+                      {post.tags && post.tags.length > 0 && (
+                        <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
+                          {post.tags.slice(0, 2).map(tag => (
+                            <TagBadge tag={tag} size="sm" />
+                          ))}
+                          {post.tags.length > 2 && (
+                            <span class="text-xs text-white bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                              +{post.tags.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                  
+                  <div class="p-5">
+                    <h3 class="text-lg font-bold text-text-primary mb-3 line-clamp-2 hover:text-primary transition-colors duration-300">
+                      <a href={`/blog/${post.slug}`}>
+                        {post.title}
+                      </a>
+                    </h3>
+                    
+                    {post.excerpt && (
+                      <p class="text-sm text-text-secondary mb-4 line-clamp-3">
+                        {post.excerpt}
+                      </p>
+                    )}
+                    
+                    <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
+                      {post.author && (
+                        <a href={`/authors/${post.author.slug}`} class="flex items-center group">
+                          <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
+                            <img 
+                              src={post.author.avatar || '/images/default-avatar.svg'} 
+                              alt={post.author.name} 
+                              class="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">
+                            {post.author.name}
+                          </span>
+                        </a>
+                      )}
+                      
+                      {post.publishDate && (
+                        <span class="text-xs text-text-secondary/70">
+                          {new Date(post.publishDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="text-center py-24 bg-white/70 backdrop-blur-xl rounded-3xl border border-neutral-200/50 shadow-playful transform-style-3d hover:translate-z-4 transition-transform duration-500">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-16 h-16 mx-auto mb-6 text-text-secondary/50 animate-pulse-subtle"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+            <p class="text-text-secondary font-bold text-xl mb-3">No blog posts available at the moment.</p>
+            <p class="text-text-secondary/70 text-lg">Check back soon for new articles!</p>
+          </div>
+        )}
+        
+        <!-- Pagination -->
+        {blogPosts.length > 9 && (
+          <div class="flex justify-center mt-16">
+            <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
+              <a href="#" aria-current="page" class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary-50 text-sm font-medium text-primary">1</a>
+              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">2</a>
+              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">3</a>
+              <span class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary">...</span>
+              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">8</a>
+              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">9</a>
+              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">10</a>
+              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-200 bg-white text-sm font-medium text-text-secondary hover:bg-neutral-50">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
+            </nav>
+          </div>
+        )}
+      </div>
+    </section>
+    
+    <!-- Newsletter Signup -->
+    <section class="py-16">
+      <div class="container">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Subscribe to Our Newsletter</h2>
+            <p class="text-lg text-text-secondary">
+              Stay updated with our latest blog posts, stories, and educational resources.
+            </p>
+          </div>
+          
+          <form class="max-w-xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="email" 
+                placeholder="Your email address" 
+                class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+                required
+              />
+              <button 
+                type="submit" 
+                class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
+              >
+                Subscribe
+              </button>
+            </div>
+            <p class="text-xs text-text-secondary/70 text-center mt-4">
+              By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+    
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+  </style>
+</body>
+</html>

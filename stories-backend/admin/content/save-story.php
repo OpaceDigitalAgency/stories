@@ -232,13 +232,14 @@ try {
             $stmt->execute([$id]);
         }
         
-        // Delete existing author relationships
+        // Delete existing author relationships for THIS STORY ONLY
         $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
         if ($stmt->rowCount() > 0) {
+            // First delete only this story's author relationships
             $stmt = $db->prepare("DELETE FROM story_authors WHERE story_id = ?");
             $stmt->execute([$id]);
             
-            // Add new author relationship
+            // Then add the new author relationship for this story
             $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
             $stmt->execute([$id, $author_id]);
             error_log("Updated story_authors relationship: story_id=$id, author_id=$author_id");

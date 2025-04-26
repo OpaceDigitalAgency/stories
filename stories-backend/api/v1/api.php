@@ -92,15 +92,55 @@ try {
            STORIES (paginated, with sort/limit)
            ----------------------------------- */
         case 'stories':
-            $total = (int)$db
-                ->query("SELECT COUNT(*) FROM stories WHERE is_published = 1")
-                ->fetchColumn();
-
+            // Build WHERE clause with filters
+            $whereConditions = ["s.is_published = 1"];
+            $params = [];
+            
+            // Add filter for featured stories
+            if (isset($_GET['featured']) && $_GET['featured'] == 1) {
+                $whereConditions[] = "s.featured = 1";
+            }
+            
+            // Add filter for sponsored stories
+            if (isset($_GET['is_sponsored']) && $_GET['is_sponsored'] == 1) {
+                $whereConditions[] = "s.is_sponsored = 1";
+            }
+            
+            // Add filter for self-published stories
+            if (isset($_GET['is_self_published']) && $_GET['is_self_published'] == 1) {
+                $whereConditions[] = "s.is_self_published = 1";
+            }
+            
+            // Add filter for AI-enhanced stories
+            if (isset($_GET['is_ai_enhanced']) && $_GET['is_ai_enhanced'] == 1) {
+                $whereConditions[] = "s.is_ai_enhanced = 1";
+            }
+            
+            // Handle filter parameter (direct query string)
+            if (isset($_GET['filter'])) {
+                $filterParams = [];
+                parse_str($_GET['filter'], $filterParams);
+                
+                foreach ($filterParams as $key => $value) {
+                    if (in_array($key, ['featured', 'is_sponsored', 'is_self_published', 'is_ai_enhanced']) && $value == 1) {
+                        $whereConditions[] = "s.$key = 1";
+                    }
+                }
+            }
+            
+            // Combine all conditions
+            $whereClause = implode(' AND ', $whereConditions);
+            
+            // Get total count with filters
+            $countSql = "SELECT COUNT(*) FROM stories s WHERE $whereClause";
+            $total = (int)$db->query($countSql)->fetchColumn();
+            
+            // Build final query with filters
             $sql = "SELECT s.* FROM stories s
-                    WHERE s.is_published = 1
+                    WHERE $whereClause
                     ORDER BY s.$sortColumn $sortDir
                     LIMIT :offset, :limit";
-
+            
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->bindValue(':limit',  $pageSize, PDO::PARAM_INT);
@@ -108,14 +148,54 @@ try {
 
             $stories = [];
             while ($row = $stmt->fetch()) {
+                // Get author information from story_authors table
+                $authorStmt = $db->prepare("
+                    SELECT a.id, a.name, a.slug, a.bio, a.avatar_url
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = ?
+                ");
+                $authorStmt->execute([$row['id']]);
+                $author = $authorStmt->fetch();
+                
+                // Get tags for the story
+                $tagStmt = $db->prepare("
+                    SELECT t.id, t.name, t.slug
+                    FROM story_tags st
+                    JOIN tags t ON st.tag_id = t.id
+                    WHERE st.story_id = ?
+                ");
+                $tagStmt->execute([$row['id']]);
+                $tags = $tagStmt->fetchAll();
+                
                 $stories[] = [
-                    'id'      => $row['id'],
-                    'title'   => $row['title'],
-                    'slug'    => $row['slug'],
-                    'excerpt' => $row['excerpt'],
-                    'content' => $row['content'],
-                    'publishedAt' => date('c', strtotime($row['created_at'])),
-                    /* … other story fields … */
+                    'id'              => $row['id'],
+                    'title'           => $row['title'],
+                    'slug'            => $row['slug'],
+                    'excerpt'         => $row['excerpt'],
+                    'content'         => $row['content'],
+                    'cover_url'       => $row['cover_url'],
+                    'publishedAt'     => date('c', strtotime($row['created_at'])),
+                    'featured'        => (bool)$row['featured'],
+                    'is_sponsored'    => (bool)$row['is_sponsored'],
+                    'is_self_published' => (bool)$row['is_self_published'],
+                    'is_ai_enhanced'  => (bool)$row['is_ai_enhanced'],
+                    'average_rating'  => (float)$row['average_rating'],
+                    'review_count'    => (int)$row['review_count'],
+                    'author'          => $author ? [
+                        'id'          => $author['id'],
+                        'name'        => $author['name'],
+                        'slug'        => $author['slug'],
+                        'bio'         => $author['bio'],
+                        'avatar_url'  => $author['avatar_url']
+                    ] : null,
+                    'tags'            => array_map(function($tag) {
+                        return [
+                            'id'      => $tag['id'],
+                            'name'    => $tag['name'],
+                            'slug'    => $tag['slug']
+                        ];
+                    }, $tags)
                 ];
             }
 

@@ -116,28 +116,22 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
   try {
     console.log("Applying filters:", JSON.stringify(filters));
     
-    // Create a direct query string for filtering
-    // This is a more direct approach that should work with the backend
-    let filterQuery = '';
-    
+    // Apply filters directly as query parameters
+    // This matches the backend API implementation
     if (filters.featured === true) {
-      filterQuery += 'featured=1&';
+      params['featured'] = 1;
     }
     
     if (filters.sponsored === true) {
-      filterQuery += 'is_sponsored=1&';
+      params['is_sponsored'] = 1;
     }
     
     if (filters.isSelfPublished === true) {
-      filterQuery += 'is_self_published=1&';
+      params['is_self_published'] = 1;
     }
     
     if (filters.isAiEnhanced === true) {
-      filterQuery += 'is_ai_enhanced=1&';
-    }
-    
-    if (filterQuery) {
-      params['filter'] = filterQuery.slice(0, -1); // Remove trailing &
+      params['is_ai_enhanced'] = 1;
     }
     
     // Log the final params for debugging

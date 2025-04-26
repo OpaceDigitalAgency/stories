@@ -9,7 +9,6 @@ import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
 import ApiErrorMessage from '../components/ApiErrorMessage.astro';
-import { fetchFromApi } from '../lib/api';
 import '../styles/base.css';
 
 // Dynamic data arrays fetched from API
@@ -27,42 +26,27 @@ let apiErrorEndpoint = null;
 
 try {
   console.log('Fetching data from API...');
+
   // Fetch featured stories
-  const featuredStoriesResponse = await fetchFromApi('stories', {
-    filters: {
-      featured: true
-    },
-    populate: '*',
-    sort: 'publishedAt:desc',
-    pagination: { limit: 3 }
-  });
-
-
-
-  // --- NEW plain‐fetch code against your flat JSON API ---
-  
   console.log('Fetching featured stories…');
   const resFeatured = await fetch(
     `${import.meta.env.PUBLIC_API_URL}/stories?featured=true&sort=publishedAt:desc&pagination[limit]=3`
   );
-  const rawFeatured = await resFeatured.json();    // flat array of story objects
+  const rawFeatured = await resFeatured.json();
   featuredStories = rawFeatured.map(item => ({
-    title:       item.title,
-    excerpt:     item.excerpt,
-    coverImage:  item.coverImage,                 // matches your PHP API’s "coverImage" key
+    title: item.title,
+    excerpt: item.excerpt,
+    coverImage: item.coverImage,
     author: {
-      name:      item.author.name,
-      avatar:    item.author.avatar,
-      slug:      item.author.slug
+      name: item.author.name,
+      avatar: item.author.avatar,
+      slug: item.author.slug
     },
-    rating:      item.rating,
-    tags:        item.tags,
-    slug:        item.slug,
+    rating: item.rating,
+    tags: item.tags,
+    slug: item.slug,
     publishDate: new Date(item.publishedAt)
   })) || [];
-
-
-  // --- NEW ---
 
   // Fetch most loved stories
   console.log('Fetching most-loved stories…');
@@ -71,22 +55,19 @@ try {
   );
   const rawLoved = await resLoved.json();
   mostLovedStories = rawLoved.map(item => ({
-    title:       item.title,
-    excerpt:     item.excerpt,
-    coverImage:  item.coverImage,
-    author: { 
-      name:      item.author.name,
-      avatar:    item.author.avatar,
-      slug:      item.author.slug
+    title: item.title,
+    excerpt: item.excerpt,
+    coverImage: item.coverImage,
+    author: {
+      name: item.author.name,
+      avatar: item.author.avatar,
+      slug: item.author.slug
     },
-    rating:      item.rating,
-    tags:        item.tags,
-    slug:        item.slug,
+    rating: item.rating,
+    tags: item.tags,
+    slug: item.slug,
     publishDate: new Date(item.publishedAt)
-  }))|| [];
-
-
-  // --- NEW ---
+  })) || [];
 
   // Fetch latest self-published stories
   console.log('Fetching self-published stories…');
@@ -95,87 +76,79 @@ try {
   );
   const rawSelf = await resSelf.json();
   latestSelfPublishedStories = rawSelf.map(item => ({
-    title:       item.title,
-    excerpt:     item.excerpt,
-    coverImage:  item.coverImage,
-    author: { 
-      name:      item.author.name,
-      avatar:    item.author.avatar,
-      slug:      item.author.slug
+    title: item.title,
+    excerpt: item.excerpt,
+    coverImage: item.coverImage,
+    author: {
+      name: item.author.name,
+      avatar: item.author.avatar,
+      slug: item.author.slug
     },
-    rating:      item.rating,
-    tags:        item.tags,
-    slug:        item.slug,
+    rating: item.rating,
+    tags: item.tags,
+    slug: item.slug,
     publishDate: new Date(item.publishedAt)
-  }))|| [];
+  })) || [];
 
   // Fetch AI-enhanced stories
-  const aiEnhancedStoriesResponse = await fetchFromApi('stories', {
-    filters: {
-      isAIEnhanced: true
-    },
-    populate: '*',
-    sort: 'publishedAt:desc',
-    pagination: { limit: 6 }
-  });
-  aiEnhancedStories = aiEnhancedStoriesResponse.data?.map(item => ({
-    title: item.attributes?.title || '',
-    excerpt: item.attributes?.excerpt || '',
-    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+  console.log('Fetching AI-enhanced stories…');
+  const resAI = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/stories?isAIEnhanced=true&sort=publishedAt:desc&pagination[limit]=6`
+  );
+  const rawAI = await resAI.json();
+  aiEnhancedStories = rawAI.map(item => ({
+    title: item.title,
+    excerpt: item.excerpt,
+    coverImage: item.coverImage,
     author: {
-      name: item.attributes?.author?.data?.attributes?.name || '',
-      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-      slug: item.attributes?.author?.data?.attributes?.slug || ''
+      name: item.author.name,
+      avatar: item.author.avatar,
+      slug: item.author.slug
     },
-    rating: item.attributes?.averageRating || 0,
-    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
-    slug: item.attributes?.slug || '',
-    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date()
+    rating: item.rating,
+    tags: item.tags,
+    slug: item.slug,
+    publishDate: new Date(item.publishedAt)
   })) || [];
 
   // Fetch sponsored stories
-  const sponsoredStoriesResponse = await fetchFromApi('stories', {
-    filters: {
-      isSponsored: true
-    },
-    populate: '*',
-    sort: 'publishedAt:desc',
-    pagination: { limit: 6 }
-  });
-  sponsoredStories = sponsoredStoriesResponse.data?.map(item => ({
-    title: item.attributes?.title || '',
-    excerpt: item.attributes?.excerpt || '',
-    coverImage: item.attributes?.cover?.data?.attributes?.url || '',
+  console.log('Fetching sponsored stories…');
+  const resSponsored = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/stories?isSponsored=true&sort=publishedAt:desc&pagination[limit]=6`
+  );
+  const rawSponsored = await resSponsored.json();
+  sponsoredStories = rawSponsored.map(item => ({
+    title: item.title,
+    excerpt: item.excerpt,
+    coverImage: item.coverImage,
     author: {
-      name: item.attributes?.author?.data?.attributes?.name || '',
-      avatar: item.attributes?.author?.data?.attributes?.avatar?.data?.attributes?.url || '',
-      slug: item.attributes?.author?.data?.attributes?.slug || ''
+      name: item.author.name,
+      avatar: item.author.avatar,
+      slug: item.author.slug
     },
-    rating: item.attributes?.averageRating || 0,
-    tags: item.attributes?.tags?.data?.map(tag => tag.attributes?.name) || [],
-    slug: item.attributes?.slug || '',
-    publishDate: item.attributes?.publishedAt ? new Date(item.attributes.publishedAt) : new Date(),
+    rating: item.rating,
+    tags: item.tags,
+    slug: item.slug,
+    publishDate: new Date(item.publishedAt),
     sponsored: true
   })) || [];
 
   // Fetch featured authors
-  const featuredAuthorsResponse = await fetchFromApi('authors', {
-    filters: {
-      featured: true
-    },
-    populate: '*',
-    pagination: { limit: 2 }
-  });
-  featuredAuthors = featuredAuthorsResponse.data?.map(item => ({
-    name: item.attributes?.name || '',
-    avatar: item.attributes?.avatar?.data?.attributes?.url || '',
-    bio: item.attributes?.bio || '',
-    slug: item.attributes?.slug || '',
-    storyCount: item.attributes?.storyCount || 0,
+  console.log('Fetching featured authors…');
+  const resAuthors = await fetch(
+    `${import.meta.env.PUBLIC_API_URL}/authors?featured=true&pagination[limit]=2`
+  );
+  const rawAuthors = await resAuthors.json();
+  featuredAuthors = rawAuthors.map(item => ({
+    name: item.name,
+    avatar: item.avatar,
+    bio: item.bio,
+    slug: item.slug,
+    storyCount: item.storyCount,
     socialLinks: {
-      twitter: item.attributes?.twitter || '',
-      instagram: item.attributes?.instagram || '',
-      website: item.attributes?.website || ''
+      twitter: item.twitter || '',
+      instagram: item.instagram || '',
+      website: item.website || ''
     }
   })) || [];
 } catch (error) {
@@ -218,7 +191,7 @@ try {
           <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />
         </div>
       )}
-      <!-- Hero Section (static design) -->
+      <!-- Hero Section -->
       <section class="relative py-16 md:py-24 overflow-hidden">
         <!-- Decorative blobs -->
         <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
@@ -242,13 +215,11 @@ try {
               <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
                 <a href="/stories" class="btn btn-primary text-lg px-6 py-3 shadow-playful btn-playful">
                   <span class="flex items-center">
-                    <!-- SVG icon omitted for brevity -->
                     Explore Stories
                   </span>
                 </a>
                 <a href="/publish" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful">
                   <span class="flex items-center">
-                    <!-- SVG icon omitted for brevity -->
                     Share Your Story
                   </span>
                 </a>
@@ -279,52 +250,15 @@ try {
                         </div>
                       </div>
                     </div>
-                    
-                    <!-- Floating elements -->
-                    <div class="absolute top-6 right-6 w-12 h-12 bg-tertiary rounded-full flex items-center justify-center pulse-animation">
-                      <div class="w-6 h-6 text-white">
-                        <!-- SVG icon omitted for brevity -->
-                      </div>
-                    </div>
-                    
-                    <div class="absolute bottom-8 left-8 w-14 h-14 bg-success rounded-full flex items-center justify-center float-animation" style="animation-delay: 0.5s;">
-                      <div class="w-8 h-8 text-white">
-                        <!-- SVG icon omitted for brevity -->
-                      </div>
-                    </div>
                   </div>
-                </div>
-                
-                <div class="absolute top-10 right-0 transform rotate-12 pulse-animation" style="animation-delay: 1s;">
-                  <!-- SVG icon omitted for brevity -->
-                </div>
-                
-                <div class="absolute bottom-10 left-0 transform -rotate-6 float-animation" style="animation-delay: 0.5s; animation-duration: 5s;">
-                  <!-- SVG icon omitted for brevity -->
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
-        <script>
-          // Parallax effect for blobs
-          document.addEventListener('mousemove', (e) => {
-            const blobs = document.querySelectorAll('.blob-shape');
-            const mouseX = e.clientX / window.innerWidth;
-            const mouseY = e.clientY / window.innerHeight;
-            
-            blobs.forEach((blob, index) => {
-              const speed = (index + 1) * 20;
-              const x = (mouseX - 0.5) * speed;
-              const y = (mouseY - 0.5) * speed;
-              blob.style.transform = `translate(${x}px, ${y}px)`;
-            });
-          });
-        </script>
       </section>
       
-      <!-- Sponsored Carousel (Dynamic) -->
+      <!-- Sponsored Carousel -->
       <div class="relative border border-dashed border-red-500 p-4 mb-4">
         <span class="absolute top-0 left-0 bg-red-500 text-white text-xs px-2">Dynamic: Sponsored Stories</span>
         <SponsoredCarousel
@@ -366,47 +300,6 @@ try {
         />
       </div>
       
-      <!-- How It Works Section (static) -->
-      <section class="py-16 bg-neutral-dark relative overflow-hidden">
-        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
-        <div class="container mx-auto px-4">
-          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-12 fancy-underline relative z-10">How It Works</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="text-center">
-              <div class="bg-primary/15 text-primary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation">
-                <!-- SVG icon omitted for brevity -->
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Create Your Story</h3>
-              <p class="text-text-secondary">Write your story using our easy-to-use editor. Add images, format text, and make it your own.</p>
-            </div>
-            <div class="text-center">
-              <div class="bg-secondary/15 text-secondary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation" style="animation-delay: 0.3s;">
-                <!-- SVG icon omitted for brevity -->
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Publish & Share</h3>
-              <p class="text-text-secondary">Publish your story to our platform and share it with friends, family, and our community.</p>
-            </div>
-            <div class="text-center">
-              <div class="bg-accent/15 text-text-primary w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-playful pulse-animation" style="animation-delay: 0.6s;">
-                <!-- SVG icon omitted for brevity -->
-              </div>
-              <h3 class="text-xl font-display font-bold mb-3 text-text-primary">Inspire Others</h3>
-              <p class="text-text-secondary">Get feedback, inspire readers, and connect with other storytellers around the world.</p>
-            </div>
-          </div>
-          <div class="text-center mt-12 relative z-10">
-            <div class="absolute -z-10 w-40 h-40 bg-primary/20 rounded-full blur-xl left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-            <a href="/publish" class="inline-block bg-gradient-to-r from-primary to-tertiary text-white text-lg font-bold px-10 py-4 rounded-xl shadow-playful transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative overflow-hidden group">
-              <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-              <span class="flex items-center justify-center relative">
-                <!-- SVG icon omitted for brevity -->
-                Start Writing Today
-              </span>
-            </a>
-          </div>
-        </div>
-      </section>
-      
       <!-- Featured Authors Section -->
       <section class="py-16 relative overflow-hidden">
         <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
@@ -423,10 +316,12 @@ try {
               {featuredAuthors.map(author => (
                 <CardAuthor author={author} />
               ))}
-              <!-- Become an Author Card (static) -->
+              <!-- Become an Author Card -->
               <div class="card p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
                 <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful pulse-animation relative">
-                  <!-- SVG icon omitted for brevity -->
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
                 </div>
                 <h3 class="text-2xl font-display font-bold text-text-primary mb-3 group-hover:text-primary transition-colors">
                   Become an Author
@@ -436,7 +331,6 @@ try {
                 </p>
                 <a href="/publish" class="btn btn-accent w-full py-3 px-6 shadow-playful btn-playful">
                   <span class="flex items-center justify-center">
-                    <!-- SVG icon omitted for brevity -->
                     Get Started
                   </span>
                 </a>
@@ -508,10 +402,9 @@ try {
               />
               <button
                 type="submit"
-                class="bg-[#4CBFBF] text-white px-6 py-3 rounded-xl shadow-playful whitespace-nowrap hover:bg-[#3AAEAE] transition-colors duration-300"
+                class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
               >
-                <span class="flex items-center font-bold">
-                  <!-- SVG icon omitted for brevity -->
+                <span class="flex items-center">
                   Subscribe
                 </span>
               </button>
@@ -525,5 +418,21 @@ try {
     </main>
     
     <Footer />
+    
+    <script>
+      // Parallax effect for blobs
+      document.addEventListener('mousemove', (e) => {
+        const blobs = document.querySelectorAll('.blob-shape');
+        const mouseX = e.clientX / window.innerWidth;
+        const mouseY = e.clientY / window.innerHeight;
+        
+        blobs.forEach((blob, index) => {
+          const speed = (index + 1) * 20;
+          const x = (mouseX - 0.5) * speed;
+          const y = (mouseY - 0.5) * speed;
+          blob.style.transform = `translate(${x}px, ${y}px)`;
+        });
+      });
+    </script>
   </body>
 </html>

@@ -55,6 +55,10 @@ try {
     // Commit transaction
     $db->commit();
 
+    // Store success message
+    session_start();
+    $_SESSION['success'] = "Story deleted successfully.";
+
     // Redirect back to stories list
     header("Location: stories.php");
     exit;

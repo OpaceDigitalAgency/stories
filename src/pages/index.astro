@@ -13,9 +13,10 @@ import ApiErrorMessage from '../components/ApiErrorMessage.astro';
 import { fetchStories, fetchAuthors } from '../lib/api';
 import '../styles/base.css';
 
-export const prerender = true;
+// Remove prerender directive to enable server-side rendering
+// export const prerender = true;
 
-// Fetch data at build time
+// Fetch data at request time
 let featuredStories = [];
 let mostLovedStories = [];
 let latestSelfPublishedStories = [];

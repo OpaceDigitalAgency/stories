@@ -44,7 +44,7 @@ class AiToolsPage extends CrudPage {
         // Set fields
         $this->fields = [
             [
-                'name' => 'name',
+                'name' => 'title',  // Changed from 'name' to match database field
                 'label' => 'Name',
                 'type' => 'text',
                 'main' => true,
@@ -52,7 +52,7 @@ class AiToolsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => '',
-                'api_field' => 'name' // API field name
+                'api_field' => 'title' // API field name matches database field
             ],
             [
                 'name' => 'description',
@@ -65,7 +65,7 @@ class AiToolsPage extends CrudPage {
                 'api_field' => 'description' // API field name
             ],
             [
-                'name' => 'url',
+                'name' => 'website_url',  // Changed from 'url' to match database field
                 'label' => 'URL',
                 'type' => 'text',
                 'list' => true,
@@ -73,7 +73,7 @@ class AiToolsPage extends CrudPage {
                 'view' => true,
                 'default' => '',
                 'help' => 'Full URL including https:// or relative path if hosted on this site',
-                'api_field' => 'url' // API field name
+                'api_field' => 'website_url' // API field name matches database field
             ],
             [
                 'name' => 'category',
@@ -107,17 +107,17 @@ class AiToolsPage extends CrudPage {
                     ['value' => 'freemium', 'label' => 'Freemium'],
                     ['value' => 'paid', 'label' => 'Paid']
                 ],
-                'api_field' => 'pricingType' // API field name
+                'api_field' => 'pricing_type' // API field name matches database field
             ],
             [
-                'name' => 'logo',
+                'name' => 'cover_url',  // Changed from 'logo' to match database field
                 'label' => 'Logo',
                 'type' => 'image',
                 'list' => false,
                 'form' => true,
                 'view' => true,
                 'default' => null,
-                'api_field' => 'logo' // API field name
+                'api_field' => 'cover_url' // API field name matches database field
             ],
             [
                 'name' => 'featured',
@@ -139,15 +139,15 @@ class AiToolsPage extends CrudPage {
                 'view' => true,
                 'default' => true,
                 'checkboxLabel' => 'Published',
-                'api_field' => 'isPublished' // API field name
+                'api_field' => 'is_published' // API field name matches database field
             ]
         ];
         
         // Set required fields
-        $this->requiredFields = ['name', 'url', 'category'];
+        $this->requiredFields = ['title', 'website_url', 'category'];
         
         // Set searchable fields
-        $this->searchableFields = ['name', 'description', 'url'];
+        $this->searchableFields = ['title', 'description', 'website_url'];
         
         // Set sortable fields
         $this->sortableFields = ['id', 'name', 'category'];
@@ -162,15 +162,15 @@ class AiToolsPage extends CrudPage {
      */
     protected function handleCreate() {
         // Handle file upload
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
             // Create file upload instance
             $fileUpload = new FileUpload($this->config['media']);
             
             // Upload file
-            $file = $fileUpload->upload($_FILES['logo'], 'ai_tool', 0, 'logo');
+            $file = $fileUpload->upload($_FILES['cover_url'], 'ai_tool', 0, 'cover_url');
             
             if ($file) {
-                $_POST['logo'] = $file;
+                $_POST['cover_url'] = $file;
             } else {
                 $this->errors = array_merge($this->errors, $fileUpload->getErrors());
                 return;
@@ -186,7 +186,7 @@ class AiToolsPage extends CrudPage {
      */
     protected function handleEdit() {
         // Handle file upload
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['cover_url']) && $_FILES['cover_url']['error'] === UPLOAD_ERR_OK) {
             // Create file upload instance
             $fileUpload = new FileUpload($this->config['media']);
             
@@ -194,10 +194,10 @@ class AiToolsPage extends CrudPage {
             $id = $this->getParam('id');
             
             // Upload file
-            $file = $fileUpload->upload($_FILES['logo'], 'ai_tool', $id, 'logo');
+            $file = $fileUpload->upload($_FILES['cover_url'], 'ai_tool', $id, 'cover_url');
             
             if ($file) {
-                $_POST['logo'] = $file;
+                $_POST['cover_url'] = $file;
             } else {
                 $this->errors = array_merge($this->errors, $fileUpload->getErrors());
                 return;

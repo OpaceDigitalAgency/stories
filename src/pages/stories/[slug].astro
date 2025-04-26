@@ -7,7 +7,7 @@ import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
-import { fetchStories, fetchStory, type Story } from '../../lib/api';
+import { fetchStories, type Story } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
@@ -21,8 +21,9 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
-// Fetch story data
-const story = await fetchStory(slug);
+// Fetch all stories and find the one we want
+const allStories = await fetchStories();
+const story = allStories.find(s => s.slug === slug);
 
 if (!story) {
   return new Response('Story not found', { status: 404 });
@@ -35,8 +36,7 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
   day: 'numeric'
 }).format(new Date(story.publishDate));
 
-// Fetch related stories
-const allStories = await fetchStories();
+// Get related stories (excluding current story)
 const relatedStories = allStories
   .filter(s => s.slug !== slug)
   .slice(0, 3);
@@ -124,11 +124,7 @@ const relatedStories = allStories
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatedStories.map(story => (
               <CardStory 
-                title={story.title}
-                excerpt={story.excerpt}
-                coverImage={story.coverImage}
-                slug={story.slug}
-                publishDate={story.publishDate}
+                story={story}
               />
             ))}
             

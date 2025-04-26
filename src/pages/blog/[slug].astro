@@ -1,25 +1,484 @@
-rc/pages/blog/[slug].astro</path>
-<content lines="69-90">
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-      {JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "BlogPosting",
-        "headline": post.title,
-        "image": post.cover_url,
-        "datePublished": post.publishedAt,
-        "author": {
-          "@type": "Person",
-          "name": post.author?.name || 'Anonymous'
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Stories From The Web",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://storiesfromtheweb.org/logo.png"
-          }
-        },
-        "description": post.excerpt
-      })}
-    </script>
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import TagBadge from '../../components/TagBadge.astro';
+import { fetchStories } from '../../lib/api';
+import '../../styles/base.css';
+
+// Get the slug from the URL
+const { slug } = Astro.params;
+
+// Fetch blog posts
+const stories = await fetchStories();
+const blogPosts = stories.filter(story => story.type === 'blog');
+const post = blogPosts.find(p => p.slug === slug);
+
+// If post not found, redirect to 404
+if (!post) {
+  return Astro.redirect('/404');
+}
+
+// Get related posts (same category or tags)
+const relatedPosts = blogPosts
+  .filter(p => 
+    p.slug !== slug && 
+    (p.category === post.category || 
+     p.tags?.some(tag => post.tags?.includes(tag)))
+  )
+  .slice(0, 3);
+
+// Format date if available
+const formattedDate = post.publishDate 
+  ? new Date(post.publishDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  : null;
+
+// Page metadata
+const title = `${post.title} | Blog | Stories From The Web`;
+const description = post.excerpt || `Read "${post.title}" on Stories From The Web`;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:title" content={post.title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content={post.coverImage}>
+  <meta property="og:url" content={`https://storiesfromtheweb.org/blog/${slug}`}>
+  <meta property="og:type" content="article">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={post.title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={post.coverImage}>
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+    {JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": post.title,
+      "image": post.coverImage,
+      "datePublished": post.publishDate,
+      "author": {
+        "@type": "Person",
+        "name": post.author?.name || 'Anonymous'
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Stories From The Web",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://storiesfromtheweb.org/logo.png"
+        }
+      },
+      "description": post.excerpt
+    })}
+  </script>
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <article class="relative overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-4xl mx-auto">
+          <!-- Breadcrumbs -->
+          <nav class="flex items-center text-sm text-text-secondary mb-8" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-2">
+              <li>
+                <a href="/" class="hover:text-primary transition-colors duration-300">Home</a>
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mx-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+                <a href="/blog" class="hover:text-primary transition-colors duration-300">Blog</a>
+              </li>
+              {post.category && (
+                <li class="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mx-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                  <a 
+                    href={`/blog/category/${post.category.toLowerCase().replace(/\s+/g, '-')}`} 
+                    class="hover:text-primary transition-colors duration-300"
+                  >
+                    {post.category}
+                  </a>
+                </li>
+              )}
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mx-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+                <span class="text-text-secondary/70 truncate max-w-[200px]">{post.title}</span>
+              </li>
+            </ol>
+          </nav>
+          
+          <!-- Post Header -->
+          <header class="mb-12">
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-3 mb-6">
+              {post.tags?.map(tag => (
+                <TagBadge tag={tag} size="md" />
+              ))}
+            </div>
+            
+            <!-- Title -->
+            <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+              {post.title}
+            </h1>
+            
+            <!-- Author and Date -->
+            <div class="flex items-center mb-8">
+              {post.author && (
+                <a href={`/authors/${post.author.slug}`} class="flex items-center group">
+                  <div class="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-white shadow-md">
+                    <img 
+                      src={post.author.avatar || '/images/default-avatar.svg'} 
+                      alt={post.author.name} 
+                      class="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <span class="block text-base font-bold text-text-primary group-hover:text-primary transition-colors duration-300">
+                      {post.author.name}
+                    </span>
+                    {formattedDate && (
+                      <span class="text-sm text-text-secondary">
+                        {formattedDate}
+                      </span>
+                    )}
+                  </div>
+                </a>
+              )}
+            </div>
+            
+            <!-- Cover Image -->
+            <div class="mb-12 rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+              <img 
+                src={post.coverImage || '/images/default-cover.svg'} 
+                alt={post.title} 
+                class="w-full h-auto object-cover"
+              />
+            </div>
+          </header>
+          
+          <!-- Post Content -->
+          <div class="prose prose-lg max-w-none mb-16">
+            {post.content ? (
+              <div set:html={post.content} />
+            ) : (
+              <div class="bg-white p-8 rounded-xl shadow-md">
+                <p class="text-lg text-text-secondary">
+                  This is a placeholder for the blog post content. In a real implementation, the full content would be displayed here.
+                </p>
+                <p class="text-lg text-text-secondary mt-4">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras porttitor metus in nibh finibus, a volutpat felis condimentum. Nulla facilisi. Phasellus gravida semper nisi. Nulla facilisi. Cras id arcu lorem, et semper purus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Duis vel est nec sapien suscipit gravida. Aliquam erat volutpat. Ut id magna vitae ante rutrum commodo.
+                </p>
+                <p class="text-lg text-text-secondary mt-4">
+                  Fusce at nisi eget dolor rhoncus facilisis. Mauris ante nisl, consectetur et luctus et, porta ut dolor. Curabitur ultricies ultrices nulla. Morbi blandit nec est vitae dictum. Etiam vel consectetur diam. Maecenas ut tristique mi. Duis vel sapien at odio venenatis facilisis a sit amet lectus.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <!-- Share Buttons -->
+          <div class="flex flex-wrap items-center justify-center gap-4 mb-16 p-6 bg-white rounded-xl shadow-md">
+            <span class="text-text-secondary font-bold">Share this post:</span>
+            <a 
+              href={`https://twitter.com/intent/tweet?url=https://storiesfromtheweb.org/blog/${slug}&text=${encodeURIComponent(post.title)}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="bg-blue-400 text-white p-3 rounded-full hover:bg-blue-500 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
+              aria-label="Share on Twitter"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+              </svg>
+            </a>
+            <a 
+              href={`https://www.facebook.com/sharer/sharer.php?u=https://storiesfromtheweb.org/blog/${slug}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
+              aria-label="Share on Facebook"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+              </svg>
+            </a>
+            <a 
+              href={`https://www.linkedin.com/shareArticle?mini=true&url=https://storiesfromtheweb.org/blog/${slug}&title=${encodeURIComponent(post.title)}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="bg-blue-700 text-white p-3 rounded-full hover:bg-blue-800 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
+              aria-label="Share on LinkedIn"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z"/>
+              </svg>
+            </a>
+            <a 
+              href={`mailto:?subject=${encodeURIComponent(post.title)}&body=Check out this article: https://storiesfromtheweb.org/blog/${slug}`} 
+              class="bg-gray-700 text-white p-3 rounded-full hover:bg-gray-800 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
+              aria-label="Share via Email"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </a>
+          </div>
+          
+          <!-- Author Bio -->
+          {post.author && post.author.bio && (
+            <div class="mb-16 bg-white p-8 rounded-xl shadow-md">
+              <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-xl flex-shrink-0">
+                  <img 
+                    src={post.author.avatar || '/images/default-avatar.svg'} 
+                    alt={post.author.name} 
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 class="text-xl font-bold text-text-primary mb-2">About {post.author.name}</h3>
+                  <p class="text-text-secondary mb-4">{post.author.bio}</p>
+                  <a 
+                    href={`/authors/${post.author.slug}`} 
+                    class="text-primary font-medium hover:text-primary-600 transition-colors duration-300 flex items-center"
+                  >
+                    View all posts
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 ml-1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+    
+    <!-- Related Posts -->
+    {relatedPosts.length > 0 && (
+      <section class="py-16 bg-white">
+        <div class="container">
+          <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Related Articles
+          </h2>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 perspective-1000">
+            {relatedPosts.map((relatedPost, index) => (
+              <div 
+                class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+                style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+              >
+                <article class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+                  <a href={`/blog/${relatedPost.slug}`} class="block relative">
+                    <div class="relative h-48 overflow-hidden">
+                      <img 
+                        src={relatedPost.coverImage || '/images/default-cover.svg'} 
+                        alt={relatedPost.title} 
+                        class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                      />
+                      <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
+                      
+                      {relatedPost.tags && relatedPost.tags.length > 0 && (
+                        <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
+                          {relatedPost.tags.slice(0, 1).map(tag => (
+                            <TagBadge tag={tag} size="sm" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                  
+                  <div class="p-5">
+                    <h3 class="text-lg font-bold text-text-primary mb-3 line-clamp-2 hover:text-primary transition-colors duration-300">
+                      <a href={`/blog/${relatedPost.slug}`}>
+                        {relatedPost.title}
+                      </a>
+                    </h3>
+                    
+                    {relatedPost.excerpt && (
+                      <p class="text-sm text-text-secondary mb-4 line-clamp-2">
+                        {relatedPost.excerpt}
+                      </p>
+                    )}
+                    
+                    <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
+                      {relatedPost.author && (
+                        <a href={`/authors/${relatedPost.author.slug}`} class="flex items-center group">
+                          <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
+                            <img 
+                              src={relatedPost.author.avatar || '/images/default-avatar.svg'} 
+                              alt={relatedPost.author.name} 
+                              class="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">
+                            {relatedPost.author.name}
+                          </span>
+                        </a>
+                      )}
+                      
+                      {relatedPost.publishDate && (
+                        <span class="text-xs text-text-secondary/70">
+                          {new Date(relatedPost.publishDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+    
+    <!-- Newsletter Signup -->
+    <section class="py-16">
+      <div class="container">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Subscribe to Our Newsletter</h2>
+            <p class="text-lg text-text-secondary">
+              Stay updated with our latest blog posts, stories, and educational resources.
+            </p>
+          </div>
+          
+          <form class="max-w-xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="email" 
+                placeholder="Your email address" 
+                class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+                required
+              />
+              <button 
+                type="submit" 
+                class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
+              >
+                Subscribe
+              </button>
+            </div>
+            <p class="text-xs text-text-secondary/70 text-center mt-4">
+              By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+    
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+    
+    /* Prose styles for blog content */
+    .prose {
+      --tw-prose-body: #374151;
+      --tw-prose-headings: #111827;
+      --tw-prose-lead: #4b5563;
+      --tw-prose-links: var(--color-primary);
+      --tw-prose-bold: #111827;
+      --tw-prose-counters: #6b7280;
+      --tw-prose-bullets: #d1d5db;
+      --tw-prose-hr: #e5e7eb;
+      --tw-prose-quotes: #111827;
+      --tw-prose-quote-borders: #e5e7eb;
+      --tw-prose-captions: #6b7280;
+      --tw-prose-code: #111827;
+      --tw-prose-pre-code: #e5e7eb;
+      --tw-prose-pre-bg: #1f2937;
+      --tw-prose-th-borders: #d1d5db;
+      --tw-prose-td-borders: #e5e7eb;
+    }
+    
+    .prose a {
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    
+    .prose a:hover {
+      color: var(--tw-prose-links);
+      text-decoration: underline;
+    }
+    
+    .prose img {
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .prose blockquote {
+      border-left-color: var(--color-primary);
+      background-color: rgba(var(--color-primary-rgb), 0.05);
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+    }
+  </style>
+</body>
+</html>

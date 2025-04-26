@@ -1,5 +1,3 @@
-rc/pages/authors/index.astro</path>
-<content lines="1-8">
 ---
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
@@ -8,3 +6,199 @@ import { fetchAuthors } from '../../lib/api';
 import '../../styles/base.css';
 
 export const prerender = true;
+
+// Fetch authors from API
+const authors = await fetchAuthors();
+
+// Page metadata
+const title = 'Authors | Stories From The Web';
+const description = 'Discover amazing storytellers on Stories From The Web. Browse our collection of children\'s book authors, educators, and more.';
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <!-- Hero Section -->
+    <section class="relative py-20 overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-3xl mx-auto text-center mb-16">
+          <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Meet Our Authors
+          </h1>
+          <p class="text-lg text-text-secondary mb-8">
+            Discover the talented storytellers behind our collection of amazing stories. From award-winning children's book authors to innovative educators, our community of writers brings diverse perspectives and creative voices to young readers.
+          </p>
+          
+          <!-- Search Bar -->
+          <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
+            <input 
+              type="text" 
+              placeholder="Search for authors by name or genre..." 
+              class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+            />
+            <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Featured Authors -->
+    <section class="py-16 bg-white">
+      <div class="container">
+        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          Featured Authors
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
+          {authors.filter(author => author.featured).slice(0, 4).map((author, index) => (
+            <div 
+              class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+              style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+            >
+              <CardAuthor author={author} className="rounded-xl shadow-md hover:shadow-lg transition" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+    
+    <!-- All Authors -->
+    <section class="py-16">
+      <div class="container">
+        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          All Authors
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
+          {authors.map((author, index) => (
+            <div 
+              class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+              style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+            >
+              <CardAuthor author={author} className="rounded-xl shadow-md hover:shadow-lg transition" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+    
+    <!-- Become an Author CTA -->
+    <section class="py-16 bg-gradient-to-br from-primary-50 to-primary-100">
+      <div class="container">
+        <div class="max-w-4xl mx-auto bg-white rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Become an Author</h2>
+            <p class="text-lg text-text-secondary">
+              Join our community of storytellers and share your stories with young readers around the world.
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
+              <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-text-primary mb-2">Easy Publishing</h3>
+              <p class="text-sm text-text-secondary">
+                Our intuitive tools make it simple to write, format, and publish your stories.
+              </p>
+            </div>
+            
+            <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
+              <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-text-primary mb-2">Reach Readers</h3>
+              <p class="text-sm text-text-secondary">
+                Connect with a global audience of young readers, parents, and educators.
+              </p>
+            </div>
+            
+            <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
+              <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-text-primary mb-2">Track Performance</h3>
+              <p class="text-sm text-text-secondary">
+                Get insights into how readers engage with your stories and grow your audience.
+              </p>
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <a href="/publish" class="inline-block bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105">
+              Start Writing Today
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+    
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+  </style>
+</body>
+</html>

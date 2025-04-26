@@ -1,5 +1,3 @@
-<details> 
-<summary><code>src/lib/api.ts</code></summary>
 
 /**
  * Simple wrapper around fetch() for your flat JSON API.
@@ -29,7 +27,7 @@ export async function fetchFromApi<T = any>(
   }
   return (await res.json()) as T;
 }
-</details>
+
 
 
 

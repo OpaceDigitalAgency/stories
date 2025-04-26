@@ -35,7 +35,15 @@ try {
   // Try to fetch specific categories, but fall back to all stories if they fail
   try {
     featuredStories = await fetchStories(1, 3, { featured: true });
-    if (featuredStories.length === 0) featuredStories = allStories.slice(0, 3);
+    console.log('Featured stories:', featuredStories);
+    // Only use fallback if no stories match the filter
+    if (featuredStories.length === 0) {
+      console.log('No featured stories found, using fallback');
+      featuredStories = allStories.filter(story => story.featured).slice(0, 3);
+      if (featuredStories.length === 0) {
+        featuredStories = allStories.slice(0, 3);
+      }
+    }
   } catch (err) {
     console.error('Error fetching featured stories:', err);
     featuredStories = allStories.slice(0, 3);
@@ -44,7 +52,12 @@ try {
   try {
     // Ensure "Most Loved" shows stories with highest ratings
     mostLovedStories = await fetchStories(1, 6, { sort: 'average_rating:desc' });
-    if (mostLovedStories.length === 0) mostLovedStories = allStories.slice(0, 6);
+    console.log('Most loved stories:', mostLovedStories);
+    if (mostLovedStories.length === 0) {
+      console.log('No most loved stories found, using fallback');
+      // Sort by rating
+      mostLovedStories = [...allStories].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 6);
+    }
   } catch (err) {
     console.error('Error fetching most loved stories:', err);
     mostLovedStories = allStories.slice(0, 6);
@@ -52,7 +65,15 @@ try {
   
   try {
     latestSelfPublishedStories = await fetchStories(1, 6, { isSelfPublished: true });
-    if (latestSelfPublishedStories.length === 0) latestSelfPublishedStories = allStories.slice(0, 6);
+    console.log('Self-published stories:', latestSelfPublishedStories);
+    // Only use fallback if no stories match the filter
+    if (latestSelfPublishedStories.length === 0) {
+      console.log('No self-published stories found, using fallback');
+      latestSelfPublishedStories = allStories.filter(story => story.isSelfPublished).slice(0, 6);
+      if (latestSelfPublishedStories.length === 0) {
+        latestSelfPublishedStories = allStories.slice(0, 6);
+      }
+    }
   } catch (err) {
     console.error('Error fetching self-published stories:', err);
     latestSelfPublishedStories = allStories.slice(0, 6);
@@ -60,7 +81,15 @@ try {
   
   try {
     aiEnhancedStories = await fetchStories(1, 6, { isAiEnhanced: true });
-    if (aiEnhancedStories.length === 0) aiEnhancedStories = allStories.slice(0, 6);
+    console.log('AI-enhanced stories:', aiEnhancedStories);
+    // Only use fallback if no stories match the filter
+    if (aiEnhancedStories.length === 0) {
+      console.log('No AI-enhanced stories found, using fallback');
+      aiEnhancedStories = allStories.filter(story => story.isAiEnhanced).slice(0, 6);
+      if (aiEnhancedStories.length === 0) {
+        aiEnhancedStories = allStories.slice(0, 6);
+      }
+    }
   } catch (err) {
     console.error('Error fetching AI-enhanced stories:', err);
     aiEnhancedStories = allStories.slice(0, 6);
@@ -70,7 +99,14 @@ try {
     // Use is_sponsored instead of sponsored to match the API parameter
     sponsoredStories = await fetchStories(1, 6, { sponsored: true });
     console.log('Sponsored stories:', sponsoredStories);
-    if (sponsoredStories.length === 0) sponsoredStories = allStories.slice(0, 6);
+    // Only use fallback if no stories match the filter
+    if (sponsoredStories.length === 0) {
+      console.log('No sponsored stories found, using fallback');
+      sponsoredStories = allStories.filter(story => story.sponsored).slice(0, 6);
+      if (sponsoredStories.length === 0) {
+        sponsoredStories = allStories.slice(0, 6);
+      }
+    }
   } catch (err) {
     console.error('Error fetching sponsored stories:', err);
     sponsoredStories = allStories.slice(0, 6);

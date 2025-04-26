@@ -78,7 +78,8 @@ class CrudPage extends AdminPage
         /* ---------- fallback (retry w/out page/pageSize/sort) ---------- */
         if ($response === false) {
             error_log("CrudPage fallback → retrying {$this->endpoint} with minimal params");
-            $response = $this->apiClient->get($this->endpoint, $search ? [$search] : []);
+            // always retry without any query params (flat response)
+            $response = $this->apiClient->get($this->endpoint, []);
         }
         if ($response === false) {                 // still dead
             $this->setError(

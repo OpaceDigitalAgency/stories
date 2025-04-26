@@ -87,13 +87,41 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
   return response.json();
 }
 
+// Define filter interface
+interface StoryFilters {
+  featured?: boolean;
+  sponsored?: boolean;
+  isSelfPublished?: boolean;
+  isAiEnhanced?: boolean;
+  sort?: string;
+}
+
 // Resource-specific fetch functions with proper mapping
-export async function fetchStories(page = 1, limit = 10): Promise<Story[]> {
-  const raw = await fetchApi<any[]>('/stories', {
+export async function fetchStories(page = 1, limit = 10, filters: StoryFilters = {}): Promise<Story[]> {
+  const params: Record<string, string | number | boolean> = {
     'sort': 'publishedAt:desc',
     'pagination[limit]': limit,
     'pagination[page]': page
-  });
+  };
+  
+  // Add filters
+  if (filters.featured !== undefined) {
+    params['filters[featured][$eq]'] = filters.featured;
+  }
+  if (filters.sponsored !== undefined) {
+    params['filters[is_sponsored][$eq]'] = filters.sponsored;
+  }
+  if (filters.isSelfPublished !== undefined) {
+    params['filters[is_self_published][$eq]'] = filters.isSelfPublished;
+  }
+  if (filters.isAiEnhanced !== undefined) {
+    params['filters[is_ai_enhanced][$eq]'] = filters.isAiEnhanced;
+  }
+  if (filters.sort) {
+    params['sort'] = filters.sort;
+  }
+  
+  const raw = await fetchApi<any[]>('/stories', params);
   return raw.map(item => ({
     title: item.title,
     excerpt: item.excerpt,

@@ -106,9 +106,12 @@ try {
         'content' => $content
     ];
 
-    // Add author data
+    // Add author data - ensure author_id is always included
     if (in_array('author_id', $columns)) {
         $data['author_id'] = $author_id;
+        
+        // Debug log for author_id
+        error_log("Setting author_id to: " . $author_id);
     }
     
     // Include author name for backward compatibility
@@ -157,9 +160,17 @@ try {
         $data['average_rating'] = $average_rating;
     }
 
+    // Process all boolean fields
+    $booleanFields = ['featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation'];
+    foreach ($booleanFields as $field) {
+        if (in_array($field, $columns)) {
+            $data[$field] = isset($_POST[$field]) ? 1 : 0;
+        }
+    }
+
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'is_sponsored', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
             // Handle integer fields
             if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'int') !== false || strpos($columnInfo[$key]['Type'], 'tinyint') !== false)) {
                 $data[$key] = (int)$value;

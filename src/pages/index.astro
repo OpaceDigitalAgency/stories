@@ -29,11 +29,12 @@ let apiErrorDetails = null;
 let apiErrorEndpoint = null;
 
 try {
-  featuredStories = await fetchStories(1, 3);
-  mostLovedStories = await fetchStories(1, 6);
-  latestSelfPublishedStories = await fetchStories(1, 6);
-  aiEnhancedStories = await fetchStories(1, 6);
-  sponsoredStories = await fetchStories(1, 6);
+  featuredStories = await fetchStories(1, 3, { featured: true });
+  // Ensure "Most Loved" shows stories with highest ratings
+  mostLovedStories = await fetchStories(1, 6, { sort: 'average_rating:desc' });
+  latestSelfPublishedStories = await fetchStories(1, 6, { isSelfPublished: true });
+  aiEnhancedStories = await fetchStories(1, 6, { isAiEnhanced: true });
+  sponsoredStories = await fetchStories(1, 6, { sponsored: true });
   featuredAuthors = await fetchAuthors();
 } catch (e) {
   console.error('Error fetching data:', e);

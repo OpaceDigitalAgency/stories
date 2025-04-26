@@ -67,7 +67,9 @@ try {
   }
   
   try {
+    // Use is_sponsored instead of sponsored to match the API parameter
     sponsoredStories = await fetchStories(1, 6, { sponsored: true });
+    console.log('Sponsored stories:', sponsoredStories);
     if (sponsoredStories.length === 0) sponsoredStories = allStories.slice(0, 6);
   } catch (err) {
     console.error('Error fetching sponsored stories:', err);

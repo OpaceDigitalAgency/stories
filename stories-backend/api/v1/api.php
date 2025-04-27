@@ -123,6 +123,13 @@ try {
                 error_log("Adding is_ai_enhanced=1 filter");
             }
             
+            // Add filter for source_type
+            if (isset($_GET['source_type']) && in_array($_GET['source_type'], ['child', 'parent', 'classic'])) {
+                $whereConditions[] = "s.source_type = :source_type";
+                $params[':source_type'] = $_GET['source_type'];
+                error_log("Adding source_type={$_GET['source_type']} filter");
+            }
+            
             // Handle filter parameter (direct query string)
             if (isset($_GET['filter'])) {
                 $filterParams = [];
@@ -189,6 +196,8 @@ try {
                     'is_ai_enhanced'  => (bool)$row['is_ai_enhanced'],
                     'average_rating'  => (float)$row['average_rating'],
                     'review_count'    => (int)$row['review_count'],
+                    'source_type'     => $row['source_type'],
+                    'allow_reviews'   => (bool)$row['allow_reviews'],
                     'author'          => $author ? [
                         'id'          => $author['id'],
                         'name'        => $author['name'],

@@ -53,6 +53,7 @@ erDiagram
     
     STORIES {
         int id PK
+        enum source_type
         string title
         string slug
         text content
@@ -60,6 +61,7 @@ erDiagram
         boolean is_published
         boolean featured
         decimal average_rating
+        boolean allow_reviews
         int review_count
         string estimated_reading_time
         boolean is_sponsored
@@ -152,6 +154,7 @@ erDiagram
         boolean is_published
         timestamp created_at
         timestamp updated_at
+        int story_id FK
     }
     
     AI_TOOLS {
@@ -234,6 +237,7 @@ The main table for story content.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | int | PRIMARY KEY, AUTO_INCREMENT | Unique identifier |
+| source_type | enum('child','parent','classic') | NOT NULL, DEFAULT 'child' | Source type of the story |
 | title | varchar(255) | NOT NULL | Story title |
 | content | text | NULL | Full story content |
 | excerpt | text | NULL | Short summary of the story |
@@ -241,6 +245,7 @@ The main table for story content.
 | is_published | tinyint(1) | DEFAULT 1 | Publication status |
 | featured | tinyint(1) | DEFAULT 0 | Whether story is featured |
 | average_rating | decimal(3,1) | DEFAULT 4.5 | Average user rating |
+| allow_reviews | tinyint(1) | NOT NULL, DEFAULT 0 | Whether reviews are allowed |
 | review_count | int | DEFAULT 10 | Number of reviews |
 | estimated_reading_time | varchar(50) | DEFAULT '5 minutes' | Estimated time to read |
 | is_sponsored | tinyint(1) | DEFAULT 0 | Whether content is sponsored |
@@ -357,6 +362,7 @@ Directory listings for related resources.
 | is_published | tinyint(1) | NOT NULL, DEFAULT 0 | Publication status |
 | created_at | datetime | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 | updated_at | datetime | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
+| story_id | int | NULL, FOREIGN KEY | Reference to stories.id |
 
 ### ai_tools
 

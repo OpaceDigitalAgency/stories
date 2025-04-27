@@ -119,6 +119,23 @@ try {
             </div>
 
             <div class="form-group">
+                <label class="form-label" for="source_type">Source Type</label>
+                <select id="source_type" name="source_type" class="form-input" required>
+                    <option value="child" <?php echo ($story['source_type'] ?? 'child') === 'child' ? 'selected' : ''; ?>>Child</option>
+                    <option value="parent" <?php echo ($story['source_type'] ?? '') === 'parent' ? 'selected' : ''; ?>>Parent</option>
+                    <option value="classic" <?php echo ($story['source_type'] ?? '') === 'classic' ? 'selected' : ''; ?>>Classic</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="allow_reviews" value="1"
+                           <?php echo ($story['allow_reviews'] ?? 0) == 1 ? 'checked' : ''; ?>>
+                    Allow Reviews
+                </label>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label" for="author_id">Author</label>
                 <select id="author_id" name="author_id" class="form-input" required>
                     <option value="">Select Author</option>

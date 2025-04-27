@@ -48,6 +48,24 @@ try {
     $author_id = $_POST['author_id'] ?? '';
     $content = $_POST['content'] ?? '';
     $tags = $_POST['tags'] ?? [];
+    
+    // Get new fields
+    $source_type = $_POST['source_type'] ?? 'child';
+    $allow_reviews = isset($_POST['allow_reviews']) ? 1 : 0;
+    
+    // Validate source_type
+    if (!in_array($source_type, ['child', 'parent', 'classic'])) {
+        $source_type = 'child';
+    }
+    
+    // Apply business rules
+    if ($source_type === 'child') {
+        // Children's stories never get reviews
+        $allow_reviews = 0;
+    } else if ($source_type === 'classic') {
+        // Classic works always get reviews
+        $allow_reviews = 1;
+    }
 
     // Validate required fields
     if (empty($title) || empty($author_id) || empty($content)) {
@@ -56,16 +74,16 @@ try {
 
     if ($id) {
         // Update existing story
-        $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, content = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$title, $author_id, $content, $id]);
+        $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, content = ?, source_type = ?, allow_reviews = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$title, $author_id, $content, $source_type, $allow_reviews, $id]);
         
         // Delete existing tags
         $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
         $stmt->execute([$id]);
     } else {
         // Create new story
-        $stmt = $db->prepare("INSERT INTO stories (title, author_id, content, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
-        $stmt->execute([$title, $author_id, $content]);
+        $stmt = $db->prepare("INSERT INTO stories (title, author_id, content, source_type, allow_reviews, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt->execute([$title, $author_id, $content, $source_type, $allow_reviews]);
         $id = $db->lastInsertId();
     }
 

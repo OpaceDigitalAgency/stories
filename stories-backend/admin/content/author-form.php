@@ -145,13 +145,11 @@ if (isset($_SESSION['error'])) {
                     </div>
                     <?php endif; ?>
 
-                    <?php if ($hasEmailColumn): ?>
                     <div class="form-group">
                         <label class="form-label" for="email">Email</label>
                         <input type="email" id="email" name="email" class="form-control" required
                                value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
                     </div>
-                    <?php endif; ?>
 
                     <div class="form-group">
                         <label class="form-label" for="bio">Bio</label>

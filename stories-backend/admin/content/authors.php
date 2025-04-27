@@ -163,6 +163,7 @@ if (isset($_SESSION['error'])) {
                     <tr>
                         <th>Name</th>
                         <th>Email</th>
+                        <th>Type</th>
                         <th>Bio</th>
                         <th>Stories</th>
                         <th>Blog Posts</th>
@@ -172,13 +173,14 @@ if (isset($_SESSION['error'])) {
                 <tbody>
                     <?php if (empty($authors)): ?>
                         <tr>
-                            <td colspan="6" class="text-center">No authors found. Add your first author!</td>
+                            <td colspan="7" class="text-center">No authors found. Add your first author!</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($authors as $author): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($author['name']); ?></td>
                                 <td><?php echo htmlspecialchars($author['email']); ?></td>
+                                <td><?php echo ucfirst(htmlspecialchars($author['author_type'] ?? 'retail')); ?></td>
                                 <td><?php echo htmlspecialchars(substr($author['bio'] ?? '', 0, 100) . (strlen($author['bio'] ?? '') > 100 ? '...' : '')); ?></td>
                                 <td><?php echo $author['story_count']; ?></td>
                                 <td><?php echo $author['post_count']; ?></td>

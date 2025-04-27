@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stories from the Web – System Architecture – April 2025</title>
+
+  <!-- Mermaid for diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px auto; max-width: 1200px; line-height: 1.6; color: #333; }
+    h1 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+    h2 { border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 40px; }
+    h3 { margin-top: 30px; }
+    .mermaid { background:#fff; padding: 20px; border-radius: 6px; margin: 20px 0; }
+    pre { background:#f5f5f5; padding:12px; border-radius:5px; overflow-x:auto; white-space:pre-wrap; }
+    code { background:#f5f5f5; padding:2px 4px; border-radius:3px; }
+    table { border-collapse: collapse; width:100%; margin:20px 0; }
+    th,td { border:1px solid #ddd; padding:8px; text-align:left; }
+    th { background:#f5f5f5; }
+    .note,.warning,.success { padding:15px; margin:20px 0; border-left:5px solid; }
+    .note   { background:#ffffe8; border-color:#ffcc00; }
+    .warning{ background:#ffecec; border-color:#ff3333; }
+    .success{ background:#eeffee; border-color:#33cc33; }
+  </style>
+</head>
+<body>
+  <h1>Stories from the Web – System Architecture</h1>
+  <p><em>Version updated: 27 April 2025 – consolidated from <code>system‑architecture.html</code>, <code>comprehensive‑system‑architecture.md</code> and related docs.</em></p>
+
+  <h2 id="overview">1. Overview</h2>
+  <p>Stories from the Web is a two‑tier publishing platform.</p>
+  <ul>
+    <li><strong>Public Frontend</strong> – Static Astro <abbr title="TypeScript + Tailwind">TS/TW</abbr> site served via Netlify CDN.</li>
+    <li><strong>Admin Backend</strong> – PHP CMS on cPanel shared hosting (JavaScript‑free UI).</li>
+  </ul>
+
+  <h2 id="tech-stack">2. Complete Tech Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Tech</th><th>Notes</th></tr>
+    <tr><td>Frontend</td><td>Astro 2.x / Vite / TypeScript / Tailwind</td><td>SSG + Islands; deployed automatically on <code>main</code></td></tr>
+    <tr><td>Backend API</td><td>PHP 8.3 (custom REST), Apache, MySQL 8</td><td>Manual deploy via cPanel Git</td></tr>
+    <tr><td>Auth</td><td>JWT <em>and</em> SimpleAuth fallback</td><td>SimpleAuth added Apr 2025 to fix DB write issues</td></tr>
+    <tr><td>Dev Tooling</td><td>GitHub, VS Code, Postman</td><td> </td></tr>
+  </table>
+
+  <h2 id="environments">3. Environments</h2>
+  <h3>Production</h3>
+  <ul>
+    <li>Frontend – <a href="https://storiesfromtheweb.netlify.app/">Netlify</a></li>
+    <li>API – <a href="https://api.storiesfromtheweb.org/">api.storiesfromtheweb.org</a></li>
+    <li>Admin – <a href="https://api.storiesfromtheweb.org/admin/">/admin</a></li>
+  </ul>
+  <p><strong>Environment variables</strong>:</p>
+  <pre>[build.environment]
+PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+</pre>
+
+  <h2 id="architecture">4. Architecture Components</h2>
+  <div class="mermaid">
+    graph TD
+      A[Frontend – Astro.js] --|API Requests| B[Backend – PHP API]
+      B --|Database Queries| C[(MySQL DB)]
+      D[Admin Interface] --|CRUD Operations| B
+      D --|Direct Access| C
+      E[Users] --|View Content| A
+      F[Content Creators] --|Manage Content| D
+  </div>
+
+  <div class="note">
+    <h4>Key Benefits</h4>
+    <ul>
+      <li><strong>Separation of Concerns</strong> – Frontend and backend can be developed independently</li>
+      <li><strong>Scalability</strong> – Each component can be scaled separately</li>
+      <li><strong>Security</strong> – Admin interface is isolated from public frontend</li>
+      <li><strong>Performance</strong> – Static frontend with dynamic data loading</li>
+    </ul>
+  </div>
+
+  <h2 id="database">5. Database Schema (ER‑diagram extract)</h2>
+  <div class="mermaid">
+    erDiagram
+      STORIES ||--o{ STORY_AUTHORS : has
+      STORIES ||--o{ STORY_TAGS    : has
+      AUTHORS ||--o{ STORY_AUTHORS : belongs_to
+      TAGS    ||--o{ STORY_TAGS    : belongs_to
+      USERS   ||--|| AUTH_TOKENS   : has
+
+      STORIES {
+        int id PK
+        string title
+        string slug
+        text   content
+        boolean is_published
+        decimal average_rating
+        timestamp created_at
+      }
+      AUTHORS {
+        int id PK
+        string name
+        string slug
+      }
+  </div>
+
+  <h2 id="api">6. API Surface (excerpt)</h2>
+  <h3>Content Endpoints</h3>
+  <table>
+    <tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+    <tr><td>/stories</td><td>GET</td><td>List stories</td></tr>
+    <tr><td>/stories/{id}</td><td>GET</td><td>Single story</td></tr>
+    <tr><td>/admin/stories</td><td>POST</td><td>Create story (auth req.)</td></tr>
+  </table>
+  <h3>Standard Response</h3>
+  <pre>{
+  "data": [ { "id":1, "title":"Example" } ],
+  "meta": { "pagination": { "page":1, "pageSize":25 } }
+}</pre>
+
+  <h3>Authentication</h3>
+  <p>Default JWT flow with optional SimpleAuth fallback (April 2025).</p>
+  <div class="mermaid">
+    sequenceDiagram
+      participant U as User
+      participant A as Admin
+      participant API as API
+      U->>A: Login
+      A->>API: POST /auth/login
+      API-->>A: JWT/Token
+      A-->>U: Session Set
+  </div>
+
+  <h2 id="security">7. Security & Compliance</h2>
+  <ul>
+    <li>Bcrypt password hashing & rate‑limit on failed logins</li>
+    <li>Strict PSR‑4 autoloader (case‑sensitivity enforced)</li>
+    <li>Content‑Security‑Policy blocks JS in Admin</li>
+    <li>SQL‑prepared statements & XSS sanitisation</li>
+  </ul>
+
+  <h2 id="deployment">8. Deployment</h2>
+  <div class="mermaid">
+    graph TD
+      G[GitHub] --|Push| N[Netlify CI]
+      N --|Build| CDN[Netlify CDN]
+      G --|Manual| CP[cPanel Git]
+      CP --|Deploy| S[Shared Hosting]
+      S --|Serves| API
+      S --|Serves| Admin
+  </div>
+  <h3>Backend Deploy Snippet</h3>
+  <pre>export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+/bin/cp -R stories-backend/admin $DEPLOYPATH
+/bin/cp -R stories-backend/api   $DEPLOYPATH
+</pre>
+
+  <h2 id="folders">9. Repository Folder Structure (high‑level)</h2>
+  <pre>stories/
+├── frontend/          # Astro project
+│   ├── src/pages/
+│   ├── src/components/
+│   └── ...
+└── stories-backend/
+    ├── api/v1/
+    │   ├── Endpoints/
+    │   ├── Middleware/
+    │   ├── Utils/
+    │   └── routes.php
+    ├── admin/         # JavaScript‑free CMS
+    └── database/
+        └── stories_db_26.04.25_1337.sql
+</pre>
+
+  <h2 id="changelog">10. Recent Changes</h2>
+  <ul>
+    <li><strong>2025‑04‑26</strong> – Added SimpleAuth &amp; updated deployment guide</li>
+    <li><strong>2025‑04‑21</strong> – Case‑sensitivity fix merged (<code>fix_case_once_and_for_all.php</code>)</li>
+    <li><strong>2025‑04‑15</strong> – Netlify env‑var refactor</li>
+  </ul>
+
+  <footer style="margin-top:50px; font-size:0.9em; color:#777; border-top:1px solid #eee; padding-top:12px;">
+    <p>© 2025 Opace Digital – This HTML is a generated consolidation. Source Markdown: <code>docs/comprehensive-system-architecture.md</code>. Edit there and regenerate.</p>
+  </footer>
+</body>
+</html>

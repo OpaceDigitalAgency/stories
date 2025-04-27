@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories from the Web - Comprehensive System Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        h2 { margin-top: 40px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+        ul { margin: 10px 0 20px 20px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        code { background: #eef; padding: 2px 4px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f9f9f9; }
+        .note { background: #ffffe0; padding: 10px; border-left: 5px solid #ff0; margin: 20px 0; }
+        .mermaid { margin: 20px 0; background: #fff; padding: 20px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Stories from the Web - Comprehensive System Architecture</h1>
+
+    <h2>Contents</h2>
+    <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#tech-stack">Tech Stack</a></li>
+        <li><a href="#environments">Environments</a></li>
+        <li><a href="#architecture-components">Architecture Components</a></li>
+        <li><a href="#frontend-architecture">Frontend Architecture</a></li>
+        <li><a href="#backend-architecture">Backend Architecture</a></li>
+        <li><a href="#database-schema">Database Schema</a></li>
+        <li><a href="#api-documentation">API Documentation</a></li>
+        <li><a href="#authentication-system">Authentication System</a></li>
+        <li><a href="#data-flow-processes">Data Flow Processes</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#caching-performance">Caching & Performance</a></li>
+        <li><a href="#key-files">Key Files</a></li>
+        <li><a href="#documentation">Documentation</a></li>
+        <li><a href="#deployment">Deployment</a></li>
+        <li><a href="#monitoring-troubleshooting">Monitoring & Troubleshooting</a></li>
+        <li><a href="#getting-started">Getting Started</a></li>
+    </ul>
+
+    <h2 id="overview">Overview</h2>
+    <p>Stories from the Web is a platform for sharing and discovering user‑generated stories, complemented by games, directory listings, and AI‑powered tools. It follows a clear <em>separation of concerns</em>: a static frontend served via CDN and a RESTful PHP backend for data and content management.</p>
+
+    <h2 id="tech-stack">Tech Stack</h2>
+    <h3>Frontend</h3>
+    <ul>
+        <li><strong>Framework:</strong> Astro.js (v2.x) with TypeScript</li>
+        <li><strong>Styling:</strong> Tailwind CSS</li>
+        <li><strong>Build & Serve:</strong> Vite, deployed on Netlify</li>
+        <li><strong>Package Manager:</strong> npm</li>
+    </ul>
+    <h3>Backend</h3>
+    <ul>
+        <li><strong>Language:</strong> PHP (v8.3.x)</li>
+        <li><strong>Database:</strong> MySQL (v8.0.x)</li>
+        <li><strong>Server:</strong> Apache on cPanel shared hosting</li>
+        <li><strong>Authentication:</strong> Custom JWT</li>
+        <li><strong>Deployment:</strong> cPanel Git Version Control</li>
+    </ul>
+
+    <h2 id="environments">Environments</h2>
+    <h3>Production</h3>
+    <ul>
+        <li><strong>Frontend URL:</strong> https://storiesfromtheweb.netlify.app/</li>
+        <li><strong>Backend API:</strong> https://api.storiesfromtheweb.org/api/v1/</li>
+        <li><strong>Admin Interface:</strong> https://api.storiesfromtheweb.org/admin/</li>
+    </ul>
+    <h3>Development</h3>
+    <ul>
+        <li>Local server: http://localhost:3000 (frontend), http://localhost/stories-backend/api/v1 (API), http://localhost/stories-backend/admin (admin)</li>
+        <li>Environment variables in <code>.env</code> and <code>config.php</code></li>
+    </ul>
+
+    <h2 id="architecture-components">Architecture Components</h2>
+    <div class="mermaid">
+graph TD
+    A[Users] -->|View Content| F[Astro Frontend]
+    F -->|API Requests| B[PHP API]
+    B -->|Reads/Writes| C[MySQL DB]
+    G[Content Creators] -->|Manage Content| H[Admin Panel]
+    H -->|CRUD| B
+    B -->|Direct Queries| C
+    style A fill:#f9f,stroke:#333,stroke-width:1px
+    style G fill:#ff9,stroke:#333,stroke-width:1px
+    style H fill:#9ff,stroke:#333,stroke-width:1px
+    style C fill:#cfc,stroke:#333,stroke-width:1px
+    style F fill:#ccf,stroke:#333,stroke-width:1px
+    style B fill:#ffc,stroke:#333,stroke-width:1px
+    
+    </div>
+    <div class="note">No magic wizards—just clear, maintainable components working in harmony.</div>
+
+    <h2 id="frontend-architecture">Frontend Architecture</h2>
+    <p>The static site generator Astro builds pages at deploy time, with optional client scripts for interactivity.</p>
+    <pre><code>src/
+├── components/         # Reusable UI blocks (NavHeader, CardStory, etc.)
+├── lib/                # API client (src/lib/api.ts), mock data
+├── pages/              # Astro pages (index.astro, stories/[slug].astro, etc.)
+├── styles/             # Global styles (Tailwind imports)
+└── types/              # TypeScript definitions
+</code></pre>
+
+    <h2 id="backend-architecture">Backend Architecture</h2>
+    <p>A custom MVC‑style PHP backend exposes a versioned REST API and an admin interface.</p>
+    <pre><code>stories-backend/
+├── admin/              # Admin UI assets, templates, includes (Auth.php, Database.php)
+├── api/                # v1 API router (api/v1/api.php, Middleware, Endpoints)
+├── database/           # SQL dumps (stories_db_26.04.25_1337.sql)
+├── .htaccess           # Apache config
+└── .cpanel.yml         # Deployment tasks
+</code></pre>
+
+<h2 id="database-schema">Database Schema</h2>
+    <div class="mermaid">
+erDiagram
+    USERS ||--o{ AUTH_TOKENS : has
+    AUTHORS ||--o{ STORY_AUTHORS : has
+    STORIES ||--o{ STORY_AUTHORS : has
+    TAGS ||--o{ STORY_TAGS : has
+    STORIES ||--o{ STORY_TAGS : has
+    TAGS ||--o{ POST_TAGS : has
+    BLOG_POSTS ||--o{ POST_TAGS : has
+    AI_TOOL_CATEGORIES ||--o{ AI_TOOLS : has
+    DIRECTORY_CATEGORIES ||--o{ DIRECTORY_ITEMS : has
+</div>
+    <pre><code>-- Full DB Schema (DDL)
+CREATE TABLE `ai_tools` (
+  `id` int NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `category_id` int DEFAULT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `published_at` datetime DEFAULT NULL,
+  `tool_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pricing_type` enum('free','freemium','paid','subscription') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
+  `price_info` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `features` text COLLATE utf8mb4_unicode_ci,
+  `rating` decimal(3,1) DEFAULT '0.0',
+  `featured` tinyint(1) DEFAULT '0',
+  `cover_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_published` tinyint(1) DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `ai_tool_categories` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `description` text,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `authors` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `bio` text,
+  `avatar_url` varchar(255) DEFAULT NULL,
+  `is_published` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE `auth_tokens` (
+  `user_id` int NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  PRIMARY KEY (`user_id`,`token`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `blog_posts` (
+  `id` int NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `excerpt` text,
+  `slug` varchar(255) NOT NULL,
+  `is_published` tinyint(1) DEFAULT '0',
+  `author_id` int DEFAULT NULL,
+  `cover_url` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE `directory_categories` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `directory_items` (
+  `id` int NOT NULL,
+  `category_id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `url` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `games` (
+  `id` int NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `description` text,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `media` (
+  `id` int NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `file_type` varchar(50) NOT NULL,
+  `file_size` int NOT NULL,
+  `alt_text` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE `post_tags` (
+  `post_id` int NOT NULL,
+  `tag_id` int NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `story_authors` (
+  `story_id` int NOT NULL,
+  `author_id` int NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `story_tags` (
+  `story_id` int NOT NULL,
+  `tag_id` int NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE `stories` (
+  `id` int NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `excerpt` text,
+  `is_published` tinyint(1) DEFAULT '0',
+  `featured` tinyint(1) DEFAULT '0',
+  `average_rating` decimal(3,1) DEFAULT '0.0',
+  `cover_url` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE `tags` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE `users` (
+  `id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` varchar(50) NOT NULL DEFAULT 'user',
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=MyISAM;
+</code></pre>
+
+
+    <h2 id="api-documentation">API Documentation</h2>
+    <div class="note">All endpoints are under <code>/api/v1</code>. Responses use a flat JSON format.</div>
+    <h3>Content Endpoints</h3>
+    <table>
+      <tr><th>Endpoint</th><th>Method</th><th>Description</th><th>Auth</th></tr>
+      <tr><td><code>/stories</code></td><td>GET</td><td>List stories (pagination, sorting, filters)</td><td>No</td></tr>
+      <tr><td><code>/stories/{id}</code></td><td>GET</td><td>Get single story</td><td>No</td></tr>
+      <tr><td><code>/authors</code></td><td>GET</td><td>List authors</td><td>No</td></tr>
+      <tr><td><code>/authors/{id}</code></td><td>GET</td><td>Get single author</td><td>No</td></tr>
+      <tr><td><code>/tags</code></td><td>GET</td><td>List tags</td><td>No</td></tr>
+      <tr><td><code>/games</code></td><td>GET</td><td>List games</td><td>No</td></tr>
+      <tr><td><code>/directory-items</code></td><td>GET</td><td>List directory items</td><td>No</td></tr>
+      <tr><td><code>/ai-tools</code></td><td>GET</td><td>List AI tools</td><td>No</td></tr>
+      <tr><td><code>/blog-posts</code></td><td>GET</td><td>List blog posts</td><td>No</td></tr>
+    </table>
+
+    <h3>Admin Endpoints</h3>
+    <table>
+      <tr><th>Endpoint</th><th>Method</th><th>Action</th></tr>
+      <tr><td><code>/admin/stories</code></td><td>POST</td><td>Create story</td></tr>
+      <tr><td><code>/admin/stories/{id}</code></td><td>PUT</td><td>Update story</td></tr>
+      <tr><td><code>/admin/stories/{id}</code></td><td>DELETE</td><td>Delete story</td></tr>
+      <tr><td><code>/admin/media</code></td><td>POST</td><td>Upload media</td></tr>
+    </table>
+    <h3>Query Options</h3>
+    <ul>
+      <li><strong>Pagination:</strong> <code>?page=1&pageSize=25</code></li>
+      <li><strong>Sorting:</strong> <code>?sort=title:asc</code></li>
+      <li><strong>Filtering:</strong> <code>?featured=true&author=1</code></li>
+    </ul>
+    <h3>Rate Limiting & CORS</h3>
+    <ul>
+      <li>60 req/min (unauthenticated), 120 req/min (authenticated).</li>
+      <li>CORS: <code>Access-Control-Allow-Origin: *</code>, methods <code>GET, POST, PUT, DELETE, OPTIONS</code>.</li>
+    </ul>
+
+    <h2 id="authentication-system">Authentication System</h2>
+    <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant A as Admin UI
+    participant API
+    participant DB
+    U->>A: Submit credentials
+    A->>API: POST /auth/login
+    API->>DB: Verify credentials
+    DB-->>API: Valid
+    API->>API: Generate JWT
+    API->>DB: Store token
+    API-->>A: Return token
+    A-->>U: Redirect to dashboard
+</div>
+
+    <h3>Token Refresh</h3>
+    <div class="mermaid">
+sequenceDiagram
+    participant F as Frontend
+    participant API
+    participant DB
+    F->>API: Request with JWT
+    API->>API: Validate
+    alt Valid
+      API->>DB: Serve request
+      DB-->>API: Data
+      API-->>F: Response
+    else Expired
+      API-->>F: 401 Unauthorized
+      F->>API: POST /auth/refresh
+      API->>API: New JWT
+      API-->>F: New token
+      F->>API: Retry original
+    end
+</div>
+
+    <h2 id="data-flow-processes">Data Flow Processes</h2>
+    <h3>Content Viewing</h3>
+    <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant API
+    participant DB
+    U->>F: Visit stories list
+    F->>API: GET /stories
+    API->>DB: Query stories
+    DB-->>API: Return list
+    API-->>F: JSON
+    F-->>U: Render list
+    U->>F: Click story
+    F->>API: GET /stories/{id}
+    API->>DB: Query story
+    DB-->>API: Return story
+    API-->>F: JSON
+    F-->>U: Render story
+</div>
+
+    <h3>Content Creation</h3>
+    <div class="mermaid">
+sequenceDiagram
+    participant Auth as Author
+    participant UI as Admin UI
+    participant API
+    participant DB
+    Auth->>UI: Login
+    UI->>API: Authenticate
+    API-->>UI: JWT
+    Auth->>UI: Create story
+    UI->>API: POST /admin/stories
+    API->>DB: Insert record
+    DB-->>API: OK
+    API-->>UI: Success
+    UI-->>Auth: Confirmation
+</div>
+
+    <h3>Error Handling</h3>
+    <div class="mermaid">
+sequenceDiagram
+    participant F as Frontend
+    participant API
+    F->>API: Invalid request
+    API-->>F: 400 Bad Request
+    F-->>U: Show error
+    F->>API: Expired token
+    API-->>F: 401 Unauthorized
+    F->>API: Refresh token
+    API-->>F: New token
+    F->>API: Retry
+    API-->>F: Success
+</div>
+
+    <h2 id="security">Security</h2>
+    <ul>
+        <li><strong>JWT Tokens:</strong> Signed with secret, 24h lifetime, revocable.</li>
+        <li><strong>Passwords:</strong> Bcrypt hashing, rate‑limited login attempts.</li>
+        <li><strong>HTTPS:</strong> All traffic via TLS, cookies <code>Secure</code> & <code>HttpOnly</code>.</li>
+        <li><strong>CSP & Sanitisation:</strong> Prevent XSS, validate inputs server‑side.</li>
+    </ul>
+
+    <h2 id="caching-performance">Caching & Performance</h2>
+    <ul>
+        <li>Frontend assets served from Netlify CDN with aggressive caching headers.</li>
+        <li>No server‑side cache layer (Redis/​Memcached); any future optimisation would plug in here.</li>
+        <li>Image assets on object storage/CDN as configured.</li>
+    </ul>
+
+    <h2 id="key-files">Key Files</h2>
+    <h3>Frontend</h3>
+    <ul>
+        <li><code>src/lib/api.ts</code> – API client, error handling.</li>
+        <li><code>src/types/components.ts</code> – TypeScript interfaces.</li>
+        <li><code>src/components/NavHeader.astro</code>, <code>CardStory.astro</code>, etc.</li>
+    </ul>
+    <h3>Backend</h3>
+    <ul>
+        <li><code>api/v1/api.php</code> – Main router.</li>
+        <li><code>admin/includes/Auth.php</code>, <code>Database.php</code>.</li>
+        <li><code>admin/stories.php</code>, <code>admin/authors.php</code>.</li>
+    </ul>
+
+    <h2 id="documentation">Documentation</h2>
+    <ul>
+        <li><a href="../README.md">README.md</a></li>
+        <li><a href="../PLANNING.md">PLANNING.md</a></li>
+        <li><a href="../PROGRESS.md">PROGRESS.md</a></li>
+        <li><a href="../API_CONNECTIVITY_FIX.md">API_CONNECTIVITY_FIX.md</a></li>
+        <li><a href="project-cleanup-summary.md">Project Cleanup Summary</a></li>
+        <li><a href="stories-cleanup-plan.md">Stories Cleanup Plan</a></li>
+        <li><a href="database-schema.md">Database Schema</a></li>
+        <li><a href="api-documentation.md">API Documentation</a></li>
+        <li><a href="consolidated-deployment-guide.md">Consolidated Deployment Guide</a></li>
+        <li><a href="documentation-index.md">Documentation Index</a></li>
+    </ul>
+
+    <h2 id="deployment">Deployment</h2>
+    <h3>Frontend (Netlify)</h3>
+    <div class="mermaid">
+graph TD
+    GitHub -->|push| Netlify{CI/CD}
+    Netlify -->|build| Build[npm run build]
+    Build -->|publish| CDN[Netlify CDN]
+    CDN -->|serve| Users
+    </div>
+    <pre><code>netlify.toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+</code></pre>
+
+    <h3>Backend (cPanel Git Version Control)</h3>
+    <div class="mermaid">
+graph TD
+    GH[GitHub repo] -->|manual| CPANEL[Log into cPanel]
+    CPANEL -->|Git Version Control| Repo[Select repo]
+    Repo -->|Update from Remote| Pull[Pull latest]
+    Pull -->|Deploy HEAD| Deploy[Run .cpanel.yml tasks]
+    Deploy -->|serve| API[PHP API & Admin]
+    </div>
+    <pre><code>.cpanel.yml
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - /bin/cp -R stories-backend/*.php $DEPLOYPATH
+    - /bin/cp -R stories-backend/admin $DEPLOYPATH
+    - /bin/cp -R stories-backend/api $DEPLOYPATH
+</code></pre>
+
+    <h2 id="monitoring-troubleshooting">Monitoring & Troubleshooting</h2>
+    <ul>
+        <li><strong>Netlify:</strong> Build logs, deploy previews, rollback on failure.</li>
+        <li><strong>cPanel Git:</strong> Check deployment logs, file permissions, .cpanel.yml formatting.</li>
+        <li><strong>FTP Issues:</strong> Passive mode, credentials, cert verification.</li>
+        <li><strong>HTTP 403:</strong> Review <code>.htaccess</code> file matches allowed scripts.</li>
+    </ul>
+
+    <h2 id="getting-started">Getting Started</h2>
+    <h3>Clone & Install</h3>
+    <pre><code>git clone https://github.com/OpaceDigitalAgency/stories.git
+cd stories
+npm install
+npm run dev
+</code></pre>
+    <h3>Backend Setup</h3>
+    <pre><code>mysql -u root -p stories_db < stories-backend/database/stories_db_26.04.25_1337.sql
+# Edit stories-backend/api/v1/config/config.php with DB credentials
+</code></pre>
+    <h3>Credentials</h3>
+    <ul>
+        <li>Admin (dev only): <code>admin@storiesfromtheweb.org / password123</code></li>
+        <li>API: use JWT from <code>/auth/login</code> endpoint</li>
+    </ul>
+</body>
+</html>

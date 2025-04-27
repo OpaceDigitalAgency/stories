@@ -135,6 +135,26 @@ class AuthorsPage extends CrudPage {
                     ['value' => 'child', 'label' => 'Child'],
                     ['value' => 'educator', 'label' => 'Educator']
                 ]
+            ],
+            [
+                'name' => 'age',
+                'label' => 'Age',
+                'type' => 'number',
+                'list' => false,
+                'form' => true,
+                'view' => true,
+                'default' => null,
+                'help' => 'Age of child author (1-21)'
+            ],
+            [
+                'name' => 'location',
+                'label' => 'Location',
+                'type' => 'text',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => '',
+                'help' => 'Author\'s location (city, county, or country)'
             ]
         ];
         
@@ -142,10 +162,10 @@ class AuthorsPage extends CrudPage {
         $this->requiredFields = ['name'];
         
         // Set searchable fields
-        $this->searchableFields = ['name', 'bio'];
+        $this->searchableFields = ['name', 'bio', 'location'];
         
         // Set sortable fields
-        $this->sortableFields = ['id', 'name', 'featured'];
+        $this->sortableFields = ['id', 'name', 'featured', 'location', 'author_type'];
         
         // Set default sort
         $this->defaultSortField = 'name';

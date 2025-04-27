@@ -1,6 +1,13 @@
 # Stories From The Web - Progress Log
 
 ## 2025-04-27
+- Added age field for child authors and location field for all authors:
+  - Created SQL to add age and location fields to the authors table
+  - Updated author-form.php to display age field conditionally when child type is selected
+  - Updated author-form.php to display location field for all authors
+  - Updated save-author.php to handle the new fields
+  - Updated comprehensive-system-architecture-new.php to reflect the schema changes
+  - Updated database-schema.md to include the new fields
 - Implemented support for story source types and review controls:
   - Added source_type and allow_reviews fields to admin story form
   - Updated save-story.php to handle the new fields with business rules

@@ -84,6 +84,8 @@ erDiagram
         timestamp created_at
         timestamp updated_at
         enum author_type
+        int age
+        string location
     }
     
     TAGS {
@@ -273,6 +275,8 @@ Information about content creators.
 | created_at | timestamp | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 | updated_at | timestamp | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
 | author_type | enum('retail','parent','child','educator') | NOT NULL, DEFAULT 'parent' | Type of author |
+| age | tinyint unsigned | NULL | Age (only for child authors) |
+| location | varchar(100) | NULL | Author's location (city, county, or country) |
 
 ### tags
 

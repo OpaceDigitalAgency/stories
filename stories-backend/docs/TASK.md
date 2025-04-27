@@ -50,6 +50,9 @@
 - Verify that each section shows the correct stories
 - Verify that form fields save properly in the admin panel
 - Test the review submission process end-to-end
+- Test the new author fields (age and location) functionality
+- Verify that the age field only appears for child authors
+- Test the location predictive search functionality
 
 ### Improvements
 - Add more robust error handling for API calls
@@ -57,6 +60,8 @@
 - Consider adding pagination for story sections
 - Add more filtering options for stories
 - Add individual review storage and display (currently only aggregate ratings are stored)
+- Implement filtering of authors by location
+- Add location-based story discovery
 
 ## Backlog 📝
 

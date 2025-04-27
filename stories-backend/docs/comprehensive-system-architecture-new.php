@@ -209,7 +209,7 @@ erDiagram
     <ul>
       <li><strong>retail</strong>: Professional book authors</li>
       <li><strong>parent</strong>: Parents who write stories</li>
-      <li><strong>child</strong>: Children who write stories</li>
+      <li><strong>child</strong>: Children who write stories (includes age field, 1-21)</li>
       <li><strong>educator</strong>: Teachers and educational content creators</li>
     </ul>
     <p>Author types directly influence story source types and review capabilities:</p>
@@ -218,6 +218,7 @@ erDiagram
       <li>Parent authors → parent source type (reviews configurable)</li>
       <li>Retail/educator authors → classic source type (reviews always enabled)</li>
     </ul>
+    <p>All authors have a location field that stores their city, county, or country, enabling filtering by location.</p>
 
     <pre><code>-- Full DB Schema (DDL)
 CREATE TABLE `ai_tools` (
@@ -257,7 +258,9 @@ CREATE TABLE `authors` (
   `is_published` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `author_type` enum('retail','parent','child','educator') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'parent'
+  `author_type` enum('retail','parent','child','educator') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'parent',
+  `age` tinyint unsigned DEFAULT NULL,
+  `location` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `auth_tokens` (

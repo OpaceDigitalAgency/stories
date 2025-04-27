@@ -50,6 +50,8 @@ try {
     $bio = trim($_POST['bio'] ?? '');
     $avatar_url = trim($_POST['avatar_url'] ?? '');
     $author_type = trim($_POST['author_type'] ?? 'retail');
+    $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
+    $location = trim($_POST['location'] ?? '');
 
     // Validate required fields
     if (empty($name)) {
@@ -77,6 +79,12 @@ try {
     
     // Check if author_type column exists
     $hasAuthorTypeColumn = in_array('author_type', $columns);
+    
+    // Check if age column exists
+    $hasAgeColumn = in_array('age', $columns);
+    
+    // Check if location column exists
+    $hasLocationColumn = in_array('location', $columns);
 
     // Generate slug from name if not provided and slug column exists
     if ($hasSlugColumn && empty($slug)) {
@@ -156,6 +164,16 @@ try {
             $params[] = $author_type;
         }
         
+        if ($hasAgeColumn) {
+            $setClause[] = "age = ?";
+            $params[] = $age;
+        }
+        
+        if ($hasLocationColumn) {
+            $setClause[] = "location = ?";
+            $params[] = $location;
+        }
+        
         $setClause[] = "updated_at = NOW()";
         $params[] = $id; // Add ID for WHERE clause
         
@@ -198,6 +216,18 @@ try {
             $columns[] = "author_type";
             $placeholders[] = "?";
             $params[] = $author_type;
+        }
+        
+        if ($hasAgeColumn) {
+            $columns[] = "age";
+            $placeholders[] = "?";
+            $params[] = $age;
+        }
+        
+        if ($hasLocationColumn) {
+            $columns[] = "location";
+            $placeholders[] = "?";
+            $params[] = $location;
         }
         
         $columns[] = "created_at";

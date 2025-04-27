@@ -3,4 +3,3 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
     - /bin/cp -R stories-backend/* $DEPLOYPATH
-    - /bin/cp stories-backend/.htaccess $DEPLOYPATH

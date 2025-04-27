@@ -172,7 +172,8 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
       name: item.author.name,
       bio: item.author.bio || '',
       avatar: item.author.avatar_url || '',
-      slug: item.author.slug
+      slug: item.author.slug,
+      author_type: item.author.author_type || 'retail'
     } : undefined
   }));
 }

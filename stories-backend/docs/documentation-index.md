@@ -31,6 +31,10 @@ The following documentation files have been created as part of the comprehensive
 
 10. [**System Architecture (HTML)**](system-architecture.html) - Interactive HTML version of the system architecture with Mermaid.js diagrams
 
+### Troubleshooting Documentation
+
+11. [**Known Issues and Fixes**](KNOWN_ISSUES_AND_FIXES.md) - Documentation of known issues and their solutions
+
 ## Existing Documentation
 
 The following documentation files already existed in the project:
@@ -96,7 +100,8 @@ The recommended documentation structure is as follows:
 │   ├── system-architecture.md      # System architecture with diagrams
 │   ├── system-architecture.html    # Interactive HTML version with diagrams
 │   ├── comprehensive-system-architecture.md # Complete system architecture documentation
-│   └── consolidated-deployment-guide.md # Consolidated deployment guide
+│   ├── consolidated-deployment-guide.md # Consolidated deployment guide
+│   └── KNOWN_ISSUES_AND_FIXES.md   # Known issues and their solutions
 └── API_CONNECTIVITY_FIX.md         # Reference for API connectivity issues
 ```
 

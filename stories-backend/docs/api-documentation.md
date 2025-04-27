@@ -121,6 +121,9 @@ Query Parameters:
 - `sort`: Sort field and direction (e.g., `title:asc`, `publishedAt:desc`)
 - `featured`: Filter by featured status (boolean)
 - `author`: Filter by author ID
+- `is_sponsored`: Filter by sponsored status (boolean)
+- `is_self_published`: Filter by self-published status (boolean)
+- `is_ai_enhanced`: Filter by AI-enhanced status (boolean)
 
 Response:
 

@@ -171,7 +171,13 @@ src/
    - Provides typed interfaces for API responses
    - Maps API response fields to component props
    - Supports flat data structure from API
-   - Includes resource-specific fetch functions for each content type
+   - Includes resource-specific fetch functions for each content type:
+     - `fetchStories`: Fetches stories with filtering options
+     - `fetchAuthors`: Fetches authors
+     - `fetchBlogPosts`: Fetches blog posts
+     - `fetchGames`: Fetches games
+     - `fetchDirectoryItems`: Fetches directory items
+     - `fetchAiTools`: Fetches AI tools
 
 2. **Page Components**:
    - Each page is an Astro component that fetches data and renders content

@@ -122,12 +122,12 @@ try {
   const allAuthors = await fetchAuthors();
   
   // Filter authors by type
-  const retailAuthors = allAuthors.filter(author => author.author_type === 'retail');
+  retailAuthors = allAuthors.filter(author => author.author_type === 'retail');
   const parentAuthors = allAuthors.filter(author => author.author_type === 'parent');
   const childAuthors = allAuthors.filter(author => author.author_type === 'child');
   
   // Combine parent and child authors for the family section
-  const familyAuthors = [...parentAuthors, ...childAuthors];
+  familyAuthors = [...parentAuthors, ...childAuthors];
   
   // Featured authors
   featuredAuthors = allAuthors.filter(author => author.featured);

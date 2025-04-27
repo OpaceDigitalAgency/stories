@@ -66,192 +66,171 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $game ? 'Edit' : 'Add'; ?> Game - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
                 <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
+                <button type="submit" formaction="games.php" class="nav-link active">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
                 <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
                 <button type="submit" formaction="media.php" class="nav-link">Media</button>
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1><?php echo $game ? 'Edit' : 'Add'; ?> Game</h1>
-            <form method="GET" action="games.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Games</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo $game ? 'Edit' : 'Add'; ?> Game</h1>
+                <p class="page-description">
+                    <a href="games.php" class="text-primary">← Back to Games</a>
+                </p>
+            </div>
         </div>
 
         <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="form-info">
-            <p><strong>Required fields:</strong> Title</p>
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Game Information</h2>
+                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
+            </div>
+            <div class="section-body">
+                <form method="POST" action="save-game.php" class="content-form">
+                    <?php if ($game): ?>
+                        <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
+                    <?php endif; ?>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="title">Title <span class="required">*</span></label>
+                        <input type="text" id="title" name="title" class="form-control" required
+                               value="<?php echo htmlspecialchars($game['title'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="slug">Slug</label>
+                        <input type="text" id="slug" name="slug" class="form-control"
+                               value="<?php echo htmlspecialchars($game['slug'] ?? ''); ?>">
+                        <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="5"><?php 
+                            echo htmlspecialchars($game['description'] ?? ''); 
+                        ?></textarea>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="featured" name="featured" value="1" class="form-check-input"
+                                   <?php echo (isset($game['featured']) && $game['featured'] == 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="featured">Featured</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="is_published" name="is_published" value="1" class="form-check-input"
+                                   <?php echo (!isset($game['is_published']) || $game['is_published'] == 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="is_published">Published</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="published_at">Published at</label>
+                        <input type="datetime-local" id="published_at" name="published_at" class="form-control"
+                               value="<?php echo isset($game['published_at']) ? date('Y-m-d\TH:i', strtotime($game['published_at'])) : date('Y-m-d\TH:i'); ?>">
+                        <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary"><?php echo $game ? 'Update' : 'Add'; ?> Game</button>
+                        <a href="games.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <form method="POST" action="save-game.php" class="content-form">
-            <?php if ($game): ?>
-                <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
-            <?php endif; ?>
-
-            <div class="form-group">
-                <label class="form-label" for="title">Title <span class="required">*</span></label>
-                <input type="text" id="title" name="title" class="form-input" required
-                       value="<?php echo htmlspecialchars($game['title'] ?? ''); ?>">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" class="form-input"
-                       value="<?php echo htmlspecialchars($game['slug'] ?? ''); ?>">
-                <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="description">Description</label>
-                <textarea id="description" name="description" class="form-input" rows="5"><?php 
-                    echo htmlspecialchars($game['description'] ?? ''); 
-                ?></textarea>
-            </div>
-
-            <div class="form-group checkbox-field">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="featured" value="1"
-                           <?php echo (isset($game['featured']) && $game['featured'] == 1) ? 'checked' : ''; ?>>
-                    Featured
-                </label>
-            </div>
-
-            <div class="form-group checkbox-field">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="is_published" value="1"
-                           <?php echo (!isset($game['is_published']) || $game['is_published'] == 1) ? 'checked' : ''; ?>>
-                    Published
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="published_at">Published at</label>
-                <input type="datetime-local" id="published_at" name="published_at" class="form-input"
-                       value="<?php echo isset($game['published_at']) ? date('Y-m-d\TH:i', strtotime($game['published_at'])) : date('Y-m-d\TH:i'); ?>">
-                <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
-            </div>
-
-            <div class="form-group">
-                <button type="submit" class="form-submit"><?php echo $game ? 'Update' : 'Add'; ?> Game</button>
-            </div>
-        </form>
-
         <?php if ($game): ?>
-            <div class="form-metadata">
-                <p>Created: <?php echo date('M j, Y g:i A', strtotime($game['created_at'])); ?></p>
-                <p>Last Updated: <?php echo date('M j, Y g:i A', strtotime($game['updated_at'])); ?></p>
-                <p>ID: <?php echo $game['id']; ?></p>
+            <div class="content-section mb-4">
+                <div class="section-header">
+                    <h2 class="section-title">Metadata</h2>
+                </div>
+                <div class="section-body">
+                    <div class="metadata-list">
+                        <div class="metadata-item">
+                            <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($game['created_at'])); ?>
+                        </div>
+                        <div class="metadata-item">
+                            <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($game['updated_at'])); ?>
+                        </div>
+                        <div class="metadata-item">
+                            <strong>ID:</strong> <?php echo $game['id']; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
     </div>
+    
     <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+        .metadata-list {
+            background-color: var(--gray-50);
+            border-radius: var(--radius-md);
+            padding: 1rem;
         }
-        .nav-link:hover {
-            background: #f5f5f5;
+        
+        .metadata-item {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
         }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        
+        .metadata-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
         }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .checkbox-field {
-            margin-bottom: 15px;
-        }
-        .checkbox-label {
+        
+        .form-check {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
         }
-        .form-metadata {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
+        
+        .form-check-input {
+            margin-top: 0;
         }
-        .form-metadata p {
-            margin: 5px 0;
-        }
-        .form-info {
-            background: #e7f3ff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .form-info p {
-            margin: 5px 0;
-        }
-        .required {
-            color: #dc3545;
-            margin-left: 3px;
-        }
-        small {
-            color: #666;
-            font-size: 12px;
-            display: block;
-            margin-top: 5px;
+        
+        .text-muted {
+            color: var(--gray-600);
+            font-size: 0.875rem;
         }
     </style>
+    
     <script>
         // Auto-generate slug from title
         document.addEventListener('DOMContentLoaded', function() {

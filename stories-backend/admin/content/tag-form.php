@@ -63,24 +63,32 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $tag ? 'Edit' : 'Add'; ?> Tag - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="tags.php" class="nav-link active">Tags</button>
                 <button type="submit" formaction="games.php" class="nav-link">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
                 <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
@@ -88,77 +96,112 @@ if (isset($_SESSION['error'])) {
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1><?php echo $tag ? 'Edit' : 'Add'; ?> Tag</h1>
-            <form method="GET" action="tags.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Tags</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo $tag ? 'Edit' : 'Add'; ?> Tag</h1>
+                <p class="page-description">
+                    <a href="tags.php" class="text-primary">← Back to Tags</a>
+                </p>
+            </div>
         </div>
 
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <form method="POST" action="save-tag.php" class="content-form">
-            <?php if ($tag): ?>
-                <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-            <?php endif; ?>
-
-            <div class="form-group">
-                <label class="form-label" for="name">Name</label>
-                <input type="text" id="name" name="name" class="form-input" required
-                       value="<?php echo htmlspecialchars($tag['name'] ?? ''); ?>"
-                       onkeyup="generateSlug(this.value)">
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Tag Information</h2>
+                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
+            <div class="section-body">
+                <form method="POST" action="save-tag.php" class="content-form">
+                    <?php if ($tag): ?>
+                        <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                    <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" class="form-input" required
-                       value="<?php echo htmlspecialchars($tag['slug'] ?? ''); ?>">
-            </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="name">Name <span class="required">*</span></label>
+                        <input type="text" id="name" name="name" class="form-control" required
+                               value="<?php echo htmlspecialchars($tag['name'] ?? ''); ?>"
+                               onkeyup="generateSlug(this.value)">
+                    </div>
 
-            <div class="form-group">
-                <label class="form-label" for="description">Description</label>
-                <textarea id="description" name="description" class="form-input" rows="3"><?php 
-                    echo htmlspecialchars($tag['description'] ?? ''); 
-                ?></textarea>
-            </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                        <input type="text" id="slug" name="slug" class="form-control" required
+                               value="<?php echo htmlspecialchars($tag['slug'] ?? ''); ?>">
+                        <small>Use lowercase letters, numbers, and hyphens only. No spaces. Will be auto-generated from name.</small>
+                    </div>
 
-            <div class="form-group">
-                <button type="submit" class="form-submit">Save Tag</button>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="3"><?php 
+                            echo htmlspecialchars($tag['description'] ?? ''); 
+                        ?></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Save Tag</button>
+                        <a href="tags.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
+
+        <?php if ($tag): ?>
+            <div class="content-section mb-4">
+                <div class="section-header">
+                    <h2 class="section-title">Metadata</h2>
+                </div>
+                <div class="section-body">
+                    <div class="metadata-list">
+                        <?php if (isset($tag['created_at'])): ?>
+                        <div class="metadata-item">
+                            <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['created_at'])); ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($tag['updated_at'])): ?>
+                        <div class="metadata-item">
+                            <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['updated_at'])); ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="metadata-item">
+                            <strong>ID:</strong> <?php echo $tag['id']; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
+    
     <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+        .metadata-list {
+            background-color: var(--gray-50);
+            border-radius: var(--radius-md);
+            padding: 1rem;
         }
-        .nav-link:hover {
-            background: #f5f5f5;
+        
+        .metadata-item {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
         }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        
+        .metadata-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
         }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        
+        .text-muted {
+            color: var(--gray-600);
+            font-size: 0.875rem;
         }
     </style>
+    
     <script>
         function generateSlug(name) {
             const slug = name

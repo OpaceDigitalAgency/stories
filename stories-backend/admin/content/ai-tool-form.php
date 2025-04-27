@@ -73,19 +73,27 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $tool ? 'Edit' : 'Add'; ?> AI Tool - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
@@ -93,222 +101,193 @@ if (isset($_SESSION['error'])) {
                 <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
                 <button type="submit" formaction="games.php" class="nav-link">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link active">AI Tools</button>
                 <button type="submit" formaction="media.php" class="nav-link">Media</button>
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1><?php echo $tool ? 'Edit' : 'Add'; ?> AI Tool</h1>
-            <form method="GET" action="ai-tools.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to AI Tools</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo $tool ? 'Edit' : 'Add'; ?> AI Tool</h1>
+                <p class="page-description">
+                    <a href="ai-tools.php" class="text-primary">← Back to AI Tools</a>
+                </p>
+            </div>
         </div>
 
         <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="form-info">
-            <p><strong>Required fields:</strong> Title</p>
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Tool Information</h2>
+                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
+            </div>
+            <div class="section-body">
+                <form method="POST" action="save-ai-tool.php" class="content-form">
+                    <?php if ($tool): ?>
+                        <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
+                    <?php endif; ?>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="title">Title <span class="required">*</span></label>
+                        <input type="text" id="title" name="title" class="form-control" required
+                               value="<?php echo htmlspecialchars($tool['title'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="slug">Slug</label>
+                        <input type="text" id="slug" name="slug" class="form-control"
+                               value="<?php echo htmlspecialchars($tool['slug'] ?? ''); ?>">
+                        <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="category_id">Category</label>
+                        <select id="category_id" name="category_id" class="form-control">
+                            <option value="">Select Category</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>"
+                                        <?php echo (isset($tool['category_id']) && $tool['category_id'] == $category['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($category['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="5"><?php 
+                            echo htmlspecialchars($tool['description'] ?? ''); 
+                        ?></textarea>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="tool_url">Tool URL</label>
+                        <input type="url" id="tool_url" name="tool_url" class="form-control"
+                               value="<?php echo htmlspecialchars($tool['tool_url'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="pricing_type">Pricing Type</label>
+                        <select id="pricing_type" name="pricing_type" class="form-control">
+                            <option value="free" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'free') ? 'selected' : ''; ?>>Free</option>
+                            <option value="freemium" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'freemium') ? 'selected' : ''; ?>>Freemium</option>
+                            <option value="paid" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'paid') ? 'selected' : ''; ?>>Paid</option>
+                            <option value="subscription" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'subscription') ? 'selected' : ''; ?>>Subscription</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="price_info">Price Information</label>
+                        <input type="text" id="price_info" name="price_info" class="form-control"
+                               value="<?php echo htmlspecialchars($tool['price_info'] ?? ''); ?>">
+                        <small>E.g., "Free trial, $9.99/month" or "Starting at $19.99"</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="features">Features</label>
+                        <textarea id="features" name="features" class="form-control" rows="5"><?php 
+                            echo htmlspecialchars($tool['features'] ?? ''); 
+                        ?></textarea>
+                        <small>List key features, one per line</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="rating">Rating (0-5)</label>
+                        <input type="number" id="rating" name="rating" class="form-control" min="0" max="5" step="0.1"
+                               value="<?php echo htmlspecialchars($tool['rating'] ?? '0'); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="featured" name="featured" value="1" class="form-check-input"
+                                   <?php echo (isset($tool['featured']) && $tool['featured'] == 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="featured">Featured</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="is_published" name="is_published" value="1" class="form-check-input"
+                                   <?php echo (!isset($tool['is_published']) || $tool['is_published'] == 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="is_published">Published</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="published_at">Published at</label>
+                        <input type="datetime-local" id="published_at" name="published_at" class="form-control"
+                               value="<?php echo isset($tool['published_at']) ? date('Y-m-d\TH:i', strtotime($tool['published_at'])) : date('Y-m-d\TH:i'); ?>">
+                        <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary"><?php echo $tool ? 'Update' : 'Add'; ?> AI Tool</button>
+                        <a href="ai-tools.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <form method="POST" action="save-ai-tool.php" class="content-form">
-            <?php if ($tool): ?>
-                <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
-            <?php endif; ?>
-
-            <div class="form-group">
-                <label class="form-label" for="title">Title <span class="required">*</span></label>
-                <input type="text" id="title" name="title" class="form-input" required
-                       value="<?php echo htmlspecialchars($tool['title'] ?? ''); ?>">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" class="form-input"
-                       value="<?php echo htmlspecialchars($tool['slug'] ?? ''); ?>">
-                <small>URL-friendly version of the title. Will be auto-generated if left empty.</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="category_id">Category</label>
-                <select id="category_id" name="category_id" class="form-input">
-                    <option value="">Select Category</option>
-                    <?php foreach ($categories as $category): ?>
-                        <option value="<?php echo $category['id']; ?>"
-                                <?php echo (isset($tool['category_id']) && $tool['category_id'] == $category['id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($category['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="description">Description</label>
-                <textarea id="description" name="description" class="form-input" rows="5"><?php 
-                    echo htmlspecialchars($tool['description'] ?? ''); 
-                ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="tool_url">Tool URL</label>
-                <input type="url" id="tool_url" name="tool_url" class="form-input"
-                       value="<?php echo htmlspecialchars($tool['tool_url'] ?? ''); ?>">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="pricing_type">Pricing Type</label>
-                <select id="pricing_type" name="pricing_type" class="form-input">
-                    <option value="free" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'free') ? 'selected' : ''; ?>>Free</option>
-                    <option value="freemium" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'freemium') ? 'selected' : ''; ?>>Freemium</option>
-                    <option value="paid" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'paid') ? 'selected' : ''; ?>>Paid</option>
-                    <option value="subscription" <?php echo (isset($tool['pricing_type']) && $tool['pricing_type'] == 'subscription') ? 'selected' : ''; ?>>Subscription</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="price_info">Price Information</label>
-                <input type="text" id="price_info" name="price_info" class="form-input"
-                       value="<?php echo htmlspecialchars($tool['price_info'] ?? ''); ?>">
-                <small>E.g., "Free trial, $9.99/month" or "Starting at $19.99"</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="features">Features</label>
-                <textarea id="features" name="features" class="form-input" rows="5"><?php 
-                    echo htmlspecialchars($tool['features'] ?? ''); 
-                ?></textarea>
-                <small>List key features, one per line</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="rating">Rating (0-5)</label>
-                <input type="number" id="rating" name="rating" class="form-input" min="0" max="5" step="0.1"
-                       value="<?php echo htmlspecialchars($tool['rating'] ?? '0'); ?>">
-            </div>
-
-            <div class="form-group checkbox-field">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="featured" value="1"
-                           <?php echo (isset($tool['featured']) && $tool['featured'] == 1) ? 'checked' : ''; ?>>
-                    Featured
-                </label>
-            </div>
-
-            <div class="form-group checkbox-field">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="is_published" value="1"
-                           <?php echo (!isset($tool['is_published']) || $tool['is_published'] == 1) ? 'checked' : ''; ?>>
-                    Published
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="published_at">Published at</label>
-                <input type="datetime-local" id="published_at" name="published_at" class="form-input"
-                       value="<?php echo isset($tool['published_at']) ? date('Y-m-d\TH:i', strtotime($tool['published_at'])) : date('Y-m-d\TH:i'); ?>">
-                <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
-            </div>
-
-            <div class="form-group">
-                <button type="submit" class="form-submit"><?php echo $tool ? 'Update' : 'Add'; ?> AI Tool</button>
-            </div>
-        </form>
-
         <?php if ($tool): ?>
-            <div class="form-metadata">
-                <p>Created: <?php echo date('M j, Y g:i A', strtotime($tool['created_at'])); ?></p>
-                <p>Last Updated: <?php echo date('M j, Y g:i A', strtotime($tool['updated_at'])); ?></p>
-                <p>ID: <?php echo $tool['id']; ?></p>
+            <div class="content-section mb-4">
+                <div class="section-header">
+                    <h2 class="section-title">Metadata</h2>
+                </div>
+                <div class="section-body">
+                    <div class="metadata-list">
+                        <div class="metadata-item">
+                            <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($tool['created_at'])); ?>
+                        </div>
+                        <div class="metadata-item">
+                            <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($tool['updated_at'])); ?>
+                        </div>
+                        <div class="metadata-item">
+                            <strong>ID:</strong> <?php echo $tool['id']; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
     </div>
+    
     <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+        .metadata-list {
+            background-color: var(--gray-50);
+            border-radius: var(--radius-md);
+            padding: 1rem;
         }
-        .nav-link:hover {
-            background: #f5f5f5;
+        
+        .metadata-item {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
         }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        
+        .metadata-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
         }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .checkbox-field {
-            margin-bottom: 15px;
-        }
-        .checkbox-label {
+        
+        .form-check {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
         }
-        .form-metadata {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
+        
+        .form-check-input {
+            margin-top: 0;
         }
-        .form-metadata p {
-            margin: 5px 0;
-        }
-        .form-info {
-            background: #e7f3ff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .form-info p {
-            margin: 5px 0;
-        }
-        .required {
-            color: #dc3545;
-            margin-left: 3px;
-        }
-        small {
-            color: #666;
-            font-size: 12px;
-            display: block;
-            margin-top: 5px;
+        
+        .text-muted {
+            color: var(--gray-600);
+            font-size: 0.875rem;
         }
     </style>
+    
     <script>
         // Auto-generate slug from title
         document.addEventListener('DOMContentLoaded', function() {

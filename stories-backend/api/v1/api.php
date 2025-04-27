@@ -235,9 +235,35 @@ try {
            AUTHORS (flat array)
            ----------------------------------- */
         case 'authors':
-            $authors = $db
-                ->query("SELECT * FROM authors WHERE is_published = 1 ORDER BY name ASC")
-                ->fetchAll();
+            // Debug log all GET parameters for authors endpoint
+            error_log("Authors API GET parameters: " . json_encode($_GET));
+            
+            // Build WHERE clause with filters
+            $whereConditions = ["is_published = 1"];
+            $params = [];
+            
+            // Add filter for author_type if specified
+            if (isset($_GET['author_type']) && in_array($_GET['author_type'], ['retail', 'parent', 'child', 'educator'])) {
+                $whereConditions[] = "author_type = :author_type";
+                $params[':author_type'] = $_GET['author_type'];
+                error_log("Adding author_type={$_GET['author_type']} filter");
+            }
+            
+            // Combine all conditions
+            $whereClause = implode(' AND ', $whereConditions);
+            
+            // Prepare and execute the query
+            $sql = "SELECT * FROM authors WHERE $whereClause ORDER BY name ASC";
+            $stmt = $db->prepare($sql);
+            
+            // Bind parameters if any
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            
+            $stmt->execute();
+            $authors = $stmt->fetchAll();
+            
             echo json_encode($authors);
             break;
 

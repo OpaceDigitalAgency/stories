@@ -87,16 +87,20 @@ const formattedDate = story.publishDate
       
       {story.rating && typeof story.rating === 'number' && story.rating > 0 && (
         <div class="ml-2 flex-shrink-0">
-          <RatingStars
-            rating={story.rating}
-            size="sm"
-            allow_reviews={story.allow_reviews === true}
-            source_type={story.source_type}
-          />
-          {/* Debug info */}
-          <span class="hidden">
-            allow_reviews: {String(story.allow_reviews)},
-            source_type: {story.source_type}
+          {/* Only show ratings if allow_reviews is true */}
+          {story.allow_reviews === true ? (
+            <RatingStars
+              rating={story.rating}
+              size="sm"
+              allow_reviews={true}
+              source_type={story.source_type}
+            />
+          ) : (
+            <span class="text-xs text-gray-400">{story.source_type === 'child' ? 'No ratings' : ''}</span>
+          )}
+          {/* Debug info - visible for debugging */}
+          <span class="text-xs text-gray-400">
+            {story.source_type} {story.allow_reviews === true ? '★' : '☆'}
           </span>
         </div>
       )}

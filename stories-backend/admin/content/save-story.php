@@ -164,11 +164,36 @@ try {
     }
 
     // Process all boolean fields
-    $booleanFields = ['featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation'];
+    $booleanFields = ['featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation', 'allow_reviews'];
     foreach ($booleanFields as $field) {
         if (in_array($field, $columns)) {
             $data[$field] = isset($_POST[$field]) ? 1 : 0;
         }
+    }
+    
+    // Enforce business rules for source_type and allow_reviews
+    if (in_array('source_type', $columns) && in_array('allow_reviews', $columns)) {
+        $source_type = $_POST['source_type'] ?? 'child';
+        
+        // Validate source_type
+        if (!in_array($source_type, ['child', 'parent', 'classic'])) {
+            $source_type = 'child';
+        }
+        
+        $data['source_type'] = $source_type;
+        
+        // Apply business rules
+        if ($source_type === 'child') {
+            // Children's stories NEVER get reviews
+            $data['allow_reviews'] = 0;
+            error_log("ENFORCING RULE: Child story - allow_reviews set to 0");
+        } else if ($source_type === 'classic') {
+            // Classic works ALWAYS get reviews
+            $data['allow_reviews'] = 1;
+            error_log("ENFORCING RULE: Classic work - allow_reviews set to 1");
+        }
+        
+        error_log("Final values - source_type: {$data['source_type']}, allow_reviews: {$data['allow_reviews']}");
     }
 
     // Add any additional fields from the form

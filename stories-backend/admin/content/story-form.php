@@ -499,6 +499,54 @@ try {
     </style>
     
     <script>
+        // Function to handle source_type changes
+        function handleSourceTypeChange() {
+            const sourceTypeSelect = document.getElementById('source_type');
+            const allowReviewsCheckbox = document.getElementById('allow_reviews');
+            
+            if (!sourceTypeSelect || !allowReviewsCheckbox) {
+                console.error('Required elements not found');
+                return;
+            }
+            
+            const sourceType = sourceTypeSelect.value;
+            const allowReviewsLabel = allowReviewsCheckbox.closest('.form-group');
+            
+            console.log('Source type changed to:', sourceType);
+            
+            if (sourceType === 'child') {
+                // Children's stories never get reviews
+                allowReviewsCheckbox.checked = false;
+                allowReviewsCheckbox.disabled = true;
+                allowReviewsLabel.style.opacity = '0.5';
+                allowReviewsLabel.title = 'Children\'s stories never get reviews';
+            } else if (sourceType === 'classic') {
+                // Classic works always get reviews
+                allowReviewsCheckbox.checked = true;
+                allowReviewsCheckbox.disabled = true;
+                allowReviewsLabel.style.opacity = '0.5';
+                allowReviewsLabel.title = 'Classic works always get reviews';
+            } else {
+                // Parent stories can choose
+                allowReviewsCheckbox.disabled = false;
+                allowReviewsLabel.style.opacity = '1';
+                allowReviewsLabel.title = '';
+            }
+        }
+        
+        // Run when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const sourceTypeSelect = document.getElementById('source_type');
+            if (sourceTypeSelect) {
+                // Set initial state
+                handleSourceTypeChange();
+                
+                // Add event listener for changes
+                sourceTypeSelect.addEventListener('change', handleSourceTypeChange);
+            }
+        });
+    </script>
+    <script>
         // Auto-generate slug from title
         document.addEventListener('DOMContentLoaded', function() {
             const titleInput = document.getElementById('title');

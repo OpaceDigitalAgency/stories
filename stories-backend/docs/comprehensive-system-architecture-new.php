@@ -50,15 +50,17 @@
         <li><a href="#backend-architecture">Backend Architecture</a></li>
         <li><a href="#database-schema">Database Schema</a></li>
         <li><a href="#api-documentation">API Documentation</a></li>
+        <li><a href="#review-system">Review System</a></li>
         <li><a href="#authentication-system">Authentication System</a></li>
         <li><a href="#data-flow-processes">Data Flow Processes</a></li>
         <li><a href="#security">Security</a></li>
         <li><a href="#caching-performance">Caching & Performance</a></li>
         <li><a href="#key-files">Key Files</a></li>
-        <li><a href="#documentation">Documentation</a></li>
+        <li><a href="#documentation">Documentation</a></li> 
         <li><a href="#deployment">Deployment</a></li>
         <li><a href="#monitoring-troubleshooting">Monitoring & Troubleshooting</a></li>
         <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#known-issues">Known Issues</a></li>
     </ul>
 
     <h2 id="overview">Overview</h2>
@@ -94,6 +96,22 @@
         <li>Environment variables in <code>.env</code> and <code>config.php</code></li>
     </ul>
 
+<p>Stories from the Web is a two‑tier publishing platform. Public Frontend – Static Astro TS/TW site served via Netlify CDN. Admin Backend – PHP CMS on cPanel shared hosting (JavaScript‑free UI).</p>
+      <h3>Architecture Diagram</h3>
+      <pre><code>┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Astro Frontend │────▶│   PHP REST API  │────▶│  MySQL Database │
+│ (Netlify CDN)   │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘</code></pre>
+
+      <h3>Key Benefits</h3>
+      <ul>
+        <li>Separation of Concerns – Frontend and backend can be developed independently</li>
+        <li>Scalability – Each component can be scaled separately</li>
+        <li>Security – Admin interface is isolated from public frontend</li>
+        <li>Performance – Static frontend with dynamic data loading</li>
+      </ul>
+
     <h2 id="architecture-components">Architecture Components</h2>
     <div class="mermaid">
 graph TD
@@ -114,6 +132,29 @@ graph TD
     <div class="note">No magic wizards—just clear, maintainable components working in harmony.</div>
 
     <h2 id="frontend-architecture">Frontend Architecture</h2>
+
+    <p>A pure-PHP CMS on cPanel, optimised for reliability and security:</p>
+      <ul>
+        <li><strong>JavaScript-free UI</strong>: All interactions via CSS and HTML forms.</li>
+        <li><strong>CSP enforcement</strong>: Blocks any rogue scripts.</li>
+        <li><strong>User Experience</strong>: Direct form submissions and server redirects.</li>
+        <li><strong>Session Management</strong>: PHP sessions for admin login state.</li>
+      </ul>
+
+        <p>Astro powers the front end, combining static generation with selective interactivity:</p>
+      <ul>
+        <li><strong>Static Site Generation</strong> at build time using API-fetched data.</li>
+        <li><strong>Hydration Islands</strong> for dynamic components like rating widgets.</li>
+      </ul>
+      <h3>TypeScript API Wrapper</h3>
+      <pre><code>// src/lib/api.ts
+export async function fetchStories() {
+  const resp = await fetch(`${import.meta.env.PUBLIC_API_URL}/stories`);
+  return resp.json();
+}
+</code></pre>
+      <p><strong>Styling:</strong> Tailwind CSS for utility-first approach, keeping bundle sizes minimal.</p>
+
     <p>The static site generator Astro builds pages at deploy time, with optional client scripts for interactivity.</p>
     <pre><code>src/
 ├── components/         # Reusable UI blocks (NavHeader, CardStory, etc.)
@@ -134,6 +175,22 @@ graph TD
 </code></pre>
 
 <h2 id="database-schema">Database Schema</h2>
+ <p>Stories from the Web uses a relational model with both core tables and join tables to handle many-to-many relationships.</p>
+      <h3>Core Tables</h3>
+      <ul>
+        <li><strong>stories</strong>: Holds each story’s title, slug, content, publication status, rating, timestamps.</li>
+        <li><strong>authors</strong>: Author metadata (name, slug).</li>
+        <li><strong>tags</strong>: Content categories.</li>
+        <li><strong>users</strong>: Accounts for admin users.</li>
+        <li><strong>auth_tokens</strong>: Session and JWT token records.</li>
+        <li><strong>blog_posts</strong>, <strong>games</strong>, <strong>directory_items</strong>, <strong>ai_tools</strong>: Additional content types.</li>
+      </ul>
+      <h3>Join Tables</h3>
+      <ul>
+        <li><strong>story_authors</strong>: Links stories ↔ authors.</li>
+        <li><strong>story_tags</strong>: Links stories ↔ tags.</li>
+        <li><strong>author_stories</strong>: Alternate alias for author↔story relationships.</li>
+      </ul>
     <div class="mermaid">
 erDiagram
     USERS ||--o{ AUTH_TOKENS : has
@@ -304,6 +361,7 @@ CREATE TABLE `users` (
       <tr><td><code>/directory-items</code></td><td>GET</td><td>List directory items</td><td>No</td></tr>
       <tr><td><code>/ai-tools</code></td><td>GET</td><td>List AI tools</td><td>No</td></tr>
       <tr><td><code>/blog-posts</code></td><td>GET</td><td>List blog posts</td><td>No</td></tr>
+      <tr><td><code>/submit-review</code></td><td>POST</td><td>Submit a review for a story</td><td>No</td></tr>
     </table>
 
     <h3>Admin Endpoints</h3>
@@ -479,6 +537,24 @@ output('
 ?>
 
     <h2 id="authentication-system">Authentication System</h2>
+    <p>We employ both JWT and a SimpleAuth fallback for reliability.</p>
+      <h3>Login Flow</h3>
+      <ol>
+        <li>Client posts credentials to <code>/auth/login</code>.</li>
+        <li>On success, server returns a JWT (or sets a session cookie).</li>
+        <li>Client includes <code>Authorization: Bearer &lt;token&gt;</code> on protected requests.</li>
+      </ol>
+      <h3>Token Handling</h3>
+      <ul>
+        <li>Tokens carry user ID and role claims.</li>
+        <li>Expiry is configurable; refresh via <code>/auth/refresh</code>.</li>
+        <li>SimpleAuth (added April 2025) catches occasional DB write locks on shared hosting.</li>
+      </ul>
+      <h3>Middleware</h3>
+      <ul>
+        <li><strong>AuthMiddleware</strong>: Validates JWT on API routes.</li>
+        <li><strong>SimpleAuthMiddleware</strong>: Session-based fallback for admin pages.</li>
+      </ul>
     <div class="mermaid">
 sequenceDiagram
     participant U as User
@@ -676,5 +752,24 @@ npm run dev
         <li>Admin (dev only): <code>admin@storiesfromtheweb.org / password123</code></li>
         <li>API: use JWT from <code>/auth/login</code> endpoint</li>
     </ul>
+
+
+      <h2 id="known-issues">Known Issues and Solutions</h2>
+      <table>
+        <thead>
+          <tr><th>Issue</th><th>Root Cause</th><th>Solution / Tool</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Case-sensitivity file errors</td><td>Inconsistent directory name capitalisation</td><td>Run <code>permanent_case_fix.php</code>; enforce PSR-4</td><td>Resolved (Apr 21)</td></tr>
+          <tr><td>Frontend not rendering API content</td><td>Incorrect CORS and API URL settings</td><td>Update CORS headers; fix <code>PUBLIC_API_URL</code></td><td>In progress</td></tr>
+          <tr><td>JWT validation failures</td><td>Secret mismatch across environments</td><td>Standardise JWT secret env-vars</td><td>Pending rollout</td></tr>
+          <tr><td>Admin form “stuck on processing”</td><td>Legacy JS handler in PHP CMS</td><td>Remove JS; rely on server redirects</td><td>Fixed (Apr 19)</td></tr>
+          <tr><td>Database write lock issues</td><td>Shared hosting lock contention</td><td>Added SimpleAuth fallback</td><td>Mitigated (Apr 26)</td></tr>
+          <tr><td>Unexpected API response formats</td><td>Inconsistent controller error handling</td><td>Normalise JSON in middleware</td><td>Under review</td></tr>
+        </tbody>
+      </table>
+
+
+
 </body>
 </html>

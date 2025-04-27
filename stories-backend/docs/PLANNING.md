@@ -48,3 +48,12 @@
 - Added view functionality for all content types
 - Ensured all content types have consistent actions (view, edit, delete)
 - Maintained JavaScript-free architecture as required
+
+### Issue 6: Review system not working properly
+**Problem**: Reviews weren't displaying correctly on story pages, and users couldn't submit reviews.
+**Solution**:
+- Fixed the RatingStars component to properly display ratings and handle interactive rating selection
+- Added a slider control in the admin story form for the average_rating field
+- Created a submit-review.php endpoint to handle review submissions
+- Updated the reviews page to display stories with their ratings and allow users to submit reviews
+- Ensured the review form properly updates the story's average rating and review count

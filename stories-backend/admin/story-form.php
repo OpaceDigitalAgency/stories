@@ -46,8 +46,8 @@ try {
         }
     }
 
-    // Get authors for dropdown
-    $authors = $db->query("SELECT id, name FROM authors ORDER BY name")->fetchAll();
+    // Get authors for dropdown with their types
+    $authors = $db->query("SELECT id, name, author_type FROM authors ORDER BY name")->fetchAll();
 
     // Get tags for dropdown
     $tags = $db->query("SELECT id, name FROM tags ORDER BY name")->fetchAll();
@@ -162,8 +162,46 @@ try {
                         }
                     }
                     
+                    // Function to update source type based on author type
+                    window.updateSourceTypeFromAuthor = function() {
+                        const authorSelect = document.getElementById('author_id');
+                        const sourceTypeSelect = document.getElementById('source_type');
+                        
+                        if (authorSelect.selectedIndex > 0) {
+                            const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                            const authorType = selectedOption.getAttribute('data-author-type');
+                            
+                            // Map author type to source type
+                            let sourceType;
+                            switch (authorType) {
+                                case 'child':
+                                    sourceType = 'child';
+                                    break;
+                                case 'parent':
+                                    sourceType = 'parent';
+                                    break;
+                                case 'retail':
+                                case 'educator':
+                                default:
+                                    sourceType = 'classic';
+                                    break;
+                            }
+                            
+                            // Set the source type and disable the dropdown
+                            sourceTypeSelect.value = sourceType;
+                            sourceTypeSelect.disabled = true;
+                            
+                            // Update the allow reviews visibility
+                            updateAllowReviewsVisibility();
+                        } else {
+                            // Enable the dropdown if no author is selected
+                            sourceTypeSelect.disabled = false;
+                        }
+                    }
+                    
                     // Run immediately
                     updateAllowReviewsVisibility();
+                    updateSourceTypeFromAuthor();
                     
                     // Also run when the dropdown changes
                     document.getElementById('source_type').addEventListener('change', updateAllowReviewsVisibility);
@@ -172,15 +210,20 @@ try {
 
             <div class="form-group">
                 <label class="form-label" for="author_id">Author</label>
-                <select id="author_id" name="author_id" class="form-input" required>
+                <select id="author_id" name="author_id" class="form-input" required onchange="updateSourceTypeFromAuthor()">
                     <option value="">Select Author</option>
                     <?php foreach ($authors as $author): ?>
                         <option value="<?php echo $author['id']; ?>"
+                                data-author-type="<?php echo htmlspecialchars($author['author_type'] ?? 'retail'); ?>"
                                 <?php echo ($story['author_id'] ?? '') == $author['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($author['name']); ?>
+                            (<?php echo ucfirst(htmlspecialchars($author['author_type'] ?? 'retail')); ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <p class="text-sm text-gray-500 mt-1">
+                    Author type determines the default source type for the story
+                </p>
             </div>
 
             <div class="form-group">

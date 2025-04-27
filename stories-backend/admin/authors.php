@@ -120,6 +120,21 @@ class AuthorsPage extends CrudPage {
                 'form' => true,
                 'view' => true,
                 'default' => null
+            ],
+            [
+                'name' => 'author_type',
+                'label' => 'Author Type',
+                'type' => 'select',
+                'list' => true,
+                'form' => true,
+                'view' => true,
+                'default' => 'retail',
+                'options' => [
+                    ['value' => 'retail', 'label' => 'Retail (Book Author)'],
+                    ['value' => 'parent', 'label' => 'Parent'],
+                    ['value' => 'child', 'label' => 'Child'],
+                    ['value' => 'educator', 'label' => 'Educator']
+                ]
             ]
         ];
         

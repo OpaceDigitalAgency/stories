@@ -71,8 +71,8 @@ try {
         'blog_posts' => ['title', 'created_at', 'id'],
         'authors' => ['name', 'created_at', 'id'],
         'games' => ['title', 'created_at', 'id'],
-        'directory_items' => ['name', 'created_at', 'id'],
-        'ai_tools' => ['name', 'created_at', 'id']
+        'directory_items' => ['title', 'created_at', 'id'],
+        'ai_tools' => ['title', 'created_at', 'id']
     ];
     
     $recentContent = [];

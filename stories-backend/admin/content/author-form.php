@@ -76,23 +76,31 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $author ? 'Edit' : 'Add'; ?> Author - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
+                <button type="submit" formaction="authors.php" class="nav-link active">Authors</button>
                 <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
                 <button type="submit" formaction="games.php" class="nav-link">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
@@ -101,102 +109,74 @@ if (isset($_SESSION['error'])) {
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1><?php echo $author ? 'Edit' : 'Add'; ?> Author</h1>
-            <form method="GET" action="authors.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Authors</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo $author ? 'Edit' : 'Add'; ?> Author</h1>
+                <p class="page-description">
+                    <a href="authors.php" class="text-primary">← Back to Authors</a>
+                </p>
+            </div>
         </div>
 
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <form method="POST" action="save-author.php" class="content-form">
-            <?php if ($author): ?>
-                <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-            <?php endif; ?>
+        <div class="content-section mb-4">
+            <div class="section-body">
+                <form method="POST" action="save-author.php" class="content-form">
+                    <?php if ($author): ?>
+                        <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+                    <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="name">Name</label>
-                <input type="text" id="name" name="name" class="form-input" required
-                       value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
-            </div>
+                    <div class="form-group">
+                        <label class="form-label" for="name">Name</label>
+                        <input type="text" id="name" name="name" class="form-control" required
+                               value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
+                    </div>
 
-            <?php if ($hasSlugColumn): ?>
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" class="form-input" required
-                       value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>"
-                       placeholder="author-name-in-lowercase">
-                <small>Use lowercase letters, numbers, and hyphens only. No spaces.</small>
-            </div>
-            <?php endif; ?>
+                    <?php if ($hasSlugColumn): ?>
+                    <div class="form-group">
+                        <label class="form-label" for="slug">Slug</label>
+                        <input type="text" id="slug" name="slug" class="form-control" required
+                               value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>"
+                               placeholder="author-name-in-lowercase">
+                        <small class="form-text text-muted">Use lowercase letters, numbers, and hyphens only. No spaces.</small>
+                    </div>
+                    <?php endif; ?>
 
-            <?php if ($hasEmailColumn): ?>
-            <div class="form-group">
-                <label class="form-label" for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-input" required
-                       value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
-            </div>
-            <?php endif; ?>
+                    <?php if ($hasEmailColumn): ?>
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control" required
+                               value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+                    </div>
+                    <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="bio">Bio</label>
-                <textarea id="bio" name="bio" class="form-input" rows="5"><?php 
-                    echo htmlspecialchars($author['bio'] ?? ''); 
-                ?></textarea>
-            </div>
+                    <div class="form-group">
+                        <label class="form-label" for="bio">Bio</label>
+                        <textarea id="bio" name="bio" class="form-control" rows="5"><?php 
+                            echo htmlspecialchars($author['bio'] ?? ''); 
+                        ?></textarea>
+                    </div>
 
-            <div class="form-group">
-                <label class="form-label" for="avatar_url">Avatar URL</label>
-                <input type="text" id="avatar_url" name="avatar_url" class="form-input"
-                       value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>"
-                       placeholder="https://example.com/avatar.jpg">
-                <small>Enter a URL to the author's avatar image. Leave empty to use the default avatar.</small>
-            </div>
+                    <div class="form-group">
+                        <label class="form-label" for="avatar_url">Avatar URL</label>
+                        <input type="text" id="avatar_url" name="avatar_url" class="form-control"
+                               value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>"
+                               placeholder="https://example.com/avatar.jpg">
+                        <small class="form-text text-muted">Enter a URL to the author's avatar image. Leave empty to use the default avatar.</small>
+                    </div>
 
-            <div class="form-group">
-                <button type="submit" class="form-submit">Save Author</button>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Save Author</button>
+                        <a href="authors.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
-    <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        small {
-            color: #666;
-            font-size: 12px;
-            display: block;
-            margin-top: 5px;
-        }
-    </style>
+    
     <script>
         // Auto-generate slug from name
         document.addEventListener('DOMContentLoaded', function() {

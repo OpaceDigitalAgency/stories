@@ -122,21 +122,29 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $story ? 'Edit' : 'Add'; ?> Story - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
+                <button type="submit" formaction="stories.php" class="nav-link active">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
                 <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
@@ -147,391 +155,317 @@ try {
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1><?php echo $story ? 'Edit' : 'Add'; ?> Story</h1>
-            <form method="GET" action="stories.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Stories</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo $story ? 'Edit' : 'Add'; ?> Story</h1>
+                <p class="page-description">
+                    <a href="stories.php" class="text-primary">← Back to Stories</a>
+                </p>
+            </div>
         </div>
 
         <?php if (isset($error)): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <form method="POST" action="save-story.php" class="content-form">
-            <?php if ($story): ?>
-                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-            <?php endif; ?>
+        <div class="content-section mb-4">
+            <div class="section-body">
+                <form method="POST" action="save-story.php" class="content-form">
+                    <?php if ($story): ?>
+                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+                    <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="title">Title</label>
-                <input type="text" id="title" name="title" class="form-input" required
-                       value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" class="form-input"
-                       value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
-                <small>Leave empty to auto-generate from title</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="author_id">Author</label>
-                <select id="author_id" name="author_id" class="form-input" required>
-                    <option value="">Select Author</option>
-                    <?php foreach ($authors as $author): ?>
-                        <option value="<?php echo $author['id']; ?>"
-                                <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($author['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (isset($story['author_id']) && isset($story['author_name'])): ?>
-                    <small>Current author: <?php echo htmlspecialchars($story['author_name']); ?></small>
-                <?php endif; ?>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="excerpt">Excerpt</label>
-                <textarea id="excerpt" name="excerpt" class="form-input" rows="3"><?php 
-                    echo htmlspecialchars($story['excerpt'] ?? ''); 
-                ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="content">Content</label>
-                <textarea id="content" name="content" class="form-input" rows="10" required><?php 
-                    echo htmlspecialchars($story['content'] ?? ''); 
-                ?></textarea>
-            </div>
-
-            <?php
-            // Handle cover image fields - use cover_image if it exists, otherwise use cover_url
-            $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' :
-                              (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
-            
-            if ($coverImageField):
-            ?>
-            <div class="form-group">
-                <label class="form-label" for="<?php echo $coverImageField; ?>">Cover Image URL</label>
-                <input type="text" id="<?php echo $coverImageField; ?>" name="<?php echo $coverImageField; ?>" class="form-input"
-                       value="<?php echo htmlspecialchars($story[$coverImageField] ?? ''); ?>">
-            </div>
-            <?php endif; ?>
-
-            <div class="form-group">
-                <label class="form-label" for="published_at">Publish Date</label>
-                <input type="datetime-local" id="published_at" name="published_at" class="form-input"
-                       value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
-            </div>
-            
-            <!-- Group all checkboxes together -->
-            <h3 class="form-section-title">Options</h3>
-            <div class="checkbox-section">
-                <div class="form-group checkbox-group-item">
-                    <label class="form-check-label" for="is_published">Published</label>
-                    <input type="checkbox" id="is_published" name="is_published" value="1"
-                           <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?>
-                           class="form-check-input">
-                </div>
-                
-                <div class="form-group checkbox-group-item">
-                    <label class="form-check-label" for="featured">Featured</label>
-                    <input type="checkbox" id="featured" name="featured" value="1"
-                           <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?>
-                           class="form-check-input">
-                </div>
-                
-                <div class="form-group checkbox-group-item">
-                    <label class="form-check-label" for="is_sponsored">Sponsored</label>
-                    <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1"
-                           <?php echo (isset($story['is_sponsored']) && $story['is_sponsored']) ? "checked" : ""; ?>
-                           class="form-check-input">
-                </div>
-
-            <?php
-            // Collect boolean fields and non-boolean fields separately
-            $booleanFields = [];
-            $nonBooleanFields = [];
-            
-            foreach ($additionalFields as $field) {
-                // Skip fields that are already handled above or will be handled below
-                if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at', 'cover_image', 'cover_url', 'slug', 'excerpt'])) continue;
-                
-                $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
-                $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
-                $isIntField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'int') !== false || strpos($columnInfo[$field]['Type'], 'tinyint') !== false);
-                $isDecimalField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'decimal') !== false || strpos($columnInfo[$field]['Type'], 'float') !== false || strpos($columnInfo[$field]['Type'], 'double') !== false);
-                $isEnumField = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'enum') !== false;
-                $isBooleanField = isset($columnInfo[$field]) && (
-                    (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) ||
-                    (strpos($field, 'is_') === 0) ||
-                    (strpos($field, 'has_') === 0) ||
-                    (strpos($field, 'needs_') === 0)
-                );
-                
-                if ($isBooleanField) {
-                    $booleanFields[] = $field;
-                } else {
-                    $nonBooleanFields[] = [
-                        'field' => $field,
-                        'isRequired' => $isRequired,
-                        'isDateTime' => $isDateTime,
-                        'isIntField' => $isIntField,
-                        'isDecimalField' => $isDecimalField,
-                        'isEnumField' => $isEnumField
-                    ];
-                }
-            }
-            
-            // Display non-boolean fields first
-            foreach ($nonBooleanFields as $fieldData):
-                $field = $fieldData['field'];
-                $isRequired = $fieldData['isRequired'];
-                $isDateTime = $fieldData['isDateTime'];
-                $isIntField = $fieldData['isIntField'];
-                $isDecimalField = $fieldData['isDecimalField'];
-                $isEnumField = $fieldData['isEnumField'];
-                
-                // Format field label
-                $label = ucwords(str_replace('_', ' ', $field));
-                
-                if ($isDateTime):
-            ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : ''; ?>"
-                           <?php echo $isRequired ? 'required' : ''; ?>>
-                </div>
-            <?php elseif ($isEnumField):
-                // Extract enum values
-                preg_match("/enum\(([^)]+)\)/", $columnInfo[$field]['Type'], $matches);
-                $enumValues = $matches[1] ? str_getcsv($matches[1], ',', "'") : [];
-            ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <select id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                            <?php echo $isRequired ? 'required' : ''; ?>>
-                        <option value="">Select <?php echo $label; ?></option>
-                        <?php foreach ($enumValues as $value): ?>
-                            <option value="<?php echo $value; ?>"
-                                    <?php echo ($story[$field] ?? '') == $value ? 'selected' : ''; ?>>
-                                <?php echo ucfirst($value); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            <?php elseif ($field === 'average_rating'): ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <div class="flex items-center">
-                        <input type="range" id="<?php echo $field; ?>_slider" class="form-input w-3/4"
-                               min="0" max="5" step="0.1"
-                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                               oninput="document.getElementById('<?php echo $field; ?>').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;">
-                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input w-1/4 ml-2"
-                               min="0" max="5" step="0.1"
-                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                               oninput="document.getElementById('<?php echo $field; ?>_slider').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;"
-                               <?php echo $isRequired ? 'required' : ''; ?>>
+                    <div class="form-group">
+                        <label class="form-label" for="title">Title</label>
+                        <input type="text" id="title" name="title" class="form-control" required
+                               value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
                     </div>
-                    <div class="text-center mt-2">
-                        <span id="<?php echo $field; ?>_display" class="text-lg font-bold"><?php echo htmlspecialchars($story[$field] ?? '0'); ?></span> / 5
+
+                    <div class="form-group">
+                        <label class="form-label" for="slug">Slug</label>
+                        <input type="text" id="slug" name="slug" class="form-control"
+                               value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
+                        <small class="form-text text-muted">Leave empty to auto-generate from title</small>
                     </div>
-                </div>
-            <?php elseif ($field === 'review_count'): ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           min="0" step="1"
-                           value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                           <?php echo $isRequired ? 'required' : ''; ?>>
-                    <small>Number of reviews for this story</small>
-                </div>
-            <?php elseif ($isIntField || $isDecimalField): ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                           <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
-                           <?php echo $isRequired ? 'required' : ''; ?>>
-                </div>
-            <?php else: ?>
-                <div class="form-group">
-                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-input"
-                           value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                           <?php echo $isRequired ? 'required' : ''; ?>>
-                </div>
-            <?php endif; endforeach; ?>
-            
-            <!-- Add all boolean fields to the checkbox section -->
-            <?php if (!empty($booleanFields)): ?>
-            <div class="checkbox-section">
-                <?php foreach ($booleanFields as $field):
-                    // Format field label
-                    $label = ucwords(str_replace('_', ' ', $field));
-                ?>
-                <div class="form-group checkbox-group-item">
-                    <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                    <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="1"
-                           <?php echo (isset($story[$field]) && $story[$field]) ? "checked" : ""; ?>
-                           class="form-check-input">
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
 
-            <!-- Tags section moved to the bottom -->
-            <div class="form-group">
-                <label class="form-label">Tags</label>
-                <div class="checkbox-group">
-                    <?php foreach ($tags as $tag): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
-                                   <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
-                            <?php echo htmlspecialchars($tag['name']); ?>
-                        </label>
+                    <div class="form-group">
+                        <label class="form-label" for="author_id">Author</label>
+                        <select id="author_id" name="author_id" class="form-control" required>
+                            <option value="">Select Author</option>
+                            <?php foreach ($authors as $author): ?>
+                                <option value="<?php echo $author['id']; ?>"
+                                        <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($author['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if (isset($story['author_id']) && isset($story['author_name'])): ?>
+                            <small class="form-text text-muted">Current author: <?php echo htmlspecialchars($story['author_name']); ?></small>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="excerpt">Excerpt</label>
+                        <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php 
+                            echo htmlspecialchars($story['excerpt'] ?? ''); 
+                        ?></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="content">Content</label>
+                        <textarea id="content" name="content" class="form-control" rows="10" required><?php 
+                            echo htmlspecialchars($story['content'] ?? ''); 
+                        ?></textarea>
+                    </div>
+
+                    <?php
+                    // Handle cover image fields - use cover_image if it exists, otherwise use cover_url
+                    $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' :
+                                      (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
+                    
+                    if ($coverImageField):
+                    ?>
+                    <div class="form-group">
+                        <label class="form-label" for="<?php echo $coverImageField; ?>">Cover Image URL</label>
+                        <input type="text" id="<?php echo $coverImageField; ?>" name="<?php echo $coverImageField; ?>" class="form-control"
+                               value="<?php echo htmlspecialchars($story[$coverImageField] ?? ''); ?>">
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="form-group">
+                        <label class="form-label" for="published_at">Publish Date</label>
+                        <input type="datetime-local" id="published_at" name="published_at" class="form-control"
+                               value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
+                    </div>
+                    
+                    <!-- Group all checkboxes together -->
+                    <h3 class="form-section-title">Options</h3>
+                    <div class="checkbox-section">
+                        <div class="form-group checkbox-group-item">
+                            <label class="form-check-label" for="is_published">Published</label>
+                            <input type="checkbox" id="is_published" name="is_published" value="1"
+                                   <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?>
+                                   class="form-check-input">
+                        </div>
+                        
+                        <div class="form-group checkbox-group-item">
+                            <label class="form-check-label" for="featured">Featured</label>
+                            <input type="checkbox" id="featured" name="featured" value="1"
+                                   <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?>
+                                   class="form-check-input">
+                        </div>
+                        
+                        <div class="form-group checkbox-group-item">
+                            <label class="form-check-label" for="is_sponsored">Sponsored</label>
+                            <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1"
+                                   <?php echo (isset($story['is_sponsored']) && $story['is_sponsored']) ? "checked" : ""; ?>
+                                   class="form-check-input">
+                        </div>
+
+                    <?php
+                    // Collect boolean fields and non-boolean fields separately
+                    $booleanFields = [];
+                    $nonBooleanFields = [];
+                    
+                    foreach ($additionalFields as $field) {
+                        // Skip fields that are already handled above or will be handled below
+                        if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at', 'cover_image', 'cover_url', 'slug', 'excerpt'])) continue;
+                        
+                        $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
+                        $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
+                        $isIntField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'int') !== false || strpos($columnInfo[$field]['Type'], 'tinyint') !== false);
+                        $isDecimalField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'decimal') !== false || strpos($columnInfo[$field]['Type'], 'float') !== false || strpos($columnInfo[$field]['Type'], 'double') !== false);
+                        $isEnumField = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'enum') !== false;
+                        $isBooleanField = isset($columnInfo[$field]) && (
+                            (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) ||
+                            (strpos($field, 'is_') === 0) ||
+                            (strpos($field, 'has_') === 0) ||
+                            (strpos($field, 'needs_') === 0)
+                        );
+                        
+                        if ($isBooleanField) {
+                            $booleanFields[] = $field;
+                        } else {
+                            $nonBooleanFields[] = [
+                                'field' => $field,
+                                'isRequired' => $isRequired,
+                                'isDateTime' => $isDateTime,
+                                'isIntField' => $isIntField,
+                                'isDecimalField' => $isDecimalField,
+                                'isEnumField' => $isEnumField
+                            ];
+                        }
+                    }
+                    
+                    // Add all boolean fields to the checkbox section
+                    foreach ($booleanFields as $field):
+                        // Format field label
+                        $label = ucwords(str_replace('_', ' ', $field));
+                    ?>
+                        <div class="form-group checkbox-group-item">
+                            <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="1"
+                                   <?php echo (isset($story[$field]) && $story[$field]) ? "checked" : ""; ?>
+                                   class="form-check-input">
+                        </div>
                     <?php endforeach; ?>
-                </div>
-            </div>
+                    </div>
+                    
+                    <!-- Display non-boolean fields -->
+                    <?php foreach ($nonBooleanFields as $fieldData):
+                        $field = $fieldData['field'];
+                        $isRequired = $fieldData['isRequired'];
+                        $isDateTime = $fieldData['isDateTime'];
+                        $isIntField = $fieldData['isIntField'];
+                        $isDecimalField = $fieldData['isDecimalField'];
+                        $isEnumField = $fieldData['isEnumField'];
+                        
+                        // Format field label
+                        $label = ucwords(str_replace('_', ' ', $field));
+                        
+                        if ($isDateTime):
+                    ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   value="<?php echo isset($story[$field]) ? date('Y-m-d\TH:i', strtotime($story[$field])) : ''; ?>"
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                        </div>
+                    <?php elseif ($isEnumField):
+                        // Extract enum values
+                        preg_match("/enum\(([^)]+)\)/", $columnInfo[$field]['Type'], $matches);
+                        $enumValues = $matches[1] ? str_getcsv($matches[1], ',', "'") : [];
+                    ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <select id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                    <?php echo $isRequired ? 'required' : ''; ?>>
+                                <option value="">Select <?php echo $label; ?></option>
+                                <?php foreach ($enumValues as $value): ?>
+                                    <option value="<?php echo $value; ?>"
+                                            <?php echo ($story[$field] ?? '') == $value ? 'selected' : ''; ?>>
+                                        <?php echo ucfirst($value); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php elseif ($field === 'average_rating'): ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" id="<?php echo $field; ?>_slider" class="form-control w-75"
+                                       min="0" max="5" step="0.1"
+                                       value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                       oninput="document.getElementById('<?php echo $field; ?>').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;">
+                                <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control w-25 ml-2"
+                                       min="0" max="5" step="0.1"
+                                       value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                       oninput="document.getElementById('<?php echo $field; ?>_slider').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;"
+                                       <?php echo $isRequired ? 'required' : ''; ?>>
+                            </div>
+                            <div class="text-center mt-2">
+                                <span id="<?php echo $field; ?>_display" class="text-lg font-bold"><?php echo htmlspecialchars($story[$field] ?? '0'); ?></span> / 5
+                            </div>
+                        </div>
+                    <?php elseif ($field === 'review_count'): ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   min="0" step="1"
+                                   value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                            <small class="form-text text-muted">Number of reviews for this story</small>
+                        </div>
+                    <?php elseif ($isIntField || $isDecimalField): ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                   <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                        </div>
+                    <?php else: ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                        </div>
+                    <?php endif; endforeach; ?>
+                    
+                    <!-- Tags section moved to the bottom -->
+                    <div class="form-group">
+                        <label class="form-label">Tags</label>
+                        <div class="checkbox-group">
+                            <?php foreach ($tags as $tag): ?>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
+                                           <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
+                                    <?php echo htmlspecialchars($tag['name']); ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
 
-            <div class="form-group">
-                <button type="submit" class="form-submit">Save Story</button>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Save Story</button>
+                        <a href="stories.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
+    
     <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .form-row {
-            display: flex;
-            gap: 20px;
-        }
-        .form-group-half {
-            flex: 1;
-        }
         .checkbox-group {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
+            margin-top: 10px;
         }
+        
         .checkbox-label {
             display: flex;
             align-items: center;
             gap: 5px;
         }
-        .form-check-input {
-            width: 20px;
-            height: 20px;
-        }
-        .form-check-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
+        
         .form-section-title {
             margin-top: 20px;
             margin-bottom: 10px;
-            font-size: 18px;
-            color: #333;
-            border-bottom: 1px solid #eee;
+            font-size: 1.25rem;
+            color: var(--gray-800);
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 5px;
         }
+        
         .checkbox-section {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
-            background-color: #f9f9f9;
+            background-color: var(--gray-50);
             padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #eee;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
         }
+        
         .checkbox-group-item {
             margin-bottom: 0;
         }
         
-        /* Slider styling */
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 10px;
-            border-radius: 5px;
-            background: #d3d3d3;
-            outline: none;
+        .content-form {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
         }
         
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4a90e2;
-            cursor: pointer;
-            transition: background .15s ease-in-out;
-        }
-        
-        input[type="range"]::-webkit-slider-thumb:hover {
-            background: #3a7bc8;
-        }
-        
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border: 0;
-            border-radius: 50%;
-            background: #4a90e2;
-            cursor: pointer;
-            transition: background .15s ease-in-out;
-        }
-        
-        input[type="range"]::-moz-range-thumb:hover {
-            background: #3a7bc8;
-        }
-        
-        .flex {
-            display: flex;
-        }
-        
-        .items-center {
-            align-items: center;
-        }
-        
-        .w-3\/4 {
+        .w-75 {
             width: 75%;
         }
         
-        .w-1\/4 {
+        .w-25 {
             width: 25%;
         }
         
@@ -539,12 +473,20 @@ try {
             margin-left: 0.5rem;
         }
         
-        .mt-2 {
-            margin-top: 0.5rem;
+        .d-flex {
+            display: flex;
+        }
+        
+        .align-items-center {
+            align-items: center;
         }
         
         .text-center {
             text-align: center;
+        }
+        
+        .mt-2 {
+            margin-top: 0.5rem;
         }
         
         .text-lg {
@@ -552,8 +494,37 @@ try {
         }
         
         .font-bold {
-            font-weight: bold;
+            font-weight: 700;
         }
     </style>
+    
+    <script>
+        // Auto-generate slug from title
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleInput = document.getElementById('title');
+            const slugInput = document.getElementById('slug');
+            
+            if (titleInput && slugInput) {
+                titleInput.addEventListener('input', function() {
+                    // Only auto-generate if slug is empty or hasn't been manually edited
+                    if (!slugInput.value || slugInput._autoGenerated) {
+                        const slug = titleInput.value
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '') // Remove special characters
+                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+                        
+                        slugInput.value = slug;
+                        slugInput._autoGenerated = true;
+                    }
+                });
+                
+                // Mark when user manually edits the slug
+                slugInput.addEventListener('input', function() {
+                    slugInput._autoGenerated = false;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

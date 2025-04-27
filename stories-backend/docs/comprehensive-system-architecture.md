@@ -282,6 +282,7 @@ erDiagram
     
     STORIES {
         int id PK
+        enum source_type
         string title
         string slug
         text content
@@ -289,6 +290,7 @@ erDiagram
         boolean is_published
         boolean featured
         decimal average_rating
+        boolean allow_reviews
         int review_count
         string estimated_reading_time
         boolean is_sponsored
@@ -340,7 +342,7 @@ erDiagram
    - `tags`: Categories and tags for content
    - `blog_posts`: Blog content
    - `games`: Interactive story games
-   - `directory_items`: Directory listings
+   - `directory_items`: Directory listings (can link to stories via story_id)
    - `ai_tools`: AI tool listings
 
 2. **Relationship Tables**:
@@ -363,6 +365,38 @@ erDiagram
 3. **Indexing**: Primary keys and frequently queried fields are indexed
 4. **Timestamps**: All tables include created_at and updated_at timestamps
 5. **Soft Deletes**: Content is marked as unpublished rather than deleted
+
+### Story Source Types and Review Rules
+
+The stories table includes special columns to handle different contributor types:
+
+1. **source_type**: An ENUM field with three possible values:
+   - `child`: Stories created by children
+   - `parent`: Stories created by parents or families
+   - `classic`: Classic works seeded by administrators
+
+2. **allow_reviews**: A boolean field controlling whether reviews are allowed
+
+These fields implement the following business rules:
+
+- **Children's stories** (`source_type = 'child'`):
+  - Never receive public reviews (`allow_reviews = 0`)
+  - Use a child-specific default cover image
+  - Have simplified UI with basic form fields
+
+- **Parent/family stories** (`source_type = 'parent'`):
+  - May choose whether their story is reviewable
+  - Use a parent-specific default cover image
+  - Have access to all form fields
+
+- **Classic works** (`source_type = 'classic'`):
+  - Always open to ratings (`allow_reviews = 1`)
+  - Use a classic-specific default cover image
+  - Are seeded by administrators
+
+3. **Directory Integration**:
+  - Directory items can link back to hosted stories via the `story_id` column
+  - This allows the same review data to appear beside external resources
 
 ## API Endpoints
 
@@ -430,6 +464,8 @@ The frontend maps these fields to component props:
 - `cover_url` → `coverImage`
 - `slug` → `slug`
 - `publishedAt` → `publishDate`
+- `source_type` → `source_type`
+- `allow_reviews` → `allow_reviews`
 
 For authors:
 - `name` → `name`

@@ -1,6 +1,13 @@
 # Stories From The Web - Progress Log
 
 ## 2025-04-27
+- Implemented support for story source types and review controls:
+  - Added source_type and allow_reviews fields to admin story form
+  - Updated save-story.php to handle the new fields with business rules
+  - Updated API to include the new fields in responses and support filtering
+  - Modified frontend components to respect source_type for cover images
+  - Modified RatingStars component to only display when reviews are allowed
+  - Updated documentation to reflect the new schema and business rules
 - Created comprehensive cleanup and documentation plan:
   - Developed revised cleanup plan focusing on PHP script cleanup and documentation consolidation
   - Created system architecture diagrams highlighting areas needing improvement

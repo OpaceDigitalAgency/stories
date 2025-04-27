@@ -125,7 +125,134 @@ $user = SimpleAuth::check();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Stories Admin</title>
-    <link rel="stylesheet" href="assets/css/modern-admin.css">
+    <!-- Fix CSS path to ensure it loads correctly -->
+    <link rel="stylesheet" href="/admin/assets/css/modern-admin.css">
+    <!-- Add Bootstrap CSS as a fallback -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Basic styling in case the CSS file doesn't load */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .admin-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            background-color: #007bff;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .nav-menu {
+            margin-bottom: 20px;
+        }
+        .nav-link {
+            margin-right: 5px;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .dashboard-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .dashboard-card {
+            flex: 1 1 200px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #fff;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 6px 12px;
+            margin-bottom: 0;
+            font-size: 14px;
+            font-weight: 400;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .btn-primary {
+            color: #fff;
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-success {
+            color: #fff;
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-info {
+            color: #fff;
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        .btn-danger {
+            color: #fff;
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .content-list {
+            list-style: none;
+            padding: 0;
+        }
+        .content-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .admin-footer {
+            margin-top: 30px;
+            padding: 20px 0;
+            border-top: 1px solid #ddd;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <header class="admin-header">
@@ -167,7 +294,8 @@ $user = SimpleAuth::check();
             <h1 class="page-title">Dashboard</h1>
             <p class="page-description">Welcome to the Stories Admin Dashboard. Manage all your content from here.</p>
             <div class="mt-3">
-                <a href="https://api.storiesfromtheweb.org/stories-backend/diagnostic-dashboard.php" target="_blank" class="btn btn-info">
+                <!-- Fix the diagnostic dashboard link -->
+                <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" target="_blank" class="btn btn-info">
                     <span class="icon-view"></span> Diagnostic Dashboard
                 </a>
                 <a href="https://api.storiesfromtheweb.org/stories-backend/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
@@ -516,5 +644,8 @@ $user = SimpleAuth::check();
             <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
         </div>
     </footer>
+    
+    <!-- Add Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

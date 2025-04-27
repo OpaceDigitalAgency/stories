@@ -33,6 +33,8 @@ export interface Author {
   avatar: string;
   avatar_url?: string; // API response field
   slug: string;
+  author_type?: 'retail' | 'parent' | 'child' | 'educator';
+  featured?: boolean;
 }
 
 export interface Game {
@@ -183,7 +185,9 @@ export async function fetchAuthors(): Promise<Author[]> {
     name: item.name,
     bio: item.bio || '',
     avatar: item.avatar_url || '',
-    slug: item.slug
+    slug: item.slug,
+    author_type: item.author_type || 'parent',
+    featured: Boolean(item.featured)
   }));
 }
 
@@ -272,7 +276,9 @@ export async function fetchAuthor(slug: string): Promise<Author> {
     name: item.name,
     bio: item.bio || '',
     avatar: item.avatar_url || '',
-    slug: item.slug
+    slug: item.slug,
+    author_type: item.author_type || 'parent',
+    featured: Boolean(item.featured)
   };
 }
 

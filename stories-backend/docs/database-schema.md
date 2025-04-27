@@ -83,6 +83,7 @@ erDiagram
         boolean is_published
         timestamp created_at
         timestamp updated_at
+        enum author_type
     }
     
     TAGS {
@@ -271,6 +272,7 @@ Information about content creators.
 | is_published | tinyint(1) | DEFAULT 1 | Publication status |
 | created_at | timestamp | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 | updated_at | timestamp | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
+| author_type | enum('retail','parent','child','educator') | NOT NULL, DEFAULT 'parent' | Type of author |
 
 ### tags
 

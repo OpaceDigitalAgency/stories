@@ -344,14 +344,14 @@ function output($text, $isHtml = false) {
 
 // Set content type
 header('Content-Type: text/html; charset=utf-8');
-output('<!DOCTYPE html>
+output('
 
   
     <div class="container">
-        <h1>Test API Format</h1>
+        <h2>Test API Format</h2>
 ', true);
 
-output("<h2>API Endpoints</h2>");
+output("<strong>API Endpoints</strong>");
 
 // Test endpoints
 $endpoints = [
@@ -440,7 +440,7 @@ foreach ($endpoints as $name => $path) {
 output("</table>", true);
 
 // Check for inconsistencies
-output("<h2>Analysis</h2>");
+output("<strong>Analysis</strong>");
 
 $formats = array_unique(array_column($results, 'format'));
 if (count($formats) > 1) {

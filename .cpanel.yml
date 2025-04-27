@@ -3,3 +3,6 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
     - /bin/cp -R stories-backend/* $DEPLOYPATH
+  git:
+    # Use no-ff merge strategy to avoid fast-forward issues
+    merge_strategy: --no-ff

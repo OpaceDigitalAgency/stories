@@ -17,6 +17,12 @@ export interface CardStoryProps {
     rating?: number;
     tags?: string[];
     publishDate?: Date;
+    /** Source type of the story (child, parent, classic) */
+    source_type?: 'child' | 'parent' | 'classic';
+    /** Whether reviews are allowed for this story */
+    allow_reviews?: boolean;
+    /** Review count */
+    review_count?: number;
   };
   /** Optional class names to apply to the card */
   className?: string;
@@ -56,6 +62,12 @@ export interface RatingStarsProps {
   size?: 'sm' | 'md' | 'lg';
   /** Optional class names to apply to the container */
   className?: string;
+  /** Whether reviews are allowed for this story */
+  allow_reviews?: boolean;
+  /** Source type of the story */
+  source_type?: 'child' | 'parent' | 'classic';
+  /** Whether the stars should be interactive */
+  interactive?: boolean;
 }
 
 export interface StoryCarouselProps {

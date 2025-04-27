@@ -5,19 +5,10 @@ import RatingStars from './RatingStars.astro';
 
 const { story, className = '' } = Astro.props as CardStoryProps;
 
-// Default images based on source_type
+// Default cover image with source type indicator
 let defaultCoverImage = '/images/default-cover.svg';
-if (story?.source_type) {
-  // Use source_type-specific images if they exist, otherwise fall back to default
-  try {
-    // This is just a placeholder - the actual check would happen at build time
-    // For now, we'll use the default cover image with a visual indicator
-    defaultCoverImage = `/images/default-cover.svg`;
-    console.log(`Using default cover for source_type: ${story.source_type}`);
-  } catch (e) {
-    console.log(`Source type image not found, using default: ${e}`);
-  }
-}
+// We'll use the same default image for all source types for now
+// In production, you would create specific default images for each source type
 const defaultAvatarImage = '/images/default-avatar.svg';
 
 // Handle cover image - directly use the URL from the API
@@ -47,10 +38,11 @@ const formattedDate = story.publishDate
 <article class={`card-story bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform-style-3d hover:translate-z-4 ${className}`}>
   <a href={`/stories/${story.slug}`} class="block relative">
     <div class="relative h-48 overflow-hidden">
-      <img 
-        src={coverImageUrl} 
-        alt={story.title} 
+      <img
+        src={coverImageUrl}
+        alt={story.title}
         class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+        onerror="this.onerror=null; this.src='/images/default-cover.svg';"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
       
@@ -58,7 +50,6 @@ const formattedDate = story.publishDate
       {story.source_type && (
         <div class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
           {story.source_type}
-          {story.allow_reviews ? ' ★' : ' ☆'}
         </div>
       )}
       
@@ -78,48 +69,43 @@ const formattedDate = story.publishDate
   </a>
   
   <div class="p-5">
-    <div class="flex justify-between items-start mb-3">
-      <h3 class="text-lg font-bold text-text-primary line-clamp-2 hover:text-primary transition-colors duration-300">
-        <a href={`/stories/${story.slug}`}>
-          {story.title}
-        </a>
-      </h3>
-      
-      {story.rating && typeof story.rating === 'number' && story.rating > 0 && (
-        <div class="ml-2 flex-shrink-0">
-          {/* Only show ratings if allow_reviews is true */}
-          {story.allow_reviews === true ? (
-            <RatingStars
-              rating={story.rating}
-              size="sm"
-              allow_reviews={true}
-              source_type={story.source_type}
-            />
-          ) : (
-            <span class="text-xs text-gray-400">{story.source_type === 'child' ? 'No ratings' : ''}</span>
-          )}
-          {/* Debug info - visible for debugging */}
-          <span class="text-xs text-gray-400">
-            {story.source_type} {story.allow_reviews === true ? '★' : '☆'}
-          </span>
-        </div>
-      )}
-    </div>
+    {/* Title */}
+    <h3 class="text-lg font-bold text-text-primary line-clamp-2 hover:text-primary transition-colors duration-300 mb-1">
+      <a href={`/stories/${story.slug}`}>
+        {story.title}
+      </a>
+    </h3>
     
+    {/* Ratings - only show for non-child stories with allow_reviews=true */}
+    {story.rating && typeof story.rating === 'number' && story.rating > 0 &&
+     story.source_type !== 'child' && story.allow_reviews === true && (
+      <div class="mb-3">
+        <RatingStars
+          rating={story.rating}
+          size="sm"
+          allow_reviews={true}
+          source_type={story.source_type}
+        />
+      </div>
+    )}
+    
+    {/* Excerpt */}
     {story.excerpt && (
       <p class="text-sm text-text-secondary mb-4 line-clamp-3">
         {story.excerpt}
       </p>
     )}
     
+    {/* Author and date */}
     <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
       {story.author && (
         <a href={`/authors/${story.author.slug}`} class="flex items-center group">
           <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
-            <img 
-              src={authorAvatarUrl} 
-              alt={story.author.name} 
+            <img
+              src={authorAvatarUrl}
+              alt={story.author.name}
               class="w-full h-full object-cover"
+              onerror="this.onerror=null; this.src='/images/default-avatar.svg';"
             />
           </div>
           <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">

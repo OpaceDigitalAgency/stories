@@ -5,8 +5,11 @@ import RatingStars from './RatingStars.astro';
 
 const { story, className = '' } = Astro.props as CardStoryProps;
 
-// Default images
-const defaultCoverImage = '/images/default-cover.svg';
+// Default images based on source_type
+let defaultCoverImage = '/images/default-cover.svg';
+if (story?.source_type) {
+  defaultCoverImage = `/images/default-${story.source_type}.webp`;
+}
 const defaultAvatarImage = '/images/default-avatar.svg';
 
 // Handle cover image - directly use the URL from the API
@@ -68,7 +71,11 @@ const formattedDate = story.publishDate
       
       {story.rating && typeof story.rating === 'number' && story.rating > 0 && (
         <div class="ml-2 flex-shrink-0">
-          <RatingStars rating={story.rating} size="sm" />
+          <RatingStars
+            rating={story.rating}
+            size="sm"
+            allow_reviews={story.allow_reviews === true}
+          />
         </div>
       )}
     </div>

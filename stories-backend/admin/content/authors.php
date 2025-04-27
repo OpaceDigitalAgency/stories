@@ -196,15 +196,13 @@ if (isset($_SESSION['error'])) {
                                                 <span class="icon-edit"></span> Edit
                                             </button>
                                         </form>
-                                        <?php if ($author['story_count'] == 0 && $author['post_count'] == 0): ?>
-                                            <form method="POST" action="delete-author.php" style="display: inline;">
-                                                <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                                <button type="submit" class="btn btn-danger btn-sm" 
-                                                        onclick="return confirm('Are you sure you want to delete this author?')">
-                                                    <span class="icon-delete"></span> Delete
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
+                                        <form method="POST" action="delete-author.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete this author? This will remove the author from all associated content.')">
+                                                <span class="icon-delete"></span> Delete
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>

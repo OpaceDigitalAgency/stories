@@ -39,15 +39,75 @@ We've addressed several issues and made improvements to the platform:
    - Consistent actions (view, edit, delete) for all content types
    - CSS-only expand/collapse functionality for dashboard content sections
 
-## Technical Details
+## Technical Architecture
 
-- **Frontend**: Built with Astro.js for server-side rendering
-- **Backend**: PHP with MySQL database
-- **API**: RESTful API for communication between frontend and backend
+- **Frontend**: Astro.js static site with TypeScript and Tailwind CSS, deployed on Netlify CDN
+- **Backend**: Custom PHP RESTful API with MySQL database, hosted on cPanel shared hosting
+- **Admin Interface**: JavaScript-free PHP admin panel for content management
+
+## Current Cleanup Initiative
+
+We're currently undertaking a comprehensive cleanup and documentation initiative to:
+
+1. **Clean up redundant PHP scripts** - Removing obsolete scripts while safely archiving them for reference
+2. **Consolidate documentation** - Organizing and updating documentation to make it easier to understand the system
+3. **Standardize API responses** - Ensuring consistent response formats across all endpoints
+4. **Improve admin interface reliability** - Enhancing the admin interface to be more reliable and user-friendly
 
 ## Documentation
 
 For more detailed information, please refer to:
 
-- [Planning Document](PLANNING.md): Contains goals, architecture decisions, and solutions to known issues
-- [Progress Log](PROGRESS.md): Tracks changes and progress over time
+### Core Documentation
+
+- [Documentation Index](documentation-index.md) - Central index of all documentation
+- [Revised Cleanup Plan](revised-cleanup-plan.md) - Detailed plan for cleaning up scripts and documentation
+- [System Architecture](system-architecture.md) - Comprehensive system architecture documentation
+- [System Architecture with Improvements](system-architecture-with-improvements.md) - Visual representation of areas needing improvement
+- [Database Schema](database-schema.md) - Complete database schema documentation
+- [API Documentation](api-documentation.md) - Comprehensive API endpoint documentation
+- [PHP Scripts Cleanup Guide](php-scripts-cleanup-guide.md) - Guide for cleaning up PHP scripts
+- [Known Issues and Fixes](KNOWN_ISSUES_AND_FIXES.md) - Documentation of known issues and their solutions
+
+### Historical Documentation
+
+- [Planning Document](PLANNING.md) - Contains goals, architecture decisions, and solutions to known issues
+- [Progress Log](PROGRESS.md) - Tracks changes and progress over time
+
+### Deployment Documentation
+
+- [Consolidated Deployment Guide](consolidated-deployment-guide.md) - Comprehensive guide for deploying the platform
+
+## Getting Started
+
+### Development Environment Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/OpaceDigitalAgency/stories.git
+   cd stories
+   ```
+
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Set up the backend:
+   - Import the database from `stories-backend/database/stories_db_26.04.25_1337.sql`
+   - Configure `stories-backend/api/v1/config/config.php` with your database credentials
+
+### Production Environments
+
+- **Frontend**: https://storiesfromtheweb.netlify.app/
+- **Backend API**: https://api.storiesfromtheweb.org/api/v1/
+- **Admin Interface**: https://api.storiesfromtheweb.org/admin/
+
+## Contributing
+
+Please refer to the [Revised Cleanup Plan](revised-cleanup-plan.md) for guidelines on contributing to the cleanup initiative.

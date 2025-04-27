@@ -11,11 +11,10 @@ $config = [
     'port' => 3306
 ];
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
+ifI(stssiin_$conui()==HP_SESSIN_NONE) {
+// C eis _();
 
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
+:check()) {
     header("Location: login.php");
     exit;
 }

@@ -120,20 +120,47 @@ try {
 
             <div class="form-group">
                 <label class="form-label" for="source_type">Source Type</label>
-                <select id="source_type" name="source_type" class="form-input" required>
+                <select id="source_type" name="source_type" class="form-input" required onchange="updateAllowReviewsVisibility()">
                     <option value="child" <?php echo ($story['source_type'] ?? 'child') === 'child' ? 'selected' : ''; ?>>Child</option>
                     <option value="parent" <?php echo ($story['source_type'] ?? '') === 'parent' ? 'selected' : ''; ?>>Parent</option>
                     <option value="classic" <?php echo ($story['source_type'] ?? '') === 'classic' ? 'selected' : ''; ?>>Classic</option>
                 </select>
+                <p class="text-sm text-gray-500 mt-1">
+                    Child: Never allows reviews | Parent: Can choose | Classic: Always allows reviews
+                </p>
             </div>
 
-            <div class="form-group">
+            <div id="allow-reviews-container" class="form-group" style="<?php echo ($story['source_type'] ?? 'child') !== 'parent' ? 'display: none;' : ''; ?>">
                 <label class="checkbox-label">
-                    <input type="checkbox" name="allow_reviews" value="1"
+                    <input type="checkbox" id="allow_reviews" name="allow_reviews" value="1"
                            <?php echo ($story['allow_reviews'] ?? 0) == 1 ? 'checked' : ''; ?>>
                     Allow Reviews
                 </label>
+                <p class="text-sm text-gray-500 mt-1">Only parent/family stories can toggle this option</p>
             </div>
+
+            <script>
+                function updateAllowReviewsVisibility() {
+                    const sourceType = document.getElementById('source_type').value;
+                    const allowReviewsContainer = document.getElementById('allow-reviews-container');
+                    const allowReviewsCheckbox = document.getElementById('allow_reviews');
+                    
+                    if (sourceType === 'parent') {
+                        allowReviewsContainer.style.display = 'block';
+                    } else {
+                        allowReviewsContainer.style.display = 'none';
+                        // Set the appropriate value based on source type
+                        if (sourceType === 'child') {
+                            allowReviewsCheckbox.checked = false;
+                        } else if (sourceType === 'classic') {
+                            allowReviewsCheckbox.checked = true;
+                        }
+                    }
+                }
+                
+                // Initialize on page load
+                document.addEventListener('DOMContentLoaded', updateAllowReviewsVisibility);
+            </script>
 
             <div class="form-group">
                 <label class="form-label" for="author_id">Author</label>

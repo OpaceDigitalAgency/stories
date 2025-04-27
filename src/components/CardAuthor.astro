@@ -4,7 +4,11 @@ import type { CardAuthorProps } from '../types/components';
 const { author, className = '' } = Astro.props as CardAuthorProps;
 
 // Extend author interface with additional social/stats data
-interface ExtendedAuthor extends CardAuthorProps['author'] {
+interface ExtendedAuthor {
+  name: string;
+  avatar?: string;
+  bio?: string;
+  slug: string;
   storyCount?: number;
   socialLinks?: {
     twitter?: string;
@@ -21,9 +25,10 @@ const extendedAuthor = author as ExtendedAuthor;
     <a href={`/authors/${author.slug}`} class="block group perspective-1000">
       <div class="relative transform-style-3d hover:translate-z-4 transition-transform duration-300">
         <img
-          src={author.avatar || '/images/default-avatar.jpg'}
+          src={author.avatar || '/images/default-avatar.svg'}
           alt={author.name}
           class="w-24 h-24 rounded-full object-cover border-4 border-accent shadow-xl mb-4 transform group-hover:scale-110 transition-all duration-300"
+          onerror="this.onerror=null; this.src='/images/default-avatar.svg';"
         />
         <div class="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/30 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full"></div>
       </div>

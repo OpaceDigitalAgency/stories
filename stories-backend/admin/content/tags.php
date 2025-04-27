@@ -99,24 +99,32 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tags - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
                 <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
+                <button type="submit" formaction="tags.php" class="nav-link active">Tags</button>
                 <button type="submit" formaction="games.php" class="nav-link">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
                 <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
@@ -124,10 +132,15 @@ if (isset($_SESSION['error'])) {
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1>Tags</h1>
-            <form method="GET" action="tag-form.php" style="display: inline;">
-                <button type="submit" class="form-submit">Add New Tag</button>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title">Tags</h1>
+                <p class="page-description">Manage all your tags from here.</p>
+            </div>
+            <form method="GET" action="tag-form.php">
+                <button type="submit" class="btn btn-success">
+                    <span class="icon-edit"></span> Add New Tag
+                </button>
             </form>
         </div>
 
@@ -139,76 +152,60 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Slug</th>
-                    <th>Description</th>
-                    <th>Stories</th>
-                    <th>Blog Posts</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($tags)): ?>
+        <div class="table-container">
+            <table class="table">
+                <thead>
                     <tr>
-                        <td colspan="6" class="text-center">No tags found. Add your first tag!</td>
+                        <th>Name</th>
+                        <th>Slug</th>
+                        <th>Description</th>
+                        <th>Stories</th>
+                        <th>Blog Posts</th>
+                        <th>Actions</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($tags as $tag): ?>
+                </thead>
+                <tbody>
+                    <?php if (empty($tags)): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($tag['name']); ?></td>
-                            <td><?php echo htmlspecialchars($tag['slug']); ?></td>
-                            <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . (strlen($tag['description'] ?? '') > 100 ? '...' : '')); ?></td>
-                            <td><?php echo $tag['story_count']; ?></td>
-                            <td><?php echo $tag['post_count']; ?></td>
-                            <td>
-                                <form method="GET" action="tag-form.php" style="display: inline;">
-                                    <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                    <button type="submit" class="form-submit">Edit</button>
-                                </form>
-                                <?php if ($tag['story_count'] == 0 && $tag['post_count'] == 0): ?>
-                                    <form method="POST" action="delete-tag.php" style="display: inline;">
-                                        <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                        <button type="submit" class="form-submit" style="background: #dc3545;"
-                                                onclick="return confirm('Are you sure you want to delete this tag?')">Delete</button>
-                                    </form>
-                                <?php endif; ?>
-                            </td>
+                            <td colspan="6" class="text-center">No tags found. Add your first tag!</td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php foreach ($tags as $tag): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($tag['name']); ?></td>
+                                <td><?php echo htmlspecialchars($tag['slug']); ?></td>
+                                <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . (strlen($tag['description'] ?? '') > 100 ? '...' : '')); ?></td>
+                                <td><?php echo $tag['story_count']; ?></td>
+                                <td><?php echo $tag['post_count']; ?></td>
+                                <td>
+                                    <div class="table-actions">
+                                        <form method="GET" action="view-tag.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                                            <button type="submit" class="btn btn-info btn-sm">
+                                                <span class="icon-view"></span> View
+                                            </button>
+                                        </form>
+                                        <form method="GET" action="tag-form.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <span class="icon-edit"></span> Edit
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="delete-tag.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm" 
+                                                    onclick="return confirm('Are you sure you want to delete this tag?')">
+                                                <span class="icon-delete"></span> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-    <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .content-header h1 {
-            margin: 0;
-        }
-        .text-center {
-            text-align: center;
-            padding: 20px;
-        }
-    </style>
 </body>
 </html>

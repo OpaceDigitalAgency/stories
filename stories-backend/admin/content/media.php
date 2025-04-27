@@ -146,19 +146,27 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media - Admin</title>
-    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/modern-admin.css">
 </head>
 <body>
-    <div class="container">
-        <div class="user-info">
-            Welcome, <?php echo htmlspecialchars($user['name']); ?> |
-            <form method="POST" action="../logout.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #dc3545;">Logout</button>
-            </form>
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="logo-container">
+                <div class="logo">S</div>
+                <div class="logo-text">Stories Admin</div>
+            </div>
+            <div class="user-info">
+                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
+                <form method="POST" action="../logout.php" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
+    </header>
 
+    <div class="container">
         <nav class="nav-menu">
-            <form method="GET" style="display: inline;">
+            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                 <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
                 <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
                 <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
@@ -167,15 +175,15 @@ if (isset($_SESSION['error'])) {
                 <button type="submit" formaction="games.php" class="nav-link">Games</button>
                 <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
                 <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+                <button type="submit" formaction="media.php" class="nav-link active">Media</button>
             </form>
         </nav>
 
-        <div class="content-header">
-            <h1>Media</h1>
-            <form method="GET" action="../dashboard.php" style="display: inline;">
-                <button type="submit" class="form-submit" style="background: #6c757d;">Back to Dashboard</button>
-            </form>
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title">Media</h1>
+                <p class="page-description">Manage all your media files from here.</p>
+            </div>
         </div>
 
         <?php if ($success): ?>
@@ -186,172 +194,182 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="content-section">
-            <h2>Upload New Media</h2>
-            <form method="POST" enctype="multipart/form-data" class="upload-form">
-                <div class="form-group">
-                    <label class="form-label" for="media_file">File <span class="required">*</span></label>
-                    <input type="file" id="media_file" name="media_file" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="alt_text">Alt Text</label>
-                    <input type="text" id="alt_text" name="alt_text" class="form-input" placeholder="Describe the image for accessibility">
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="form-submit">Upload</button>
-                </div>
-            </form>
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Upload New Media</h2>
+            </div>
+            <div class="section-body">
+                <form method="POST" enctype="multipart/form-data" class="upload-form">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="media_file">File <span class="required">*</span></label>
+                        <input type="file" id="media_file" name="media_file" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="alt_text">Alt Text</label>
+                        <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-success">
+                            <span class="icon-upload"></span> Upload
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="content-section">
-            <h2>Media Library</h2>
-            <?php if (empty($media)): ?>
-                <p class="no-items">No media files found.</p>
-            <?php else: ?>
-                <div class="media-grid">
-                    <?php foreach ($media as $item): ?>
-                        <div class="media-item">
-                            <?php 
-                            $isImage = strpos($item['file_type'], 'image/') === 0;
-                            $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
-                            ?>
-                            <div class="media-thumbnail">
-                                <?php if ($isImage): ?>
-                                    <img src="<?php echo htmlspecialchars($item['file_path']); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
-                                <?php else: ?>
-                                    <div class="file-icon"><?php echo pathinfo($item['filename'], PATHINFO_EXTENSION); ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="media-info">
-                                <p class="media-filename"><?php echo htmlspecialchars($item['filename']); ?></p>
-                                <p class="media-date"><?php echo date('M j, Y', strtotime($item['created_at'])); ?></p>
-                                <div class="media-actions">
-                                    <a href="<?php echo htmlspecialchars($item['file_path']); ?>" target="_blank" class="action-link">View</a>
-                                    <a href="?delete=<?php echo $item['id']; ?>" class="action-link delete" onclick="return confirm('Are you sure you want to delete this file?')">Delete</a>
+            <div class="section-header">
+                <h2 class="section-title">Media Library</h2>
+            </div>
+            <div class="section-body">
+                <?php if (empty($media)): ?>
+                    <p class="no-items">No media files found.</p>
+                <?php else: ?>
+                    <div class="media-grid">
+                        <?php foreach ($media as $item): ?>
+                            <div class="media-card">
+                                <?php 
+                                $isImage = strpos($item['file_type'], 'image/') === 0;
+                                $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
+                                ?>
+                                <div class="media-thumbnail">
+                                    <?php if ($isImage): ?>
+                                        <img src="<?php echo htmlspecialchars($item['file_path']); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
+                                    <?php else: ?>
+                                        <div class="file-icon"><?php echo pathinfo($item['filename'], PATHINFO_EXTENSION); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="media-info">
+                                    <h3 class="media-filename"><?php echo htmlspecialchars($item['filename']); ?></h3>
+                                    <p class="media-date"><?php echo date('M j, Y', strtotime($item['created_at'])); ?></p>
+                                    <div class="media-actions">
+                                        <form method="GET" action="view-media.php" style="display: inline;">
+                                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                            <button type="submit" class="btn btn-info btn-sm">
+                                                <span class="icon-view"></span> View
+                                            </button>
+                                        </form>
+                                        <a href="<?php echo htmlspecialchars($item['file_path']); ?>" target="_blank" class="btn btn-primary btn-sm">
+                                            <span class="icon-download"></span> Download
+                                        </a>
+                                        <form method="GET" style="display: inline;">
+                                            <input type="hidden" name="delete" value="<?php echo $item['id']; ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm" 
+                                                    onclick="return confirm('Are you sure you want to delete this file?')">
+                                                <span class="icon-delete"></span> Delete
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
+    
     <style>
-        .nav-link {
-            background: none;
-            border: none;
-            padding: 8px 15px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .nav-link:hover {
-            background: #f5f5f5;
-        }
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .content-header h1 {
-            margin: 0;
-        }
-        .content-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .content-section h2 {
-            margin-top: 0;
-            color: #333;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
         .upload-form {
             max-width: 600px;
         }
+        
         .media-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
+            margin-top: 20px;
         }
-        .media-item {
-            border: 1px solid #eee;
-            border-radius: 8px;
+        
+        .media-card {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
             overflow: hidden;
             transition: all 0.2s ease;
+            background-color: white;
         }
-        .media-item:hover {
+        
+        .media-card:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
+        
         .media-thumbnail {
-            height: 150px;
+            height: 180px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f9f9f9;
+            background: var(--gray-50);
             overflow: hidden;
+            border-bottom: 1px solid var(--border-color);
         }
+        
         .media-thumbnail img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
+        
         .file-icon {
-            width: 60px;
-            height: 60px;
-            background: #e9e9e9;
+            width: 80px;
+            height: 80px;
+            background: var(--gray-200);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             text-transform: uppercase;
-            color: #666;
-            border-radius: 4px;
+            color: var(--gray-700);
+            border-radius: var(--radius-sm);
+            font-size: 1.2rem;
         }
+        
         .media-info {
-            padding: 10px;
+            padding: 15px;
         }
+        
         .media-filename {
-            margin: 0 0 5px 0;
-            font-weight: bold;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+            font-size: 1rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: var(--gray-900);
         }
+        
         .media-date {
-            margin: 0 0 10px 0;
-            font-size: 0.8rem;
-            color: #666;
+            margin: 0 0 15px 0;
+            font-size: 0.85rem;
+            color: var(--gray-600);
         }
+        
         .media-actions {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .action-link {
-            color: #4a6cf7;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .action-link.delete {
-            color: #dc3545;
-        }
-        .action-link:hover {
-            text-decoration: underline;
-        }
+        
         .no-items {
             text-align: center;
-            padding: 20px;
-            color: #666;
+            padding: 30px;
+            color: var(--gray-600);
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            font-size: 1.1rem;
         }
+        
         .required {
-            color: #dc3545;
+            color: var(--danger);
             margin-left: 3px;
+        }
+        
+        .icon-upload:before {
+            content: "↑";
+        }
+        
+        .icon-download:before {
+            content: "↓";
         }
     </style>
 </body>

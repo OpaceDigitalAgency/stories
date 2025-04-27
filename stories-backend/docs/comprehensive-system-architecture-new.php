@@ -250,14 +250,15 @@ CREATE TABLE `ai_tool_categories` (
 
 CREATE TABLE `authors` (
   `id` int NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `bio` text,
-  `avatar_url` varchar(255) DEFAULT NULL,
-  `is_published` tinyint(1) DEFAULT '0',
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bio` text COLLATE utf8mb4_unicode_ci,
+  `avatar_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_published` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `author_type` enum('retail','parent','child','educator') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'parent'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `auth_tokens` (
   `user_id` int NOT NULL,
@@ -287,20 +288,45 @@ CREATE TABLE `directory_categories` (
 
 CREATE TABLE `directory_items` (
   `id` int NOT NULL,
-  `category_id` int NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `description` text,
-  `url` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB;
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `category_id` int DEFAULT NULL,
+  `slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `published_at` datetime DEFAULT NULL,
+  `website_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contact_email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `contact_phone` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address` text COLLATE utf8mb4_unicode_ci,
+  `featured` tinyint(1) NOT NULL DEFAULT '0',
+  `rating` decimal(3,1) DEFAULT '0.0',
+  `price_range` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cover_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_published` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `story_id` int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `games` (
   `id` int NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `description` text,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL
-) ENGINE=InnoDB;
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `featured` tinyint(1) DEFAULT '0',
+  `slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `website_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `genre` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `platform` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `developer` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `publisher` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `release_date` date DEFAULT NULL,
+  `rating` decimal(3,1) DEFAULT '0.0',
+  `price` decimal(10,2) DEFAULT '0.00',
+  `cover_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_published` tinyint(1) DEFAULT '1',
+  `published_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `media` (
   `id` int NOT NULL,
@@ -321,7 +347,7 @@ CREATE TABLE `post_tags` (
 CREATE TABLE `story_authors` (
   `story_id` int NOT NULL,
   `author_id` int NOT NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `story_tags` (
   `story_id` int NOT NULL,
@@ -330,17 +356,26 @@ CREATE TABLE `story_tags` (
 
 CREATE TABLE `stories` (
   `id` int NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `content` text NOT NULL,
-  `excerpt` text,
-  `is_published` tinyint(1) DEFAULT '0',
+  `source_type` enum('child','parent','classic') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'child',
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text COLLATE utf8mb4_unicode_ci,
+  `excerpt` text COLLATE utf8mb4_unicode_ci,
+  `slug` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_published` tinyint(1) DEFAULT '1',
   `featured` tinyint(1) DEFAULT '0',
-  `average_rating` decimal(3,1) DEFAULT '0.0',
-  `cover_url` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+  `average_rating` decimal(3,1) DEFAULT '4.5',
+  `allow_reviews` tinyint(1) NOT NULL DEFAULT '0',
+  `review_count` int DEFAULT '10',
+  `estimated_reading_time` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '5 minutes',
+  `is_sponsored` tinyint(1) DEFAULT '0',
+  `age_group` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '12+',
+  `needs_moderation` tinyint(1) DEFAULT '0',
+  `is_self_published` tinyint(1) DEFAULT '1',
+  `is_ai_enhanced` tinyint(1) DEFAULT '0',
+  `cover_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT 'https://example.com/cover.jpg',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `tags` (
   `id` int NOT NULL,

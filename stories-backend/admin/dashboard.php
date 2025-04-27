@@ -298,7 +298,7 @@ $user = SimpleAuth::check();
                 <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" target="_blank" class="btn btn-info">
                     <span class="icon-view"></span> Diagnostic Dashboard
                 </a>
-                <a href="https://api.storiesfromtheweb.org/stories-backend/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
+                <a href="https://api.storiesfromtheweb.org/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
                     <span class="icon-view"></span> View System Documentation
                 </a>
             </div>

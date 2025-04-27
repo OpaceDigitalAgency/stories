@@ -766,6 +766,8 @@ npm run dev
           <tr><td>Admin form “stuck on processing”</td><td>Legacy JS handler in PHP CMS</td><td>Remove JS; rely on server redirects</td><td>Fixed (Apr 19)</td></tr>
           <tr><td>Database write lock issues</td><td>Shared hosting lock contention</td><td>Added SimpleAuth fallback</td><td>Mitigated (Apr 26)</td></tr>
           <tr><td>Unexpected API response formats</td><td>Inconsistent controller error handling</td><td>Normalise JSON in middleware</td><td>Under review</td></tr>
+          <tr><td>Admin save/edit issues</td><td>Adding JS breaks the admin and prevents saving to the DB</td><td>Until understood, remove JS and rely on a pure HTML and CSS solutoon apart from auto slug generation</td><td>Mitigated (Apr 26)</td></tr>
+          <tr><td>Missing homepage content with prerender enabled</td><td>New stories don't sow until a fresh deploy is triggered</td><td>Remove prerender for now but consider webhooks to auto deploy when stories are added/removed</td><td>Under review</td></tr>
         </tbody>
       </table>
 

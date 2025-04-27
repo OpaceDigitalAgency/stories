@@ -40,7 +40,8 @@ try {
         'blog_posts' => 0,
         'games' => 0,
         'directory_items' => 0,
-        'ai_tools' => 0
+        'ai_tools' => 0,
+        'media' => 0
     ];
 
     // Check if tables exist before querying
@@ -50,7 +51,8 @@ try {
         'blog_posts',
         'games',
         'directory_items',
-        'ai_tools'
+        'ai_tools',
+        'media'
     ];
 
     foreach ($tables as $table) {
@@ -72,7 +74,8 @@ try {
         'authors' => ['name', 'created_at', 'id'],
         'games' => ['title', 'created_at', 'id'],
         'directory_items' => ['title', 'created_at', 'id'],
-        'ai_tools' => ['title', 'created_at', 'id']
+        'ai_tools' => ['title', 'created_at', 'id'],
+        'media' => ['filename', 'created_at', 'id']
     ];
     
     $recentContent = [];
@@ -161,8 +164,8 @@ try {
             <p class="page-description">Welcome to the Stories Admin Dashboard. Manage all your content from here.</p>
         </div>
 
-        <div class="dashboard-grid">
-            <div class="stat-card">
+        <div class="dashboard-cards">
+            <div class="dashboard-card">
                 <h3>Stories</h3>
                 <div class="stat-number"><?php echo $stats['stories']; ?></div>
                 <div class="stat-actions">
@@ -175,7 +178,7 @@ try {
                 </div>
             </div>
             
-            <div class="stat-card">
+            <div class="dashboard-card">
                 <h3>Blog Posts</h3>
                 <div class="stat-number"><?php echo $stats['blog_posts']; ?></div>
                 <div class="stat-actions">
@@ -188,7 +191,7 @@ try {
                 </div>
             </div>
             
-            <div class="stat-card">
+            <div class="dashboard-card">
                 <h3>Authors</h3>
                 <div class="stat-number"><?php echo $stats['authors']; ?></div>
                 <div class="stat-actions">
@@ -201,7 +204,7 @@ try {
                 </div>
             </div>
             
-            <div class="stat-card">
+            <div class="dashboard-card">
                 <h3>Games</h3>
                 <div class="stat-number"><?php echo $stats['games']; ?></div>
                 <div class="stat-actions">
@@ -214,7 +217,7 @@ try {
                 </div>
             </div>
             
-            <div class="stat-card">
+            <div class="dashboard-card">
                 <h3>Directory Items</h3>
                 <div class="stat-number"><?php echo $stats['directory_items']; ?></div>
                 <div class="stat-actions">
@@ -227,7 +230,7 @@ try {
                 </div>
             </div>
             
-            <div class="stat-card">
+            <div class="dashboard-card">
                 <h3>AI Tools</h3>
                 <div class="stat-number"><?php echo $stats['ai_tools']; ?></div>
                 <div class="stat-actions">
@@ -237,6 +240,15 @@ try {
                     <form method="GET" action="content/ai-tool-form.php">
                         <button type="submit" class="btn btn-success btn-sm">Add New</button>
                     </form>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Media</h3>
+                    <div class="stat-number"><?php echo isset($stats['media']) ? $stats['media'] : 0; ?></div>
+                    <div class="stat-actions">
+                        <form method="GET" action="content/media.php" style="margin-right: 0.5rem;">
+                            <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -529,8 +541,160 @@ try {
                         <?php endif; ?>
                     </div>
                 </div>
+                
+                <!-- Media Section -->
+                <input type="checkbox" id="toggle-media" class="collapsible-toggle">
+                <div class="collapsible">
+                    <label for="toggle-media" class="collapsible-header">
+                        Media
+                    </label>
+                    <div class="collapsible-content">
+                        <?php if (empty($recentContent['media'])): ?>
+                            <p class="p-3">No media files found.</p>
+                        <?php else: ?>
+                            <ul class="content-list">
+                                <?php foreach ($recentContent['media'] as $item): ?>
+                                    <li class="content-item">
+                                        <div>
+                                            <div class="content-item-title"><?php echo htmlspecialchars($item['title'] ?? $item['filename']); ?></div>
+                                            <div class="content-item-meta">
+                                                <?php echo date('M j, Y', strtotime($item['created_at'])); ?>
+                                            </div>
+                                        </div>
+                                        <div class="content-item-actions">
+                                            <form method="GET" action="content/view-media.php" style="display: inline;">
+                                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-info btn-sm">
+                                                    <span class="icon-view"></span> View
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="content/media.php" style="display: inline;">
+                                                <input type="hidden" name="delete" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm"
+                                                        onclick="return confirm('Are you sure you want to delete this media file?')">
+                                                    <span class="icon-delete"></span> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    
+    <style>
+        /* Dashboard specific styles */
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        
+        .stat-actions {
+            display: flex;
+            margin-top: 1rem;
+        }
+        
+        /* Collapsible sections */
+        .collapsible {
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        
+        .collapsible-toggle {
+            display: none;
+        }
+        
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background-color: var(--gray-50);
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray-800);
+            position: relative;
+        }
+        
+        .collapsible-header::after {
+            content: "▼";
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+        
+        .collapsible-toggle:checked + .collapsible .collapsible-header::after {
+            transform: rotate(180deg);
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .collapsible-toggle:checked + .collapsible .collapsible-content {
+            max-height: 1000px;
+        }
+        
+        /* Content list */
+        .content-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .content-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .content-item:last-child {
+            border-bottom: none;
+        }
+        
+        .content-item-title {
+            font-weight: 500;
+            color: var(--gray-800);
+            margin-bottom: 0.25rem;
+        }
+        
+        .content-item-meta {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+        
+        .content-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .p-3 {
+            padding: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .content-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .content-item-actions {
+                margin-top: 1rem;
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
 </body>
 </html>

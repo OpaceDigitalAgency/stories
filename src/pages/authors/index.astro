@@ -8,7 +8,18 @@ import '../../styles/base.css';
 export const prerender = true;
 
 // Fetch authors from API
-const authors = await fetchAuthors();
+const allAuthors = await fetchAuthors();
+
+// Filter authors by type
+const retailAuthors = allAuthors.filter(author => author.author_type === 'retail');
+const parentAuthors = allAuthors.filter(author => author.author_type === 'parent');
+const childAuthors = allAuthors.filter(author => author.author_type === 'child');
+
+// Combine parent and child authors for the family section
+const familyAuthors = [...parentAuthors, ...childAuthors];
+
+// Featured authors
+const featuredAuthors = allAuthors.filter(author => author.featured);
 
 // Page metadata
 const title = 'Authors | Stories From The Web';
@@ -68,8 +79,8 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         </h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
-          {authors.filter(author => author.featured).slice(0, 4).map((author, index) => (
-            <div 
+          {featuredAuthors.slice(0, 4).map((author, index) => (
+            <div
               class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
               style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
             >
@@ -80,23 +91,57 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
       </div>
     </section>
     
-    <!-- All Authors -->
-    <section class="py-16">
-      <div class="container">
-        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
-          All Authors
-        </h2>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
-          {authors.map((author, index) => (
-            <div 
-              class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
-              style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
-            >
-              <CardAuthor author={author} className="rounded-xl shadow-md hover:shadow-lg transition" />
-            </div>
-          ))}
+    <!-- Recommended Book Authors Section -->
+    <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
+      <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
+      <div class="container mx-auto px-4 relative z-10">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Recommended Book Authors</h2>
         </div>
+        
+        {retailAuthors.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
+            {retailAuthors.map((author, index) => (
+              <div
+                class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+                style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+              >
+                <CardAuthor author={author} className="rounded-xl shadow-md hover:shadow-lg transition" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="text-center py-12">
+            <p class="text-text-secondary">No recommended book authors available at the moment.</p>
+          </div>
+        )}
+      </div>
+    </section>
+    
+    <!-- Latest Children & Family Writers Section -->
+    <section class="py-16 relative overflow-hidden">
+      <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
+      <div class="container mx-auto px-4 relative z-10">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Latest Children & Family Writers</h2>
+        </div>
+        
+        {familyAuthors.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
+            {familyAuthors.map((author, index) => (
+              <div
+                class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+                style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+              >
+                <CardAuthor author={author} className="rounded-xl shadow-md hover:shadow-lg transition" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="text-center py-12">
+            <p class="text-text-secondary">No family authors available at the moment.</p>
+          </div>
+        )}
       </div>
     </section>
     
@@ -198,6 +243,14 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
     
     .fancy-underline:hover::after {
       transform: scaleX(1);
+    }
+    
+    .blob-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      z-index: 0;
+      transition: transform 0.5s ease;
     }
   </style>
 </body>

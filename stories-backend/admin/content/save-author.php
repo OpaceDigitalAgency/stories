@@ -49,6 +49,7 @@ try {
     $email = trim($_POST['email'] ?? '');
     $bio = trim($_POST['bio'] ?? '');
     $avatar_url = trim($_POST['avatar_url'] ?? '');
+    $author_type = trim($_POST['author_type'] ?? 'retail');
 
     // Validate required fields
     if (empty($name)) {
@@ -73,6 +74,9 @@ try {
     
     // Check if avatar_url column exists
     $hasAvatarColumn = in_array('avatar_url', $columns);
+    
+    // Check if author_type column exists
+    $hasAuthorTypeColumn = in_array('author_type', $columns);
 
     // Generate slug from name if not provided and slug column exists
     if ($hasSlugColumn && empty($slug)) {
@@ -147,6 +151,11 @@ try {
             $params[] = $avatar_url;
         }
         
+        if ($hasAuthorTypeColumn) {
+            $setClause[] = "author_type = ?";
+            $params[] = $author_type;
+        }
+        
         $setClause[] = "updated_at = NOW()";
         $params[] = $id; // Add ID for WHERE clause
         
@@ -183,6 +192,12 @@ try {
             $columns[] = "avatar_url";
             $placeholders[] = "?";
             $params[] = $avatar_url;
+        }
+        
+        if ($hasAuthorTypeColumn) {
+            $columns[] = "author_type";
+            $placeholders[] = "?";
+            $params[] = $author_type;
         }
         
         $columns[] = "created_at";

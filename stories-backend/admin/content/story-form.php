@@ -80,7 +80,7 @@ try {
     }
 
     // Get authors for dropdown
-    $authors = $db->query("SELECT id, name FROM authors ORDER BY name")->fetchAll();
+    $authors = $db->query("SELECT id, name, author_type FROM authors ORDER BY name")->fetchAll();
 
     // Get tags for dropdown
     $tags = $db->query("SELECT id, name FROM tags ORDER BY name")->fetchAll();
@@ -194,8 +194,9 @@ try {
                             <option value="">Select Author</option>
                             <?php foreach ($authors as $author): ?>
                                 <option value="<?php echo $author['id']; ?>"
+                                        data-author-type="<?php echo htmlspecialchars($author['author_type'] ?? 'retail'); ?>"
                                         <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($author['name']); ?>
+                                    <?php echo htmlspecialchars($author['name']); ?> (<?php echo ucfirst($author['author_type'] ?? 'retail'); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -499,6 +500,48 @@ try {
     </style>
     
     <script>
+        // Function to update source type based on author selection
+        function updateSourceTypeFromAuthor() {
+            const authorSelect = document.getElementById('author_id');
+            const sourceTypeSelect = document.getElementById('source_type');
+            
+            if (!authorSelect || !sourceTypeSelect) {
+                console.error('Required elements not found');
+                return;
+            }
+            
+            if (authorSelect.selectedIndex > 0) {
+                const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                const authorType = selectedOption.getAttribute('data-author-type');
+                
+                // Map author type to source type
+                let sourceType;
+                switch (authorType) {
+                    case 'child':
+                        sourceType = 'child';
+                        break;
+                    case 'parent':
+                        sourceType = 'parent';
+                        break;
+                    case 'retail':
+                    case 'educator':
+                    default:
+                        sourceType = 'classic';
+                        break;
+                }
+                
+                // Set the source type and disable the dropdown
+                sourceTypeSelect.value = sourceType;
+                sourceTypeSelect.disabled = true;
+                
+                // Update the allow reviews visibility
+                handleSourceTypeChange();
+            } else {
+                // Enable the dropdown if no author is selected
+                sourceTypeSelect.disabled = false;
+            }
+        }
+
         // Function to handle source_type changes
         function handleSourceTypeChange() {
             const sourceTypeSelect = document.getElementById('source_type');
@@ -514,35 +557,118 @@ try {
             
             console.log('Source type changed to:', sourceType);
             
+            // Find all review/rating related fields
+            const reviewFields = [
+                document.getElementById('allow_reviews'),
+                document.getElementById('average_rating'),
+                document.getElementById('review_count')
+            ];
+            
+            // Find the containers for these fields
+            const reviewFieldContainers = reviewFields
+                .filter(field => field !== null)
+                .map(field => field.closest('.form-group'));
+            
             if (sourceType === 'child') {
-                // Children's stories never get reviews
-                allowReviewsCheckbox.checked = false;
-                allowReviewsCheckbox.disabled = true;
-                allowReviewsLabel.style.opacity = '0.5';
-                allowReviewsLabel.title = 'Children\'s stories never get reviews';
+                // Children's stories never get reviews - disable all review fields
+                reviewFields.forEach(field => {
+                    if (field) {
+                        if (field.type === 'checkbox') {
+                            field.checked = false;
+                        } else if (field.type === 'number') {
+                            field.value = '0';
+                        }
+                        field.disabled = true;
+                    }
+                });
+                
+                // Make all review field containers appear disabled
+                reviewFieldContainers.forEach(container => {
+                    if (container) {
+                        container.style.opacity = '0.5';
+                        container.title = 'Children\'s stories never get reviews';
+                    }
+                });
+                
+                // Also disable the average_rating slider if it exists
+                const ratingSlider = document.getElementById('average_rating_slider');
+                if (ratingSlider) {
+                    ratingSlider.disabled = true;
+                }
             } else if (sourceType === 'classic') {
                 // Classic works always get reviews
-                allowReviewsCheckbox.checked = true;
-                allowReviewsCheckbox.disabled = true;
-                allowReviewsLabel.style.opacity = '0.5';
-                allowReviewsLabel.title = 'Classic works always get reviews';
+                if (allowReviewsCheckbox) {
+                    allowReviewsCheckbox.checked = true;
+                    allowReviewsCheckbox.disabled = true;
+                }
+                if (allowReviewsLabel) {
+                    allowReviewsLabel.style.opacity = '0.5';
+                    allowReviewsLabel.title = 'Classic works always get reviews';
+                }
+                
+                // Enable other review fields
+                reviewFields.slice(1).forEach(field => {
+                    if (field) {
+                        field.disabled = false;
+                    }
+                });
+                
+                // Make other review field containers appear enabled
+                reviewFieldContainers.slice(1).forEach(container => {
+                    if (container) {
+                        container.style.opacity = '1';
+                        container.title = '';
+                    }
+                });
+                
+                // Enable the average_rating slider if it exists
+                const ratingSlider = document.getElementById('average_rating_slider');
+                if (ratingSlider) {
+                    ratingSlider.disabled = false;
+                }
             } else {
                 // Parent stories can choose
-                allowReviewsCheckbox.disabled = false;
-                allowReviewsLabel.style.opacity = '1';
-                allowReviewsLabel.title = '';
+                reviewFields.forEach(field => {
+                    if (field) {
+                        field.disabled = false;
+                    }
+                });
+                
+                // Make all review field containers appear enabled
+                reviewFieldContainers.forEach(container => {
+                    if (container) {
+                        container.style.opacity = '1';
+                        container.title = '';
+                    }
+                });
+                
+                // Enable the average_rating slider if it exists
+                const ratingSlider = document.getElementById('average_rating_slider');
+                if (ratingSlider) {
+                    ratingSlider.disabled = false;
+                }
             }
         }
         
         // Run when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             const sourceTypeSelect = document.getElementById('source_type');
+            const authorSelect = document.getElementById('author_id');
+            
             if (sourceTypeSelect) {
                 // Set initial state
                 handleSourceTypeChange();
                 
                 // Add event listener for changes
                 sourceTypeSelect.addEventListener('change', handleSourceTypeChange);
+            }
+            
+            if (authorSelect) {
+                // Set initial state
+                updateSourceTypeFromAuthor();
+                
+                // Add event listener for changes
+                authorSelect.addEventListener('change', updateSourceTypeFromAuthor);
             }
         });
     </script>

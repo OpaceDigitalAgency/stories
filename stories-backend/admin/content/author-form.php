@@ -169,6 +169,16 @@ if (isset($_SESSION['error'])) {
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label" for="author_type">Author Type</label>
+                        <select id="author_type" name="author_type" class="form-control">
+                            <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail (Book Author)</option>
+                            <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
+                            <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
+                            <option value="educator" <?php echo (isset($author['author_type']) && $author['author_type'] === 'educator') ? 'selected' : ''; ?>>Educator</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <button type="submit" class="btn btn-primary">Save Author</button>
                         <a href="authors.php" class="btn btn-secondary">Cancel</a>
                     </div>

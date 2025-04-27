@@ -163,7 +163,7 @@ try {
             <h1 class="page-title">Dashboard</h1>
             <p class="page-description">Welcome to the Stories Admin Dashboard. Manage all your content from here.</p>
             <div class="mt-3">
-                <a href="../docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
+                <a href="/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
                     <span class="icon-view"></span> View System Documentation
                 </a>
             </div>

@@ -23,6 +23,8 @@ let latestSelfPublishedStories = [];
 let aiEnhancedStories = [];
 let sponsoredStories = [];
 let featuredAuthors = [];
+let retailAuthors = [];
+let familyAuthors = [];
 
 // Track API errors
 let apiError = false;
@@ -116,7 +118,27 @@ try {
     sponsoredStories = allStories.filter(story => story.sponsored).slice(0, 6);
   }
   
-  featuredAuthors = await fetchAuthors();
+  // Fetch all authors
+  const allAuthors = await fetchAuthors();
+  
+  // Filter authors by type
+  const retailAuthors = allAuthors.filter(author => author.author_type === 'retail');
+  const parentAuthors = allAuthors.filter(author => author.author_type === 'parent');
+  const childAuthors = allAuthors.filter(author => author.author_type === 'child');
+  
+  // Combine parent and child authors for the family section
+  const familyAuthors = [...parentAuthors, ...childAuthors];
+  
+  // Featured authors
+  featuredAuthors = allAuthors.filter(author => author.featured);
+  
+  // If no featured authors, use some from each category
+  if (featuredAuthors.length === 0) {
+    featuredAuthors = [
+      ...retailAuthors.slice(0, 1),
+      ...familyAuthors.slice(0, 1)
+    ].filter(author => author); // Filter out undefined values
+  }
 } catch (e) {
   console.error('Error fetching data:', e);
   apiError = true;
@@ -262,20 +284,45 @@ try {
         />
       )}
       
-      <!-- Featured Authors Section -->
-      <section class="py-16 relative overflow-hidden">
+      <!-- Recommended Book Authors Section -->
+      <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
         <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
         <div class="container mx-auto px-4 relative z-10">
           <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Featured Authors</h2>
+            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Recommended Book Authors</h2>
             <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
               View All Authors →
             </a>
           </div>
           
-          {featuredAuthors.length > 0 ? (
+          {retailAuthors.length > 0 ? (
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredAuthors.map(author => (
+              {retailAuthors.slice(0, 3).map(author => (
+                <CardAuthor author={author} />
+              ))}
+            </div>
+          ) : (
+            <div class="text-center py-12">
+              <p class="text-text-secondary">No recommended book authors available at the moment.</p>
+            </div>
+          )}
+        </div>
+      </section>
+      
+      <!-- Latest Children & Family Writers Section -->
+      <section class="py-16 relative overflow-hidden">
+        <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
+        <div class="container mx-auto px-4 relative z-10">
+          <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Latest Children & Family Writers</h2>
+            <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+              View All Authors →
+            </a>
+          </div>
+          
+          {familyAuthors.length > 0 ? (
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {familyAuthors.slice(0, 3).map(author => (
                 <CardAuthor author={author} />
               ))}
               <!-- Become an Author Card -->
@@ -300,7 +347,7 @@ try {
             </div>
           ) : (
             <div class="text-center py-12">
-              <p class="text-text-secondary">No featured authors available at the moment.</p>
+              <p class="text-text-secondary">No family authors available at the moment.</p>
             </div>
           )}
         </div>

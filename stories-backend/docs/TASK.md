@@ -35,23 +35,34 @@
 - Created TASK.md to track tasks
 - Updated documentation with admin interface improvements
 
+### Review System
+- Fixed the RatingStars component to properly display ratings
+- Added interactive rating selection functionality
+- Added a slider control in the admin story form for the average_rating field
+- Created a submit-review.php endpoint to handle review submissions
+- Updated the reviews page to display stories with their ratings
+- Implemented the review submission form with proper validation and feedback
+
 ## Pending Tasks 🔄
 
 ### Testing
 - Test all changes to ensure they work as expected
 - Verify that each section shows the correct stories
 - Verify that form fields save properly in the admin panel
+- Test the review submission process end-to-end
 
 ### Improvements
 - Add more robust error handling for API calls
 - Improve UI feedback when saving forms in the admin panel
 - Consider adding pagination for story sections
 - Add more filtering options for stories
+- Add individual review storage and display (currently only aggregate ratings are stored)
 
 ## Backlog 📝
 
 ### Features
 - Implement user authentication for story submission
 - Add commenting functionality for stories
-- Implement rating system for stories
+- Expand the rating system to include more detailed review metrics
 - Add search functionality for stories and authors
+- Implement review moderation system

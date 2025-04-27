@@ -17,6 +17,7 @@ This document provides comprehensive documentation for the Stories from the Web 
   - [Directory Items](#directory-items)
   - [AI Tools](#ai-tools)
   - [Blog Posts](#blog-posts)
+  - [Reviews](#reviews)
 - [Authentication Endpoints](#authentication-endpoints)
 - [Admin Endpoints](#admin-endpoints)
 - [Pagination](#pagination)
@@ -559,6 +560,43 @@ GET /blog-posts/{id}
 
 Response: Single blog post object as shown above
 
+### Reviews
+
+#### Submit Review
+
+```
+POST /submit-review
+```
+
+Request Body:
+
+```json
+{
+  "story": "example-story-slug",
+  "rating": 4.5,
+  "review_title": "Great story for kids",
+  "review_content": "My children loved this story. The illustrations are beautiful and the message is positive.",
+  "age_group": "6-8 years"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Review submitted successfully",
+  "story": {
+    "id": 1,
+    "slug": "example-story-slug",
+    "average_rating": 4.3,
+    "review_count": 11
+  }
+}
+```
+
+This endpoint updates the story's average rating and review count. Currently, individual reviews are not stored in the database, only the aggregate data.
+
 ## Authentication Endpoints
 
 ### Login
@@ -614,7 +652,7 @@ Response:
 ### Get Current User
 
 ```
-GET /auth/me
+GET /auth/user
 ```
 
 Headers:
@@ -631,7 +669,8 @@ Response:
   "name": "Admin",
   "email": "admin@storiesfromtheweb.org",
   "role": "admin",
-  "active": 1
+  "created_at": "2025-04-26 08:17:50",
+  "updated_at": "2025-04-26 08:17:50"
 }
 ```
 
@@ -647,29 +686,18 @@ Headers:
 Authorization: Bearer <token>
 ```
 
-Request Body:
-
-```json
-{
-  "user_id": 1,
-  "force": false,
-  "threshold": 3600
-}
-```
-
 Response:
 
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshed": true,
   "expires_in": 86400
 }
 ```
 
 ## Admin Endpoints
 
-These endpoints require authentication with admin privileges.
+These endpoints require authentication with an admin role.
 
 ### Create Story
 
@@ -677,27 +705,7 @@ These endpoints require authentication with admin privileges.
 POST /admin/stories
 ```
 
-Headers:
-
-```
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
-Request Body:
-
-```json
-{
-  "title": "New Story",
-  "slug": "new-story",
-  "content": "Story content...",
-  "excerpt": "Story excerpt...",
-  "featured": false,
-  "is_published": true,
-  "authors": [1, 2],
-  "tags": [1, 3]
-}
-```
+Request Body: Form data with story fields
 
 Response:
 
@@ -708,10 +716,12 @@ Response:
   "slug": "new-story",
   "content": "Story content...",
   "excerpt": "Story excerpt...",
-  "featured": 0,
   "is_published": 1,
-  "created_at": "2025-04-26 13:45:22",
-  "updated_at": "2025-04-26 13:45:22"
+  "featured": 0,
+  "average_rating": "0.0",
+  "cover_url": "https://example.com/cover3.jpg",
+  "created_at": "2025-04-26 09:17:50",
+  "updated_at": "2025-04-26 09:17:50"
 }
 ```
 
@@ -721,37 +731,23 @@ Response:
 PUT /admin/stories/{id}
 ```
 
-Headers:
-
-```
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
-Request Body:
-
-```json
-{
-  "title": "Updated Story",
-  "content": "Updated content...",
-  "excerpt": "Updated excerpt...",
-  "featured": true
-}
-```
+Request Body: Form data with story fields
 
 Response:
 
 ```json
 {
-  "id": 3,
+  "id": 1,
   "title": "Updated Story",
-  "slug": "new-story",
+  "slug": "updated-story",
   "content": "Updated content...",
   "excerpt": "Updated excerpt...",
-  "featured": 1,
   "is_published": 1,
-  "created_at": "2025-04-26 13:45:22",
-  "updated_at": "2025-04-26 13:50:15"
+  "featured": 1,
+  "average_rating": "4.5",
+  "cover_url": "https://example.com/cover1.jpg",
+  "created_at": "2025-04-26 09:17:50",
+  "updated_at": "2025-04-26 09:17:50"
 }
 ```
 
@@ -759,12 +755,6 @@ Response:
 
 ```
 DELETE /admin/stories/{id}
-```
-
-Headers:
-
-```
-Authorization: Bearer <token>
 ```
 
 Response:
@@ -781,19 +771,7 @@ Response:
 POST /admin/media
 ```
 
-Headers:
-
-```
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
-
-Request Body:
-
-```
-file: [binary file data]
-alt_text: "Image description"
-```
+Request Body: Form data with file
 
 Response:
 
@@ -801,22 +779,21 @@ Response:
 {
   "id": 1,
   "filename": "image.jpg",
-  "file_path": "/uploads/2025/04/image.jpg",
+  "file_path": "/uploads/image.jpg",
   "file_type": "image/jpeg",
   "file_size": 12345,
   "alt_text": "Image description",
-  "url": "https://api.storiesfromtheweb.org/uploads/2025/04/image.jpg",
-  "created_at": "2025-04-26 14:02:33",
-  "updated_at": "2025-04-26 14:02:33"
+  "created_at": "2025-04-26 09:17:50",
+  "updated_at": "2025-04-26 09:17:50"
 }
 ```
 
 ## Pagination
 
-Most list endpoints support pagination using the following query parameters:
+Most endpoints that return lists support pagination using the following query parameters:
 
 - `page`: Page number (default: 1)
-- `pageSize`: Items per page (default: 25, max: 100)
+- `pageSize`: Items per page (default: 25)
 
 Example:
 
@@ -826,32 +803,21 @@ GET /stories?page=2&pageSize=10
 
 ## Sorting
 
-Most list endpoints support sorting using the `sort` query parameter:
+Most endpoints that return lists support sorting using the `sort` query parameter:
 
 ```
 GET /stories?sort=title:asc
 ```
 
-The format is `field:direction` where direction is either `asc` or `desc`.
+Multiple sort fields can be specified by separating them with commas:
 
-Common sortable fields:
-
-- `id`
-- `title` or `name`
-- `created_at`
-- `updated_at`
-- `publishedAt`
+```
+GET /stories?sort=featured:desc,title:asc
+```
 
 ## Filtering
 
-Endpoints support various filters specific to the content type. Common filters include:
-
-- `featured`: Filter by featured status (boolean)
-- `author` or `author_id`: Filter by author
-- `category` or `category_id`: Filter by category
-- `tag` or `tag_id`: Filter by tag
-
-Example:
+Most endpoints that return lists support filtering using query parameters:
 
 ```
 GET /stories?featured=true&author=1
@@ -864,22 +830,16 @@ The API implements rate limiting to prevent abuse:
 - 60 requests per minute for unauthenticated requests
 - 120 requests per minute for authenticated requests
 
-Rate limit headers are included in responses:
+Rate limit headers are included in all responses:
 
-```
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 58
-X-RateLimit-Reset: 1619442000
-```
+- `X-RateLimit-Limit`: Maximum number of requests allowed per minute
+- `X-RateLimit-Remaining`: Number of requests remaining in the current minute
+- `X-RateLimit-Reset`: Time in seconds until the rate limit resets
 
 ## CORS
 
 The API supports Cross-Origin Resource Sharing (CORS) with the following headers:
 
-```
-Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization
-```
-
-This allows the API to be accessed from any origin, including the frontend hosted on Netlify.
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS`
+- `Access-Control-Allow-Headers: Content-Type, Authorization`

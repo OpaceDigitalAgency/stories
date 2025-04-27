@@ -23,6 +23,8 @@ export interface Story {
   reviewCount?: number;
   tags?: string[];
   author?: Author;
+  source_type?: 'child' | 'parent' | 'classic';
+  allow_reviews?: boolean;
 }
 
 export interface Author {
@@ -160,6 +162,8 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     needsModeration: Boolean(item.needs_moderation),
     rating: Number(item.average_rating) || 0,
     reviewCount: Number(item.review_count) || 0,
+    source_type: item.source_type || 'child',
+    allow_reviews: Boolean(item.allow_reviews),
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
@@ -246,6 +250,8 @@ export async function fetchStory(slug: string): Promise<Story> {
     needsModeration: Boolean(item.needs_moderation),
     rating: Number(item.average_rating) || 0,
     reviewCount: Number(item.review_count) || 0,
+    source_type: item.source_type || 'child',
+    allow_reviews: Boolean(item.allow_reviews),
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {

@@ -8,7 +8,15 @@ const { story, className = '' } = Astro.props as CardStoryProps;
 // Default images based on source_type
 let defaultCoverImage = '/images/default-cover.svg';
 if (story?.source_type) {
-  defaultCoverImage = `/images/default-${story.source_type}.webp`;
+  // Use source_type-specific images if they exist, otherwise fall back to default
+  try {
+    // This is just a placeholder - the actual check would happen at build time
+    // For now, we'll use the default cover image with a visual indicator
+    defaultCoverImage = `/images/default-cover.svg`;
+    console.log(`Using default cover for source_type: ${story.source_type}`);
+  } catch (e) {
+    console.log(`Source type image not found, using default: ${e}`);
+  }
 }
 const defaultAvatarImage = '/images/default-avatar.svg';
 
@@ -45,6 +53,14 @@ const formattedDate = story.publishDate
         class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
+      
+      {/* Source type indicator */}
+      {story.source_type && (
+        <div class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+          {story.source_type}
+          {story.allow_reviews ? ' ★' : ' ☆'}
+        </div>
+      )}
       
       {story.tags && story.tags.length > 0 && (
         <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">

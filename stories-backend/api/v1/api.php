@@ -198,6 +198,9 @@ try {
                     'review_count'    => (int)$row['review_count'],
                     'source_type'     => $row['source_type'],
                     'allow_reviews'   => (bool)$row['allow_reviews'],
+                    // Debug info
+                    'debug_source_type' => 'Value: ' . $row['source_type'] . ' | Type: ' . gettype($row['source_type']),
+                    'debug_allow_reviews' => 'Value: ' . $row['allow_reviews'] . ' | Type: ' . gettype($row['allow_reviews']),
                     'author'          => $author ? [
                         'id'          => $author['id'],
                         'name'        => $author['name'],

@@ -35,6 +35,7 @@ export interface CardAuthorProps {
     avatar?: string;
     bio?: string;
     slug: string;
+    author_type?: 'retail' | 'parent' | 'child' | 'educator';
     storyCount?: number;
     socialLinks?: {
       twitter?: string;

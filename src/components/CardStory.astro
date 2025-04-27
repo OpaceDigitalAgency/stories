@@ -35,7 +35,7 @@ const formattedDate = story.publishDate
   : null;
 ---
 
-<article class={`card-story bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform-style-3d hover:translate-z-4 ${className}`}>
+<article class={`card-story bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform-style-3d hover:translate-z-4 flex flex-col h-full ${className}`}>
   <a href={`/stories/${story.slug}`} class="block relative">
     <div class="relative h-48 overflow-hidden">
       <img
@@ -68,7 +68,7 @@ const formattedDate = story.publishDate
     </div>
   </a>
   
-  <div class="p-5">
+  <div class="p-5 flex flex-col flex-grow">
     {/* Title */}
     <h3 class="text-lg font-bold text-text-primary line-clamp-2 hover:text-primary transition-colors duration-300 mb-1">
       <a href={`/stories/${story.slug}`}>
@@ -90,11 +90,13 @@ const formattedDate = story.publishDate
     )}
     
     {/* Excerpt */}
-    {story.excerpt && (
-      <p class="text-sm text-text-secondary mb-4 line-clamp-3">
-        {story.excerpt}
-      </p>
-    )}
+    <div class="min-h-[4.5rem] mb-4">
+      {story.excerpt && (
+        <p class="text-sm text-text-secondary line-clamp-3">
+          {story.excerpt}
+        </p>
+      )}
+    </div>
     
     {/* Author and date */}
     <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">

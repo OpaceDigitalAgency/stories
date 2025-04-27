@@ -203,6 +203,22 @@ erDiagram
     AI_TOOL_CATEGORIES ||--o{ AI_TOOLS : has
     DIRECTORY_CATEGORIES ||--o{ DIRECTORY_ITEMS : has
 </div>
+
+    <h3>Author Types and Story Source Types</h3>
+    <p>The system uses author types to categorize content creators:</p>
+    <ul>
+      <li><strong>retail</strong>: Professional book authors</li>
+      <li><strong>parent</strong>: Parents who write stories</li>
+      <li><strong>child</strong>: Children who write stories</li>
+      <li><strong>educator</strong>: Teachers and educational content creators</li>
+    </ul>
+    <p>Author types directly influence story source types and review capabilities:</p>
+    <ul>
+      <li>Child authors → child source type (reviews disabled)</li>
+      <li>Parent authors → parent source type (reviews configurable)</li>
+      <li>Retail/educator authors → classic source type (reviews always enabled)</li>
+    </ul>
+
     <pre><code>-- Full DB Schema (DDL)
 CREATE TABLE `ai_tools` (
   `id` int NOT NULL,

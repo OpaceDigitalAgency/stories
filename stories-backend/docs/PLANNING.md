@@ -4,16 +4,38 @@
 - Create a platform for sharing and discovering children's stories
 - Allow filtering of stories by different categories (AI-Enhanced, Self-Published, Sponsored)
 - Implement proper admin functionality for managing stories
+- Establish a clean, maintainable codebase with comprehensive documentation
 
 ## Architecture Decisions
-- Frontend: Astro.js with server-side rendering
-- Backend: PHP with MySQL database
-- API: RESTful API for communication between frontend and backend
+
+### Current Architecture
+- **Frontend**: Astro.js static site with TypeScript and Tailwind CSS, deployed on Netlify CDN
+- **Backend**: Custom PHP RESTful API with MySQL database, hosted on cPanel shared hosting
+- **Admin Interface**: JavaScript-free PHP admin panel for content management
+
+### Architecture Benefits
+- **Separation of Concerns**: Frontend and backend can be developed independently
+- **Scalability**: Each component can be scaled separately
+- **Security**: Admin interface is isolated from public frontend
+- **Performance**: Static frontend with dynamic data loading
+
+### Architecture Diagram
+```mermaid
+graph TD
+    A[Users] -->|View Content| F[Astro Frontend]
+    F -->|API Requests| B[PHP API]
+    B -->|Reads/Writes| C[MySQL DB]
+    G[Content Creators] -->|Manage Content| H[Admin Panel]
+    H -->|CRUD| B
+    B -->|Direct Queries| C
+```
 
 ## Constraints
 - Ensure proper filtering of stories by category
 - Fix form submission issues in the admin panel
 - Ensure all boolean fields are properly saved
+- Maintain JavaScript-free admin interface for reliability
+- Standardize API response formats
 
 ## Known Issues and Solutions
 
@@ -57,3 +79,64 @@
 - Created a submit-review.php endpoint to handle review submissions
 - Updated the reviews page to display stories with their ratings and allow users to submit reviews
 - Ensured the review form properly updates the story's average rating and review count
+
+### Issue 7: Redundant PHP scripts and fragmented documentation
+**Problem**: The codebase contains numerous redundant PHP scripts and fragmented documentation.
+**Solution**:
+- Created a comprehensive cleanup plan (see [Revised Cleanup Plan](revised-cleanup-plan.md))
+- Established a safe archiving approach for redundant files
+- Consolidated documentation into a clear, organized structure
+- Created visual architecture diagrams to aid understanding
+
+## Current Cleanup Initiative
+
+We're currently undertaking a comprehensive cleanup and documentation initiative to:
+
+1. **Clean up redundant PHP scripts**
+   - Archive obsolete fix scripts that have been incorporated into the main codebase
+   - Consolidate diagnostic scripts with overlapping functionality
+   - Remove backup files and temporary scripts
+
+2. **Consolidate documentation**
+   - Create a central documentation index
+   - Consolidate deployment guides into a single comprehensive guide
+   - Archive outdated documentation for reference
+   - Create visual architecture diagrams
+
+3. **Standardize API responses**
+   - Ensure all endpoints return a consistent flat array format
+   - Standardize error handling
+   - Implement consistent pagination, sorting, and filtering
+
+4. **Improve admin interface reliability**
+   - Simplify the authentication system
+   - Enhance form submission
+   - Improve navigation and dashboard
+   - Enhance media management
+
+## Implementation Plan
+
+The implementation will follow a phased approach:
+
+1. **Phase 1: Preparation** (1 day)
+   - Create backups
+   - Set up archive directories
+   - Create archive branches in Git
+
+2. **Phase 2: PHP Scripts Cleanup** (2-3 days)
+   - Archive obsolete scripts
+   - Create consolidated scripts
+   - Update references
+   - Create script index
+
+3. **Phase 3: Documentation Consolidation** (2-3 days)
+   - Archive redundant documentation
+   - Update core documentation
+   - Create documentation index
+
+4. **Phase 4: Testing and Verification** (1-2 days)
+   - Test system functionality
+   - Verify documentation
+   - Commit and tag
+
+For more details, see the [Revised Cleanup Plan](revised-cleanup-plan.md) and [Implementation Plan](implementation-plan.md).

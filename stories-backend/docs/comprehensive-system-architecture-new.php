@@ -351,7 +351,7 @@ output('
         <h2>Test API Format</h2>
 ', true);
 
-output("<strong>API Endpoints</strong>");
+output("<strong>API Endpoints</strong>", true);
 
 // Test endpoints
 $endpoints = [
@@ -440,7 +440,7 @@ foreach ($endpoints as $name => $path) {
 output("</table>", true);
 
 // Check for inconsistencies
-output("<strong>Analysis</strong>");
+output("<strong>Analysis</strong>", true);
 
 $formats = array_unique(array_column($results, 'format'));
 if (count($formats) > 1) {

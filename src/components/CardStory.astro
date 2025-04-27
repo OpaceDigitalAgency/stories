@@ -91,7 +91,13 @@ const formattedDate = story.publishDate
             rating={story.rating}
             size="sm"
             allow_reviews={story.allow_reviews === true}
+            source_type={story.source_type}
           />
+          {/* Debug info */}
+          <span class="hidden">
+            allow_reviews: {String(story.allow_reviews)},
+            source_type: {story.source_type}
+          </span>
         </div>
       )}
     </div>

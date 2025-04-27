@@ -58,14 +58,18 @@ try {
         $source_type = 'child';
     }
     
-    // Apply business rules
+    // Apply business rules - ENFORCE THESE RULES SERVER-SIDE
     if ($source_type === 'child') {
-        // Children's stories never get reviews
+        // Children's stories NEVER get reviews
         $allow_reviews = 0;
+        error_log("Enforcing child story rule: allow_reviews set to 0");
     } else if ($source_type === 'classic') {
-        // Classic works always get reviews
+        // Classic works ALWAYS get reviews
         $allow_reviews = 1;
+        error_log("Enforcing classic story rule: allow_reviews set to 1");
     }
+    
+    error_log("Final values - source_type: $source_type, allow_reviews: $allow_reviews");
 
     // Validate required fields
     if (empty($title) || empty($author_id) || empty($content)) {

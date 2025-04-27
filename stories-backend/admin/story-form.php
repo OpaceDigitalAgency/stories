@@ -140,26 +140,34 @@ try {
             </div>
 
             <script>
-                function updateAllowReviewsVisibility() {
-                    const sourceType = document.getElementById('source_type').value;
-                    const allowReviewsContainer = document.getElementById('allow-reviews-container');
-                    const allowReviewsCheckbox = document.getElementById('allow_reviews');
-                    
-                    if (sourceType === 'parent') {
-                        allowReviewsContainer.style.display = 'block';
-                    } else {
-                        allowReviewsContainer.style.display = 'none';
-                        // Set the appropriate value based on source type
-                        if (sourceType === 'child') {
-                            allowReviewsCheckbox.checked = false;
-                        } else if (sourceType === 'classic') {
-                            allowReviewsCheckbox.checked = true;
+                // Immediately execute this script
+                (function() {
+                    function updateAllowReviewsVisibility() {
+                        const sourceType = document.getElementById('source_type').value;
+                        const allowReviewsContainer = document.getElementById('allow-reviews-container');
+                        const allowReviewsCheckbox = document.getElementById('allow_reviews');
+                        
+                        console.log("Source type changed to:", sourceType);
+                        
+                        if (sourceType === 'parent') {
+                            allowReviewsContainer.style.display = 'block';
+                        } else {
+                            allowReviewsContainer.style.display = 'none';
+                            // Set the appropriate value based on source type
+                            if (sourceType === 'child') {
+                                allowReviewsCheckbox.checked = false;
+                            } else if (sourceType === 'classic') {
+                                allowReviewsCheckbox.checked = true;
+                            }
                         }
                     }
-                }
-                
-                // Initialize on page load
-                document.addEventListener('DOMContentLoaded', updateAllowReviewsVisibility);
+                    
+                    // Run immediately
+                    updateAllowReviewsVisibility();
+                    
+                    // Also run when the dropdown changes
+                    document.getElementById('source_type').addEventListener('change', updateAllowReviewsVisibility);
+                })();
             </script>
 
             <div class="form-group">

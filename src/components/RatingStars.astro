@@ -34,9 +34,12 @@ const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
 
 const starClass = `${sizeClasses[size]} ${interactive ? 'cursor-pointer transform-style-3d transition-all duration-500 hover:scale-125 hover:translate-z-4 hover:shadow-glow hover:rotate-12' : ''}`;
 const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`;
+
+// Debug logging
+console.log(`RatingStars - allow_reviews: ${allow_reviews}, source_type: ${Astro.props.source_type}, rating: ${rating}`);
 ---
 
-{allow_reviews && (
+{allow_reviews ? (
   <div class={`inline-flex items-center gap-1 ${className}`} aria-label={`Rating: ${rating} out of ${maxRating} stars`} id={componentId}>
     {/* Full stars */}
     {Array.from({ length: fullStars }).map((_, i) => (
@@ -92,7 +95,7 @@ const componentId = `rating-stars-${Math.random().toString(36).substring(2, 9)}`
       </span>
     ) : null}
   </div>
-)}
+) : null}
 
 {interactive && allow_reviews && (
   <script define:vars={{ componentId, maxRating }}>

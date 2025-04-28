@@ -194,19 +194,28 @@ function extractAuthorInfo($title) {
         'location' => null
     ];
     
-    // More comprehensive pattern to catch various formats
-    if (preg_match('/by\s+([^,]+?)(?:,?\s+aged\s+(\d+))?(?:,?\s+from\s+([^,.]+))?/i', $title, $matches)) {
+    // Extract just the author name without the full title
+    if (preg_match('/by\s+([^,]+?)(?:,?\s+aged|\s+from|$)/i', $title, $nameMatch)) {
+        $info['name'] = trim($nameMatch[1]);
+        
+        // Now extract age
+        if (preg_match('/aged\s+(\d+)/i', $title, $ageMatch)) {
+            $info['age'] = trim($ageMatch[1]);
+        }
+        
+        // Now extract location
+        if (preg_match('/from\s+([^,.]+)/i', $title, $locMatch)) {
+            $info['location'] = trim($locMatch[1]);
+        }
+    } else if (preg_match('/([^,]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,.]+))?/i', $title, $matches)) {
+        // Secondary pattern for "Name, aged X, from Location" format
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
     }
     
-    // Secondary pattern for "Name, aged X, from Location" format
-    if (!$info['age'] && preg_match('/([^,]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,.]+))?/i', $title, $matches)) {
-        $info['name'] = trim($matches[1]);
-        $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
-        $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
-    }
+    // Debug output
+    echo "<p class='info'>Extracted author: {$info['name']}, age: {$info['age']}, location: {$info['location']}</p>";
     
     return $info;
 }
@@ -544,6 +553,11 @@ foreach ($storyDirs as $storyDir) {
         
         // Insert new story
         try {
+            // Debug output
+            echo "<p class='info'>Creating new story with title: $title</p>";
+            echo "<p class='info'>Slug: $slug</p>";
+            echo "<p class='info'>Cover URL: $coverUrl</p>";
+            
             $stmt = $db->prepare("
                 INSERT INTO stories (
                     title, slug, content, excerpt, cover_url,
@@ -552,7 +566,7 @@ foreach ($storyDirs as $storyDir) {
                 ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?)
             ");
         
-        $stmt->execute([
+        $result = $stmt->execute([
             $title,
             $slug,
             $html,
@@ -561,6 +575,10 @@ foreach ($storyDirs as $storyDir) {
             $readingTime,
             $ageGroup
         ]);
+        
+        if (!$result) {
+            echo "<p class='error'>Failed to execute INSERT statement: " . print_r($stmt->errorInfo(), true) . "</p>";
+        }
         
         $storyId = $db->lastInsertId();
         echo "<p class='success'>Created story with ID: $storyId</p>";

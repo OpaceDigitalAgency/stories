@@ -1260,14 +1260,35 @@ function processStory($db, $storyDir) {
             
             // Make sure author is associated
             if ($authorId) {
-                $checkStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
-                $checkStmt->execute([$existingStory['id'], $authorId]);
-                if (!$checkStmt->fetch()) {
-                    $linkStmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
-                    $linkStmt->execute([$existingStory['id'], $authorId]);
-                    echo "<p class='success'>Associated story with author ID: $authorId</p>";
+                try {
+                    $checkStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
+                    $checkStmt->execute([$existingStory['id'], $authorId]);
+                    if (!$checkStmt->fetch()) {
+                        $linkStmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                        $linkStmt->execute([$existingStory['id'], $authorId]);
+                        echo "<p class='success'><strong>STORY-AUTHOR LINK CREATED:</strong> Story ID {$existingStory['id']} linked to Author ID $authorId</p>";
+                        flushOutput();
+                        
+                        // Verify the association was created
+                        $verifyStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
+                        $verifyStmt->execute([$existingStory['id'], $authorId]);
+                        if ($verifyStmt->fetch()) {
+                            echo "<p class='success'><strong>STORY-AUTHOR LINK VERIFIED:</strong> Association exists in database</p>";
+                        } else {
+                            echo "<p class='warning'><strong>STORY-AUTHOR LINK WARNING:</strong> Association not found after creation</p>";
+                        }
+                        flushOutput();
+                    } else {
+                        echo "<p class='info'><strong>STORY-AUTHOR LINK EXISTS:</strong> Story already associated with author ID $authorId</p>";
+                        flushOutput();
+                    }
+                } catch (Exception $e) {
+                    echo "<p class='error'><strong>STORY-AUTHOR LINK ERROR:</strong> " . $e->getMessage() . "</p>";
                     flushOutput();
                 }
+            } else {
+                echo "<p class='warning'><strong>STORY-AUTHOR LINK SKIPPED:</strong> No author ID available</p>";
+                flushOutput();
             }
             
             // Process tags
@@ -1300,9 +1321,27 @@ function processStory($db, $storyDir) {
             
             // Associate with author
             if ($authorId) {
-                $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
-                $stmt->execute([$storyId, $authorId]);
-                echo "<p class='success'>Associated with author</p>";
+                try {
+                    $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                    $stmt->execute([$storyId, $authorId]);
+                    echo "<p class='success'><strong>STORY-AUTHOR LINK CREATED:</strong> Story ID $storyId linked to Author ID $authorId</p>";
+                    flushOutput();
+                    
+                    // Verify the association was created
+                    $verifyStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
+                    $verifyStmt->execute([$storyId, $authorId]);
+                    if ($verifyStmt->fetch()) {
+                        echo "<p class='success'><strong>STORY-AUTHOR LINK VERIFIED:</strong> Association exists in database</p>";
+                    } else {
+                        echo "<p class='warning'><strong>STORY-AUTHOR LINK WARNING:</strong> Association not found after creation</p>";
+                    }
+                    flushOutput();
+                } catch (Exception $e) {
+                    echo "<p class='error'><strong>STORY-AUTHOR LINK ERROR:</strong> " . $e->getMessage() . "</p>";
+                    flushOutput();
+                }
+            } else {
+                echo "<p class='warning'><strong>STORY-AUTHOR LINK SKIPPED:</strong> No author ID available</p>";
                 flushOutput();
             }
             

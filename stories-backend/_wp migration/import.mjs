@@ -362,8 +362,7 @@ async function importStory(file) {
       featured: data.sticky ? 1 : 0,
       source_type: 'child',
       allow_reviews: 0,
-      cover_url: coverUrl,
-      tags: tagIds
+      cover_url: coverUrl
     };
     
     const storyRes = await fetch(`${API}/stories`, {

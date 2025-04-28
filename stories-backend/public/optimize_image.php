@@ -73,35 +73,7 @@ function optimizeSingleImage($imagePath, $destinationDir = null) {
     }
 }
 
-// Function to update a media record with optimized URLs
-function updateMediaRecord($db, $mediaId, $variants) {
-    try {
-        $stmt = $db->prepare("UPDATE media SET 
-            file_path = :file_path,
-            thumbnail_url = :thumbnail_url,
-            small_url = :small_url,
-            medium_url = :medium_url,
-            large_url = :large_url,
-            file_size = :file_size
-            WHERE id = :id");
-        
-        $stmt->execute([
-            ':file_path' => $variants['medium']['url'] ?? $variants['original']['url'],
-            ':thumbnail_url' => $variants['thumbnail']['url'] ?? null,
-            ':small_url' => $variants['small']['url'] ?? null,
-            ':medium_url' => $variants['medium']['url'] ?? null,
-            ':large_url' => $variants['large']['url'] ?? null,
-            ':file_size' => $variants['medium']['size'] ?? $variants['original']['size'],
-            ':id' => $mediaId
-        ]);
-        
-        echo "<p style='color:green'>Updated media record ID: $mediaId</p>";
-        return true;
-    } catch (PDOException $e) {
-        echo "<p style='color:red'>Failed to update media record: " . $e->getMessage() . "</p>";
-        return false;
-    }
-}
+// Use the updateMediaRecord function from the image_optimizer.php library
 
 // Function to optimize all media files
 function optimizeAllMedia($db) {

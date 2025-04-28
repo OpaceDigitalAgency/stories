@@ -297,6 +297,9 @@ $user = SimpleAuth::check();
                 <a href="https://api.storiesfromtheweb.org/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
                     <span class="icon-view"></span> View System Documentation
                 </a>
+                <a href="https://api.storiesfromtheweb.org/public/optimize_image.php" target="_blank" class="btn btn-success">
+                    <span class="icon-image"></span> Image Optimization Tool
+                </a>
             </div>
         </div>
 

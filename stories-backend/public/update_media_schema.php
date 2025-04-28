@@ -77,11 +77,11 @@ try {
     echo "<p style='color:blue'>Found $count media records that need URL updates</p>";
     
     if ($count > 0) {
-        echo "<p style='color:blue'>To update these records, please run the fix_media_sizes.php script</p>";
+        echo "<p style='color:blue'>To update these records, please run the optimize_image.php script</p>";
     }
 } catch (PDOException $e) {
     echo "<p style='color:red'>Error checking records: " . $e->getMessage() . "</p>";
 }
 
 echo "<p style='color:green'>Schema update process completed</p>";
-echo "<p><a href='fix_media_sizes.php'>Run the image optimization script</a></p>";
+echo "<p><a href='optimize_image.php'>Run the image optimization script</a></p>";

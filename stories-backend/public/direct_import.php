@@ -1437,7 +1437,7 @@ header('Content-Type: text/html; charset=utf-8');
         <form method="post">
             <button type="submit" name="action" value="import" class="button">Import All Content</button>
         </form>
-        <a href="fix_media_sizes.php" class="button" style="background: #e04a4a;">Optimize All Media Files</a>
+        <a href="optimize_image.php" class="button" style="background: #e04a4a;">Optimize All Media Files</a>
     </div>
     
     <div class="log">

@@ -207,16 +207,20 @@ async function createAuthorFromStory(file) {
     
     // Extract author info from title using regex
     // Pattern: "Story Title by Author Name aged X from Location"
-    const authorMatch = title.match(/by\s+([^,]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,]+))?/i);
+    // Also handle variations like "by Author Name, aged X, from Location"
+    const authorMatch = title.match(/by\s+([^,]+?)(?:,?\s+aged\s+(\d+))?(?:,?\s+from\s+([^,]+))?/i);
     
     if (!authorMatch) {
       console.log(`  - No author info found in title: ${title}`);
+      console.log(`  - Full title: "${title}"`);
       return null;
     }
     
     const authorName = authorMatch[1]?.trim();
     const authorAge = authorMatch[2] || '';
     const authorLocation = authorMatch[3] || '';
+    
+    console.log(`  - Extracted author info: Name="${authorName}", Age=${authorAge || 'unknown'}, Location="${authorLocation || 'unknown'}"`);
     
     if (!authorName) {
       console.log(`  - Could not extract author name from title: ${title}`);
@@ -276,17 +280,44 @@ async function getAuthorIdByName(name) {
   if (!name) return null;
   
   try {
+    // First try exact slug match
     const slug = name.toLowerCase().replace(/\s+/g, '-');
+    console.log(`  - Looking up author by slug: "${slug}"`);
+    
     const res = await fetch(`${API}/authors?slug=${slug}`, {
       headers: { 'Authorization': `Bearer ${TOKEN}` }
     });
     
     if (!res.ok) {
-      throw new Error(`Failed to fetch author: ${res.status} ${res.statusText}`);
+      throw new Error(`Failed to fetch author by slug: ${res.status} ${res.statusText}`);
     }
     
     const authors = await res.json();
-    return authors && authors.length > 0 ? authors[0].id : null;
+    
+    if (authors && authors.length > 0) {
+      console.log(`  - Found author by slug: ${authors[0].name} (ID: ${authors[0].id})`);
+      return authors[0].id;
+    }
+    
+    // If slug match fails, try name match
+    console.log(`  - No author found by slug, trying name match: "${name}"`);
+    const nameRes = await fetch(`${API}/authors?name=${encodeURIComponent(name)}`, {
+      headers: { 'Authorization': `Bearer ${TOKEN}` }
+    });
+    
+    if (!nameRes.ok) {
+      throw new Error(`Failed to fetch author by name: ${nameRes.status} ${nameRes.statusText}`);
+    }
+    
+    const nameAuthors = await nameRes.json();
+    
+    if (nameAuthors && nameAuthors.length > 0) {
+      console.log(`  - Found author by name: ${nameAuthors[0].name} (ID: ${nameAuthors[0].id})`);
+      return nameAuthors[0].id;
+    }
+    
+    console.log(`  - No author found for "${name}"`);
+    return null;
   } catch (err) {
     console.error(`  - Error getting author ID for ${name}: ${err.message}`);
     return null;
@@ -345,18 +376,35 @@ async function importStory(file) {
     let authorId = null;
     let authorAge = null;
     let authorLocation = null;
-    const authorMatch = data.title.match(/by\s+([^,]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,]+))?/i);
+    const authorMatch = data.title.match(/by\s+([^,]+?)(?:,?\s+aged\s+(\d+))?(?:,?\s+from\s+([^,]+))?/i);
     
     if (authorMatch && authorMatch[1]) {
-      authorId = await getAuthorIdByName(authorMatch[1].trim());
+      const authorName = authorMatch[1].trim();
       authorAge = authorMatch[2] || '';
       authorLocation = authorMatch[3] || '';
       
-      if (authorId) {
-        console.log(`  - Found author ID: ${authorId}`);
+      console.log(`  - Extracted author from title: Name="${authorName}", Age=${authorAge || 'unknown'}, Location="${authorLocation || 'unknown'}"`);
+      
+      // First try to find existing author
+      authorId = await getAuthorIdByName(authorName);
+      
+      // If author not found, create a new one
+      if (!authorId) {
+        console.log(`  - Author not found, creating new author: ${authorName}`);
+        
+        // Create author using the same function as in the first pass
+        authorId = await createAuthorFromStory(file);
+        
+        if (authorId) {
+          console.log(`  - Created new author with ID: ${authorId}`);
+        } else {
+          console.log(`  - Failed to create author for: ${authorName}`);
+        }
       } else {
-        console.log(`  - Could not find author ID for: ${authorMatch[1].trim()}`);
+        console.log(`  - Found existing author ID: ${authorId}`);
       }
+    } else {
+      console.log(`  - Could not extract author info from title: "${data.title}"`);
     }
     
     // Calculate estimated reading time (average reading speed: 200 words per minute)
@@ -431,23 +479,50 @@ async function importStory(file) {
     
     // If we have an author ID and story was created successfully, associate them
     if (authorId && storyResult && storyResult.id) {
-      const associateRes = await fetch(`${API}/story-authors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${TOKEN}`
-        },
-        body: JSON.stringify({
-          story_id: storyResult.id,
-          author_id: authorId
-        })
-      });
-      
-      if (!associateRes.ok) {
-        throw new Error(`Failed to associate story with author: ${associateRes.status} ${associateRes.statusText}`);
+      try {
+        console.log(`  - Attempting to associate story ID ${storyResult.id} with author ID ${authorId}`);
+        
+        const associateRes = await fetch(`${API}/story-authors`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${TOKEN}`
+          },
+          body: JSON.stringify({
+            story_id: storyResult.id,
+            author_id: authorId
+          })
+        });
+        
+        // Log the full response for debugging
+        const responseText = await associateRes.text();
+        console.log(`  - Association response: ${associateRes.status} ${associateRes.statusText}`);
+        console.log(`  - Response body: ${responseText.substring(0, 200)}...`);
+        
+        if (!associateRes.ok) {
+          throw new Error(`Failed to associate story with author: ${associateRes.status} ${associateRes.statusText}`);
+        }
+        
+        console.log(`  - Successfully associated story with author ID: ${authorId}`);
+        
+        // Verify the association was created
+        const verifyRes = await fetch(`${API}/story-authors?story_id=${storyResult.id}`, {
+          headers: { 'Authorization': `Bearer ${TOKEN}` }
+        });
+        
+        if (verifyRes.ok) {
+          const associations = await verifyRes.json();
+          if (associations && associations.length > 0) {
+            console.log(`  - Verified association exists in database`);
+          } else {
+            console.log(`  - Warning: Association not found in database after creation`);
+          }
+        }
+      } catch (err) {
+        console.error(`  - Error associating story with author: ${err.message}`);
       }
-      
-      console.log(`  - Associated story with author ID: ${authorId}`);
+    } else {
+      console.log(`  - Cannot associate story with author: ${!authorId ? 'Missing author ID' : 'Missing story ID'}`);
     }
     
     return storyResult.id;

@@ -249,13 +249,26 @@ function handleMediaUpload($db, $storyDir, $title) {
             $uniqueFilename = uniqid() . '-' . $coverImage;
             $destination = $uploadDir . $uniqueFilename;
             
+            // Ensure the uploads directory is web-accessible
+            $publicUrl = '/uploads/' . $uniqueFilename;
+            $fullPublicUrl = 'https://' . $_SERVER['HTTP_HOST'] . $publicUrl;
+            
             if (copy($images[0], $destination)) {
-                $coverUrl = '/uploads/' . $uniqueFilename;
-                echo "<p class='success'>Copied image to: $destination</p>";
-                flushOutput();
-                
-                // Set proper permissions
+                // Set proper permissions - ensure web server can read the file
                 chmod($destination, 0644);
+                
+                // Verify the file exists and is readable
+                if (file_exists($destination) && is_readable($destination)) {
+                    echo "<p class='success'>Copied image to: $destination</p>";
+                    echo "<p class='info'>Public URL: $fullPublicUrl</p>";
+                    $coverUrl = $publicUrl;
+                } else {
+                    echo "<p class='warning'>File copied but may not be readable: $destination</p>";
+                    echo "<p class='info'>Setting permissions again...</p>";
+                    chmod($destination, 0644);
+                    $coverUrl = $publicUrl;
+                }
+                flushOutput();
                 
                 // Get proper MIME type
                 $fileSize = filesize($destination);
@@ -287,10 +300,11 @@ function handleMediaUpload($db, $storyDir, $title) {
                 
                 // Add to media library
                 try {
+                    // Store both the relative path and the full URL for better compatibility
                     $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
                     $stmt->execute([
                         $uniqueFilename,
-                        $coverUrl,
+                        $publicUrl, // Use the public URL path that starts with /uploads/
                         $mimeType,
                         $fileSize,
                         $altText
@@ -519,13 +533,24 @@ function processStory($db, $storyDir) {
         $existingStory = findExistingStory($db, $title, $slug);
         
         if ($existingStory) {
+            // Ensure cover URL is properly formatted for the frontend
+            $formattedCoverUrl = $coverUrl;
+            if (!empty($coverUrl) && $coverUrl !== '/images/default-cover.svg') {
+                // Make sure the URL starts with https:// for the frontend
+                if (strpos($coverUrl, 'http') !== 0) {
+                    $formattedCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . $coverUrl;
+                    echo "<p class='info'>Formatted cover URL for frontend: $formattedCoverUrl</p>";
+                    flushOutput();
+                }
+            }
+            
             // Update existing story
             $stmt = $db->prepare("
-                UPDATE stories SET 
-                    content = ?, 
-                    excerpt = ?, 
+                UPDATE stories SET
+                    content = ?,
+                    excerpt = ?,
                     cover_url = ?,
-                    estimated_reading_time = ?, 
+                    estimated_reading_time = ?,
                     age_group = ?,
                     source_type = 'child',
                     allow_reviews = 0
@@ -535,7 +560,7 @@ function processStory($db, $storyDir) {
             $stmt->execute([
                 $markdownContent,
                 $excerpt,
-                $coverUrl,
+                $formattedCoverUrl,
                 $readingTime,
                 $ageGroup,
                 $existingStory['id']
@@ -575,7 +600,7 @@ function processStory($db, $storyDir) {
                 $slug,
                 $markdownContent,
                 $excerpt,
-                $coverUrl,
+                $formattedCoverUrl,
                 $readingTime,
                 $ageGroup
             ]);

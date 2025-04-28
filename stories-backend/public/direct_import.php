@@ -189,7 +189,15 @@ function extractAuthorInfo($title) {
         'location' => null
     ];
     
-    if (preg_match('/by\s+([^,]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,]+))?/i', $title, $matches)) {
+    // More comprehensive pattern to catch various formats
+    if (preg_match('/by\s+([^,]+?)(?:,?\s+aged\s+(\d+))?(?:,?\s+from\s+([^,.]+))?/i', $title, $matches)) {
+        $info['name'] = trim($matches[1]);
+        $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
+        $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
+    }
+    
+    // Secondary pattern for "Name, aged X, from Location" format
+    if (!$info['age'] && preg_match('/([^,]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
@@ -357,11 +365,25 @@ foreach ($storyDirs as $storyDir) {
                 $coverUrl = '/uploads/' . $coverImage;
                 echo "<p class='success'>Copied cover image: $coverImage</p>";
                 
+                // Make sure the file is accessible
+                chmod($destination, 0644);
+                
+                // Get proper file type
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->file($destination);
+                $fileSize = filesize($destination);
+                
                 // Insert into media table
                 try {
                     $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
-                    $stmt->execute([$coverImage, $coverUrl, 'image/png', filesize($destination)]);
-                    echo "<p class='success'>Added image to media library</p>";
+                    $stmt->execute([$coverImage, $coverUrl, $mimeType, $fileSize]);
+                    $mediaId = $db->lastInsertId();
+                    echo "<p class='success'>Added image to media library (ID: $mediaId)</p>";
+                    
+                    // Create alt text for the image
+                    $altText = "Illustration for story: " . $title;
+                    $updateAltStmt = $db->prepare("UPDATE media SET alt_text = ? WHERE id = ?");
+                    $updateAltStmt->execute([$altText, $mediaId]);
                 } catch (Exception $e) {
                     echo "<p class='error'>Failed to add to media library: " . $e->getMessage() . "</p>";
                 }
@@ -375,11 +397,40 @@ foreach ($storyDirs as $storyDir) {
     $summaryMatch = null;
     if (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*)/s', $markdownContent, $summaryMatch)) {
         $summary = trim($summaryMatch[1]);
-        $excerpt = $summary;
+        
+        // Extract just the first sentence from the summary
+        if (preg_match('/^(.*?[.!?])(?:\s|$)/s', $summary, $sentenceMatch)) {
+            $excerpt = trim($sentenceMatch[1]);
+        } else {
+            $excerpt = $summary;
+        }
     } else {
         // Fallback to first paragraph if no summary section
         $paragraphs = preg_split('/\n\s*\n/', $markdownContent);
-        $excerpt = trim($paragraphs[0]);
+        $firstPara = trim($paragraphs[0]);
+        
+        // Remove any metadata like Name/Age/Location
+        $firstPara = preg_replace('/^(?:Name|Age|Location):\s+.*$/m', '', $firstPara);
+        
+        // Extract just the first sentence
+        if (preg_match('/^(.*?[.!?])(?:\s|$)/s', $firstPara, $sentenceMatch)) {
+            $excerpt = trim($sentenceMatch[1]);
+        } else {
+            $excerpt = $firstPara;
+        }
+    }
+    
+    // Make sure excerpt isn't too short
+    if (strlen($excerpt) < 20) {
+        // Try to get a better excerpt from the content
+        if (preg_match('/Story\s*\n(.*?)(?:\n\n|\n#|\n\*\*)/s', $markdownContent, $storyMatch)) {
+            $storyText = trim($storyMatch[1]);
+            if (preg_match('/^(.*?[.!?])(?:\s|$)/s', $storyText, $sentenceMatch)) {
+                $excerpt = trim($sentenceMatch[1]);
+            } else {
+                $excerpt = substr($storyText, 0, 100) . '...';
+            }
+        }
     }
     
     // Convert markdown to HTML
@@ -397,8 +448,15 @@ foreach ($storyDirs as $storyDir) {
     // Generate tags
     $tags = generateTags($markdownContent);
     
-    // Check if story already exists
-    $existingStory = storyExistsBySlug($db, $slug);
+    // Check if story exists by title (more reliable than slug)
+    $titleStmt = $db->prepare("SELECT id, slug FROM stories WHERE title LIKE ?");
+    $titleStmt->execute(["%" . substr($title, 0, 30) . "%"]);
+    $existingStory = $titleStmt->fetch();
+    
+    if (!$existingStory) {
+        // Fallback to slug check
+        $existingStory = storyExistsBySlug($db, $slug);
+    }
     
     // Prepare story data
     $storyData = [
@@ -463,6 +521,14 @@ foreach ($storyDirs as $storyDir) {
             }
         }
     } else {
+        // Generate a unique slug to avoid duplicates
+        $baseSlug = $slug;
+        $counter = 1;
+        while (storyExistsBySlug($db, $slug)) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        
         // Insert new story
         try {
             $stmt = $db->prepare("

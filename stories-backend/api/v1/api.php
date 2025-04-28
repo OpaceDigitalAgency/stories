@@ -91,6 +91,45 @@ try {
         /* -----------------------------------
            STORIES (paginated, with sort/limit)
            ----------------------------------- */
+        case 'media':
+            // Media upload endpoint
+            $input = file_get_contents('php://input');
+            $filename = $_SERVER['HTTP_X_FILENAME'] ?? uniqid() . '.dat';
+            $filetype = $_SERVER['HTTP_X_FILETYPE'] ?? 'application/octet-stream';
+            $uploadDir = __DIR__ . '/../../public/uploads/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $filepath = $uploadDir . basename($filename);
+            file_put_contents($filepath, $input);
+            $url = '/uploads/' . basename($filename);
+            // Insert into media table
+            $stmt = $db->prepare("INSERT INTO media (entity_type, type, filename, url, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute(['story', $filetype, basename($filename), $url]);
+            echo json_encode(['url' => $url]);
+            break;
+
+        case 'stories':
+            // POST handler for story creation
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $input = json_decode(file_get_contents('php://input'), true);
+                if (!is_array($input)) {
+                    http_response_code(400);
+                    echo json_encode(['error' => ['status' => 400, 'message' => 'Invalid JSON']]);
+                    break;
+                }
+                $fields = array_keys($input);
+                $columns = implode(',', $fields);
+                $placeholders = implode(',', array_map(fn($f) => ":$f", $fields));
+                $insertSql = "INSERT INTO stories ($columns) VALUES ($placeholders)";
+                $insertStmt = $db->prepare($insertSql);
+                foreach ($input as $key => $value) {
+                    $insertStmt->bindValue(":$key", $value);
+                }
+                $insertStmt->execute();
+                $newId = (int)$db->lastInsertId();
+                http_response_code(201);
+                echo json_encode(['id' => $newId]);
+                break;
+            }
         case 'stories':
             // Build WHERE clause with filters
             $whereConditions = ["s.is_published = 1"];

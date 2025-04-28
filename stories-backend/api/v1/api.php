@@ -328,6 +328,39 @@ try {
                 $tagStmt->execute([$row['id']]);
                 $tags = $tagStmt->fetchAll();
                 
+                // Get media information for cover image
+                $mediaStmt = null;
+                $media = null;
+                
+                // Try to find media record by URL
+                if (!empty($row['cover_url'])) {
+                    $mediaStmt = $db->prepare("
+                        SELECT * FROM media
+                        WHERE file_path = ? OR thumbnail_url = ? OR small_url = ? OR medium_url = ? OR large_url = ?
+                    ");
+                    $mediaStmt->execute([
+                        $row['cover_url'], $row['cover_url'], $row['cover_url'], $row['cover_url'], $row['cover_url']
+                    ]);
+                    $media = $mediaStmt->fetch();
+                }
+                
+                // Prepare cover image URLs
+                $coverUrls = [
+                    'default' => $row['cover_url'],
+                    'thumbnail' => null,
+                    'small' => null,
+                    'medium' => null,
+                    'large' => null
+                ];
+                
+                // If we found a media record, use its URLs
+                if ($media) {
+                    $coverUrls['thumbnail'] = $media['thumbnail_url'] ?: $row['cover_url'];
+                    $coverUrls['small'] = $media['small_url'] ?: $row['cover_url'];
+                    $coverUrls['medium'] = $media['medium_url'] ?: $row['cover_url'];
+                    $coverUrls['large'] = $media['large_url'] ?: $row['cover_url'];
+                }
+                
                 $stories[] = [
                     'id'              => $row['id'],
                     'title'           => $row['title'],
@@ -335,6 +368,7 @@ try {
                     'excerpt'         => $row['excerpt'],
                     'content'         => $row['content'],
                     'cover_url'       => $row['cover_url'],
+                    'cover_urls'      => $coverUrls,
                     'publishedAt'     => date('c', strtotime($row['created_at'])),
                     'featured'        => (bool)$row['featured'],
                     'is_sponsored'    => (bool)$row['is_sponsored'],
@@ -344,9 +378,6 @@ try {
                     'review_count'    => (int)$row['review_count'],
                     'source_type'     => $row['source_type'],
                     'allow_reviews'   => (bool)$row['allow_reviews'],
-                    // Debug info
-                    'debug_source_type' => 'Value: ' . $row['source_type'] . ' | Type: ' . gettype($row['source_type']),
-                    'debug_allow_reviews' => 'Value: ' . $row['allow_reviews'] . ' | Type: ' . gettype($row['allow_reviews']),
                     'author'          => $author ? [
                         'id'          => $author['id'],
                         'name'        => $author['name'],

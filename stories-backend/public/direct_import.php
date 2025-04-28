@@ -228,6 +228,9 @@ function extractExcerpt($title, $markdownContent) {
 }
 // Function to handle media upload with proper error handling
 function handleMediaUpload($db, $storyDir, $title) {
+    // Include the image optimization library
+    require_once __DIR__ . '/../includes/image_optimizer.php';
+    
     $imagesDir = "$storyDir/images";
     // Use absolute URL for default cover image
     $defaultCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/images/default-cover.svg';
@@ -480,17 +483,32 @@ function handleMediaUpload($db, $storyDir, $title) {
         echo "<p class='info'>Absolute URL will be: $absoluteUrl</p>";
         flushOutput();
         
-        // Copy the pre-optimized image
-        if (copy($preOptimizedImage, $destination)) {
-            echo "<p class='success'>Copied pre-optimized image successfully</p>";
+        // Use the image optimization library to create multiple size variants
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+            echo "<p class='info'>Created optimized uploads directory</p>";
+            flushOutput();
+        }
+        
+        echo "<p class='info'>Creating multiple size variants using image optimization library</p>";
+        flushOutput();
+        
+        // Create image variants
+        $variants = createImageVariants($preOptimizedImage, $uploadDir, [
+            'convert_format' => 'jpg',
+            'include_original' => true
+        ]);
+        
+        if ($variants) {
+            echo "<p class='success'>Created multiple size variants successfully</p>";
             
-            // Set proper permissions
-            chmod($destination, 0644);
-            system("chmod -R 644 " . escapeshellarg($destination));
-            system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
+            // Use the medium size as the primary image
+            $destination = $variants['medium']['path'] ?? $variants['original']['path'];
+            $absoluteUrl = $variants['medium']['url'] ?? $variants['original']['url'];
+            $fileSize = $variants['medium']['size'] ?? $variants['original']['size'];
             
             // Get file info
-            $fileSize = filesize($destination);
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_file($finfo, $destination);
             finfo_close($finfo);
@@ -498,8 +516,54 @@ function handleMediaUpload($db, $storyDir, $title) {
             // Create alt text
             $altText = "Illustration for story: " . $title;
             
-            // Add to media library
-            try {
+            echo "<p class='info'>Using optimized image: " . basename($destination) . "</p>";
+            echo "<p class='info'>Size: " . round($fileSize / 1024) . " KB</p>";
+            flushOutput();
+        } else {
+            // Fall back to copying the pre-optimized image if optimization fails
+            echo "<p class='warning'>Image optimization failed, falling back to direct copy</p>";
+            flushOutput();
+            
+            if (copy($preOptimizedImage, $destination)) {
+                echo "<p class='success'>Copied pre-optimized image successfully</p>";
+                
+                // Set proper permissions
+                chmod($destination, 0644);
+                system("chmod -R 644 " . escapeshellarg($destination));
+                system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
+                
+                // Get file info
+                $fileSize = filesize($destination);
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $destination);
+                finfo_close($finfo);
+                
+                // Create alt text
+                $altText = "Illustration for story: " . $title;
+            }
+        }
+            
+        // Add to media library with all image URLs
+        try {
+            if (isset($variants) && $variants) {
+                $stmt = $db->prepare("INSERT INTO media (filename, file_path, thumbnail_url, small_url, medium_url, large_url, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+                $stmt->execute([
+                    $uniqueFilename,
+                    $variants['medium']['url'] ?? $absoluteUrl,
+                    $variants['thumbnail']['url'] ?? null,
+                    $variants['small']['url'] ?? null,
+                    $variants['medium']['url'] ?? null,
+                    $variants['large']['url'] ?? null,
+                    $mimeType,
+                    $fileSize,
+                    $altText
+                ]);
+                
+                $mediaId = $db->lastInsertId();
+                $coverUrl = $variants['medium']['url'] ?? $absoluteUrl;
+                echo "<p class='success'>Added image with multiple size variants to media library (ID: $mediaId)</p>";
+            } else {
+                // Fall back to the old method if variants aren't available
                 $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
                 $stmt->execute([
                     $uniqueFilename,
@@ -508,23 +572,25 @@ function handleMediaUpload($db, $storyDir, $title) {
                     $fileSize,
                     $altText
                 ]);
+                
                 $mediaId = $db->lastInsertId();
                 $coverUrl = $absoluteUrl;
                 echo "<p class='success'>Added pre-optimized image to media library (ID: $mediaId)</p>";
-                flushOutput();
-                
-                return [
-                    'cover_url' => $coverUrl,
-                    'media_id' => $mediaId
-                ];
-            } catch (Exception $e) {
-                echo "<p class='error'>Failed to add pre-optimized image to media library: " . $e->getMessage() . "</p>";
-                flushOutput();
             }
-        } else {
-            echo "<p class='error'>Failed to copy pre-optimized image</p>";
             flushOutput();
+            
+            return [
+                'cover_url' => $coverUrl,
+                'media_id' => $mediaId
+            ];
+        } catch (Exception $e) {
+            echo "<p class='error'>Failed to add pre-optimized image to media library: " . $e->getMessage() . "</p>";
+            flushOutput();
+            return null;
         }
+    } else {
+        echo "<p class='error'>Failed to copy pre-optimized image</p>";
+        flushOutput();
     }
     
     // If we get here, either we're not using a pre-optimized image or it failed

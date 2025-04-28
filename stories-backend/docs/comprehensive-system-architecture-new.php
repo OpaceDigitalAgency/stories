@@ -827,5 +827,48 @@ npm run dev
 
 
 
+      <h2 id="image-optimization-system">Image Optimization System</h2>
+      <p>The system includes a modular image optimization framework that ensures consistent handling of images across all parts of the application.</p>
+      
+      <h3>Core Components</h3>
+      <ul>
+        <li><code>includes/image_config.php</code>: Defines standard image sizes and formats</li>
+        <li><code>includes/image_optimizer.php</code>: Contains modular functions for image processing</li>
+        <li><code>public/update_media_schema.php</code>: Updates the database schema to support multiple image sizes</li>
+        <li><code>public/fix_media_sizes.php</code>: Uses the image optimizer library to optimize all media files</li>
+      </ul>
+      
+      <h3>Database Schema</h3>
+      <p>The media table includes additional columns for different image sizes:</p>
+      <pre><code>ALTER TABLE media
+ADD COLUMN thumbnail_url VARCHAR(255) AFTER file_path,
+ADD COLUMN small_url VARCHAR(255) AFTER thumbnail_url,
+ADD COLUMN medium_url VARCHAR(255) AFTER small_url,
+ADD COLUMN large_url VARCHAR(255) AFTER large_url;</code></pre>
+      
+      <h3>Standard Image Sizes</h3>
+      <table>
+        <thead>
+          <tr><th>Size</th><th>Dimensions</th><th>Use Case</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>thumbnail</td><td>150x150</td><td>Avatar thumbnails, tiny previews</td></tr>
+          <tr><td>small</td><td>300x300</td><td>Card thumbnails, small previews</td></tr>
+          <tr><td>medium</td><td>640x640</td><td>Medium-sized previews, list views</td></tr>
+          <tr><td>large</td><td>1200x800</td><td>Detail pages, full-width images</td></tr>
+          <tr><td>original</td><td>(unchanged)</td><td>Original image (preserved if needed)</td></tr>
+        </tbody>
+      </table>
+      
+      <h3>Integration Points</h3>
+      <ul>
+        <li><strong>API Responses</strong>: Include all image URLs for different sizes</li>
+        <li><strong>Frontend Components</strong>: Use appropriate image sizes for different contexts</li>
+        <li><strong>Import Scripts</strong>: All import methods use the same image optimization library</li>
+        <li><strong>Media Uploads</strong>: Manual uploads are processed through the same system</li>
+      </ul>
+      
+      <p>For detailed documentation, see <a href="image_optimization_system.md">Image Optimization System</a>.</p>
+
 </body>
 </html>

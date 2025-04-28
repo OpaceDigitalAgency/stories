@@ -223,6 +223,10 @@ erDiagram
         int id PK
         string filename
         string file_path
+        string thumbnail_url
+        string small_url
+        string medium_url
+        string large_url
         string file_type
         int file_size
         string alt_text
@@ -467,13 +471,17 @@ Categories for directory items.
 
 ### media
 
-Stores information about uploaded media files.
+Stores information about uploaded media files with multiple size variants.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | int | PRIMARY KEY, AUTO_INCREMENT | Unique identifier |
 | filename | varchar(255) | NOT NULL | Original filename |
-| file_path | varchar(255) | NOT NULL | Server file path |
+| file_path | varchar(255) | NOT NULL | Server file path (primary/medium size) |
+| thumbnail_url | varchar(255) | NULL | URL for thumbnail size (150x150) |
+| small_url | varchar(255) | NULL | URL for small size (300x300) |
+| medium_url | varchar(255) | NULL | URL for medium size (640x640) |
+| large_url | varchar(255) | NULL | URL for large size (1200x800) |
 | file_type | varchar(100) | NOT NULL | MIME type |
 | file_size | int | NOT NULL | File size in bytes |
 | alt_text | varchar(255) | NULL | Alternative text for accessibility |

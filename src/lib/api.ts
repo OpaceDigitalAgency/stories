@@ -2,11 +2,25 @@
 const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
 
 // Type definitions
+export interface CoverImageUrls {
+  default: string;
+  thumbnail?: string;
+  small?: string;
+  medium?: string;
+  large?: string;
+}
+
 export interface Story {
   title: string;
   excerpt: string;
-  coverImage: string;
+  coverImage: string | CoverImageUrls;
   cover_url?: string; // API response field
+  cover_urls?: {
+    thumbnail?: string;
+    small?: string;
+    medium?: string;
+    large?: string;
+  }; // API response field
   slug: string;
   publishDate: string;
   publishedAt?: string; // API response field
@@ -154,7 +168,13 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
   return raw.map(item => ({
     title: item.title,
     excerpt: item.excerpt,
-    coverImage: item.cover_url || '',
+    coverImage: item.cover_urls ? {
+      default: item.cover_url || '',
+      thumbnail: item.cover_urls.thumbnail || '',
+      small: item.cover_urls.small || '',
+      medium: item.cover_urls.medium || '',
+      large: item.cover_urls.large || ''
+    } : item.cover_url || '',
     slug: item.slug,
     publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),
@@ -245,7 +265,13 @@ export async function fetchStory(slug: string): Promise<Story> {
   return {
     title: item.title,
     excerpt: item.excerpt || '',
-    coverImage: item.cover_url || '',
+    coverImage: item.cover_urls ? {
+      default: item.cover_url || '',
+      thumbnail: item.cover_urls.thumbnail || '',
+      small: item.cover_urls.small || '',
+      medium: item.cover_urls.medium || '',
+      large: item.cover_urls.large || ''
+    } : item.cover_url || '',
     slug: item.slug,
     publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),

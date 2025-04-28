@@ -12,7 +12,7 @@ header('Content-Type: text/html; charset=utf-8');
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Direct WordPress Import</title>
+    <title>WordPress Import Tool</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
         h1, h2 { color: #4a6ee0; }
@@ -31,46 +31,28 @@ header('Content-Type: text/html; charset=utf-8');
             text-decoration: none;
             margin-right: 10px;
             cursor: pointer;
+            border: none;
+            font-size: 16px;
         }
         .button.danger { background: #e04a4a; }
+        .button.primary { background: #4CAF50; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>Direct WordPress Import</h1>
+    <h1>WordPress Import Tool</h1>
     
     <div class="options">
-        <h2>Import Options</h2>
         <form method="post">
+            <p>This tool will import WordPress content from the _wp-migration folder.</p>
             <p>
-                <label>
-                    <input type="radio" name="mode" value="update" checked>
-                    <strong>Update Mode:</strong> Update existing stories and authors with new information
-                </label>
-            </p>
-            <p>
-                <label>
-                    <input type="radio" name="mode" value="clean">
-                    <strong>Clean Import:</strong> Delete all existing child stories and reimport (keeps other content)
-                </label>
-            </p>
-            <p>
-                <button type="submit" name="action" value="import" class="button">Start Import</button>
-                <?php if (isset($_POST['mode']) && $_POST['mode'] === 'clean'): ?>
-                    <button type="submit" name="action" value="confirm_clean" class="button danger">Confirm Clean Import</button>
-                <?php endif; ?>
+                <button type="submit" name="action" value="clear_and_import" class="button primary">Clear Data & Import All Content</button>
+                <button type="submit" name="action" value="import_only" class="button">Import Without Clearing</button>
             </p>
         </form>
     </div>
     
     <div class="log">
 <?php
-
-// Only process if form submitted
-if (!isset($_POST['action'])) {
-    echo "<p class='info'>Select an import option above and click 'Start Import'</p>";
-    echo "</div></body></html>";
-    exit;
-}
 
 // Database connection
 try {
@@ -89,46 +71,53 @@ try {
     exit;
 }
 
-// Handle clean import mode
-if ($_POST['action'] === 'confirm_clean' && $_POST['mode'] === 'clean') {
-    try {
-        // Begin transaction
-        $db->beginTransaction();
-        
-        // 1. Delete story_tags associations for child stories
-        $db->exec("DELETE st FROM story_tags st
-                  JOIN stories s ON st.story_id = s.id
-                  WHERE s.source_type = 'child'");
-        echo "<p class='info'>Deleted story-tag associations for child stories</p>";
-        
-        // 2. Delete story_authors associations for child stories
-        $db->exec("DELETE sa FROM story_authors sa
-                  JOIN stories s ON sa.story_id = s.id
-                  WHERE s.source_type = 'child'");
-        echo "<p class='info'>Deleted story-author associations for child stories</p>";
-        
-        // 3. Delete child stories
-        $stmt = $db->prepare("DELETE FROM stories WHERE source_type = 'child'");
-        $stmt->execute();
-        $count = $stmt->rowCount();
-        echo "<p class='info'>Deleted $count existing child stories</p>";
-        
-        // 4. Delete unused authors (those without any stories)
-        $db->exec("DELETE a FROM authors a
-                  LEFT JOIN story_authors sa ON a.id = sa.author_id
-                  WHERE sa.author_id IS NULL AND a.author_type = 'child'");
-        echo "<p class='info'>Deleted unused child authors</p>";
-        
-        // 5. Delete unused media files
-        $db->exec("DELETE FROM media WHERE id > 1");
-        echo "<p class='info'>Deleted existing media files</p>";
-        
-        // Commit transaction
-        $db->commit();
-        echo "<p class='success'>Database cleaned successfully</p>";
-    } catch (Exception $e) {
-        $db->rollBack();
-        echo "<p class='error'>Clean import failed: " . $e->getMessage() . "</p>";
+// Process the import action
+if (isset($_POST['action'])) {
+    // Clear data if requested
+    if ($_POST['action'] === 'clear_and_import') {
+        try {
+            // Begin transaction
+            $db->beginTransaction();
+            
+            // 1. Delete story_tags associations for child stories
+            $db->exec("DELETE st FROM story_tags st
+                      JOIN stories s ON st.story_id = s.id
+                      WHERE s.source_type = 'child'");
+            echo "<p class='info'>Deleted story-tag associations for child stories</p>";
+            
+            // 2. Delete story_authors associations for child stories
+            $db->exec("DELETE sa FROM story_authors sa
+                      JOIN stories s ON sa.story_id = s.id
+                      WHERE s.source_type = 'child'");
+            echo "<p class='info'>Deleted story-author associations for child stories</p>";
+            
+            // 3. Delete child stories
+            $stmt = $db->prepare("DELETE FROM stories WHERE source_type = 'child'");
+            $stmt->execute();
+            $count = $stmt->rowCount();
+            echo "<p class='info'>Deleted $count existing child stories</p>";
+            
+            // 4. Delete unused authors (those without any stories)
+            $db->exec("DELETE a FROM authors a
+                      LEFT JOIN story_authors sa ON a.id = sa.author_id
+                      WHERE sa.author_id IS NULL AND a.author_type = 'child'");
+            echo "<p class='info'>Deleted unused child authors</p>";
+            
+            // 5. Delete unused media files
+            $db->exec("DELETE FROM media WHERE id > 1");
+            echo "<p class='info'>Deleted existing media files</p>";
+            
+            // Commit transaction
+            $db->commit();
+            echo "<p class='success'>Database cleaned successfully</p>";
+        } catch (Exception $e) {
+            $db->rollBack();
+            echo "<p class='error'>Clean import failed: " . $e->getMessage() . "</p>";
+            exit;
+        }
+    } else if ($_POST['action'] !== 'import_only') {
+        echo "<p class='info'>Select an import option above</p>";
+        echo "</div></body></html>";
         exit;
     }
 }

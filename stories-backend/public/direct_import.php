@@ -106,6 +106,9 @@ function cleanChildStoryData($db) {
         echo "<p class='error'>Clean operation failed: " . $e->getMessage() . "</p>";
         flushOutput();
         return false;
+    }
+}
+
 // Function to extract author info from title using reliable regex
 function extractAuthorInfo($title) {
     $info = [
@@ -119,7 +122,7 @@ function extractAuthorInfo($title) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
-    } 
+    }
     // Pattern 2: "Name, aged X, from Location"
     else if (preg_match('/([^,]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
@@ -127,8 +130,8 @@ function extractAuthorInfo($title) {
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
     }
     
-    echo "<p class='info'>Extracted author: " . ($info['name'] ?? 'Unknown') . 
-         ", age: " . ($info['age'] ?? 'Unknown') . 
+    echo "<p class='info'>Extracted author: " . ($info['name'] ?? 'Unknown') .
+         ", age: " . ($info['age'] ?? 'Unknown') .
          ", location: " . ($info['location'] ?? 'Unknown') . "</p>";
     flushOutput();
     
@@ -221,8 +224,6 @@ function extractExcerpt($title, $markdownContent) {
         return trim($sentenceMatch[1]);
     } else {
         return substr(strip_tags($firstPara), 0, 150) . '...';
-    }
-}
     }
 }
 // Function to handle media upload with proper error handling

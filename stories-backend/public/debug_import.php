@@ -146,8 +146,18 @@ header('Content-Type: text/html; charset=utf-8');
                 echo "<p class='success'>Directory exists</p>";
                 $found = true;
                 
-                // Count markdown files
-                $mdFiles = glob("$dir/**/index.md", GLOB_RECURSE);
+                // Count markdown files - use recursive directory iterator instead of GLOB_RECURSE
+                $mdFiles = [];
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS)
+                );
+                
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && $file->getFilename() === 'index.md') {
+                        $mdFiles[] = $file->getPathname();
+                    }
+                }
+                
                 echo "<p>Found " . count($mdFiles) . " markdown files</p>";
                 
                 if (count($mdFiles) > 0) {
@@ -160,8 +170,18 @@ header('Content-Type: text/html; charset=utf-8');
                     }
                 }
                 
-                // Check for images
-                $imageFiles = glob("$dir/**/images/*.*", GLOB_RECURSE);
+                // Check for images - use recursive directory iterator
+                $imageFiles = [];
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS)
+                );
+                
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && strpos($file->getPathname(), '/images/') !== false) {
+                        $imageFiles[] = $file->getPathname();
+                    }
+                }
+                
                 echo "<p>Found " . count($imageFiles) . " image files</p>";
                 
                 if (count($imageFiles) > 0) {

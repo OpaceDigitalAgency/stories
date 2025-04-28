@@ -46,6 +46,10 @@ function getDisplayUrl($filePath) {
 $media = [];
 $error = null;
 $success = null;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$perPage = 20;
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$totalItems = 0;
 
 try {
     // Connect to database
@@ -166,8 +170,38 @@ try {
         }
     }
 
-    // Get all media files
-    $media = $db->query("SELECT * FROM media ORDER BY created_at DESC")->fetchAll();
+    // Count total items for pagination
+    $countSql = "SELECT COUNT(*) FROM media";
+    $params = [];
+    
+    if (!empty($search)) {
+        $countSql .= " WHERE filename LIKE ?";
+        $params[] = "%$search%";
+    }
+    
+    $stmt = $db->prepare($countSql);
+    $stmt->execute($params);
+    $totalItems = $stmt->fetchColumn();
+    
+    // Calculate pagination
+    $totalPages = ceil($totalItems / $perPage);
+    $page = min($page, max(1, $totalPages));
+    $offset = ($page - 1) * $perPage;
+    
+    // Get media files with search and pagination
+    $sql = "SELECT * FROM media";
+    if (!empty($search)) {
+        $sql .= " WHERE filename LIKE ?";
+    }
+    $sql .= " ORDER BY created_at DESC LIMIT $offset, $perPage";
+    
+    $stmt = $db->prepare($sql);
+    if (!empty($search)) {
+        $stmt->execute(["%$search%"]);
+    } else {
+        $stmt->execute();
+    }
+    $media = $stmt->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Media page error: " . $e->getMessage());
@@ -267,8 +301,19 @@ if (isset($_SESSION['error'])) {
         </div>
 
         <div class="content-section">
-            <div class="section-header">
+            <div class="section-header d-flex justify-content-between align-items-center">
                 <h2 class="section-title">Media Library</h2>
+                <form method="GET" class="search-form">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Search by filename..." value="<?php echo htmlspecialchars($search); ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="icon-search"></span> Search
+                        </button>
+                        <?php if (!empty($search)): ?>
+                            <a href="media.php" class="btn btn-secondary">Clear</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
             </div>
             <div class="section-body">
                 <?php if (empty($media)): ?>
@@ -313,6 +358,37 @@ if (isset($_SESSION['error'])) {
                             </div>
                         <?php endforeach; ?>
                     </div>
+                    
+                    <!-- Pagination -->
+                    <?php if ($totalPages > 1): ?>
+                    <div class="pagination-container">
+                        <div class="pagination">
+                            <?php if ($page > 1): ?>
+                                <a href="?page=1<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">First</a>
+                                <a href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Previous</a>
+                            <?php endif; ?>
+                            
+                            <?php
+                            $startPage = max(1, $page - 2);
+                            $endPage = min($totalPages, $page + 2);
+                            
+                            for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                <a href="?page=<?php echo $i; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>"
+                                   class="pagination-link <?php echo $i === $page ? 'active' : ''; ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+                            
+                            <?php if ($page < $totalPages): ?>
+                                <a href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Next</a>
+                                <a href="?page=<?php echo $totalPages; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Last</a>
+                            <?php endif; ?>
+                        </div>
+                        <div class="pagination-info">
+                            Showing <?php echo ($offset + 1); ?>-<?php echo min($offset + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -424,6 +500,169 @@ if (isset($_SESSION['error'])) {
         .icon-image:before {
             content: "🖼️";
         }
+        
+        .icon-search:before {
+            content: "🔍";
+        }
+        
+        .icon-view:before {
+            content: "👁️";
+        }
+        
+        .icon-delete:before {
+            content: "🗑️";
+        }
+        
+        .search-form {
+            max-width: 400px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .pagination-container {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .pagination {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .pagination-link {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            color: var(--gray-700);
+            background-color: white;
+            transition: all 0.2s ease;
+        }
+        
+        .pagination-link:hover {
+            background-color: var(--gray-100);
+        }
+        
+        .pagination-link.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .pagination-info {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+        
+        /* Progress indicator styles */
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
+        }
+        
+        .progress-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .progress-spinner {
+            border: 5px solid var(--gray-200);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
+    
+    <!-- Progress Indicator -->
+    <div id="progressOverlay" class="progress-overlay">
+        <div class="progress-container">
+            <div class="progress-spinner"></div>
+            <h3 id="progressTitle">Processing...</h3>
+            <p id="progressMessage">Please wait while we optimize your images.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Show progress indicator when optimizing images
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all buttons that trigger optimization
+            const optimizeButtons = document.querySelectorAll('a[href*="optimize_image.php"]');
+            
+            optimizeButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Show the progress overlay
+                    const overlay = document.getElementById('progressOverlay');
+                    overlay.style.visibility = 'visible';
+                    overlay.style.opacity = '1';
+                    
+                    // Set appropriate message based on button text
+                    const title = document.getElementById('progressTitle');
+                    const message = document.getElementById('progressMessage');
+                    
+                    if (this.textContent.includes('All Media')) {
+                        title.textContent = 'Optimizing All Media';
+                        message.textContent = 'This may take several minutes. Please do not close this page.';
+                    } else {
+                        title.textContent = 'Optimizing Image';
+                        message.textContent = 'Please wait while we optimize your image.';
+                    }
+                    
+                    // Don't prevent default - let the link work normally
+                });
+            });
+            
+            // Also add progress indicator to file upload
+            const uploadForm = document.querySelector('form.upload-form');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    // Only show progress if a file is selected
+                    const fileInput = document.getElementById('media_file');
+                    if (fileInput && fileInput.files.length > 0) {
+                        const overlay = document.getElementById('progressOverlay');
+                        overlay.style.visibility = 'visible';
+                        overlay.style.opacity = '1';
+                        
+                        const title = document.getElementById('progressTitle');
+                        const message = document.getElementById('progressMessage');
+                        
+                        title.textContent = 'Uploading and Optimizing';
+                        message.textContent = 'Please wait while we upload and optimize your image.';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

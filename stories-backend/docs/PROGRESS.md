@@ -1,5 +1,14 @@
 # Stories From The Web - Progress Log
 
+## 2025-04-28
+- Fixed media optimization issues:
+  - Identified that the server lacks required PHP image processing extensions (ImageMagick/GD)
+  - Created fix_media_direct.php script to use existing smaller image versions instead of resizing
+  - Script finds appropriately sized versions of images in uploads directories
+  - Updated database records to point to these smaller versions
+  - Significantly reduced image load times in admin interface
+  - Documented the solution in KNOWN_ISSUES_AND_FIXES.md
+
 ## 2025-04-27
 - Added age field for child authors and location field for all authors:
   - Created SQL to add age and location fields to the authors table

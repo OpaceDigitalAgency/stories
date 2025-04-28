@@ -9,6 +9,7 @@ This document outlines known issues in the Stories from the Web platform and the
 - [API Issues](#api-issues)
 - [Database Issues](#database-issues)
 - [Deployment Issues](#deployment-issues)
+- [Media Issues](#media-issues)
 
 ## Admin Interface Issues
 
@@ -218,3 +219,73 @@ $db->exec("CREATE TABLE IF NOT EXISTS story_authors (
 ```
 
 This allows the frontend to fetch the latest data from the API on each request, ensuring that changes made in the admin interface are immediately reflected on the frontend.
+
+## Media Issues
+
+### Slow-Loading Images in Admin Interface
+
+**Issue**: Images in the admin interface were loading very slowly, particularly in the media library. The fix_media_sizes.php script was not optimizing images as expected.
+
+**Cause**: The server lacks the required PHP image processing extensions (ImageMagick and GD). When the optimization script runs, it reports "No image libraries available, copied without optimization" and simply copies the original large files (3MB+) without reducing their size.
+
+**Fix**:
+
+1. Created a new script (fix_media_direct.php) that doesn't rely on image processing libraries:
+```php
+// Function to find the best sized version of an image
+function findBestSizedVersion($originalFilename, $maxWidth = 640) {
+    $baseName = getBaseName($originalFilename);
+    
+    // Define size preferences in order (smaller to larger)
+    $preferredSizes = [
+        '50x50', '110x110', '150x150', '180x77', '240x240', '300x300',
+        '440x330', '640x640'
+    ];
+    
+    // Define directories to search
+    $searchDirs = [
+        $_SERVER['DOCUMENT_ROOT'] . '/uploads/',
+        $_SERVER['DOCUMENT_ROOT'] . '/uploads/2023/',
+        $_SERVER['DOCUMENT_ROOT'] . '/uploads/2024/'
+    ];
+    
+    // Search for existing sized versions
+    foreach ($preferredSizes as $size) {
+        foreach ($searchDirs as $dir) {
+            if (!is_dir($dir)) continue;
+            
+            // Look for files with this size in the name
+            $files = glob($dir . '*' . $baseName . '*' . $size . '*');
+            
+            if (!empty($files)) {
+                // Use this sized version
+                $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $files[0]);
+                return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+            }
+        }
+    }
+    
+    return null;
+}
+```
+
+2. The script searches for existing smaller versions of each image in the uploads directories (which already contain multiple sized versions of each image).
+
+3. It updates the database to use these smaller versions instead of the original large files:
+```php
+// Update database record
+$updateStmt = $db->prepare("UPDATE media SET file_path = ?, file_size = ? WHERE id = ?");
+$updateStmt->execute([$result['path'], $result['size'], $item['id']]);
+```
+
+4. For a permanent solution, install the required PHP extensions on the server:
+```bash
+# For ImageMagick (preferred for better quality)
+sudo apt-get install php-imagick
+
+# For GD (alternative)
+sudo apt-get install php-gd
+
+# Then restart PHP
+sudo systemctl restart php-fpm  # or apache2, depending on your setup
+```

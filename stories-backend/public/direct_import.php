@@ -238,39 +238,131 @@ function handleMediaUpload($db, $storyDir, $title) {
     echo "<p class='info'>Looking for images in: $imagesDir</p>";
     flushOutput();
     
+    // Check for pre-optimized images first (for specific stories)
+    $usePreOptimized = false;
+    $preOptimizedImage = null;
+    
+    if (strpos($title, "Omagh Library") !== false) {
+        // Look for the future-library images in the uploads directory
+        $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
+        $possibleImages = glob("$optimizedDir/future-library-captivating-storybook-300x300.png");
+        
+        if (!empty($possibleImages)) {
+            echo "<p class='success'>Found pre-optimized image for Omagh Library</p>";
+            $usePreOptimized = true;
+            $preOptimizedImage = $possibleImages[0];
+        }
+    } else if (strpos($title, "The Reader and the Old Library") !== false) {
+        // Look for any suitable pre-optimized image
+        $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
+        $possibleImages = glob("$optimizedDir/library-books-reading-300x300.png");
+        
+        if (!empty($possibleImages)) {
+            echo "<p class='success'>Found pre-optimized image for The Reader and the Old Library</p>";
+            $usePreOptimized = true;
+            $preOptimizedImage = $possibleImages[0];
+        }
+    }
+    
+    // If we're using a pre-optimized image, process it directly
+    if ($usePreOptimized && $preOptimizedImage) {
+        $coverImage = basename($preOptimizedImage);
+        
+        // Use absolute server path for uploads
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+            echo "<p class='info'>Created uploads directory</p>";
+            flushOutput();
+        }
+        
+        // Generate unique filename to avoid collisions
+        $uniqueFilename = uniqid() . '-' . $coverImage;
+        $destination = $uploadDir . $uniqueFilename;
+        
+        // Create absolute URL (always use HTTPS for admin panel compatibility)
+        $relativeUrl = '/uploads/' . $uniqueFilename;
+        $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
+        
+        echo "<p class='info'>Using pre-optimized image: $preOptimizedImage</p>";
+        echo "<p class='info'>Absolute URL will be: $absoluteUrl</p>";
+        flushOutput();
+        
+        // Copy the pre-optimized image
+        if (copy($preOptimizedImage, $destination)) {
+            echo "<p class='success'>Copied pre-optimized image successfully</p>";
+            
+            // Set proper permissions
+            chmod($destination, 0644);
+            system("chmod -R 644 " . escapeshellarg($destination));
+            system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
+            
+            // Get file info
+            $fileSize = filesize($destination);
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $destination);
+            finfo_close($finfo);
+            
+            // Create alt text
+            $altText = "Illustration for story: " . $title;
+            
+            // Add to media library
+            try {
+                $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+                $stmt->execute([
+                    $uniqueFilename,
+                    $absoluteUrl,
+                    $mimeType,
+                    $fileSize,
+                    $altText
+                ]);
+                $mediaId = $db->lastInsertId();
+                $coverUrl = $absoluteUrl;
+                echo "<p class='success'>Added pre-optimized image to media library (ID: $mediaId)</p>";
+                flushOutput();
+                
+                return [
+                    'cover_url' => $coverUrl,
+                    'media_id' => $mediaId
+                ];
+            } catch (Exception $e) {
+                echo "<p class='error'>Failed to add pre-optimized image to media library: " . $e->getMessage() . "</p>";
+                flushOutput();
+            }
+        } else {
+            echo "<p class='error'>Failed to copy pre-optimized image</p>";
+            flushOutput();
+        }
+    }
+    
+    // If we get here, either we're not using a pre-optimized image or it failed
     // Check if images directory exists
     if (!is_dir($imagesDir)) {
         echo "<p class='warning'>Images directory not found: $imagesDir</p>";
         flushOutput();
         
-        // Special handling for known problematic stories
-        if (strpos($title, "Omagh Library") !== false || strpos($title, "The Reader and the Old Library") !== false) {
-            echo "<p class='info'>Attempting to find images for special case: $title</p>";
-            
-            // Try to find images in parent directory
-            $parentDir = dirname($storyDir);
-            $possibleImages = glob("$parentDir/*.*");
+        // Try to find images in alternative locations
+        $found = false;
+        $alternativeLocations = [
+            dirname($storyDir), // Parent directory
+            $storyDir, // Story directory itself
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads', // Uploads directory
+        ];
+        
+        foreach ($alternativeLocations as $location) {
+            echo "<p class='info'>Looking for images in alternative location: $location</p>";
+            $possibleImages = glob("$location/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
             
             if (!empty($possibleImages)) {
-                echo "<p class='success'>Found alternative images in parent directory</p>";
-                $imagesDir = $parentDir;
+                echo "<p class='success'>Found images in alternative location: $location</p>";
                 $images = $possibleImages;
-            } else {
-                // Try to find any PNG files in the story directory
-                $possibleImages = glob("$storyDir/*.png");
-                
-                if (!empty($possibleImages)) {
-                    echo "<p class='success'>Found PNG images directly in story directory</p>";
-                    $images = $possibleImages;
-                } else {
-                    echo "<p class='error'>No images found for special case: $title</p>";
-                    return [
-                        'cover_url' => $coverUrl,
-                        'media_id' => $mediaId
-                    ];
-                }
+                $found = true;
+                break;
             }
-        } else {
+        }
+        
+        if (!$found) {
+            echo "<p class='error'>No images found in any location</p>";
             return [
                 'cover_url' => $coverUrl,
                 'media_id' => $mediaId
@@ -303,6 +395,30 @@ function handleMediaUpload($db, $storyDir, $title) {
     $imageSize = filesize($images[0]);
     echo "<p class='info'>Original image size: " . round($imageSize / 1024) . " KB</p>";
     flushOutput();
+    
+    // Check if we should look for a smaller version of this image
+    $smallerImage = null;
+    $originalBasename = pathinfo($coverImage, PATHINFO_FILENAME);
+    
+    // Look for smaller versions in the uploads directory
+    $uploadsDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
+    if (is_dir($uploadsDir)) {
+        // Try to find a smaller version (300x300 is a good size)
+        $smallerVersions = glob("$uploadsDir/$originalBasename*300x300*.png");
+        
+        if (!empty($smallerVersions)) {
+            $smallerImage = $smallerVersions[0];
+            echo "<p class='success'>Found smaller version of image: $smallerImage</p>";
+            flushOutput();
+            
+            // Use the smaller image instead
+            $images[0] = $smallerImage;
+            $coverImage = basename($smallerImage);
+            $imageSize = filesize($smallerImage);
+            echo "<p class='info'>Using smaller image: " . round($imageSize / 1024) . " KB</p>";
+            flushOutput();
+        }
+    }
     
     // Generate unique filename to avoid collisions
     $uniqueFilename = uniqid() . '-' . $coverImage;
@@ -442,11 +558,46 @@ function handleMediaUpload($db, $storyDir, $title) {
         flushOutput();
     }
                 
-                // Create alt text
-                $altText = "Illustration for story: " . $title;
-                
     // Create alt text
     $altText = "Illustration for story: " . $title;
+    
+    // Verify the file exists and is accessible via web
+    $webAccessible = false;
+    $ch = curl_init($absoluteUrl);
+    curl_setopt($ch, CURLOPT_NOBODY, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_exec($ch);
+    $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($responseCode == 200) {
+        $webAccessible = true;
+        echo "<p class='success'>Image is accessible via web: $absoluteUrl</p>";
+    } else {
+        echo "<p class='warning'>Image may not be accessible via web (HTTP $responseCode): $absoluteUrl</p>";
+        
+        // Try to fix permissions again
+        chmod($destination, 0644);
+        system("chmod -R 644 " . escapeshellarg($destination));
+        system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
+        
+        // Create a symlink in a web-accessible directory if needed
+        $publicDir = $_SERVER['DOCUMENT_ROOT'] . '/public/uploads/';
+        if (!is_dir($publicDir)) {
+            mkdir($publicDir, 0755, true);
+        }
+        
+        $publicPath = $publicDir . $uniqueFilename;
+        if (!file_exists($publicPath)) {
+            copy($destination, $publicPath);
+            chmod($publicPath, 0644);
+        }
+        
+        // Update the URL to use the public directory
+        $relativeUrl = '/public/uploads/' . $uniqueFilename;
+        $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
+        echo "<p class='info'>Created public copy at: $absoluteUrl</p>";
+    }
     
     // Add to media library
     try {
@@ -462,6 +613,15 @@ function handleMediaUpload($db, $storyDir, $title) {
         $mediaId = $db->lastInsertId();
         echo "<p class='success'>Added to media library (ID: $mediaId)</p>";
         flushOutput();
+        
+        // Verify the media entry
+        $verifyStmt = $db->prepare("SELECT * FROM media WHERE id = ?");
+        $verifyStmt->execute([$mediaId]);
+        $mediaEntry = $verifyStmt->fetch();
+        
+        if ($mediaEntry) {
+            echo "<p class='info'>Verified media entry: " . json_encode($mediaEntry) . "</p>";
+        }
     } catch (Exception $e) {
         echo "<p class='error'>Failed to add to media library: " . $e->getMessage() . "</p>";
         flushOutput();

@@ -246,8 +246,8 @@ function handleMediaUpload($db, $storyDir, $title) {
     // Extract the base name without extension to search for optimized versions
     $baseNameParts = explode('-by-', basename($storyDir));
     $baseName = $baseNameParts[0];
-    $baseName = preg_replace('/[^a-z0-9]+/i', '-', $baseName);
-    echo "<p class='info'>Looking for optimized images for: $baseName</p>";
+    $storySlug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $baseName));
+    echo "<p class='info'>Looking for optimized images for: $storySlug</p>";
     flushOutput();
     
     // Try to find optimized versions with different sizes (prioritize 300x300)
@@ -255,43 +255,110 @@ function handleMediaUpload($db, $storyDir, $title) {
         '300x300', // Best size for balance between quality and performance
         '240x240',
         '150x150',
-        '110x110'
+        '110x110',
+        '' // Also try without size pattern
     ];
     
-    // First try to find images matching the story name
+    // More comprehensive image name patterns
+    $imagePatterns = [
+        "$storySlug*",
+        "*$storySlug*",
+        "future-library*",
+        "*library*",
+        "*story*",
+        "*book*",
+        "*illustration*"
+    ];
+    
+    // First try to find images matching the story name with various patterns
+    $found = false;
     foreach ($sizePatterns as $sizePattern) {
-        // Look for files matching the pattern in the uploads directory
-        $optimizedImages = glob("$optimizedDir/*$baseName*$sizePattern*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+        if ($found) break;
         
-        if (!empty($optimizedImages)) {
-            $preOptimizedImage = $optimizedImages[0];
-            $usePreOptimized = true;
-            echo "<p class='success'>Found pre-optimized image ($sizePattern) for story: " . basename($preOptimizedImage) . "</p>";
-            flushOutput();
-            break;
+        foreach ($imagePatterns as $pattern) {
+            $sizeStr = empty($sizePattern) ? "" : "-$sizePattern";
+            $searchPattern = "$optimizedDir/$pattern$sizeStr.{jpg,jpeg,png,gif}";
+            $optimizedImages = glob($searchPattern, GLOB_BRACE);
+            
+            if (!empty($optimizedImages)) {
+                // Sort by file size and use the smallest one
+                usort($optimizedImages, function($a, $b) {
+                    return filesize($a) - filesize($b);
+                });
+                
+                $preOptimizedImage = $optimizedImages[0];
+                $usePreOptimized = true;
+                echo "<p class='success'>Found pre-optimized image using pattern '$pattern$sizeStr': " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                flushOutput();
+                $found = true;
+                break;
+            }
         }
     }
     
-    // If no match found, try with specific story titles
+    // Special handling for problematic stories
     if (!$usePreOptimized) {
+        // Force specific images for known problematic stories
         if (strpos($title, "Omagh Library") !== false) {
-            // Look for the future-library images in the uploads directory
-            $possibleImages = glob("$optimizedDir/future-library-captivating-storybook-300x300.png");
+            // Look for any future-library images
+            $possibleImages = glob("$optimizedDir/future-library*.{jpg,jpeg,png,gif}", GLOB_BRACE);
             
             if (!empty($possibleImages)) {
-                echo "<p class='success'>Found pre-optimized image for Omagh Library</p>";
-                $usePreOptimized = true;
+                // Sort by file size and use the smallest one
+                usort($possibleImages, function($a, $b) {
+                    return filesize($a) - filesize($b);
+                });
+                
                 $preOptimizedImage = $possibleImages[0];
+                $usePreOptimized = true;
+                echo "<p class='success'>Found fallback image for Omagh Library: " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                flushOutput();
             }
-        } else if (strpos($title, "The Reader and the Old Library") !== false) {
-            // Look for any suitable pre-optimized image
-            $possibleImages = glob("$optimizedDir/library-books-reading-300x300.png");
+        } else if (strpos($title, "The Reader") !== false || strpos($title, "Old Library") !== false) {
+            // Look for any library-related images
+            $possibleImages = glob("$optimizedDir/*library*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            
+            if (empty($possibleImages)) {
+                // If no library images, try future-library as fallback
+                $possibleImages = glob("$optimizedDir/future-library*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            }
             
             if (!empty($possibleImages)) {
-                echo "<p class='success'>Found pre-optimized image for The Reader and the Old Library</p>";
-                $usePreOptimized = true;
+                // Sort by file size and use the smallest one
+                usort($possibleImages, function($a, $b) {
+                    return filesize($a) - filesize($b);
+                });
+                
                 $preOptimizedImage = $possibleImages[0];
+                $usePreOptimized = true;
+                echo "<p class='success'>Found fallback image for library story: " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                flushOutput();
             }
+        }
+    }
+    
+    // Last resort fallback - use any available optimized image rather than default
+    if (!$usePreOptimized) {
+        // Try to find any optimized image under 300KB
+        $allOptimizedImages = glob("$optimizedDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+        $smallImages = [];
+        
+        foreach ($allOptimizedImages as $img) {
+            if (filesize($img) < 300 * 1024) { // Less than 300KB
+                $smallImages[] = $img;
+            }
+        }
+        
+        if (!empty($smallImages)) {
+            // Sort by file size and use the smallest one
+            usort($smallImages, function($a, $b) {
+                return filesize($a) - filesize($b);
+            });
+            
+            $preOptimizedImage = $smallImages[0];
+            $usePreOptimized = true;
+            echo "<p class='success'>Using generic fallback image: " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+            flushOutput();
         }
     }
     
@@ -477,9 +544,64 @@ function handleMediaUpload($db, $storyDir, $title) {
     echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
     flushOutput();
             
-    // Always optimize images for better performance
-    if (extension_loaded('gd')) {
+    // Try to use ImageMagick first (much better compression than GD)
+    $optimized = false;
+    if (extension_loaded('imagick')) {
         try {
+            echo "<p class='info'>Using ImageMagick for better compression</p>";
+            flushOutput();
+            
+            $imagick = new Imagick($images[0]);
+            
+            // Strip metadata to reduce size
+            $imagick->stripImage();
+            
+            // Resize to max 500px width
+            $width = $imagick->getImageWidth();
+            $height = $imagick->getImageHeight();
+            
+            if ($width > 500) {
+                $newWidth = 500;
+                $newHeight = ($height / $width) * 500;
+                $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
+                echo "<p class='info'>Resized from {$width}x{$height} to {$newWidth}x{$newHeight}</p>";
+                flushOutput();
+            }
+            
+            // Set quality based on image format
+            if ($imagick->getImageFormat() == 'JPEG') {
+                $imagick->setImageCompressionQuality(65); // More aggressive compression
+                $imagick->setInterlaceScheme(Imagick::INTERLACE_PLANE);
+                echo "<p class='info'>Applied JPEG compression (65% quality)</p>";
+            } else if ($imagick->getImageFormat() == 'PNG') {
+                // For PNG, optimize compression
+                $imagick->setImageCompressionQuality(95);
+                $imagick->setOption('png:compression-level', 9);
+                $imagick->setOption('png:compression-strategy', 1);
+                $imagick->setOption('png:exclude-chunk', 'all');
+                echo "<p class='info'>Applied maximum PNG compression</p>";
+            }
+            
+            // Write the optimized image
+            $imagick->writeImage($destination);
+            $imagick->destroy();
+            
+            $optimized = true;
+            echo "<p class='success'>Image optimized with ImageMagick</p>";
+            flushOutput();
+        } catch (Exception $e) {
+            echo "<p class='warning'>ImageMagick optimization failed: " . $e->getMessage() . "</p>";
+            echo "<p class='info'>Falling back to GD</p>";
+            flushOutput();
+        }
+    }
+    
+    // Fall back to GD if ImageMagick failed or isn't available
+    if (!$optimized && extension_loaded('gd')) {
+        try {
+            echo "<p class='info'>Using GD for image optimization</p>";
+            flushOutput();
+            
             // Get image info
             list($width, $height, $type) = getimagesize($images[0]);
             
@@ -493,8 +615,8 @@ function handleMediaUpload($db, $storyDir, $title) {
                 }
                 
                 if ($source) {
-                    // Calculate new dimensions (max 600px width for better performance)
-                    $maxWidth = 600;
+                    // Calculate new dimensions (max 500px width for better performance)
+                    $maxWidth = 500;
                     $newWidth = $width;
                     $newHeight = $height;
                     
@@ -518,8 +640,8 @@ function handleMediaUpload($db, $storyDir, $title) {
                     
                     // Save resized image with higher compression
                     if ($type === IMAGETYPE_JPEG) {
-                        // Use 70% quality for better compression
-                        imagejpeg($resized, $destination, 70);
+                        // Use 65% quality for better compression
+                        imagejpeg($resized, $destination, 65);
                     } else {
                         // For PNG, use maximum compression (9)
                         imagepng($resized, $destination, 9);

@@ -258,9 +258,29 @@ function handleMediaUpload($db, $storyDir, $title) {
                 chmod($destination, 0644);
                 
                 // Get proper MIME type
-                $finfo = new finfo(FILEINFO_MIME_TYPE);
-                $mimeType = $finfo->file($destination);
                 $fileSize = filesize($destination);
+                
+                // Try to use fileinfo extension if available
+                if (function_exists('finfo_open')) {
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mimeType = finfo_file($finfo, $destination);
+                    finfo_close($finfo);
+                } else {
+                    // Fallback: determine MIME type based on extension
+                    $extension = strtolower(pathinfo($destination, PATHINFO_EXTENSION));
+                    $mimeTypes = [
+                        'jpg' => 'image/jpeg',
+                        'jpeg' => 'image/jpeg',
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp',
+                        'svg' => 'image/svg+xml',
+                        'pdf' => 'application/pdf'
+                    ];
+                    $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+                    echo "<p class='info'>Using fallback MIME type detection: $mimeType</p>";
+                    flushOutput();
+                }
                 
                 // Create alt text
                 $altText = "Illustration for story: " . $title;

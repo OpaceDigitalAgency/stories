@@ -1,15 +1,22 @@
 <?php
 /**
  * Simple WordPress Import Script
- * 
+ *
  * This script directly imports WordPress stories into the database
  * with minimal complexity and maximum reliability.
  */
 
-set_time_limit(0);
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-header('Content-Type: text/html; charset=utf-8');
+// Basic error handling to diagnose 500 errors
+try {
+    // Enable error reporting
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    
+    // Increase time limit for long-running script
+    set_time_limit(0);
+    
+    // Set content type
+    header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
 <html>
@@ -538,6 +545,18 @@ echo "<li>Unique slugs to prevent conflicts</li>";
 echo "</ul>";
 echo "<p>Check the <a href='/admin/stories'>Stories Admin</a> to verify the imported content.</p>";
 echo "</div>";
+
+} catch (Exception $e) {
+    // Catch any uncaught exceptions
+    echo "<h1>Error 500: Script Error</h1>";
+    echo "<p>An error occurred while running the import script:</p>";
+    echo "<pre style='background: #f8d7da; padding: 15px; border-radius: 5px;'>";
+    echo htmlspecialchars($e->getMessage()) . "\n\n";
+    echo "File: " . htmlspecialchars($e->getFile()) . "\n";
+    echo "Line: " . $e->getLine() . "\n\n";
+    echo "Stack Trace:\n" . htmlspecialchars($e->getTraceAsString());
+    echo "</pre>";
+}
 ?>
     </div>
 </body>

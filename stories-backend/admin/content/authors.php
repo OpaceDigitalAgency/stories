@@ -65,13 +65,28 @@ try {
         // Table might not exist, ignore
     }
 
-    // Build the query based on available columns
-    $storyCountQuery = $hasStoriesAuthorId 
-        ? "(SELECT COUNT(*) FROM stories WHERE author_id = a.id)" 
-        : "0";
+    // Check if story_authors junction table exists
+    $hasStoryAuthorsTable = false;
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+        $hasStoryAuthorsTable = $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore
+    }
+
+    // Build the query based on available tables and columns
+    $storyCountQuery = "0"; // Default to 0
     
-    $postCountQuery = $hasBlogPostsAuthorId 
-        ? "(SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id)" 
+    if ($hasStoryAuthorsTable) {
+        // Use the junction table if it exists
+        $storyCountQuery = "(SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id)";
+    } else if ($hasStoriesAuthorId) {
+        // Fall back to direct column if junction table doesn't exist
+        $storyCountQuery = "(SELECT COUNT(*) FROM stories WHERE author_id = a.id)";
+    }
+    
+    $postCountQuery = $hasBlogPostsAuthorId
+        ? "(SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id)"
         : "0";
 
     // Get all authors with content counts

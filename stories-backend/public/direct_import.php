@@ -117,17 +117,67 @@ function extractAuthorInfo($title) {
         'location' => null
     ];
     
-    // Pattern 1: "by <Name>, aged <Age>, from <Location>"
-    if (preg_match('/by\s+([^,]+?)(?:,?\s+aged\s+(\d+))?(?:,?\s+from\s+([^,.]+))?/i', $title, $matches)) {
+    echo "<p class='info'><strong>TITLE FOR EXTRACTION:</strong> \"$title\"</p>";
+    flushOutput();
+    
+    // Try multiple patterns to extract author information
+    
+    // Pattern 1: "Story Title by Author Name aged X from Location"
+    if (preg_match('/by\s+([A-Za-z\s\-\.]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,\.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
+        echo "<p class='success'><strong>PATTERN 1 MATCHED:</strong> Found author in 'by Author' format</p>";
     }
-    // Pattern 2: "Name, aged X, from Location"
-    else if (preg_match('/([^,]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,.]+))?/i', $title, $matches)) {
+    // Pattern 2: "The Magic Treehouse Kerry, aged 9, from Northern Ireland"
+    else if (preg_match('/([A-Za-z\s\-\.]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,\.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
+        echo "<p class='success'><strong>PATTERN 2 MATCHED:</strong> Found author in 'Name, aged' format</p>";
+    }
+    // Pattern 3: Extract from title with specific keywords
+    else if (preg_match('/((?:by|aged|from).*?)$/i', $title, $fullMatch)) {
+        $authorPart = $fullMatch[1];
+        
+        // Now extract components from this part
+        if (preg_match('/by\s+([A-Za-z\s\-\.]+)/i', $authorPart, $nameMatch)) {
+            $info['name'] = trim($nameMatch[1]);
+        }
+        
+        if (preg_match('/aged\s+(\d+)/i', $authorPart, $ageMatch)) {
+            $info['age'] = trim($ageMatch[1]);
+        }
+        
+        if (preg_match('/from\s+([A-Za-z\s\-\.]+)/i', $authorPart, $locMatch)) {
+            $info['location'] = trim($locMatch[1]);
+        }
+        
+        echo "<p class='success'><strong>PATTERN 3 MATCHED:</strong> Extracted from partial match</p>";
+    }
+    
+    // If no name was found but title contains author indicators, try harder
+    if (!$info['name'] && (stripos($title, 'by') !== false || stripos($title, 'aged') !== false)) {
+        // Try to extract just the name after "by"
+        if (preg_match('/by\s+([A-Za-z][A-Za-z\s\-\.]+?)(?:\s+aged|\s+from|$)/i', $title, $nameOnly)) {
+            $info['name'] = trim($nameOnly[1]);
+            echo "<p class='success'><strong>FALLBACK PATTERN MATCHED:</strong> Extracted name only</p>";
+            
+            // Now try to get age and location separately
+            if (preg_match('/aged\s+(\d+)/i', $title, $ageOnly)) {
+                $info['age'] = trim($ageOnly[1]);
+            }
+            
+            if (preg_match('/from\s+([A-Za-z][A-Za-z\s\-\.]+?)(?:$|,|\.|aged)/i', $title, $locOnly)) {
+                $info['location'] = trim($locOnly[1]);
+            }
+        }
+    }
+    
+    // Last resort - if title contains a name-like pattern
+    if (!$info['name'] && preg_match('/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/', $title, $possibleName)) {
+        $info['name'] = trim($possibleName[1]);
+        echo "<p class='warning'><strong>LAST RESORT MATCH:</strong> Using possible name from title</p>";
     }
     
     echo "<p class='info'>Extracted author: " . ($info['name'] ?? 'Unknown') .

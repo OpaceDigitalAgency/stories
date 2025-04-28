@@ -332,14 +332,23 @@ try {
                 $mediaStmt = null;
                 $media = null;
                 
-                // Try to find media record by URL
+                // Try to find media record by URL or filename
                 if (!empty($row['cover_url'])) {
+                    // Extract filename from URL
+                    $coverFilename = basename($row['cover_url']);
+                    
                     $mediaStmt = $db->prepare("
                         SELECT * FROM media
-                        WHERE file_path = ? OR thumbnail_url = ? OR small_url = ? OR medium_url = ? OR large_url = ?
+                        WHERE file_path = ?
+                        OR thumbnail_url = ?
+                        OR small_url = ?
+                        OR medium_url = ?
+                        OR large_url = ?
+                        OR filename = ?
                     ");
                     $mediaStmt->execute([
-                        $row['cover_url'], $row['cover_url'], $row['cover_url'], $row['cover_url'], $row['cover_url']
+                        $row['cover_url'], $row['cover_url'], $row['cover_url'],
+                        $row['cover_url'], $row['cover_url'], $coverFilename
                     ]);
                     $media = $mediaStmt->fetch();
                 }

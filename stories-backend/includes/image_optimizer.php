@@ -92,6 +92,9 @@ function createOptimizedFilename($originalFilename, $size = 'medium', $format = 
     // Remove any random digits prefix (like 680fd60a0a8e3-) from the basename
     $baseName = preg_replace('/^[0-9a-f]+-/', '', $baseName);
     
+    // Also remove any img_ prefix that might be present
+    $baseName = preg_replace('/^img_[A-Za-z0-9]+$/', 'image', $baseName);
+    
     // Create a SEO-friendly filename with size indicator but no random prefix
     return $baseName . '-' . $size . '.' . $format;
 }
@@ -366,6 +369,9 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
         
         // Create unique filename
         $variantFilename = createOptimizedFilename($originalFilename, $size, $formatConfig['extension']);
+        
+        // Ensure no double slashes in the path
+        $destinationDir = rtrim($destinationDir, '/');
         $variantPath = $destinationDir . '/' . $variantFilename;
         
         // Set resize options
@@ -389,6 +395,8 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
         if ($success) {
             // Create URL
             $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $variantPath);
+            // Ensure the relative path starts with a single slash
+            $relativePath = '/' . ltrim($relativePath, '/');
             $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
             
             $variants[$size] = [
@@ -460,9 +468,10 @@ function optimizeImage($sourcePath, $destinationDir, $options = []) {
 function updateMediaRecord($db, $mediaId, $variants) {
     try {
         // Prepare update statement
-        $sql = "UPDATE media SET 
+        $sql = "UPDATE media SET
                 file_path = :file_path,
                 file_size = :file_size,
+                file_type = :file_type,
                 thumbnail_url = :thumbnail_url,
                 small_url = :small_url,
                 medium_url = :medium_url,
@@ -471,9 +480,21 @@ function updateMediaRecord($db, $mediaId, $variants) {
         
         $stmt = $db->prepare($sql);
         
+        // Determine the file type based on the format used
+        $fileType = 'image/jpeg'; // Default to JPEG since we're converting most images
+        if (isset($variants['medium'])) {
+            $ext = pathinfo($variants['medium']['path'], PATHINFO_EXTENSION);
+            if ($ext === 'png') {
+                $fileType = 'image/png';
+            } elseif ($ext === 'webp') {
+                $fileType = 'image/webp';
+            }
+        }
+        
         // Bind parameters
         $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? '');
         $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? 0);
+        $stmt->bindValue(':file_type', $fileType);
         $stmt->bindValue(':thumbnail_url', $variants['thumbnail']['url'] ?? '');
         $stmt->bindValue(':small_url', $variants['small']['url'] ?? '');
         $stmt->bindValue(':medium_url', $variants['medium']['url'] ?? '');

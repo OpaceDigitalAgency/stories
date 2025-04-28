@@ -1,5 +1,6 @@
 <?php
 require_once '../../simple_auth.php';
+require_once '../../includes/image_optimizer.php';
 
 // Database configuration
 $config = [
@@ -109,7 +110,29 @@ try {
                     $_POST['alt_text'] ?? ''
                 ]);
                 
-                $success = "File uploaded successfully";
+                $mediaId = $db->lastInsertId();
+                
+                // Check if it's an image and automatically optimize it
+                if (strpos($fileType, 'image/') === 0) {
+                    // Create optimized directory if it doesn't exist
+                    $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
+                    if (!is_dir($optimizedDir)) {
+                        mkdir($optimizedDir, 0755, true);
+                    }
+                    
+                    // Optimize the image
+                    $variants = createImageVariants($fileDestination, $optimizedDir);
+                    
+                    if ($variants) {
+                        // Update the media record with optimized URLs
+                        updateMediaRecord($db, $mediaId, $variants);
+                        $success = "File uploaded and optimized successfully";
+                    } else {
+                        $success = "File uploaded successfully, but optimization failed";
+                    }
+                } else {
+                    $success = "File uploaded successfully";
+                }
             } else {
                 $error = "Error moving uploaded file";
             }
@@ -204,6 +227,11 @@ if (isset($_SESSION['error'])) {
             <div>
                 <h1 class="page-title">Media</h1>
                 <p class="page-description">Manage all your media files from here.</p>
+            </div>
+            <div>
+                <a href="../../public/optimize_image.php" class="btn btn-success">
+                    <span class="icon-image"></span> Optimize All Media
+                </a>
             </div>
         </div>
 
@@ -391,6 +419,10 @@ if (isset($_SESSION['error'])) {
         
         .icon-download:before {
             content: "↓";
+        }
+        
+        .icon-image:before {
+            content: "🖼️";
         }
     </style>
 </body>

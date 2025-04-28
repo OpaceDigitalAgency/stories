@@ -20,11 +20,29 @@ if (!$user = SimpleAuth::check()) {
     exit;
 }
 
+// Include the image optimizer library
+require_once '../../includes/image_optimizer.php';
+
 // Function to handle file paths for display and access
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
     if (strpos($filePath, 'http') === 0) {
         return $filePath;
+    }
+    
+    // Check for optimized versions
+    if (isset($GLOBALS['media']) && isset($GLOBALS['media']['id'])) {
+        $mediaId = $GLOBALS['media']['id'];
+        $db = $GLOBALS['db'];
+        
+        // Check if we have optimized versions
+        if (!empty($GLOBALS['media']['medium_url'])) {
+            return $GLOBALS['media']['medium_url'];
+        }
+        
+        if (!empty($GLOBALS['media']['large_url'])) {
+            return $GLOBALS['media']['large_url'];
+        }
     }
     
     // If it's a relative URL starting with /
@@ -192,6 +210,14 @@ try {
                                 </div>
                             <?php endif; ?>
                         </div>
+                        
+                        <?php if ($isImage): ?>
+                        <div class="optimize-actions mb-4">
+                            <a href="../../public/optimize_image.php?id=<?php echo $media['id']; ?>" class="btn btn-success">
+                                <span class="icon-image"></span> Optimize This Image
+                            </a>
+                        </div>
+                        <?php endif; ?>
                     </div>
                     <div class="col-md-6">
                         <div class="media-details">
@@ -222,6 +248,42 @@ try {
                                 <strong>Display URL:</strong>
                                 <?php echo htmlspecialchars($displayUrl); ?>
                             </div>
+                            
+                            <?php if ($isImage): ?>
+                            <div class="detail-item">
+                                <strong>Available Sizes:</strong>
+                                <ul class="image-sizes-list">
+                                    <?php if (!empty($media['thumbnail_url'])): ?>
+                                    <li>
+                                        <a href="<?php echo htmlspecialchars($media['thumbnail_url']); ?>" target="_blank">Thumbnail</a>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($media['small_url'])): ?>
+                                    <li>
+                                        <a href="<?php echo htmlspecialchars($media['small_url']); ?>" target="_blank">Small</a>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($media['medium_url'])): ?>
+                                    <li>
+                                        <a href="<?php echo htmlspecialchars($media['medium_url']); ?>" target="_blank">Medium</a>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($media['large_url'])): ?>
+                                    <li>
+                                        <a href="<?php echo htmlspecialchars($media['large_url']); ?>" target="_blank">Large</a>
+                                    </li>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (empty($media['thumbnail_url']) && empty($media['small_url']) &&
+                                             empty($media['medium_url']) && empty($media['large_url'])): ?>
+                                    <li>No optimized sizes available</li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                            <?php endif; ?>
                             
                             <?php if (!empty($media['alt_text'])): ?>
                             <div class="detail-item">
@@ -348,6 +410,34 @@ try {
         
         .icon-download:before {
             content: "↓";
+        }
+        
+        .image-sizes-list {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+        
+        .image-sizes-list li {
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            background-color: var(--gray-50);
+            border-radius: var(--radius-sm);
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .image-sizes-list li a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .image-sizes-list li a:hover {
+            text-decoration: underline;
+        }
+        
+        .icon-image:before {
+            content: "🖼️";
         }
     </style>
 </body>

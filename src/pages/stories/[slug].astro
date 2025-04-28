@@ -131,7 +131,11 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           <!-- Cover Image -->
           <div class="mb-12 rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
             <img
-              src={story.cover_urls?.large || story.cover_urls?.medium || story.coverImage || '/images/default-cover.svg'}
+              src={
+                typeof story.coverImage === 'object'
+                  ? (story.coverImage.large || story.coverImage.medium || story.coverImage.default)
+                  : (story.cover_urls?.large || story.cover_urls?.medium || story.coverImage || '/images/default-cover.svg')
+              }
               alt={story.title}
               class="w-full h-auto object-cover"
             />

@@ -51,11 +51,14 @@ try {
         throw new Exception("Author not found");
     }
 
-    // Check if author has any stories
-    $stmt = $db->prepare("SELECT COUNT(*) FROM stories WHERE author_id = ?");
+    // Check if author has any stories (using junction table)
+    $stmt = $db->prepare("
+        SELECT COUNT(*) FROM story_authors
+        WHERE author_id = ?
+    ");
     $stmt->execute([$id]);
     if ($stmt->fetchColumn() > 0) {
-        throw new Exception("Cannot delete author with existing stories");
+        throw new Exception("Cannot delete author with existing stories. Please remove story associations first.");
     }
 
     // Check if author has any blog posts

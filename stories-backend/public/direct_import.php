@@ -199,7 +199,13 @@ function getOrCreateAuthor($db, $authorInfo) {
         return null;
     }
     
-    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorInfo['name']));
+    // Generate a proper slug from the author name
+    $name = trim($authorInfo['name']);
+    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
+    
+    // Remove any leading or trailing dashes
+    $slug = trim($slug, '-');
+    
     echo "<p class='info'><strong>AUTHOR SLUG:</strong> \"$slug\"</p>";
     flushOutput();
     

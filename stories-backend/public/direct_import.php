@@ -215,9 +215,10 @@ function getOrCreateAuthor($db, $authorInfo) {
     if ($author) {
         echo "<p class='info'>Author already exists: {$authorInfo['name']}</p>";
         
-        // Update author with age and location if not set
-        $updateStmt = $db->prepare("UPDATE authors SET age = COALESCE(age, ?), location = COALESCE(location, ?) WHERE id = ?");
+        // Always update author with age and location
+        $updateStmt = $db->prepare("UPDATE authors SET age = ?, location = ? WHERE id = ?");
         $updateStmt->execute([$authorInfo['age'], $authorInfo['location'], $author['id']]);
+        echo "<p class='success'>Updated author with age: {$authorInfo['age']}, location: {$authorInfo['location']}</p>";
         
         return $author['id'];
     }
@@ -370,8 +371,16 @@ foreach ($storyDirs as $storyDir) {
         }
     }
     
-    // Generate clean excerpt
-    $excerpt = cleanExcerpt($markdownContent);
+    // Extract the summary section from markdown content
+    $summaryMatch = null;
+    if (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*)/s', $markdownContent, $summaryMatch)) {
+        $summary = trim($summaryMatch[1]);
+        $excerpt = $summary;
+    } else {
+        // Fallback to first paragraph if no summary section
+        $paragraphs = preg_split('/\n\s*\n/', $markdownContent);
+        $excerpt = trim($paragraphs[0]);
+    }
     
     // Convert markdown to HTML
     $html = $markdownContent; // Simple conversion - in production use a proper markdown parser
@@ -420,6 +429,39 @@ foreach ($storyDirs as $storyDir) {
                 echo "<p class='success'>Associated story with author ID: $authorId</p>";
             }
         }
+        
+        // Add tags to the story
+        // First, get or create tags
+        foreach (explode(',', $tags) as $tagName) {
+            $tagName = trim($tagName);
+            if (empty($tagName)) continue;
+            
+            $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $tagName));
+            
+            // Check if tag exists
+            $tagStmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
+            $tagStmt->execute([$tagSlug]);
+            $tag = $tagStmt->fetch();
+            
+            if (!$tag) {
+                // Create new tag
+                $createTagStmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                $createTagStmt->execute([$tagName, $tagSlug]);
+                $tagId = $db->lastInsertId();
+                echo "<p class='success'>Created tag: $tagName</p>";
+            } else {
+                $tagId = $tag['id'];
+            }
+            
+            // Associate tag with story if not already associated
+            $checkTagStmt = $db->prepare("SELECT * FROM story_tags WHERE story_id = ? AND tag_id = ?");
+            $checkTagStmt->execute([$existingStory['id'], $tagId]);
+            if (!$checkTagStmt->fetch()) {
+                $linkTagStmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+                $linkTagStmt->execute([$existingStory['id'], $tagId]);
+                echo "<p class='success'>Added tag '$tagName' to story</p>";
+            }
+        }
     } else {
         // Insert new story
         try {
@@ -440,6 +482,44 @@ foreach ($storyDirs as $storyDir) {
             $readingTime,
             $ageGroup
         ]);
+        
+        $storyId = $db->lastInsertId();
+        echo "<p class='success'>Created story with ID: $storyId</p>";
+        
+        // Associate with author
+        if ($authorId) {
+            $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+            $stmt->execute([$storyId, $authorId]);
+            echo "<p class='success'>Associated story with author ID: $authorId</p>";
+        }
+        
+        // Add tags to the story
+        foreach (explode(',', $tags) as $tagName) {
+            $tagName = trim($tagName);
+            if (empty($tagName)) continue;
+            
+            $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $tagName));
+            
+            // Check if tag exists
+            $tagStmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
+            $tagStmt->execute([$tagSlug]);
+            $tag = $tagStmt->fetch();
+            
+            if (!$tag) {
+                // Create new tag
+                $createTagStmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                $createTagStmt->execute([$tagName, $tagSlug]);
+                $tagId = $db->lastInsertId();
+                echo "<p class='success'>Created tag: $tagName</p>";
+            } else {
+                $tagId = $tag['id'];
+            }
+            
+            // Associate tag with story
+            $linkTagStmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+            $linkTagStmt->execute([$storyId, $tagId]);
+            echo "<p class='success'>Added tag '$tagName' to story</p>";
+        }
         
         $storyId = $db->lastInsertId();
         echo "<p class='success'>Created story with ID: $storyId</p>";

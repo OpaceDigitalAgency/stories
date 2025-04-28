@@ -238,29 +238,75 @@ function handleMediaUpload($db, $storyDir, $title) {
     echo "<p class='info'>Looking for images in: $imagesDir</p>";
     flushOutput();
     
-    // Check for pre-optimized images first (for specific stories)
+    // Check for pre-optimized images first (for all stories)
     $usePreOptimized = false;
     $preOptimizedImage = null;
+    $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
     
-    if (strpos($title, "Omagh Library") !== false) {
-        // Look for the future-library images in the uploads directory
-        $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
-        $possibleImages = glob("$optimizedDir/future-library-captivating-storybook-300x300.png");
+    // Extract the base name without extension to search for optimized versions
+    $baseNameParts = explode('-by-', basename($storyDir));
+    $baseName = $baseNameParts[0];
+    $baseName = preg_replace('/[^a-z0-9]+/i', '-', $baseName);
+    echo "<p class='info'>Looking for optimized images for: $baseName</p>";
+    flushOutput();
+    
+    // Try to find optimized versions with different sizes (prioritize 300x300)
+    $sizePatterns = [
+        '300x300', // Best size for balance between quality and performance
+        '240x240',
+        '150x150',
+        '110x110'
+    ];
+    
+    // First try to find images matching the story name
+    foreach ($sizePatterns as $sizePattern) {
+        // Look for files matching the pattern in the uploads directory
+        $optimizedImages = glob("$optimizedDir/*$baseName*$sizePattern*.{jpg,jpeg,png,gif}", GLOB_BRACE);
         
-        if (!empty($possibleImages)) {
-            echo "<p class='success'>Found pre-optimized image for Omagh Library</p>";
+        if (!empty($optimizedImages)) {
+            $preOptimizedImage = $optimizedImages[0];
             $usePreOptimized = true;
-            $preOptimizedImage = $possibleImages[0];
+            echo "<p class='success'>Found pre-optimized image ($sizePattern) for story: " . basename($preOptimizedImage) . "</p>";
+            flushOutput();
+            break;
         }
-    } else if (strpos($title, "The Reader and the Old Library") !== false) {
-        // Look for any suitable pre-optimized image
-        $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
-        $possibleImages = glob("$optimizedDir/library-books-reading-300x300.png");
-        
-        if (!empty($possibleImages)) {
-            echo "<p class='success'>Found pre-optimized image for The Reader and the Old Library</p>";
-            $usePreOptimized = true;
-            $preOptimizedImage = $possibleImages[0];
+    }
+    
+    // If no match found, try with specific story titles
+    if (!$usePreOptimized) {
+        if (strpos($title, "Omagh Library") !== false) {
+            // Look for the future-library images in the uploads directory
+            $possibleImages = glob("$optimizedDir/future-library-captivating-storybook-300x300.png");
+            
+            if (!empty($possibleImages)) {
+                echo "<p class='success'>Found pre-optimized image for Omagh Library</p>";
+                $usePreOptimized = true;
+                $preOptimizedImage = $possibleImages[0];
+            }
+        } else if (strpos($title, "The Reader and the Old Library") !== false) {
+            // Look for any suitable pre-optimized image
+            $possibleImages = glob("$optimizedDir/library-books-reading-300x300.png");
+            
+            if (!empty($possibleImages)) {
+                echo "<p class='success'>Found pre-optimized image for The Reader and the Old Library</p>";
+                $usePreOptimized = true;
+                $preOptimizedImage = $possibleImages[0];
+            }
+        }
+    }
+    
+    // If still no match, try with generic "future-library" pattern which seems to be common
+    if (!$usePreOptimized) {
+        foreach ($sizePatterns as $sizePattern) {
+            $futureLibraryImages = glob("$optimizedDir/future-library*$sizePattern*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            
+            if (!empty($futureLibraryImages)) {
+                $preOptimizedImage = $futureLibraryImages[0];
+                $usePreOptimized = true;
+                echo "<p class='success'>Found generic pre-optimized future-library image ($sizePattern): " . basename($preOptimizedImage) . "</p>";
+                flushOutput();
+                break;
+            }
         }
     }
     
@@ -447,8 +493,8 @@ function handleMediaUpload($db, $storyDir, $title) {
                 }
                 
                 if ($source) {
-                    // Calculate new dimensions (max 800px width for better performance)
-                    $maxWidth = 800;
+                    // Calculate new dimensions (max 600px width for better performance)
+                    $maxWidth = 600;
                     $newWidth = $width;
                     $newHeight = $height;
                     
@@ -472,8 +518,8 @@ function handleMediaUpload($db, $storyDir, $title) {
                     
                     // Save resized image with higher compression
                     if ($type === IMAGETYPE_JPEG) {
-                        // Use 75% quality for better compression
-                        imagejpeg($resized, $destination, 75);
+                        // Use 70% quality for better compression
+                        imagejpeg($resized, $destination, 70);
                     } else {
                         // For PNG, use maximum compression (9)
                         imagepng($resized, $destination, 9);

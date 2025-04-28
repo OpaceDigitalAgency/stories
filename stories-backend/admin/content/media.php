@@ -20,6 +20,27 @@ if (!$user = SimpleAuth::check()) {
     exit;
 }
 
+// Function to handle file paths for display and access
+function getDisplayUrl($filePath) {
+    // If it's already an absolute URL
+    if (strpos($filePath, 'http') === 0) {
+        return $filePath;
+    }
+    
+    // If it's a relative URL starting with /
+    if (strpos($filePath, '/') === 0) {
+        return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
+    }
+    
+    // If it's a server path
+    if (file_exists($filePath)) {
+        $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $filePath);
+        return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+    }
+    
+    return $filePath;
+}
+
 // Initialize variables
 $media = [];
 $error = null;
@@ -234,7 +255,7 @@ if (isset($_SESSION['error'])) {
                                 ?>
                                 <div class="media-thumbnail">
                                     <?php if ($isImage): ?>
-                                        <img src="<?php echo htmlspecialchars($item['file_path']); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
+                                        <img src="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
                                     <?php else: ?>
                                         <div class="file-icon"><?php echo pathinfo($item['filename'], PATHINFO_EXTENSION); ?></div>
                                     <?php endif; ?>
@@ -249,7 +270,7 @@ if (isset($_SESSION['error'])) {
                                                 <span class="icon-view"></span> View
                                             </button>
                                         </form>
-                                        <a href="<?php echo htmlspecialchars($item['file_path']); ?>" target="_blank" class="btn btn-primary btn-sm">
+                                        <a href="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" target="_blank" class="btn btn-primary btn-sm">
                                             <span class="icon-download"></span> Download
                                         </a>
                                         <form method="GET" style="display: inline;">

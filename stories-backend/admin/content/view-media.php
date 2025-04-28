@@ -20,6 +20,39 @@ if (!$user = SimpleAuth::check()) {
     exit;
 }
 
+// Function to handle file paths for display and access
+function getDisplayUrl($filePath) {
+    // If it's already an absolute URL
+    if (strpos($filePath, 'http') === 0) {
+        return $filePath;
+    }
+    
+    // If it's a relative URL starting with /
+    if (strpos($filePath, '/') === 0) {
+        return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
+    }
+    
+    // If it's a server path
+    if (file_exists($filePath)) {
+        $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $filePath);
+        return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+    }
+    
+    return $filePath;
+}
+
+// Function to check if a file exists, handling both local paths and URLs
+function fileExistsCheck($filePath) {
+    // If it's a local path
+    if (strpos($filePath, 'http') !== 0) {
+        return file_exists($filePath);
+    }
+    
+    // If it's a URL, try to fetch headers
+    $headers = @get_headers($filePath);
+    return $headers && strpos($headers[0], '200') !== false;
+}
+
 // Check if ID is provided
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     $_SESSION['error'] = "Invalid media ID.";
@@ -68,8 +101,11 @@ try {
     $isImage = strpos($media['file_type'], 'image/') === 0;
     $fileExtension = pathinfo($media['filename'], PATHINFO_EXTENSION);
 
-    // Check if file exists
-    $fileExists = file_exists($media['file_path']);
+    // Check if file exists (handling both local paths and URLs)
+    $fileExists = fileExistsCheck($media['file_path']);
+    
+    // Get display URL for the file
+    $displayUrl = getDisplayUrl($media['file_path']);
 
 } catch (PDOException $e) {
     error_log("View media error: " . $e->getMessage());
@@ -125,7 +161,7 @@ try {
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <a href="<?php echo htmlspecialchars($media['file_path']); ?>" target="_blank" class="btn btn-primary">
+                <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-primary">
                     <span class="icon-download"></span> Download
                 </a>
                 <form method="GET" style="display: inline;">
@@ -147,7 +183,7 @@ try {
                     <div class="col-md-6">
                         <div class="media-preview mb-4">
                             <?php if ($isImage && $fileExists): ?>
-                                <img src="<?php echo htmlspecialchars($media['file_path']); ?>" 
+                                <img src="<?php echo htmlspecialchars($displayUrl); ?>"
                                      alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"
                                      class="img-preview">
                             <?php else: ?>
@@ -175,11 +211,16 @@ try {
                             </div>
                             
                             <div class="detail-item">
-                                <strong>File Path:</strong> 
+                                <strong>File Path:</strong>
                                 <?php echo htmlspecialchars($media['file_path']); ?>
                                 <?php if (!$fileExists): ?>
                                     <span class="text-danger">(File not found on server)</span>
                                 <?php endif; ?>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <strong>Display URL:</strong>
+                                <?php echo htmlspecialchars($displayUrl); ?>
                             </div>
                             
                             <?php if (!empty($media['alt_text'])): ?>
@@ -202,9 +243,9 @@ try {
                             <div class="detail-item mt-4">
                                 <strong>Usage in HTML:</strong>
                                 <?php if ($isImage): ?>
-                                <pre class="code-block"><code>&lt;img src="<?php echo htmlspecialchars($media['file_path']); ?>" alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"&gt;</code></pre>
+                                <pre class="code-block"><code>&lt;img src="<?php echo htmlspecialchars($displayUrl); ?>" alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"&gt;</code></pre>
                                 <?php else: ?>
-                                <pre class="code-block"><code>&lt;a href="<?php echo htmlspecialchars($media['file_path']); ?>"&gt;Download <?php echo htmlspecialchars($media['filename']); ?>&lt;/a&gt;</code></pre>
+                                <pre class="code-block"><code>&lt;a href="<?php echo htmlspecialchars($displayUrl); ?>"&gt;Download <?php echo htmlspecialchars($media['filename']); ?>&lt;/a&gt;</code></pre>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -218,7 +259,7 @@ try {
                 Back to Media Library
             </a>
             <div>
-                <a href="<?php echo htmlspecialchars($media['file_path']); ?>" target="_blank" class="btn btn-primary">
+                <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-primary">
                     <span class="icon-download"></span> Download
                 </a>
             </div>

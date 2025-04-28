@@ -171,10 +171,16 @@ $possiblePaths = [
     __DIR__ . '/../_wp migration/wp-md'
 ];
 
+echo "<p>Find WordPress export directory: \$wpDir = null; \$possiblePaths = [";
+foreach ($possiblePaths as $path) {
+    echo " '__DIR__ . \"" . str_replace(__DIR__, '', $path) . "\"',";
+}
+echo " ];</p>";
+
 foreach ($possiblePaths as $path) {
     if (is_dir($path)) {
         $wpDir = $path;
-        echo "<p class='success'>Found WordPress export directory: $wpDir</p>";
+        echo "<p>Found WordPress export directory: \$wpDir = \"$wpDir\";</p>";
         break;
     }
 }
@@ -183,6 +189,9 @@ if (!$wpDir) {
     echo "<p class='error'>WordPress export directory not found</p>";
     exit;
 }
+
+// Debug info
+echo "<p>break; } } if (\$wpDir) { echo \"</p>";
 
 // Action: Clean & Import
 if ($_POST['action'] === 'clean_import') {

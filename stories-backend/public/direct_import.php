@@ -234,103 +234,237 @@ function handleMediaUpload($db, $storyDir, $title) {
     $coverUrl = $defaultCoverUrl; // Default
     $mediaId = null;
     
-    if (is_dir($imagesDir)) {
-        $images = glob("$imagesDir/*.*");
-        if (!empty($images)) {
-            $coverImage = basename($images[0]);
+    // Debug info for missing images
+    echo "<p class='info'>Looking for images in: $imagesDir</p>";
+    flushOutput();
+    
+    // Check if images directory exists
+    if (!is_dir($imagesDir)) {
+        echo "<p class='warning'>Images directory not found: $imagesDir</p>";
+        flushOutput();
+        
+        // Special handling for known problematic stories
+        if (strpos($title, "Omagh Library") !== false || strpos($title, "The Reader and the Old Library") !== false) {
+            echo "<p class='info'>Attempting to find images for special case: $title</p>";
             
-            // Use absolute server path for uploads
-            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-                echo "<p class='info'>Created uploads directory</p>";
-                flushOutput();
-            }
+            // Try to find images in parent directory
+            $parentDir = dirname($storyDir);
+            $possibleImages = glob("$parentDir/*.*");
             
-            // Generate unique filename to avoid collisions
-            $uniqueFilename = uniqid() . '-' . $coverImage;
-            $destination = $uploadDir . $uniqueFilename;
-            
-            // Create both relative and absolute URLs
-            $relativeUrl = '/uploads/' . $uniqueFilename;
-            $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
-            
-            echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
-            flushOutput();
-            
-            if (copy($images[0], $destination)) {
-                // Set proper permissions - ensure web server can read the file
-                chmod($destination, 0644);
+            if (!empty($possibleImages)) {
+                echo "<p class='success'>Found alternative images in parent directory</p>";
+                $imagesDir = $parentDir;
+                $images = $possibleImages;
+            } else {
+                // Try to find any PNG files in the story directory
+                $possibleImages = glob("$storyDir/*.png");
                 
-                // Make sure everyone can read the file
-                system("chmod -R 644 " . escapeshellarg($destination));
-                
-                // Verify the file exists and is readable
-                if (file_exists($destination) && is_readable($destination)) {
-                    echo "<p class='success'>Copied image to: $destination</p>";
-                    echo "<p class='info'>Public URL: $absoluteUrl</p>";
-                    // Always use absolute URL for cover
-                    $coverUrl = $absoluteUrl;
+                if (!empty($possibleImages)) {
+                    echo "<p class='success'>Found PNG images directly in story directory</p>";
+                    $images = $possibleImages;
                 } else {
-                    echo "<p class='warning'>File copied but may not be readable: $destination</p>";
-                    echo "<p class='info'>Setting permissions again...</p>";
-                    chmod($destination, 0644);
-                    // Always use absolute URL for cover
-                    $coverUrl = $absoluteUrl;
-                }
-                flushOutput();
-                
-                // Get proper MIME type
-                $fileSize = filesize($destination);
-                
-                // Try to use fileinfo extension if available
-                if (function_exists('finfo_open')) {
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mimeType = finfo_file($finfo, $destination);
-                    finfo_close($finfo);
-                } else {
-                    // Fallback: determine MIME type based on extension
-                    $extension = strtolower(pathinfo($destination, PATHINFO_EXTENSION));
-                    $mimeTypes = [
-                        'jpg' => 'image/jpeg',
-                        'jpeg' => 'image/jpeg',
-                        'png' => 'image/png',
-                        'gif' => 'image/gif',
-                        'webp' => 'image/webp',
-                        'svg' => 'image/svg+xml',
-                        'pdf' => 'application/pdf'
+                    echo "<p class='error'>No images found for special case: $title</p>";
+                    return [
+                        'cover_url' => $coverUrl,
+                        'media_id' => $mediaId
                     ];
-                    $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
-                    echo "<p class='info'>Using fallback MIME type detection: $mimeType</p>";
+                }
+            }
+        } else {
+            return [
+                'cover_url' => $coverUrl,
+                'media_id' => $mediaId
+            ];
+        }
+    } else {
+        $images = glob("$imagesDir/*.*");
+        if (empty($images)) {
+            echo "<p class='warning'>No images found in directory: $imagesDir</p>";
+            flushOutput();
+            return [
+                'cover_url' => $coverUrl,
+                'media_id' => $mediaId
+            ];
+        }
+    }
+    
+    // Process the first image found
+    $coverImage = basename($images[0]);
+    
+    // Use absolute server path for uploads
+    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+        echo "<p class='info'>Created uploads directory</p>";
+        flushOutput();
+    }
+    
+    // Check image size before processing
+    $imageSize = filesize($images[0]);
+    echo "<p class='info'>Original image size: " . round($imageSize / 1024) . " KB</p>";
+    flushOutput();
+    
+    // Generate unique filename to avoid collisions
+    $uniqueFilename = uniqid() . '-' . $coverImage;
+    $destination = $uploadDir . $uniqueFilename;
+    
+    // Create absolute URL (always use HTTPS for admin panel compatibility)
+    $relativeUrl = '/uploads/' . $uniqueFilename;
+    $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
+    
+    echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
+    flushOutput();
+            
+    // Always optimize images for better performance
+    if (extension_loaded('gd')) {
+        try {
+            // Get image info
+            list($width, $height, $type) = getimagesize($images[0]);
+            
+            // Only process if it's a supported image type
+            if ($type === IMAGETYPE_JPEG || $type === IMAGETYPE_PNG) {
+                // Create image resource
+                if ($type === IMAGETYPE_JPEG) {
+                    $source = imagecreatefromjpeg($images[0]);
+                } else {
+                    $source = imagecreatefrompng($images[0]);
+                }
+                
+                if ($source) {
+                    // Calculate new dimensions (max 800px width for better performance)
+                    $maxWidth = 800;
+                    $newWidth = $width;
+                    $newHeight = $height;
+                    
+                    if ($width > $maxWidth) {
+                        $newWidth = $maxWidth;
+                        $newHeight = ($height / $width) * $maxWidth;
+                    }
+                    
+                    // Create resized image with proper alpha channel support for PNGs
+                    $resized = imagecreatetruecolor($newWidth, $newHeight);
+                    
+                    // Preserve transparency for PNG images
+                    if ($type === IMAGETYPE_PNG) {
+                        imagealphablending($resized, false);
+                        imagesavealpha($resized, true);
+                        $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+                        imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+                    }
+                    
+                    imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    
+                    // Save resized image with higher compression
+                    if ($type === IMAGETYPE_JPEG) {
+                        // Use 75% quality for better compression
+                        imagejpeg($resized, $destination, 75);
+                    } else {
+                        // For PNG, use maximum compression (9)
+                        imagepng($resized, $destination, 9);
+                    }
+                    
+                    imagedestroy($resized);
+                    imagedestroy($source);
+                    
+                    echo "<p class='success'>Image optimized and resized to $newWidth x $newHeight</p>";
                     flushOutput();
                 }
+            } else {
+                // Just copy the file if it's not a supported type
+                copy($images[0], $destination);
+                echo "<p class='info'>Unsupported image type, copied without optimization</p>";
+                flushOutput();
+            }
+        } catch (Exception $e) {
+            // If optimization fails, just copy the file
+            copy($images[0], $destination);
+            echo "<p class='warning'>Image optimization failed: " . $e->getMessage() . "</p>";
+            echo "<p class='info'>Copied original image instead</p>";
+            flushOutput();
+        }
+    } else {
+        // If GD is not available, just copy the file
+        copy($images[0], $destination);
+        echo "<p class='info'>GD library not available, copied without optimization</p>";
+        flushOutput();
+    }
+    
+    // Set proper permissions - ensure web server can read the file
+    chmod($destination, 0644);
+    
+    // Make sure everyone can read the file
+    system("chmod -R 644 " . escapeshellarg($destination));
+    system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
+    
+    // Verify the file exists and is readable
+    if (file_exists($destination) && is_readable($destination)) {
+        echo "<p class='success'>Image saved to: $destination</p>";
+        echo "<p class='info'>Public URL: $absoluteUrl</p>";
+        
+        // Check final file size
+        $finalSize = filesize($destination);
+        echo "<p class='info'>Final image size: " . round($finalSize / 1024) . " KB</p>";
+        
+        // Always use absolute URL for cover
+        $coverUrl = $absoluteUrl;
+    } else {
+        echo "<p class='warning'>File saved but may not be readable: $destination</p>";
+        echo "<p class='info'>Setting permissions again...</p>";
+        chmod($destination, 0644);
+        
+        // Always use absolute URL for cover
+        $coverUrl = $absoluteUrl;
+    }
+    flushOutput();
+    
+    // Get proper MIME type
+    $fileSize = filesize($destination);
+    
+    // Try to use fileinfo extension if available
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $destination);
+        finfo_close($finfo);
+    } else {
+        // Fallback: determine MIME type based on extension
+        $extension = strtolower(pathinfo($destination, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+            'pdf' => 'application/pdf'
+        ];
+        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+        echo "<p class='info'>Using fallback MIME type detection: $mimeType</p>";
+        flushOutput();
+    }
                 
                 // Create alt text
                 $altText = "Illustration for story: " . $title;
                 
-                // Add to media library
-                try {
-                    // Always store absolute URLs in the database
-                    $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
-                    $stmt->execute([
-                        $uniqueFilename,
-                        $absoluteUrl, // Use absolute URL with domain
-                        $mimeType,
-                        $fileSize,
-                        $altText
-                    ]);
-                    $mediaId = $db->lastInsertId();
-                    echo "<p class='success'>Added to media library (ID: $mediaId)</p>";
-                    flushOutput();
-                } catch (Exception $e) {
-                    echo "<p class='error'>Failed to add to media library: " . $e->getMessage() . "</p>";
-                    flushOutput();
-                }
-            } else {
-                echo "<p class='error'>Failed to copy image: $images[0]</p>";
-                flushOutput();
-            }
-        }
+    // Create alt text
+    $altText = "Illustration for story: " . $title;
+    
+    // Add to media library
+    try {
+        // Always store absolute URLs in the database for admin panel compatibility
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt->execute([
+            $uniqueFilename,
+            $absoluteUrl, // Use absolute URL with protocol
+            $mimeType,
+            $fileSize,
+            $altText
+        ]);
+        $mediaId = $db->lastInsertId();
+        echo "<p class='success'>Added to media library (ID: $mediaId)</p>";
+        flushOutput();
+    } catch (Exception $e) {
+        echo "<p class='error'>Failed to add to media library: " . $e->getMessage() . "</p>";
+        flushOutput();
     }
     
     return [

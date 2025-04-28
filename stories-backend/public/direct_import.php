@@ -95,17 +95,33 @@ if ($_POST['action'] === 'confirm_clean' && $_POST['mode'] === 'clean') {
         // Begin transaction
         $db->beginTransaction();
         
-        // 1. Delete story_authors associations for child stories
+        // 1. Delete story_tags associations for child stories
+        $db->exec("DELETE st FROM story_tags st
+                  JOIN stories s ON st.story_id = s.id
+                  WHERE s.source_type = 'child'");
+        echo "<p class='info'>Deleted story-tag associations for child stories</p>";
+        
+        // 2. Delete story_authors associations for child stories
         $db->exec("DELETE sa FROM story_authors sa
                   JOIN stories s ON sa.story_id = s.id
                   WHERE s.source_type = 'child'");
         echo "<p class='info'>Deleted story-author associations for child stories</p>";
         
-        // 2. Delete child stories
+        // 3. Delete child stories
         $stmt = $db->prepare("DELETE FROM stories WHERE source_type = 'child'");
         $stmt->execute();
         $count = $stmt->rowCount();
         echo "<p class='info'>Deleted $count existing child stories</p>";
+        
+        // 4. Delete unused authors (those without any stories)
+        $db->exec("DELETE a FROM authors a
+                  LEFT JOIN story_authors sa ON a.id = sa.author_id
+                  WHERE sa.author_id IS NULL AND a.author_type = 'child'");
+        echo "<p class='info'>Deleted unused child authors</p>";
+        
+        // 5. Delete unused media files
+        $db->exec("DELETE FROM media WHERE id > 1");
+        echo "<p class='info'>Deleted existing media files</p>";
         
         // Commit transaction
         $db->commit();
@@ -357,13 +373,21 @@ foreach ($storyDirs as $storyDir) {
             $coverImage = basename($images[0]);
             
             // Copy image to uploads directory
-            $uploadDir = __DIR__ . '/../public/uploads/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            // Use absolute server path for uploads
+            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+                echo "<p class='info'>Created uploads directory at: $uploadDir</p>";
+            }
             
-            $destination = $uploadDir . $coverImage;
+            // Create a unique filename to avoid conflicts
+            $fileExt = pathinfo($coverImage, PATHINFO_EXTENSION);
+            $uniqueFilename = uniqid() . '-' . $coverImage;
+            $destination = $uploadDir . $uniqueFilename;
+            
             if (copy($images[0], $destination)) {
-                $coverUrl = '/uploads/' . $coverImage;
-                echo "<p class='success'>Copied cover image: $coverImage</p>";
+                $coverUrl = '/uploads/' . $uniqueFilename;
+                echo "<p class='success'>Copied cover image to: $destination</p>";
                 
                 // Make sure the file is accessible
                 chmod($destination, 0644);
@@ -376,7 +400,7 @@ foreach ($storyDirs as $storyDir) {
                 // Insert into media table
                 try {
                     $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
-                    $stmt->execute([$coverImage, $coverUrl, $mimeType, $fileSize]);
+                    $stmt->execute([$uniqueFilename, $coverUrl, $mimeType, $fileSize]);
                     $mediaId = $db->lastInsertId();
                     echo "<p class='success'>Added image to media library (ID: $mediaId)</p>";
                     

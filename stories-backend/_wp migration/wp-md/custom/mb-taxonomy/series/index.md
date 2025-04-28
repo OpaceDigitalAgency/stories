@@ -1,0 +1,6 @@
+---
+title: "Series"
+date: 2023-07-19
+---
+
+{"slug":"series","types":\["post","book"\],"function\_name":"your\_prefix\_register\_taxonomy","text\_domain":"your-textdomain","labels":{"name":"Series","singular\_name":"Series","menu\_name":"Series","search\_items":"Search Series","popular\_items":"Popular Series","all\_items":"All Series","parent\_item":"Parent Series","parent\_item\_colon":"Parent Series:","edit\_item":"Edit Series","view\_item":"View Series","update\_item":"Update Series","add\_new\_item":"Add New Series","new\_item\_name":"New Series Name","separate\_items\_with\_commas":"Separate series with commas","add\_or\_remove\_items":"Add or remove series","choose\_from\_most\_used":"Choose most used series","not\_found":"No series found.","no\_terms":"No series","filter\_by\_item":"Filter by series","items\_list\_navigation":"Series list pagination","items\_list":"Series list","most\_used":"Most Used","back\_to\_items":"← Go to Series"},"description":"","public":true,"publicly\_queryable":true,"hierarchical":false,"show\_ui":true,"show\_in\_menu":true,"show\_in\_nav\_menus":true,"meta\_box\_cb":"post\_tags\_meta\_box","show\_in\_rest":true,"rest\_base":"","show\_tagcloud":true,"show\_in\_quick\_edit":true,"show\_admin\_column":false,"rewrite":{"slug":"","with\_front":false,"hierarchical":false},"query\_var":true,"sort":false,"label":"Series"}

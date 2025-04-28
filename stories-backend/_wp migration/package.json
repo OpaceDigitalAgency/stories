@@ -1,0 +1,19 @@
+{
+  "name": "_wp-migration",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.11",
+    "node-fetch": "^2.7.0",
+    "wordpress-export-to-markdown": "^3.0.4"
+  }
+}

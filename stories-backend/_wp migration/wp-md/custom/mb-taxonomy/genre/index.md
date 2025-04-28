@@ -1,0 +1,6 @@
+---
+title: "Genre"
+date: 2023-07-19
+---
+
+{"slug":"genre","types":\["post","book"\],"function\_name":"your\_prefix\_register\_taxonomy","text\_domain":"your-textdomain","labels":{"name":"Genres","singular\_name":"Genre","menu\_name":"Genres","search\_items":"Search Genres","popular\_items":"Popular Genres","all\_items":"All Genres","parent\_item":"Parent Genre","parent\_item\_colon":"Parent Genre:","edit\_item":"Edit Genre","view\_item":"View Genre","update\_item":"Update Genre","add\_new\_item":"Add New Genre","new\_item\_name":"New Genre Name","separate\_items\_with\_commas":"Separate genres with commas","add\_or\_remove\_items":"Add or remove genres","choose\_from\_most\_used":"Choose most used genres","not\_found":"No genres found.","no\_terms":"No genres","filter\_by\_item":"Filter by genre","items\_list\_navigation":"Genres list pagination","items\_list":"Genres list","most\_used":"Most Used","back\_to\_items":"← Go to Genres"},"description":"","public":true,"publicly\_queryable":true,"hierarchical":false,"show\_ui":true,"show\_in\_menu":true,"show\_in\_nav\_menus":true,"meta\_box\_cb":"post\_tags\_meta\_box","show\_in\_rest":true,"rest\_base":"","show\_tagcloud":true,"show\_in\_quick\_edit":true,"show\_admin\_column":false,"rewrite":{"slug":"","with\_front":false,"hierarchical":false},"query\_var":true,"sort":false,"label":"Genres"}

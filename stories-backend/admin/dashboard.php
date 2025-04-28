@@ -1,15 +1,11 @@
 <?php
 require_once '../simple_auth.php';
-
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Load admin configuration
+$config = require __DIR__ . '/includes/config.php';
+// Initialize database connection for SimpleAuth
+SimpleAuth::initDB($config['db']);
+ // Initialize database connection for SimpleAuth
+ SimpleAuth::initDB($config);
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -23,9 +19,9 @@ if (!SimpleAuth::check()) {
 try {
     // Get content statistics
     $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
+        "mysql:host={$config['db']['host']};dbname={$config['db']['name']};charset={$config['db']['charset']};port={$config['db']['port']}",
+        $config['db']['user'],
+        $config['db']['password'],
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

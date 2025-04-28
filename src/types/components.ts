@@ -4,28 +4,41 @@
 
 export interface CardStoryProps {
   /** The story data */
-  story: {
-    title: string;
-    slug: string;
-    excerpt?: string;
-    coverImage?: string;
-    author?: {
-      name: string;
-      avatar?: string;
-      slug: string;
-    };
-    rating?: number;
-    tags?: string[];
-    publishDate?: Date;
-    /** Source type of the story (child, parent, classic) */
-    source_type?: 'child' | 'parent' | 'classic';
-    /** Whether reviews are allowed for this story */
-    allow_reviews?: boolean;
-    /** Review count */
-    review_count?: number;
-  };
+  story: Story;
   /** Optional class names to apply to the card */
   className?: string;
+}
+
+export interface CoverImageUrls {
+  default?: string;
+  thumbnail?: string;
+  small?: string;
+  medium?: string;
+  large?: string;
+}
+
+export interface Story {
+  id?: number;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  coverImage?: string | CoverImageUrls;
+  cover_urls?: CoverImageUrls;
+  author?: {
+    name: string;
+    avatar?: string;
+    slug: string;
+  };
+  rating?: number;
+  tags?: string[];
+  publishDate?: Date;
+  /** Source type of the story (child, parent, classic) */
+  source_type?: 'child' | 'parent' | 'classic';
+  /** Whether reviews are allowed for this story */
+  allow_reviews?: boolean;
+  /** Review count */
+  review_count?: number;
 }
 
 export interface CardAuthorProps {

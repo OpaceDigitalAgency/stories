@@ -13,9 +13,12 @@ const defaultAvatarImage = '/images/default-avatar.svg';
 
 // Handle cover image - use the appropriate size for cards
 let coverImageUrl = defaultCoverImage;
-if (story?.coverImage) {
-  if (story.coverImage.small || story.coverImage.thumbnail) {
-    // If we have cover_urls object with sizes
+if (story?.cover_urls) {
+  // If we have cover_urls object with sizes
+  coverImageUrl = story.cover_urls.small || story.cover_urls.thumbnail || story.cover_urls.default;
+} else if (story?.coverImage) {
+  if (typeof story.coverImage === 'object' && (story.coverImage.small || story.coverImage.thumbnail)) {
+    // If coverImage is an object with sizes
     coverImageUrl = story.coverImage.small || story.coverImage.thumbnail || story.coverImage.default;
   } else if (typeof story.coverImage === 'string') {
     // Backward compatibility with old API responses

@@ -89,8 +89,11 @@ function createOptimizedFilename($originalFilename, $size = 'medium', $format = 
     $pathInfo = pathinfo($originalFilename);
     $baseName = $pathInfo['filename'];
     
-    // Create a unique filename with size indicator
-    return uniqid() . '-' . $size . '-' . $baseName . '.' . $format;
+    // Remove any random digits prefix (like 680fd60a0a8e3-) from the basename
+    $baseName = preg_replace('/^[0-9a-f]+-/', '', $baseName);
+    
+    // Create a SEO-friendly filename with size indicator but no random prefix
+    return $baseName . '-' . $size . '.' . $format;
 }
 
 /**

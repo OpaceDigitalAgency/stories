@@ -102,7 +102,19 @@ function optimizeAllMedia($db) {
         'failed' => 0
     ];
     
+    $count = 0;
     foreach ($media as $item) {
+        $count++;
+        $percent = round(($count / $stats['total']) * 100);
+        
+        // Update progress bar
+        echo "<script>
+            document.getElementById('progress').style.width = '{$percent}%';
+            document.getElementById('progress-text').innerText = 'Processing {$count} of {$stats['total']} ({$percent}%)';
+        </script>";
+        ob_flush();
+        flush();
+        
         echo "<h3>Processing: " . htmlspecialchars($item['filename']) . " (ID: {$item['id']})</h3>";
         
         // Skip default images
@@ -255,7 +267,45 @@ header('Content-Type: text/html; charset=utf-8');
                     // Handle optimizing all media
                     $db = connectToDatabase();
                     if ($db) {
+                        // Add JavaScript for real-time progress updates
+                        echo "<script>
+                            function scrollToBottom() {
+                                window.scrollTo(0, document.body.scrollHeight);
+                            }
+                            
+                            // Auto-scroll to bottom every second to show progress
+                            const scrollInterval = setInterval(scrollToBottom, 1000);
+                            
+                            // Stop auto-scrolling after 5 minutes (safety measure)
+                            setTimeout(() => clearInterval(scrollInterval), 300000);
+                        </script>";
+                        
+                        // Flush output buffer to ensure script is loaded
+                        ob_flush();
+                        flush();
+                        
+                        echo "<div id='progress-container' style='border: 1px solid #ccc; padding: 10px; margin-top: 20px;'>";
+                        echo "<h3>Processing Media Files...</h3>";
+                        echo "<div id='progress-bar' style='height: 20px; background-color: #f3f3f3; margin-bottom: 10px;'>";
+                        echo "<div id='progress' style='width: 0%; height: 100%; background-color: #4CAF50;'></div>";
+                        echo "</div>";
+                        echo "<p id='progress-text'>Starting optimization process...</p>";
+                        echo "</div>";
+                        
+                        // Flush output buffer to show progress container
+                        ob_flush();
+                        flush();
+                        
                         optimizeAllMedia($db);
+                        
+                        // Complete the progress bar
+                        echo "<script>
+                            document.getElementById('progress').style.width = '100%';
+                            document.getElementById('progress-text').innerText = 'Optimization complete!';
+                            clearInterval(scrollInterval);
+                        </script>";
+                        ob_flush();
+                        flush();
                     }
                 }
             }

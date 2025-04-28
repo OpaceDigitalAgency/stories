@@ -241,7 +241,15 @@ function handleMediaUpload($db, $storyDir, $title) {
     // Check for pre-optimized images first (for all stories)
     $usePreOptimized = false;
     $preOptimizedImage = null;
-    $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
+    
+    // Define all possible locations for optimized images
+    $optimizedDirs = [
+        $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2023/07', // Primary location shown in screenshot
+        $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2023',
+        $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2024/10',
+        $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2024',
+        $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads', // Fallback to main uploads dir
+    ];
     
     // Extract the base name without extension to search for optimized versions
     $baseNameParts = explode('-by-', basename($storyDir));
@@ -256,42 +264,113 @@ function handleMediaUpload($db, $storyDir, $title) {
         '240x240',
         '150x150',
         '110x110',
+        '50x50',
         '' // Also try without size pattern
     ];
     
-    // More comprehensive image name patterns
-    $imagePatterns = [
-        "$storySlug*",
-        "*$storySlug*",
-        "future-library*",
-        "*library*",
-        "*story*",
-        "*book*",
-        "*illustration*"
+    // Known image patterns that exist on the server (from screenshot)
+    $knownPatterns = [
+        'future-library-captivating-storybook',
+        'library-books-reading',
+        'Gangsta-Granny-by-David-Walliams',
+        'Frogspell'
     ];
     
-    // First try to find images matching the story name with various patterns
+    // First try the known patterns that we know exist on the server
     $found = false;
-    foreach ($sizePatterns as $sizePattern) {
+    
+    // Try each directory, prioritizing the 2023/07 directory
+    foreach ($optimizedDirs as $optimizedDir) {
         if ($found) break;
         
-        foreach ($imagePatterns as $pattern) {
-            $sizeStr = empty($sizePattern) ? "" : "-$sizePattern";
-            $searchPattern = "$optimizedDir/$pattern$sizeStr.{jpg,jpeg,png,gif}";
-            $optimizedImages = glob($searchPattern, GLOB_BRACE);
+        echo "<p class='info'>Searching in directory: $optimizedDir</p>";
+        flushOutput();
+        
+        // First try known patterns with size variations
+        foreach ($knownPatterns as $pattern) {
+            if ($found) break;
             
-            if (!empty($optimizedImages)) {
+            foreach ($sizePatterns as $sizePattern) {
+                $sizeStr = empty($sizePattern) ? "" : "-$sizePattern";
+                $searchPattern = "$optimizedDir/$pattern$sizeStr.{jpg,jpeg,png,gif}";
+                echo "<p class='info'>Trying pattern: " . basename($searchPattern) . "</p>";
+                $optimizedImages = glob($searchPattern, GLOB_BRACE);
+                
+                if (!empty($optimizedImages)) {
+                    // Sort by file size and use the smallest one
+                    usort($optimizedImages, function($a, $b) {
+                        return filesize($a) - filesize($b);
+                    });
+                    
+                    $preOptimizedImage = $optimizedImages[0];
+                    $usePreOptimized = true;
+                    echo "<p class='success'>Found pre-optimized image: " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                    flushOutput();
+                    $found = true;
+                    break;
+                }
+            }
+        }
+        
+        // If still not found, try story-specific patterns
+        if (!$found) {
+            $storyPatterns = [
+                "$storySlug*",
+                "*$storySlug*",
+                "*library*",
+                "*story*",
+                "*book*",
+                "*illustration*"
+            ];
+            
+            foreach ($storyPatterns as $pattern) {
+                if ($found) break;
+                
+                foreach ($sizePatterns as $sizePattern) {
+                    $sizeStr = empty($sizePattern) ? "" : "-$sizePattern";
+                    $searchPattern = "$optimizedDir/$pattern$sizeStr.{jpg,jpeg,png,gif}";
+                    $optimizedImages = glob($searchPattern, GLOB_BRACE);
+                    
+                    if (!empty($optimizedImages)) {
+                        // Sort by file size and use the smallest one
+                        usort($optimizedImages, function($a, $b) {
+                            return filesize($a) - filesize($b);
+                        });
+                        
+                        $preOptimizedImage = $optimizedImages[0];
+                        $usePreOptimized = true;
+                        echo "<p class='success'>Found pre-optimized image using pattern '$pattern$sizeStr': " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                        flushOutput();
+                        $found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // If still not found, try all images in this directory
+        if (!$found) {
+            $allImages = glob("$optimizedDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            
+            if (!empty($allImages)) {
+                // Filter for smaller images first (< 300KB)
+                $smallImages = array_filter($allImages, function($img) {
+                    return filesize($img) < 300 * 1024;
+                });
+                
+                // If we have small images, use those, otherwise use any images
+                $imagesToUse = !empty($smallImages) ? $smallImages : $allImages;
+                
                 // Sort by file size and use the smallest one
-                usort($optimizedImages, function($a, $b) {
+                usort($imagesToUse, function($a, $b) {
                     return filesize($a) - filesize($b);
                 });
                 
-                $preOptimizedImage = $optimizedImages[0];
+                $preOptimizedImage = $imagesToUse[0];
                 $usePreOptimized = true;
-                echo "<p class='success'>Found pre-optimized image using pattern '$pattern$sizeStr': " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
+                echo "<p class='success'>Found image in directory: " . basename($preOptimizedImage) . " (" . round(filesize($preOptimizedImage) / 1024) . " KB)</p>";
                 flushOutput();
                 $found = true;
-                break;
             }
         }
     }
@@ -459,11 +538,16 @@ function handleMediaUpload($db, $storyDir, $title) {
         $alternativeLocations = [
             dirname($storyDir), // Parent directory
             $storyDir, // Story directory itself
-            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads', // Uploads directory
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads', // Main uploads directory
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2023', // 2023 uploads
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2023/07', // July 2023 uploads
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2024', // 2024 uploads
+            $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads/2024/10', // October 2024 uploads
         ];
         
         foreach ($alternativeLocations as $location) {
             echo "<p class='info'>Looking for images in alternative location: $location</p>";
+            // First try direct files in this directory
             $possibleImages = glob("$location/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
             
             if (!empty($possibleImages)) {
@@ -471,6 +555,52 @@ function handleMediaUpload($db, $storyDir, $title) {
                 $images = $possibleImages;
                 $found = true;
                 break;
+            }
+        }
+        
+        // If still not found, try a recursive search in the uploads directory
+        if (!$found) {
+            $uploadsDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
+            echo "<p class='info'>Performing recursive search in uploads directory</p>";
+            
+            // Use RecursiveDirectoryIterator to search all subdirectories
+            try {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($uploadsDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::LEAVES_ONLY
+                );
+                
+                $imageFiles = [];
+                foreach ($iterator as $file) {
+                    if ($file->isFile()) {
+                        $extension = strtolower(pathinfo($file->getPathname(), PATHINFO_EXTENSION));
+                        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
+                            $imageFiles[] = $file->getPathname();
+                        }
+                    }
+                }
+                
+                if (!empty($imageFiles)) {
+                    echo "<p class='success'>Found " . count($imageFiles) . " images in recursive search</p>";
+                    // Sort by file size (prefer smaller files)
+                    usort($imageFiles, function($a, $b) {
+                        return filesize($a) - filesize($b);
+                    });
+                    
+                    // Use the first 10 images (or fewer if less than 10 found)
+                    $images = array_slice($imageFiles, 0, 10);
+                    $found = true;
+                    
+                    // Log the images found
+                    echo "<p class='info'>Using images:</p>";
+                    echo "<ul>";
+                    foreach ($images as $img) {
+                        echo "<li>" . basename($img) . " (" . round(filesize($img) / 1024) . " KB)</li>";
+                    }
+                    echo "</ul>";
+                }
+            } catch (Exception $e) {
+                echo "<p class='warning'>Error during recursive search: " . $e->getMessage() . "</p>";
             }
         }
         
@@ -556,23 +686,22 @@ function handleMediaUpload($db, $storyDir, $title) {
             // Strip metadata to reduce size
             $imagick->stripImage();
             
-            // Resize to max 500px width
+            // Always resize to 300px width for better performance
             $width = $imagick->getImageWidth();
             $height = $imagick->getImageHeight();
             
-            if ($width > 500) {
-                $newWidth = 500;
-                $newHeight = ($height / $width) * 500;
-                $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
-                echo "<p class='info'>Resized from {$width}x{$height} to {$newWidth}x{$newHeight}</p>";
-                flushOutput();
-            }
+            // Force resize to 300px width regardless of original size
+            $newWidth = 300;
+            $newHeight = ($height / $width) * 300;
+            $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
+            echo "<p class='info'>Resized to {$newWidth}x{$newHeight}</p>";
+            flushOutput();
             
-            // Set quality based on image format
+            // Set quality based on image format - use extremely aggressive compression
             if ($imagick->getImageFormat() == 'JPEG') {
-                $imagick->setImageCompressionQuality(65); // More aggressive compression
+                $imagick->setImageCompressionQuality(50); // Very aggressive compression
                 $imagick->setInterlaceScheme(Imagick::INTERLACE_PLANE);
-                echo "<p class='info'>Applied JPEG compression (65% quality)</p>";
+                echo "<p class='info'>Applied JPEG compression (50% quality)</p>";
             } else if ($imagick->getImageFormat() == 'PNG') {
                 // For PNG, optimize compression
                 $imagick->setImageCompressionQuality(95);
@@ -581,6 +710,9 @@ function handleMediaUpload($db, $storyDir, $title) {
                 $imagick->setOption('png:exclude-chunk', 'all');
                 echo "<p class='info'>Applied maximum PNG compression</p>";
             }
+            
+            // Strip all metadata to reduce size (do this again to be sure)
+            $imagick->stripImage();
             
             // Write the optimized image
             $imagick->writeImage($destination);
@@ -615,12 +747,13 @@ function handleMediaUpload($db, $storyDir, $title) {
                 }
                 
                 if ($source) {
-                    // Calculate new dimensions (max 500px width for better performance)
-                    $maxWidth = 500;
+                    // Calculate new dimensions (max 300px width for better performance)
+                    $maxWidth = 300; // Reduced from 500px to 300px
                     $newWidth = $width;
                     $newHeight = $height;
                     
-                    if ($width > $maxWidth) {
+                    // Always resize to 300px width regardless of original size
+                    if ($width > 0) { // Avoid division by zero
                         $newWidth = $maxWidth;
                         $newHeight = ($height / $width) * $maxWidth;
                     }
@@ -640,8 +773,8 @@ function handleMediaUpload($db, $storyDir, $title) {
                     
                     // Save resized image with higher compression
                     if ($type === IMAGETYPE_JPEG) {
-                        // Use 65% quality for better compression
-                        imagejpeg($resized, $destination, 65);
+                        // Use 50% quality for better compression (reduced from 65%)
+                        imagejpeg($resized, $destination, 50);
                     } else {
                         // For PNG, use maximum compression (9)
                         imagepng($resized, $destination, 9);
@@ -1238,6 +1371,7 @@ header('Content-Type: text/html; charset=utf-8');
         <form method="post">
             <button type="submit" name="action" value="import" class="button">Import All Content</button>
         </form>
+        <a href="fix_media_sizes.php" class="button" style="background: #e04a4a;">Optimize All Media Files</a>
     </div>
     
     <div class="log">

@@ -123,11 +123,37 @@ try {
 }
 
 // Process WordPress export directory
-$wpDir = __DIR__ . '/../_wp migration/wp-md/custom/childrens-story';
+$wpDir = __DIR__ . '/../_wp-migration/wp-md/custom/childrens-story';
 
 if (!is_dir($wpDir)) {
-    echo "<p class='error'>WordPress export directory not found: $wpDir</p>";
-    exit;
+    // Try alternate paths
+    $altPaths = [
+        __DIR__ . '/../_wp-migration/wp-md',
+        __DIR__ . '/../_wp-migration/wp-md/custom',
+        __DIR__ . '/../_wp migration/wp-md/custom/childrens-story',
+        __DIR__ . '/../_wp migration/wp-md'
+    ];
+    
+    $found = false;
+    foreach ($altPaths as $path) {
+        if (is_dir($path)) {
+            $wpDir = $path;
+            $found = true;
+            echo "<p class='info'>Found WordPress export directory at: $wpDir</p>";
+            break;
+        }
+    }
+    
+    if (!$found) {
+        echo "<p class='error'>WordPress export directory not found. Tried:</p>";
+        echo "<ul>";
+        echo "<li>" . __DIR__ . "/../_wp-migration/wp-md/custom/childrens-story</li>";
+        foreach ($altPaths as $path) {
+            echo "<li>$path</li>";
+        }
+        echo "</ul>";
+        exit;
+    }
 }
 
 echo "<h2>Importing Children's Stories</h2>";

@@ -253,6 +253,8 @@ async function createAuthorFromStory(file) {
         slug: authorSlug,
         bio: `${authorName} is a child author${authorAge ? ' aged ' + authorAge : ''}${authorLocation ? ' from ' + authorLocation : ''}.`,
         author_type: 'child',
+        age: authorAge || '',
+        location: authorLocation || '',
         is_published: true
       })
     });
@@ -341,15 +343,58 @@ async function importStory(file) {
     
     // Extract author info from title
     let authorId = null;
-    const authorMatch = data.title.match(/by\s+([^,]+)(?:\s+aged|\s+from)/i);
+    let authorAge = null;
+    let authorLocation = null;
+    const authorMatch = data.title.match(/by\s+([^,]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,]+))?/i);
     
     if (authorMatch && authorMatch[1]) {
       authorId = await getAuthorIdByName(authorMatch[1].trim());
+      authorAge = authorMatch[2] || '';
+      authorLocation = authorMatch[3] || '';
+      
       if (authorId) {
         console.log(`  - Found author ID: ${authorId}`);
       } else {
         console.log(`  - Could not find author ID for: ${authorMatch[1].trim()}`);
       }
+    }
+    
+    // Calculate estimated reading time (average reading speed: 200 words per minute)
+    const wordCount = content.split(/\s+/).length;
+    const readingTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
+    const estimatedReadingTime = `${readingTimeMinutes} minute${readingTimeMinutes !== 1 ? 's' : ''}`;
+    
+    // Determine age group based on author age or content
+    let ageGroup = '7-12';  // Default for children's stories
+    if (authorAge) {
+      const age = parseInt(authorAge, 10);
+      if (age <= 6) ageGroup = '0-6';
+      else if (age <= 9) ageGroup = '7-9';
+      else if (age <= 12) ageGroup = '10-12';
+      else ageGroup = '13+';
+    }
+    
+    // Generate tags based on content if none provided
+    let generatedTags = [];
+    if (!data.tags || !Array.isArray(data.tags) || data.tags.length === 0) {
+      // Simple keyword extraction
+      const keywords = [
+        'adventure', 'animals', 'fantasy', 'friendship', 'magic',
+        'school', 'family', 'nature', 'space', 'dinosaurs',
+        'robots', 'monsters', 'fairy tale', 'mystery'
+      ];
+      
+      const contentLower = content.toLowerCase();
+      generatedTags = keywords.filter(keyword =>
+        contentLower.includes(keyword.toLowerCase())
+      ).slice(0, 3);  // Take up to 3 matching tags
+      
+      // Always add 'children's story' tag
+      if (!generatedTags.includes('children\'s story')) {
+        generatedTags.push('children\'s story');
+      }
+      
+      console.log(`  - Generated tags: ${generatedTags.join(', ')}`);
     }
     
     // Create the story
@@ -362,7 +407,10 @@ async function importStory(file) {
       featured: data.sticky ? 1 : 0,
       source_type: 'child',
       allow_reviews: 0,
-      cover_url: coverUrl
+      cover_url: coverUrl,
+      estimated_reading_time: estimatedReadingTime,
+      age_group: ageGroup,
+      tags: generatedTags.join(',')
     };
     
     const storyRes = await fetch(`${API}/stories`, {

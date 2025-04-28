@@ -94,9 +94,18 @@ try {
         case 'media':
             // Media upload endpoint
             try {
+                // Check if this is a small file or a large file
                 $input = file_get_contents('php://input');
                 $filename = $_SERVER['HTTP_X_FILENAME'] ?? uniqid() . '.dat';
                 $filetype = $_SERVER['HTTP_X_FILETYPE'] ?? 'application/octet-stream';
+                
+                // For large files, we'll use the default cover
+                if (strlen($input) > 1000000) { // Over 1MB
+                    error_log("Large file detected: " . $filename . " (" . strlen($input) . " bytes). Using default cover.");
+                    echo json_encode(['url' => '/images/default-cover.svg']);
+                    break;
+                }
+                
                 $uploadDir = __DIR__ . '/../../public/uploads/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
                 $filepath = $uploadDir . basename($filename);

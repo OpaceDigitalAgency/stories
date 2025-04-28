@@ -140,13 +140,18 @@ function extractAuthorInfo($title) {
 
 // Function to get or create author with proper handling
 function getOrCreateAuthor($db, $authorInfo) {
+    echo "<p class='info'><strong>AUTHOR PROCESSING:</strong> Starting author lookup/creation</p>";
+    flushOutput();
+    
     if (empty($authorInfo['name'])) {
-        echo "<p class='warning'>No author name found</p>";
+        echo "<p class='warning'><strong>AUTHOR ERROR:</strong> No author name found</p>";
         flushOutput();
         return null;
     }
     
     $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorInfo['name']));
+    echo "<p class='info'><strong>AUTHOR SLUG:</strong> \"$slug\"</p>";
+    flushOutput();
     
     // Check if author exists by name or slug (case-insensitive)
     $stmt = $db->prepare("SELECT id, bio FROM authors WHERE LOWER(slug) = LOWER(?) OR LOWER(name) = LOWER(?)");
@@ -154,43 +159,52 @@ function getOrCreateAuthor($db, $authorInfo) {
     $author = $stmt->fetch();
     
     if ($author) {
-        echo "<p class='info'>Author already exists: {$authorInfo['name']} (ID: {$author['id']})</p>";
+        echo "<p class='info'><strong>AUTHOR FOUND:</strong> {$authorInfo['name']} (ID: {$author['id']})</p>";
         flushOutput();
         
         // Always update age and location
         $bio = $author['bio'];
         if (empty($bio)) {
-            $bio = "{$authorInfo['name']} is a child author" . 
-                   ($authorInfo['age'] ? " aged {$authorInfo['age']}" : "") . 
+            $bio = "{$authorInfo['name']} is a child author" .
+                   ($authorInfo['age'] ? " aged {$authorInfo['age']}" : "") .
                    ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
         }
         
         $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = 'child' WHERE id = ?");
         $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $author['id']]);
-        echo "<p class='success'>Updated author information</p>";
+        echo "<p class='success'><strong>AUTHOR UPDATED:</strong> Age={$authorInfo['age']}, Location=\"{$authorInfo['location']}\"</p>";
         flushOutput();
         
         return $author['id'];
     } else {
-        // Create new author
-        $bio = "{$authorInfo['name']} is a child author" . 
-               ($authorInfo['age'] ? " aged {$authorInfo['age']}" : "") . 
-               ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
-        
-        $stmt = $db->prepare("INSERT INTO authors (name, slug, bio, author_type, age, location, is_published) VALUES (?, ?, ?, 'child', ?, ?, 1)");
-        $stmt->execute([
-            $authorInfo['name'],
-            $slug,
-            $bio,
-            $authorInfo['age'],
-            $authorInfo['location']
-        ]);
-        
-        $authorId = $db->lastInsertId();
-        echo "<p class='success'>Created author with ID: $authorId</p>";
+        echo "<p class='info'><strong>AUTHOR NOT FOUND:</strong> Creating new author \"{$authorInfo['name']}\"</p>";
         flushOutput();
         
-        return $authorId;
+        // Create new author
+        $bio = "{$authorInfo['name']} is a child author" .
+               ($authorInfo['age'] ? " aged {$authorInfo['age']}" : "") .
+               ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
+        
+        try {
+            $stmt = $db->prepare("INSERT INTO authors (name, slug, bio, author_type, age, location, is_published) VALUES (?, ?, ?, 'child', ?, ?, 1)");
+            $stmt->execute([
+                $authorInfo['name'],
+                $slug,
+                $bio,
+                $authorInfo['age'],
+                $authorInfo['location']
+            ]);
+            
+            $authorId = $db->lastInsertId();
+            echo "<p class='success'><strong>AUTHOR CREATED:</strong> \"{$authorInfo['name']}\" with ID: $authorId</p>";
+            flushOutput();
+            
+            return $authorId;
+        } catch (Exception $e) {
+            echo "<p class='error'><strong>AUTHOR CREATION ERROR:</strong> " . $e->getMessage() . "</p>";
+            flushOutput();
+            return null;
+        }
     }
 }
 
@@ -1169,13 +1183,24 @@ function processStory($db, $storyDir) {
             }
         }
         
-        $title = $data['title'] ?? basename($storyDir);
+        $title = isset($data['title']) ? $data['title'] : basename($storyDir);
         echo "<h3>Importing: $title</h3>";
         flushOutput();
         
         // Extract author info
         $authorInfo = extractAuthorInfo($title);
+        $authorAge = isset($authorInfo['age']) && $authorInfo['age'] ? $authorInfo['age'] : 'unknown';
+        $authorLocation = isset($authorInfo['location']) && $authorInfo['location'] ? $authorInfo['location'] : 'unknown';
+        echo "<p class='info'><strong>Author extraction result:</strong> Name=\"{$authorInfo['name']}\", Age={$authorAge}, Location=\"{$authorLocation}\"</p>";
+        flushOutput();
+        
         $authorId = getOrCreateAuthor($db, $authorInfo);
+        if ($authorId) {
+            echo "<p class='success'><strong>Author ID:</strong> $authorId</p>";
+        } else {
+            echo "<p class='error'><strong>Failed to get or create author</strong></p>";
+        }
+        flushOutput();
         
         // Process cover image
         $mediaData = handleMediaUpload($db, $storyDir, $title);

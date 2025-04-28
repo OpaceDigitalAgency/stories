@@ -21,12 +21,56 @@ header('Content-Type: text/html; charset=utf-8');
         .error { color: red; }
         .warning { color: orange; }
         .info { color: blue; }
+        .options { margin: 20px 0; padding: 15px; background: #e9f0ff; border-radius: 5px; }
+        .button {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #4a6ee0;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .button.danger { background: #e04a4a; }
     </style>
 </head>
 <body>
     <h1>Direct WordPress Import</h1>
+    
+    <div class="options">
+        <h2>Import Options</h2>
+        <form method="post">
+            <p>
+                <label>
+                    <input type="radio" name="mode" value="update" checked>
+                    <strong>Update Mode:</strong> Update existing stories and authors with new information
+                </label>
+            </p>
+            <p>
+                <label>
+                    <input type="radio" name="mode" value="clean">
+                    <strong>Clean Import:</strong> Delete all existing child stories and reimport (keeps other content)
+                </label>
+            </p>
+            <p>
+                <button type="submit" name="action" value="import" class="button">Start Import</button>
+                <?php if (isset($_POST['mode']) && $_POST['mode'] === 'clean'): ?>
+                    <button type="submit" name="action" value="confirm_clean" class="button danger">Confirm Clean Import</button>
+                <?php endif; ?>
+            </p>
+        </form>
+    </div>
+    
     <div class="log">
 <?php
+
+// Only process if form submitted
+if (!isset($_POST['action'])) {
+    echo "<p class='info'>Select an import option above and click 'Start Import'</p>";
+    echo "</div></body></html>";
+    exit;
+}
 
 // Database connection
 try {
@@ -43,6 +87,34 @@ try {
 } catch (PDOException $e) {
     echo "<p class='error'>Database connection failed: " . $e->getMessage() . "</p>";
     exit;
+}
+
+// Handle clean import mode
+if ($_POST['action'] === 'confirm_clean' && $_POST['mode'] === 'clean') {
+    try {
+        // Begin transaction
+        $db->beginTransaction();
+        
+        // 1. Delete story_authors associations for child stories
+        $db->exec("DELETE sa FROM story_authors sa
+                  JOIN stories s ON sa.story_id = s.id
+                  WHERE s.source_type = 'child'");
+        echo "<p class='info'>Deleted story-author associations for child stories</p>";
+        
+        // 2. Delete child stories
+        $stmt = $db->prepare("DELETE FROM stories WHERE source_type = 'child'");
+        $stmt->execute();
+        $count = $stmt->rowCount();
+        echo "<p class='info'>Deleted $count existing child stories</p>";
+        
+        // Commit transaction
+        $db->commit();
+        echo "<p class='success'>Database cleaned successfully</p>";
+    } catch (Exception $e) {
+        $db->rollBack();
+        echo "<p class='error'>Clean import failed: " . $e->getMessage() . "</p>";
+        exit;
+    }
 }
 
 // Function to clean excerpt text
@@ -175,6 +247,35 @@ function getOrCreateAuthor($db, $authorInfo) {
     return $authorId;
 }
 
+// Check if story exists by slug
+function storyExistsBySlug($db, $slug) {
+    $stmt = $db->prepare("SELECT id FROM stories WHERE slug = ?");
+    $stmt->execute([$slug]);
+    return $stmt->fetch();
+}
+
+// Update existing story
+function updateStory($db, $storyId, $data) {
+    $stmt = $db->prepare("
+        UPDATE stories SET
+            excerpt = COALESCE(?, excerpt),
+            estimated_reading_time = COALESCE(?, estimated_reading_time),
+            age_group = COALESCE(?, age_group),
+            tags = COALESCE(?, tags)
+        WHERE id = ?
+    ");
+    
+    $stmt->execute([
+        $data['excerpt'],
+        $data['reading_time'],
+        $data['age_group'],
+        $data['tags'],
+        $storyId
+    ]);
+    
+    return $stmt->rowCount();
+}
+
 // Process WordPress export directory
 $wpDir = __DIR__ . '/../_wp migration/wp-md/custom/childrens-story';
 
@@ -184,10 +285,19 @@ if (!is_dir($wpDir)) {
 }
 
 echo "<h2>Importing Children's Stories</h2>";
+echo "<p class='info'>Import mode: " . ($_POST['mode'] === 'clean' ? 'Clean Import' : 'Update Mode') . "</p>";
 
 // Get all story directories
 $storyDirs = array_filter(glob("$wpDir/*"), 'is_dir');
 echo "<p>Found " . count($storyDirs) . " stories to process</p>";
+
+// Stats
+$stats = [
+    'created' => 0,
+    'updated' => 0,
+    'skipped' => 0,
+    'errors' => 0
+];
 
 foreach ($storyDirs as $storyDir) {
     $mdFile = "$storyDir/index.md";
@@ -278,15 +388,48 @@ foreach ($storyDirs as $storyDir) {
     // Generate tags
     $tags = generateTags($markdownContent);
     
-    // Insert story
-    try {
-        $stmt = $db->prepare("
-            INSERT INTO stories (
-                title, slug, content, excerpt, cover_url, 
-                is_published, source_type, allow_reviews, 
-                estimated_reading_time, age_group, tags
-            ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?, ?)
-        ");
+    // Check if story already exists
+    $existingStory = storyExistsBySlug($db, $slug);
+    
+    // Prepare story data
+    $storyData = [
+        'excerpt' => $excerpt,
+        'reading_time' => $readingTime,
+        'age_group' => $ageGroup,
+        'tags' => $tags
+    ];
+    
+    if ($existingStory && $_POST['mode'] === 'update') {
+        // Update existing story
+        $updated = updateStory($db, $existingStory['id'], $storyData);
+        if ($updated) {
+            echo "<p class='success'>Updated existing story: $title (ID: {$existingStory['id']})</p>";
+            $stats['updated']++;
+        } else {
+            echo "<p class='info'>No changes needed for: $title</p>";
+            $stats['skipped']++;
+        }
+        
+        // Make sure author is associated
+        if ($authorId) {
+            $checkStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
+            $checkStmt->execute([$existingStory['id'], $authorId]);
+            if (!$checkStmt->fetch()) {
+                $linkStmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                $linkStmt->execute([$existingStory['id'], $authorId]);
+                echo "<p class='success'>Associated story with author ID: $authorId</p>";
+            }
+        }
+    } else {
+        // Insert new story
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO stories (
+                    title, slug, content, excerpt, cover_url,
+                    is_published, source_type, allow_reviews,
+                    estimated_reading_time, age_group, tags
+                ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?, ?)
+            ");
         
         $stmt->execute([
             $title,
@@ -308,12 +451,22 @@ foreach ($storyDirs as $storyDir) {
             $stmt->execute([$storyId, $authorId]);
             echo "<p class='success'>Associated story with author ID: $authorId</p>";
         }
-    } catch (Exception $e) {
-        echo "<p class='error'>Failed to create story: " . $e->getMessage() . "</p>";
+            $stats['created']++;
+        } catch (Exception $e) {
+            echo "<p class='error'>Failed to create story: " . $e->getMessage() . "</p>";
+            $stats['errors']++;
+        }
     }
 }
 
 echo "<h2>Import Complete!</h2>";
+echo "<p class='success'>Summary:</p>";
+echo "<ul>";
+echo "<li>Created: {$stats['created']} stories</li>";
+echo "<li>Updated: {$stats['updated']} stories</li>";
+echo "<li>Skipped: {$stats['skipped']} stories</li>";
+echo "<li>Errors: {$stats['errors']} stories</li>";
+echo "</ul>";
 echo "<p>Now check the <a href='/admin/stories'>Stories Admin</a> to verify the imported content.</p>";
 echo "<p>Then trigger the Netlify rebuild to update the frontend.</p>";
 ?>

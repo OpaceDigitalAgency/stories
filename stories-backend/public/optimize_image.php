@@ -15,6 +15,9 @@ set_time_limit(0);
 // Include the image optimization library
 require_once __DIR__ . '/../includes/image_optimizer.php';
 
+// Initialize global variable for current media filename
+$GLOBALS['current_media_filename'] = '';
+
 // Database connection function
 function connectToDatabase() {
     try {
@@ -116,6 +119,9 @@ function optimizeAllMedia($db) {
         flush();
         
         echo "<h3>Processing: " . htmlspecialchars($item['filename']) . " (ID: {$item['id']})</h3>";
+        
+        // Store the current media filename in a global variable for the createOptimizedFilename function
+        $GLOBALS['current_media_filename'] = $item['filename'];
         
         // Skip default images
         if (strpos($item['file_path'], 'default-') !== false) {
@@ -235,8 +241,64 @@ header('Content-Type: text/html; charset=utf-8');
     <div>
         <h2>Results</h2>
         <?php
+        // Check if we're optimizing a specific media ID
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+            $mediaId = (int)$_GET['id'];
+            $db = connectToDatabase();
+            
+            if ($db) {
+                // Get media details
+                $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");
+                $stmt->execute([$mediaId]);
+                $media = $stmt->fetch();
+                
+                if ($media) {
+                    echo "<h3>Optimizing media: " . htmlspecialchars($media['filename']) . " (ID: {$media['id']})</h3>";
+                    
+                    // Store the current media filename in a global variable for the createOptimizedFilename function
+                    $GLOBALS['current_media_filename'] = $media['filename'];
+                    
+                    // Get the file path
+                    $filePath = $media['file_path'];
+                    if (strpos($filePath, 'http') === 0) {
+                        // For URLs, download the file first
+                        $tempFile = tempnam(sys_get_temp_dir(), 'img_');
+                        if (copy($filePath, $tempFile)) {
+                            echo "<p style='color:blue'>Downloaded file from URL</p>";
+                            $filePath = $tempFile;
+                        } else {
+                            echo "<p style='color:red'>Failed to download file from URL: $filePath</p>";
+                            exit;
+                        }
+                    }
+                    
+                    // Optimize the image
+                    $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
+                    $variants = optimizeSingleImage($filePath, $destinationDir);
+                    
+                    // Clean up temp file if needed
+                    if (isset($tempFile) && file_exists($tempFile)) {
+                        unlink($tempFile);
+                    }
+                    
+                    if ($variants) {
+                        // Update the media record
+                        if (updateMediaRecord($db, $mediaId, $variants)) {
+                            echo "<p style='color:green'>Media record updated successfully</p>";
+                            echo "<p><a href='../admin/content/view-media.php?id=$mediaId' class='button'>View Media</a></p>";
+                        } else {
+                            echo "<p style='color:red'>Failed to update media record</p>";
+                        }
+                    } else {
+                        echo "<p style='color:red'>Failed to optimize image</p>";
+                    }
+                } else {
+                    echo "<p style='color:red'>Media not found</p>";
+                }
+            }
+        }
         // Process form submission
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['action'])) {
                 if ($_POST['action'] === 'optimize_single' && isset($_FILES['image'])) {
                     // Handle single image optimization
@@ -245,6 +307,9 @@ header('Content-Type: text/html; charset=utf-8');
                         $filename = $_FILES['image']['name'];
                         
                         echo "<h3>Optimizing uploaded image: $filename</h3>";
+                        
+                        // Store the current media filename in a global variable for the createOptimizedFilename function
+                        $GLOBALS['current_media_filename'] = $filename;
                         
                         $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
                         $variants = optimizeSingleImage($tempPath, $destinationDir);

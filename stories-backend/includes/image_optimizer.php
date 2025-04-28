@@ -89,11 +89,25 @@ function createOptimizedFilename($originalFilename, $size = 'medium', $format = 
     $pathInfo = pathinfo($originalFilename);
     $baseName = $pathInfo['filename'];
     
-    // Remove any random digits prefix (like 680fd60a0a8e3-) from the basename
-    $baseName = preg_replace('/^[0-9a-f]+-/', '', $baseName);
+    // Extract the original descriptive part if it exists
+    if (preg_match('/^[0-9a-f]+-(.+)$/', $baseName, $matches)) {
+        // If there's a descriptive part after the random digits, use it
+        $baseName = $matches[1];
+    } else if (preg_match('/^img_[A-Za-z0-9]+$/', $baseName)) {
+        // If it's just a random img_ name with no descriptive part, use a generic name
+        // Check if we can get a descriptive name from the original URL
+        if (isset($GLOBALS['current_media_filename']) && !empty($GLOBALS['current_media_filename'])) {
+            $originalPathInfo = pathinfo($GLOBALS['current_media_filename']);
+            $baseName = preg_replace('/^[0-9a-f]+-/', '', $originalPathInfo['filename']);
+        } else {
+            $baseName = 'image';
+        }
+    }
     
-    // Also remove any img_ prefix that might be present
-    $baseName = preg_replace('/^img_[A-Za-z0-9]+$/', 'image', $baseName);
+    // Clean up the basename - replace spaces with hyphens and remove special characters
+    $baseName = preg_replace('/[^a-zA-Z0-9-]/', '-', $baseName);
+    $baseName = preg_replace('/-+/', '-', $baseName); // Replace multiple hyphens with a single one
+    $baseName = trim($baseName, '-'); // Remove hyphens from start and end
     
     // Create a SEO-friendly filename with size indicator but no random prefix
     return $baseName . '-' . $size . '.' . $format;

@@ -558,6 +558,9 @@ foreach ($storyDirs as $storyDir) {
             echo "<p class='info'>Slug: $slug</p>";
             echo "<p class='info'>Cover URL: $coverUrl</p>";
             
+            // Begin transaction
+            $db->beginTransaction();
+            
             $stmt = $db->prepare("
                 INSERT INTO stories (
                     title, slug, content, excerpt, cover_url,
@@ -578,6 +581,8 @@ foreach ($storyDirs as $storyDir) {
         
         if (!$result) {
             echo "<p class='error'>Failed to execute INSERT statement: " . print_r($stmt->errorInfo(), true) . "</p>";
+            $db->rollBack();
+            throw new Exception("Failed to insert story");
         }
         
         $storyId = $db->lastInsertId();
@@ -585,9 +590,14 @@ foreach ($storyDirs as $storyDir) {
         
         // Associate with author
         if ($authorId) {
-            $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
-            $stmt->execute([$storyId, $authorId]);
-            echo "<p class='success'>Associated story with author ID: $authorId</p>";
+            try {
+                $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                $stmt->execute([$storyId, $authorId]);
+                echo "<p class='success'>Associated story with author ID: $authorId</p>";
+            } catch (Exception $e) {
+                echo "<p class='error'>Failed to associate author: " . $e->getMessage() . "</p>";
+                // Continue anyway
+            }
         }
         
         // Add tags to the story
@@ -595,28 +605,37 @@ foreach ($storyDirs as $storyDir) {
             $tagName = trim($tagName);
             if (empty($tagName)) continue;
             
-            $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $tagName));
-            
-            // Check if tag exists
-            $tagStmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
-            $tagStmt->execute([$tagSlug]);
-            $tag = $tagStmt->fetch();
-            
-            if (!$tag) {
-                // Create new tag
-                $createTagStmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
-                $createTagStmt->execute([$tagName, $tagSlug]);
-                $tagId = $db->lastInsertId();
-                echo "<p class='success'>Created tag: $tagName</p>";
-            } else {
-                $tagId = $tag['id'];
+            try {
+                $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $tagName));
+                
+                // Check if tag exists
+                $tagStmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
+                $tagStmt->execute([$tagSlug]);
+                $tag = $tagStmt->fetch();
+                
+                if (!$tag) {
+                    // Create new tag
+                    $createTagStmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                    $createTagStmt->execute([$tagName, $tagSlug]);
+                    $tagId = $db->lastInsertId();
+                    echo "<p class='success'>Created tag: $tagName</p>";
+                } else {
+                    $tagId = $tag['id'];
+                }
+                
+                // Associate tag with story
+                $linkTagStmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+                $linkTagStmt->execute([$storyId, $tagId]);
+                echo "<p class='success'>Added tag '$tagName' to story</p>";
+            } catch (Exception $e) {
+                echo "<p class='error'>Failed to process tag '$tagName': " . $e->getMessage() . "</p>";
+                // Continue with other tags
             }
-            
-            // Associate tag with story
-            $linkTagStmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
-            $linkTagStmt->execute([$storyId, $tagId]);
-            echo "<p class='success'>Added tag '$tagName' to story</p>";
         }
+        
+        // Commit the transaction
+        $db->commit();
+        echo "<p class='success'>Story transaction committed successfully</p>";
         
         $storyId = $db->lastInsertId();
         echo "<p class='success'>Created story with ID: $storyId</p>";
@@ -629,9 +648,19 @@ foreach ($storyDirs as $storyDir) {
         }
             $stats['created']++;
         } catch (Exception $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+                echo "<p class='error'>Transaction rolled back</p>";
+            }
             echo "<p class='error'>Failed to create story: " . $e->getMessage() . "</p>";
             $stats['errors']++;
         }
+    }
+    
+    // Force flush output buffer to ensure progress is shown
+    if (ob_get_level() > 0) {
+        ob_flush();
+        flush();
     }
 }
 

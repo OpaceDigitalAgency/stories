@@ -7,6 +7,13 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Polyfill Array.prototype.at for Node versions <16
+if (!Array.prototype.at) {
+  Array.prototype.at = function(n) {
+    return n >= 0 ? this[n] : this[this.length + n];
+  };
+}
+
 // API configuration
 const API = 'https://api.storiesfromtheweb.org/api/v1';
 

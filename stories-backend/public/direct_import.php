@@ -358,8 +358,8 @@ foreach ($storyDirs as $storyDir) {
                 
                 // Insert into media table
                 try {
-                    $stmt = $db->prepare("INSERT INTO media (entity_type, type, filename, url, created_at) VALUES (?, ?, ?, ?, NOW())");
-                    $stmt->execute(['story', 'image/png', $coverImage, $coverUrl]);
+                    $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
+                    $stmt->execute([$coverImage, $coverUrl, 'image/png', filesize($destination)]);
                     echo "<p class='success'>Added image to media library</p>";
                 } catch (Exception $e) {
                     echo "<p class='error'>Failed to add to media library: " . $e->getMessage() . "</p>";
@@ -427,8 +427,8 @@ foreach ($storyDirs as $storyDir) {
                 INSERT INTO stories (
                     title, slug, content, excerpt, cover_url,
                     is_published, source_type, allow_reviews,
-                    estimated_reading_time, age_group, tags
-                ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?, ?)
+                    estimated_reading_time, age_group
+                ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?)
             ");
         
         $stmt->execute([
@@ -438,8 +438,7 @@ foreach ($storyDirs as $storyDir) {
             $excerpt,
             $coverUrl,
             $readingTime,
-            $ageGroup,
-            $tags
+            $ageGroup
         ]);
         
         $storyId = $db->lastInsertId();

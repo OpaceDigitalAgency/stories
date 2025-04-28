@@ -113,8 +113,8 @@ try {
                 $url = '/uploads/' . basename($filename);
                 
                 // Insert into media table
-                $stmt = $db->prepare("INSERT INTO media (entity_type, type, filename, url, created_at) VALUES (?, ?, ?, ?, NOW())");
-                $stmt->execute(['story', $filetype, basename($filename), $url]);
+                $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
+                $stmt->execute([basename($filename), $url, $filetype, strlen($input)]);
                 
                 echo json_encode(['url' => $url]);
             } catch (Exception $e) {

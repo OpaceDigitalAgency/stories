@@ -229,7 +229,9 @@ function extractExcerpt($title, $markdownContent) {
 // Function to handle media upload with proper error handling
 function handleMediaUpload($db, $storyDir, $title) {
     $imagesDir = "$storyDir/images";
-    $coverUrl = '/images/default-cover.svg'; // Default
+    // Use absolute URL for default cover image
+    $defaultCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/images/default-cover.svg';
+    $coverUrl = $defaultCoverUrl; // Default
     $mediaId = null;
     
     if (is_dir($imagesDir)) {
@@ -249,24 +251,32 @@ function handleMediaUpload($db, $storyDir, $title) {
             $uniqueFilename = uniqid() . '-' . $coverImage;
             $destination = $uploadDir . $uniqueFilename;
             
-            // Ensure the uploads directory is web-accessible
-            $publicUrl = '/uploads/' . $uniqueFilename;
-            $fullPublicUrl = 'https://' . $_SERVER['HTTP_HOST'] . $publicUrl;
+            // Create both relative and absolute URLs
+            $relativeUrl = '/uploads/' . $uniqueFilename;
+            $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
+            
+            echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
+            flushOutput();
             
             if (copy($images[0], $destination)) {
                 // Set proper permissions - ensure web server can read the file
                 chmod($destination, 0644);
                 
+                // Make sure everyone can read the file
+                system("chmod -R 644 " . escapeshellarg($destination));
+                
                 // Verify the file exists and is readable
                 if (file_exists($destination) && is_readable($destination)) {
                     echo "<p class='success'>Copied image to: $destination</p>";
-                    echo "<p class='info'>Public URL: $fullPublicUrl</p>";
-                    $coverUrl = $publicUrl;
+                    echo "<p class='info'>Public URL: $absoluteUrl</p>";
+                    // Always use absolute URL for cover
+                    $coverUrl = $absoluteUrl;
                 } else {
                     echo "<p class='warning'>File copied but may not be readable: $destination</p>";
                     echo "<p class='info'>Setting permissions again...</p>";
                     chmod($destination, 0644);
-                    $coverUrl = $publicUrl;
+                    // Always use absolute URL for cover
+                    $coverUrl = $absoluteUrl;
                 }
                 flushOutput();
                 
@@ -300,11 +310,11 @@ function handleMediaUpload($db, $storyDir, $title) {
                 
                 // Add to media library
                 try {
-                    // Store both the relative path and the full URL for better compatibility
+                    // Always store absolute URLs in the database
                     $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
                     $stmt->execute([
                         $uniqueFilename,
-                        $publicUrl, // Use the public URL path that starts with /uploads/
+                        $absoluteUrl, // Use absolute URL with domain
                         $mimeType,
                         $fileSize,
                         $altText
@@ -533,16 +543,9 @@ function processStory($db, $storyDir) {
         $existingStory = findExistingStory($db, $title, $slug);
         
         if ($existingStory) {
-            // Ensure cover URL is properly formatted for the frontend
-            $formattedCoverUrl = $coverUrl;
-            if (!empty($coverUrl) && $coverUrl !== '/images/default-cover.svg') {
-                // Make sure the URL starts with https:// for the frontend
-                if (strpos($coverUrl, 'http') !== 0) {
-                    $formattedCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . $coverUrl;
-                    echo "<p class='info'>Formatted cover URL for frontend: $formattedCoverUrl</p>";
-                    flushOutput();
-                }
-            }
+            // No need to format cover URL as it's already absolute
+            echo "<p class='info'>Using cover URL: $coverUrl</p>";
+            flushOutput();
             
             // Update existing story
             $stmt = $db->prepare("
@@ -560,7 +563,7 @@ function processStory($db, $storyDir) {
             $stmt->execute([
                 $markdownContent,
                 $excerpt,
-                $formattedCoverUrl,
+                $coverUrl, // Already absolute URL
                 $readingTime,
                 $ageGroup,
                 $existingStory['id']
@@ -600,7 +603,7 @@ function processStory($db, $storyDir) {
                 $slug,
                 $markdownContent,
                 $excerpt,
-                $formattedCoverUrl,
+                $coverUrl, // Already absolute URL
                 $readingTime,
                 $ageGroup
             ]);

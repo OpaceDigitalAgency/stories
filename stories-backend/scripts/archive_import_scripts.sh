@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# Get the script's directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
 # Create archive directory if it doesn't exist
-mkdir -p ../stories-backend/_archive/public_scripts/import_scripts/
+ARCHIVE_DIR="$PROJECT_ROOT/stories-backend/_archive/public_scripts/import_scripts"
+mkdir -p "$ARCHIVE_DIR"
+
+echo "Moving files from $PROJECT_ROOT/stories-backend/public to $ARCHIVE_DIR"
 
 # List of redundant scripts to archive
 IMPORT_SCRIPTS=(
@@ -37,16 +44,24 @@ IMPORT_SCRIPTS=(
 
 # Move each script to archive
 for script in "${IMPORT_SCRIPTS[@]}"; do
-    if [ -f "../stories-backend/public/$script" ]; then
+    SOURCE="$PROJECT_ROOT/stories-backend/public/$script"
+    if [ -f "$SOURCE" ]; then
         echo "Moving $script to archive..."
-        mv "../stories-backend/public/$script" "../stories-backend/_archive/public_scripts/import_scripts/"
+        mv "$SOURCE" "$ARCHIVE_DIR/"
+        if [ $? -eq 0 ]; then
+            echo "Successfully moved $script"
+        else
+            echo "Failed to move $script"
+        fi
+    else
+        echo "File not found: $script"
     fi
 done
 
 echo "Import scripts archived. Only direct_import.php remains in public folder."
 
 # Create README in archive folder
-cat > "../stories-backend/_archive/public_scripts/import_scripts/README.md" << EOL
+cat > "$ARCHIVE_DIR/README.md" << EOL
 # Archived Scripts
 
 These scripts have been archived as part of the system cleanup. They are kept for reference only and should not be used.

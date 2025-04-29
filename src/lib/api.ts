@@ -13,14 +13,10 @@ export interface CoverImageUrls {
 export interface Story {
   title: string;
   excerpt: string;
+  content?: string;
   coverImage: string | CoverImageUrls;
   cover_url?: string; // API response field
-  cover_urls?: {
-    thumbnail?: string;
-    small?: string;
-    medium?: string;
-    large?: string;
-  }; // API response field
+  cover_urls?: CoverImageUrls;
   slug: string;
   publishDate: string;
   publishedAt?: string; // API response field

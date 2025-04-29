@@ -15,14 +15,20 @@ const defaultAvatarImage = '/images/default-avatar.svg';
 let coverImageUrl = defaultCoverImage;
 if (story?.cover_urls) {
   // If we have cover_urls object with sizes
-  coverImageUrl = story.cover_urls.small || story.cover_urls.thumbnail || story.cover_urls.default;
+  coverImageUrl = story.cover_urls.small ||
+                 story.cover_urls.thumbnail ||
+                 story.cover_urls.default ||
+                 defaultCoverImage;
 } else if (story?.coverImage) {
   if (typeof story.coverImage === 'object' && (story.coverImage.small || story.coverImage.thumbnail)) {
     // If coverImage is an object with sizes
-    coverImageUrl = story.coverImage.small || story.coverImage.thumbnail || story.coverImage.default;
+    coverImageUrl = story.coverImage.small ||
+                   story.coverImage.thumbnail ||
+                   story.coverImage.default ||
+                   defaultCoverImage;
   } else if (typeof story.coverImage === 'string') {
     // Backward compatibility with old API responses
-    coverImageUrl = story.coverImage;
+    coverImageUrl = story.coverImage || defaultCoverImage;
   }
 }
 console.log("Cover image URL:", coverImageUrl); // Debug log
@@ -119,9 +125,17 @@ const formattedDate = story.publishDate
               onerror="this.onerror=null; this.src='/images/default-avatar.svg';"
             />
           </div>
-          <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">
-            {story.author.name}
-          </span>
+          <div class="flex flex-col">
+            <span class="text-xs text-text-secondary group-hover:text-primary transition-colors duration-300">
+              {story.author.name}
+            </span>
+            {story.author.author_type === 'child' && story.author.age && (
+              <span class="text-xs text-text-secondary/70">
+                {story.author.age} years old
+                {story.author.location && ` • ${story.author.location}`}
+              </span>
+            )}
+          </div>
         </a>
       )}
       

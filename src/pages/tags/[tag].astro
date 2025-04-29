@@ -2,7 +2,7 @@
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import CardStory from '../../components/CardStory.astro';
-import { fetchStories } from '../../lib/api';
+import { fetchStoriesByTag } from '../../lib/api';
 import type { Story } from '../../types/components';
 
 // Get tag from URL
@@ -15,13 +15,8 @@ if (!tag) {
 // Decode the tag from URL format
 const decodedTag = decodeURIComponent(tag.replace(/-/g, ' '));
 
-// Fetch stories
-const stories = await fetchStories();
-
-// Filter stories by tag
-const taggedStories = stories.filter(story => 
-  story.tags?.some(t => t.toLowerCase() === decodedTag.toLowerCase())
-);
+// Fetch stories by tag
+const taggedStories = await fetchStoriesByTag(decodedTag);
 
 // Page metadata
 const title = `${decodedTag} Stories | Stories From The Web`;

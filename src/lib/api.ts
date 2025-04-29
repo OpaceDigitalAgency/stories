@@ -252,6 +252,47 @@ export async function fetchAiTools(): Promise<AiTool[]> {
   }));
 }
 
+// Fetch stories by tag
+export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
+  const raw = await fetchApi<any[]>('/stories', {
+    'filters[tags][$contains]': tag,
+    'sort': 'publishedAt:desc'
+  });
+  
+  return raw.map(item => ({
+    title: item.title,
+    excerpt: item.excerpt || '',
+    content: item.content,
+    coverImage: item.cover_urls ? {
+      default: item.cover_url || '',
+      thumbnail: item.cover_urls.thumbnail || '',
+      small: item.cover_urls.small || '',
+      medium: item.cover_urls.medium || '',
+      large: item.cover_urls.large || ''
+    } : item.cover_url || '',
+    slug: item.slug,
+    publishDate: item.publishedAt || '',
+    featured: Boolean(item.featured),
+    sponsored: Boolean(item.is_sponsored),
+    isAiEnhanced: Boolean(item.is_ai_enhanced),
+    isSelfPublished: Boolean(item.is_self_published),
+    needsModeration: Boolean(item.needs_moderation),
+    rating: Number(item.average_rating) || 0,
+    reviewCount: Number(item.review_count) || 0,
+    source_type: item.source_type || 'child',
+    allow_reviews: Boolean(item.allow_reviews),
+    tags: Array.isArray(item.tags) ? item.tags :
+          (item.tags ? [String(item.tags)] : []),
+    author: item.author ? {
+      name: item.author.name,
+      bio: item.author.bio || '',
+      avatar: item.author.avatar_url || '',
+      slug: item.author.slug,
+      author_type: item.author.author_type || 'retail'
+    } : undefined
+  }));
+}
+
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story> {
   const raw = await fetchApi<any[]>('/stories', {

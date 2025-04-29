@@ -98,6 +98,97 @@ if (typeof tag === 'string') {
 **Cause**: The blog page was trying to filter stories by a non-existent `type` field and had issues handling tags.
 
 **Fix**:
+1. Updated the blog page to use the correct fields and handle tags properly.
+2. Added proper error handling for missing data.
+
+### Tag Pages Returning 404
+
+**Issue**: Clicking on story tags was leading to 404 errors.
+
+**Cause**: Missing tag results page and improper tag URL handling.
+
+**Fix**:
+1. Added a new `[tag].astro` page to handle tag results
+2. Enhanced tag URL handling with proper encoding/decoding:
+```typescript
+// Format tag for URL
+const decodedTag = decodeURIComponent(tag.replace(/-/g, ' '));
+
+// Filter stories by tag
+const taggedStories = stories.filter(story =>
+  story.tags?.some(t => t.toLowerCase() === decodedTag.toLowerCase())
+);
+```
+
+### Review Section Showing for Child Authors
+
+**Issue**: Review sections were being displayed for stories by child authors.
+
+**Cause**: Missing author type check in review visibility logic.
+
+**Fix**:
+1. Added author type check in story detail page:
+```typescript
+{story.is_published && (!story.author?.author_type || story.author?.author_type !== 'child') && (
+  <ReviewSection
+    itemType="story"
+    itemId={slug}
+    itemName={story.title}
+    rating={story.rating || 0}
+    reviewCount={story.reviewCount || 0}
+  />
+)}
+```
+
+### Moderation Box Always Visible
+
+**Issue**: Moderation CTA was visible to all users regardless of admin status.
+
+**Cause**: Missing admin and story status checks.
+
+**Fix**:
+1. Added proper visibility conditions:
+```typescript
+{(Astro.locals?.user?.isAdmin && (!story.publishedAt || story.needs_moderation)) && (
+  <ModerationCTA
+    contentType="story"
+    contentId={slug}
+    reason={story.needs_moderation ? "Story requires moderation" : "Story needs to be published"}
+  />
+)}
+```
+
+### Age Group and Reading Time Not Set
+
+**Issue**: Stories were missing age group and reading time information.
+
+**Cause**: Missing fields in story form and database.
+
+**Fix**:
+1. Added fields to story form:
+```php
+<div class="form-group">
+  <label class="form-label" for="age_group">Age Group</label>
+  <select id="age_group" name="age_group" class="form-input" required>
+    <option value="0-3">0-3 years</option>
+    <option value="4-6">4-6 years</option>
+    <option value="7-12" selected>7-12 years</option>
+    <option value="13+">13+ years</option>
+  </select>
+</div>
+```
+2. Added automatic age group setting based on child author age:
+```javascript
+if (authorType === 'child' && data.age) {
+  const age = parseInt(data.age);
+  let ageGroup = '7-12'; // Default
+  if (age <= 3) ageGroup = '0-3';
+  else if (age <= 6) ageGroup = '4-6';
+  else if (age <= 12) ageGroup = '7-12';
+  else ageGroup = '13+';
+  ageGroupSelect.value = ageGroup;
+}
+```
 1. Updated the blog page to fetch from the correct API endpoint:
 ```javascript
 import { fetchBlogPosts } from '../../lib/api';

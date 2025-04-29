@@ -1,5 +1,28 @@
 # Stories From The Web - Progress Log
 
+## 2025-04-29
+- Fixed story detail page issues:
+  - Added proper handling of reviews based on author type
+  - Added proper visibility control for moderation box based on admin status
+  - Added automatic age group setting based on child author age
+  - Added estimated reading time field to story form
+  - Updated documentation to reflect these changes
+- Added tag suggestion system:
+  - Created suggest-tags.php endpoint for content analysis
+  - Added tag suggestion button to story form
+  - Implemented keyword-based tag matching
+  - Added visual feedback for tag suggestions
+- Fixed tag page 404 errors:
+  - Created [tag].astro page for tag results
+  - Added proper tag URL encoding/decoding
+  - Added story filtering by tag
+  - Added animations and styling to tag results page
+- Updated documentation:
+  - Added new features to comprehensive system architecture
+  - Updated database schema documentation
+  - Added new fixes to KNOWN_ISSUES_AND_FIXES.md
+  - Updated PROGRESS.md with recent changes
+
 ## 2025-04-28
 - Fixed media optimization issues:
   - Identified that the server lacks required PHP image processing extensions (ImageMagick/GD)

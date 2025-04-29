@@ -191,6 +191,32 @@ export async function fetchStories() {
         <li><strong>story_tags</strong>: Links stories ↔ tags.</li>
         <li><strong>author_stories</strong>: Alternate alias for author↔story relationships.</li>
       </ul>
+
+      <h3>Content Management Features</h3>
+      <ul>
+        <li><strong>Automatic Tag Suggestion</strong>: Content analysis system that suggests relevant tags based on story content using keyword matching and natural language processing.</li>
+        <li><strong>Age Group Management</strong>: Stories are categorized by age groups (0-3, 4-6, 7-12, 13+) with automatic suggestions based on child author ages.</li>
+        <li><strong>Reading Time Estimation</strong>: Stories include estimated reading times to help readers choose appropriate content.</li>
+      </ul>
+
+      <h3>Review System</h3>
+      <ul>
+        <li><strong>Visibility Rules</strong>:
+          <ul>
+            <li>Child authors: Reviews disabled to maintain a supportive environment</li>
+            <li>Parent authors: Optional review system</li>
+            <li>Classic/retail authors: Reviews always enabled</li>
+          </ul>
+        </li>
+        <li><strong>Rating System</strong>: 5-star rating system with review counts and average calculations</li>
+      </ul>
+
+      <h3>Moderation System</h3>
+      <ul>
+        <li><strong>Admin Controls</strong>: Moderation interface visible only to admin users for unpublished or flagged content</li>
+        <li><strong>Publication Flow</strong>: Stories require admin approval before publication</li>
+        <li><strong>Content Flags</strong>: System tracks needs_moderation flag for content requiring review</li>
+      </ul>
     <div class="mermaid">
 erDiagram
     USERS ||--o{ AUTH_TOKENS : has

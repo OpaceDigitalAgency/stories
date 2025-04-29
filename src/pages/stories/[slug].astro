@@ -11,20 +11,6 @@ import { fetchStories } from '../../lib/api';
 import type { Story } from '../../types/components';
 import '../../styles/base.css';
 
-// Add type for Astro.locals
-declare global {
-  namespace App {
-    interface Locals {
-      user?: {
-        id: number;
-        name: string;
-        email: string;
-        isAdmin?: boolean;
-      };
-    }
-  }
-}
-
 // Helper function to get image URL from story
 function getImageUrl(story: Story): string {
   if (typeof story.coverImage === 'string') {
@@ -188,7 +174,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           </div>
           
           <!-- Moderation CTA - Only show for admins and unpublished/needs moderation stories -->
-          {(Astro.locals?.user?.isAdmin && (!story.publishedAt || story.needs_moderation)) && (
+          {(Astro.locals?.user && 'isAdmin' in Astro.locals.user && (!story.is_published || story.needs_moderation)) && (
             <div class="mb-16">
               <ModerationCTA
                 contentType="story"
@@ -199,7 +185,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           )}
           
           <!-- Reviews Section - Only show for non-child authors and published stories -->
-          {story.publishedAt && (!story.author?.author_type || story.author?.author_type !== 'child') && (
+          {story.is_published && (!story.author?.author_type || story.author?.author_type !== 'child') && (
             <ReviewSection
               itemType="story"
               itemId={slug}

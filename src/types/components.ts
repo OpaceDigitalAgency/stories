@@ -35,18 +35,18 @@ export interface Story {
   };
   rating?: number;
   tags?: string[];
-  publishDate: string;
-  publishedAt?: string;
+  /** Publication date */
+  publishDate?: string;
+  /** Whether the story is published */
+  is_published?: boolean;
+  /** Whether the story needs moderation */
+  needs_moderation?: boolean;
   /** Source type of the story (child, parent, classic) */
   source_type?: 'child' | 'parent' | 'classic';
   /** Whether reviews are allowed for this story */
   allow_reviews?: boolean;
   /** Review count */
   reviewCount?: number;
-  /** Whether the story is published */
-  is_published?: boolean;
-  /** Whether the story needs moderation */
-  needs_moderation?: boolean;
   /** Whether the story is sponsored */
   sponsored?: boolean;
   is_sponsored?: boolean;
@@ -58,16 +58,10 @@ export interface Story {
   is_self_published?: boolean;
   /** Whether the story is featured */
   featured?: boolean;
-}
-
-// Add Locals interface for Astro.locals
-export interface Locals {
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    isAdmin?: boolean;
-  };
+  /** Estimated reading time in minutes */
+  estimated_reading_time?: string;
+  /** Target age group */
+  age_group?: '0-3' | '4-6' | '7-12' | '13+';
 }
 
 export interface CardAuthorProps {

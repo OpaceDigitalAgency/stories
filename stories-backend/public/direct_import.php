@@ -123,25 +123,38 @@ function extractAuthorInfo($title) {
     // Try multiple patterns to extract author information
     
     // Pattern 1: "Story Title by Author Name aged X from Location"
-    if (preg_match('/by\s+([A-Za-z\s\-\.]+)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,\.]+))?/i', $title, $matches)) {
+    if (preg_match('/by\s+([^,]+?)(?:\s+aged\s+(\d+))?(?:\s+from\s+([^,\.]+))?(?:$|,|\.|aged)/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
         echo "<p class='success'><strong>PATTERN 1 MATCHED:</strong> Found author in 'by Author' format</p>";
     }
     // Pattern 2: "The Magic Treehouse Kerry, aged 9, from Northern Ireland"
-    else if (preg_match('/([A-Za-z\s\-\.]+),\s+aged\s+(\d+)(?:,\s+from\s+([^,\.]+))?/i', $title, $matches)) {
+    else if (preg_match('/([^,]+?)(?:,|\s+)(?:aged\s+(\d+))?(?:,?\s*from\s+([^,\.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
         echo "<p class='success'><strong>PATTERN 2 MATCHED:</strong> Found author in 'Name, aged' format</p>";
     }
     // Pattern 3: "Story Title by Name aged X from Location" - more specific pattern for common format
-    else if (preg_match('/by\s+([A-Za-z][A-Za-z\s\-\.]+)\s+aged\s+(\d+)(?:\s+from\s+([^,\.]+))?/i', $title, $matches)) {
+    else if (preg_match('/by\s+([^,]+?)\s+aged\s+(\d+)(?:\s+from\s+([^,\.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = trim($matches[2]);
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
         echo "<p class='success'><strong>IMPROVED PATTERN MATCHED:</strong> Found author with age and location</p>";
+    }
+
+    // Extract age and location from title if not found yet
+    if (!$info['age'] || !$info['location']) {
+        // Try to find age
+        if (preg_match('/aged?\s+(\d+)/i', $title, $ageMatch)) {
+            $info['age'] = trim($ageMatch[1]);
+        }
+        
+        // Try to find location
+        if (preg_match('/from\s+([^,\.]+)(?:$|,|\.)/i', $title, $locMatch)) {
+            $info['location'] = trim($locMatch[1]);
+        }
     }
     // Pattern 3: Extract from title with specific keywords
     else if (preg_match('/((?:by|aged|from).*?)$/i', $title, $fullMatch)) {
@@ -216,10 +229,18 @@ function getOrCreateAuthor($db, $authorInfo) {
     
     // Generate a proper slug from the author name
     $name = trim($authorInfo['name']);
+    
+    // Convert accented characters to ASCII
+    $name = iconv('UTF-8', 'ASCII//TRANSLIT', $name);
+    
+    // Convert to lowercase and replace non-alphanumeric with hyphens
     $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
     
     // Remove any leading or trailing dashes
     $slug = trim($slug, '-');
+    
+    echo "<p class='info'><strong>SLUG GENERATION:</strong> Name=\"{$name}\" -> Slug=\"{$slug}\"</p>";
+    flushOutput();
     
     echo "<p class='info'><strong>AUTHOR SLUG:</strong> \"$slug\"</p>";
     flushOutput();

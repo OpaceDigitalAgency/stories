@@ -18,17 +18,17 @@ $IMAGE_SIZES = [
 $IMAGE_FORMATS = [
     'jpg' => [
         'mime' => 'image/jpeg',
-        'quality' => 85,
+        'quality' => 60, // Lower quality for better compression
         'extension' => 'jpg'
     ],
     'png' => [
         'mime' => 'image/png',
-        'quality' => 9, // PNG compression level (0-9)
+        'quality' => 9, // Maximum PNG compression
         'extension' => 'png'
     ],
     'webp' => [
         'mime' => 'image/webp',
-        'quality' => 80,
+        'quality' => 60, // Lower quality for better compression
         'extension' => 'webp'
     ]
 ];
@@ -37,7 +37,7 @@ $IMAGE_FORMATS = [
 $DEFAULT_CONVERT_FORMAT = 'jpg';
 
 // Maximum file size before optimization is required (in bytes)
-$MAX_FILE_SIZE = 300 * 1024; // 300KB
+$MAX_FILE_SIZE = 1024 * 1024; // 1MB - increased to handle larger images
 
 // Directory for optimized images
 $OPTIMIZED_DIR = 'optimized';

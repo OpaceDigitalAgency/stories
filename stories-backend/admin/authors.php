@@ -159,7 +159,35 @@ class AuthorsPage extends CrudPage {
         ];
         
         // Set required fields
-        $this->requiredFields = ['name'];
+        $this->requiredFields = ['name', 'author_type'];
+        
+        // Set conditional required fields
+        $this->conditionalRequiredFields = [
+            'age' => function($data) {
+                return isset($data['author_type']) && $data['author_type'] === 'child';
+            }
+        ];
+        
+        // Set field validation rules
+        $this->validationRules = [
+            'age' => function($value, $data) {
+                if ($data['author_type'] === 'child') {
+                    if (!is_numeric($value) || $value < 1 || $value > 21) {
+                        return 'Age must be between 1 and 21 for child authors';
+                    }
+                }
+                return true;
+            },
+            'location' => function($value, $data) {
+                if (empty($value)) {
+                    return 'Location is required';
+                }
+                if (strlen($value) > 100) {
+                    return 'Location must be less than 100 characters';
+                }
+                return true;
+            }
+        ];
         
         // Set searchable fields
         $this->searchableFields = ['name', 'bio', 'location'];
@@ -170,6 +198,41 @@ class AuthorsPage extends CrudPage {
         // Set default sort
         $this->defaultSortField = 'name';
         $this->defaultSortDirection = 'asc';
+    }
+
+    /**
+     * Handle delete
+     */
+    protected function handleDelete() {
+        if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+            $this->errors[] = 'Invalid author ID';
+            return;
+        }
+
+        // Use the new delete-author.php script
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'delete-author.php');
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['id' => $_POST['id']]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            $this->errors[] = 'Failed to delete author';
+            return;
+        }
+
+        $result = json_decode($response, true);
+        if (!$result['success']) {
+            $this->errors[] = $result['error'] ?? 'Failed to delete author';
+            return;
+        }
+
+        $this->message = 'Author deleted successfully';
+        $this->redirect = 'authors.php';
     }
     
     /**

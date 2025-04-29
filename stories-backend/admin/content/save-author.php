@@ -87,8 +87,34 @@ try {
     $hasLocationColumn = in_array('location', $columns);
 
     // Generate slug from name if not provided and slug column exists
-    if ($hasSlugColumn && empty($slug)) {
-        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
+    if ($hasSlugColumn) {
+        // If no slug provided, generate from name
+        if (empty($slug)) {
+            // Convert to lowercase
+            $slug = strtolower($name);
+            // Replace accented characters
+            $slug = iconv('UTF-8', 'ASCII//TRANSLIT', $slug);
+            // Replace anything that's not alphanumeric with hyphens
+            $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+            // Remove leading/trailing hyphens
+            $slug = trim($slug, '-');
+        }
+        
+        // Ensure unique slug
+        $stmt = $db->prepare("SELECT COUNT(*) FROM authors WHERE slug = ? AND id != ?");
+        $stmt->execute([$slug, $id ?? 0]);
+        $count = $stmt->fetchColumn();
+        
+        if ($count > 0) {
+            $originalSlug = $slug;
+            $counter = 1;
+            do {
+                $slug = $originalSlug . '-' . $counter;
+                $stmt->execute([$slug, $id ?? 0]);
+                $count = $stmt->fetchColumn();
+                $counter++;
+            } while ($count > 0);
+        }
     }
 
     // Validate email format if email column exists

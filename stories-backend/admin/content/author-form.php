@@ -167,8 +167,8 @@ if (isset($_SESSION['error'])) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="author_type">Author Type</label>
-                        <select id="author_type" name="author_type" class="form-control">
+                        <label class="form-label" for="author_type">Author Type <span class="text-danger">*</span></label>
+                        <select id="author_type" name="author_type" class="form-control" required onchange="handleAuthorTypeChange()">
                             <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail (Book Author)</option>
                             <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
                             <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
@@ -177,19 +177,22 @@ if (isset($_SESSION['error'])) {
                     </div>
 
                     <div id="age-field" class="form-group" style="display: <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'block' : 'none'; ?>;">
-                        <label class="form-label" for="age">Age</label>
-                        <select id="age" name="age" class="form-control">
-                            <?php for ($i = 1; $i <= 21; $i++): ?>
-                                <option value="<?php echo $i; ?>" <?php echo (isset($author['age']) && $author['age'] == $i) ? 'selected' : ''; ?>><?php echo $i; ?></option>
-                            <?php endfor; ?>
-                        </select>
+                        <label class="form-label" for="age">Age <span class="text-danger">*</span></label>
+                        <input type="number" id="age" name="age" class="form-control" min="1" max="21"
+                               value="<?php echo htmlspecialchars($author['age'] ?? ''); ?>"
+                               <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'required' : ''; ?>>
+                        <small class="form-text text-muted">Age must be between 1 and 21 years old</small>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="location">Location</label>
-                        <input type="text" id="location" name="location" class="form-control"
+                        <label class="form-label" for="location">Location <span class="text-danger">*</span></label>
+                        <input type="text" id="location" name="location" class="form-control" required
                                value="<?php echo htmlspecialchars($author['location'] ?? ''); ?>"
-                               list="uk-locations" autocomplete="off">
+                               list="uk-locations" autocomplete="off"
+                               maxlength="100"
+                               pattern="[A-Za-z\s,.-]{2,100}"
+                               title="Location must be between 2 and 100 characters, and can only contain letters, spaces, commas, periods, and hyphens">
+                        <small class="form-text text-muted">Enter city, county, or country (max 100 characters)</small>
                         <datalist id="uk-locations">
                             <!-- Countries -->
                             <option value="England">England</option>
@@ -198,6 +201,85 @@ if (isset($_SESSION['error'])) {
                             <option value="Northern Ireland">Northern Ireland</option>
                             
                             <!-- Major Cities -->
+                            <option value="London">London</option>
+                            <option value="Birmingham">Birmingham</option>
+                            <option value="Manchester">Manchester</option>
+                            <option value="Leeds">Leeds</option>
+                            <option value="Liverpool">Liverpool</option>
+                            <option value="Newcastle">Newcastle</option>
+                            <option value="Sheffield">Sheffield</option>
+                            <option value="Bristol">Bristol</option>
+                            <option value="Edinburgh">Edinburgh</option>
+                            <option value="Glasgow">Glasgow</option>
+                            <option value="Cardiff">Cardiff</option>
+                            <option value="Belfast">Belfast</option>
+                        </datalist>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Author</button>
+                        <a href="authors.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Handle author type change
+        function handleAuthorTypeChange() {
+            const authorType = document.getElementById('author_type').value;
+            const ageField = document.getElementById('age-field');
+            const ageInput = document.getElementById('age');
+            
+            if (authorType === 'child') {
+                ageField.style.display = 'block';
+                ageInput.required = true;
+                if (!ageInput.value) {
+                    ageInput.value = '7'; // Default age for child authors
+                }
+            } else {
+                ageField.style.display = 'none';
+                ageInput.required = false;
+                ageInput.value = '';
+            }
+        }
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const authorType = document.getElementById('author_type').value;
+            const age = document.getElementById('age').value;
+            const location = document.getElementById('location').value;
+
+            // Validate age for child authors
+            if (authorType === 'child') {
+                if (!age || age < 1 || age > 21) {
+                    e.preventDefault();
+                    alert('Age must be between 1 and 21 for child authors');
+                    return;
+                }
+            }
+
+            // Validate location
+            if (!location || location.length < 2 || location.length > 100) {
+                e.preventDefault();
+                alert('Location must be between 2 and 100 characters');
+                return;
+            }
+
+            // Validate location characters
+            if (!/^[A-Za-z\s,.-]+$/.test(location)) {
+                e.preventDefault();
+                alert('Location can only contain letters, spaces, commas, periods, and hyphens');
+                return;
+            }
+        });
+
+        // Initialize form state
+        handleAuthorTypeChange();
+    </script>
+</body>
+</html>
                             <option value="London">London</option>
                             <option value="Birmingham">Birmingham</option>
                             <option value="Manchester">Manchester</option>

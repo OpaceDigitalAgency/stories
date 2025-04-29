@@ -303,16 +303,78 @@ try {
 
             <div class="form-group">
                 <label class="form-label">Tags</label>
-                <div class="checkbox-group">
+                <div class="tag-controls">
+                    <button type="button" id="suggest-tags-btn" class="btn btn-secondary btn-sm">
+                        <span class="icon-magic"></span> Suggest Tags from Content
+                    </button>
+                    <span id="tag-suggestion-status" style="display: none; margin-left: 10px;"></span>
+                </div>
+                <div class="checkbox-group" id="tags-container">
                     <?php foreach ($tags as $tag): ?>
                         <label class="checkbox-label">
-                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
+                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>" id="tag-<?php echo $tag['id']; ?>"
                                    <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
                             <?php echo htmlspecialchars($tag['name']); ?>
                         </label>
                     <?php endforeach; ?>
                 </div>
             </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const suggestTagsBtn = document.getElementById('suggest-tags-btn');
+                    const contentTextarea = document.getElementById('content');
+                    const statusSpan = document.getElementById('tag-suggestion-status');
+                    
+                    suggestTagsBtn.addEventListener('click', function() {
+                        const content = contentTextarea.value;
+                        
+                        if (!content) {
+                            alert('Please enter some content first');
+                            return;
+                        }
+                        
+                        statusSpan.textContent = 'Analyzing content...';
+                        statusSpan.style.display = 'inline';
+                        
+                        // Make AJAX request to suggest tags
+                        fetch('suggest-tags.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'content=' + encodeURIComponent(content)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Uncheck all tags first
+                                document.querySelectorAll('input[name="tags[]"]').forEach(checkbox => {
+                                    checkbox.checked = false;
+                                });
+                                
+                                // Check suggested tags
+                                data.tags.forEach(tag => {
+                                    const checkbox = document.getElementById('tag-' + tag.id);
+                                    if (checkbox) {
+                                        checkbox.checked = true;
+                                    }
+                                });
+                                
+                                statusSpan.textContent = 'Tags suggested based on content!';
+                                setTimeout(() => {
+                                    statusSpan.style.display = 'none';
+                                }, 3000);
+                            } else {
+                                statusSpan.textContent = 'Error: ' + (data.error || 'Unknown error');
+                            }
+                        })
+                        .catch(error => {
+                            statusSpan.textContent = 'Error: ' + error.message;
+                        });
+                    });
+                });
+            </script>
 
             <div class="form-group">
                 <button type="submit" class="form-submit">Save Story</button>
@@ -336,6 +398,49 @@ try {
         .content-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .content-header h1 {
+            margin: 0;
+        }
+        .content-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tag-controls {
+            margin-bottom: 10px;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .icon-magic {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="white" d="M224 96l16-32 32-16-32-16-16-32-16 32-32 16 32 16 16 32zM80 160l26.66-53.33L160 80l-53.34-26.67L80 0 53.34 53.33 0 80l53.34 26.67L80 160zm352 128l-26.66 53.33L352 368l53.34 26.67L432 448l26.66-53.33L512 368l-53.34-26.67L432 288zm70.62-193.77L417.77 9.38C411.53 3.12 403.34 0 395.15 0c-8.19 0-16.38 3.12-22.63 9.38L9.38 372.52c-12.5 12.5-12.5 32.76 0 45.25l84.85 84.85c6.25 6.25 14.44 9.37 22.62 9.37 8.19 0 16.38-3.12 22.63-9.37l363.14-363.15c12.5-12.48 12.5-32.75 0-45.24zM359.45 203.46l-50.91-50.91 86.6-86.6 50.91 50.91-86.6 86.6z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+        }
+        #tag-suggestion-status {
+            color: #666;
+            font-style: italic;
+        }
             align-items: center;
             margin-bottom: 20px;
         }

@@ -1,0 +1,103 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import { fetchStories } from '../../lib/api';
+import type { Story } from '../../types/components';
+
+// Get tag from URL
+const { tag } = Astro.params;
+
+if (!tag) {
+  return Astro.redirect('/404');
+}
+
+// Decode the tag from URL format
+const decodedTag = decodeURIComponent(tag.replace(/-/g, ' '));
+
+// Fetch stories
+const stories = await fetchStories();
+
+// Filter stories by tag
+const taggedStories = stories.filter(story => 
+  story.tags?.some(t => t.toLowerCase() === decodedTag.toLowerCase())
+);
+
+// Page metadata
+const title = `${decodedTag} Stories | Stories From The Web`;
+const description = `Browse stories tagged with "${decodedTag}" on Stories From The Web`;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:url" content={`https://storiesfromtheweb.org/tags/${tag}`}>
+  <meta property="og:type" content="website">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <section class="relative py-16 overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-4xl mx-auto">
+          <!-- Tag Header -->
+          <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Stories Tagged "{decodedTag}"
+          </h1>
+          
+          <p class="text-lg text-text-secondary mb-12">
+            {taggedStories.length === 0 
+              ? `No stories found with the tag "${decodedTag}"`
+              : `Found ${taggedStories.length} ${taggedStories.length === 1 ? 'story' : 'stories'} tagged with "${decodedTag}"`
+            }
+          </p>
+          
+          <!-- Stories Grid -->
+          {taggedStories.length > 0 && (
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 perspective-1000">
+              {taggedStories.map((story, index) => (
+                <div 
+                  class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+                  style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+                >
+                  <CardStory story={story} className="rounded-xl shadow-md hover:shadow-lg transition" />
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <!-- No Results -->
+          {taggedStories.length === 0 && (
+            <div class="text-center py-12">
+              <div class="mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-text-secondary">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p class="text-lg text-text-secondary">
+                No stories found with this tag. Try browsing our <a href="/stories" class="text-primary hover:text-primary-dark underline">stories page</a> or using a different tag.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+</body>
+</html>

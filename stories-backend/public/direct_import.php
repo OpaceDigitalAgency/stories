@@ -136,12 +136,19 @@ function extractAuthorInfo($title) {
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
         echo "<p class='success'><strong>PATTERN 2 MATCHED:</strong> Found author in 'Name, aged' format</p>";
     }
+    // Pattern 3: "Story Title by Name aged X from Location" - more specific pattern for common format
+    else if (preg_match('/by\s+([A-Za-z][A-Za-z\s\-\.]+)\s+aged\s+(\d+)(?:\s+from\s+([^,\.]+))?/i', $title, $matches)) {
+        $info['name'] = trim($matches[1]);
+        $info['age'] = trim($matches[2]);
+        $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
+        echo "<p class='success'><strong>IMPROVED PATTERN MATCHED:</strong> Found author with age and location</p>";
+    }
     // Pattern 3: Extract from title with specific keywords
     else if (preg_match('/((?:by|aged|from).*?)$/i', $title, $fullMatch)) {
         $authorPart = $fullMatch[1];
         
         // Now extract components from this part
-        if (preg_match('/by\s+([A-Za-z\s\-\.]+)/i', $authorPart, $nameMatch)) {
+        if (preg_match('/by\s+([A-Za-z][A-Za-z\s\-\.]+)/i', $authorPart, $nameMatch)) {
             $info['name'] = trim($nameMatch[1]);
         }
         
@@ -149,11 +156,19 @@ function extractAuthorInfo($title) {
             $info['age'] = trim($ageMatch[1]);
         }
         
-        if (preg_match('/from\s+([A-Za-z\s\-\.]+)/i', $authorPart, $locMatch)) {
+        if (preg_match('/from\s+([A-Za-z][A-Za-z\s\-\.]+)/i', $authorPart, $locMatch)) {
             $info['location'] = trim($locMatch[1]);
         }
         
         echo "<p class='success'><strong>PATTERN 3 MATCHED:</strong> Extracted from partial match</p>";
+    }
+    
+    // Pattern 4: Direct extraction from URL/slug format like "ampire-by-ane-aged-9-from-ast-unbartonshire"
+    else if (preg_match('/(?:^|\-)by\-([a-z]+)(?:\-aged\-(\d+))?(?:\-from\-([a-z\-]+))?/i', $title, $matches)) {
+        $info['name'] = ucfirst(trim($matches[1]));
+        $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
+        $info['location'] = isset($matches[3]) ? str_replace('-', ' ', ucfirst(trim($matches[3]))) : null;
+        echo "<p class='success'><strong>URL PATTERN MATCHED:</strong> Extracted from slug format</p>";
     }
     
     // If no name was found but title contains author indicators, try harder

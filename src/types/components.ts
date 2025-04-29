@@ -21,24 +21,53 @@ export interface Story {
   id?: number;
   title: string;
   slug: string;
-  excerpt?: string;
+  excerpt: string;
   content?: string;
-  coverImage?: string | CoverImageUrls;
+  coverImage: string | CoverImageUrls;
+  cover_url?: string;
   cover_urls?: CoverImageUrls;
   author?: {
     name: string;
     avatar?: string;
+    avatar_url?: string;
     slug: string;
+    author_type?: 'retail' | 'parent' | 'child' | 'educator';
   };
   rating?: number;
   tags?: string[];
-  publishDate?: Date;
+  publishDate: string;
+  publishedAt?: string;
   /** Source type of the story (child, parent, classic) */
   source_type?: 'child' | 'parent' | 'classic';
   /** Whether reviews are allowed for this story */
   allow_reviews?: boolean;
   /** Review count */
-  review_count?: number;
+  reviewCount?: number;
+  /** Whether the story is published */
+  is_published?: boolean;
+  /** Whether the story needs moderation */
+  needs_moderation?: boolean;
+  /** Whether the story is sponsored */
+  sponsored?: boolean;
+  is_sponsored?: boolean;
+  /** Whether the story is AI enhanced */
+  isAiEnhanced?: boolean;
+  is_ai_enhanced?: boolean;
+  /** Whether the story is self published */
+  isSelfPublished?: boolean;
+  is_self_published?: boolean;
+  /** Whether the story is featured */
+  featured?: boolean;
+}
+
+// Add Locals interface for Astro.locals
+export interface Locals {
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    isAdmin?: boolean;
+  };
 }
 
 export interface CardAuthorProps {

@@ -8,10 +8,43 @@ import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
 import { fetchStories } from '../../lib/api';
+import type { Story } from '../../types/components';
 import '../../styles/base.css';
+
+// Add type for Astro.locals
+declare global {
+  namespace App {
+    interface Locals {
+      user?: {
+        id: number;
+        name: string;
+        email: string;
+        isAdmin?: boolean;
+      };
+    }
+  }
+}
+
+// Helper function to get image URL from story
+function getImageUrl(story: Story): string {
+  if (typeof story.coverImage === 'string') {
+    return story.coverImage;
+  }
+  if (story.coverImage?.default) {
+    return story.coverImage.default;
+  }
+  if (story.cover_urls?.default) {
+    return story.cover_urls.default;
+  }
+  return '/images/default-cover.svg';
+}
 
 // Get the slug from the URL
 const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
 
 // Fetch story data
 const stories = await fetchStories();
@@ -56,7 +89,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
   <!-- Open Graph / Social Media Meta Tags -->
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
-  <meta property="og:image" content={story.coverImage}>
+  <meta property="og:image" content={getImageUrl(story)}>
   <meta property="og:url" content={`https://storiesfromtheweb.org/stories/${slug}`}>
   <meta property="og:type" content="article">
   
@@ -64,7 +97,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content={title}>
   <meta name="twitter:description" content={description}>
-  <meta name="twitter:image" content={story.coverImage}>
+  <meta name="twitter:image" content={getImageUrl(story)}>
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
@@ -148,35 +181,33 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
             ) : (
               <div class="bg-white p-8 rounded-xl shadow-md">
                 <p class="text-lg text-text-secondary">
-                  This is a placeholder for the story content. In a real implementation, the full story content would be displayed here.
-                </p>
-                <p class="text-lg text-text-secondary mt-4">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras porttitor metus in nibh finibus, a volutpat felis condimentum. Nulla facilisi. Phasellus gravida semper nisi. Nulla facilisi. Cras id arcu lorem, et semper purus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Duis vel est nec sapien suscipit gravida. Aliquam erat volutpat. Ut id magna vitae ante rutrum commodo.
-                </p>
-                <p class="text-lg text-text-secondary mt-4">
-                  Fusce at nisi eget dolor rhoncus facilisis. Mauris ante nisl, consectetur et luctus et, porta ut dolor. Curabitur ultricies ultrices nulla. Morbi blandit nec est vitae dictum. Etiam vel consectetur diam. Maecenas ut tristique mi. Duis vel sapien at odio venenatis facilisis a sit amet lectus.
+                  {story.excerpt || "This story's content is not available at the moment."}
                 </p>
               </div>
             )}
           </div>
           
-          <!-- Moderation CTA -->
-          <div class="mb-16">
-            <ModerationCTA 
-              contentType="story" 
-              contentId={story.id || slug} 
-              reason="Report inappropriate content"
-            />
-          </div>
+          <!-- Moderation CTA - Only show for admins and unpublished/needs moderation stories -->
+          {(Astro.locals?.user?.isAdmin && (!story.publishedAt || story.needs_moderation)) && (
+            <div class="mb-16">
+              <ModerationCTA
+                contentType="story"
+                contentId={slug}
+                reason={story.needs_moderation ? "Story requires moderation" : "Story needs to be published"}
+              />
+            </div>
+          )}
           
-          <!-- Reviews Section -->
-          <ReviewSection
-            itemType="story"
-            itemId={story.id || slug}
-            itemName={story.title}
-            rating={story.rating || 0}
-            reviewCount={story.reviewCount || 0}
-          />
+          <!-- Reviews Section - Only show for non-child authors and published stories -->
+          {story.publishedAt && (!story.author?.author_type || story.author?.author_type !== 'child') && (
+            <ReviewSection
+              itemType="story"
+              itemId={slug}
+              itemName={story.title}
+              rating={story.rating || 0}
+              reviewCount={story.reviewCount || 0}
+            />
+          )}
         </div>
       </div>
     </section>

@@ -1210,9 +1210,8 @@ function getAgeGroup($age) {
 
 // Function to estimate reading time
 function getReadingTime($content) {
-    $wordCount = str_word_count(strip_tags($content));
-    $minutes = max(1, ceil($wordCount / 200));
-    return "$minutes minute" . ($minutes !== 1 ? 's' : '');
+    // All imported stories are set to 1 minute reading time
+    return "1 minute";
 }
 // Function to process a single story with transaction
 function processStory($db, $storyDir) {

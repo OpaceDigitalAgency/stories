@@ -52,6 +52,20 @@ try {
     // Get new fields
     $source_type = $_POST['source_type'] ?? 'child';
     $allow_reviews = isset($_POST['allow_reviews']) ? 1 : 0;
+    $estimated_reading_time = intval($_POST['estimated_reading_time'] ?? 1);
+    $age_group = $_POST['age_group'] ?? '7-12';
+    
+    // Validate reading time
+    if ($estimated_reading_time < 1) {
+        $estimated_reading_time = 1;
+    } else if ($estimated_reading_time > 60) {
+        $estimated_reading_time = 60;
+    }
+    
+    // Validate age group
+    if (!in_array($age_group, ['0-3', '4-6', '7-12', '13+'])) {
+        $age_group = '7-12';
+    }
     
     // Validate source_type
     if (!in_array($source_type, ['child', 'parent', 'classic'])) {
@@ -78,16 +92,56 @@ try {
 
     if ($id) {
         // Update existing story
-        $stmt = $db->prepare("UPDATE stories SET title = ?, author_id = ?, content = ?, source_type = ?, allow_reviews = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$title, $author_id, $content, $source_type, $allow_reviews, $id]);
+        $stmt = $db->prepare("
+            UPDATE stories
+            SET title = ?,
+                author_id = ?,
+                content = ?,
+                source_type = ?,
+                allow_reviews = ?,
+                estimated_reading_time = ?,
+                age_group = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $title,
+            $author_id,
+            $content,
+            $source_type,
+            $allow_reviews,
+            $estimated_reading_time,
+            $age_group,
+            $id
+        ]);
         
         // Delete existing tags
         $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
         $stmt->execute([$id]);
     } else {
         // Create new story
-        $stmt = $db->prepare("INSERT INTO stories (title, author_id, content, source_type, allow_reviews, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
-        $stmt->execute([$title, $author_id, $content, $source_type, $allow_reviews]);
+        $stmt = $db->prepare("
+            INSERT INTO stories (
+                title,
+                author_id,
+                content,
+                source_type,
+                allow_reviews,
+                estimated_reading_time,
+                age_group,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        ");
+        $stmt->execute([
+            $title,
+            $author_id,
+            $content,
+            $source_type,
+            $allow_reviews,
+            $estimated_reading_time,
+            $age_group
+        ]);
         $id = $db->lastInsertId();
     }
 

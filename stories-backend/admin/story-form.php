@@ -199,12 +199,58 @@ try {
                         }
                     }
                     
+                    // Function to update age group based on author age
+                    window.updateAgeGroupFromAuthor = function() {
+                        const authorSelect = document.getElementById('author_id');
+                        const ageGroupSelect = document.getElementById('age_group');
+                        
+                        if (authorSelect.selectedIndex > 0) {
+                            const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                            const authorType = selectedOption.getAttribute('data-author-type');
+                            
+                            // Only set age group for child authors
+                            if (authorType === 'child') {
+                                // Get author ID
+                                const authorId = selectedOption.value;
+                                
+                                // Make an AJAX request to get author age
+                                fetch('get-author-age.php?id=' + authorId)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.age) {
+                                            // Set age group based on author age
+                                            const age = parseInt(data.age);
+                                            let ageGroup = '7-12'; // Default
+                                            
+                                            if (age <= 3) {
+                                                ageGroup = '0-3';
+                                            } else if (age <= 6) {
+                                                ageGroup = '4-6';
+                                            } else if (age <= 12) {
+                                                ageGroup = '7-12';
+                                            } else {
+                                                ageGroup = '13+';
+                                            }
+                                            
+                                            ageGroupSelect.value = ageGroup;
+                                            console.log("Set age group to", ageGroup, "based on author age", age);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error("Error fetching author age:", error);
+                                    });
+                            }
+                        }
+                    }
+                    
                     // Run immediately
                     updateAllowReviewsVisibility();
                     updateSourceTypeFromAuthor();
+                    updateAgeGroupFromAuthor();
                     
                     // Also run when the dropdown changes
                     document.getElementById('source_type').addEventListener('change', updateAllowReviewsVisibility);
+                    document.getElementById('author_id').addEventListener('change', updateAgeGroupFromAuthor);
                 })();
             </script>
 
@@ -231,6 +277,28 @@ try {
                 <textarea id="content" name="content" class="form-input" rows="10" required><?php 
                     echo htmlspecialchars($story['content'] ?? ''); 
                 ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="estimated_reading_time">Estimated Reading Time (minutes)</label>
+                <input type="number" id="estimated_reading_time" name="estimated_reading_time" class="form-input" min="1" max="60" required
+                       value="<?php echo htmlspecialchars($story['estimated_reading_time'] ?? '1'); ?>">
+                <p class="text-sm text-gray-500 mt-1">
+                    For children's stories, this is typically 1-5 minutes
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="age_group">Age Group</label>
+                <select id="age_group" name="age_group" class="form-input" required>
+                    <option value="0-3" <?php echo ($story['age_group'] ?? '') === '0-3' ? 'selected' : ''; ?>>0-3 years</option>
+                    <option value="4-6" <?php echo ($story['age_group'] ?? '') === '4-6' ? 'selected' : ''; ?>>4-6 years</option>
+                    <option value="7-12" <?php echo ($story['age_group'] ?? '7-12') === '7-12' ? 'selected' : ''; ?>>7-12 years</option>
+                    <option value="13+" <?php echo ($story['age_group'] ?? '') === '13+' ? 'selected' : ''; ?>>13+ years</option>
+                </select>
+                <p class="text-sm text-gray-500 mt-1">
+                    Target age group for this story
+                </p>
             </div>
 
             <div class="form-group">

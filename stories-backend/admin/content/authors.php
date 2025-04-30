@@ -76,7 +76,7 @@ try {
 
     // Build the query based on available tables and columns
     $storyCountQuery = "0"; // Default to 0
-    
+
     if ($hasStoryAuthorsTable) {
         // Use the junction table if it exists
         $storyCountQuery = "(SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id)";
@@ -84,16 +84,16 @@ try {
         // Fall back to direct column if junction table doesn't exist
         $storyCountQuery = "(SELECT COUNT(*) FROM stories WHERE author_id = a.id)";
     }
-    
+
     $postCountQuery = $hasBlogPostsAuthorId
         ? "(SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id)"
         : "0";
 
     // Get all authors with content counts
-    $query = "SELECT a.*, 
+    $query = "SELECT a.*,
               $storyCountQuery as story_count,
               $postCountQuery as post_count
-              FROM authors a 
+              FROM authors a
               ORDER BY a.name ASC";
     $authors = $db->query($query)->fetchAll();
 
@@ -213,10 +213,9 @@ if (isset($_SESSION['error'])) {
                                                 <span class="icon-edit"></span> Edit
                                             </button>
                                         </form>
-                                        <form method="POST" action="delete-author.php" style="display: inline;">
+                                        <form method="GET" action="author-delete.php" style="display: inline;">
                                             <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete this author? This will remove the author from all associated content.')">
+                                            <button type="submit" class="btn btn-danger btn-sm">
                                                 <span class="icon-delete"></span> Delete
                                             </button>
                                         </form>

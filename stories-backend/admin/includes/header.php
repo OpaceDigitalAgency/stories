@@ -1,10 +1,10 @@
 <?php
 /**
  * Common Header Include
- * 
+ *
  * This file contains the common header elements for all admin pages.
  * It should be included at the top of each admin page.
- * 
+ *
  * Usage:
  * $pageTitle = 'Page Title';
  * $currentPage = 'page-id'; // e.g., 'dashboard', 'stories', 'authors', etc.
@@ -15,6 +15,10 @@
 $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = $currentPage ?? '';
 $pageDescription = $pageDescription ?? '';
+
+// Determine the correct paths based on the current file location
+$basePath = dirname($_SERVER['SCRIPT_FILENAME']);
+$isContentDir = strpos($basePath, '/admin/content') !== false;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,7 +26,12 @@ $pageDescription = $pageDescription ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle); ?> - Stories Admin</title>
-    <link rel="stylesheet" href="/admin/assets/css/enhanced-admin.css">
+    <?php
+    // Determine the correct path to assets based on the current file location
+    $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
+    $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
+    ?>
+    <link rel="stylesheet" href="<?php echo $assetsPath; ?>">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Meta tags for better accessibility -->
@@ -33,7 +42,7 @@ $pageDescription = $pageDescription ?? '';
 <body>
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to content</a>
-    
+
     <header class="admin-header">
         <div class="header-container">
             <div class="logo-container">
@@ -42,7 +51,7 @@ $pageDescription = $pageDescription ?? '';
             </div>
             <div class="user-info">
                 <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
-                <form method="POST" action="/admin/logout.php" style="display: inline;">
+                <form method="POST" action="<?php echo $isContentDir ? '../logout.php' : 'logout.php'; ?>" style="display: inline;">
                     <button type="submit" class="btn btn-danger btn-sm">Logout</button>
                 </form>
             </div>
@@ -52,31 +61,36 @@ $pageDescription = $pageDescription ?? '';
     <div class="container" id="main-content">
         <nav class="nav-menu" role="navigation" aria-label="Main Navigation">
             <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="/admin/dashboard.php" class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                <?php
+                // Set paths for navigation
+                $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
+                $contentPrefix = $isContentDir ? '' : 'content/';
+                ?>
+                <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
                     <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
                 </button>
-                <button type="submit" formaction="/admin/content/stories.php" class="nav-link <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>stories.php" class="nav-link <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
                     <i class="fas fa-book" aria-hidden="true"></i> Stories
                 </button>
-                <button type="submit" formaction="/admin/content/blog-posts.php" class="nav-link <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>blog-posts.php" class="nav-link <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
                     <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
                 </button>
-                <button type="submit" formaction="/admin/content/authors.php" class="nav-link <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>authors.php" class="nav-link <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
                     <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
                 </button>
-                <button type="submit" formaction="/admin/content/tags.php" class="nav-link <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>tags.php" class="nav-link <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
                     <i class="fas fa-tags" aria-hidden="true"></i> Tags
                 </button>
-                <button type="submit" formaction="/admin/content/games.php" class="nav-link <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>games.php" class="nav-link <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
                     <i class="fas fa-gamepad" aria-hidden="true"></i> Games
                 </button>
-                <button type="submit" formaction="/admin/content/directory-items.php" class="nav-link <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>directory-items.php" class="nav-link <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
                     <i class="fas fa-folder" aria-hidden="true"></i> Directory
                 </button>
-                <button type="submit" formaction="/admin/content/ai-tools.php" class="nav-link <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-tools.php" class="nav-link <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
                     <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
                 </button>
-                <button type="submit" formaction="/admin/content/media.php" class="nav-link <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
                     <i class="fas fa-images" aria-hidden="true"></i> Media
                 </button>
             </form>

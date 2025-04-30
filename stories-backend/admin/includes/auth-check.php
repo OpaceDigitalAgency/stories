@@ -1,16 +1,19 @@
 <?php
 /**
  * Authentication Check Include
- * 
+ *
  * This file checks if the user is authenticated.
  * It should be included at the top of each admin page.
- * 
+ *
  * Usage:
  * include '../includes/auth-check.php';
  * // Now $user is available for use
  */
 
-require_once '../../simple_auth.php';
+// Determine the correct path to simple_auth.php based on the current file location
+$basePath = dirname($_SERVER['SCRIPT_FILENAME']);
+$adminDir = strpos($basePath, '/admin/content') !== false ? '../../' : '../';
+require_once $adminDir . 'simple_auth.php';
 
 // Initialize SimpleAuth with database config
 $config = [
@@ -33,8 +36,9 @@ if (!$user = SimpleAuth::check()) {
         echo json_encode(['error' => 'Unauthorized']);
         exit;
     }
-    
+
     // Otherwise, redirect to login page
-    header("Location: /admin/login.php");
+    $loginPath = $adminDir === '../' ? 'login.php' : '../login.php';
+    header("Location: $loginPath");
     exit;
 }

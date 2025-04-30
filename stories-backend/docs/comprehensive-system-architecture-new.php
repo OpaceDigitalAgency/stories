@@ -56,9 +56,10 @@
         <li><a href="#security">Security</a></li>
         <li><a href="#caching-performance">Caching & Performance</a></li>
         <li><a href="#key-files">Key Files</a></li>
-        <li><a href="#documentation">Documentation</a></li> 
+        <li><a href="#documentation">Documentation</a></li>
         <li><a href="#deployment">Deployment</a></li>
         <li><a href="#monitoring-troubleshooting">Monitoring & Troubleshooting</a></li>
+        <li><a href="#development-workflow">Development Workflow</a></li>
         <li><a href="#getting-started">Getting Started</a></li>
         <li><a href="#known-issues">Known Issues</a></li>
     </ul>
@@ -127,7 +128,7 @@ graph TD
     style C fill:#cfc,stroke:#333,stroke-width:1px
     style F fill:#ccf,stroke:#333,stroke-width:1px
     style B fill:#ffc,stroke:#333,stroke-width:1px
-    
+
     </div>
     <div class="note">No magic wizards—just clear, maintainable components working in harmony.</div>
 
@@ -146,6 +147,53 @@ graph TD
         <li><strong>Static Site Generation</strong> at build time using API-fetched data.</li>
         <li><strong>Hydration Islands</strong> for dynamic components like rating widgets.</li>
       </ul>
+
+      <h3>Image Optimization</h3>
+      <p>The system includes comprehensive image optimization for both the frontend and backend:</p>
+      <ul>
+        <li><strong>Backend Processing:</strong> Images uploaded through the admin interface are automatically resized and optimized</li>
+        <li><strong>WebP Conversion:</strong> JPEG and PNG images are converted to WebP format when supported by the browser</li>
+        <li><strong>Responsive Images:</strong> Multiple sizes are generated for different viewport sizes</li>
+        <li><strong>Lazy Loading:</strong> Images use the loading="lazy" attribute for improved performance</li>
+        <li><strong>CDN Integration:</strong> Optimized images are served through a CDN for faster delivery</li>
+      </ul>
+
+      <h3>TypeScript Interfaces</h3>
+      <p>The frontend uses TypeScript interfaces to ensure type safety when working with API data:</p>
+      <pre><code>// src/types/Story.ts
+export interface Story {
+  id: number;
+  title: string;
+  content: string;
+  excerpt: string;
+  slug: string;
+  is_published: boolean;
+  featured: boolean;
+  average_rating: number;
+  allow_reviews: boolean;
+  review_count: number;
+  estimated_reading_time: string;
+  age_group: string;
+  cover_url: string;
+  created_at: string;
+  updated_at: string;
+  authors: Author[];
+  tags: Tag[];
+}
+
+// src/types/Author.ts
+export interface Author {
+  id: number;
+  name: string;
+  slug: string;
+  bio: string | null;
+  avatar_url: string | null;
+  author_type: 'retail' | 'parent' | 'child' | 'educator';
+  age: number | null;
+  location: string | null;
+}
+</code></pre>
+
       <h3>TypeScript API Wrapper</h3>
       <pre><code>// src/lib/api.ts
 export async function fetchStories() {
@@ -167,12 +215,103 @@ export async function fetchStories() {
     <h2 id="backend-architecture">Backend Architecture</h2>
     <p>A custom MVC‑style PHP backend exposes a versioned REST API and an admin interface.</p>
     <pre><code>stories-backend/
-├── admin/              # Admin UI assets, templates, includes (Auth.php, Database.php)
+├── admin/              # Admin UI assets, templates, includes
+│   ├── _archive/       # Archived unused implementations
+│   ├── assets/         # CSS, JS, and other assets
+│   ├── content/        # Active admin implementation (all admin pages)
+│   ├── js/             # JavaScript files
+│   ├── dashboard.php   # Main dashboard
+│   ├── index.php       # Redirect to dashboard
+│   ├── login.php       # Authentication
+│   └── logout.php      # Session termination
 ├── api/                # v1 API router (api/v1/api.php, Middleware, Endpoints)
 ├── database/           # SQL dumps (stories_db_26.04.25_1337.sql)
 ├── .htaccess           # Apache config
 └── .cpanel.yml         # Deployment tasks
 </code></pre>
+
+    <h3 id="admin-implementation">Admin Implementation</h3>
+    <p>The admin interface is implemented as a set of standalone PHP files in the <code>stories-backend/admin/content/</code> directory. Each content type (stories, authors, tags, etc.) has its own set of files for listing, viewing, editing, and deleting items.</p>
+
+    <div class="note">
+        <strong>Important:</strong> There is an archived, unused CRUD-based implementation in <code>stories-backend/admin/_archive/unused_crud_implementation/</code>. This implementation uses a more structured approach with templates and classes, but it is not currently in use. All active admin pages are in the <code>stories-backend/admin/content/</code> directory.
+    </div>
+
+    <h4>Archive Directory Structure</h4>
+    <p>The <code>_archive</code> directory contains unused or deprecated code that has been preserved for reference:</p>
+    <pre><code>stories-backend/admin/_archive/
+├── controllers/                # MVC controllers (unused)
+├── unused_crud_implementation/ # Template-based CRUD system
+│   ├── includes/               # Shared code and utilities
+│   │   ├── Auth.php            # Authentication library
+│   │   ├── Database.php        # Database connection
+│   │   └── ...                 # Other utilities
+│   ├── views/                  # Template files
+│   │   ├── authors/            # Author templates
+│   │   ├── stories/            # Story templates
+│   │   └── ...                 # Other content type templates
+│   ├── ai-tools.php            # AI tools listing
+│   ├── authors.php             # Authors listing
+│   ├── delete-author.php       # Author deletion
+│   └── ...                     # Other content management files
+└── uploads/                    # Legacy file upload directory
+</code></pre>
+
+    <p>When archiving new files, they should be placed in the appropriate subdirectory within the <code>_archive</code> directory to maintain consistent organization.</p>
+
+    <h4>Admin File Structure</h4>
+    <pre><code>stories-backend/admin/content/
+├── authors.php         # List all authors
+├── author-form.php     # Create/edit author form
+├── author-delete.php   # Confirm author deletion
+├── delete-author.php   # Process author deletion
+├── stories.php         # List all stories
+├── story-form.php      # Create/edit story form
+└── ... (similar files for other content types)
+</code></pre>
+
+    <h4>Admin Authentication</h4>
+    <p>The admin interface uses PHP sessions for authentication, managed by the <code>simple_auth.php</code> library. All admin pages check for an active session before allowing access.</p>
+
+    <h4>Admin UI Design</h4>
+    <p>The admin interface uses a simple, JavaScript-free design with direct form submissions and server redirects. This approach prioritizes reliability and security over complex client-side interactions.</p>
+
+    <h4>Author Deletion Flow</h4>
+    <p>The author deletion process follows a careful workflow to prevent accidental data loss:</p>
+    <ol>
+        <li>Admin clicks "Delete" on the authors listing page</li>
+        <li>System displays a confirmation modal using Bootstrap</li>
+        <li>If confirmed, the system checks for associated stories</li>
+        <li>If stories exist, the admin must choose to either:
+            <ul>
+                <li>Delete the author and all associated stories</li>
+                <li>Delete only the author and keep orphaned stories</li>
+                <li>Cancel the deletion process</li>
+            </ul>
+        </li>
+        <li>After confirmation, the system executes the deletion and redirects back to the authors listing</li>
+    </ol>
+
+    <h4>Bootstrap Modals</h4>
+    <p>The admin interface uses Bootstrap modals for confirmation dialogs and alerts. These modals are triggered by server-side code and do not require JavaScript for basic functionality. The modals are styled using Bootstrap CSS and provide a consistent user experience across the admin interface.</p>
+
+    <h4>Story Form with Age-Group Fields</h4>
+    <p>The story creation and editing form includes specialized fields for managing age-appropriate content:</p>
+    <ul>
+        <li><strong>Age Group Selection:</strong> Dropdown menu with options for different age ranges (0-3, 4-6, 7-12, 13+)</li>
+        <li><strong>Automatic Age Group Suggestion:</strong> When an author with the "child" type is selected, the system automatically suggests an age group based on the author's age</li>
+        <li><strong>Content Warnings:</strong> Optional fields for content that may require parental guidance</li>
+        <li><strong>Reading Level Indicators:</strong> Fields to specify reading difficulty and estimated reading time</li>
+    </ul>
+
+    <h4>Tag Extraction in Direct Import</h4>
+    <p>The system includes a direct import feature (<code>direct_import.php</code>) that can analyze story content to automatically extract and suggest relevant tags:</p>
+    <ul>
+        <li><strong>Keyword Analysis:</strong> Scans content for common themes and subjects</li>
+        <li><strong>Tag Matching:</strong> Compares extracted keywords against existing tags in the database</li>
+        <li><strong>Tag Suggestions:</strong> Presents the admin with a list of suggested tags that can be selected with checkboxes</li>
+        <li><strong>Custom Tag Creation:</strong> Allows adding new tags if the suggested ones are insufficient</li>
+    </ul>
 
 <h2 id="database-schema">Database Schema</h2>
  <p>Stories from the Web uses a relational model with both core tables and join tables to handle many-to-many relationships.</p>
@@ -467,7 +606,7 @@ CREATE TABLE `users` (
     <?php
 /**
  * Test API Format
- * 
+ *
  * This script tests the API endpoints and checks if the admin interface can handle the response format.
  */
 
@@ -484,7 +623,7 @@ function output($text, $isHtml = false) {
 header('Content-Type: text/html; charset=utf-8');
 output('
 
-  
+
     <div class="container">
         <h2>Test API Format</h2>
 ', true);
@@ -509,23 +648,23 @@ function testEndpoint($name, $path) {
     // Build the full URL
     $baseUrl = "https://api.storiesfromtheweb.org";
     $url = $baseUrl . $path;
-    
+
     // Initialize cURL
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    
+
     // Execute request
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
+
     curl_close($ch);
-    
+
     // Parse response
     $isJson = false;
     $jsonError = '';
     $decodedResponse = null;
-    
+
     try {
         $decodedResponse = json_decode($response, true);
         $jsonError = json_last_error_msg();
@@ -533,11 +672,11 @@ function testEndpoint($name, $path) {
     } catch (Exception $e) {
         $jsonError = $e->getMessage();
     }
-    
+
     // Check response format
     $format = "Invalid";
     $details = "";
-    
+
     if ($isJson) {
         if (isset($decodedResponse['data'])) {
             $format = "Nested";
@@ -552,7 +691,7 @@ function testEndpoint($name, $path) {
     } else {
         $details = "Response is not valid JSON: $jsonError";
     }
-    
+
     // Output results
     output("<tr>", true);
     output("<td>$name</td>", true);
@@ -560,7 +699,7 @@ function testEndpoint($name, $path) {
     output("<td>" . ($format === "Invalid" ? "<span class='error'>$format</span>" : "<span class='success'>$format</span>") . "</td>", true);
     output("<td><button onclick=\"toggleResponse('$name')\">View Response</button><div id='$name-details' style='display:none;'>$details<pre class='response'>" . htmlspecialchars(substr($response, 0, 1000)) . (strlen($response) > 1000 ? "..." : "") . "</pre></div></td>", true);
     output("</tr>", true);
-    
+
     return [
         'status' => $httpCode,
         'format' => $format,
@@ -584,15 +723,15 @@ $formats = array_unique(array_column($results, 'format'));
 if (count($formats) > 1) {
     output("<div class='warning'>Inconsistent response formats detected!</div>", true);
     output("<p>The API endpoints are returning different response formats:</p>", true);
-    
+
     foreach ($formats as $format) {
         $endpointsWithFormat = array_keys(array_filter($results, function($result) use ($format) {
             return $result['format'] === $format;
         }));
-        
+
         output("<p><strong>$format format:</strong> " . implode(', ', $endpointsWithFormat) . "</p>", true);
     }
-    
+
     output("<p>This can cause issues with the admin interface, which may expect a consistent format.</p>", true);
 } else {
     output("<div class='success'>All endpoints are using the same response format: " . reset($formats) . "</div>", true);
@@ -816,6 +955,42 @@ deployment:
         <li><strong>HTTP 403:</strong> Review <code>.htaccess</code> file matches allowed scripts.</li>
     </ul>
 
+    <h2 id="development-workflow">Development Workflow</h2>
+    <h3>Git Workflow</h3>
+    <p>The project follows a simplified git workflow:</p>
+    <ul>
+        <li><strong>Main Branch:</strong> The primary branch for development and deployment</li>
+        <li><strong>Feature Branches:</strong> Created for specific features or bug fixes</li>
+        <li><strong>Commit Conventions:</strong> Descriptive commit messages with prefixes (feat:, fix:, docs:, etc.)</li>
+        <li><strong>Combined Operations:</strong> For efficiency, git add/commit/push operations are often combined into a single step</li>
+    </ul>
+
+    <h3>Code Organization</h3>
+    <p>When working with the codebase, follow these guidelines:</p>
+    <ul>
+        <li><strong>Active Admin Pages:</strong> All active admin pages should be placed in the <code>stories-backend/admin/content/</code> directory</li>
+        <li><strong>Archiving Code:</strong> Unused or deprecated code should be moved to the appropriate subdirectory within <code>stories-backend/admin/_archive/</code></li>
+        <li><strong>Frontend Components:</strong> New frontend components should follow the existing TypeScript interfaces and Astro component structure</li>
+        <li><strong>API Endpoints:</strong> New API endpoints should follow the existing pattern in <code>stories-backend/api/v1/</code></li>
+    </ul>
+
+    <h3>Development Environment</h3>
+    <p>The local development environment consists of:</p>
+    <ul>
+        <li><strong>Frontend:</strong> Astro development server (npm run dev)</li>
+        <li><strong>Backend:</strong> Local PHP server (XAMPP, MAMP, etc.)</li>
+        <li><strong>Database:</strong> Local MySQL instance</li>
+        <li><strong>API Configuration:</strong> Local API URL configured in <code>.env</code> file</li>
+    </ul>
+
+    <h3>Testing</h3>
+    <p>The project includes several testing approaches:</p>
+    <ul>
+        <li><strong>Manual Testing:</strong> Primary method for testing admin functionality</li>
+        <li><strong>API Testing:</strong> Using tools like Postman or the built-in test scripts</li>
+        <li><strong>Frontend Testing:</strong> Visual inspection and browser testing</li>
+    </ul>
+
     <h2 id="getting-started">Getting Started</h2>
     <h3>Clone & Install</h3>
     <pre><code>git clone https://github.com/OpaceDigitalAgency/stories.git
@@ -855,7 +1030,7 @@ npm run dev
 
       <h2 id="image-optimization-system">Image Optimization System</h2>
       <p>The system includes a modular image optimization framework that ensures consistent handling of images across all parts of the application.</p>
-      
+
       <h3>Core Components</h3>
       <ul>
         <li><code>includes/image_config.php</code>: Defines standard image sizes and formats</li>
@@ -863,7 +1038,7 @@ npm run dev
         <li><code>public/update_media_schema.php</code>: Updates the database schema to support multiple image sizes</li>
         <li><code>public/fix_media_sizes.php</code>: Uses the image optimizer library to optimize all media files</li>
       </ul>
-      
+
       <h3>Database Schema</h3>
       <p>The media table includes additional columns for different image sizes:</p>
       <pre><code>ALTER TABLE media
@@ -871,7 +1046,7 @@ ADD COLUMN thumbnail_url VARCHAR(255) AFTER file_path,
 ADD COLUMN small_url VARCHAR(255) AFTER thumbnail_url,
 ADD COLUMN medium_url VARCHAR(255) AFTER small_url,
 ADD COLUMN large_url VARCHAR(255) AFTER large_url;</code></pre>
-      
+
       <h3>Standard Image Sizes</h3>
       <table>
         <thead>
@@ -885,7 +1060,7 @@ ADD COLUMN large_url VARCHAR(255) AFTER large_url;</code></pre>
           <tr><td>original</td><td>(unchanged)</td><td>Original image (preserved if needed)</td></tr>
         </tbody>
       </table>
-      
+
       <h3>Integration Points</h3>
       <ul>
         <li><strong>API Responses</strong>: Include all image URLs for different sizes</li>
@@ -893,7 +1068,7 @@ ADD COLUMN large_url VARCHAR(255) AFTER large_url;</code></pre>
         <li><strong>Import Scripts</strong>: All import methods use the same image optimization library</li>
         <li><strong>Media Uploads</strong>: Manual uploads are processed through the same system</li>
       </ul>
-      
+
       <p>For detailed documentation, see <a href="image_optimization_system.md">Image Optimization System</a>.</p>
 
 </body>

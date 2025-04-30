@@ -1,5 +1,5 @@
-// Base API URL
-const API_URL = 'https://api.storiesfromtheweb.org/api/v1';
+// Base API URL - use proxied endpoint to avoid CORS
+const API_URL = '/api';
 
 // Type definitions
 export interface CoverImageUrls {

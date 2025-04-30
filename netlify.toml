@@ -11,8 +11,19 @@
 [context.deploy-preview.environment]
   PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+    Access-Control-Allow-Origin = "*"
+
 [[redirects]]
   from = "/*"
-  to = "/.netlify/builders/index.html"
+  to = "/index.html"
   status = 200
-  force = false
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.storiesfromtheweb.org/api/v1/:splat"
+  status = 200
+  force = true

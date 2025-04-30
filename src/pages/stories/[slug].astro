@@ -165,7 +165,8 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
               </a>
             )}
 
-            {story.rating && (
+            {story.rating && typeof story.rating === 'number' && story.rating > 0 &&
+              story.author?.author_type !== 'child' && (
               <div>
                 <RatingStars rating={story.rating} size="md" />
               </div>

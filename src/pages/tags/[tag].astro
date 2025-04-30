@@ -12,7 +12,7 @@ if (!tag) {
 }
 
 // Decode the tag from URL format
-const decodedTag = decodeURIComponent(tag.replace(/-/g, ' '));
+const decodedTag = decodeURIComponent(tag);
 
 // Fetch stories by tag with error handling
 let taggedStories: Story[] = [];

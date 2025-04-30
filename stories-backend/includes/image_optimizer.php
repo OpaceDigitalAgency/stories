@@ -298,42 +298,55 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
     $origHeight = $imageInfo[1];
     $type = $imageInfo[2];
     
-    // Calculate new dimensions
-    $width = $options['width'] ?? $origWidth;
-    $height = $options['height'] ?? $origHeight;
-    $quality = $options['quality'] ?? 85;
+    // Always resize to max 300px width for better performance
+    $maxWidth = 300;
+    $width = $maxWidth;
+    $height = ($origHeight / $origWidth) * $maxWidth;
+    
+    $quality = $options['quality'] ?? 60; // Reduced default quality
     $format = $options['format'] ?? 'jpg';
     
-    // Try command-line tools first
-    $optimized = false;
-    
-    // Try pngquant for PNG
-    if ($type === IMAGETYPE_PNG && $format === 'png') {
-        exec("which pngquant", $output, $returnVar);
-        if ($returnVar === 0) {
-            error_log("Using pngquant for PNG optimization");
-            copy($sourcePath, $destinationPath);
-            exec("pngquant --force --quality=65-80 --ext .png --skip-if-larger " . escapeshellarg($destinationPath));
-            $optimized = true;
-        }
-    }
-    
-    // Try jpegoptim for JPEG
-    if (($type === IMAGETYPE_JPEG || $format === 'jpg') && !$optimized) {
-        exec("which jpegoptim", $output, $returnVar);
-        if ($returnVar === 0) {
-            error_log("Using jpegoptim for JPEG optimization");
-            copy($sourcePath, $destinationPath);
-            exec("jpegoptim --max=60 --strip-all --all-progressive " . escapeshellarg($destinationPath));
-            $optimized = true;
+    // Try ImageMagick first (best quality and compression)
+    if (extension_loaded('imagick')) {
+        try {
+            error_log("Using ImageMagick for optimization");
+            $imagick = new Imagick($sourcePath);
+            
+            // Strip metadata to reduce size
+            $imagick->stripImage();
+            
+            // Always resize to 300px width
+            $imagick->resizeImage($width, $height, Imagick::FILTER_LANCZOS, 1, true);
+            
+            // Set format-specific options
+            if ($format === 'jpg' || $imagick->getImageFormat() === 'JPEG') {
+                $imagick->setImageFormat('JPEG');
+                $imagick->setImageCompressionQuality($quality);
+                $imagick->setInterlaceScheme(Imagick::INTERLACE_PLANE);
+                $imagick->setImageCompression(Imagick::COMPRESSION_JPEG);
+            } else if ($format === 'png' || $imagick->getImageFormat() === 'PNG') {
+                $imagick->setImageFormat('PNG');
+                $imagick->setOption('png:compression-level', 9);
+                $imagick->setOption('png:compression-strategy', 1);
+                $imagick->setOption('png:exclude-chunk', 'all');
+            }
+            
+            // Write the optimized image
+            $imagick->writeImage($destinationPath);
+            $imagick->destroy();
+            
+            error_log("Successfully optimized image with ImageMagick: " . filesize($destinationPath) . " bytes");
+            return true;
+        } catch (Exception $e) {
+            error_log("ImageMagick optimization failed: " . $e->getMessage());
+            // Fall through to GD
         }
     }
     
     // Try GD as fallback
-    if (!$optimized) {
-        $libraries = getAvailableImageLibraries();
-        if ($libraries['gd']) {
-            error_log("Using GD library for image optimization");
+    if (extension_loaded('gd')) {
+        try {
+            error_log("Using GD for optimization");
             
             // Create source image resource
             switch ($type) {
@@ -381,13 +394,13 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
             $success = false;
             switch ($format) {
                 case 'jpg':
-                    $success = imagejpeg($destination, $destinationPath, 60);
+                    $success = imagejpeg($destination, $destinationPath, $quality);
                     break;
                 case 'png':
                     $success = imagepng($destination, $destinationPath, 9);
                     break;
                 case 'webp':
-                    $success = imagewebp($destination, $destinationPath, 60);
+                    $success = imagewebp($destination, $destinationPath, $quality);
                     break;
             }
             
@@ -397,18 +410,16 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
             
             if ($success) {
                 error_log("Successfully optimized image with GD: " . filesize($destinationPath) . " bytes");
-                $optimized = true;
+                return true;
             }
+        } catch (Exception $e) {
+            error_log("GD optimization failed: " . $e->getMessage());
         }
     }
     
-    // If all else fails, just copy
-    if (!$optimized) {
-        error_log("No optimization methods available, copying without optimization");
-        return copy($sourcePath, $destinationPath);
-    }
-    
-    return true;
+    // If all optimization attempts fail, copy the original
+    error_log("All optimization methods failed, copying without optimization");
+    return copy($sourcePath, $destinationPath);
 }
 
 /**

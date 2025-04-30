@@ -230,8 +230,14 @@ function getOrCreateAuthor($db, $authorInfo) {
     // Generate a proper slug from the author name
     $name = trim($authorInfo['name']);
     
-    // Convert accented characters to ASCII
-    $name = iconv('UTF-8', 'ASCII//TRANSLIT', $name);
+    // Convert accented characters to ASCII while preserving first character
+    $firstChar = mb_substr($name, 0, 1, 'UTF-8');
+    $restChars = mb_substr($name, 1, null, 'UTF-8');
+    
+    $firstChar = iconv('UTF-8', 'ASCII//TRANSLIT', $firstChar);
+    $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+    
+    $name = $firstChar . $restChars;
     
     // Convert to lowercase and replace non-alphanumeric with hyphens
     $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
@@ -1202,7 +1208,30 @@ function findExistingStory($db, $title, $slug) {
 
 // Function to generate a unique slug
 function generateUniqueSlug($db, $title) {
+    // Convert accented characters to ASCII while preserving first characters
+    $words = explode(' ', $title);
+    $processedWords = [];
+    
+    foreach ($words as $word) {
+        if (empty($word)) continue;
+        
+        $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+        $restChars = mb_substr($word, 1, null, 'UTF-8');
+        
+        $firstChar = iconv('UTF-8', 'ASCII//TRANSLIT', $firstChar);
+        $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+        
+        $processedWords[] = $firstChar . $restChars;
+    }
+    
+    $title = implode(' ', $processedWords);
+    
+    // Convert to lowercase and replace non-alphanumeric with hyphens
     $baseSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+    
+    // Debug output
+    echo "<p class='info'><strong>STORY SLUG GENERATION:</strong> Converting \"$title\" to \"$baseSlug\"</p>";
+    flushOutput();
     $baseSlug = trim($baseSlug, '-');
     $slug = $baseSlug;
     $counter = 1;

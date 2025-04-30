@@ -287,92 +287,128 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
         return false;
     }
     
-    // Get available libraries
-    $libraries = getAvailableImageLibraries();
+    // Get image info
+    $imageInfo = getimagesize($sourcePath);
+    if (!$imageInfo) {
+        error_log("Failed to get image info: $sourcePath");
+        return false;
+    }
     
-    // Use GD since it's available
-    if ($libraries['gd']) {
-        error_log("Using GD library for image optimization");
-        
-        // Get image info
-        list($origWidth, $origHeight, $type) = getimagesize($sourcePath);
-        
-        // Create source image resource
-        switch ($type) {
-            case IMAGETYPE_JPEG:
-                $source = imagecreatefromjpeg($sourcePath);
-                break;
-            case IMAGETYPE_PNG:
-                $source = imagecreatefrompng($sourcePath);
-                break;
-            case IMAGETYPE_GIF:
-                $source = imagecreatefromgif($sourcePath);
-                break;
-            case IMAGETYPE_WEBP:
-                $source = imagecreatefromwebp($sourcePath);
-                break;
-            default:
-                error_log("Unsupported image type: $type");
-                return false;
-        }
-        
-        if (!$source) {
-            error_log("Failed to create source image resource");
-            return false;
-        }
-        
-        // Calculate new dimensions
-        $width = $options['width'] ?? $origWidth;
-        $height = $options['height'] ?? $origHeight;
-        $quality = $options['quality'] ?? 85;
-        
-        // Create destination image
-        $destination = imagecreatetruecolor($width, $height);
-        
-        // Preserve transparency for PNG
-        if ($type === IMAGETYPE_PNG) {
-            imagealphablending($destination, false);
-            imagesavealpha($destination, true);
-            $transparent = imagecolorallocatealpha($destination, 255, 255, 255, 127);
-            imagefilledrectangle($destination, 0, 0, $width, $height, $transparent);
-        }
-        
-        // Resize the image
-        imagecopyresampled(
-            $destination, $source,
-            0, 0, 0, 0,
-            $width, $height, $origWidth, $origHeight
-        );
-        
-        // Save with maximum compression
-        $format = $options['format'] ?? 'jpg';
-        $success = false;
-        
-        switch ($format) {
-            case 'jpg':
-                $success = imagejpeg($destination, $destinationPath, $quality);
-                break;
-            case 'png':
-                // Use maximum PNG compression (9)
-                $success = imagepng($destination, $destinationPath, 9);
-                break;
-            case 'webp':
-                $success = imagewebp($destination, $destinationPath, $quality);
-                break;
-        }
-        
-        // Clean up
-        imagedestroy($source);
-        imagedestroy($destination);
-        
-        if ($success) {
-            error_log("Successfully optimized image with GD: " . filesize($destinationPath) . " bytes");
-            return true;
+    $origWidth = $imageInfo[0];
+    $origHeight = $imageInfo[1];
+    $type = $imageInfo[2];
+    
+    // Calculate new dimensions
+    $width = $options['width'] ?? $origWidth;
+    $height = $options['height'] ?? $origHeight;
+    $quality = $options['quality'] ?? 85;
+    $format = $options['format'] ?? 'jpg';
+    
+    // Try command-line tools first
+    $optimized = false;
+    
+    // Try pngquant for PNG
+    if ($type === IMAGETYPE_PNG && $format === 'png') {
+        exec("which pngquant", $output, $returnVar);
+        if ($returnVar === 0) {
+            error_log("Using pngquant for PNG optimization");
+            copy($sourcePath, $destinationPath);
+            exec("pngquant --force --quality=65-80 --ext .png --skip-if-larger " . escapeshellarg($destinationPath));
+            $optimized = true;
         }
     }
     
-    error_log("No image libraries available, copying without optimization");
-    return copy($sourcePath, $destinationPath);
+    // Try jpegoptim for JPEG
+    if (($type === IMAGETYPE_JPEG || $format === 'jpg') && !$optimized) {
+        exec("which jpegoptim", $output, $returnVar);
+        if ($returnVar === 0) {
+            error_log("Using jpegoptim for JPEG optimization");
+            copy($sourcePath, $destinationPath);
+            exec("jpegoptim --max=60 --strip-all --all-progressive " . escapeshellarg($destinationPath));
+            $optimized = true;
+        }
+    }
+    
+    // Try GD as fallback
+    if (!$optimized) {
+        $libraries = getAvailableImageLibraries();
+        if ($libraries['gd']) {
+            error_log("Using GD library for image optimization");
+            
+            // Create source image resource
+            switch ($type) {
+                case IMAGETYPE_JPEG:
+                    $source = imagecreatefromjpeg($sourcePath);
+                    break;
+                case IMAGETYPE_PNG:
+                    $source = imagecreatefrompng($sourcePath);
+                    break;
+                case IMAGETYPE_GIF:
+                    $source = imagecreatefromgif($sourcePath);
+                    break;
+                case IMAGETYPE_WEBP:
+                    $source = imagecreatefromwebp($sourcePath);
+                    break;
+                default:
+                    error_log("Unsupported image type: $type");
+                    return false;
+            }
+            
+            if (!$source) {
+                error_log("Failed to create source image resource");
+                return false;
+            }
+            
+            // Create destination image
+            $destination = imagecreatetruecolor($width, $height);
+            
+            // Preserve transparency for PNG
+            if ($type === IMAGETYPE_PNG) {
+                imagealphablending($destination, false);
+                imagesavealpha($destination, true);
+                $transparent = imagecolorallocatealpha($destination, 255, 255, 255, 127);
+                imagefilledrectangle($destination, 0, 0, $width, $height, $transparent);
+            }
+            
+            // Resize the image
+            imagecopyresampled(
+                $destination, $source,
+                0, 0, 0, 0,
+                $width, $height, $origWidth, $origHeight
+            );
+            
+            // Save with maximum compression
+            $success = false;
+            switch ($format) {
+                case 'jpg':
+                    $success = imagejpeg($destination, $destinationPath, 60);
+                    break;
+                case 'png':
+                    $success = imagepng($destination, $destinationPath, 9);
+                    break;
+                case 'webp':
+                    $success = imagewebp($destination, $destinationPath, 60);
+                    break;
+            }
+            
+            // Clean up
+            imagedestroy($source);
+            imagedestroy($destination);
+            
+            if ($success) {
+                error_log("Successfully optimized image with GD: " . filesize($destinationPath) . " bytes");
+                $optimized = true;
+            }
+        }
+    }
+    
+    // If all else fails, just copy
+    if (!$optimized) {
+        error_log("No optimization methods available, copying without optimization");
+        return copy($sourcePath, $destinationPath);
+    }
+    
+    return true;
 }
 
 /**

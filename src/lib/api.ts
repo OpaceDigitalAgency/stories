@@ -30,7 +30,7 @@ export interface Story {
   needsModeration?: boolean;
   needs_moderation?: boolean; // API response field
   is_published?: boolean; // Whether the story is published
-  rating?: number;
+  rating?: number | undefined;
   reviewCount?: number;
   tags?: string[];
   author?: Author;
@@ -176,7 +176,7 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
     is_published: Boolean(item.is_published),  // Include is_published field
-    rating: Number(item.average_rating) || 0,
+    rating: Number(item.average_rating) > 0 ? Number(item.average_rating) : undefined,
     reviewCount: Number(item.review_count) || 0,
     source_type: item.source_type || 'child',
     allow_reviews: Boolean(item.allow_reviews),

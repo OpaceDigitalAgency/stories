@@ -4,7 +4,7 @@ import Footer from '../../components/Footer.astro';
 import { fetchDirectoryItems } from '../../lib/api';
 import '../../styles/base.css';
 
-export const prerender = true;
+export const prerender = false;
 
 // Fetch directory items from API
 const items = await fetchDirectoryItems();

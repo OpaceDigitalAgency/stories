@@ -1,5 +1,5 @@
-// Base API URL - use proxied endpoint to avoid CORS
-const API_URL = '/api';
+// Base API URL - use environment variable or fallback to proxy path
+const API_URL = import.meta.env.PUBLIC_API_URL || '/api';
 
 // Type definitions
 export interface CoverImageUrls {

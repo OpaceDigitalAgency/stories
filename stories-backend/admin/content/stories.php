@@ -1,37 +1,17 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * Stories Admin Page
+ *
+ * This page displays a list of all stories and allows for searching, filtering, and bulk actions.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Check if stories table exists
     $stmt = $db->query("SHOW TABLES LIKE 'stories'");
@@ -213,222 +193,109 @@ if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stories - Admin</title>
-    <link rel="stylesheet" href="../assets/css/enhanced-admin.css">
-    <!-- Add Font Awesome for better icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Meta tags for better accessibility -->
-    <meta name="description" content="Stories Admin - Manage all your stories">
-    <meta name="theme-color" content="#4361ee">
-</head>
-<body>
-    <!-- Skip to content link for accessibility -->
-    <a href="#main-content" class="skip-to-content">Skip to content</a>
 
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
+// Set page variables for header
+$pageTitle = 'Stories';
+$currentPage = 'stories';
+$pageDescription = 'Manage all your stories from here.';
+$pageActions = '
+<form method="GET" action="story-form.php">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
+    </button>
+</form>
+';
 
-    <div class="container" id="main-content">
-        <nav class="nav-menu" role="navigation" aria-label="Main Navigation">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">
-                    <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
-                </button>
-                <button type="submit" formaction="stories.php" class="nav-link active">
-                    <i class="fas fa-book" aria-hidden="true"></i> Stories
-                </button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">
-                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
-                </button>
-                <button type="submit" formaction="authors.php" class="nav-link">
-                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
-                </button>
-                <button type="submit" formaction="tags.php" class="nav-link">
-                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
-                </button>
-                <button type="submit" formaction="games.php" class="nav-link">
-                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
-                </button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">
-                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
-                </button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">
-                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
-                </button>
-                <button type="submit" formaction="media.php" class="nav-link">
-                    <i class="fas fa-images" aria-hidden="true"></i> Media
-                </button>
-            </form>
-        </nav>
+// Include header
+include_once '../includes/header.php';
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title">Stories</h1>
-                <p class="page-description">Manage all your stories from here.</p>
-            </div>
-            <form method="GET" action="story-form.php">
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
-                </button>
-            </form>
-        </div>
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+}
 
-        <?php if (isset($success)): ?>
-            <div class="success" role="alert">
-                <i class="fas fa-check-circle" aria-hidden="true"></i>
-                <?php echo htmlspecialchars($success); ?>
-            </div>
-        <?php endif; ?>
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
+}
 
-        <?php if (isset($error)): ?>
-            <div class="error" role="alert">
-                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                <?php echo htmlspecialchars($error); ?>
-            </div>
-        <?php endif; ?>
+// Include status indicator component
+include_once '../includes/status-indicator-component.php';
 
-        <?php
-        // Include search component
-        include_once '../includes/search-component.php';
-        if (function_exists('renderSearchComponent')) {
-            renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
+    $columns = [
+        'id' => 'ID',
+        'title' => 'Title',
+        'author_name' => 'Author',
+        'status' => 'Status',
+        'tags' => 'Tags',
+        'created_at' => 'Created'
+    ];
+
+    // Define custom formatters
+    $customFormatters = [
+        'title' => function($story, $key) {
+            $output = '<div class="item-title">';
+            $output .= htmlspecialchars($story['title']);
+
+            if (isset($story['featured']) && $story['featured']) {
+                $output .= ' <span class="featured-badge" title="Featured story" aria-label="Featured story">';
+                $output .= '<i class="fas fa-star" aria-hidden="true"></i>';
+                $output .= '</span>';
+            }
+
+            $output .= '</div>';
+            $output .= '<div class="item-excerpt">';
+            $output .= htmlspecialchars(substr($story['content'], 0, 100) . '...');
+            $output .= '</div>';
+
+            return $output;
+        },
+        'author_name' => function($story, $key) {
+            return htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown');
+        },
+        'status' => function($story, $key) {
+            $output = '';
+            if (function_exists('getPublishedStatusIndicator')) {
+                $output .= getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
+            } else {
+                $output .= isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
+            }
+
+            if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
+                $output .= '<br>' . getModerationStatusIndicator(true);
+            }
+
+            return $output;
+        },
+        'created_at' => function($story, $key) {
+            $output = '<div>' . date('M j, Y', strtotime($story['created_at'])) . '</div>';
+            $output .= '<div class="text-muted">Updated: ' . date('M j, Y', strtotime($story['updated_at'])) . '</div>';
+            return $output;
         }
+    ];
 
-        // Include bulk actions component
-        include_once '../includes/bulk-actions-component.php';
-        if (function_exists('renderBulkActionsComponent')) {
-            renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
-        }
-        ?>
+    // Render the table
+    renderTable($stories, $columns, [
+        'content_type' => 'stories',
+        'name_field' => 'title',
+        'empty_message' => 'No stories found. Add your first story!',
+        'custom_formatters' => $customFormatters
+    ]);
+}
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th class="checkbox-column">
-                            <input type="checkbox" id="select-all" aria-label="Select all stories">
-                        </th>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Status</th>
-                        <th>Tags</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($stories)): ?>
-                        <tr>
-                            <td colspan="8" class="text-center">No stories found. Add your first story!</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php
-                        // Include status indicator component
-                        include_once '../includes/status-indicator-component.php';
+// Include pagination component
+include_once '../includes/pagination-component.php';
+if (function_exists('renderPagination')) {
+    // Use the total items from the query for accurate pagination
+    // $totalItems is already set from the count query
+    renderPagination($totalItems, $perPage, $page);
+}
 
-                        foreach ($stories as $story):
-                        ?>
-                            <tr>
-                                <td class="checkbox-column">
-                                    <input type="checkbox" class="bulk-checkbox" name="selected_ids[]"
-                                           value="<?php echo $story['id']; ?>"
-                                           aria-label="Select story: <?php echo htmlspecialchars($story['title']); ?>">
-                                </td>
-                                <td><?php echo $story['id']; ?></td>
-                                <td>
-                                    <div class="item-title">
-                                        <?php echo htmlspecialchars($story['title']); ?>
-                                        <?php if (isset($story['featured']) && $story['featured']): ?>
-                                            <span class="featured-badge" title="Featured story" aria-label="Featured story">
-                                                <i class="fas fa-star" aria-hidden="true"></i>
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="item-excerpt">
-                                        <?php echo htmlspecialchars(substr($story['content'], 0, 100) . '...'); ?>
-                                    </div>
-                                </td>
-                                <td><?php echo htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown'); ?></td>
-                                <td>
-                                    <?php
-                                    if (function_exists('getPublishedStatusIndicator')) {
-                                        echo getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
-                                    } else {
-                                        echo isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
-                                    }
-
-                                    if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
-                                        echo '<br>' . getModerationStatusIndicator(true);
-                                    }
-                                    ?>
-                                </td>
-                                <td><?php echo htmlspecialchars($story['tags'] ?? ''); ?></td>
-                                <td>
-                                    <div><?php echo date('M j, Y', strtotime($story['created_at'])); ?></div>
-                                    <div class="text-muted">Updated: <?php echo date('M j, Y', strtotime($story['updated_at'])); ?></div>
-                                </td>
-                                <td>
-                                    <div class="table-actions">
-                                        <a href="view-story.php?id=<?php echo $story['id']; ?>" class="btn btn-info btn-sm" aria-label="View story: <?php echo htmlspecialchars($story['title']); ?>">
-                                            <i class="fas fa-eye" aria-hidden="true"></i> View
-                                        </a>
-                                        <a href="story-form.php?id=<?php echo $story['id']; ?>" class="btn btn-primary btn-sm" aria-label="Edit story: <?php echo htmlspecialchars($story['title']); ?>">
-                                            <i class="fas fa-edit" aria-hidden="true"></i> Edit
-                                        </a>
-                                        <form method="POST" action="delete-story.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete this story?')"
-                                                    aria-label="Delete story: <?php echo htmlspecialchars($story['title']); ?>">
-                                                <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <?php
-        // Include pagination component
-        include_once '../includes/pagination-component.php';
-        if (function_exists('renderPagination')) {
-            // Use the total items from the query for accurate pagination
-            // $totalItems is already set from the count query
-
-            // Render pagination
-            renderPagination($totalItems, $perPage, $page);
-        }
-        ?>
-    </div>
-
-    <footer class="admin-footer" role="contentinfo">
-        <div class="container">
-            <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
-            <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
-        </div>
-    </footer>
-</body>
-</html>
+// Include footer
+include_once '../includes/footer.php';

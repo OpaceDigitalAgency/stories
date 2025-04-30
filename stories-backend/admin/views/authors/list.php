@@ -1,36 +1,172 @@
-<?php
-// Start output buffering to capture the generic list template
-ob_start();
-require_once __DIR__ . '/../generic/list.php';
-$genericList = ob_get_clean();
+<div class="container">
+    <?php
+    // Start output buffering to capture the generic list template
+    ob_start();
+    require_once __DIR__ . '/../generic/list.php';
+    $genericList = ob_get_clean();
 
-// Replace the default delete button with our custom one
-$customDeleteButtons = '';
-foreach ($items as $item) {
-    // Get story count
-    $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
-    $stmt->execute([$item['id']]);
-    $storyCount = $stmt->fetchColumn();
+    // Replace the default delete button with our custom one
+    $customDeleteButtons = '';
+    foreach ($items as $item) {
+        // Get story count
+        $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
+        $stmt->execute([$item['id']]);
+        $storyCount = $stmt->fetchColumn();
 
-    $customDeleteButtons .= sprintf(
-        '<a href="#" class="btn btn-sm btn-danger delete-confirm"
-            data-author-id="%d"
-            data-author-name="%s"
-            data-story-count="%d">
-            <i class="fas fa-trash me-1"></i> Delete
-        </a>',
-        $item['id'],
-        htmlspecialchars($item['name']),
-        $storyCount
-    );
-}
+        $customDeleteButtons .= sprintf(
+            '<button type="button" class="btn btn-sm btn-danger delete-author"
+                data-bs-toggle="modal"
+                data-bs-target="#deleteAuthorModal"
+                data-author-id="%d"
+                data-author-name="%s"
+                data-story-count="%d">
+                <i class="fas fa-trash me-1"></i> Delete
+            </button>',
+            $item['id'],
+            htmlspecialchars($item['name']),
+            $storyCount
+        );
+    }
 
-// Replace delete buttons in the generic list
-$pattern = '/<a[^>]*class="[^"]*\bdelete-confirm\b[^"]*"[^>]*>.*?<\/a>/s';
-$genericList = preg_replace($pattern, $customDeleteButtons, $genericList);
+    // Replace delete buttons in the generic list
+    $pattern = '/<a[^>]*class="[^"]*\bdelete-confirm\b[^"]*"[^>]*>.*?<\/a>/s';
+    $genericList = preg_replace($pattern, $customDeleteButtons, $genericList);
 
-// Output the modified list
-echo $genericList;
+    // Output the modified list
+    echo $genericList;
+    ?>
+
+    <!-- Delete Author Modal -->
+    <div class="modal fade" id="deleteAuthorModal" tabindex="-1" aria-labelledby="deleteAuthorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAuthorModalLabel">Delete Author</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <span id="authorName"></span>?</p>
+                    <div id="storyOptions" style="display: none;">
+                        <p>This author has <span id="storyCount"></span> associated stories. Please choose how to handle them:</p>
+                        <form id="deleteForm">
+                            <input type="hidden" name="id" id="authorId">
+                            <div class="form-check mb-3">
+                                <input type="radio" id="delete_all" name="action" value="delete_all" class="form-check-input">
+                                <label for="delete_all" class="form-check-label">
+                                    Delete all associated stories
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input type="radio" id="reassign" name="action" value="reassign" class="form-check-input">
+                                <label for="reassign" class="form-check-label">
+                                    Reassign stories to another author:
+                                </label>
+                                <select name="new_author_id" class="form-control mt-2" id="new_author_select" disabled>
+                                    <option value="">Select an author</option>
+                                </select>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input type="radio" id="cancel" name="action" value="cancel" class="form-check-input" checked>
+                                <label for="cancel" class="form-check-label">
+                                    Cancel deletion
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = new bootstrap.Modal(document.getElementById('deleteAuthorModal'));
+        const deleteForm = document.getElementById('deleteForm');
+        const storyOptions = document.getElementById('storyOptions');
+        const authorNameSpan = document.getElementById('authorName');
+        const storyCountSpan = document.getElementById('storyCount');
+        const authorIdInput = document.getElementById('authorId');
+        const newAuthorSelect = document.getElementById('new_author_select');
+
+        // Handle radio button changes
+        document.querySelectorAll('input[name="action"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                newAuthorSelect.disabled = this.value !== 'reassign';
+            });
+        });
+
+        // Handle delete button clicks
+        document.querySelectorAll('.delete-author').forEach(button => {
+            button.addEventListener('click', function() {
+                const authorId = this.dataset.authorId;
+                const authorName = this.dataset.authorName;
+                const storyCount = parseInt(this.dataset.storyCount);
+
+                authorNameSpan.textContent = authorName;
+                authorIdInput.value = authorId;
+
+                if (storyCount > 0) {
+                    storyCountSpan.textContent = storyCount;
+                    storyOptions.style.display = 'block';
+                    
+                    // Load other authors
+                    fetch(`content/get-authors.php?exclude=${authorId}`)
+                        .then(response => response.json())
+                        .then(authors => {
+                            newAuthorSelect.innerHTML = '<option value="">Select an author</option>';
+                            authors.forEach(author => {
+                                const option = document.createElement('option');
+                                option.value = author.id;
+                                option.textContent = author.name;
+                                newAuthorSelect.appendChild(option);
+                            });
+                        });
+                } else {
+                    storyOptions.style.display = 'none';
+                }
+            });
+        });
+
+        // Handle confirm delete
+        document.getElementById('confirmDelete').addEventListener('click', function() {
+            const action = document.querySelector('input[name="action"]:checked').value;
+            
+            if (action === 'cancel') {
+                modal.hide();
+                return;
+            }
+
+            if (action === 'reassign' && !newAuthorSelect.value) {
+                alert('Please select an author to reassign the stories to.');
+                return;
+            }
+
+            const formData = new FormData(deleteForm);
+            
+            fetch('content/delete-author.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    alert(result.error || 'Failed to delete author');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete author');
+            });
+        });
+    });
+    </script>
+</div>
 ?>
 
 <!-- Modal -->

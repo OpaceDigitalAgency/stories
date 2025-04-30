@@ -814,87 +814,35 @@ function handleMediaUpload($db, $storyDir, $title) {
     $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
-        echo "<p class='info'>Created uploads directory</p>";
-        flushOutput();
     }
     
-    // Generate unique filename to avoid collisions
+    // Generate unique filename
     $uniqueFilename = uniqid() . '-' . $coverImage;
     $destination = $uploadDir . $uniqueFilename;
     
-    // Create absolute URL (always use HTTPS for admin panel compatibility)
+    // Create absolute URL
     $relativeUrl = '/uploads/' . $uniqueFilename;
     $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
     
-    // Simply copy the file without optimization
+    // Simply copy the file
     copy($images[0], $destination);
-    echo "<p class='info'>Image uploaded: " . basename($destination) . "</p>";
-    flushOutput();
-    
-    // Set proper permissions - ensure web server can read the file
     chmod($destination, 0644);
     
-    // Make sure everyone can read the file
-    system("chmod -R 644 " . escapeshellarg($destination));
-    system("chown -R www-data:www-data " . escapeshellarg($destination) . " 2>/dev/null");
-    
-    // Verify the file exists and is readable
-    if (file_exists($destination) && is_readable($destination)) {
-        echo "<p class='success'>Image saved to: $destination</p>";
-        echo "<p class='info'>Public URL: $absoluteUrl</p>";
-        
-        // Check final file size
-        $finalSize = filesize($destination);
-        echo "<p class='info'>Final image size: " . round($finalSize / 1024) . " KB</p>";
-        
-        // Always use absolute URL for cover
-        $coverUrl = $absoluteUrl;
-    } else {
-        echo "<p class='warning'>File saved but may not be readable: $destination</p>";
-        echo "<p class='info'>Setting permissions again...</p>";
-        chmod($destination, 0644);
-        
-        // Always use absolute URL for cover
-        $coverUrl = $absoluteUrl;
-    }
-    flushOutput();
-    
-    // Get proper MIME type
+    // Get basic file info
     $fileSize = filesize($destination);
+    $extension = strtolower(pathinfo($destination, PATHINFO_EXTENSION));
+    $mimeType = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif'
+    ][$extension] ?? 'application/octet-stream';
     
-    // Try to use fileinfo extension if available
-    if (function_exists('finfo_open')) {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $destination);
-        finfo_close($finfo);
-    } else {
-        // Fallback: determine MIME type based on extension
-        $extension = strtolower(pathinfo($destination, PATHINFO_EXTENSION));
-        $mimeTypes = [
-            'jpg' => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'gif' => 'image/gif',
-            'webp' => 'image/webp',
-            'svg' => 'image/svg+xml',
-            'pdf' => 'application/pdf'
-        ];
-        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
-        echo "<p class='info'>Using fallback MIME type detection: $mimeType</p>";
-        flushOutput();
-    }
-                
+    // Set cover URL
+    $coverUrl = $absoluteUrl;
+    
     // Create alt text
     $altText = "Illustration for story: " . $title;
-    
-    // Verify the file exists and is accessible via web
-    $webAccessible = false;
-    $ch = curl_init($absoluteUrl);
-    curl_setopt($ch, CURLOPT_NOBODY, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_exec($ch);
-    $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
     
     if ($responseCode == 200) {
         $webAccessible = true;

@@ -44,7 +44,7 @@ export interface Author {
   avatar_url?: string;
   slug: string;
   author_type?: 'retail' | 'parent' | 'child' | 'educator';
-  age?: number;
+  age?: number | string;
   location?: string;
 }
 
@@ -74,7 +74,7 @@ export interface Story {
   /** Estimated reading time in minutes */
   estimated_reading_time?: number | string;
   /** Target age group */
-  age_group?: '0-3' | '4-6' | '7-12' | '13+';
+  age_group?: '0-3' | '4-6' | '7-12' | '13+' | string;
   /** Whether the story is featured */
   featured?: boolean;
   /** Whether the story is sponsored */

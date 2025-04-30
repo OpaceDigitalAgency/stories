@@ -852,21 +852,24 @@ function handleMediaUpload($db, $storyDir, $title) {
     echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
     flushOutput();
             
-    // Use the image optimizer library for consistent optimization
-    $optimized = resizeImage($images[0], $destination, [
-        'width' => 300,
-        'height' => null, // Will maintain aspect ratio
-        'quality' => 60,
-        'format' => pathinfo($images[0], PATHINFO_EXTENSION)
-    ]);
-
-    if (!$optimized) {
+    // Use optimize_image.php for consistent image optimization
+    require_once __DIR__ . '/optimize_image.php';
+    
+    // Create variants using the optimizeSingleImage function
+    $variants = optimizeSingleImage($images[0], dirname($destination));
+    
+    if ($variants && isset($variants['300x300'])) {
+        // Use the 300x300 variant as our main image
+        copy($variants['300x300']['path'], $destination);
+        echo "<p class='success'>Image optimized successfully using optimize_image.php</p>";
+        flushOutput();
+        
+        // Update file permissions
+        chmod($destination, 0644);
+    } else {
         // If optimization fails, copy the original
         copy($images[0], $destination);
         echo "<p class='warning'>Image optimization failed, using original file</p>";
-        flushOutput();
-    } else {
-        echo "<p class='success'>Image optimized successfully</p>";
         flushOutput();
     }
     

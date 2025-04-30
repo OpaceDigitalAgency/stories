@@ -221,15 +221,16 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           )}
           
           <!-- Reviews Section - Only show for non-child authors and published stories -->
-          {story.is_published && (!story.author?.author_type || story.author?.author_type !== 'child') && (
-            <ReviewSection
-              itemType="story"
-              itemId={slug}
-              itemName={story.title}
-              rating={story.rating || 0}
-              reviewCount={story.reviewCount || 0}
-            />
-          )}
+          <ReviewSection
+            itemType="story"
+            itemId={slug}
+            itemName={story.title}
+            rating={story.rating || 0}
+            reviewCount={story.reviewCount || 0}
+            authorType={story.author?.author_type || 'retail'}
+            isAdmin={'isAdmin' in (Astro.locals?.user || {})}
+            isPublished={story.is_published || false}
+          />
         </div>
       </div>
     </section>

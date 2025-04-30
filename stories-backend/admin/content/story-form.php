@@ -190,13 +190,18 @@ try {
 
                     <div class="form-group">
                         <label class="form-label" for="author_id">Author</label>
-                        <select id="author_id" name="author_id" class="form-control" required>
+                        <select id="author_id" name="author_id" class="form-control" required onchange="updateAgeGroup(this)">
                             <option value="">Select Author</option>
                             <?php foreach ($authors as $author): ?>
                                 <option value="<?php echo $author['id']; ?>"
                                         data-author-type="<?php echo htmlspecialchars($author['author_type'] ?? 'retail'); ?>"
+                                        data-author-age="<?php echo htmlspecialchars($author['age'] ?? ''); ?>"
                                         <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($author['name']); ?> (<?php echo ucfirst($author['author_type'] ?? 'retail'); ?>)
+                                    <?php
+                                        echo htmlspecialchars($author['name']);
+                                        if ($author['age']) echo " (Age: {$author['age']})";
+                                        echo " - " . ucfirst($author['author_type'] ?? 'retail');
+                                    ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -204,6 +209,22 @@ try {
                             <small class="form-text text-muted">Current author: <?php echo htmlspecialchars($story['author_name']); ?></small>
                         <?php endif; ?>
                     </div>
+
+                    <script>
+                    function updateAgeGroup(authorSelect) {
+                        const option = authorSelect.options[authorSelect.selectedIndex];
+                        const age = option.getAttribute('data-author-age');
+                        const ageGroupSelect = document.getElementById('age_group');
+                        
+                        if (age) {
+                            const ageNum = parseInt(age);
+                            if (ageNum <= 5) ageGroupSelect.value = '0-3';
+                            else if (ageNum <= 8) ageGroupSelect.value = '4-6';
+                            else if (ageNum <= 12) ageGroupSelect.value = '7-12';
+                            else ageGroupSelect.value = '13+';
+                        }
+                    }
+                    </script>
 
                     <div class="form-group">
                         <label class="form-label" for="excerpt">Excerpt</label>
@@ -394,25 +415,47 @@ try {
                         </div>
                     <?php endif; endforeach; ?>
                     
-                    <!-- Reading time and age group -->
+                    <!-- Reading time (auto-calculated) -->
                     <div class="form-group">
-                        <label class="form-label" for="estimated_reading_time">Reading Time (minutes)</label>
+                        <label class="form-label" for="estimated_reading_time">Reading Time</label>
+                        <?php
+                        // Calculate reading time based on content
+                        $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
+                        $readingTime = ceil($wordCount / 200); // Average reading speed
+                        ?>
                         <input type="number" id="estimated_reading_time" name="estimated_reading_time" class="form-control"
-                               min="1" max="60" step="1"
-                               value="<?php echo isset($story['estimated_reading_time']) ? intval($story['estimated_reading_time']) : 1; ?>"
-                               required>
-                        <small class="form-text text-muted">Estimated reading time in minutes (1-60)</small>
+                               value="<?php echo $readingTime; ?>" readonly>
+                        <small class="form-text text-muted">Automatically calculated based on content length</small>
                     </div>
 
+                    <!-- Age group (auto-set based on author) -->
                     <div class="form-group">
                         <label class="form-label" for="age_group">Age Group</label>
+                        <?php
+                        // Get author's age if available
+                        $authorAge = null;
+                        if (isset($story['author_id'])) {
+                            $stmt = $db->prepare("SELECT age FROM authors WHERE id = ?");
+                            $stmt->execute([$story['author_id']]);
+                            $authorAge = $stmt->fetchColumn();
+                        }
+                        
+                        // Determine age group based on author's age
+                        $ageGroup = '7-12'; // default
+                        if ($authorAge !== null) {
+                            if ($authorAge <= 5) $ageGroup = '0-3';
+                            else if ($authorAge <= 8) $ageGroup = '4-6';
+                            else if ($authorAge <= 12) $ageGroup = '7-12';
+                            else $ageGroup = '13+';
+                        }
+                        ?>
                         <select id="age_group" name="age_group" class="form-control" required>
-                            <option value="0-3" <?php echo (isset($story['age_group']) && $story['age_group'] === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
-                            <option value="4-6" <?php echo (isset($story['age_group']) && $story['age_group'] === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
-                            <option value="7-12" <?php echo (!isset($story['age_group']) || $story['age_group'] === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
-                            <option value="13+" <?php echo (isset($story['age_group']) && $story['age_group'] === '13+') ? 'selected' : ''; ?>>13+ years</option>
+                            <option value="0-3" <?php echo ($ageGroup === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
+                            <option value="4-6" <?php echo ($ageGroup === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
+                            <option value="7-12" <?php echo ($ageGroup === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
+                            <option value="13+" <?php echo ($ageGroup === '13+') ? 'selected' : ''; ?>>13+ years</option>
                         </select>
-                        <small class="form-text text-muted">Select target age group for this story</small>
+                        <small class="form-text text-muted">Auto-set based on author's age (<?php echo $authorAge ?? 'unknown'; ?> years old)</small>
                     </div>
 
                     <!-- Tags section moved to the bottom -->

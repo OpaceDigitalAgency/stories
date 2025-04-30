@@ -2,6 +2,27 @@
  * Component Props Interfaces
  */
 
+export interface ReviewSectionProps {
+  /** Type of content being reviewed */
+  itemType: 'story' | 'author';
+  /** ID of the content */
+  itemId: number | string;
+  /** Name of the content */
+  itemName: string;
+  /** Rating value (0-5) */
+  rating?: number;
+  /** Number of reviews */
+  reviewCount?: number;
+  /** Optional class names to apply to the section */
+  className?: string;
+  /** Author type for review visibility */
+  authorType?: 'retail' | 'parent' | 'child' | 'educator';
+  /** Whether the user is an admin */
+  isAdmin?: boolean;
+  /** Whether the content is published */
+  isPublished?: boolean;
+}
+
 export interface CardStoryProps {
   /** The story data */
   story: Story;
@@ -17,6 +38,16 @@ export interface CoverImageUrls {
   large?: string;
 }
 
+export interface Author {
+  name: string;
+  avatar?: string;
+  avatar_url?: string;
+  slug: string;
+  author_type?: 'retail' | 'parent' | 'child' | 'educator';
+  age?: number;
+  location?: string;
+}
+
 export interface Story {
   id?: number;
   title: string;
@@ -26,16 +57,9 @@ export interface Story {
   coverImage: string | CoverImageUrls;
   cover_url?: string;
   cover_urls?: CoverImageUrls;
-  author?: {
-    name: string;
-    avatar?: string;
-    avatar_url?: string;
-    slug: string;
-    author_type?: 'retail' | 'parent' | 'child' | 'educator';
-    age?: number;
-    location?: string;
-  };
+  author?: Author;
   rating?: number;
+  reviewCount?: number;
   tags?: string[];
   /** Publication date */
   publishDate?: string;
@@ -47,23 +71,18 @@ export interface Story {
   source_type?: 'child' | 'parent' | 'classic';
   /** Whether reviews are allowed for this story */
   allow_reviews?: boolean;
-  /** Review count */
-  reviewCount?: number;
-  /** Whether the story is sponsored */
-  sponsored?: boolean;
-  is_sponsored?: boolean;
-  /** Whether the story is AI enhanced */
-  isAiEnhanced?: boolean;
-  is_ai_enhanced?: boolean;
-  /** Whether the story is self published */
-  isSelfPublished?: boolean;
-  is_self_published?: boolean;
-  /** Whether the story is featured */
-  featured?: boolean;
   /** Estimated reading time in minutes */
-  estimated_reading_time?: string;
+  estimated_reading_time?: number | string;
   /** Target age group */
   age_group?: '0-3' | '4-6' | '7-12' | '13+';
+  /** Whether the story is featured */
+  featured?: boolean;
+  /** Whether the story is sponsored */
+  sponsored?: boolean;
+  /** Whether the story is AI enhanced */
+  is_ai_enhanced?: boolean;
+  /** Whether the story is self published */
+  is_self_published?: boolean;
 }
 
 export interface CardAuthorProps {
@@ -135,20 +154,6 @@ export interface SponsoredCarouselProps {
   className?: string;
 }
 
-export interface ReviewSectionProps {
-  /** Type of content being reviewed */
-  itemType: 'story' | 'author';
-  /** ID of the content */
-  itemId: number | string;
-  /** Name of the content */
-  itemName: string;
-  /** Rating value (0-5) */
-  rating?: number;
-  /** Number of reviews */
-  reviewCount?: number;
-  /** Optional class names to apply to the section */
-  className?: string;
-}
 
 export interface SponsoredBadgeProps {
   /** Type of badge */

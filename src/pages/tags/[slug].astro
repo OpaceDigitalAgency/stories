@@ -1,0 +1,127 @@
+---
+import NavHeader from '../../components/NavHeader.astro';
+import Footer from '../../components/Footer.astro';
+import CardStory from '../../components/CardStory.astro';
+import { fetchStories } from '../../lib/api';
+import type { Story } from '../../types/components';
+import '../../styles/base.css';
+
+// Get the tag slug from the URL
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+// Decode the tag name from the slug
+const tagName = decodeURIComponent(slug.replace(/-/g, ' '));
+
+// Fetch all stories
+const stories = await fetchStories();
+
+// Filter stories by tag
+const taggedStories = stories.filter(story => 
+  story.tags?.some(tag => tag.toLowerCase() === tagName.toLowerCase())
+);
+
+// If no stories found with this tag, redirect to 404
+if (taggedStories.length === 0) {
+  return Astro.redirect('/404');
+}
+
+// Page metadata
+const title = `Stories tagged with "${tagName}" | Stories From The Web`;
+const description = `Read stories tagged with "${tagName}" on Stories From The Web`;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:url" content={`https://storiesfromtheweb.org/tags/${slug}`}>
+  <meta property="og:type" content="website">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main class="pt-24 pb-32">
+    <section class="relative py-16 overflow-hidden">
+      <!-- Decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      
+      <div class="container relative z-10">
+        <div class="max-w-4xl mx-auto text-center mb-12">
+          <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+            Stories tagged with "{tagName}"
+          </h1>
+          <p class="text-lg text-text-secondary">
+            Found {taggedStories.length} {taggedStories.length === 1 ? 'story' : 'stories'} with this tag
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 perspective-1000">
+          {taggedStories.map((story, index) => (
+            <div 
+              class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
+              style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
+            >
+              <CardStory story={story} className="rounded-xl shadow-md hover:shadow-lg transition" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+    
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+  </style>
+</body>
+</html>

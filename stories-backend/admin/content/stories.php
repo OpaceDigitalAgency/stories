@@ -72,11 +72,58 @@ try {
         $joinCondition = "s.author = a.name";
     }
 
+    // Get search parameters
+    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $searchField = isset($_GET['search_field']) ? $_GET['search_field'] : 'all';
+
+    // Get pagination parameters
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
+
     // Get all stories with all available fields
     try {
-        // Get all stories
-        $query = "SELECT * FROM stories ORDER BY created_at DESC";
-        $allStories = $db->query($query)->fetchAll();
+        // Build the query based on search parameters
+        $params = [];
+        $whereClause = '';
+
+        if (!empty($search)) {
+            if ($searchField === 'all') {
+                // Search in all searchable fields
+                $whereClause = " WHERE (title LIKE ? OR content LIKE ?";
+                $params[] = "%$search%";
+                $params[] = "%$search%";
+
+                // Add author search if the column exists
+                if (in_array('author', $columns)) {
+                    $whereClause .= " OR author LIKE ?";
+                    $params[] = "%$search%";
+                }
+
+                // Close the where clause
+                $whereClause .= ")";
+            } else {
+                // Search in a specific field
+                if (in_array($searchField, $columns)) {
+                    $whereClause = " WHERE $searchField LIKE ?";
+                    $params[] = "%$search%";
+                }
+            }
+        }
+
+        // Get total count for pagination
+        $countQuery = "SELECT COUNT(*) FROM stories" . $whereClause;
+        $stmt = $db->prepare($countQuery);
+        $stmt->execute($params);
+        $totalItems = $stmt->fetchColumn();
+
+        // Calculate offset for pagination
+        $offset = ($page - 1) * $perPage;
+
+        // Get stories with pagination
+        $query = "SELECT * FROM stories" . $whereClause . " ORDER BY created_at DESC LIMIT $offset, $perPage";
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        $allStories = $stmt->fetchAll();
 
         error_log("Number of stories fetched: " . count($allStories));
 
@@ -368,13 +415,11 @@ if (isset($_SESSION['error'])) {
         // Include pagination component
         include_once '../includes/pagination-component.php';
         if (function_exists('renderPagination')) {
-            // Calculate total items and current page
-            $totalItems = count($stories);
-            $itemsPerPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 25;
-            $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+            // Use the total items from the query for accurate pagination
+            // $totalItems is already set from the count query
 
             // Render pagination
-            renderPagination($totalItems, $itemsPerPage, $currentPage);
+            renderPagination($totalItems, $perPage, $page);
         }
         ?>
     </div>

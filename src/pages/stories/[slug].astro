@@ -8,7 +8,8 @@ import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
 import { fetchStories, fetchStory } from '../../lib/api';
-import type { Story } from '../../types/components';
+// Import Story type from the API module to ensure type compatibility
+import type { Story } from '../../lib/api';
 import '../../styles/base.css';
 
 // Helper function to get image URL from story
@@ -32,17 +33,29 @@ if (!slug) {
   return Astro.redirect('/404');
 }
 
-// Fetch story data using fetchStory to get full content
+// Fetch story data
 let story;
+
+// First try to get the story using fetchStory (which includes content)
 try {
   story = await fetchStory(slug);
+
+  // If story not found with fetchStory, try the old method with fetchStories
+  if (!story) {
+    console.log(`Story not found with fetchStory, trying fetchStories for slug: ${slug}`);
+    const stories = await fetchStories();
+    story = stories.find(s => s.slug === slug);
+  }
 } catch (error) {
   console.error(`Error fetching story with slug ${slug}:`, error);
-  return Astro.redirect('/404');
+  // Don't redirect yet, try the fallback method
+  const stories = await fetchStories();
+  story = stories.find(s => s.slug === slug);
 }
 
-// If story not found, redirect to 404
+// If story still not found after both attempts, redirect to 404
 if (!story) {
+  console.error(`Story not found with slug: ${slug}`);
   return Astro.redirect('/404');
 }
 

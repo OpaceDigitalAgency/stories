@@ -26,10 +26,25 @@ const authorStories = stories.filter(s => s.author?.slug === slug);
 
 // Get popular tags from author's stories
 const allTags = authorStories.flatMap(story => story.tags || []);
-const tagCounts: Record<string, number> = allTags.reduce((acc: Record<string, number>, tag: string) => {
+
+// Process tags to ensure they're strings
+const processedTags = allTags.map(tag => {
+  if (typeof tag === 'string') {
+    return tag;
+  } else if (tag && typeof tag === 'object') {
+    // If it's an object, try to get the name or title
+    if (tag.name) return tag.name;
+    if (tag.title) return tag.title;
+    return 'Tag'; // Fallback
+  }
+  return String(tag || 'Tag');
+});
+
+const tagCounts: Record<string, number> = processedTags.reduce((acc: Record<string, number>, tag: string) => {
   acc[tag] = (acc[tag] || 0) + 1;
   return acc;
 }, {});
+
 const popularTags = Object.entries(tagCounts)
   .sort((a, b) => b[1] - a[1])
   .slice(0, 8)

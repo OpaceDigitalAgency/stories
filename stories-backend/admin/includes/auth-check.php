@@ -37,8 +37,12 @@ if (!$user = SimpleAuth::check()) {
         exit;
     }
 
-    // Otherwise, redirect to login page
-    $loginPath = $adminDir === '../' ? 'login.php' : '../login.php';
-    header("Location: $loginPath");
-    exit;
+    // Prevent redirect loops by checking if we're already on the login page
+    $currentScript = basename($_SERVER['SCRIPT_FILENAME']);
+    if ($currentScript !== 'login.php') {
+        // Otherwise, redirect to login page
+        $loginPath = $adminDir === '../' ? 'login.php' : '../login.php';
+        header("Location: $loginPath");
+        exit;
+    }
 }

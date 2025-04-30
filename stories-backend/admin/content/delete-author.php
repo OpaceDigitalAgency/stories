@@ -26,6 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['id'])) {
     exit;
 }
 
+$action = $_POST['action'] ?? 'cancel';
+$id = $_POST['id'];
+$newAuthorId = $_POST['new_author_id'] ?? null;
+
+if ($action === 'cancel') {
+    header("Location: authors.php");
+    exit;
+}
+
 try {
     // Connect to database
     $db = new PDO(
@@ -51,26 +60,62 @@ try {
         throw new Exception("Author not found");
     }
 
-    // Check if author has any stories (using junction table)
-    $stmt = $db->prepare("
-        SELECT COUNT(*) FROM story_authors
-        WHERE author_id = ?
-    ");
+    // Get story count
+    $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
     $stmt->execute([$id]);
-    if ($stmt->fetchColumn() > 0) {
-        throw new Exception("Cannot delete author with existing stories. Please remove story associations first.");
-    }
+    $storyCount = $stmt->fetchColumn();
 
-    // Check if author has any blog posts
-    $stmt = $db->prepare("SELECT COUNT(*) FROM blog_posts WHERE author_id = ?");
-    $stmt->execute([$id]);
-    if ($stmt->fetchColumn() > 0) {
-        throw new Exception("Cannot delete author with existing blog posts");
+    if ($action === 'delete_all') {
+        // Get all stories by this author
+        $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
+        $stmt->execute([$id]);
+        $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Delete story tags
+        if (!empty($storyIds)) {
+            $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+            $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
+            $stmt->execute($storyIds);
+        }
+        
+        // Delete story authors
+        $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
+        $stmt->execute([$id]);
+        
+        // Delete stories
+        if (!empty($storyIds)) {
+            $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+            $stmt = $db->prepare("DELETE FROM stories WHERE id IN ($placeholders)");
+            $stmt->execute($storyIds);
+        }
+        
+        // Delete author
+        $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        $_SESSION['success'] = "Author and all associated stories deleted successfully";
     }
-
-    // Delete author
-    $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
-    $stmt->execute([$id]);
+    elseif ($action === 'reassign' && $newAuthorId) {
+        // Verify new author exists
+        $stmt = $db->prepare("SELECT id FROM authors WHERE id = ?");
+        $stmt->execute([$newAuthorId]);
+        if (!$stmt->fetch()) {
+            throw new Exception("New author not found");
+        }
+        
+        // Update story_authors table
+        $stmt = $db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id = ?");
+        $stmt->execute([$newAuthorId, $id]);
+        
+        // Delete old author
+        $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        $_SESSION['success'] = "Stories reassigned and author deleted successfully";
+    }
+    else {
+        throw new Exception("Invalid action");
+    }
 
     // Commit transaction
     $db->commit();

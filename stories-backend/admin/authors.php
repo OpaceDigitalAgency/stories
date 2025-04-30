@@ -314,7 +314,7 @@ class AuthorsPage extends CrudPage {
             case 'view':
                 return 'generic/view';
             case 'delete':
-                return 'generic/delete';
+                return 'authors/delete';
             default:
                 return 'generic/list';
         }

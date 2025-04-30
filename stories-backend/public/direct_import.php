@@ -1021,9 +1021,34 @@ function handleMediaUpload($db, $storyDir, $title) {
 
 // Function to extract tags from front-matter and content
 function extractTags($frontMatter, $markdownContent) {
-    $tags = ['children\'s story']; // Always include this tag
+    $tags = [];
+    $contentLower = strtolower($markdownContent);
     
-    // Parse front-matter for tags or categories
+    // Define tag categories with related keywords
+    $tagCategories = [
+        'genre' => [
+            'adventure' => ['adventure', 'quest', 'journey', 'explore'],
+            'fantasy' => ['magic', 'wizard', 'dragon', 'fairy', 'enchanted', 'spell'],
+            'mystery' => ['mystery', 'clue', 'detective', 'solve', 'secret'],
+            'science fiction' => ['robot', 'space', 'alien', 'future', 'planet'],
+            'fairy tale' => ['once upon a time', 'kingdom', 'prince', 'princess', 'castle']
+        ],
+        'themes' => [
+            'friendship' => ['friend', 'together', 'help', 'share', 'team'],
+            'family' => ['family', 'parent', 'mother', 'father', 'sister', 'brother'],
+            'nature' => ['nature', 'forest', 'garden', 'tree', 'flower', 'animal'],
+            'school' => ['school', 'teacher', 'classroom', 'lesson', 'homework'],
+            'imagination' => ['imagine', 'dream', 'pretend', 'create', 'wonder']
+        ],
+        'characters' => [
+            'animals' => ['cat', 'dog', 'bear', 'bird', 'rabbit', 'fox'],
+            'magical creatures' => ['dragon', 'unicorn', 'fairy', 'wizard', 'witch'],
+            'dinosaurs' => ['dinosaur', 't-rex', 'raptor', 'fossil'],
+            'monsters' => ['monster', 'creature', 'beast', 'giant']
+        ]
+    ];
+    
+    // Parse front-matter for tags
     $lines = explode("\n", $frontMatter);
     foreach ($lines as $line) {
         if (preg_match('/^(tags|categories):\s*(.*)$/i', $line, $matches)) {
@@ -1038,21 +1063,28 @@ function extractTags($frontMatter, $markdownContent) {
         }
     }
     
-    // Add content-based tags if we don't have enough
-    if (count($tags) < 3) {
-        $keywords = [
-            'adventure', 'animals', 'fantasy', 'friendship', 'magic', 
-            'school', 'family', 'nature', 'space', 'dinosaurs', 
-            'robots', 'monsters', 'fairy tale', 'mystery'
-        ];
-        
-        $contentLower = strtolower($markdownContent);
-        foreach ($keywords as $keyword) {
-            if (strpos($contentLower, $keyword) !== false && !in_array($keyword, $tags)) {
-                $tags[] = $keyword;
-                if (count($tags) >= 5) break; // Limit to 5 tags total
+    // Always include "children's story" as base tag
+    $tags[] = 'children\'s story';
+    
+    // Analyze content for each category
+    foreach ($tagCategories as $category => $tagTypes) {
+        foreach ($tagTypes as $tag => $keywords) {
+            $matches = 0;
+            foreach ($keywords as $keyword) {
+                if (strpos($contentLower, $keyword) !== false) {
+                    $matches++;
+                }
+            }
+            // Add tag if multiple related keywords are found
+            if ($matches >= 2 && !in_array($tag, $tags)) {
+                $tags[] = $tag;
             }
         }
+    }
+    
+    // Limit to 5 most relevant tags
+    if (count($tags) > 5) {
+        $tags = array_slice($tags, 0, 5);
     }
     
     return $tags;

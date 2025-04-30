@@ -413,6 +413,20 @@ try {
                             <!-- Hidden inputs for child authors -->
                             <input type="hidden" name="<?php echo $field; ?>" value="0">
                         <?php endif; ?>
+                    <?php elseif ($field === 'estimated_reading_time'): ?>
+                        <?php
+                        // Calculate reading time based on content
+                        $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
+                        $readingTime = max(1, ceil($wordCount / 200)); // At least 1 minute
+                        ?>
+                        <div class="form-group">
+                            <label class="form-label">Reading Time</label>
+                            <div class="form-control-static">
+                                <?php echo $readingTime; ?> minute<?php echo $readingTime !== 1 ? 's' : ''; ?>
+                                <input type="hidden" name="estimated_reading_time" value="<?php echo $readingTime; ?>">
+                            </div>
+                            <small class="form-text text-muted">Automatically calculated based on content length (minimum 1 minute)</small>
+                        </div>
                     <?php elseif ($isIntField || $isDecimalField): ?>
                         <div class="form-group">
                             <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -429,21 +443,6 @@ try {
                                    <?php echo $isRequired ? 'required' : ''; ?>>
                         </div>
                     <?php endif; endforeach; ?>
-                    
-                    <!-- Reading time (auto-calculated) -->
-                    <div class="form-group">
-                        <label class="form-label">Reading Time</label>
-                        <?php
-                        // Calculate reading time based on content
-                        $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
-                        $readingTime = max(1, ceil($wordCount / 200)); // At least 1 minute
-                        ?>
-                        <div class="form-control-static">
-                            <?php echo $readingTime; ?> minute<?php echo $readingTime !== 1 ? 's' : ''; ?>
-                            <input type="hidden" name="estimated_reading_time" value="<?php echo $readingTime; ?>">
-                        </div>
-                        <small class="form-text text-muted">Automatically calculated based on content length (minimum 1 minute)</small>
-                    </div>
 
                     <!-- Age group (auto-set based on author) -->
                     <div class="form-group">

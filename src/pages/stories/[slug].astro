@@ -228,10 +228,11 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
             {story.content ? (
               <>
                 <div class="bg-white p-8 rounded-xl shadow-md mb-8">
-                  <h3 class="text-xl font-bold mb-4">Story Summary</h3>
+                  <h2 class="text-2xl font-bold mb-4">Story Summary</h2>
                   <p class="text-gray-700">{story.excerpt}</p>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-md">
+                  <h2 class="text-2xl font-bold mb-4">Story</h2>
                   <div set:html={story.content} />
                 </div>
               </>

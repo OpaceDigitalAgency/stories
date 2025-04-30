@@ -2,8 +2,7 @@
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import CardStory from '../../components/CardStory.astro';
-import { fetchStoriesByTag } from '../../lib/api';
-import type { Story } from '../../types/components';
+import { fetchStoriesByTag, fetchStories, type Story } from '../../lib/api';
 
 // Get tag from URL
 const { tag } = Astro.params;
@@ -21,7 +20,18 @@ let fetchError = false;
 let errorMessage = '';
 
 try {
+  // Try to fetch stories by tag
   taggedStories = await fetchStoriesByTag(decodedTag);
+
+  // If we get here without an error but have no stories, try to fetch all stories as a fallback
+  if (taggedStories.length === 0) {
+    console.log(`No stories found with tag "${decodedTag}", showing all stories as fallback`);
+    const allStories = await fetchStories();
+    // Filter stories that might have this tag (case insensitive)
+    taggedStories = allStories.filter(story =>
+      story.tags?.some(t => t.toLowerCase().includes(decodedTag.toLowerCase()))
+    );
+  }
 } catch (error) {
   console.error(`Error fetching stories for tag "${decodedTag}":`, error);
   fetchError = true;

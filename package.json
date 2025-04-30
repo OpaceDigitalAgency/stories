@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "clean": "rm -rf dist .astro",
+    "build": "npm run clean && astro build",
     "preview": "astro preview"
   },
   "dependencies": {

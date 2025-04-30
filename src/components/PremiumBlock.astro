@@ -35,28 +35,28 @@ const typeClasses = {
 ---
 
 <div class={`relative rounded-xl overflow-hidden border bg-gradient-to-br ${typeClasses[type]} shadow-playful hover:shadow-xl transition-all duration-300 transform-style-3d hover:translate-z-2 group`}>
-  <!-- Premium badge -->
-  <div class="absolute top-3 right-3 z-10">
-    <SponsoredBadge type={badgeType} />
-  </div>
-
   <a href={link} class="block">
-    <div class="h-64 overflow-hidden relative">
+    <div class="h-96 overflow-hidden relative">
       <img
-        src={image || 'https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg'}
+        src={image}
         alt={title}
         width="1200"
         height="800"
-        class="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1"
+        class="w-full h-full object-cover"
       />
       
-      {/* Dark overlay for better text readability */}
-      <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+      {/* Dark gradient overlay */}
+      <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
 
-      {/* Content overlaid on image */}
-      <div class="absolute inset-0 flex flex-col justify-end p-6 text-white">
-        <h3 class="font-display font-bold text-2xl mb-3">{title}</h3>
-        <p class="text-white/90 text-lg max-w-2xl mb-4">{description}</p>
+      {/* Badges */}
+      <div class="absolute top-4 right-4">
+        <SponsoredBadge type={badgeType} />
+      </div>
+
+      {/* Content */}
+      <div class="absolute inset-x-0 bottom-0 p-8">
+        <h3 class="font-display font-bold text-3xl text-white mb-4">{title}</h3>
+        <p class="text-white/90 text-xl max-w-2xl mb-6">{description}</p>
 
         <div class="flex items-center mt-4">
           <a href={buttonLink || link} class="bg-white text-primary hover:bg-primary hover:text-white px-6 py-3 rounded-full font-bold text-lg shadow-xl transition-all duration-300 transform hover:scale-105 hover:translate-y-[-2px] flex items-center">
@@ -71,7 +71,7 @@ const typeClasses = {
       </div>
 
       {comingSoon && (
-        <div class="absolute top-4 right-4 z-20">
+        <div class="absolute top-4 left-4">
           <div class="bg-accent/90 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-xl backdrop-blur-sm transform rotate-2 scale-110 animate-pulse">
             <span class="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">

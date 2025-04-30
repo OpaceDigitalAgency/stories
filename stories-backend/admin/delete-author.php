@@ -46,29 +46,32 @@ try {
 
     $authorId = $_POST['id'];
 
-    // Delete story_tags for all stories by this author
-    $stmt = $db->prepare("
-        DELETE st FROM story_tags st
-        INNER JOIN story_authors sa ON st.story_id = sa.story_id
-        WHERE sa.author_id = ?
-    ");
+    // First, get all story IDs by this author
+    $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
     $stmt->execute([$authorId]);
+    $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Delete story_authors entries
-    $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
-    $stmt->execute([$authorId]);
+    if (!empty($storyIds)) {
+        // Delete story tags first
+        $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+        $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
+        $stmt->execute($storyIds);
 
-    // Delete stories by this author
-    $stmt = $db->prepare("
-        DELETE s FROM stories s
-        INNER JOIN story_authors sa ON s.id = sa.story_id
-        WHERE sa.author_id = ?
-    ");
-    $stmt->execute([$authorId]);
+        // Delete stories
+        $stmt = $db->prepare("DELETE FROM stories WHERE id IN ($placeholders)");
+        $stmt->execute($storyIds);
+
+        // Delete story_authors entries
+        $stmt = $db->prepare("DELETE FROM story_authors WHERE story_id IN ($placeholders)");
+        $stmt->execute($storyIds);
+    }
 
     // Finally, delete the author
     $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
     $stmt->execute([$authorId]);
+
+    // Log the deletion
+    error_log("Successfully deleted author ID: $authorId with " . count($storyIds) . " associated stories");
 
     // Commit transaction
     $db->commit();

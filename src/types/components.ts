@@ -32,6 +32,8 @@ export interface Story {
     avatar_url?: string;
     slug: string;
     author_type?: 'retail' | 'parent' | 'child' | 'educator';
+    age?: number;
+    location?: string;
   };
   rating?: number;
   tags?: string[];

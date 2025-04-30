@@ -55,6 +55,16 @@ try {
     $review_count = isset($_POST['review_count']) ? (int)$_POST['review_count'] : 0;
     $average_rating = isset($_POST['average_rating']) ? (float)$_POST['average_rating'] : 0;
     $tags = $_POST['tags'] ?? [];
+    
+    // Always set reading time to 1 minute
+    $_POST['estimated_reading_time'] = '1 minute';
+    
+    // Validate age group
+    $age_group = $_POST['age_group'] ?? '7-12';
+    if (!in_array($age_group, ['0-3', '4-6', '7-12', '13+'])) {
+        $age_group = '7-12'; // Default to 7-12 if invalid
+    }
+    $_POST['age_group'] = $age_group;
 
     // Validate required fields
     if (empty($title) || empty($author_id) || empty($content)) {

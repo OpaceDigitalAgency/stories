@@ -394,6 +394,27 @@ try {
                         </div>
                     <?php endif; endforeach; ?>
                     
+                    <!-- Reading time and age group -->
+                    <div class="form-group">
+                        <label class="form-label" for="estimated_reading_time">Reading Time (minutes)</label>
+                        <input type="number" id="estimated_reading_time" name="estimated_reading_time" class="form-control"
+                               min="1" max="60" step="1"
+                               value="<?php echo isset($story['estimated_reading_time']) ? intval($story['estimated_reading_time']) : 1; ?>"
+                               required>
+                        <small class="form-text text-muted">Estimated reading time in minutes (1-60)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="age_group">Age Group</label>
+                        <select id="age_group" name="age_group" class="form-control" required>
+                            <option value="0-3" <?php echo (isset($story['age_group']) && $story['age_group'] === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
+                            <option value="4-6" <?php echo (isset($story['age_group']) && $story['age_group'] === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
+                            <option value="7-12" <?php echo (!isset($story['age_group']) || $story['age_group'] === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
+                            <option value="13+" <?php echo (isset($story['age_group']) && $story['age_group'] === '13+') ? 'selected' : ''; ?>>13+ years</option>
+                        </select>
+                        <small class="form-text text-muted">Select target age group for this story</small>
+                    </div>
+
                     <!-- Tags section moved to the bottom -->
                     <div class="form-group">
                         <label class="form-label">Tags</label>

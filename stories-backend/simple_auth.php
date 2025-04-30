@@ -1,7 +1,7 @@
 <?php
 /**
  * Simple Authentication Solution
- * 
+ *
  * This file provides a simplified authentication system to replace the complex JWT implementation.
  * It uses standard PHP sessions and database authentication.
  */
@@ -13,27 +13,35 @@ if (session_status() === PHP_SESSION_NONE) {
 
 class SimpleAuth {
     private static $db = null;
-    
+
     /**
      * Initialize the database connection
      */
     public static function initDB($config) {
         try {
-            $dsn = "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']};port={$config['port']}";
+            // Set default values if keys don't exist
+            $host = isset($config['host']) ? $config['host'] : 'localhost';
+            $name = isset($config['name']) ? $config['name'] : 'stories_db';
+            $charset = isset($config['charset']) ? $config['charset'] : 'utf8mb4';
+            $port = isset($config['port']) ? $config['port'] : '3306';
+            $user = isset($config['user']) ? $config['user'] : 'root';
+            $password = isset($config['password']) ? $config['password'] : '';
+
+            $dsn = "mysql:host={$host};dbname={$name};charset={$charset};port={$port}";
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            
-            self::$db = new PDO($dsn, $config['user'], $config['password'], $options);
+
+            self::$db = new PDO($dsn, $user, $password, $options);
             return true;
         } catch (PDOException $e) {
             error_log("SimpleAuth DB Connection Error: " . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Login a user with email and password
      */
@@ -43,39 +51,39 @@ class SimpleAuth {
             $query = "SELECT id, name, email, password, role FROM users WHERE email = ? AND active = 1 LIMIT 1";
             $stmt = self::$db->prepare($query);
             $stmt->execute([$email]);
-            
+
             if ($stmt->rowCount() === 0) {
                 return false;
             }
-            
+
             $user = $stmt->fetch();
-            
+
             // Verify password
             if (!password_verify($password, $user['password'])) {
                 return false;
             }
-            
+
             // Remove password from user data
             unset($user['password']);
-            
+
             // Store user in session
             $_SESSION['auth_user'] = $user;
             $_SESSION['auth_time'] = time();
-            
+
             // Generate a simple token for API access
             $token = self::generateSimpleToken($user['id'], $user['role']);
             $_SESSION['auth_token'] = $token;
-            
+
             // Set cookie for persistent login
             setcookie('auth_token', $token, time() + 86400, '/', '', false, true);
-            
+
             return $user;
         } catch (Exception $e) {
             error_log("SimpleAuth login error: " . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Check if user is authenticated
      */
@@ -84,12 +92,12 @@ class SimpleAuth {
         if (isset($_SESSION['auth_user']) && !empty($_SESSION['auth_user'])) {
             return $_SESSION['auth_user'];
         }
-        
+
         // Check for token in cookie
         if (isset($_COOKIE['auth_token']) && !empty($_COOKIE['auth_token'])) {
             $token = $_COOKIE['auth_token'];
             $userData = self::validateSimpleToken($token);
-            
+
             if ($userData) {
                 // Store in session for future checks
                 $_SESSION['auth_user'] = $userData;
@@ -98,10 +106,10 @@ class SimpleAuth {
                 return $userData;
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Logout the current user
      */
@@ -110,11 +118,11 @@ class SimpleAuth {
         unset($_SESSION['auth_user']);
         unset($_SESSION['auth_time']);
         unset($_SESSION['auth_token']);
-        
+
         // Clear cookie
         setcookie('auth_token', '', time() - 3600, '/', '', false, true);
     }
-    
+
     /**
      * Generate a simple token for API access
      */
@@ -123,20 +131,20 @@ class SimpleAuth {
         $timestamp = time();
         $random = bin2hex(random_bytes(16));
         $data = "$userId|$role|$timestamp|$random";
-        
+
         // Add a simple signature
         $signature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
         $token = base64_encode("$data|$signature");
-        
+
         // Store token in database for validation
-        $query = "INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?) 
+        $query = "INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)
                  ON DUPLICATE KEY UPDATE token = VALUES(token), expires_at = VALUES(expires_at)";
         $stmt = self::$db->prepare($query);
         $stmt->execute([$userId, $token, date('Y-m-d H:i:s', time() + 86400)]);
-        
+
         return $token;
     }
-    
+
     /**
      * Validate a simple token
      */
@@ -145,58 +153,58 @@ class SimpleAuth {
             // Decode token
             $decoded = base64_decode($token);
             $parts = explode('|', $decoded);
-            
+
             if (count($parts) !== 5) {
                 return false;
             }
-            
+
             list($userId, $role, $timestamp, $random, $signature) = $parts;
-            
+
             // Check if token is expired (24 hours)
             if (time() - $timestamp > 86400) {
                 return false;
             }
-            
+
             // Verify signature
             $data = "$userId|$role|$timestamp|$random";
             $expectedSignature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
-            
+
             if ($signature !== $expectedSignature) {
                 return false;
             }
-            
+
             // Check if token exists in database
             $query = "SELECT * FROM auth_tokens WHERE user_id = ? AND token = ? AND expires_at > NOW() LIMIT 1";
             $stmt = self::$db->prepare($query);
             $stmt->execute([$userId, $token]);
-            
+
             if ($stmt->rowCount() === 0) {
                 return false;
             }
-            
+
             // Get user data
             $query = "SELECT id, name, email, role FROM users WHERE id = ? AND active = 1 LIMIT 1";
             $stmt = self::$db->prepare($query);
             $stmt->execute([$userId]);
-            
+
             if ($stmt->rowCount() === 0) {
                 return false;
             }
-            
+
             return $stmt->fetch();
         } catch (Exception $e) {
             error_log("SimpleAuth token validation error: " . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Get current authenticated user
      */
     public static function user() {
         return self::check();
     }
-    
+
     /**
      * Check if user has a specific role
      */
@@ -205,14 +213,14 @@ class SimpleAuth {
         if (!$user) {
             return false;
         }
-        
+
         if (is_array($role)) {
             return in_array($user['role'], $role);
         }
-        
+
         return $user['role'] === $role;
     }
-    
+
     /**
      * Create auth_tokens table if it doesn't exist
      */
@@ -225,7 +233,7 @@ class SimpleAuth {
             PRIMARY KEY (user_id),
             UNIQUE KEY (token)
         )";
-        
+
         try {
             self::$db->exec($query);
             return true;

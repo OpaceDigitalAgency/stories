@@ -536,14 +536,25 @@ try {
                 try {
                     $authorId = (int)$_GET['id'];
                     
+                    // Check if author has any stories
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
+                    $stmt->execute([$authorId]);
+                    $storyCount = (int)$stmt->fetchColumn();
+                    
+                    if ($storyCount > 0) {
+                        http_response_code(400);
+                        echo json_encode(['error' => [
+                            'status' => 400,
+                            'message' => 'Cannot delete author with existing stories. Please remove story associations first.',
+                            'story_count' => $storyCount
+                        ]]);
+                        break;
+                    }
+                    
                     // Start transaction
                     $db->beginTransaction();
                     
-                    // Delete from story_authors first (will cascade)
-                    $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
-                    $stmt->execute([$authorId]);
-                    
-                    // Then delete the author
+                    // Delete the author (no need to delete from story_authors since we checked there are none)
                     $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
                     $stmt->execute([$authorId]);
                     
@@ -551,7 +562,9 @@ try {
                     echo json_encode(['success' => true]);
                     break;
                 } catch (Exception $e) {
-                    $db->rollBack();
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
                     error_log("Author deletion error: " . $e->getMessage());
                     http_response_code(500);
                     echo json_encode(['error' => ['status' => 500, 'message' => 'Failed to delete author']]);

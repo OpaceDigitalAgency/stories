@@ -852,135 +852,21 @@ function handleMediaUpload($db, $storyDir, $title) {
     echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
     flushOutput();
             
-    // Try to use ImageMagick first (much better compression than GD)
-    $optimized = false;
-    if (extension_loaded('imagick')) {
-        try {
-            echo "<p class='info'>Using ImageMagick for better compression</p>";
-            flushOutput();
-            
-            $imagick = new Imagick($images[0]);
-            
-            // Strip metadata to reduce size
-            $imagick->stripImage();
-            
-            // Always resize to 300px width for better performance
-            $width = $imagick->getImageWidth();
-            $height = $imagick->getImageHeight();
-            
-            // Force resize to 300px width regardless of original size
-            $newWidth = 300;
-            $newHeight = ($height / $width) * 300;
-            $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
-            echo "<p class='info'>Resized to {$newWidth}x{$newHeight}</p>";
-            flushOutput();
-            
-            // Set quality based on image format - use extremely aggressive compression
-            if ($imagick->getImageFormat() == 'JPEG') {
-                $imagick->setImageCompressionQuality(50); // Very aggressive compression
-                $imagick->setInterlaceScheme(Imagick::INTERLACE_PLANE);
-                echo "<p class='info'>Applied JPEG compression (50% quality)</p>";
-            } else if ($imagick->getImageFormat() == 'PNG') {
-                // For PNG, optimize compression
-                $imagick->setImageCompressionQuality(95);
-                $imagick->setOption('png:compression-level', 9);
-                $imagick->setOption('png:compression-strategy', 1);
-                $imagick->setOption('png:exclude-chunk', 'all');
-                echo "<p class='info'>Applied maximum PNG compression</p>";
-            }
-            
-            // Strip all metadata to reduce size (do this again to be sure)
-            $imagick->stripImage();
-            
-            // Write the optimized image
-            $imagick->writeImage($destination);
-            $imagick->destroy();
-            
-            $optimized = true;
-            echo "<p class='success'>Image optimized with ImageMagick</p>";
-            flushOutput();
-        } catch (Exception $e) {
-            echo "<p class='warning'>ImageMagick optimization failed: " . $e->getMessage() . "</p>";
-            echo "<p class='info'>Falling back to GD</p>";
-            flushOutput();
-        }
-    }
-    
-    // Fall back to GD if ImageMagick failed or isn't available
-    if (!$optimized && extension_loaded('gd')) {
-        try {
-            echo "<p class='info'>Using GD for image optimization</p>";
-            flushOutput();
-            
-            // Get image info
-            list($width, $height, $type) = getimagesize($images[0]);
-            
-            // Only process if it's a supported image type
-            if ($type === IMAGETYPE_JPEG || $type === IMAGETYPE_PNG) {
-                // Create image resource
-                if ($type === IMAGETYPE_JPEG) {
-                    $source = imagecreatefromjpeg($images[0]);
-                } else {
-                    $source = imagecreatefrompng($images[0]);
-                }
-                
-                if ($source) {
-                    // Calculate new dimensions (max 300px width for better performance)
-                    $maxWidth = 300; // Reduced from 500px to 300px
-                    $newWidth = $width;
-                    $newHeight = $height;
-                    
-                    // Always resize to 300px width regardless of original size
-                    if ($width > 0) { // Avoid division by zero
-                        $newWidth = $maxWidth;
-                        $newHeight = ($height / $width) * $maxWidth;
-                    }
-                    
-                    // Create resized image with proper alpha channel support for PNGs
-                    $resized = imagecreatetruecolor($newWidth, $newHeight);
-                    
-                    // Preserve transparency for PNG images
-                    if ($type === IMAGETYPE_PNG) {
-                        imagealphablending($resized, false);
-                        imagesavealpha($resized, true);
-                        $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
-                        imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
-                    }
-                    
-                    imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-                    
-                    // Save resized image with higher compression
-                    if ($type === IMAGETYPE_JPEG) {
-                        // Use 50% quality for better compression (reduced from 65%)
-                        imagejpeg($resized, $destination, 50);
-                    } else {
-                        // For PNG, use maximum compression (9)
-                        imagepng($resized, $destination, 9);
-                    }
-                    
-                    imagedestroy($resized);
-                    imagedestroy($source);
-                    
-                    echo "<p class='success'>Image optimized and resized to $newWidth x $newHeight</p>";
-                    flushOutput();
-                }
-            } else {
-                // Just copy the file if it's not a supported type
-                copy($images[0], $destination);
-                echo "<p class='info'>Unsupported image type, copied without optimization</p>";
-                flushOutput();
-            }
-        } catch (Exception $e) {
-            // If optimization fails, just copy the file
-            copy($images[0], $destination);
-            echo "<p class='warning'>Image optimization failed: " . $e->getMessage() . "</p>";
-            echo "<p class='info'>Copied original image instead</p>";
-            flushOutput();
-        }
-    } else {
-        // If GD is not available, just copy the file
+    // Use the image optimizer library for consistent optimization
+    $optimized = resizeImage($images[0], $destination, [
+        'width' => 300,
+        'height' => null, // Will maintain aspect ratio
+        'quality' => 60,
+        'format' => pathinfo($images[0], PATHINFO_EXTENSION)
+    ]);
+
+    if (!$optimized) {
+        // If optimization fails, copy the original
         copy($images[0], $destination);
-        echo "<p class='info'>GD library not available, copied without optimization</p>";
+        echo "<p class='warning'>Image optimization failed, using original file</p>";
+        flushOutput();
+    } else {
+        echo "<p class='success'>Image optimized successfully</p>";
         flushOutput();
     }
     

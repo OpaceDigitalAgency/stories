@@ -93,7 +93,8 @@ const formattedDate = story.publishDate
 
     {/* Ratings - only show for non-child stories with allow_reviews=true and rating > 0 */}
     {story.rating && typeof story.rating === 'number' && story.rating > 0 &&
-     story.source_type !== 'child' && story.author?.author_type !== 'child' && (
+     story.source_type !== 'child' && story.author?.author_type !== 'child' &&
+     story.allow_reviews !== false && (
       <div class="mb-3">
         <RatingStars
           rating={story.rating}

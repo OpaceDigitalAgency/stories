@@ -273,20 +273,10 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 
     // Try with contains first
     let raw = await fetchApi<any[]>('/stories', {
-      'filters[tags][$contains]': tag,
+      'filters[tags]': tag,
       'sort': 'publishedAt:desc',
       'populate': '*'
     });
-
-    // If no results, try with containsi (case insensitive)
-    if (!raw || raw.length === 0) {
-      console.log(`No stories found with tag using contains, trying containsi: ${tag}`);
-      raw = await fetchApi<any[]>('/stories', {
-        'filters[tags][$containsi]': tag,
-        'sort': 'publishedAt:desc',
-        'populate': '*'
-      });
-    }
 
     if (!raw || raw.length === 0) {
       console.log(`No stories found with tag: ${tag}`);

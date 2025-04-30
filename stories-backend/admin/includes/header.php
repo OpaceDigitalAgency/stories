@@ -99,7 +99,7 @@ $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false
             <div>
                 <h1 class="page-title"><?php echo htmlspecialchars($pageTitle); ?></h1>
                 <?php if (!empty($pageDescription)): ?>
-                    <p class="page-description"><?php echo htmlspecialchars($pageDescription); ?></p>
+                    <p class="page-description"><?php echo $pageDescription; ?></p>
                 <?php endif; ?>
             </div>
             <?php if (isset($pageActions)): ?>

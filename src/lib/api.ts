@@ -29,12 +29,15 @@ export interface Story {
   is_self_published?: boolean; // API response field
   needsModeration?: boolean;
   needs_moderation?: boolean; // API response field
+  is_published?: boolean; // Whether the story is published
   rating?: number;
   reviewCount?: number;
   tags?: string[];
   author?: Author;
   source_type?: 'child' | 'parent' | 'classic';
   allow_reviews?: boolean;
+  estimated_reading_time?: string | number;
+  age_group?: string;
 }
 
 export interface Author {
@@ -45,6 +48,8 @@ export interface Author {
   slug: string;
   author_type?: 'retail' | 'parent' | 'child' | 'educator';
   featured?: boolean;
+  age?: number | string | null;
+  location?: string | null;
 }
 
 export interface Game {
@@ -254,104 +259,145 @@ export async function fetchAiTools(): Promise<AiTool[]> {
 
 // Fetch stories by tag
 export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
-  const raw = await fetchApi<any[]>('/stories', {
-    'filters[tags][$contains]': tag,
-    'sort': 'publishedAt:desc'
-  });
+  try {
+    const raw = await fetchApi<any[]>('/stories', {
+      'filters[tags][$contains]': tag,
+      'sort': 'publishedAt:desc'
+    });
 
-  return raw.map(item => ({
-    title: item.title,
-    excerpt: item.excerpt || '',
-    content: item.content,
-    coverImage: item.cover_urls ? {
-      default: item.cover_url || '',
-      thumbnail: item.cover_urls.thumbnail || '',
-      small: item.cover_urls.small || '',
-      medium: item.cover_urls.medium || '',
-      large: item.cover_urls.large || ''
-    } : item.cover_url || '',
-    slug: item.slug,
-    publishDate: item.publishedAt || '',
-    featured: Boolean(item.featured),
-    sponsored: Boolean(item.is_sponsored),
-    isAiEnhanced: Boolean(item.is_ai_enhanced),
-    isSelfPublished: Boolean(item.is_self_published),
-    needsModeration: Boolean(item.needs_moderation),
-    rating: Number(item.average_rating) || 0,
-    reviewCount: Number(item.review_count) || 0,
-    source_type: item.source_type || 'child',
-    allow_reviews: Boolean(item.allow_reviews),
-    tags: Array.isArray(item.tags) ? item.tags :
-          (item.tags ? [String(item.tags)] : []),
-    author: item.author ? {
-      name: item.author.name,
-      bio: item.author.bio || '',
-      avatar: item.author.avatar_url || '',
-      slug: item.author.slug,
-      author_type: item.author.author_type || 'retail'
-    } : undefined
-  }));
+    if (!raw || raw.length === 0) {
+      console.log(`No stories found with tag: ${tag}`);
+      return [];
+    }
+
+    return raw.map(item => ({
+      title: item.title,
+      excerpt: item.excerpt || '',
+      content: item.content,
+      coverImage: item.cover_urls ? {
+        default: item.cover_url || '',
+        thumbnail: item.cover_urls.thumbnail || '',
+        small: item.cover_urls.small || '',
+        medium: item.cover_urls.medium || '',
+        large: item.cover_urls.large || ''
+      } : item.cover_url || '',
+      slug: item.slug,
+      publishDate: item.publishedAt || '',
+      featured: Boolean(item.featured),
+      sponsored: Boolean(item.is_sponsored),
+      isAiEnhanced: Boolean(item.is_ai_enhanced),
+      isSelfPublished: Boolean(item.is_self_published),
+      needsModeration: Boolean(item.needs_moderation),
+      is_published: Boolean(item.is_published),
+      rating: Number(item.average_rating) || 0,
+      reviewCount: Number(item.review_count) || 0,
+      source_type: item.source_type || 'child',
+      allow_reviews: Boolean(item.allow_reviews),
+      estimated_reading_time: item.estimated_reading_time || '1',
+      age_group: item.age_group || '7-12',
+      tags: Array.isArray(item.tags) ? item.tags :
+            (item.tags ? [String(item.tags)] : []),
+      author: item.author ? {
+        name: item.author.name,
+        bio: item.author.bio || '',
+        avatar: item.author.avatar_url || '',
+        slug: item.author.slug,
+        author_type: item.author.author_type || 'retail',
+        age: item.author.age || null,
+        location: item.author.location || null
+      } : undefined
+    }));
+  } catch (error) {
+    console.error(`Error fetching stories with tag ${tag}:`, error);
+    throw error; // Re-throw to allow the caller to handle the error
+  }
 }
 
 // Single item fetch functions
-export async function fetchStory(slug: string): Promise<Story> {
-  const raw = await fetchApi<any[]>('/stories', {
-    'filters[slug][$eq]': slug,
-    'populate': '*'  // Ensure we get all fields including content
-  });
-  const item = raw[0];
-  return {
-    title: item.title,
-    excerpt: item.excerpt || '',
-    content: item.content || '',
-    coverImage: item.cover_urls ? {
-      default: item.cover_url || '',
-      thumbnail: item.cover_urls.thumbnail || '',
-      small: item.cover_urls.small || '',
-      medium: item.cover_urls.medium || '',
-      large: item.cover_urls.large || ''
-    } : item.cover_url || '',
-    slug: item.slug,
-    publishDate: item.publishedAt || '',
-    featured: Boolean(item.featured),
-    sponsored: Boolean(item.is_sponsored),
-    isAiEnhanced: Boolean(item.is_ai_enhanced),
-    isSelfPublished: Boolean(item.is_self_published),
-    needsModeration: Boolean(item.needs_moderation),
-    is_published: Boolean(item.is_published),
-    rating: Number(item.average_rating) || 0,
-    reviewCount: Number(item.review_count) || 0,
-    source_type: item.source_type || 'child',
-    allow_reviews: Boolean(item.allow_reviews),
-    estimated_reading_time: item.estimated_reading_time || '1',
-    age_group: item.age_group || '7-12',
-    tags: Array.isArray(item.tags) ? item.tags :
-          (item.tags ? [String(item.tags)] : []),
-    author: item.author ? {
-      name: item.author.name,
-      bio: item.author.bio || '',
-      avatar: item.author.avatar_url || '',
-      slug: item.author.slug,
-      author_type: item.author.author_type || 'retail',
-      age: item.author.age || null,
-      location: item.author.location || null
-    } : undefined
-  };
+export async function fetchStory(slug: string): Promise<Story | null> {
+  try {
+    const raw = await fetchApi<any[]>('/stories', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'  // Ensure we get all fields including content
+    });
+
+    // Check if we got any results
+    if (!raw || raw.length === 0) {
+      console.error(`No story found with slug: ${slug}`);
+      return null;
+    }
+
+    const item = raw[0];
+    return {
+      title: item.title,
+      excerpt: item.excerpt || '',
+      content: item.content || '',
+      coverImage: item.cover_urls ? {
+        default: item.cover_url || '',
+        thumbnail: item.cover_urls.thumbnail || '',
+        small: item.cover_urls.small || '',
+        medium: item.cover_urls.medium || '',
+        large: item.cover_urls.large || ''
+      } : item.cover_url || '',
+      slug: item.slug,
+      publishDate: item.publishedAt || '',
+      featured: Boolean(item.featured),
+      sponsored: Boolean(item.is_sponsored),
+      isAiEnhanced: Boolean(item.is_ai_enhanced),
+      isSelfPublished: Boolean(item.is_self_published),
+      needsModeration: Boolean(item.needs_moderation),
+      is_published: Boolean(item.is_published),
+      rating: Number(item.average_rating) || 0,
+      reviewCount: Number(item.review_count) || 0,
+      source_type: item.source_type || 'child',
+      allow_reviews: Boolean(item.allow_reviews),
+      estimated_reading_time: item.estimated_reading_time || '1',
+      age_group: item.age_group || '7-12',
+      tags: Array.isArray(item.tags) ? item.tags :
+            (item.tags ? [String(item.tags)] : []),
+      author: item.author ? {
+        name: item.author.name,
+        bio: item.author.bio || '',
+        avatar: item.author.avatar_url || '',
+        slug: item.author.slug,
+        author_type: item.author.author_type || 'retail',
+        age: item.author.age || null,
+        location: item.author.location || null
+      } : undefined
+    };
+  } catch (error) {
+    console.error(`Error fetching story with slug ${slug}:`, error);
+    return null;
+  }
 }
 
-export async function fetchAuthor(slug: string): Promise<Author> {
-  const raw = await fetchApi<any[]>('/authors', {
-    'filters[slug][$eq]': slug
-  });
-  const item = raw[0];
-  return {
-    name: item.name,
-    bio: item.bio || '',
-    avatar: item.avatar_url || '',
-    slug: item.slug,
-    author_type: item.author_type || 'parent',
-    featured: Boolean(item.featured)
-  };
+export async function fetchAuthor(slug: string): Promise<Author | null> {
+  try {
+    const raw = await fetchApi<any[]>('/authors', {
+      'filters[slug][$eq]': slug
+    });
+
+    // Check if we got any results
+    if (!raw || raw.length === 0) {
+      console.error(`No author found with slug: ${slug}`);
+      return null;
+    }
+
+    const item = raw[0];
+    return {
+      name: item.name,
+      bio: item.bio || '',
+      avatar: item.avatar_url || '',
+      slug: item.slug,
+      author_type: item.author_type || 'parent',
+      featured: Boolean(item.featured),
+      age: item.age || null,
+      location: item.location || null
+    };
+  } catch (error) {
+    console.error(`Error fetching author with slug ${slug}:`, error);
+    return null;
+  }
 }
 
 // Fetch blog posts

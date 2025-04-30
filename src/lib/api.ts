@@ -165,10 +165,14 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     console.error("Error applying filters:", error);
   }
 
+  // Add populate parameter to ensure we get content
+  params['populate'] = '*';
+
   const raw = await fetchApi<any[]>('/stories', params);
   return raw.map(item => ({
     title: item.title,
-    excerpt: item.excerpt,
+    excerpt: item.excerpt || '',
+    content: item.content || '',  // Include content field
     coverImage: item.cover_urls ? {
       default: item.cover_url || '',
       thumbnail: item.cover_urls.thumbnail || '',
@@ -183,10 +187,13 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     isAiEnhanced: Boolean(item.is_ai_enhanced),
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
+    is_published: Boolean(item.is_published),  // Include is_published field
     rating: Number(item.average_rating) || 0,
     reviewCount: Number(item.review_count) || 0,
     source_type: item.source_type || 'child',
     allow_reviews: Boolean(item.allow_reviews),
+    estimated_reading_time: item.estimated_reading_time || '1',  // Include reading time
+    age_group: item.age_group || '7-12',  // Include age group
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
@@ -194,7 +201,9 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
       bio: item.author.bio || '',
       avatar: item.author.avatar_url || '',
       slug: item.author.slug,
-      author_type: item.author.author_type || 'retail'
+      author_type: item.author.author_type || 'retail',
+      age: item.author.age || null,  // Include author age
+      location: item.author.location || null  // Include author location
     } : undefined
   }));
 }

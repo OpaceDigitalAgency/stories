@@ -15,6 +15,9 @@ $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
 $adminDir = strpos($basePath, '/admin/content') !== false ? '../../' : '../';
 require_once $adminDir . 'simple_auth.php';
 
+// For debugging
+error_log("Auth check running in: " . $_SERVER['SCRIPT_FILENAME']);
+
 // Initialize SimpleAuth with database config
 $config = [
     'host' => 'localhost',
@@ -40,8 +43,26 @@ if (!$user = SimpleAuth::check()) {
     // Prevent redirect loops by checking if we're already on the login page
     $currentScript = basename($_SERVER['SCRIPT_FILENAME']);
     if ($currentScript !== 'login.php') {
-        // Otherwise, redirect to login page
+        // For debugging
+        error_log("Redirecting to login from: " . $_SERVER['SCRIPT_FILENAME']);
+
+        // Redirect to login page
         $loginPath = $adminDir === '../' ? 'login.php' : '../login.php';
+
+        // Clear any existing output to prevent "headers already sent" errors
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Disable further output buffering
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Set a session variable to indicate we're redirecting to login
+        $_SESSION['redirecting_to_login'] = true;
+
+        // Redirect
         header("Location: $loginPath");
         exit;
     }

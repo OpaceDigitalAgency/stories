@@ -19,6 +19,9 @@ $pageDescription = $pageDescription ?? '';
 // Determine the correct paths based on the current file location
 $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
 $isContentDir = strpos($basePath, '/admin/content') !== false;
+
+// For debugging
+error_log("Header included from: " . $_SERVER['SCRIPT_FILENAME'] . ", isContentDir: " . ($isContentDir ? 'true' : 'false'));
 ?>
 <!DOCTYPE html>
 <html lang="en">

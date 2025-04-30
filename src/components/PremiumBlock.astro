@@ -20,7 +20,7 @@ const {
   type = 'editor-pick',
   title,
   description,
-  image = '/images/premium-banner.jpg',
+  image = '/images/default-cover.svg',
   link = '/premium',
   buttonText = 'Learn More',
   buttonLink,
@@ -43,7 +43,7 @@ const typeClasses = {
   <a href={link} class="block">
     <div class="h-40 overflow-hidden relative">
       <img
-        src={image || '/images/premium-banner.jpg'}
+        src={image || '/images/default-cover.svg'}
         alt={title}
         width="400"
         height="300"

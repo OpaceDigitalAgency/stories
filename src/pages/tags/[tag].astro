@@ -15,8 +15,18 @@ if (!tag) {
 // Decode the tag from URL format
 const decodedTag = decodeURIComponent(tag.replace(/-/g, ' '));
 
-// Fetch stories by tag
-const taggedStories = await fetchStoriesByTag(decodedTag);
+// Fetch stories by tag with error handling
+let taggedStories: Story[] = [];
+let fetchError = false;
+let errorMessage = '';
+
+try {
+  taggedStories = await fetchStoriesByTag(decodedTag);
+} catch (error) {
+  console.error(`Error fetching stories for tag "${decodedTag}":`, error);
+  fetchError = true;
+  errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+}
 
 // Page metadata
 const title = `${decodedTag} Stories | Stories From The Web`;
@@ -30,7 +40,7 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
   <title>{title}</title>
   <meta name="description" content={description}>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  
+
   <!-- Open Graph / Social Media Meta Tags -->
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
@@ -39,14 +49,14 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
-  
+
   <main class="pt-24 pb-32">
     <section class="relative py-16 overflow-hidden">
       <!-- Enhanced decorative blobs -->
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-purple-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-purple-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-purple-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <style>
         @keyframes blob {
           0% {
@@ -101,7 +111,7 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
           animation: fadeIn 0.8s ease-out forwards;
         }
       </style>
-      
+
       <div class="container relative z-10">
         <div class="max-w-4xl mx-auto">
           <!-- Tag Header -->
@@ -112,7 +122,7 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
                 <span class="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-purple-200 via-purple-500 to-purple-200 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></span>
               </span>
             </h1>
-            
+
             <p class="text-lg text-purple-600/80 mb-12">
               {taggedStories.length === 0
                 ? `No stories found with the tag "${decodedTag}"`
@@ -120,12 +130,12 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
               }
             </p>
           </div>
-          
+
           <!-- Stories Grid -->
           {taggedStories.length > 0 && (
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 perspective-1000">
               {taggedStories.map((story, index) => (
-                <div 
+                <div
                   class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
                   style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
                 >
@@ -134,9 +144,31 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
               ))}
             </div>
           )}
-          
+
+          <!-- Error Message -->
+          {fetchError && (
+            <div class="text-center py-12">
+              <div class="mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-red-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p class="text-lg text-red-600 mb-2">
+                Error loading stories for this tag.
+              </p>
+              <p class="text-md text-text-secondary mb-4">
+                {errorMessage || "Please try again later."}
+              </p>
+              <a href="/stories" class="btn btn-primary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
+                <span class="relative z-10 flex items-center">
+                  Browse All Stories
+                </span>
+              </a>
+            </div>
+          )}
+
           <!-- No Results -->
-          {taggedStories.length === 0 && (
+          {!fetchError && taggedStories.length === 0 && (
             <div class="text-center py-12">
               <div class="mb-6">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-text-secondary">
@@ -152,7 +184,7 @@ const description = `Browse stories tagged with "${decodedTag}" on Stories From 
       </div>
     </section>
   </main>
-  
+
   <Footer />
 </body>
 </html>

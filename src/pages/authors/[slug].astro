@@ -26,7 +26,7 @@ const authorStories = stories.filter(s => s.author?.slug === slug);
 
 // Get popular tags from author's stories
 const allTags = authorStories.flatMap(story => story.tags || []);
-const tagCounts = allTags.reduce((acc, tag) => {
+const tagCounts: Record<string, number> = allTags.reduce((acc: Record<string, number>, tag: string) => {
   acc[tag] = (acc[tag] || 0) + 1;
   return acc;
 }, {});
@@ -47,14 +47,14 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
   <title>{title}</title>
   <meta name="description" content={description}>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  
+
   <!-- Open Graph / Social Media Meta Tags -->
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
   <meta property="og:image" content={author.avatar}>
   <meta property="og:url" content={`https://storiesfromtheweb.org/authors/${slug}`}>
   <meta property="og:type" content="profile">
-  
+
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content={title}>
@@ -63,7 +63,7 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
-  
+
   <main class="pt-24 pb-32">
     <!-- Author Header -->
     <section class="relative py-16 overflow-hidden">
@@ -71,33 +71,33 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <div class="container relative z-10">
         <div class="max-w-4xl mx-auto">
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
             <!-- Author Avatar -->
             <div class="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
-              <img 
-                src={author.avatar || '/images/default-avatar.svg'} 
-                alt={author.name} 
+              <img
+                src={author.avatar || '/images/default-avatar.svg'}
+                alt={author.name}
                 class="w-full h-full object-cover"
               />
             </div>
-            
+
             <div class="flex-1 text-center md:text-left">
               <!-- Author Name -->
               <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-4">
                 <h1 class="text-4xl md:text-5xl font-display font-bold text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
                   {author.name}
                 </h1>
-                
+
                 {author.featured && (
                   <div>
                     <SponsoredBadge type="featured" />
                   </div>
                 )}
               </div>
-              
+
               <!-- Author Stats -->
               <div class="flex flex-wrap justify-center md:justify-start gap-6 mb-6 text-text-secondary">
                 <div class="flex items-center">
@@ -106,7 +106,7 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
                   </svg>
                   <span>{authorStories.length} Stories</span>
                 </div>
-                
+
                 {author.storyCount && (
                   <div class="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
@@ -116,7 +116,7 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
                     <span>{author.storyCount.toLocaleString()} Views</span>
                   </div>
                 )}
-                
+
                 {author.joinDate && (
                   <div class="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
@@ -126,21 +126,21 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
                   </div>
                 )}
               </div>
-              
+
               <!-- Author Bio -->
               {author.bio && (
                 <p class="text-lg text-text-secondary mb-6">
                   {author.bio}
                 </p>
               )}
-              
+
               <!-- Social Links -->
               {author.socialLinks && (
                 <div class="flex flex-wrap justify-center md:justify-start gap-4">
                   {author.socialLinks.twitter && (
-                    <a 
-                      href={author.socialLinks.twitter} 
-                      target="_blank" 
+                    <a
+                      href={author.socialLinks.twitter}
+                      target="_blank"
                       rel="noopener noreferrer"
                       class="bg-blue-400 text-white p-3 rounded-full hover:bg-blue-500 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
                       aria-label="Twitter"
@@ -150,11 +150,11 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
                       </svg>
                     </a>
                   )}
-                  
+
                   {author.socialLinks.instagram && (
-                    <a 
-                      href={author.socialLinks.instagram} 
-                      target="_blank" 
+                    <a
+                      href={author.socialLinks.instagram}
+                      target="_blank"
                       rel="noopener noreferrer"
                       class="bg-pink-500 text-white p-3 rounded-full hover:bg-pink-600 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
                       aria-label="Instagram"
@@ -164,11 +164,11 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
                       </svg>
                     </a>
                   )}
-                  
+
                   {author.socialLinks.website && (
-                    <a 
-                      href={author.socialLinks.website} 
-                      target="_blank" 
+                    <a
+                      href={author.socialLinks.website}
+                      target="_blank"
                       rel="noopener noreferrer"
                       class="bg-gray-700 text-white p-3 rounded-full hover:bg-gray-800 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110 transition-transform duration-500"
                       aria-label="Website"
@@ -182,7 +182,7 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
               )}
             </div>
           </div>
-          
+
           <!-- Popular Tags -->
           {popularTags.length > 0 && (
             <div class="mb-12">
@@ -197,18 +197,18 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
         </div>
       </div>
     </section>
-    
+
     <!-- Author's Stories -->
     <section class="py-16 bg-white">
       <div class="container">
         <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
           Stories by {author.name}
         </h2>
-        
+
         {authorStories.length > 0 ? (
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 perspective-1000">
             {authorStories.map((story, index) => (
-              <div 
+              <div
                 class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
                 style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
               >
@@ -234,23 +234,26 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
         )}
       </div>
     </section>
-    
-    <!-- Reviews Section -->
-    <section class="py-16">
-      <div class="container">
-        <div class="max-w-4xl mx-auto">
-          <ReviewSection 
-            itemType="author" 
-            itemId={author.id || slug} 
-            itemName={author.name}
-          />
+
+    <!-- Reviews Section - Only show for non-child authors -->
+    {author.author_type !== 'child' && (
+      <section class="py-16">
+        <div class="container">
+          <div class="max-w-4xl mx-auto">
+            <ReviewSection
+              itemType="author"
+              itemId={author.id || slug}
+              itemName={author.name}
+              authorType={author.author_type || 'retail'}
+            />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    )}
   </main>
-  
+
   <Footer />
-  
+
   <style>
     @keyframes fadeInUp {
       from {
@@ -266,12 +269,12 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .fancy-underline {
       position: relative;
       display: inline-block;
     }
-    
+
     .fancy-underline::after {
       content: '';
       position: absolute;
@@ -285,7 +288,7 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
       transform-origin: center;
       transition: transform 0.5s ease;
     }
-    
+
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }

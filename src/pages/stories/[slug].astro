@@ -7,7 +7,7 @@ import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
-import { fetchStories } from '../../lib/api';
+import { fetchStories, fetchStory } from '../../lib/api';
 import type { Story } from '../../types/components';
 import '../../styles/base.css';
 
@@ -32,9 +32,14 @@ if (!slug) {
   return Astro.redirect('/404');
 }
 
-// Fetch story data
-const stories = await fetchStories();
-const story = stories.find(s => s.slug === slug);
+// Fetch story data using fetchStory to get full content
+let story;
+try {
+  story = await fetchStory(slug);
+} catch (error) {
+  console.error(`Error fetching story with slug ${slug}:`, error);
+  return Astro.redirect('/404');
+}
 
 // If story not found, redirect to 404
 if (!story) {
@@ -42,16 +47,23 @@ if (!story) {
 }
 
 // Get related stories (same author or tags)
-const relatedStories = stories
-  .filter(s => 
-    s.slug !== slug && 
-    (s.author?.slug === story.author?.slug || 
-     s.tags?.some(tag => story.tags?.includes(tag)))
-  )
-  .slice(0, 4);
+let relatedStories: Story[] = [];
+try {
+  // Fetch all stories for related content
+  const allStories = await fetchStories();
+  relatedStories = allStories
+    .filter(s =>
+      s.slug !== slug &&
+      (s.author?.slug === story.author?.slug ||
+       s.tags?.some((tag: string) => story.tags?.includes(tag)))
+    )
+    .slice(0, 4);
+} catch (error) {
+  console.error("Error fetching related stories:", error);
+}
 
 // Format date if available
-const formattedDate = story.publishDate 
+const formattedDate = story.publishDate
   ? new Date(story.publishDate).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -71,14 +83,14 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
   <title>{title}</title>
   <meta name="description" content={description}>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  
+
   <!-- Open Graph / Social Media Meta Tags -->
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
   <meta property="og:image" content={getImageUrl(story)}>
   <meta property="og:url" content={`https://storiesfromtheweb.org/stories/${slug}`}>
   <meta property="og:type" content="article">
-  
+
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content={title}>
@@ -87,7 +99,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
-  
+
   <main class="pt-24 pb-32">
     <!-- Story Header -->
     <section class="relative py-16 overflow-hidden">
@@ -95,7 +107,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <div class="container relative z-10">
         <div class="max-w-4xl mx-auto">
           <!-- Story Meta -->
@@ -103,27 +115,27 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
             {story.tags?.map(tag => (
               <TagBadge tag={tag} size="md" />
             ))}
-            
+
             {story.sponsored && (
               <div class="ml-auto">
                 <SponsoredBadge type={story.featured ? "featured" : "sponsored"} />
               </div>
             )}
           </div>
-          
+
           <!-- Story Title -->
           <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
             {story.title}
           </h1>
-          
+
           <!-- Author and Date -->
           <div class="flex items-center justify-between mb-8">
             {story.author && (
               <a href={`/authors/${story.author.slug}`} class="flex items-center group">
                 <div class="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-white shadow-md">
-                  <img 
-                    src={story.author.avatar || '/images/default-avatar.svg'} 
-                    alt={story.author.name} 
+                  <img
+                    src={story.author.avatar || '/images/default-avatar.svg'}
+                    alt={story.author.name}
                     class="w-full h-full object-cover"
                   />
                 </div>
@@ -139,14 +151,14 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
                 </div>
               </a>
             )}
-            
+
             {story.rating && (
               <div>
                 <RatingStars rating={story.rating} size="md" />
               </div>
             )}
           </div>
-          
+
           <!-- Cover Image -->
           <div class="mb-12 rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
             <img
@@ -159,7 +171,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
               class="w-full h-auto object-cover"
             />
           </div>
-          
+
           <!-- Author Info -->
           {story.author?.author_type === 'child' && (
             <div class="bg-purple-50 rounded-xl p-6 mb-8">
@@ -185,6 +197,16 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
                   <span class="font-semibold">Story Type:</span> {story.author.author_type.charAt(0).toUpperCase() + story.author.author_type.slice(1)} Story
                 </div>
               )}
+              {story.author?.age && (
+                <div>
+                  <span class="font-semibold">Author Age:</span> {story.author.age} years
+                </div>
+              )}
+              {story.author?.location && (
+                <div>
+                  <span class="font-semibold">Author Location:</span> {story.author.location}
+                </div>
+              )}
             </div>
           </div>
 
@@ -208,7 +230,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
               </div>
             )}
           </div>
-          
+
           <!-- Moderation CTA - Only show for admins and unpublished/needs moderation stories -->
           {(Astro.locals?.user && 'isAdmin' in Astro.locals.user && (!story.is_published || story.needs_moderation)) && (
             <div class="mb-16">
@@ -219,22 +241,24 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
               />
             </div>
           )}
-          
+
           <!-- Reviews Section - Only show for non-child authors and published stories -->
-          <ReviewSection
-            itemType="story"
-            itemId={slug}
-            itemName={story.title}
-            rating={story.rating || 0}
-            reviewCount={story.reviewCount || 0}
-            authorType={story.author?.author_type || 'retail'}
-            isAdmin={'isAdmin' in (Astro.locals?.user || {})}
-            isPublished={story.is_published || false}
-          />
+          {story.author?.author_type !== 'child' && (
+            <ReviewSection
+              itemType="story"
+              itemId={slug}
+              itemName={story.title}
+              rating={story.rating || 0}
+              reviewCount={story.reviewCount || 0}
+              authorType={story.author?.author_type || 'retail'}
+              isAdmin={'isAdmin' in (Astro.locals?.user || {})}
+              isPublished={story.is_published || false}
+            />
+          )}
         </div>
       </div>
     </section>
-    
+
     <!-- Related Stories -->
     {relatedStories.length > 0 && (
       <section class="py-16 bg-white">
@@ -242,10 +266,10 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
           <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
             Related Stories
           </h2>
-          
+
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 perspective-1000">
             {relatedStories.map((relatedStory, index) => (
-              <div 
+              <div
                 class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
                 style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
               >
@@ -257,9 +281,9 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
       </section>
     )}
   </main>
-  
+
   <Footer />
-  
+
   <style>
     @keyframes fadeInUp {
       from {
@@ -275,12 +299,12 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .fancy-underline {
       position: relative;
       display: inline-block;
     }
-    
+
     .fancy-underline::after {
       content: '';
       position: absolute;
@@ -294,7 +318,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
       transform-origin: center;
       transition: transform 0.5s ease;
     }
-    
+
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }

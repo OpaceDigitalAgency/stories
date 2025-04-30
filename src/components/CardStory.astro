@@ -41,7 +41,7 @@ if (story?.author?.avatar && typeof story.author.avatar === 'string') {
 console.log("Author avatar URL:", authorAvatarUrl); // Debug log
 
 // Format date if available
-const formattedDate = story.publishDate 
+const formattedDate = story.publishDate
   ? new Date(story.publishDate).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -60,14 +60,14 @@ const formattedDate = story.publishDate
         onerror="this.onerror=null; this.src='/images/default-cover.svg';"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
-      
+
       {/* Source type indicator */}
       {story.source_type && (
         <div class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
           {story.source_type}
         </div>
       )}
-      
+
       {story.tags && story.tags.length > 0 && (
         <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
           {story.tags.slice(0, 2).map(tag => (
@@ -82,7 +82,7 @@ const formattedDate = story.publishDate
       )}
     </div>
   </a>
-  
+
   <div class="p-5 flex flex-col flex-grow">
     {/* Title */}
     <h3 class="text-lg font-bold text-text-primary line-clamp-2 hover:text-primary transition-colors duration-300 mb-1">
@@ -90,20 +90,21 @@ const formattedDate = story.publishDate
         {story.title}
       </a>
     </h3>
-    
+
     {/* Ratings - only show for non-child stories with allow_reviews=true */}
     {story.rating && typeof story.rating === 'number' && story.rating > 0 &&
-     story.source_type !== 'child' && story.allow_reviews === true && (
+     story.source_type !== 'child' && story.author?.author_type !== 'child' && story.allow_reviews === true && (
       <div class="mb-3">
         <RatingStars
           rating={story.rating}
           size="sm"
           allow_reviews={true}
           source_type={story.source_type}
+          showRatings={true}
         />
       </div>
     )}
-    
+
     {/* Excerpt */}
     <div class="min-h-[4.5rem] mb-4">
       {story.excerpt && (
@@ -112,7 +113,7 @@ const formattedDate = story.publishDate
         </p>
       )}
     </div>
-    
+
     {/* Author and date */}
     <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
       {story.author && (
@@ -138,7 +139,7 @@ const formattedDate = story.publishDate
           </div>
         </a>
       )}
-      
+
       {formattedDate && (
         <span class="text-xs text-text-secondary/70">
           {formattedDate}

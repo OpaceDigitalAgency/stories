@@ -1,5 +1,5 @@
 ---
-import type { TagBadgeProps } from '../types/components';
+import type { TagBadgeProps, TagObject } from '../types/components';
 
 interface ExtendedTagBadgeProps extends TagBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -31,13 +31,30 @@ const classes = `${baseClasses} ${sizeClasses[size]} ${colorClass} ${hoverClasse
 let tagText = '';
 let tagSlug = '';
 
+// Handle different tag types
+const tagObj = tag as TagObject;
+
 if (typeof tag === 'string') {
+  // Simple string tag
   tagText = tag;
   tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
 } else if (tag && typeof tag === 'object') {
-  // If tag is an object, try to get the name property
-  tagText = tag.name || tag.title || JSON.stringify(tag);
-  tagSlug = (tag.slug || tagText).toLowerCase().replace(/\s+/g, '-');
+  // Object tag with properties
+  if (tagObj.name) {
+    tagText = tagObj.name;
+  } else if (tagObj.title) {
+    tagText = tagObj.title;
+  } else if (Object.prototype.toString.call(tag) === '[object Object]') {
+    // Plain object with no name/title
+    tagText = 'Tag';
+  } else {
+    // Last resort - stringify but limit length
+    const stringified = JSON.stringify(tag);
+    tagText = stringified.length > 20 ? stringified.substring(0, 17) + '...' : stringified;
+  }
+
+  // Get slug from the object or create one from the text
+  tagSlug = (tagObj.slug || tagText).toLowerCase().replace(/\s+/g, '-');
 } else {
   // Fallback for any other type
   tagText = String(tag || 'Tag');

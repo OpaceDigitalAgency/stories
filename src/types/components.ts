@@ -46,6 +46,17 @@ export interface Author {
   author_type?: 'retail' | 'parent' | 'child' | 'educator';
   age?: number | string;
   location?: string;
+  id?: string | number;
+  bio?: string;
+  featured?: boolean;
+  storyCount?: number;
+  joinDate?: string;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 export interface Story {
@@ -104,9 +115,16 @@ export interface CardAuthorProps {
   className?: string;
 }
 
+export interface TagObject {
+  name?: string;
+  title?: string;
+  slug?: string;
+  [key: string]: any;
+}
+
 export interface TagBadgeProps {
-  /** The tag text to display */
-  tag: string;
+  /** The tag text to display - can be a string or an object with name/title/slug properties */
+  tag: string | TagObject | any;
   /** Optional size variant */
   size?: 'sm' | 'md' | 'lg';
   /** Optional class names to apply to the badge */
@@ -126,6 +144,8 @@ export interface RatingStarsProps {
   source_type?: 'child' | 'parent' | 'classic';
   /** Whether the stars should be interactive */
   interactive?: boolean;
+  /** Whether to show the rating value */
+  showRatings?: boolean;
 }
 
 export interface StoryCarouselProps {

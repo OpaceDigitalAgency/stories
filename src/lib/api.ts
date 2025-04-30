@@ -94,11 +94,11 @@ export const buildUrl = (endpoint: string, params: Record<string, string | numbe
 export async function fetchApi<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
   const url = buildUrl(endpoint, params);
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -118,48 +118,48 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     'pagination[limit]': limit,
     'pagination[page]': page
   };
-  
+
   // Set default sort if not specified in filters
   if (!filters.sort) {
     params['sort'] = 'publishedAt:desc';
   } else {
     params['sort'] = filters.sort;
   }
-  
+
   // Add filters only if they're defined
   // Using a more lenient approach to avoid breaking the API
   try {
     console.log("Applying filters:", JSON.stringify(filters));
-    
+
     // Apply filters directly as query parameters
     // This matches the backend API implementation
     if (filters.featured === true) {
       params['featured'] = 1;
       console.log("Setting featured=1 filter");
     }
-    
+
     // Map 'sponsored' to 'is_sponsored' for the API
     if (filters.sponsored === true) {
       params['is_sponsored'] = 1;
       console.log("Setting is_sponsored=1 filter");
     }
-    
+
     if (filters.isSelfPublished === true) {
       params['is_self_published'] = 1;
       console.log("Setting is_self_published=1 filter");
     }
-    
+
     if (filters.isAiEnhanced === true) {
       params['is_ai_enhanced'] = 1;
       console.log("Setting is_ai_enhanced=1 filter");
     }
-    
+
     // Log the final params for debugging
     console.log("Final API params:", JSON.stringify(params));
   } catch (error) {
     console.error("Error applying filters:", error);
   }
-  
+
   const raw = await fetchApi<any[]>('/stories', params);
   return raw.map(item => ({
     title: item.title,
@@ -258,7 +258,7 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
     'filters[tags][$contains]': tag,
     'sort': 'publishedAt:desc'
   });
-  
+
   return raw.map(item => ({
     title: item.title,
     excerpt: item.excerpt || '',
@@ -303,6 +303,7 @@ export async function fetchStory(slug: string): Promise<Story> {
   return {
     title: item.title,
     excerpt: item.excerpt || '',
+    content: item.content || '',
     coverImage: item.cover_urls ? {
       default: item.cover_url || '',
       thumbnail: item.cover_urls.thumbnail || '',
@@ -317,17 +318,23 @@ export async function fetchStory(slug: string): Promise<Story> {
     isAiEnhanced: Boolean(item.is_ai_enhanced),
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
+    is_published: Boolean(item.is_published),
     rating: Number(item.average_rating) || 0,
     reviewCount: Number(item.review_count) || 0,
     source_type: item.source_type || 'child',
     allow_reviews: Boolean(item.allow_reviews),
+    estimated_reading_time: item.estimated_reading_time || '1',
+    age_group: item.age_group || '7-12',
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
       name: item.author.name,
       bio: item.author.bio || '',
       avatar: item.author.avatar_url || '',
-      slug: item.author.slug
+      slug: item.author.slug,
+      author_type: item.author.author_type || 'retail',
+      age: item.author.age || null,
+      location: item.author.location || null
     } : undefined
   };
 }
@@ -354,23 +361,23 @@ export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<strin
     'pagination[limit]': limit,
     'pagination[page]': page
   };
-  
+
   // Set default sort if not specified in filters
   if (!filters.sort) {
     params['sort'] = 'created_at:desc';
   } else {
     params['sort'] = filters.sort;
   }
-  
+
   // Add any additional filters
   Object.entries(filters).forEach(([key, value]) => {
     if (key !== 'sort') {
       params[key] = value;
     }
   });
-  
+
   console.log("Fetching blog posts with params:", JSON.stringify(params));
-  
+
   try {
     const raw = await fetchApi<any[]>('/blog-posts', params);
     return raw.map(item => ({

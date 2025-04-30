@@ -1,37 +1,17 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * Tags Admin Page
+ *
+ * This page displays a list of all tags and allows for searching, filtering, and bulk actions.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Check if tags table exists
     $stmt = $db->query("SHOW TABLES LIKE 'tags'");
@@ -70,10 +50,10 @@ try {
     }
 
     // Get all tags with usage counts
-    $query = "SELECT t.*, 
+    $query = "SELECT t.*,
               (SELECT COUNT(*) FROM story_tags WHERE tag_id = t.id) as story_count,
               (SELECT COUNT(*) FROM post_tags WHERE tag_id = t.id) as post_count
-              FROM tags t 
+              FROM tags t
               ORDER BY t.name ASC";
     $tags = $db->query($query)->fetchAll();
 
@@ -92,120 +72,64 @@ if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tags - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
 
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link active">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
+// Set page variables for header
+$pageTitle = 'Tags';
+$currentPage = 'tags';
+$pageDescription = 'Manage all your tags from here.';
+$pageActions = '
+<form method="GET" action="tag-form.php">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Tag
+    </button>
+</form>
+';
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title">Tags</h1>
-                <p class="page-description">Manage all your tags from here.</p>
-            </div>
-            <form method="GET" action="tag-form.php">
-                <button type="submit" class="btn btn-success">
-                    <span class="icon-edit"></span> Add New Tag
-                </button>
-            </form>
-        </div>
+// Include header
+include_once '../includes/header.php';
 
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('tags', ['name', 'slug', 'description']);
+}
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('tags', ['delete']);
+}
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Slug</th>
-                        <th>Description</th>
-                        <th>Stories</th>
-                        <th>Blog Posts</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($tags)): ?>
-                        <tr>
-                            <td colspan="6" class="text-center">No tags found. Add your first tag!</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($tags as $tag): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($tag['name']); ?></td>
-                                <td><?php echo htmlspecialchars($tag['slug']); ?></td>
-                                <td><?php echo htmlspecialchars(substr($tag['description'] ?? '', 0, 100) . (strlen($tag['description'] ?? '') > 100 ? '...' : '')); ?></td>
-                                <td><?php echo $tag['story_count']; ?></td>
-                                <td><?php echo $tag['post_count']; ?></td>
-                                <td>
-                                    <div class="table-actions">
-                                        <form method="GET" action="view-tag.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <form method="GET" action="tag-form.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <span class="icon-edit"></span> Edit
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="delete-tag.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this tag?')">
-                                                <span class="icon-delete"></span> Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
+    $columns = [
+        'name' => 'Name',
+        'slug' => 'Slug',
+        'description' => 'Description',
+        'story_count' => 'Stories',
+        'post_count' => 'Blog Posts'
+    ];
+
+    // Define custom formatters
+    $customFormatters = [
+        'description' => function($tag, $key) {
+            return htmlspecialchars(substr($tag[$key] ?? '', 0, 100) . (strlen($tag[$key] ?? '') > 100 ? '...' : ''));
+        }
+    ];
+
+    // Render the table
+    renderTable($tags, $columns, [
+        'content_type' => 'tags',
+        'name_field' => 'name',
+        'empty_message' => 'No tags found. Add your first tag!',
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-tag.php?id={id}',
+        'edit_url' => 'tag-form.php?id={id}',
+        'delete_url' => 'delete-tag.php'
+    ]);
+}
+
+// Include footer
+include_once '../includes/footer.php';

@@ -120,9 +120,20 @@ try {
     // Commit transaction
     $db->commit();
 
-    // Return JSON success response
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true, 'message' => 'Author deleted successfully']);
+    // Check if this is an AJAX request
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+              strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if ($isAjax) {
+        // Return JSON success response for AJAX requests
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Author deleted successfully']);
+    } else {
+        // Store success message and redirect for regular form submissions
+        session_start();
+        $_SESSION['success'] = "Author deleted successfully";
+        header("Location: ../authors.php");
+    }
     exit;
 
 } catch (Exception $e) {
@@ -133,8 +144,19 @@ try {
 
     error_log("Delete author error: " . $e->getMessage());
 
-    // Return JSON error response
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    // Check if this is an AJAX request
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+              strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+    if ($isAjax) {
+        // Return JSON error response for AJAX requests
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    } else {
+        // Store error in session and redirect for regular form submissions
+        session_start();
+        $_SESSION['error'] = $e->getMessage();
+        header("Location: ../authors.php");
+    }
     exit;
 }

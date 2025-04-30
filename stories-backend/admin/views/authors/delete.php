@@ -18,24 +18,24 @@ $otherAuthors = $stmt->fetchAll();
 
 <div class="container">
     <h1>Delete Author</h1>
-    
+
     <?php if ($author): ?>
         <p>Are you sure you want to delete the author "<?php echo htmlspecialchars($author['name']); ?>"?</p>
-        
+
         <?php if ($storyCount > 0): ?>
             <div class="alert alert-warning">
                 <p>This author has <?php echo $storyCount; ?> associated stories. Please choose how to handle them:</p>
-                
-                <form action="../admin/content/delete-author.php" method="post" class="mt-3">
+
+                <form action="<?php echo ADMIN_URL; ?>/content/delete-author.php" method="post" class="mt-3">
                     <input type="hidden" name="id" value="<?php echo $authorId; ?>">
-                    
+
                     <div class="form-check mb-3">
                         <input type="radio" id="delete_all" name="action" value="delete_all" class="form-check-input">
                         <label for="delete_all" class="form-check-label">
                             Delete all associated stories
                         </label>
                     </div>
-                    
+
                     <div class="form-check mb-3">
                         <input type="radio" id="reassign" name="action" value="reassign" class="form-check-input">
                         <label for="reassign" class="form-check-label">
@@ -50,19 +50,19 @@ $otherAuthors = $stmt->fetchAll();
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="form-check mb-3">
                         <input type="radio" id="cancel" name="action" value="cancel" class="form-check-input" checked>
                         <label for="cancel" class="form-check-label">
                             Cancel deletion
                         </label>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-danger">Confirm</button>
                     <a href="authors.php" class="btn btn-secondary">Back</a>
                 </form>
             </div>
-            
+
             <script>
             document.querySelectorAll('input[name="action"]').forEach(radio => {
                 radio.addEventListener('change', function() {
@@ -71,7 +71,7 @@ $otherAuthors = $stmt->fetchAll();
             });
             </script>
         <?php else: ?>
-            <form action="content/delete-author.php" method="post">
+            <form action="<?php echo ADMIN_URL; ?>/content/delete-author.php" method="post">
                 <input type="hidden" name="id" value="<?php echo $authorId; ?>">
                 <input type="hidden" name="action" value="delete_all">
                 <button type="submit" class="btn btn-danger">Delete Author</button>

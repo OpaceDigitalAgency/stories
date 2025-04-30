@@ -13,7 +13,7 @@ const stories = await fetchStories();
 
 // Popular tags
 const popularTags = [
-  'Adventure', 'Fantasy', 'Mystery', 'Science Fiction', 
+  'Adventure', 'Fantasy', 'Mystery', 'Science Fiction',
   'Historical', 'Educational', 'Animals', 'Friendship'
 ];
 
@@ -32,7 +32,7 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
-  
+
   <main class="pt-24 pb-32">
     <!-- Hero Section -->
     <section class="relative py-20 overflow-hidden">
@@ -40,7 +40,7 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <div class="container relative z-10">
         <div class="max-w-3xl mx-auto text-center mb-16">
           <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
@@ -49,12 +49,12 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
           <p class="text-lg text-text-secondary mb-8">
             Explore our collection of captivating stories for all ages. From educational tales to thrilling adventures, find the perfect story for your next reading session.
           </p>
-          
+
           <!-- Search Bar -->
           <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
-            <input 
-              type="text" 
-              placeholder="Search for stories, authors, or topics..." 
+            <input
+              type="text"
+              placeholder="Search for stories, authors, or topics..."
               class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
             />
             <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
@@ -64,7 +64,7 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
             </button>
           </div>
         </div>
-        
+
         <!-- Popular Tags -->
         <div class="mb-16">
           <h2 class="text-xl font-bold text-text-primary mb-6 text-center">Popular Categories</h2>
@@ -76,17 +76,17 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
         </div>
       </div>
     </section>
-    
+
     <!-- Featured Stories -->
     <section class="py-16 bg-white">
       <div class="container">
         <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
           Featured Stories
         </h2>
-        
+
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 perspective-1000">
           {stories.slice(0, 8).map((story, index) => (
-            <div 
+            <div
               class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
               style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
             >
@@ -96,31 +96,33 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
         </div>
       </div>
     </section>
-    
+
     <!-- Premium Content Block -->
     <section class="py-16">
       <div class="container">
-        <PremiumBlock 
-          title="Unlock Premium Stories" 
+        <PremiumBlock
+          title="Unlock Premium Stories"
           description="Get access to exclusive content, personalized recommendations, and more with our premium subscription."
           buttonText="Try Premium Free"
           buttonLink="/premium"
           badgeType="featured"
+          comingSoon={true}
+          image="/images/premium-banner.jpg"
         />
       </div>
     </section>
-    
+
     <!-- Sponsored Stories -->
-    <SponsoredCarousel 
-      title="Sponsored Stories" 
-      viewAllLink="/sponsored" 
-      stories={stories.filter(s => s.sponsored).slice(0, 4)} 
+    <SponsoredCarousel
+      title="Sponsored Stories"
+      viewAllLink="/sponsored"
+      stories={stories.filter(s => s.sponsored).slice(0, 4)}
       carouselId="sponsored-carousel"
     />
   </main>
-  
+
   <Footer />
-  
+
   <style>
     @keyframes fadeInUp {
       from {
@@ -136,12 +138,12 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .fancy-underline {
       position: relative;
       display: inline-block;
     }
-    
+
     .fancy-underline::after {
       content: '';
       position: absolute;
@@ -155,7 +157,7 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
       transform-origin: center;
       transition: transform 0.5s ease;
     }
-    
+
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }

@@ -13,6 +13,7 @@ interface Props {
   buttonText?: string;
   buttonLink?: string;
   badgeType?: 'sponsored' | 'featured';
+  comingSoon?: boolean;
 }
 
 const {
@@ -21,9 +22,10 @@ const {
   description,
   image = '/images/premium-banner.jpg',
   link = '/premium',
-  buttonText,
+  buttonText = 'Learn More',
   buttonLink,
-  badgeType = 'featured'
+  badgeType = 'featured',
+  comingSoon = true
 } = Astro.props;
 
 const typeClasses = {
@@ -39,9 +41,9 @@ const typeClasses = {
   </div>
 
   <a href={link} class="block">
-    <div class="h-40 overflow-hidden">
+    <div class="h-40 overflow-hidden relative">
       <img
-        src={image}
+        src={image || '/images/default-cover.svg'}
         alt={title}
         width="400"
         height="300"
@@ -49,6 +51,12 @@ const typeClasses = {
       />
       <!-- Image overlay gradient -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+      {comingSoon && (
+        <div class="absolute top-0 right-0 bg-accent text-white px-3 py-1 rounded-bl-lg font-bold text-sm">
+          Coming Soon
+        </div>
+      )}
     </div>
 
     <div class="p-4 relative">
@@ -60,23 +68,14 @@ const typeClasses = {
         <p class="text-text-secondary text-sm line-clamp-3">{description}</p>
 
         <div class="mt-4 flex justify-end">
-          {buttonText ? (
-            <a href={buttonLink || link} class="btn btn-primary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
-              <span class="relative z-10 flex items-center">
-                {buttonText}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </span>
-            </a>
-          ) : (
-            <span class="text-sm font-medium text-primary group-hover:text-primary/80 transition-all duration-300 flex items-center group-hover:translate-x-1">
-              Learn More
+          <a href={buttonLink || link} class="btn btn-primary py-2 px-4 shadow-playful btn-playful transform-style-3d hover:translate-z-2 group">
+            <span class="relative z-10 flex items-center">
+              {buttonText}
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
             </span>
-          )}
+          </a>
         </div>
       </div>
     </div>

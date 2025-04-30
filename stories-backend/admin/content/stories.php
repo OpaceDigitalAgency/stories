@@ -77,13 +77,13 @@ try {
         // Get all stories
         $query = "SELECT * FROM stories ORDER BY created_at DESC";
         $allStories = $db->query($query)->fetchAll();
-        
+
         error_log("Number of stories fetched: " . count($allStories));
-        
+
         // Create a new array to store unique stories by ID
         $stories = [];
         $seenIds = [];
-        
+
         // Only add each story ID once
         foreach ($allStories as $story) {
             $id = $story['id'];
@@ -95,9 +95,9 @@ try {
                 error_log("Skipping duplicate story ID: " . $id . ", Title: " . $story['title']);
             }
         }
-        
+
         error_log("Number of unique stories: " . count($stories));
-        
+
         // Then for each story, try to get the author information from story_authors table
         foreach ($stories as $index => $storyItem) {
             try {
@@ -110,7 +110,7 @@ try {
                 ");
                 $stmt->execute([$storyItem['id']]);
                 $author = $stmt->fetch();
-                
+
                 if ($author) {
                     $stories[$index]['author_id'] = $author['id'];
                     $stories[$index]['author_name'] = $author['name'];
@@ -121,7 +121,7 @@ try {
                 error_log("Error fetching author for story ID " . $storyItem['id'] . ": " . $e->getMessage());
                 $stories[$index]['author_name'] = 'Unknown';
             }
-            
+
             // Get tags for the story
             try {
                 $stmt = $db->prepare("
@@ -132,7 +132,7 @@ try {
                 ");
                 $stmt->execute([$storyItem['id']]);
                 $tags = $stmt->fetch();
-                
+
                 if ($tags && isset($tags['tags'])) {
                     $stories[$index]['tags'] = $tags['tags'];
                 } else {
@@ -142,7 +142,7 @@ try {
                 error_log("Error fetching tags for story ID " . $storyItem['id'] . ": " . $e->getMessage());
                 $stories[$index]['tags'] = '';
             }
-            
+
             // Debug log for author information
             error_log("Story ID: " . $storyItem['id'] . ", Author ID: " . ($stories[$index]['author_id'] ?? 'null') . ", Author Name: " . ($stories[$index]['author_name'] ?? 'null'));
         }
@@ -173,9 +173,17 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stories - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
+    <link rel="stylesheet" href="../assets/css/enhanced-admin.css">
+    <!-- Add Font Awesome for better icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Meta tags for better accessibility -->
+    <meta name="description" content="Stories Admin - Manage all your stories">
+    <meta name="theme-color" content="#4361ee">
 </head>
 <body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to content</a>
+
     <header class="admin-header">
         <div class="header-container">
             <div class="logo-container">
@@ -191,18 +199,36 @@ if (isset($_SESSION['error'])) {
         </div>
     </header>
 
-    <div class="container">
-        <nav class="nav-menu">
+    <div class="container" id="main-content">
+        <nav class="nav-menu" role="navigation" aria-label="Main Navigation">
             <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link active">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
+                <button type="submit" formaction="../dashboard.php" class="nav-link">
+                    <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
+                </button>
+                <button type="submit" formaction="stories.php" class="nav-link active">
+                    <i class="fas fa-book" aria-hidden="true"></i> Stories
+                </button>
+                <button type="submit" formaction="blog-posts.php" class="nav-link">
+                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
+                </button>
+                <button type="submit" formaction="authors.php" class="nav-link">
+                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
+                </button>
+                <button type="submit" formaction="tags.php" class="nav-link">
+                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
+                </button>
+                <button type="submit" formaction="games.php" class="nav-link">
+                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
+                </button>
+                <button type="submit" formaction="directory-items.php" class="nav-link">
+                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
+                </button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link">
+                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
+                </button>
+                <button type="submit" formaction="media.php" class="nav-link">
+                    <i class="fas fa-images" aria-hidden="true"></i> Media
+                </button>
             </form>
         </nav>
 
@@ -213,30 +239,52 @@ if (isset($_SESSION['error'])) {
             </div>
             <form method="GET" action="story-form.php">
                 <button type="submit" class="btn btn-success">
-                    <span class="icon-edit"></span> Add New Story
+                    <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
                 </button>
             </form>
         </div>
 
         <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
+            <div class="success" role="alert">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($success); ?>
+            </div>
         <?php endif; ?>
 
         <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($error); ?>
+            </div>
         <?php endif; ?>
+
+        <?php
+        // Include search component
+        include_once '../includes/search-component.php';
+        if (function_exists('renderSearchComponent')) {
+            renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+        }
+
+        // Include bulk actions component
+        include_once '../includes/bulk-actions-component.php';
+        if (function_exists('renderBulkActionsComponent')) {
+            renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
+        }
+        ?>
 
         <div class="table-container">
             <table class="table">
                 <thead>
                     <tr>
+                        <th class="checkbox-column">
+                            <input type="checkbox" id="select-all" aria-label="Select all stories">
+                        </th>
                         <th>ID</th>
                         <th>Title</th>
                         <th>Author</th>
+                        <th>Status</th>
                         <th>Tags</th>
-                        <th>Content Preview</th>
                         <th>Created</th>
-                        <th>Updated</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -246,34 +294,65 @@ if (isset($_SESSION['error'])) {
                             <td colspan="8" class="text-center">No stories found. Add your first story!</td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($stories as $story): ?>
+                        <?php
+                        // Include status indicator component
+                        include_once '../includes/status-indicator-component.php';
+
+                        foreach ($stories as $story):
+                        ?>
                             <tr>
+                                <td class="checkbox-column">
+                                    <input type="checkbox" class="bulk-checkbox" name="selected_ids[]"
+                                           value="<?php echo $story['id']; ?>"
+                                           aria-label="Select story: <?php echo htmlspecialchars($story['title']); ?>">
+                                </td>
                                 <td><?php echo $story['id']; ?></td>
-                                <td><?php echo htmlspecialchars($story['title']); ?></td>
+                                <td>
+                                    <div class="item-title">
+                                        <?php echo htmlspecialchars($story['title']); ?>
+                                        <?php if (isset($story['featured']) && $story['featured']): ?>
+                                            <span class="featured-badge" title="Featured story" aria-label="Featured story">
+                                                <i class="fas fa-star" aria-hidden="true"></i>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="item-excerpt">
+                                        <?php echo htmlspecialchars(substr($story['content'], 0, 100) . '...'); ?>
+                                    </div>
+                                </td>
                                 <td><?php echo htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown'); ?></td>
+                                <td>
+                                    <?php
+                                    if (function_exists('getPublishedStatusIndicator')) {
+                                        echo getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
+                                    } else {
+                                        echo isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
+                                    }
+
+                                    if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
+                                        echo '<br>' . getModerationStatusIndicator(true);
+                                    }
+                                    ?>
+                                </td>
                                 <td><?php echo htmlspecialchars($story['tags'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars(substr($story['content'], 0, 100) . '...'); ?></td>
-                                <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
-                                <td><?php echo date('M j, Y', strtotime($story['updated_at'])); ?></td>
+                                <td>
+                                    <div><?php echo date('M j, Y', strtotime($story['created_at'])); ?></div>
+                                    <div class="text-muted">Updated: <?php echo date('M j, Y', strtotime($story['updated_at'])); ?></div>
+                                </td>
                                 <td>
                                     <div class="table-actions">
-                                        <form method="GET" action="view-story.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <form method="GET" action="story-form.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <span class="icon-edit"></span> Edit
-                                            </button>
-                                        </form>
+                                        <a href="view-story.php?id=<?php echo $story['id']; ?>" class="btn btn-info btn-sm" aria-label="View story: <?php echo htmlspecialchars($story['title']); ?>">
+                                            <i class="fas fa-eye" aria-hidden="true"></i> View
+                                        </a>
+                                        <a href="story-form.php?id=<?php echo $story['id']; ?>" class="btn btn-primary btn-sm" aria-label="Edit story: <?php echo htmlspecialchars($story['title']); ?>">
+                                            <i class="fas fa-edit" aria-hidden="true"></i> Edit
+                                        </a>
                                         <form method="POST" action="delete-story.php" style="display: inline;">
                                             <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this story?')">
-                                                <span class="icon-delete"></span> Delete
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete this story?')"
+                                                    aria-label="Delete story: <?php echo htmlspecialchars($story['title']); ?>">
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
                                             </button>
                                         </form>
                                     </div>
@@ -284,6 +363,27 @@ if (isset($_SESSION['error'])) {
                 </tbody>
             </table>
         </div>
+
+        <?php
+        // Include pagination component
+        include_once '../includes/pagination-component.php';
+        if (function_exists('renderPagination')) {
+            // Calculate total items and current page
+            $totalItems = count($stories);
+            $itemsPerPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 25;
+            $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+
+            // Render pagination
+            renderPagination($totalItems, $itemsPerPage, $currentPage);
+        }
+        ?>
     </div>
+
+    <footer class="admin-footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
+            <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
+        </div>
+    </footer>
 </body>
 </html>

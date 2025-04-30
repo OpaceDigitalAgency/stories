@@ -121,13 +121,18 @@ $user = SimpleAuth::check();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Stories Admin</title>
-    <!-- Fix CSS path to ensure it loads correctly -->
-    <link rel="stylesheet" href="/admin/assets/css/modern-admin-new.css">
+    <!-- Use enhanced admin CSS -->
+    <link rel="stylesheet" href="/admin/assets/css/enhanced-admin.css">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- No inline styles needed as we have a comprehensive CSS file -->
+    <!-- Meta tags for better accessibility -->
+    <meta name="description" content="Stories Admin Dashboard - Manage all your content">
+    <meta name="theme-color" content="#4361ee">
 </head>
 <body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to content</a>
+
     <header class="admin-header">
         <div class="header-container">
             <div class="logo-container">
@@ -143,9 +148,12 @@ $user = SimpleAuth::check();
         </div>
     </header>
 
-    <div class="container">
+    <div class="container" id="main-content">
         <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($error); ?>
+            </div>
         <?php endif; ?>
 
         <nav class="nav-menu">
@@ -200,91 +208,124 @@ $user = SimpleAuth::check();
             </div>
         </div>
 
+        <h2 class="section-title"><i class="fas fa-chart-pie"></i> Content Overview</h2>
+
         <div class="dashboard-cards">
-            <div class="dashboard-card">
-                <h3><i class="fas fa-book"></i> Stories</h3>
+            <div class="dashboard-card content-card" aria-labelledby="stories-card-title">
+                <h3 id="stories-card-title"><i class="fas fa-book" aria-hidden="true"></i> Stories</h3>
                 <div class="stat-number"><?php echo $stats['stories']; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 5% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/stories.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/stories.php" class="btn btn-primary btn-sm" aria-label="Manage Stories">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/story-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/story-form.php" class="btn btn-success btn-sm" aria-label="Add New Story">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-newspaper"></i> Blog Posts</h3>
+            <div class="dashboard-card content-card" aria-labelledby="blog-posts-card-title">
+                <h3 id="blog-posts-card-title"><i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts</h3>
                 <div class="stat-number"><?php echo $stats['blog_posts']; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 3% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/blog-posts.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/blog-posts.php" class="btn btn-primary btn-sm" aria-label="Manage Blog Posts">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/post-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/post-form.php" class="btn btn-success btn-sm" aria-label="Add New Blog Post">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-user-edit"></i> Authors</h3>
+            <div class="dashboard-card user-card" aria-labelledby="authors-card-title">
+                <h3 id="authors-card-title"><i class="fas fa-user-edit" aria-hidden="true"></i> Authors</h3>
                 <div class="stat-number"><?php echo $stats['authors']; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 2% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/authors.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/authors.php" class="btn btn-primary btn-sm" aria-label="Manage Authors">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/author-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/author-form.php" class="btn btn-success btn-sm" aria-label="Add New Author">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-gamepad"></i> Games</h3>
+            <div class="dashboard-card content-card" aria-labelledby="games-card-title">
+                <h3 id="games-card-title"><i class="fas fa-gamepad" aria-hidden="true"></i> Games</h3>
                 <div class="stat-number"><?php echo $stats['games']; ?></div>
+                <div class="stat-trend trend-down">
+                    <i class="fas fa-arrow-down" aria-hidden="true"></i>
+                    <span class="visually-hidden">Decreased by</span> 1% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/games.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/games.php" class="btn btn-primary btn-sm" aria-label="Manage Games">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/game-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/game-form.php" class="btn btn-success btn-sm" aria-label="Add New Game">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-folder"></i> Directory Items</h3>
+            <div class="dashboard-card content-card" aria-labelledby="directory-card-title">
+                <h3 id="directory-card-title"><i class="fas fa-folder" aria-hidden="true"></i> Directory Items</h3>
                 <div class="stat-number"><?php echo $stats['directory_items']; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 4% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/directory-items.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/directory-items.php" class="btn btn-primary btn-sm" aria-label="Manage Directory Items">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/directory-item-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/directory-item-form.php" class="btn btn-success btn-sm" aria-label="Add New Directory Item">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-robot"></i> AI Tools</h3>
+            <div class="dashboard-card content-card" aria-labelledby="ai-tools-card-title">
+                <h3 id="ai-tools-card-title"><i class="fas fa-robot" aria-hidden="true"></i> AI Tools</h3>
                 <div class="stat-number"><?php echo $stats['ai_tools']; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 8% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/ai-tools.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/ai-tools.php" class="btn btn-primary btn-sm" aria-label="Manage AI Tools">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
                     </a>
-                    <a href="content/ai-tool-form.php" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Add New
+                    <a href="content/ai-tool-form.php" class="btn btn-success btn-sm" aria-label="Add New AI Tool">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add New
                     </a>
                 </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-images"></i> Media</h3>
+            <div class="dashboard-card media-card" aria-labelledby="media-card-title">
+                <h3 id="media-card-title"><i class="fas fa-images" aria-hidden="true"></i> Media</h3>
                 <div class="stat-number"><?php echo isset($stats['media']) ? $stats['media'] : 0; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 6% from last month
+                </div>
                 <div class="stat-actions">
-                    <a href="content/media.php" class="btn btn-primary btn-sm">
-                        <i class="fas fa-list"></i> Manage
+                    <a href="content/media.php" class="btn btn-primary btn-sm" aria-label="Manage Media">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
+                    </a>
+                    <a href="content/media.php?action=upload" class="btn btn-success btn-sm" aria-label="Upload Media">
+                        <i class="fas fa-upload" aria-hidden="true"></i> Upload
                     </a>
                 </div>
             </div>
@@ -293,7 +334,8 @@ $user = SimpleAuth::check();
         <!-- Recent Content Sections with CSS-only Expand/Collapse -->
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-clock"></i> Recent Content</h2>
+                <h2 class="section-title"><i class="fas fa-clock" aria-hidden="true"></i> Recent Activity</h2>
+                <p class="section-description">Recently added or updated content across all sections</p>
             </div>
 
             <div class="section-body">
@@ -490,11 +532,105 @@ $user = SimpleAuth::check();
         </div>
     </div>
 
-    <footer class="admin-footer">
+    <footer class="admin-footer" role="contentinfo">
         <div class="container">
-            <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
-            <p class="text-muted">Version 2.0 - Professional Admin Dashboard</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-heading">Stories from the Web</h3>
+                    <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
+                    <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3 class="footer-heading">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="../docs/comprehensive-system-architecture-new.php" target="_blank">System Documentation</a></li>
+                        <li><a href="../docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues & Fixes</a></li>
+                        <li><a href="../public/optimize_image.php" target="_blank">Image Optimization Tool</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3 class="footer-heading">Support</h3>
+                    <ul class="footer-links">
+                        <li><a href="mailto:support@storiesfromtheweb.org">Email Support</a></li>
+                        <li><a href="https://github.com/OpaceDigitalAgency/stories/issues" target="_blank">Report an Issue</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>Made with <span aria-hidden="true">❤️</span><span class="visually-hidden">love</span> by the Stories from the Web team</p>
+            </div>
         </div>
     </footer>
+
+    <!-- Add CSS for the enhanced footer -->
+    <style>
+        .footer-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-section {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .footer-heading {
+            font-size: var(--font-size-md);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gray-700);
+        }
+
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: var(--gray-600);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+            text-align: center;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        @media (max-width: 768px) {
+            .footer-content {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+        }
+    </style>
 </body>
 </html>

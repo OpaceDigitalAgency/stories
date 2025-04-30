@@ -27,18 +27,18 @@ function getDisplayUrl($filePath) {
     if (strpos($filePath, 'http') === 0) {
         return $filePath;
     }
-    
+
     // If it's a relative URL starting with /
     if (strpos($filePath, '/') === 0) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
     }
-    
+
     // If it's a server path
     if (file_exists($filePath)) {
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $filePath);
         return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
-    
+
     return $filePath;
 }
 
@@ -83,25 +83,25 @@ try {
     // Handle file upload
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['media_file'])) {
         $uploadDir = '../../uploads/';
-        
+
         // Create uploads directory if it doesn't exist
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-        
+
         $file = $_FILES['media_file'];
         $fileName = $file['name'];
         $fileTmpName = $file['tmp_name'];
         $fileSize = $file['size'];
         $fileError = $file['error'];
         $fileType = $file['type'];
-        
+
         // Validate file
         if ($fileError === 0) {
             // Generate unique filename
             $fileNameNew = uniqid('', true) . '_' . $fileName;
             $fileDestination = $uploadDir . $fileNameNew;
-            
+
             // Move uploaded file
             if (move_uploaded_file($fileTmpName, $fileDestination)) {
                 // Save file info to database
@@ -113,9 +113,9 @@ try {
                     $fileSize,
                     $_POST['alt_text'] ?? ''
                 ]);
-                
+
                 $mediaId = $db->lastInsertId();
-                
+
                 // Check if it's an image and automatically optimize it
                 if (strpos($fileType, 'image/') === 0) {
                     // Create optimized directory if it doesn't exist
@@ -123,10 +123,10 @@ try {
                     if (!is_dir($optimizedDir)) {
                         mkdir($optimizedDir, 0755, true);
                     }
-                    
+
                     // Optimize the image
                     $variants = createImageVariants($fileDestination, $optimizedDir);
-                    
+
                     if ($variants) {
                         // Update the media record with optimized URLs
                         updateMediaRecord($db, $mediaId, $variants);
@@ -148,22 +148,22 @@ try {
     // Handle file deletion
     if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $id = $_GET['delete'];
-        
+
         // Get file path
         $stmt = $db->prepare("SELECT file_path FROM media WHERE id = ?");
         $stmt->execute([$id]);
         $file = $stmt->fetch();
-        
+
         if ($file) {
             // Delete file from filesystem
             if (file_exists($file['file_path'])) {
                 unlink($file['file_path']);
             }
-            
+
             // Delete from database
             $stmt = $db->prepare("DELETE FROM media WHERE id = ?");
             $stmt->execute([$id]);
-            
+
             $success = "File deleted successfully";
         } else {
             $error = "File not found";
@@ -173,28 +173,28 @@ try {
     // Count total items for pagination
     $countSql = "SELECT COUNT(*) FROM media";
     $params = [];
-    
+
     if (!empty($search)) {
         $countSql .= " WHERE filename LIKE ?";
         $params[] = "%$search%";
     }
-    
+
     $stmt = $db->prepare($countSql);
     $stmt->execute($params);
     $totalItems = $stmt->fetchColumn();
-    
+
     // Calculate pagination
     $totalPages = ceil($totalItems / $perPage);
     $page = min($page, max(1, $totalPages));
     $offset = ($page - 1) * $perPage;
-    
+
     // Get media files with search and pagination
     $sql = "SELECT * FROM media";
     if (!empty($search)) {
         $sql .= " WHERE filename LIKE ?";
     }
     $sql .= " ORDER BY created_at DESC LIMIT $offset, $perPage";
-    
+
     $stmt = $db->prepare($sql);
     if (!empty($search)) {
         $stmt->execute(["%$search%"]);
@@ -224,9 +224,17 @@ if (isset($_SESSION['error'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
+    <link rel="stylesheet" href="../assets/css/enhanced-admin.css">
+    <!-- Add Font Awesome for better icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Meta tags for better accessibility -->
+    <meta name="description" content="Media Admin - Manage all your media files">
+    <meta name="theme-color" content="#4361ee">
 </head>
 <body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to content</a>
+
     <header class="admin-header">
         <div class="header-container">
             <div class="logo-container">
@@ -242,18 +250,36 @@ if (isset($_SESSION['error'])) {
         </div>
     </header>
 
-    <div class="container">
-        <nav class="nav-menu">
+    <div class="container" id="main-content">
+        <nav class="nav-menu" role="navigation" aria-label="Main Navigation">
             <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link active">Media</button>
+                <button type="submit" formaction="../dashboard.php" class="nav-link">
+                    <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
+                </button>
+                <button type="submit" formaction="stories.php" class="nav-link">
+                    <i class="fas fa-book" aria-hidden="true"></i> Stories
+                </button>
+                <button type="submit" formaction="blog-posts.php" class="nav-link">
+                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
+                </button>
+                <button type="submit" formaction="authors.php" class="nav-link">
+                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
+                </button>
+                <button type="submit" formaction="tags.php" class="nav-link">
+                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
+                </button>
+                <button type="submit" formaction="games.php" class="nav-link">
+                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
+                </button>
+                <button type="submit" formaction="directory-items.php" class="nav-link">
+                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
+                </button>
+                <button type="submit" formaction="ai-tools.php" class="nav-link">
+                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
+                </button>
+                <button type="submit" formaction="media.php" class="nav-link active">
+                    <i class="fas fa-images" aria-hidden="true"></i> Media
+                </button>
             </form>
         </nav>
 
@@ -270,30 +296,39 @@ if (isset($_SESSION['error'])) {
         </div>
 
         <?php if ($success): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
+            <div class="success" role="alert">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($success); ?>
+            </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($error); ?>
+            </div>
         <?php endif; ?>
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Upload New Media</h2>
+                <h2 class="section-title"><i class="fas fa-upload" aria-hidden="true"></i> Upload New Media</h2>
+                <p class="section-description">Upload images and other media files to use in your content</p>
             </div>
             <div class="section-body">
                 <form method="POST" enctype="multipart/form-data" class="upload-form">
                     <div class="form-group mb-3">
-                        <label class="form-label" for="media_file">File <span class="required">*</span></label>
-                        <input type="file" id="media_file" name="media_file" class="form-control" required>
+                        <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
+                        <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
+                        <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
                     </div>
                     <div class="form-group mb-3">
                         <label class="form-label" for="alt_text">Alt Text</label>
                         <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
+                        <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
                     </div>
                     <div class="form-group">
                         <button type="submit" class="btn btn-success">
-                            <span class="icon-upload"></span> Upload
+                            <i class="fas fa-upload" aria-hidden="true"></i> Upload
                         </button>
                     </div>
                 </form>
@@ -301,20 +336,33 @@ if (isset($_SESSION['error'])) {
         </div>
 
         <div class="content-section">
-            <div class="section-header d-flex justify-content-between align-items-center">
-                <h2 class="section-title">Media Library</h2>
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-images" aria-hidden="true"></i> Media Library</h2>
+                <p class="section-description">Browse and manage your uploaded media files</p>
+            </div>
+
+            <?php
+            // Include search component
+            include_once '../includes/search-component.php';
+            if (function_exists('renderSearchComponent')) {
+                renderSearchComponent('media', ['filename', 'alt_text', 'file_type'], $search);
+            } else {
+                // Fallback to original search form if component not available
+                ?>
                 <form method="GET" class="search-form">
                     <div class="input-group">
                         <input type="text" name="search" class="form-control" placeholder="Search by filename..." value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn btn-primary">
-                            <span class="icon-search"></span> Search
+                            <i class="fas fa-search" aria-hidden="true"></i> Search
                         </button>
                         <?php if (!empty($search)): ?>
                             <a href="media.php" class="btn btn-secondary">Clear</a>
                         <?php endif; ?>
                     </div>
                 </form>
-            </div>
+                <?php
+            }
+            ?>
             <div class="section-body">
                 <?php if (empty($media)): ?>
                     <p class="no-items">No media files found.</p>
@@ -322,7 +370,7 @@ if (isset($_SESSION['error'])) {
                     <div class="media-grid">
                         <?php foreach ($media as $item): ?>
                             <div class="media-card">
-                                <?php 
+                                <?php
                                 $isImage = strpos($item['file_type'], 'image/') === 0;
                                 $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
                                 ?>
@@ -337,20 +385,18 @@ if (isset($_SESSION['error'])) {
                                     <h3 class="media-filename"><?php echo htmlspecialchars($item['filename']); ?></h3>
                                     <p class="media-date"><?php echo date('M j, Y', strtotime($item['created_at'])); ?></p>
                                     <div class="media-actions">
-                                        <form method="GET" action="view-media.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <a href="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" target="_blank" class="btn btn-primary btn-sm">
-                                            <span class="icon-download"></span> Download
+                                        <a href="view-media.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm" aria-label="View <?php echo htmlspecialchars($item['filename']); ?>">
+                                            <i class="fas fa-eye" aria-hidden="true"></i> View
+                                        </a>
+                                        <a href="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" target="_blank" class="btn btn-primary btn-sm" aria-label="Download <?php echo htmlspecialchars($item['filename']); ?>">
+                                            <i class="fas fa-download" aria-hidden="true"></i> Download
                                         </a>
                                         <form method="GET" style="display: inline;">
                                             <input type="hidden" name="delete" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this file?')">
-                                                <span class="icon-delete"></span> Delete
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete this file?')"
+                                                    aria-label="Delete <?php echo htmlspecialchars($item['filename']); ?>">
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
                                             </button>
                                         </form>
                                     </div>
@@ -358,54 +404,73 @@ if (isset($_SESSION['error'])) {
                             </div>
                         <?php endforeach; ?>
                     </div>
-                    
+
                     <!-- Pagination -->
-                    <?php if ($totalPages > 1): ?>
-                    <div class="pagination-container">
-                        <div class="pagination">
-                            <?php if ($page > 1): ?>
-                                <a href="?page=1<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">First</a>
-                                <a href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Previous</a>
-                            <?php endif; ?>
-                            
-                            <?php
-                            $startPage = max(1, $page - 2);
-                            $endPage = min($totalPages, $page + 2);
-                            
-                            for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                <a href="?page=<?php echo $i; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>"
-                                   class="pagination-link <?php echo $i === $page ? 'active' : ''; ?>">
-                                    <?php echo $i; ?>
-                                </a>
-                            <?php endfor; ?>
-                            
-                            <?php if ($page < $totalPages): ?>
-                                <a href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Next</a>
-                                <a href="?page=<?php echo $totalPages; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link">Last</a>
-                            <?php endif; ?>
+                    <?php
+                    // Include pagination component
+                    include_once '../includes/pagination-component.php';
+                    if (function_exists('renderPagination')) {
+                        renderPagination($totalItems, $perPage, $page);
+                    } else {
+                        // Fallback to original pagination if component not available
+                        if ($totalPages > 1):
+                        ?>
+                        <div class="pagination-container">
+                            <div class="pagination">
+                                <?php if ($page > 1): ?>
+                                    <a href="?page=1<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="First page">First</a>
+                                    <a href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Previous page">Previous</a>
+                                <?php endif; ?>
+
+                                <?php
+                                $startPage = max(1, $page - 2);
+                                $endPage = min($totalPages, $page + 2);
+
+                                for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                    <a href="?page=<?php echo $i; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>"
+                                       class="pagination-link <?php echo $i === $page ? 'active' : ''; ?>"
+                                       <?php echo $i === $page ? 'aria-current="page"' : ''; ?>>
+                                        <?php echo $i; ?>
+                                    </a>
+                                <?php endfor; ?>
+
+                                <?php if ($page < $totalPages): ?>
+                                    <a href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Next page">Next</a>
+                                    <a href="?page=<?php echo $totalPages; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Last page">Last</a>
+                                <?php endif; ?>
+                            </div>
+                            <div class="pagination-info">
+                                Showing <?php echo ($offset + 1); ?>-<?php echo min($offset + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
+                            </div>
                         </div>
-                        <div class="pagination-info">
-                            Showing <?php echo ($offset + 1); ?>-<?php echo min($offset + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
-                        </div>
-                    </div>
-                    <?php endif; ?>
+                        <?php
+                        endif;
+                    }
+                    ?>
                 <?php endif; ?>
             </div>
         </div>
     </div>
-    
+
+    <footer class="admin-footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
+            <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
+        </div>
+    </footer>
+
     <style>
         .upload-form {
             max-width: 600px;
         }
-        
+
         .media-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
-        
+
         .media-card {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -413,12 +478,12 @@ if (isset($_SESSION['error'])) {
             transition: all 0.2s ease;
             background-color: white;
         }
-        
+
         .media-card:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transform: translateY(-2px);
         }
-        
+
         .media-thumbnail {
             height: 180px;
             display: flex;
@@ -428,13 +493,13 @@ if (isset($_SESSION['error'])) {
             overflow: hidden;
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .media-thumbnail img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-        
+
         .file-icon {
             width: 80px;
             height: 80px;
@@ -448,11 +513,11 @@ if (isset($_SESSION['error'])) {
             border-radius: var(--radius-sm);
             font-size: 1.2rem;
         }
-        
+
         .media-info {
             padding: 15px;
         }
-        
+
         .media-filename {
             margin: 0 0 8px 0;
             font-weight: 600;
@@ -462,19 +527,19 @@ if (isset($_SESSION['error'])) {
             text-overflow: ellipsis;
             color: var(--gray-900);
         }
-        
+
         .media-date {
             margin: 0 0 15px 0;
             font-size: 0.85rem;
             color: var(--gray-600);
         }
-        
+
         .media-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         }
-        
+
         .no-items {
             text-align: center;
             padding: 30px;
@@ -483,45 +548,45 @@ if (isset($_SESSION['error'])) {
             border-radius: var(--radius-md);
             font-size: 1.1rem;
         }
-        
+
         .required {
             color: var(--danger);
             margin-left: 3px;
         }
-        
+
         .icon-upload:before {
             content: "↑";
         }
-        
+
         .icon-download:before {
             content: "↓";
         }
-        
+
         .icon-image:before {
             content: "🖼️";
         }
-        
+
         .icon-search:before {
             content: "🔍";
         }
-        
+
         .icon-view:before {
             content: "👁️";
         }
-        
+
         .icon-delete:before {
             content: "🗑️";
         }
-        
+
         .search-form {
             max-width: 400px;
         }
-        
+
         .input-group {
             display: flex;
             gap: 5px;
         }
-        
+
         .pagination-container {
             margin-top: 30px;
             display: flex;
@@ -529,14 +594,14 @@ if (isset($_SESSION['error'])) {
             align-items: center;
             gap: 15px;
         }
-        
+
         .pagination {
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
             justify-content: center;
         }
-        
+
         .pagination-link {
             padding: 8px 12px;
             border: 1px solid var(--border-color);
@@ -546,22 +611,22 @@ if (isset($_SESSION['error'])) {
             background-color: white;
             transition: all 0.2s ease;
         }
-        
+
         .pagination-link:hover {
             background-color: var(--gray-100);
         }
-        
+
         .pagination-link.active {
             background-color: var(--primary);
             color: white;
             border-color: var(--primary);
         }
-        
+
         .pagination-info {
             color: var(--gray-600);
             font-size: 0.9rem;
         }
-        
+
         /* Progress indicator styles */
         .progress-overlay {
             position: fixed;
@@ -578,7 +643,7 @@ if (isset($_SESSION['error'])) {
             opacity: 0;
             transition: visibility 0s, opacity 0.3s;
         }
-        
+
         .progress-container {
             background-color: white;
             padding: 30px;
@@ -588,7 +653,7 @@ if (isset($_SESSION['error'])) {
             max-width: 500px;
             text-align: center;
         }
-        
+
         .progress-spinner {
             border: 5px solid var(--gray-200);
             border-top: 5px solid var(--primary);
@@ -598,13 +663,13 @@ if (isset($_SESSION['error'])) {
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
     </style>
-    
+
     <!-- Progress Indicator -->
     <div id="progressOverlay" class="progress-overlay">
         <div class="progress-container">
@@ -613,24 +678,24 @@ if (isset($_SESSION['error'])) {
             <p id="progressMessage">Please wait while we optimize your images.</p>
         </div>
     </div>
-    
+
     <script>
         // Show progress indicator when optimizing images
         document.addEventListener('DOMContentLoaded', function() {
             // Get all buttons that trigger optimization
             const optimizeButtons = document.querySelectorAll('a[href*="optimize_image.php"]');
-            
+
             optimizeButtons.forEach(button => {
                 button.addEventListener('click', function(e) {
                     // Show the progress overlay
                     const overlay = document.getElementById('progressOverlay');
                     overlay.style.visibility = 'visible';
                     overlay.style.opacity = '1';
-                    
+
                     // Set appropriate message based on button text
                     const title = document.getElementById('progressTitle');
                     const message = document.getElementById('progressMessage');
-                    
+
                     if (this.textContent.includes('All Media')) {
                         title.textContent = 'Optimizing All Media';
                         message.textContent = 'This may take several minutes. Please do not close this page.';
@@ -638,11 +703,11 @@ if (isset($_SESSION['error'])) {
                         title.textContent = 'Optimizing Image';
                         message.textContent = 'Please wait while we optimize your image.';
                     }
-                    
+
                     // Don't prevent default - let the link work normally
                 });
             });
-            
+
             // Also add progress indicator to file upload
             const uploadForm = document.querySelector('form.upload-form');
             if (uploadForm) {
@@ -653,10 +718,10 @@ if (isset($_SESSION['error'])) {
                         const overlay = document.getElementById('progressOverlay');
                         overlay.style.visibility = 'visible';
                         overlay.style.opacity = '1';
-                        
+
                         const title = document.getElementById('progressTitle');
                         const message = document.getElementById('progressMessage');
-                        
+
                         title.textContent = 'Uploading and Optimizing';
                         message.textContent = 'Please wait while we upload and optimize your image.';
                     }

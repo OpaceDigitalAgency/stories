@@ -26,7 +26,7 @@ $otherAuthors = $stmt->fetchAll();
             <div class="alert alert-warning">
                 <p>This author has <?php echo $storyCount; ?> associated stories. Please choose how to handle them:</p>
                 
-                <form action="content/delete-author.php" method="post" class="mt-3">
+                <form action="../admin/content/delete-author.php" method="post" class="mt-3">
                     <input type="hidden" name="id" value="<?php echo $authorId; ?>">
                     
                     <div class="form-check mb-3">

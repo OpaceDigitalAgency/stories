@@ -818,35 +818,6 @@ function handleMediaUpload($db, $storyDir, $title) {
         flushOutput();
     }
     
-    // Check image size before processing
-    $imageSize = filesize($images[0]);
-    echo "<p class='info'>Original image size: " . round($imageSize / 1024) . " KB</p>";
-    flushOutput();
-    
-    // Check if we should look for a smaller version of this image
-    $smallerImage = null;
-    $originalBasename = pathinfo($coverImage, PATHINFO_FILENAME);
-    
-    // Look for smaller versions in the uploads directory
-    $uploadsDir = $_SERVER['DOCUMENT_ROOT'] . '/../_wp migration/uploads';
-    if (is_dir($uploadsDir)) {
-        // Try to find a smaller version (300x300 is a good size)
-        $smallerVersions = glob("$uploadsDir/$originalBasename*300x300*.png");
-        
-        if (!empty($smallerVersions)) {
-            $smallerImage = $smallerVersions[0];
-            echo "<p class='success'>Found smaller version of image: $smallerImage</p>";
-            flushOutput();
-            
-            // Use the smaller image instead
-            $images[0] = $smallerImage;
-            $coverImage = basename($smallerImage);
-            $imageSize = filesize($smallerImage);
-            echo "<p class='info'>Using smaller image: " . round($imageSize / 1024) . " KB</p>";
-            flushOutput();
-        }
-    }
-    
     // Generate unique filename to avoid collisions
     $uniqueFilename = uniqid() . '-' . $coverImage;
     $destination = $uploadDir . $uniqueFilename;
@@ -855,41 +826,10 @@ function handleMediaUpload($db, $storyDir, $title) {
     $relativeUrl = '/uploads/' . $uniqueFilename;
     $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . $relativeUrl;
     
-    echo "<p class='info'>Absolute URL: $absoluteUrl</p>";
+    // Simply copy the file without optimization
+    copy($images[0], $destination);
+    echo "<p class='info'>Image uploaded: " . basename($destination) . "</p>";
     flushOutput();
-            
-    // Use optimize_image.php for consistent image optimization
-    require_once __DIR__ . '/optimize_image.php';
-    
-    // Create variants using the optimizeSingleImage function with aggressive optimization
-    $variants = optimizeSingleImage($images[0], dirname($destination));
-    
-    if ($variants) {
-        // Get the smallest variant that's still good quality
-        $bestVariant = null;
-        $bestSize = PHP_INT_MAX;
-        
-        foreach ($variants as $size => $info) {
-            if ($info['size'] < $bestSize) {
-                $bestVariant = $info;
-                $bestSize = $info['size'];
-            }
-        }
-        
-        if ($bestVariant) {
-            copy($bestVariant['path'], $destination);
-            echo "<p class='success'>Image optimized successfully: " . round($bestSize / 1024) . " KB</p>";
-            flushOutput();
-        } else {
-            copy($images[0], $destination);
-            echo "<p class='warning'>No suitable variant found, using original file</p>";
-            flushOutput();
-        }
-    } else {
-        copy($images[0], $destination);
-        echo "<p class='warning'>Image optimization failed, using original file</p>";
-        flushOutput();
-    }
     
     // Set proper permissions - ensure web server can read the file
     chmod($destination, 0644);
@@ -1027,24 +967,24 @@ function extractTags($frontMatter, $markdownContent) {
     // Define tag categories with related keywords
     $tagCategories = [
         'genre' => [
-            'adventure' => ['adventure', 'quest', 'journey', 'explore'],
-            'fantasy' => ['magic', 'wizard', 'dragon', 'fairy', 'enchanted', 'spell'],
-            'mystery' => ['mystery', 'clue', 'detective', 'solve', 'secret'],
-            'science fiction' => ['robot', 'space', 'alien', 'future', 'planet'],
-            'fairy tale' => ['once upon a time', 'kingdom', 'prince', 'princess', 'castle']
+            'adventure' => ['adventure', 'quest', 'journey', 'explore', 'exciting', 'discovery', 'fun', 'trip'],
+            'fantasy' => ['magic', 'wizard', 'dragon', 'fairy', 'enchanted', 'spell', 'magical', 'wand', 'potion'],
+            'mystery' => ['mystery', 'clue', 'detective', 'solve', 'secret', 'discover', 'find', 'search'],
+            'science fiction' => ['robot', 'space', 'alien', 'future', 'planet', 'science', 'technology', 'machine'],
+            'fairy tale' => ['once upon a time', 'kingdom', 'prince', 'princess', 'castle', 'fairy', 'magic', 'enchanted']
         ],
         'themes' => [
-            'friendship' => ['friend', 'together', 'help', 'share', 'team'],
-            'family' => ['family', 'parent', 'mother', 'father', 'sister', 'brother'],
-            'nature' => ['nature', 'forest', 'garden', 'tree', 'flower', 'animal'],
-            'school' => ['school', 'teacher', 'classroom', 'lesson', 'homework'],
-            'imagination' => ['imagine', 'dream', 'pretend', 'create', 'wonder']
+            'friendship' => ['friend', 'together', 'help', 'share', 'team', 'play', 'fun', 'group'],
+            'family' => ['family', 'parent', 'mother', 'father', 'sister', 'brother', 'home', 'love'],
+            'nature' => ['nature', 'forest', 'garden', 'tree', 'flower', 'animal', 'plant', 'outdoor', 'park'],
+            'school' => ['school', 'teacher', 'classroom', 'lesson', 'homework', 'learn', 'student', 'class'],
+            'imagination' => ['imagine', 'dream', 'pretend', 'create', 'wonder', 'fantasy', 'magical', 'story']
         ],
         'characters' => [
-            'animals' => ['cat', 'dog', 'bear', 'bird', 'rabbit', 'fox'],
-            'magical creatures' => ['dragon', 'unicorn', 'fairy', 'wizard', 'witch'],
-            'dinosaurs' => ['dinosaur', 't-rex', 'raptor', 'fossil'],
-            'monsters' => ['monster', 'creature', 'beast', 'giant']
+            'animals' => ['cat', 'dog', 'bear', 'bird', 'rabbit', 'fox', 'pet', 'animal', 'creature'],
+            'magical creatures' => ['dragon', 'unicorn', 'fairy', 'wizard', 'witch', 'magical', 'monster', 'beast'],
+            'dinosaurs' => ['dinosaur', 't-rex', 'raptor', 'fossil', 'prehistoric', 'jurassic', 'dino'],
+            'monsters' => ['monster', 'creature', 'beast', 'giant', 'scary', 'big', 'huge']
         ]
     ];
     
@@ -1075,8 +1015,8 @@ function extractTags($frontMatter, $markdownContent) {
                     $matches++;
                 }
             }
-            // Add tag if multiple related keywords are found
-            if ($matches >= 2 && !in_array($tag, $tags)) {
+            // Add tag if any related keyword is found
+            if ($matches >= 1 && !in_array($tag, $tags)) {
                 $tags[] = $tag;
             }
         }

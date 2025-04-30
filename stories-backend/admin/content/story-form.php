@@ -427,26 +427,7 @@ try {
                             </div>
                             <small class="form-text text-muted">Automatically calculated based on content length (minimum 1 minute)</small>
                         </div>
-                    <?php elseif ($isIntField || $isDecimalField): ?>
-                        <div class="form-group">
-                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                            <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                                   <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
-                                   <?php echo $isRequired ? 'required' : ''; ?>>
-                        </div>
-                    <?php else: ?>
-                        <div class="form-group">
-                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                            <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                                   <?php echo $isRequired ? 'required' : ''; ?>>
-                        </div>
-                    <?php endif; endforeach; ?>
-
-                    <!-- Age group (auto-set based on author) -->
-                    <div class="form-group">
-                        <label class="form-label" for="age_group">Age Group</label>
+                    <?php elseif ($field === 'age_group'): ?>
                         <?php
                         // Get author's age if available
                         $authorAge = null;
@@ -465,14 +446,32 @@ try {
                             else $ageGroup = '13+';
                         }
                         ?>
-                        <select id="age_group" name="age_group" class="form-control" required>
-                            <option value="0-3" <?php echo ($ageGroup === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
-                            <option value="4-6" <?php echo ($ageGroup === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
-                            <option value="7-12" <?php echo ($ageGroup === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
-                            <option value="13+" <?php echo ($ageGroup === '13+') ? 'selected' : ''; ?>>13+ years</option>
-                        </select>
-                        <small class="form-text text-muted">Auto-set based on author's age (<?php echo $authorAge ?? 'unknown'; ?> years old)</small>
-                    </div>
+                        <div class="form-group">
+                            <label class="form-label" for="age_group">Age Group</label>
+                            <select id="age_group" name="age_group" class="form-control" required>
+                                <option value="0-3" <?php echo ($ageGroup === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
+                                <option value="4-6" <?php echo ($ageGroup === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
+                                <option value="7-12" <?php echo ($ageGroup === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
+                                <option value="13+" <?php echo ($ageGroup === '13+') ? 'selected' : ''; ?>>13+ years</option>
+                            </select>
+                            <small class="form-text text-muted">Auto-set based on author's age (<?php echo $authorAge ?? 'unknown'; ?> years old)</small>
+                        </div>
+                    <?php elseif ($isIntField || $isDecimalField): ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                   <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                        </div>
+                    <?php else: ?>
+                        <div class="form-group">
+                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                            <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                   value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                   <?php echo $isRequired ? 'required' : ''; ?>>
+                        </div>
+                    <?php endif; endforeach; ?>
 
                     <!-- Tags section moved to the bottom -->
                     <div class="form-group">

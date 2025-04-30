@@ -116,7 +116,8 @@ interface StoryFilters {
   isSelfPublished?: boolean;
   isAiEnhanced?: boolean;
   sort?: string;
-  'filters[tags]'?: string;
+  'filters[tags][$contains]'?: string;
+  'filters[tags][$containsi]'?: string;
 }
 
 // Resource-specific fetch functions with proper mapping
@@ -136,7 +137,7 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
 
   // Add filters
   Object.entries(filters).forEach(([key, value]) => {
-    if (key === 'filters[tags]') {
+    if (key.startsWith('filters[tags]')) {
       params[key] = value;
     } else if (key === 'featured' && value === true) {
       params['featured'] = 1;

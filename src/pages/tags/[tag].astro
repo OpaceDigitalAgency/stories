@@ -16,9 +16,9 @@ if (!tag) {
 // Fetch stories for this tag
 let stories = [];
 try {
-  // Use direct API filtering instead of fetchStoriesByTag
+  // Use tag filter with contains operator
   stories = await fetchStories(1, 100, {
-    'filters[tags]': tag
+    'filters[tags][$contains]': tag.toLowerCase()
   });
 } catch (error) {
   console.error(`Error fetching stories for tag ${tag}:`, error);

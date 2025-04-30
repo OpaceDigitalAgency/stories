@@ -132,7 +132,7 @@ try {
         // Store success message and redirect for regular form submissions
         session_start();
         $_SESSION['success'] = "Author deleted successfully";
-        header("Location: ../authors.php");
+        header("Location: authors.php");
     }
     exit;
 
@@ -156,7 +156,7 @@ try {
         // Store error in session and redirect for regular form submissions
         session_start();
         $_SESSION['error'] = $e->getMessage();
-        header("Location: ../authors.php");
+        header("Location: authors.php");
     }
     exit;
 }

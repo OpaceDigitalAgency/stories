@@ -1,37 +1,17 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * Story Form Page
+ *
+ * This page displays a form for adding or editing a story.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Get story if editing
     $story = null;
@@ -41,12 +21,12 @@ try {
             $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
             $stmt->execute([$_GET['id']]);
             $story = $stmt->fetch();
-            
+
             if (!$story) {
                 header("Location: stories.php");
                 exit;
             }
-            
+
             // Now try to get author information from story_authors table
             try {
                 $stmt = $db->prepare("
@@ -57,7 +37,7 @@ try {
                 ");
                 $stmt->execute([$story['id']]);
                 $author = $stmt->fetch();
-                
+
                 if ($author) {
                     $story['author_name'] = $author['author_name'];
                     $story['author_id'] = $author['author_id'];
@@ -67,7 +47,7 @@ try {
                 error_log("Error fetching author: " . $e->getMessage());
                 // Continue even if author fetch fails
             }
-            
+
             // Debug log for story and author information
             error_log("Story ID: " . $story['id']);
             error_log("Story author_id: " . ($story['author_id'] ?? 'null'));
@@ -97,14 +77,14 @@ try {
     $stmt = $db->prepare("DESCRIBE stories");
     $stmt->execute();
     $columns = $stmt->fetchAll();
-    
+
     // Organize column info for easier access
     $columnInfo = [];
     $additionalFields = [];
-    
+
     foreach ($columns as $column) {
         $columnInfo[$column['Field']] = $column;
-        
+
         // Skip standard fields that are handled explicitly
         if (!in_array($column['Field'], ['id', 'title', 'content', 'author_id', 'created_at', 'updated_at'])) {
             $additionalFields[] = $column['Field'];
@@ -115,58 +95,67 @@ try {
     error_log("Story form error: " . $e->getMessage());
     $error = "Error loading form data. Please try again.";
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $story ? 'Edit' : 'Add'; ?> Story - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
+// Set page variables for header
+$pageTitle = ($story ? 'Edit' : 'Add') . ' Story';
+$currentPage = 'stories';
+$pageDescription = '<a href="stories.php" class="text-primary">← Back to Stories</a>';
 
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link active">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
+// Add custom CSS for form styling
+$extraHeadContent = '
+<style>
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title"><?php echo $story ? 'Edit' : 'Add'; ?> Story</h1>
-                <p class="page-description">
-                    <a href="stories.php" class="text-primary">← Back to Stories</a>
-                </p>
-            </div>
-        </div>
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background-color: var(--gray-100);
+        border-radius: var(--radius-sm);
+        font-size: 0.9rem;
+    }
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+    .checkbox-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .checkbox-group-item {
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0;
+    }
+
+    .form-section-title {
+        font-size: 1.2rem;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .content-form {
+        max-width: 800px;
+    }
+</style>
+';
+
+// Include header
+include_once '../includes/header.php';
+
+// Display error message if any
+if (isset($error)): ?>
+    <div class="error"><?php echo htmlspecialchars($error); ?></div>
+<?php endif; ?>
 
         <div class="content-section mb-4">
             <div class="section-body">
@@ -215,7 +204,7 @@ try {
                         const option = authorSelect.options[authorSelect.selectedIndex];
                         const age = option.getAttribute('data-author-age');
                         const ageGroupSelect = document.getElementById('age_group');
-                        
+
                         if (age) {
                             const ageNum = parseInt(age);
                             if (ageNum <= 5) ageGroupSelect.value = '0-3';
@@ -228,15 +217,15 @@ try {
 
                     <div class="form-group">
                         <label class="form-label" for="excerpt">Excerpt</label>
-                        <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php 
-                            echo htmlspecialchars($story['excerpt'] ?? ''); 
+                        <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php
+                            echo htmlspecialchars($story['excerpt'] ?? '');
                         ?></textarea>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="content">Content</label>
-                        <textarea id="content" name="content" class="form-control" rows="10" required><?php 
-                            echo htmlspecialchars($story['content'] ?? ''); 
+                        <textarea id="content" name="content" class="form-control" rows="10" required><?php
+                            echo htmlspecialchars($story['content'] ?? '');
                         ?></textarea>
                     </div>
 
@@ -244,7 +233,7 @@ try {
                     // Handle cover image fields - use cover_image if it exists, otherwise use cover_url
                     $coverImageField = in_array('cover_image', $additionalFields) ? 'cover_image' :
                                       (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
-                    
+
                     if ($coverImageField):
                     ?>
                     <div class="form-group">
@@ -259,7 +248,7 @@ try {
                         <input type="datetime-local" id="published_at" name="published_at" class="form-control"
                                value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
                     </div>
-                    
+
                     <!-- Group all checkboxes together -->
                     <h3 class="form-section-title">Options</h3>
                     <div class="checkbox-section">
@@ -269,14 +258,14 @@ try {
                                    <?php echo (isset($story['is_published']) && $story['is_published']) ? "checked" : ""; ?>
                                    class="form-check-input">
                         </div>
-                        
+
                         <div class="form-group checkbox-group-item">
                             <label class="form-check-label" for="featured">Featured</label>
                             <input type="checkbox" id="featured" name="featured" value="1"
                                    <?php echo (isset($story['featured']) && $story['featured']) ? "checked" : ""; ?>
                                    class="form-check-input">
                         </div>
-                        
+
                         <div class="form-group checkbox-group-item">
                             <label class="form-check-label" for="is_sponsored">Sponsored</label>
                             <input type="checkbox" id="is_sponsored" name="is_sponsored" value="1"
@@ -288,11 +277,11 @@ try {
                     // Collect boolean fields and non-boolean fields separately
                     $booleanFields = [];
                     $nonBooleanFields = [];
-                    
+
                     foreach ($additionalFields as $field) {
                         // Skip fields that are already handled above or will be handled below
                         if (in_array($field, ['featured', 'is_sponsored', 'is_published', 'published', 'published_at', 'cover_image', 'cover_url', 'slug', 'excerpt'])) continue;
-                        
+
                         $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
                         $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
                         $isIntField = isset($columnInfo[$field]) && (strpos($columnInfo[$field]['Type'], 'int') !== false || strpos($columnInfo[$field]['Type'], 'tinyint') !== false);
@@ -304,7 +293,7 @@ try {
                             (strpos($field, 'has_') === 0) ||
                             (strpos($field, 'needs_') === 0)
                         );
-                        
+
                         if ($isBooleanField) {
                             $booleanFields[] = $field;
                         } else {
@@ -318,7 +307,7 @@ try {
                             ];
                         }
                     }
-                    
+
                     // Add all boolean fields to the checkbox section
                     foreach ($booleanFields as $field):
                         // Format field label
@@ -332,7 +321,7 @@ try {
                         </div>
                     <?php endforeach; ?>
                     </div>
-                    
+
                     <!-- Display non-boolean fields -->
                     <?php foreach ($nonBooleanFields as $fieldData):
                         $field = $fieldData['field'];
@@ -341,10 +330,10 @@ try {
                         $isIntField = $fieldData['isIntField'];
                         $isDecimalField = $fieldData['isDecimalField'];
                         $isEnumField = $fieldData['isEnumField'];
-                        
+
                         // Format field label
                         $label = ucwords(str_replace('_', ' ', $field));
-                        
+
                         if ($isDateTime):
                     ?>
                         <div class="form-group">
@@ -377,7 +366,7 @@ try {
                         $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
                         $stmt->execute([$story['author_id']]);
                         $authorType = $stmt->fetchColumn();
-                        
+
                         // Only show rating fields for non-child authors
                         if ($authorType !== 'child'):
                         ?>
@@ -436,7 +425,7 @@ try {
                             $stmt->execute([$story['author_id']]);
                             $authorAge = $stmt->fetchColumn();
                         }
-                        
+
                         // Determine age group based on author's age
                         $ageGroup = '7-12'; // default
                         if ($authorAge !== null) {
@@ -495,7 +484,7 @@ try {
             </div>
         </div>
     </div>
-    
+
     <style>
         .checkbox-group {
             display: grid;
@@ -503,13 +492,13 @@ try {
             gap: 10px;
             margin-top: 10px;
         }
-        
+
         .checkbox-label {
             display: flex;
             align-items: center;
             gap: 5px;
         }
-        
+
         .form-section-title {
             margin-top: 20px;
             margin-bottom: 10px;
@@ -518,7 +507,7 @@ try {
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 5px;
         }
-        
+
         .checkbox-section {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -529,70 +518,70 @@ try {
             border-radius: var(--radius-md);
             border: 1px solid var(--border-color);
         }
-        
+
         .checkbox-group-item {
             margin-bottom: 0;
         }
-        
+
         .content-form {
             background: white;
             padding: 20px;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
         }
-        
+
         .w-75 {
             width: 75%;
         }
-        
+
         .w-25 {
             width: 25%;
         }
-        
+
         .ml-2 {
             margin-left: 0.5rem;
         }
-        
+
         .d-flex {
             display: flex;
         }
-        
+
         .align-items-center {
             align-items: center;
         }
-        
+
         .text-center {
             text-align: center;
         }
-        
+
         .mt-2 {
             margin-top: 0.5rem;
         }
-        
+
         .text-lg {
             font-size: 1.125rem;
         }
-        
+
         .font-bold {
             font-weight: 700;
         }
     </style>
-    
+
     <script>
         // Function to update source type based on author selection
         function updateSourceTypeFromAuthor() {
             const authorSelect = document.getElementById('author_id');
             const sourceTypeSelect = document.getElementById('source_type');
-            
+
             if (!authorSelect || !sourceTypeSelect) {
                 console.error('Required elements not found');
                 return;
             }
-            
+
             if (authorSelect.selectedIndex > 0) {
                 const selectedOption = authorSelect.options[authorSelect.selectedIndex];
                 const authorType = selectedOption.getAttribute('data-author-type');
-                
+
                 // Map author type to source type
                 let sourceType;
                 switch (authorType) {
@@ -608,11 +597,11 @@ try {
                         sourceType = 'classic';
                         break;
                 }
-                
+
                 // Set the source type and disable the dropdown
                 sourceTypeSelect.value = sourceType;
                 sourceTypeSelect.disabled = true;
-                
+
                 // Update the allow reviews visibility
                 handleSourceTypeChange();
             } else {
@@ -625,29 +614,29 @@ try {
         function handleSourceTypeChange() {
             const sourceTypeSelect = document.getElementById('source_type');
             const allowReviewsCheckbox = document.getElementById('allow_reviews');
-            
+
             if (!sourceTypeSelect || !allowReviewsCheckbox) {
                 console.error('Required elements not found');
                 return;
             }
-            
+
             const sourceType = sourceTypeSelect.value;
             const allowReviewsLabel = allowReviewsCheckbox.closest('.form-group');
-            
+
             console.log('Source type changed to:', sourceType);
-            
+
             // Find all review/rating related fields
             const reviewFields = [
                 document.getElementById('allow_reviews'),
                 document.getElementById('average_rating'),
                 document.getElementById('review_count')
             ];
-            
+
             // Find the containers for these fields
             const reviewFieldContainers = reviewFields
                 .filter(field => field !== null)
                 .map(field => field.closest('.form-group'));
-            
+
             if (sourceType === 'child') {
                 // Children's stories never get reviews - disable all review fields
                 reviewFields.forEach(field => {
@@ -660,7 +649,7 @@ try {
                         field.disabled = true;
                     }
                 });
-                
+
                 // Make all review field containers appear disabled
                 reviewFieldContainers.forEach(container => {
                     if (container) {
@@ -668,7 +657,7 @@ try {
                         container.title = 'Children\'s stories never get reviews';
                     }
                 });
-                
+
                 // Also disable the average_rating slider if it exists
                 const ratingSlider = document.getElementById('average_rating_slider');
                 if (ratingSlider) {
@@ -684,14 +673,14 @@ try {
                     allowReviewsLabel.style.opacity = '0.5';
                     allowReviewsLabel.title = 'Classic works always get reviews';
                 }
-                
+
                 // Enable other review fields
                 reviewFields.slice(1).forEach(field => {
                     if (field) {
                         field.disabled = false;
                     }
                 });
-                
+
                 // Make other review field containers appear enabled
                 reviewFieldContainers.slice(1).forEach(container => {
                     if (container) {
@@ -699,7 +688,7 @@ try {
                         container.title = '';
                     }
                 });
-                
+
                 // Enable the average_rating slider if it exists
                 const ratingSlider = document.getElementById('average_rating_slider');
                 if (ratingSlider) {
@@ -712,7 +701,7 @@ try {
                         field.disabled = false;
                     }
                 });
-                
+
                 // Make all review field containers appear enabled
                 reviewFieldContainers.forEach(container => {
                     if (container) {
@@ -720,7 +709,7 @@ try {
                         container.title = '';
                     }
                 });
-                
+
                 // Enable the average_rating slider if it exists
                 const ratingSlider = document.getElementById('average_rating_slider');
                 if (ratingSlider) {
@@ -728,24 +717,24 @@ try {
                 }
             }
         }
-        
+
         // Run when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             const sourceTypeSelect = document.getElementById('source_type');
             const authorSelect = document.getElementById('author_id');
-            
+
             if (sourceTypeSelect) {
                 // Set initial state
                 handleSourceTypeChange();
-                
+
                 // Add event listener for changes
                 sourceTypeSelect.addEventListener('change', handleSourceTypeChange);
             }
-            
+
             if (authorSelect) {
                 // Set initial state
                 updateSourceTypeFromAuthor();
-                
+
                 // Add event listener for changes
                 authorSelect.addEventListener('change', updateSourceTypeFromAuthor);
             }
@@ -756,7 +745,7 @@ try {
         document.addEventListener('DOMContentLoaded', function() {
             const titleInput = document.getElementById('title');
             const slugInput = document.getElementById('slug');
-            
+
             if (titleInput && slugInput) {
                 titleInput.addEventListener('input', function() {
                     // Only auto-generate if slug is empty or hasn't been manually edited
@@ -766,12 +755,12 @@ try {
                             .replace(/[^\w\s-]/g, '') // Remove special characters
                             .replace(/\s+/g, '-')     // Replace spaces with hyphens
                             .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-                        
+
                         slugInput.value = slug;
                         slugInput._autoGenerated = true;
                     }
                 });
-                
+
                 // Mark when user manually edits the slug
                 slugInput.addEventListener('input', function() {
                     slugInput._autoGenerated = false;
@@ -779,5 +768,8 @@ try {
             }
         });
     </script>
-</body>
-</html>
+
+<?php
+// Include footer
+include_once '../includes/footer.php';
+?>

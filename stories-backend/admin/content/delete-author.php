@@ -70,29 +70,29 @@ try {
         $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
         $stmt->execute([$id]);
         $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+
         // Delete story tags
         if (!empty($storyIds)) {
             $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
             $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
             $stmt->execute($storyIds);
         }
-        
+
         // Delete story authors
         $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
         $stmt->execute([$id]);
-        
+
         // Delete stories
         if (!empty($storyIds)) {
             $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
             $stmt = $db->prepare("DELETE FROM stories WHERE id IN ($placeholders)");
             $stmt->execute($storyIds);
         }
-        
+
         // Delete author
         $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
         $stmt->execute([$id]);
-        
+
         $_SESSION['success'] = "Author and all associated stories deleted successfully";
     }
     elseif ($action === 'reassign' && $newAuthorId) {
@@ -102,15 +102,15 @@ try {
         if (!$stmt->fetch()) {
             throw new Exception("New author not found");
         }
-        
+
         // Update story_authors table
         $stmt = $db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id = ?");
         $stmt->execute([$newAuthorId, $id]);
-        
+
         // Delete old author
         $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
         $stmt->execute([$id]);
-        
+
         $_SESSION['success'] = "Stories reassigned and author deleted successfully";
     }
     else {
@@ -120,11 +120,9 @@ try {
     // Commit transaction
     $db->commit();
 
-    // Store success message and redirect
-    session_start();
-    $_SESSION['success'] = "Author deleted successfully";
-
-    header("Location: authors.php");
+    // Return JSON success response
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => 'Author deleted successfully']);
     exit;
 
 } catch (Exception $e) {
@@ -134,11 +132,9 @@ try {
     }
 
     error_log("Delete author error: " . $e->getMessage());
-    
-    // Store error in session and redirect back
-    session_start();
-    $_SESSION['error'] = $e->getMessage();
-    
-    header("Location: authors.php");
+
+    // Return JSON error response
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
 }

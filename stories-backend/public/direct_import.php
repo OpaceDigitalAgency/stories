@@ -129,8 +129,8 @@ function extractAuthorInfo($title) {
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
         echo "<p class='success'><strong>PATTERN 1 MATCHED:</strong> Found author in 'by Author' format</p>";
     }
-    // Pattern 2: "The Magic Treehouse Kerry, aged 9, from Northern Ireland"
-    else if (preg_match('/([^,]+?)(?:,|\s+)(?:aged\s+(\d+))?(?:,?\s*from\s+([^,\.]+))?/i', $title, $matches)) {
+    // Pattern 2: "Story Title - Kerry, aged 9, from Northern Ireland"
+    else if (preg_match('/[^a-z]by\s+([^,]+?)(?:,|\s+)(?:aged\s+(\d+))?(?:,?\s*from\s+([^,\.]+))?/i', $title, $matches)) {
         $info['name'] = trim($matches[1]);
         $info['age'] = isset($matches[2]) ? trim($matches[2]) : null;
         $info['location'] = isset($matches[3]) ? trim($matches[3]) : null;
@@ -187,7 +187,7 @@ function extractAuthorInfo($title) {
     // If no name was found but title contains author indicators, try harder
     if (!$info['name'] && (stripos($title, 'by') !== false || stripos($title, 'aged') !== false)) {
         // Try to extract just the name after "by"
-        if (preg_match('/by\s+([A-Za-z][A-Za-z\s\-\.]+?)(?:\s+aged|\s+from|$)/i', $title, $nameOnly)) {
+        if (preg_match('/[^a-z]by\s+([A-Za-z][A-Za-z\s\-\.]+?)(?:\s+aged|\s+from|$)/i', $title, $nameOnly)) {
             $info['name'] = trim($nameOnly[1]);
             echo "<p class='success'><strong>FALLBACK PATTERN MATCHED:</strong> Extracted name only</p>";
             
@@ -199,6 +199,16 @@ function extractAuthorInfo($title) {
             if (preg_match('/from\s+([A-Za-z][A-Za-z\s\-\.]+?)(?:$|,|\.|aged)/i', $title, $locOnly)) {
                 $info['location'] = trim($locOnly[1]);
             }
+        }
+    }
+    
+    // Validate author name
+    if ($info['name']) {
+        // Remove common story title words that might be mistaken for names
+        $commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'story', 'tale', 'adventure'];
+        if (in_array(strtolower($info['name']), $commonWords)) {
+            $info['name'] = null;
+            echo "<p class='warning'>Rejected common word as author name</p>";
         }
     }
     
@@ -339,9 +349,6 @@ function extractExcerpt($title, $markdownContent) {
 }
 // Function to handle media upload with proper error handling
 function handleMediaUpload($db, $storyDir, $title) {
-    // Include the image optimization library
-    require_once __DIR__ . '/../includes/image_optimizer.php';
-    
     $imagesDir = "$storyDir/images";
     // Use absolute URL for default cover image
     $defaultCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/images/default-cover.svg';
@@ -854,19 +861,31 @@ function handleMediaUpload($db, $storyDir, $title) {
     // Use optimize_image.php for consistent image optimization
     require_once __DIR__ . '/optimize_image.php';
     
-    // Create variants using the optimizeSingleImage function
+    // Create variants using the optimizeSingleImage function with aggressive optimization
     $variants = optimizeSingleImage($images[0], dirname($destination));
     
-    if ($variants && isset($variants['300x300'])) {
-        // Use the 300x300 variant as our main image
-        copy($variants['300x300']['path'], $destination);
-        echo "<p class='success'>Image optimized successfully using optimize_image.php</p>";
-        flushOutput();
+    if ($variants) {
+        // Get the smallest variant that's still good quality
+        $bestVariant = null;
+        $bestSize = PHP_INT_MAX;
         
-        // Update file permissions
-        chmod($destination, 0644);
+        foreach ($variants as $size => $info) {
+            if ($info['size'] < $bestSize) {
+                $bestVariant = $info;
+                $bestSize = $info['size'];
+            }
+        }
+        
+        if ($bestVariant) {
+            copy($bestVariant['path'], $destination);
+            echo "<p class='success'>Image optimized successfully: " . round($bestSize / 1024) . " KB</p>";
+            flushOutput();
+        } else {
+            copy($images[0], $destination);
+            echo "<p class='warning'>No suitable variant found, using original file</p>";
+            flushOutput();
+        }
     } else {
-        // If optimization fails, copy the original
         copy($images[0], $destination);
         echo "<p class='warning'>Image optimization failed, using original file</p>";
         flushOutput();
@@ -1097,25 +1116,27 @@ function findExistingStory($db, $title, $slug) {
 // Function to generate a unique slug
 function generateUniqueSlug($db, $title) {
     // Convert accented characters to ASCII while preserving first characters
-    $words = explode(' ', $title);
+    // First convert to lowercase and replace non-alphanumeric with hyphens
+    $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+    
+    // Then split into words
+    $words = explode('-', $baseSlug);
     $processedWords = [];
     
     foreach ($words as $word) {
         if (empty($word)) continue;
         
+        // Keep the first character as is
         $firstChar = mb_substr($word, 0, 1, 'UTF-8');
         $restChars = mb_substr($word, 1, null, 'UTF-8');
         
-        $firstChar = iconv('UTF-8', 'ASCII//TRANSLIT', $firstChar);
+        // Only convert rest of the word to ASCII
         $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
         
         $processedWords[] = $firstChar . $restChars;
     }
     
-    $title = implode(' ', $processedWords);
-    
-    // Convert to lowercase and replace non-alphanumeric with hyphens
-    $baseSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+    $baseSlug = implode('-', $processedWords);
     
     // Debug output
     echo "<p class='info'><strong>STORY SLUG GENERATION:</strong> Converting \"$title\" to \"$baseSlug\"</p>";

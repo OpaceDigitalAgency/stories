@@ -371,33 +371,48 @@ try {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    <?php elseif ($field === 'average_rating'): ?>
-                        <div class="form-group">
-                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                            <div class="d-flex align-items-center">
-                                <input type="range" id="<?php echo $field; ?>_slider" class="form-control w-75"
-                                       min="0" max="5" step="0.1"
-                                       value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                                       oninput="document.getElementById('<?php echo $field; ?>').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;">
-                                <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control w-25 ml-2"
-                                       min="0" max="5" step="0.1"
-                                       value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                                       oninput="document.getElementById('<?php echo $field; ?>_slider').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;"
-                                       <?php echo $isRequired ? 'required' : ''; ?>>
-                            </div>
-                            <div class="text-center mt-2">
-                                <span id="<?php echo $field; ?>_display" class="text-lg font-bold"><?php echo htmlspecialchars($story[$field] ?? '0'); ?></span> / 5
-                            </div>
-                        </div>
-                    <?php elseif ($field === 'review_count'): ?>
-                        <div class="form-group">
-                            <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                            <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                                   min="0" step="1"
-                                   value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
-                                   <?php echo $isRequired ? 'required' : ''; ?>>
-                            <small class="form-text text-muted">Number of reviews for this story</small>
-                        </div>
+                    <?php elseif (($field === 'average_rating' || $field === 'review_count') && isset($story['author_id'])): ?>
+                        <?php
+                        // Check if author is a child
+                        $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
+                        $stmt->execute([$story['author_id']]);
+                        $authorType = $stmt->fetchColumn();
+                        
+                        // Only show rating fields for non-child authors
+                        if ($authorType !== 'child'):
+                        ?>
+                            <?php if ($field === 'average_rating'): ?>
+                                <div class="form-group">
+                                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                                    <div class="d-flex align-items-center">
+                                        <input type="range" id="<?php echo $field; ?>_slider" class="form-control w-75"
+                                               min="0" max="5" step="0.1"
+                                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                               oninput="document.getElementById('<?php echo $field; ?>').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;">
+                                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control w-25 ml-2"
+                                               min="0" max="5" step="0.1"
+                                               value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                               oninput="document.getElementById('<?php echo $field; ?>_slider').value = this.value; document.getElementById('<?php echo $field; ?>_display').textContent = this.value;"
+                                               <?php echo $isRequired ? 'required' : ''; ?>>
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <span id="<?php echo $field; ?>_display" class="text-lg font-bold"><?php echo htmlspecialchars($story[$field] ?? '0'); ?></span> / 5
+                                    </div>
+                                </div>
+                            <?php elseif ($field === 'review_count'): ?>
+                                <div class="form-group">
+                                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                                    <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                           min="0" step="1"
+                                           value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
+                                           <?php echo $isRequired ? 'required' : ''; ?>>
+                                    <small class="form-text text-muted">Number of reviews for this story</small>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <!-- Hidden inputs for child authors -->
+                            <input type="hidden" name="<?php echo $field; ?>" value="0">
+                        <?php endif; ?>
                     <?php elseif ($isIntField || $isDecimalField): ?>
                         <div class="form-group">
                             <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -417,15 +432,17 @@ try {
                     
                     <!-- Reading time (auto-calculated) -->
                     <div class="form-group">
-                        <label class="form-label" for="estimated_reading_time">Reading Time</label>
+                        <label class="form-label">Reading Time</label>
                         <?php
                         // Calculate reading time based on content
                         $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
-                        $readingTime = ceil($wordCount / 200); // Average reading speed
+                        $readingTime = max(1, ceil($wordCount / 200)); // At least 1 minute
                         ?>
-                        <input type="number" id="estimated_reading_time" name="estimated_reading_time" class="form-control"
-                               value="<?php echo $readingTime; ?>" readonly>
-                        <small class="form-text text-muted">Automatically calculated based on content length</small>
+                        <div class="form-control-static">
+                            <?php echo $readingTime; ?> minute<?php echo $readingTime !== 1 ? 's' : ''; ?>
+                            <input type="hidden" name="estimated_reading_time" value="<?php echo $readingTime; ?>">
+                        </div>
+                        <small class="form-text text-muted">Automatically calculated based on content length (minimum 1 minute)</small>
                     </div>
 
                     <!-- Age group (auto-set based on author) -->

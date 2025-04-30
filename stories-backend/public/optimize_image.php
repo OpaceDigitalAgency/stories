@@ -56,10 +56,14 @@ function optimizeSingleImage($imagePath, $destinationDir = null) {
     
     echo "<p style='color:blue'>Optimizing image: " . basename($imagePath) . "</p>";
     
-    // Create image variants
+    // Create image variants with aggressive optimization
     $variants = createImageVariants($imagePath, $destinationDir, [
         'convert_format' => 'jpg',
-        'include_original' => true
+        'include_original' => true,
+        'quality' => 60,
+        'max_width' => 300,
+        'strip_metadata' => true,
+        'optimize' => true
     ]);
     
     if ($variants) {

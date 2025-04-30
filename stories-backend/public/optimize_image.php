@@ -19,7 +19,7 @@ require_once __DIR__ . '/../includes/image_optimizer.php';
 $GLOBALS['current_media_filename'] = '';
 
 // Database connection function
-function connectToDatabase() {
+function optimizerConnectToDatabase() {
     try {
         $db = new PDO(
             'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
@@ -244,7 +244,7 @@ header('Content-Type: text/html; charset=utf-8');
         // Check if we're optimizing a specific media ID
         if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             $mediaId = (int)$_GET['id'];
-            $db = connectToDatabase();
+            $db = optimizerConnectToDatabase();
             
             if ($db) {
                 // Get media details
@@ -330,7 +330,7 @@ header('Content-Type: text/html; charset=utf-8');
                     }
                 } else if ($_POST['action'] === 'optimize_all') {
                     // Handle optimizing all media
-                    $db = connectToDatabase();
+                    $db = optimizerConnectToDatabase();
                     if ($db) {
                         // Add JavaScript for real-time progress updates
                         echo "<script>

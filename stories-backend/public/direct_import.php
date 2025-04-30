@@ -230,17 +230,16 @@ function getOrCreateAuthor($db, $authorInfo) {
     // Generate a proper slug from the author name
     $name = trim($authorInfo['name']);
     
-    // Convert accented characters to ASCII while preserving first character
-    $firstChar = mb_substr($name, 0, 1, 'UTF-8');
-    $restChars = mb_substr($name, 1, null, 'UTF-8');
+    // First convert to lowercase and replace non-alphanumeric with hyphens
+    $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
     
-    $firstChar = iconv('UTF-8', 'ASCII//TRANSLIT', $firstChar);
+    // Then convert accented characters to ASCII
+    $firstChar = mb_substr($slug, 0, 1, 'UTF-8');
+    $restChars = mb_substr($slug, 1, null, 'UTF-8');
+    
+    // Convert rest of string while preserving first character
     $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
-    
-    $name = $firstChar . $restChars;
-    
-    // Convert to lowercase and replace non-alphanumeric with hyphens
-    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
+    $slug = $firstChar . $restChars;
     
     // Remove any leading or trailing dashes
     $slug = trim($slug, '-');

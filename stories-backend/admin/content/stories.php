@@ -5,8 +5,34 @@
  * This page displays a list of all stories and allows for searching, filtering, and bulk actions.
  */
 
-// Include auth check
-include_once '../includes/auth-check.php';
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Include simple_auth.php directly
+require_once '../../simple_auth.php';
+
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
+
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if user is logged in
+$user = SimpleAuth::check();
+if (!$user) {
+    // Redirect to login
+    header("Location: ../login.php");
+    exit;
+}
 
 // Include database connection
 include_once '../includes/db-connect.php';

@@ -114,6 +114,7 @@ interface StoryFilters {
   isSelfPublished?: boolean;
   isAiEnhanced?: boolean;
   sort?: string;
+  'filters[tags]'?: string;
 }
 
 // Resource-specific fetch functions with proper mapping
@@ -131,39 +132,24 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     params['sort'] = filters.sort;
   }
 
-  // Add filters only if they're defined
-  // Using a more lenient approach to avoid breaking the API
-  try {
-    console.log("Applying filters:", JSON.stringify(filters));
-
-    // Apply filters directly as query parameters
-    // This matches the backend API implementation
-    if (filters.featured === true) {
+  // Add filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key === 'filters[tags]') {
+      params[key] = value;
+    } else if (key === 'featured' && value === true) {
       params['featured'] = 1;
-      console.log("Setting featured=1 filter");
-    }
-
-    // Map 'sponsored' to 'is_sponsored' for the API
-    if (filters.sponsored === true) {
+    } else if (key === 'sponsored' && value === true) {
       params['is_sponsored'] = 1;
-      console.log("Setting is_sponsored=1 filter");
-    }
-
-    if (filters.isSelfPublished === true) {
+    } else if (key === 'isSelfPublished' && value === true) {
       params['is_self_published'] = 1;
-      console.log("Setting is_self_published=1 filter");
-    }
-
-    if (filters.isAiEnhanced === true) {
+    } else if (key === 'isAiEnhanced' && value === true) {
       params['is_ai_enhanced'] = 1;
-      console.log("Setting is_ai_enhanced=1 filter");
+    } else if (key === 'sort') {
+      params['sort'] = value;
     }
+  });
 
-    // Log the final params for debugging
-    console.log("Final API params:", JSON.stringify(params));
-  } catch (error) {
-    console.error("Error applying filters:", error);
-  }
+  console.log("Final API params:", JSON.stringify(params));
 
   // Add populate parameter to ensure we get content
   params['populate'] = '*';

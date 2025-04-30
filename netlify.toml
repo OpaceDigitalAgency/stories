@@ -13,5 +13,6 @@
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/builders/index.html"
   status = 200
+  force = false

@@ -1,24 +1,15 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * Games Admin Page
+ *
+ * This page displays a list of all games and allows for searching, filtering, and bulk actions.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 // Initialize variables
 $games = [];
@@ -26,17 +17,6 @@ $error = null;
 $success = null;
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Check if games table exists
     $stmt = $db->query("SHOW TABLES LIKE 'games'");
@@ -74,122 +54,74 @@ if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Games - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
 
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link active">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
+// Set page variables for header
+$pageTitle = 'Games';
+$currentPage = 'games';
+$pageDescription = 'Manage all your games from here.';
+$pageActions = '
+<form method="GET" action="game-form.php">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Game
+    </button>
+</form>
+';
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title">Games</h1>
-                <p class="page-description">Manage all your games from here.</p>
-            </div>
-            <form method="GET" action="game-form.php">
-                <button type="submit" class="btn btn-success">
-                    <span class="icon-edit"></span> Add New Game
-                </button>
-            </form>
-        </div>
+// Include header
+include_once '../includes/header.php';
 
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('games', ['title', 'slug', 'description']);
+}
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('games', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
+}
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Slug</th>
-                        <th>Featured</th>
-                        <th>Published</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($games)): ?>
-                        <tr>
-                            <td colspan="7" class="text-center">No games found. Add your first game!</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($games as $game): ?>
-                            <tr>
-                                <td><?php echo $game['id']; ?></td>
-                                <td><?php echo htmlspecialchars($game['title']); ?></td>
-                                <td><?php echo htmlspecialchars($game['slug']); ?></td>
-                                <td><?php echo $game['featured'] ? 'Yes' : 'No'; ?></td>
-                                <td><?php echo $game['is_published'] ? 'Yes' : 'No'; ?></td>
-                                <td><?php echo date('M j, Y', strtotime($game['created_at'])); ?></td>
-                                <td>
-                                    <div class="table-actions">
-                                        <form method="GET" action="view-game.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <form method="GET" action="game-form.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <span class="icon-edit"></span> Edit
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="delete-game.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this game?')">
-                                                <span class="icon-delete"></span> Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+// Include status indicator component
+include_once '../includes/status-indicator-component.php';
+
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
+    $columns = [
+        'id' => 'ID',
+        'title' => 'Title',
+        'slug' => 'Slug',
+        'featured' => 'Featured',
+        'is_published' => 'Published',
+        'created_at' => 'Created'
+    ];
+
+    // Define custom formatters
+    $customFormatters = [
+        'featured' => function($game, $key) {
+            return $game[$key] ? 'Yes' : 'No';
+        },
+        'is_published' => function($game, $key) {
+            return $game[$key] ? 'Yes' : 'No';
+        },
+        'created_at' => function($game, $key) {
+            return date('M j, Y', strtotime($game[$key]));
+        }
+    ];
+
+    // Render the table
+    renderTable($games, $columns, [
+        'content_type' => 'games',
+        'name_field' => 'title',
+        'empty_message' => 'No games found. Add your first game!',
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-game.php?id={id}',
+        'edit_url' => 'game-form.php?id={id}',
+        'delete_url' => 'delete-game.php'
+    ]);
+}
+
+// Include footer
+include_once '../includes/footer.php';

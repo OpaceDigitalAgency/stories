@@ -1,24 +1,15 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * Directory Items Admin Page
+ *
+ * This page displays a list of all directory items and allows for searching, filtering, and bulk actions.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 // Initialize variables
 $directory_items = [];
@@ -26,17 +17,6 @@ $error = null;
 $success = null;
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Check if directory_items table exists
     $stmt = $db->query("SHOW TABLES LIKE 'directory_items'");
@@ -72,9 +52,9 @@ try {
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
-        
+
         // Add some default categories
-        $db->exec("INSERT INTO directory_categories (name, slug, description, created_at, updated_at) VALUES 
+        $db->exec("INSERT INTO directory_categories (name, slug, description, created_at, updated_at) VALUES
             ('General', 'general', 'General directory listings', NOW(), NOW()),
             ('Business', 'business', 'Business directory listings', NOW(), NOW()),
             ('Education', 'education', 'Education directory listings', NOW(), NOW())
@@ -83,9 +63,9 @@ try {
 
     // Get all directory items with category names
     $directory_items = $db->query("
-        SELECT d.*, c.name as category_name 
-        FROM directory_items d 
-        LEFT JOIN directory_categories c ON d.category_id = c.id 
+        SELECT d.*, c.name as category_name
+        FROM directory_items d
+        LEFT JOIN directory_categories c ON d.category_id = c.id
         ORDER BY d.created_at DESC
     ")->fetchAll();
 
@@ -105,130 +85,85 @@ if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Directory Items - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
 
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link active">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
+// Set page variables for header
+$pageTitle = 'Directory Items';
+$currentPage = 'directory';
+$pageDescription = 'Manage all your directory items from here.';
+$pageActions = '
+<form method="GET" action="directory-item-form.php">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Directory Item
+    </button>
+</form>
+';
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title">Directory Items</h1>
-                <p class="page-description">Manage all your directory items from here.</p>
-            </div>
-            <form method="GET" action="directory-item-form.php">
-                <button type="submit" class="btn btn-success">
-                    <span class="icon-edit"></span> Add New Directory Item
-                </button>
-            </form>
-        </div>
+// Include header
+include_once '../includes/header.php';
 
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('directory_items', ['title', 'description', 'website_url', 'contact_email']);
+}
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('directory_items', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
+}
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Website</th>
-                        <th>Featured</th>
-                        <th>Published</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($directory_items)): ?>
-                        <tr>
-                            <td colspan="8" class="text-center">No directory items found. Add your first directory item!</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($directory_items as $item): ?>
-                            <tr>
-                                <td><?php echo $item['id']; ?></td>
-                                <td><?php echo htmlspecialchars($item['title']); ?></td>
-                                <td><?php echo htmlspecialchars($item['category_name'] ?? 'None'); ?></td>
-                                <td>
-                                    <?php if (!empty($item['website_url'])): ?>
-                                        <a href="<?php echo htmlspecialchars($item['website_url']); ?>" target="_blank">Visit</a>
-                                    <?php else: ?>
-                                        -
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo $item['featured'] ? 'Yes' : 'No'; ?></td>
-                                <td><?php echo $item['is_published'] ? 'Yes' : 'No'; ?></td>
-                                <td><?php echo date('M j, Y', strtotime($item['created_at'])); ?></td>
-                                <td>
-                                    <div class="table-actions">
-                                        <form method="GET" action="view-directory-item.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <form method="GET" action="directory-item-form.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <span class="icon-edit"></span> Edit
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="delete-directory-item.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this directory item?')">
-                                                <span class="icon-delete"></span> Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+// Include status indicator component
+include_once '../includes/status-indicator-component.php';
+
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
+    $columns = [
+        'id' => 'ID',
+        'title' => 'Title',
+        'category_name' => 'Category',
+        'website_url' => 'Website',
+        'featured' => 'Featured',
+        'is_published' => 'Published',
+        'created_at' => 'Created'
+    ];
+
+    // Define custom formatters
+    $customFormatters = [
+        'category_name' => function($item, $key) {
+            return htmlspecialchars($item[$key] ?? 'None');
+        },
+        'website_url' => function($item, $key) {
+            if (!empty($item[$key])) {
+                return '<a href="' . htmlspecialchars($item[$key]) . '" target="_blank">Visit</a>';
+            } else {
+                return '-';
+            }
+        },
+        'featured' => function($item, $key) {
+            return $item[$key] ? 'Yes' : 'No';
+        },
+        'is_published' => function($item, $key) {
+            return $item[$key] ? 'Yes' : 'No';
+        },
+        'created_at' => function($item, $key) {
+            return date('M j, Y', strtotime($item[$key]));
+        }
+    ];
+
+    // Render the table
+    renderTable($directory_items, $columns, [
+        'content_type' => 'directory_items',
+        'name_field' => 'title',
+        'empty_message' => 'No directory items found. Add your first directory item!',
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-directory-item.php?id={id}',
+        'edit_url' => 'directory-item-form.php?id={id}',
+        'delete_url' => 'delete-directory-item.php'
+    ]);
+}
+
+// Include footer
+include_once '../includes/footer.php';

@@ -1,12 +1,18 @@
 <?php
-// Define custom delete button before including generic template
-$deleteButton = function($item) use ($db) {
+// Start output buffering to capture the generic list template
+ob_start();
+require_once __DIR__ . '/../generic/list.php';
+$genericList = ob_get_clean();
+
+// Replace the default delete button with our custom one
+$customDeleteButtons = '';
+foreach ($items as $item) {
     // Get story count
     $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
     $stmt->execute([$item['id']]);
     $storyCount = $stmt->fetchColumn();
 
-    return sprintf(
+    $customDeleteButtons .= sprintf(
         '<a href="#" class="btn btn-sm btn-danger delete-confirm"
             data-author-id="%d"
             data-author-name="%s"
@@ -17,10 +23,14 @@ $deleteButton = function($item) use ($db) {
         htmlspecialchars($item['name']),
         $storyCount
     );
-};
+}
 
-// Include the generic list template
-require_once __DIR__ . '/../generic/list.php';
+// Replace delete buttons in the generic list
+$pattern = '/<a[^>]*class="[^"]*\bdelete-confirm\b[^"]*"[^>]*>.*?<\/a>/s';
+$genericList = preg_replace($pattern, $customDeleteButtons, $genericList);
+
+// Output the modified list
+echo $genericList;
 ?>
 
 <!-- Modal -->

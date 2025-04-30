@@ -296,7 +296,8 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story> {
   const raw = await fetchApi<any[]>('/stories', {
-    'filters[slug][$eq]': slug
+    'filters[slug][$eq]': slug,
+    'populate': '*'  // Ensure we get all fields including content
   });
   const item = raw[0];
   return {

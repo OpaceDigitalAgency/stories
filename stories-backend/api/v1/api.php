@@ -162,6 +162,25 @@ try {
                         echo json_encode(['error' => ['status' => 400, 'message' => 'Invalid JSON']]);
                         break;
                     }
+
+                    // Generate slug from name
+                    if (isset($input['name'])) {
+                        $name = trim($input['name']);
+                        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+                        $input['slug'] = $slug;
+                    }
+
+                    // Set default values if not provided
+                    if (!isset($input['age'])) {
+                        $input['age'] = null;
+                    }
+                    if (!isset($input['location'])) {
+                        $input['location'] = null;
+                    }
+                    if (!isset($input['author_type'])) {
+                        $input['author_type'] = 'parent';
+                    }
+
                     $fields = array_keys($input);
                     $columns = implode(',', $fields);
                     $placeholders = implode(',', array_map(fn($f) => ":$f", $fields));
@@ -173,7 +192,7 @@ try {
                     $insertStmt->execute();
                     $newId = (int)$db->lastInsertId();
                     http_response_code(201);
-                    echo json_encode(['id' => $newId]);
+                    echo json_encode(['id' => $newId, 'slug' => $input['slug']]);
                 } catch (Exception $e) {
                     error_log("Author creation error: " . $e->getMessage());
                     http_response_code(500);
@@ -218,6 +237,24 @@ try {
                         echo json_encode(['error' => ['status' => 400, 'message' => 'Invalid JSON']]);
                         break;
                     }
+
+                    // Generate slug from title
+                    if (isset($input['title'])) {
+                        $title = trim($input['title']);
+                        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+                        $input['slug'] = $slug;
+                    }
+
+                    // Calculate reading time
+                    if (isset($input['content'])) {
+                        $wordCount = str_word_count(strip_tags($input['content']));
+                        $input['estimated_reading_time'] = ceil($wordCount / 200) . ' minutes';
+                    }
+
+                    // Start transaction
+                    $db->beginTransaction();
+
+                    // Insert story
                     $fields = array_keys($input);
                     $columns = implode(',', $fields);
                     $placeholders = implode(',', array_map(fn($f) => ":$f", $fields));
@@ -228,8 +265,47 @@ try {
                     }
                     $insertStmt->execute();
                     $newId = (int)$db->lastInsertId();
+
+                    // Analyze content and assign tags
+                    if (isset($input['content'])) {
+                        $content = strtolower($input['content']);
+                        
+                        // Define tag patterns
+                        $tagPatterns = [
+                            'adventure' => '/adventure|journey|quest|explore|discover/i',
+                            'fantasy' => '/magic|wizard|dragon|fairy|enchanted/i',
+                            'mystery' => '/mystery|clue|detective|solve|secret/i',
+                            'animals' => '/dog|cat|pet|animal|bird|horse/i',
+                            'family' => '/family|parent|mother|father|sister|brother/i',
+                            'friendship' => '/friend|friendship|together|share|help/i',
+                            'school' => '/school|teacher|student|class|learn/i',
+                            'nature' => '/nature|tree|flower|garden|forest|river/i'
+                        ];
+
+                        // Check content against patterns and assign tags
+                        foreach ($tagPatterns as $tag => $pattern) {
+                            if (preg_match($pattern, $content)) {
+                                // Get or create tag
+                                $tagStmt = $db->prepare("SELECT id FROM tags WHERE name = ?");
+                                $tagStmt->execute([$tag]);
+                                $tagId = $tagStmt->fetchColumn();
+                                
+                                if (!$tagId) {
+                                    $tagStmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                                    $tagStmt->execute([$tag, strtolower($tag)]);
+                                    $tagId = $db->lastInsertId();
+                                }
+                                
+                                // Associate tag with story
+                                $storyTagStmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+                                $storyTagStmt->execute([$newId, $tagId]);
+                            }
+                        }
+                    }
+
+                    $db->commit();
                     http_response_code(201);
-                    echo json_encode(['id' => $newId]);
+                    echo json_encode(['id' => $newId, 'slug' => $input['slug']]);
                 } catch (Exception $e) {
                     error_log("Story creation error: " . $e->getMessage());
                     http_response_code(500);
@@ -306,17 +382,41 @@ try {
             $stmt->bindValue(':limit',  $pageSize, PDO::PARAM_INT);
             $stmt->execute();
 
+            // Check if user is admin (from Authorization header)
+            $isAdmin = false;
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if ($authHeader && strpos($authHeader, 'Bearer ') === 0) {
+                $token = substr($authHeader, 7);
+                $stmt = $db->prepare("SELECT u.role FROM auth_tokens t JOIN users u ON t.user_id = u.id WHERE t.token = ? AND t.expires_at > NOW()");
+                $stmt->execute([$token]);
+                $userRole = $stmt->fetchColumn();
+                $isAdmin = $userRole === 'admin';
+            }
+
             $stories = [];
             while ($row = $stmt->fetch()) {
+                // Calculate reading time based on content length
+                $wordCount = str_word_count(strip_tags($row['content']));
+                $readingTime = ceil($wordCount / 200) . ' minutes'; // Average reading speed
+
                 // Get author information from story_authors table
                 $authorStmt = $db->prepare("
-                    SELECT a.id, a.name, a.slug, a.bio, a.avatar_url
+                    SELECT a.id, a.name, a.slug, a.bio, a.avatar_url, a.age, a.location, a.author_type
                     FROM story_authors sa
                     JOIN authors a ON sa.author_id = a.id
                     WHERE sa.story_id = ?
                 ");
                 $authorStmt->execute([$row['id']]);
                 $author = $authorStmt->fetch();
+
+                // Determine age group based on author age if available
+                $ageGroup = '12+'; // default
+                if ($author && $author['age'] !== null) {
+                    if ($author['age'] <= 5) $ageGroup = '3-5';
+                    else if ($author['age'] <= 8) $ageGroup = '6-8';
+                    else if ($author['age'] <= 12) $ageGroup = '9-12';
+                    else $ageGroup = '12+';
+                }
                 
                 // Get tags for the story
                 $tagStmt = $db->prepare("
@@ -370,6 +470,9 @@ try {
                     $coverUrls['large'] = $media['large_url'] ?: $row['cover_url'];
                 }
                 
+                // Determine if reviews should be shown (not for child authors)
+                $showReviews = !($author && $author['author_type'] === 'child');
+
                 $stories[] = [
                     'id'              => $row['id'],
                     'title'           => $row['title'],
@@ -383,16 +486,24 @@ try {
                     'is_sponsored'    => (bool)$row['is_sponsored'],
                     'is_self_published' => (bool)$row['is_self_published'],
                     'is_ai_enhanced'  => (bool)$row['is_ai_enhanced'],
-                    'average_rating'  => (float)$row['average_rating'],
-                    'review_count'    => (int)$row['review_count'],
+                    'average_rating'  => $showReviews ? (float)$row['average_rating'] : null,
+                    'review_count'    => $showReviews ? (int)$row['review_count'] : 0,
                     'source_type'     => $row['source_type'],
-                    'allow_reviews'   => (bool)$row['allow_reviews'],
+                    'allow_reviews'   => $showReviews && (bool)$row['allow_reviews'],
+                    'show_reviews'    => $showReviews,
+                    'needs_moderation' => (bool)$row['needs_moderation'],
+                    'show_moderation' => $isAdmin && (bool)$row['needs_moderation'],
+                    'estimated_reading_time' => $readingTime,
+                    'age_group'       => $ageGroup,
                     'author'          => $author ? [
                         'id'          => $author['id'],
                         'name'        => $author['name'],
                         'slug'        => $author['slug'],
                         'bio'         => $author['bio'],
-                        'avatar_url'  => $author['avatar_url']
+                        'avatar_url'  => $author['avatar_url'],
+                        'age'         => $author['age'],
+                        'location'    => $author['location'],
+                        'author_type' => $author['author_type']
                     ] : null,
                     'tags'            => array_map(function($tag) {
                         return [
@@ -421,6 +532,33 @@ try {
            AUTHORS (flat array)
            ----------------------------------- */
         case 'authors':
+            if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['id'])) {
+                try {
+                    $authorId = (int)$_GET['id'];
+                    
+                    // Start transaction
+                    $db->beginTransaction();
+                    
+                    // Delete from story_authors first (will cascade)
+                    $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
+                    $stmt->execute([$authorId]);
+                    
+                    // Then delete the author
+                    $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");
+                    $stmt->execute([$authorId]);
+                    
+                    $db->commit();
+                    echo json_encode(['success' => true]);
+                    break;
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    error_log("Author deletion error: " . $e->getMessage());
+                    http_response_code(500);
+                    echo json_encode(['error' => ['status' => 500, 'message' => 'Failed to delete author']]);
+                    break;
+                }
+            }
+            
             // Debug log all GET parameters for authors endpoint
             error_log("Authors API GET parameters: " . json_encode($_GET));
             
@@ -433,6 +571,12 @@ try {
                 $whereConditions[] = "author_type = :author_type";
                 $params[':author_type'] = $_GET['author_type'];
                 error_log("Adding author_type={$_GET['author_type']} filter");
+            }
+            
+            // Add filter for slug if specified
+            if (isset($_GET['slug'])) {
+                $whereConditions[] = "slug = :slug";
+                $params[':slug'] = $_GET['slug'];
             }
             
             // Combine all conditions
@@ -457,9 +601,88 @@ try {
            TAGS (flat array)
            ----------------------------------- */
         case 'tags':
-            $tags = $db
-                ->query("SELECT * FROM tags WHERE 1 ORDER BY name ASC")
-                ->fetchAll();
+            // Build WHERE clause with filters
+            $whereConditions = ["1"];
+            $params = [];
+            
+            // Filter by slug if provided
+            if (isset($_GET['slug'])) {
+                $whereConditions[] = "t.slug = :slug";
+                $params[':slug'] = $_GET['slug'];
+            }
+            
+            // Combine all conditions
+            $whereClause = implode(' AND ', $whereConditions);
+            
+            // Get tag information with story count
+            $sql = "SELECT t.*,
+                    (SELECT COUNT(*) FROM story_tags st
+                     JOIN stories s ON st.story_id = s.id
+                     WHERE st.tag_id = t.id AND s.is_published = 1) as story_count
+                    FROM tags t
+                    WHERE $whereClause
+                    ORDER BY t.name ASC";
+            
+            $stmt = $db->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            $tags = $stmt->fetchAll();
+
+            // If slug is provided, also get associated stories
+            if (isset($_GET['slug'])) {
+                foreach ($tags as &$tag) {
+                    $storyStmt = $db->prepare("
+                        SELECT s.*, a.name as author_name, a.slug as author_slug,
+                               a.age as author_age, a.author_type,
+                               (SELECT GROUP_CONCAT(t2.name)
+                                FROM story_tags st2
+                                JOIN tags t2 ON st2.tag_id = t2.id
+                                WHERE st2.story_id = s.id) as all_tags
+                        FROM stories s
+                        JOIN story_tags st ON s.id = st.story_id
+                        LEFT JOIN story_authors sa ON s.id = sa.story_id
+                        LEFT JOIN authors a ON sa.author_id = a.id
+                        WHERE st.tag_id = ? AND s.is_published = 1
+                        ORDER BY s.created_at DESC
+                    ");
+                    $storyStmt->execute([$tag['id']]);
+                    $tag['stories'] = array_map(function($story) {
+                        // Calculate reading time
+                        $wordCount = str_word_count(strip_tags($story['content']));
+                        $readingTime = ceil($wordCount / 200) . ' minutes';
+                        
+                        // Determine age group based on author age
+                        $ageGroup = '12+';
+                        if ($story['author_age'] !== null) {
+                            if ($story['author_age'] <= 5) $ageGroup = '3-5';
+                            else if ($story['author_age'] <= 8) $ageGroup = '6-8';
+                            else if ($story['author_age'] <= 12) $ageGroup = '9-12';
+                        }
+                        
+                        // Determine if reviews should be shown
+                        $showReviews = !($story['author_type'] === 'child');
+                        
+                        return [
+                            'id' => $story['id'],
+                            'title' => $story['title'],
+                            'slug' => $story['slug'],
+                            'excerpt' => $story['excerpt'],
+                            'cover_url' => $story['cover_url'],
+                            'publishedAt' => date('c', strtotime($story['created_at'])),
+                            'author_name' => $story['author_name'],
+                            'author_slug' => $story['author_slug'],
+                            'estimated_reading_time' => $readingTime,
+                            'age_group' => $ageGroup,
+                            'show_reviews' => $showReviews,
+                            'all_tags' => $story['all_tags'] ? explode(',', $story['all_tags']) : [],
+                            'source_type' => $story['source_type']
+                        ];
+                    }, $storyStmt->fetchAll());
+                }
+            }
+            
             echo json_encode($tags);
             break;
 

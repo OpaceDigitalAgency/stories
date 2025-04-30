@@ -10,6 +10,7 @@ This document provides a comprehensive overview of the Stories from the Web plat
 - [API Endpoints](#api-endpoints)
 - [Authentication Flow](#authentication-flow)
 - [Data Flow Diagrams](#data-flow-diagrams)
+- [Development Workflow](#development-workflow)
 - [Deployment Architecture](#deployment-architecture)
 
 ## System Overview
@@ -48,6 +49,14 @@ graph TD
   - Directory listings
   - AI tool listings
   - Blog posts
+- **Implementation Details**:
+  - TypeScript interfaces for type safety (Story, Author, Tag, etc.)
+  - API wrapper for data fetching
+  - Comprehensive image optimization system
+    - WebP conversion for modern browsers
+    - Responsive images with multiple sizes
+    - Lazy loading for improved performance
+    - CDN integration for faster delivery
 
 #### Backend API (PHP)
 - **Purpose**: Provide data to frontend and admin interface
@@ -61,13 +70,20 @@ graph TD
 
 #### Admin Interface (PHP)
 - **Purpose**: Content management for administrators and authors
-- **Technology**: PHP, HTML, CSS (JavaScript-free)
+- **Technology**: PHP, HTML, CSS (JavaScript-free), Bootstrap
 - **Deployment**: Same server as Backend API
 - **Key Components**:
   - Dashboard
   - Content editors
   - Media management
   - User management
+- **Implementation Details**:
+  - Active admin pages are in `stories-backend/admin/content/` directory
+  - Unused template-based implementation is archived in `stories-backend/admin/_archive/unused_crud_implementation/`
+  - Features Bootstrap modals for confirmation dialogs
+  - Story form includes age-group fields with automatic suggestions based on author age
+  - Direct import feature with tag extraction functionality
+  - Author deletion flow with options for handling associated stories
 
 #### Database (MySQL)
 - **Purpose**: Store all platform content and user data
@@ -92,7 +108,7 @@ erDiagram
     BLOG_POSTS ||--o{ POST_TAGS : has
     TAGS ||--o{ POST_TAGS : belongs_to
     USERS ||--|| AUTH_TOKENS : has
-    
+
     STORIES {
         int id PK
         string title
@@ -106,7 +122,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     AUTHORS {
         int id PK
         string name
@@ -117,7 +133,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     TAGS {
         int id PK
         string name
@@ -125,7 +141,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     USERS {
         int id PK
         string name
@@ -136,7 +152,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     GAMES {
         int id PK
         string title
@@ -150,7 +166,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     DIRECTORY_ITEMS {
         int id PK
         string title
@@ -164,7 +180,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     AI_TOOLS {
         int id PK
         string title
@@ -242,7 +258,7 @@ sequenceDiagram
     participant AdminInterface
     participant API
     participant Database
-    
+
     User->>AdminInterface: Enter credentials
     AdminInterface->>API: POST /auth/login
     API->>Database: Verify credentials
@@ -261,7 +277,7 @@ sequenceDiagram
     participant Frontend
     participant API
     participant Database
-    
+
     Frontend->>API: Request with JWT token
     API->>API: Validate token
     alt Token valid
@@ -287,7 +303,7 @@ sequenceDiagram
     participant Frontend
     participant API
     participant Database
-    
+
     User->>Frontend: Visit stories page
     Frontend->>API: GET /api/v1/stories
     API->>Database: Query stories
@@ -295,7 +311,7 @@ sequenceDiagram
     API-->>Frontend: JSON response
     Frontend->>Frontend: Render stories
     Frontend-->>User: Display stories
-    
+
     User->>Frontend: Click on story
     Frontend->>API: GET /api/v1/stories/{id}
     API->>Database: Query story details
@@ -313,11 +329,11 @@ sequenceDiagram
     participant AdminInterface
     participant API
     participant Database
-    
+
     Author->>AdminInterface: Login
     AdminInterface->>API: Authenticate
     API-->>AdminInterface: Return token
-    
+
     Author->>AdminInterface: Create new story
     AdminInterface->>API: POST /api/v1/admin/stories
     API->>API: Validate data
@@ -326,6 +342,35 @@ sequenceDiagram
     API-->>AdminInterface: Success response
     AdminInterface-->>Author: Show success message
 ```
+
+## Development Workflow
+
+### Git Workflow
+
+- **Main Branch**: Primary branch for development and deployment
+- **Feature Branches**: Created for specific features or bug fixes
+- **Commit Conventions**: Descriptive commit messages with prefixes (feat:, fix:, docs:, etc.)
+- **Combined Operations**: For efficiency, git add/commit/push operations are often combined into a single step
+
+### Code Organization
+
+- **Active Admin Pages**: All active admin pages should be placed in the `stories-backend/admin/content/` directory
+- **Archiving Code**: Unused or deprecated code should be moved to the appropriate subdirectory within `stories-backend/admin/_archive/`
+- **Frontend Components**: New frontend components should follow the existing TypeScript interfaces and Astro component structure
+- **API Endpoints**: New API endpoints should follow the existing pattern in `stories-backend/api/v1/`
+
+### Development Environment
+
+- **Frontend**: Astro development server (npm run dev)
+- **Backend**: Local PHP server (XAMPP, MAMP, etc.)
+- **Database**: Local MySQL instance
+- **API Configuration**: Local API URL configured in `.env` file
+
+### Testing
+
+- **Manual Testing**: Primary method for testing admin functionality
+- **API Testing**: Using tools like Postman or the built-in test scripts
+- **Frontend Testing**: Visual inspection and browser testing
 
 ## Deployment Architecture
 

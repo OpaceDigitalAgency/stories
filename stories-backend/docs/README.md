@@ -44,6 +44,9 @@ We've addressed several issues and made improvements to the platform:
 - **Frontend**: Astro.js static site with TypeScript and Tailwind CSS, deployed on Netlify CDN
 - **Backend**: Custom PHP RESTful API with MySQL database, hosted on cPanel shared hosting
 - **Admin Interface**: JavaScript-free PHP admin panel for content management
+  - Active admin pages are in `stories-backend/admin/content/` directory
+  - Unused template-based implementation is archived in `stories-backend/admin/_archive/unused_crud_implementation/`
+  - Features Bootstrap modals for confirmation dialogs, age-group fields, and tag extraction
 
 ## Current Cleanup Initiative
 

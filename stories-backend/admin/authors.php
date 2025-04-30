@@ -209,30 +209,79 @@ class AuthorsPage extends CrudPage {
             return;
         }
 
-        // Use the new delete-author.php script
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'delete-author.php');
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['id' => $_POST['id']]));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $action = $_POST['action'] ?? 'cancel';
+        $newAuthorId = $_POST['new_author_id'] ?? null;
 
-        if ($httpCode !== 200) {
-            $this->errors[] = 'Failed to delete author';
+        if ($action === 'cancel') {
+            $this->redirect = 'authors.php';
             return;
         }
 
-        $result = json_decode($response, true);
-        if (!$result['success']) {
-            $this->errors[] = $result['error'] ?? 'Failed to delete author';
-            return;
-        }
+        try {
+            // Start transaction
+            $this->db->beginTransaction();
 
-        $this->message = 'Author deleted successfully';
-        $this->redirect = 'authors.php';
+            $authorId = $_POST['id'];
+
+            // Get story count
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
+            $stmt->execute([$authorId]);
+            $storyCount = $stmt->fetchColumn();
+
+            if ($action === 'delete_all') {
+                // Get all stories by this author
+                $stmt = $this->db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
+                $stmt->execute([$authorId]);
+                $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Delete story tags
+                if (!empty($storyIds)) {
+                    $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                    $stmt = $this->db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
+                    $stmt->execute($storyIds);
+                }
+                
+                // Delete story authors
+                $stmt = $this->db->prepare("DELETE FROM story_authors WHERE author_id = ?");
+                $stmt->execute([$authorId]);
+                
+                // Delete stories
+                if (!empty($storyIds)) {
+                    $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                    $stmt = $this->db->prepare("DELETE FROM stories WHERE id IN ($placeholders)");
+                    $stmt->execute($storyIds);
+                }
+            }
+            elseif ($action === 'reassign' && $newAuthorId) {
+                // Verify new author exists
+                $stmt = $this->db->prepare("SELECT id FROM authors WHERE id = ?");
+                $stmt->execute([$newAuthorId]);
+                if (!$stmt->fetch()) {
+                    throw new Exception("New author not found");
+                }
+                
+                // Update story_authors table
+                $stmt = $this->db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id = ?");
+                $stmt->execute([$newAuthorId, $authorId]);
+            }
+            else {
+                throw new Exception("Invalid action");
+            }
+
+            // Finally delete the author
+            $stmt = $this->db->prepare("DELETE FROM authors WHERE id = ?");
+            $stmt->execute([$authorId]);
+
+            $this->db->commit();
+            $this->message = 'Author deleted successfully';
+            $this->redirect = 'authors.php';
+
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            $this->errors[] = $e->getMessage();
+        }
     }
     
     /**
@@ -316,7 +365,7 @@ class AuthorsPage extends CrudPage {
             case 'delete':
                 return 'authors/delete';
             default:
-                return 'generic/list';
+                return 'authors/list';
         }
     }
 }

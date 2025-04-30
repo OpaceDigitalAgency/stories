@@ -22,14 +22,7 @@ SimpleAuth::initDB($config);
 
 // Check if already logged in
 if (SimpleAuth::check()) {
-    // Clear any redirecting flag
-    if (isset($_SESSION['redirecting_to_login'])) {
-        unset($_SESSION['redirecting_to_login']);
-    }
-
-    // For debugging
-    error_log("User already logged in, redirecting to dashboard");
-
+    // Redirect to dashboard
     header("Location: dashboard.php");
     exit;
 }

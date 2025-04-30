@@ -10,15 +10,21 @@
  * // Now $user is available for use
  */
 
-// Determine the correct path to simple_auth.php based on the current file location
-$basePath = dirname($_SERVER['SCRIPT_FILENAME']);
-$adminDir = strpos($basePath, '/admin/content') !== false ? '../../' : '../';
-require_once $adminDir . 'simple_auth.php';
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// For debugging
-error_log("Auth check running in: " . $_SERVER['SCRIPT_FILENAME']);
+// Determine if we're in the content directory or main admin directory
+$isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false;
 
-// Initialize SimpleAuth with database config
+// Set the correct path to simple_auth.php
+$simpleAuthPath = $isContentDir ? '../../simple_auth.php' : '../simple_auth.php';
+
+// Include simple_auth.php
+require_once $simpleAuthPath;
+
+// Database configuration
 $config = [
     'host' => 'localhost',
     'name' => 'stories_db',
@@ -31,39 +37,18 @@ $config = [
 // Initialize SimpleAuth
 SimpleAuth::initDB($config);
 
+// Get the current script name
+$currentScript = basename($_SERVER['SCRIPT_FILENAME']);
+
 // Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    // If this is an AJAX request, return JSON
-    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
+$user = SimpleAuth::check();
 
-    // Prevent redirect loops by checking if we're already on the login page
-    $currentScript = basename($_SERVER['SCRIPT_FILENAME']);
-    if ($currentScript !== 'login.php') {
-        // For debugging
-        error_log("Redirecting to login from: " . $_SERVER['SCRIPT_FILENAME']);
+// If not logged in and not on login page, redirect to login
+if (!$user && $currentScript !== 'login.php') {
+    // Set the correct login path
+    $loginPath = $isContentDir ? '../login.php' : 'login.php';
 
-        // Redirect to login page
-        $loginPath = $adminDir === '../' ? 'login.php' : '../login.php';
-
-        // Clear any existing output to prevent "headers already sent" errors
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-
-        // Disable further output buffering
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-
-        // Set a session variable to indicate we're redirecting to login
-        $_SESSION['redirecting_to_login'] = true;
-
-        // Redirect
-        header("Location: $loginPath");
-        exit;
-    }
+    // Redirect to login
+    header("Location: $loginPath");
+    exit;
 }

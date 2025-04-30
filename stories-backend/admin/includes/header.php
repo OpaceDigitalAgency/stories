@@ -16,12 +16,8 @@ $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = $currentPage ?? '';
 $pageDescription = $pageDescription ?? '';
 
-// Determine the correct paths based on the current file location
-$basePath = dirname($_SERVER['SCRIPT_FILENAME']);
-$isContentDir = strpos($basePath, '/admin/content') !== false;
-
-// For debugging
-error_log("Header included from: " . $_SERVER['SCRIPT_FILENAME'] . ", isContentDir: " . ($isContentDir ? 'true' : 'false'));
+// Determine if we're in the content directory or main admin directory
+$isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false;
 ?>
 <!DOCTYPE html>
 <html lang="en">

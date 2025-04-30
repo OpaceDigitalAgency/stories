@@ -60,6 +60,8 @@ export interface Game {
   slug: string;
   price: number;
   rating: number;
+  category: string;
+  ageRange: string;
 }
 
 export interface DirectoryItem {
@@ -218,7 +220,9 @@ export async function fetchGames(): Promise<Game[]> {
     coverImage: item.cover_url || '',
     slug: item.slug,
     price: Number(item.price) || 0,
-    rating: Number(item.rating) || 0
+    rating: Number(item.rating) || 0,
+    category: item.category || 'General',
+    ageRange: item.age_range || 'All Ages'
   }));
 }
 

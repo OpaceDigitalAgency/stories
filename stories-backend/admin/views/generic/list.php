@@ -84,7 +84,7 @@
                                                     } else {
                                                         $value = $item[$field['name']] ?? '';
                                                     }
-                                                    
+
                                                     // Format value based on field type
                                                     switch ($field['type']) {
                                                         case 'boolean':
@@ -177,9 +177,15 @@
                                             <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=edit&id=' . $item['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
                                                 <i class="fas fa-edit me-1"></i> Edit
                                             </a>
+                                            <?php if ($activeMenu === 'authors'): ?>
+                                            <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete">
+                                                <i class="fas fa-trash me-1"></i> Delete
+                                            </a>
+                                            <?php else: ?>
                                             <a href="<?php echo ADMIN_URL . '/' . $activeMenu . '.php?action=delete&id=' . $item['id']; ?>" class="btn btn-sm btn-danger delete-confirm" data-bs-toggle="tooltip" title="Delete">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </a>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

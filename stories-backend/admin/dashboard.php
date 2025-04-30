@@ -1,33 +1,18 @@
 <?php
-require_once '../simple_auth.php';
-// Load admin configuration
-$config = require __DIR__ . '/includes/config.php';
-// Initialize database connection for SimpleAuth
-SimpleAuth::initDB($config['db']);
- // Initialize database connection for SimpleAuth
- SimpleAuth::initDB($config);
+/**
+ * Dashboard Page
+ *
+ * This is the main dashboard page for the admin panel.
+ */
 
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+// Include auth check
+include_once 'includes/auth-check.php';
 
-if (!SimpleAuth::check()) {
-    header("Location: login.php");
-    exit;
-}
+// Include database connection
+include_once 'includes/db-connect.php';
 
 try {
     // Get content statistics
-    $db = new PDO(
-        "mysql:host={$config['db']['host']};dbname={$config['db']['name']};charset={$config['db']['charset']};port={$config['db']['port']}",
-        $config['db']['user'],
-        $config['db']['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Initialize stats array
     $stats = [
@@ -112,103 +97,36 @@ try {
     $error = "Error loading dashboard data. Please try again.";
 }
 
-// Get user information
-$user = SimpleAuth::check();
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Stories Admin</title>
-    <!-- Use enhanced admin CSS -->
-    <link rel="stylesheet" href="/admin/assets/css/enhanced-admin.css">
-    <!-- Add Font Awesome for better icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Meta tags for better accessibility -->
-    <meta name="description" content="Stories Admin Dashboard - Manage all your content">
-    <meta name="theme-color" content="#4361ee">
-</head>
-<body>
-    <!-- Skip to content link for accessibility -->
-    <a href="#main-content" class="skip-to-content">Skip to content</a>
+// Set page variables for header
+$pageTitle = 'Dashboard';
+$currentPage = 'dashboard';
+$pageDescription = 'Welcome to the Stories Admin Dashboard. Manage all your content from here.';
+$pageActions = '
+<div class="d-flex gap-2">
+    <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" target="_blank" class="btn btn-info">
+        <i class="fas fa-chart-line"></i> Diagnostic Dashboard
+    </a>
+    <a href="https://api.storiesfromtheweb.org/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
+        <i class="fas fa-book-open"></i> View System Documentation
+    </a>
+    <a href="https://api.storiesfromtheweb.org/public/optimize_image.php" target="_blank" class="btn btn-success">
+        <i class="fas fa-image"></i> Image Optimization Tool
+    </a>
+</div>
+';
 
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
+// Include header
+include_once 'includes/header.php';
 
-    <div class="container" id="main-content">
-        <?php if (isset($error)): ?>
-            <div class="error" role="alert">
-                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                <?php echo htmlspecialchars($error); ?>
-            </div>
-        <?php endif; ?>
+// Display error message if any
+if (isset($error)): ?>
+    <div class="error" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <?php echo htmlspecialchars($error); ?>
+    </div>
+<?php endif; ?>
 
-        <nav class="nav-menu">
-            <form method="GET">
-                <button type="submit" formaction="dashboard.php" class="nav-link active">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </button>
-                <button type="submit" formaction="content/stories.php" class="nav-link">
-                    <i class="fas fa-book"></i> Stories
-                </button>
-                <button type="submit" formaction="content/blog-posts.php" class="nav-link">
-                    <i class="fas fa-newspaper"></i> Blog Posts
-                </button>
-                <button type="submit" formaction="content/authors.php" class="nav-link">
-                    <i class="fas fa-user-edit"></i> Authors
-                </button>
-                <button type="submit" formaction="content/tags.php" class="nav-link">
-                    <i class="fas fa-tags"></i> Tags
-                </button>
-                <button type="submit" formaction="content/games.php" class="nav-link">
-                    <i class="fas fa-gamepad"></i> Games
-                </button>
-                <button type="submit" formaction="content/directory-items.php" class="nav-link">
-                    <i class="fas fa-folder"></i> Directory
-                </button>
-                <button type="submit" formaction="content/ai-tools.php" class="nav-link">
-                    <i class="fas fa-robot"></i> AI Tools
-                </button>
-                <button type="submit" formaction="content/media.php" class="nav-link">
-                    <i class="fas fa-images"></i> Media
-                </button>
-                <button type="submit" formaction="test_tools.php" class="nav-link">
-                    <i class="fas fa-tools"></i> Test Tools
-                </button>
-            </form>
-        </nav>
-
-        <div class="page-header mb-4">
-            <h1 class="page-title">Dashboard</h1>
-            <p class="page-description">Welcome to the Stories Admin Dashboard. Manage all your content from here.</p>
-            <div class="mt-3 d-flex gap-2">
-                <!-- Fix the diagnostic dashboard link -->
-                <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" target="_blank" class="btn btn-info">
-                    <i class="fas fa-chart-line"></i> Diagnostic Dashboard
-                </a>
-                <a href="https://api.storiesfromtheweb.org/docs/comprehensive-system-architecture-new.php" target="_blank" class="btn btn-info">
-                    <i class="fas fa-book-open"></i> View System Documentation
-                </a>
-                <a href="https://api.storiesfromtheweb.org/public/optimize_image.php" target="_blank" class="btn btn-success">
-                    <i class="fas fa-image"></i> Image Optimization Tool
-                </a>
-            </div>
-        </div>
-
-        <h2 class="section-title"><i class="fas fa-chart-pie"></i> Content Overview</h2>
+<h2 class="section-title"><i class="fas fa-chart-pie"></i> Content Overview</h2>
 
         <div class="dashboard-cards">
             <div class="dashboard-card content-card" aria-labelledby="stories-card-title">
@@ -532,105 +450,7 @@ $user = SimpleAuth::check();
         </div>
     </div>
 
-    <footer class="admin-footer" role="contentinfo">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3 class="footer-heading">Stories from the Web</h3>
-                    <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
-                    <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
-                </div>
-
-                <div class="footer-section">
-                    <h3 class="footer-heading">Quick Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="../docs/comprehensive-system-architecture-new.php" target="_blank">System Documentation</a></li>
-                        <li><a href="../docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues & Fixes</a></li>
-                        <li><a href="../public/optimize_image.php" target="_blank">Image Optimization Tool</a></li>
-                    </ul>
-                </div>
-
-                <div class="footer-section">
-                    <h3 class="footer-heading">Support</h3>
-                    <ul class="footer-links">
-                        <li><a href="mailto:support@storiesfromtheweb.org">Email Support</a></li>
-                        <li><a href="https://github.com/OpaceDigitalAgency/stories/issues" target="_blank">Report an Issue</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <p>Made with <span aria-hidden="true">❤️</span><span class="visually-hidden">love</span> by the Stories from the Web team</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Add CSS for the enhanced footer -->
-    <style>
-        .footer-content {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .footer-section {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .footer-heading {
-            font-size: var(--font-size-md);
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--gray-700);
-        }
-
-        .footer-links {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .footer-links li {
-            margin-bottom: 0.5rem;
-        }
-
-        .footer-links a {
-            color: var(--gray-600);
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .footer-links a:hover {
-            color: var(--primary);
-            text-decoration: underline;
-        }
-
-        .footer-bottom {
-            padding-top: 1rem;
-            border-top: 1px solid var(--gray-200);
-            text-align: center;
-        }
-
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-
-        @media (max-width: 768px) {
-            .footer-content {
-                flex-direction: column;
-                gap: 1.5rem;
-            }
-        }
-    </style>
-</body>
-</html>
+<?php
+// Include footer
+include_once 'includes/footer.php';
+?>

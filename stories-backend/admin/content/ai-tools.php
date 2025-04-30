@@ -1,24 +1,15 @@
 <?php
-require_once '../../simple_auth.php';
+/**
+ * AI Tools Admin Page
+ *
+ * This page displays a list of all AI tools and allows for searching, filtering, and bulk actions.
+ */
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include database connection
+include_once '../includes/db-connect.php';
 
 // Initialize variables
 $ai_tools = [];
@@ -26,17 +17,6 @@ $error = null;
 $success = null;
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
 
     // Check if ai_tools table exists
     $stmt = $db->query("SHOW TABLES LIKE 'ai_tools'");
@@ -73,9 +53,9 @@ try {
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
-        
+
         // Add some default categories
-        $db->exec("INSERT INTO ai_tool_categories (name, slug, description, created_at, updated_at) VALUES 
+        $db->exec("INSERT INTO ai_tool_categories (name, slug, description, created_at, updated_at) VALUES
             ('Text Generation', 'text-generation', 'AI tools for generating text content', NOW(), NOW()),
             ('Image Generation', 'image-generation', 'AI tools for generating images', NOW(), NOW()),
             ('Content Summarization', 'content-summarization', 'AI tools for summarizing content', NOW(), NOW()),
@@ -86,9 +66,9 @@ try {
 
     // Get all AI tools with category names
     $ai_tools = $db->query("
-        SELECT a.*, c.name as category_name 
-        FROM ai_tools a 
-        LEFT JOIN ai_tool_categories c ON a.category_id = c.id 
+        SELECT a.*, c.name as category_name
+        FROM ai_tools a
+        LEFT JOIN ai_tool_categories c ON a.category_id = c.id
         ORDER BY a.created_at DESC
     ")->fetchAll();
 
@@ -108,124 +88,81 @@ if (isset($_SESSION['error'])) {
     $error = $_SESSION['error'];
     unset($_SESSION['error']);
 }
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Tools - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
 
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link active">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
+// Set page variables for header
+$pageTitle = 'AI Tools';
+$currentPage = 'ai-tools';
+$pageDescription = 'Manage all your AI tools from here.';
+$pageActions = '
+<form method="GET" action="ai-tool-form.php">
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New AI Tool
+    </button>
+</form>
+';
 
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title">AI Tools</h1>
-                <p class="page-description">Manage all your AI tools from here.</p>
-            </div>
-            <form method="GET" action="ai-tool-form.php">
-                <button type="submit" class="btn btn-success">
-                    <span class="icon-edit"></span> Add New AI Tool
-                </button>
-            </form>
-        </div>
+// Include header
+include_once '../includes/header.php';
 
-        <?php if (isset($success)): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('ai_tools', ['title', 'description', 'pricing_type', 'category_name']);
+}
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('ai_tools', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
+}
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Pricing</th>
-                        <th>Rating</th>
-                        <th>Featured</th>
-                        <th>Published</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($ai_tools)): ?>
-                        <tr>
-                            <td colspan="8" class="text-center">No AI tools found. Add your first AI tool!</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($ai_tools as $tool): ?>
-                            <tr>
-                                <td><?php echo $tool['id']; ?></td>
-                                <td><?php echo htmlspecialchars($tool['title']); ?></td>
-                                <td><?php echo htmlspecialchars($tool['category_name'] ?? 'None'); ?></td>
-                                <td><?php echo ucfirst($tool['pricing_type']); ?></td>
-                                <td><?php echo number_format($tool['rating'], 1); ?></td>
-                                <td><?php echo $tool['featured'] ? 'Yes' : 'No'; ?></td>
-                                <td><?php echo $tool['is_published'] ? 'Yes' : 'No'; ?></td>
-                                <td>
-                                    <div class="table-actions">
-                                        <form method="GET" action="view-ai-tool.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
-                                            <button type="submit" class="btn btn-info btn-sm">
-                                                <span class="icon-view"></span> View
-                                            </button>
-                                        </form>
-                                        <form method="GET" action="ai-tool-form.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <span class="icon-edit"></span> Edit
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="delete-ai-tool.php" style="display: inline;">
-                                            <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Are you sure you want to delete this AI tool?')">
-                                                <span class="icon-delete"></span> Delete
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+// Include status indicator component
+include_once '../includes/status-indicator-component.php';
+
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
+    $columns = [
+        'id' => 'ID',
+        'title' => 'Title',
+        'category_name' => 'Category',
+        'pricing_type' => 'Pricing',
+        'rating' => 'Rating',
+        'featured' => 'Featured',
+        'is_published' => 'Published'
+    ];
+
+    // Define custom formatters
+    $customFormatters = [
+        'category_name' => function($tool, $key) {
+            return htmlspecialchars($tool[$key] ?? 'None');
+        },
+        'pricing_type' => function($tool, $key) {
+            return ucfirst($tool[$key]);
+        },
+        'rating' => function($tool, $key) {
+            return number_format($tool[$key], 1);
+        },
+        'featured' => function($tool, $key) {
+            return $tool[$key] ? 'Yes' : 'No';
+        },
+        'is_published' => function($tool, $key) {
+            return $tool[$key] ? 'Yes' : 'No';
+        }
+    ];
+
+    // Render the table
+    renderTable($ai_tools, $columns, [
+        'content_type' => 'ai_tools',
+        'name_field' => 'title',
+        'empty_message' => 'No AI tools found. Add your first AI tool!',
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-ai-tool.php?id={id}',
+        'edit_url' => 'ai-tool-form.php?id={id}',
+        'delete_url' => 'delete-ai-tool.php'
+    ]);
+}
+
+// Include footer
+include_once '../includes/footer.php';

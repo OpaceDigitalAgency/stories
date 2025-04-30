@@ -298,12 +298,16 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
     $origHeight = $imageInfo[1];
     $type = $imageInfo[2];
     
-    // Always resize to max 300px width for better performance
-    $maxWidth = 300;
-    $width = $maxWidth;
-    $height = ($origHeight / $origWidth) * $maxWidth;
+    // Use the requested dimensions or maintain original size
+    $width = $options['width'] ?? $origWidth;
+    $height = $options['height'] ?? $origHeight;
     
-    $quality = $options['quality'] ?? 60; // Reduced default quality
+    // If only width is specified, calculate height to maintain aspect ratio
+    if ($options['width'] && !$options['height']) {
+        $height = ($origHeight / $origWidth) * $width;
+    }
+    
+    $quality = $options['quality'] ?? 85; // Use higher default quality
     $format = $options['format'] ?? 'jpg';
     
     // Try ImageMagick first (best quality and compression)

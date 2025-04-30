@@ -18,7 +18,7 @@ $IMAGE_SIZES = [
 $IMAGE_FORMATS = [
     'jpg' => [
         'mime' => 'image/jpeg',
-        'quality' => 60, // Lower quality for better compression
+        'quality' => 85, // Higher quality for display images
         'extension' => 'jpg'
     ],
     'png' => [
@@ -28,7 +28,7 @@ $IMAGE_FORMATS = [
     ],
     'webp' => [
         'mime' => 'image/webp',
-        'quality' => 60, // Lower quality for better compression
+        'quality' => 85, // Higher quality for display images
         'extension' => 'webp'
     ]
 ];
@@ -37,7 +37,7 @@ $IMAGE_FORMATS = [
 $DEFAULT_CONVERT_FORMAT = 'jpg';
 
 // Maximum file size before optimization is required (in bytes)
-$MAX_FILE_SIZE = 1024 * 1024; // 1MB - increased to handle larger images
+$MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB - allow larger high-quality images
 
 // Directory for optimized images
 $OPTIMIZED_DIR = 'optimized';

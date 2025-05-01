@@ -15,6 +15,40 @@ include_once '../includes/header.php';
 // Include common admin functions
 include_once '../includes/admin-functions.php';
 
+// Add custom CSS for subscriber details
+echo '<style>
+    .subscriber-details {
+        margin-bottom: 1rem;
+    }
+    .detail-item {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+    .detail-item strong {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #495057;
+    }
+    .message-content, .notes-content {
+        background-color: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        margin-top: 0.25rem;
+    }
+    .table-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.35em 0.65em;
+    }
+</style>';
+
 // Ensure we have a database connection
 if (!isset($db) || !$db) {
     // Try to connect to the database directly
@@ -235,7 +269,6 @@ try {
                         <tr>
                             <th>ID</th>
                             <th>Email</th>
-                            <th>Name</th>
                             <th>Feature</th>
                             <th>Date</th>
                             <th>Status</th>
@@ -245,25 +278,24 @@ try {
                     <tbody>
                         <?php if (empty($subscribers)): ?>
                             <tr>
-                                <td colspan="7" class="text-center">No subscribers found</td>
+                                <td colspan="6" class="text-center">No subscribers found</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($subscribers as $subscriber): ?>
                                 <tr>
                                     <td><?php echo $subscriber['id']; ?></td>
                                     <td><?php echo htmlspecialchars($subscriber['email']); ?></td>
-                                    <td><?php echo htmlspecialchars($subscriber['name'] ?? 'Not provided'); ?></td>
                                     <td>
-                                        <span class="status-indicator">
+                                        <span class="badge bg-info text-dark">
                                             <?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>
                                         </span>
                                     </td>
                                     <td><?php echo date('M d, Y', strtotime($subscriber['created_at'])); ?></td>
                                     <td>
                                         <?php if ($subscriber['is_contacted']): ?>
-                                            <span class="status-indicator status-published">Contacted</span>
+                                            <span class="badge bg-success">Contacted</span>
                                         <?php else: ?>
-                                            <span class="status-indicator status-pending">Not Contacted</span>
+                                            <span class="badge bg-warning text-dark">Not Contacted</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -271,77 +303,161 @@ try {
                                             <button type="button" class="btn btn-sm btn-primary"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#subscriberModal<?php echo $subscriber['id']; ?>">
-                                                <i class="fas fa-edit"></i> Update
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-info"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#viewModal<?php echo $subscriber['id']; ?>">
+                                                <i class="fas fa-eye"></i> View
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- Modal for each subscriber -->
-                                <div class="modal fade" id="subscriberModal<?php echo $subscriber['id']; ?>" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Update Subscriber</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <form method="post">
-                                                <div class="modal-body">
-                                                    <input type="hidden" name="subscriber_id" value="<?php echo $subscriber['id']; ?>">
-                                                    <input type="hidden" name="update_contact_status" value="1">
-
-                                                    <div class="form-group mb-3">
-                                                        <label class="form-label">Email</label>
-                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['email']); ?>" readonly>
-                                                    </div>
-
-                                                    <?php if (!empty($subscriber['name'])): ?>
-                                                    <div class="form-group mb-3">
-                                                        <label class="form-label">Name</label>
-                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['name']); ?>" readonly>
-                                                    </div>
-                                                    <?php endif; ?>
-
-                                                    <div class="form-group mb-3">
-                                                        <label class="form-label">Feature</label>
-                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>" readonly>
-                                                    </div>
-
-                                                    <?php if (!empty($subscriber['message'])): ?>
-                                                    <div class="form-group mb-3">
-                                                        <label class="form-label">Message</label>
-                                                        <textarea class="form-control" rows="3" readonly><?php echo htmlspecialchars($subscriber['message']); ?></textarea>
-                                                    </div>
-                                                    <?php endif; ?>
-
-                                                    <div class="form-group mb-3">
-                                                        <label class="form-label">Subscription Date</label>
-                                                        <input type="text" class="form-control" value="<?php echo date('F d, Y H:i', strtotime($subscriber['created_at'])); ?>" readonly>
-                                                    </div>
-
-                                                    <div class="form-check mb-3">
-                                                        <input type="checkbox" class="form-check-input" id="isContacted<?php echo $subscriber['id']; ?>" name="is_contacted" <?php echo $subscriber['is_contacted'] ? 'checked' : ''; ?>>
-                                                        <label class="form-check-label" for="isContacted<?php echo $subscriber['id']; ?>">Mark as contacted</label>
-                                                    </div>
-
-                                                    <div class="form-group mb-3">
-                                                        <label for="adminNotes<?php echo $subscriber['id']; ?>" class="form-label">Admin Notes</label>
-                                                        <textarea class="form-control" id="adminNotes<?php echo $subscriber['id']; ?>" name="admin_notes" rows="3"><?php echo htmlspecialchars($subscriber['admin_notes'] ?? ''); ?></textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
+
+            <!-- Modals for each subscriber -->
+            <?php if (!empty($subscribers)): ?>
+                <?php foreach ($subscribers as $subscriber): ?>
+                    <!-- View Modal -->
+                    <div class="modal fade" id="viewModal<?php echo $subscriber['id']; ?>" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Subscriber Details</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="subscriber-details">
+                                        <div class="detail-item">
+                                            <strong>Email:</strong>
+                                            <span><?php echo htmlspecialchars($subscriber['email']); ?></span>
+                                        </div>
+
+                                        <?php if (!empty($subscriber['name'])): ?>
+                                        <div class="detail-item">
+                                            <strong>Name:</strong>
+                                            <span><?php echo htmlspecialchars($subscriber['name']); ?></span>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <div class="detail-item">
+                                            <strong>Feature:</strong>
+                                            <span><?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?></span>
+                                        </div>
+
+                                        <div class="detail-item">
+                                            <strong>Subscription Date:</strong>
+                                            <span><?php echo date('F d, Y H:i', strtotime($subscriber['created_at'])); ?></span>
+                                        </div>
+
+                                        <div class="detail-item">
+                                            <strong>Status:</strong>
+                                            <span>
+                                                <?php if ($subscriber['is_contacted']): ?>
+                                                    <span class="badge bg-success">Contacted</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning text-dark">Not Contacted</span>
+                                                <?php endif; ?>
+                                            </span>
+                                        </div>
+
+                                        <?php if (!empty($subscriber['message'])): ?>
+                                        <div class="detail-item">
+                                            <strong>Message:</strong>
+                                            <div class="message-content">
+                                                <?php echo nl2br(htmlspecialchars($subscriber['message'])); ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($subscriber['admin_notes'])): ?>
+                                        <div class="detail-item">
+                                            <strong>Admin Notes:</strong>
+                                            <div class="notes-content">
+                                                <?php echo nl2br(htmlspecialchars($subscriber['admin_notes'])); ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#subscriberModal<?php echo $subscriber['id']; ?>"
+                                            data-bs-dismiss="modal">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="subscriberModal<?php echo $subscriber['id']; ?>" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Update Subscriber</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form method="post">
+                                    <div class="modal-body">
+                                        <input type="hidden" name="subscriber_id" value="<?php echo $subscriber['id']; ?>">
+                                        <input type="hidden" name="update_contact_status" value="1">
+
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['email']); ?>" readonly>
+                                        </div>
+
+                                        <?php if (!empty($subscriber['name'])): ?>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['name']); ?>" readonly>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Feature</label>
+                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>" readonly>
+                                        </div>
+
+                                        <?php if (!empty($subscriber['message'])): ?>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Message</label>
+                                            <textarea class="form-control" rows="3" readonly><?php echo htmlspecialchars($subscriber['message']); ?></textarea>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Subscription Date</label>
+                                            <input type="text" class="form-control" value="<?php echo date('F d, Y H:i', strtotime($subscriber['created_at'])); ?>" readonly>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input type="checkbox" class="form-check-input" id="isContacted<?php echo $subscriber['id']; ?>" name="is_contacted" <?php echo $subscriber['is_contacted'] ? 'checked' : ''; ?>>
+                                            <label class="form-check-label" for="isContacted<?php echo $subscriber['id']; ?>">Mark as contacted</label>
+                                        </div>
+
+                                        <div class="form-group mb-3">
+                                            <label for="adminNotes<?php echo $subscriber['id']; ?>" class="form-label">Admin Notes</label>
+                                            <textarea class="form-control" id="adminNotes<?php echo $subscriber['id']; ?>" name="admin_notes" rows="3"><?php echo htmlspecialchars($subscriber['admin_notes'] ?? ''); ?></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
 
             <!-- Pagination -->
             <?php if (isset($totalPages) && $totalPages > 1): ?>

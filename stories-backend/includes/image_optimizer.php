@@ -1,7 +1,7 @@
 <?php
 /**
  * Image Optimizer Library
- * 
+ *
  * A modular library for optimizing images with consistent behavior
  * across all parts of the application.
  */
@@ -11,7 +11,7 @@ require_once __DIR__ . '/image_config.php';
 
 /**
  * Check if image libraries are available
- * 
+ *
  * @return array Associative array of available libraries
  */
 function getAvailableImageLibraries() {
@@ -19,13 +19,13 @@ function getAvailableImageLibraries() {
         'imagick' => extension_loaded('imagick'),
         'gd' => extension_loaded('gd')
     ];
-    
+
     return $libraries;
 }
 
 /**
  * Get image type from file
- * 
+ *
  * @param string $path Path to the image file
  * @return string|null Image type (jpg, png, gif, etc.) or null if not an image
  */
@@ -33,14 +33,14 @@ function getImageType($path) {
     if (!file_exists($path)) {
         return null;
     }
-    
+
     $info = getimagesize($path);
     if (!$info) {
         return null;
     }
-    
+
     $mime = $info['mime'];
-    
+
     switch ($mime) {
         case 'image/jpeg':
             return 'jpg';
@@ -57,7 +57,7 @@ function getImageType($path) {
 
 /**
  * Get image dimensions
- * 
+ *
  * @param string $path Path to the image file
  * @return array|null Array with width and height, or null if not an image
  */
@@ -65,12 +65,12 @@ function getImageDimensions($path) {
     if (!file_exists($path)) {
         return null;
     }
-    
+
     $info = getimagesize($path);
     if (!$info) {
         return null;
     }
-    
+
     return [
         'width' => $info[0],
         'height' => $info[1]
@@ -79,16 +79,16 @@ function getImageDimensions($path) {
 
 /**
  * Create a unique filename for an optimized image
- * 
+ *
  * @param string $originalFilename Original filename
  * @param string $size Size identifier (thumbnail, small, medium, large)
  * @param string $format Format (jpg, png, webp)
  * @return string Unique filename
  */
-function createOptimizedFilename($originalFilename, $size = 'medium', $format = 'jpg') {
+function createOptimizedFilename($originalFilename, $size = 'medium', $format = 'webp') {
     $pathInfo = pathinfo($originalFilename);
     $baseName = $pathInfo['filename'];
-    
+
     // Extract the original descriptive part if it exists
     if (preg_match('/^[0-9a-f]+-(.+)$/', $baseName, $matches)) {
         // If there's a descriptive part after the random digits, use it
@@ -103,19 +103,19 @@ function createOptimizedFilename($originalFilename, $size = 'medium', $format = 
             $baseName = 'image';
         }
     }
-    
+
     // Clean up the basename - replace spaces with hyphens and remove special characters
     $baseName = preg_replace('/[^a-zA-Z0-9-]/', '-', $baseName);
     $baseName = preg_replace('/-+/', '-', $baseName); // Replace multiple hyphens with a single one
     $baseName = trim($baseName, '-'); // Remove hyphens from start and end
-    
+
     // Create a SEO-friendly filename with size indicator but no random prefix
     return $baseName . '-' . $size . '.' . $format;
 }
 
 /**
  * Resize and optimize an image using ImageMagick
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationPath Destination path
  * @param array $options Resize options
@@ -127,17 +127,17 @@ function resizeWithImageMagick($sourcePath, $destinationPath, $options = []) {
         $height = $options['height'] ?? null;
         $crop = $options['crop'] ?? false;
         $quality = $options['quality'] ?? 85;
-        $format = $options['format'] ?? 'jpg';
-        
+        $format = $options['format'] ?? 'webp';
+
         $imagick = new Imagick($sourcePath);
-        
+
         // Strip metadata to reduce size
         $imagick->stripImage();
-        
+
         // Get original dimensions
         $origWidth = $imagick->getImageWidth();
         $origHeight = $imagick->getImageHeight();
-        
+
         // Calculate new dimensions if needed
         if ($width && $height) {
             if ($crop) {
@@ -148,7 +148,7 @@ function resizeWithImageMagick($sourcePath, $destinationPath, $options = []) {
                 $imagick->resizeImage($width, $height, Imagick::FILTER_LANCZOS, 1, true);
             }
         }
-        
+
         // Set format-specific options
         if ($format === 'jpg') {
             $imagick->setImageFormat('JPEG');
@@ -163,11 +163,11 @@ function resizeWithImageMagick($sourcePath, $destinationPath, $options = []) {
             $imagick->setImageFormat('WEBP');
             $imagick->setImageCompressionQuality($quality);
         }
-        
+
         // Write the optimized image
         $imagick->writeImage($destinationPath);
         $imagick->destroy();
-        
+
         return true;
     } catch (Exception $e) {
         error_log("ImageMagick optimization failed: " . $e->getMessage());
@@ -177,7 +177,7 @@ function resizeWithImageMagick($sourcePath, $destinationPath, $options = []) {
 
 /**
  * Resize and optimize an image using GD
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationPath Destination path
  * @param array $options Resize options
@@ -189,11 +189,11 @@ function resizeWithGD($sourcePath, $destinationPath, $options = []) {
         $height = $options['height'] ?? null;
         $crop = $options['crop'] ?? false;
         $quality = $options['quality'] ?? 85;
-        $format = $options['format'] ?? 'jpg';
-        
+        $format = $options['format'] ?? 'webp';
+
         // Get image info
         list($origWidth, $origHeight, $type) = getimagesize($sourcePath);
-        
+
         // Create source image resource
         switch ($type) {
             case IMAGETYPE_JPEG:
@@ -211,25 +211,25 @@ function resizeWithGD($sourcePath, $destinationPath, $options = []) {
             default:
                 return false;
         }
-        
+
         if (!$source) {
             return false;
         }
-        
+
         // Calculate new dimensions
         $newWidth = $width ?? $origWidth;
         $newHeight = $height ?? $origHeight;
-        
+
         if (!$crop && $width && $height) {
             // Maintain aspect ratio
             $ratio = min($newWidth / $origWidth, $newHeight / $origHeight);
             $newWidth = $origWidth * $ratio;
             $newHeight = $origHeight * $ratio;
         }
-        
+
         // Create destination image
         $destination = imagecreatetruecolor($newWidth, $newHeight);
-        
+
         // Preserve transparency for PNG
         if ($type === IMAGETYPE_PNG) {
             imagealphablending($destination, false);
@@ -237,14 +237,14 @@ function resizeWithGD($sourcePath, $destinationPath, $options = []) {
             $transparent = imagecolorallocatealpha($destination, 255, 255, 255, 127);
             imagefilledrectangle($destination, 0, 0, $newWidth, $newHeight, $transparent);
         }
-        
+
         // Resize the image
         imagecopyresampled(
             $destination, $source,
             0, 0, 0, 0,
             $newWidth, $newHeight, $origWidth, $origHeight
         );
-        
+
         // Save the image
         $success = false;
         switch ($format) {
@@ -260,11 +260,11 @@ function resizeWithGD($sourcePath, $destinationPath, $options = []) {
                 $success = imagewebp($destination, $destinationPath, $quality);
                 break;
         }
-        
+
         // Clean up
         imagedestroy($source);
         imagedestroy($destination);
-        
+
         return $success;
     } catch (Exception $e) {
         error_log("GD optimization failed: " . $e->getMessage());
@@ -274,7 +274,7 @@ function resizeWithGD($sourcePath, $destinationPath, $options = []) {
 
 /**
  * Resize and optimize an image
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationPath Destination path
  * @param array $options Resize options
@@ -286,42 +286,42 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
         error_log("Source file not found: $sourcePath");
         return false;
     }
-    
+
     // Get image info
     $imageInfo = getimagesize($sourcePath);
     if (!$imageInfo) {
         error_log("Failed to get image info: $sourcePath");
         return false;
     }
-    
+
     $origWidth = $imageInfo[0];
     $origHeight = $imageInfo[1];
     $type = $imageInfo[2];
-    
+
     // Use the requested dimensions or maintain original size
     $width = $options['width'] ?? $origWidth;
     $height = $options['height'] ?? $origHeight;
-    
+
     // If only width is specified, calculate height to maintain aspect ratio
     if ($options['width'] && !$options['height']) {
         $height = ($origHeight / $origWidth) * $width;
     }
-    
+
     $quality = $options['quality'] ?? 85; // Use higher default quality
-    $format = $options['format'] ?? 'jpg';
-    
+    $format = $options['format'] ?? 'webp';
+
     // Try ImageMagick first (best quality and compression)
     if (extension_loaded('imagick')) {
         try {
             error_log("Using ImageMagick for optimization");
             $imagick = new Imagick($sourcePath);
-            
+
             // Strip metadata to reduce size
             $imagick->stripImage();
-            
+
             // Always resize to 300px width
             $imagick->resizeImage($width, $height, Imagick::FILTER_LANCZOS, 1, true);
-            
+
             // Set format-specific options
             if ($format === 'jpg' || $imagick->getImageFormat() === 'JPEG') {
                 $imagick->setImageFormat('JPEG');
@@ -333,12 +333,15 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
                 $imagick->setOption('png:compression-level', 9);
                 $imagick->setOption('png:compression-strategy', 1);
                 $imagick->setOption('png:exclude-chunk', 'all');
+            } else if ($format === 'webp' || $imagick->getImageFormat() === 'WEBP') {
+                $imagick->setImageFormat('WEBP');
+                $imagick->setImageCompressionQuality($quality);
             }
-            
+
             // Write the optimized image
             $imagick->writeImage($destinationPath);
             $imagick->destroy();
-            
+
             error_log("Successfully optimized image with ImageMagick: " . filesize($destinationPath) . " bytes");
             return true;
         } catch (Exception $e) {
@@ -346,12 +349,12 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
             // Fall through to GD
         }
     }
-    
+
     // Try GD as fallback
     if (extension_loaded('gd')) {
         try {
             error_log("Using GD for optimization");
-            
+
             // Create source image resource
             switch ($type) {
                 case IMAGETYPE_JPEG:
@@ -370,15 +373,15 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
                     error_log("Unsupported image type: $type");
                     return false;
             }
-            
+
             if (!$source) {
                 error_log("Failed to create source image resource");
                 return false;
             }
-            
+
             // Create destination image
             $destination = imagecreatetruecolor($width, $height);
-            
+
             // Preserve transparency for PNG
             if ($type === IMAGETYPE_PNG) {
                 imagealphablending($destination, false);
@@ -386,14 +389,14 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
                 $transparent = imagecolorallocatealpha($destination, 255, 255, 255, 127);
                 imagefilledrectangle($destination, 0, 0, $width, $height, $transparent);
             }
-            
+
             // Resize the image
             imagecopyresampled(
                 $destination, $source,
                 0, 0, 0, 0,
                 $width, $height, $origWidth, $origHeight
             );
-            
+
             // Save with maximum compression
             $success = false;
             switch ($format) {
@@ -407,11 +410,11 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
                     $success = imagewebp($destination, $destinationPath, $quality);
                     break;
             }
-            
+
             // Clean up
             imagedestroy($source);
             imagedestroy($destination);
-            
+
             if ($success) {
                 error_log("Successfully optimized image with GD: " . filesize($destinationPath) . " bytes");
                 return true;
@@ -420,15 +423,30 @@ function resizeImage($sourcePath, $destinationPath, $options = []) {
             error_log("GD optimization failed: " . $e->getMessage());
         }
     }
-    
+
     // If all optimization attempts fail, copy the original
     error_log("All optimization methods failed, copying without optimization");
     return copy($sourcePath, $destinationPath);
 }
 
 /**
+ * Convert an image to WebP format
+ *
+ * @param string $sourcePath Source image path
+ * @param string $destinationPath Destination path
+ * @param int $quality WebP quality (0-100)
+ * @return bool Success or failure
+ */
+function convertToWebP($sourcePath, $destinationPath, $quality = 85) {
+    return resizeImage($sourcePath, $destinationPath, [
+        'format' => 'webp',
+        'quality' => $quality
+    ]);
+}
+
+/**
  * Convert an image to JPG format
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationPath Destination path
  * @param int $quality JPEG quality (0-100)
@@ -443,7 +461,7 @@ function convertToJpg($sourcePath, $destinationPath, $quality = 85) {
 
 /**
  * Create multiple size variants of an image
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationDir Destination directory
  * @param array $options Additional options
@@ -451,54 +469,54 @@ function convertToJpg($sourcePath, $destinationPath, $quality = 85) {
  */
 function createImageVariants($sourcePath, $destinationDir, $options = []) {
     global $IMAGE_SIZES, $DEFAULT_CONVERT_FORMAT;
-    
+
     // Ensure destination directory exists
     if (!is_dir($destinationDir)) {
         mkdir($destinationDir, 0755, true);
     }
-    
+
     // Get image type and dimensions
     $imageType = getImageType($sourcePath);
     if (!$imageType) {
         error_log("Not a valid image: $sourcePath");
         return false;
     }
-    
+
     $dimensions = getImageDimensions($sourcePath);
     if (!$dimensions) {
         error_log("Could not get image dimensions: $sourcePath");
         return false;
     }
-    
+
     // Determine if we should convert format
     $convertFormat = $options['convert_format'] ?? $DEFAULT_CONVERT_FORMAT;
     $originalFilename = basename($sourcePath);
-    
+
     $variants = [];
-    
+
     // Create each size variant
     foreach ($IMAGE_SIZES as $size => $sizeConfig) {
         // Skip original size if not needed
         if ($size === 'original' && !($options['include_original'] ?? true)) {
             continue;
         }
-        
+
         // Determine output format
         $outputFormat = $convertFormat;
         if ($size === 'original') {
             $outputFormat = $imageType; // Keep original format for original size
         }
-        
+
         // Get format config
         $formatConfig = getImageFormatConfig($outputFormat);
-        
+
         // Create unique filename
         $variantFilename = createOptimizedFilename($originalFilename, $size, $formatConfig['extension']);
-        
+
         // Ensure no double slashes in the path
         $destinationDir = rtrim($destinationDir, '/');
         $variantPath = $destinationDir . '/' . $variantFilename;
-        
+
         // Set resize options
         $resizeOptions = [
             'width' => $sizeConfig['width'],
@@ -507,23 +525,23 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
             'format' => $outputFormat,
             'quality' => $formatConfig['quality']
         ];
-        
+
         // For original size, just convert format if needed
         if ($size === 'original') {
             $resizeOptions['width'] = null;
             $resizeOptions['height'] = null;
         }
-        
+
         // Resize and optimize
         $success = resizeImage($sourcePath, $variantPath, $resizeOptions);
-        
+
         if ($success) {
             // Create URL
             $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $variantPath);
             // Ensure the relative path starts with a single slash
             $relativePath = '/' . ltrim($relativePath, '/');
             $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
-            
+
             $variants[$size] = [
                 'path' => $variantPath,
                 'url' => $url,
@@ -531,13 +549,13 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
             ];
         }
     }
-    
+
     return $variants;
 }
 
 /**
  * Optimize a single image
- * 
+ *
  * @param string $sourcePath Source image path
  * @param string $destinationDir Destination directory
  * @param array $options Additional options
@@ -545,24 +563,24 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
  */
 function optimizeImage($sourcePath, $destinationDir, $options = []) {
     global $MAX_FILE_SIZE;
-    
+
     // Check if the source file exists
     if (!file_exists($sourcePath)) {
         error_log("Source file not found: $sourcePath");
         return false;
     }
-    
+
     // Get file size
     $fileSize = filesize($sourcePath);
-    
+
     // Skip if file is already small enough and not forced
     if ($fileSize < $MAX_FILE_SIZE && !($options['force'] ?? false)) {
         error_log("File is already small enough: $sourcePath ($fileSize bytes)");
-        
+
         // Just return the original file info
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $sourcePath);
         $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
-        
+
         return [
             'path' => $sourcePath,
             'url' => $url,
@@ -570,21 +588,21 @@ function optimizeImage($sourcePath, $destinationDir, $options = []) {
             'optimized' => false
         ];
     }
-    
+
     // Create variants
     $variants = createImageVariants($sourcePath, $destinationDir, $options);
-    
+
     if (!$variants) {
         return false;
     }
-    
+
     // Return the medium size as the default optimized version
     return $variants['medium'] ?? $variants['original'] ?? false;
 }
 
 /**
  * Update media record in database with optimized URLs
- * 
+ *
  * @param PDO $db Database connection
  * @param int $mediaId Media ID
  * @param array $variants Image variants
@@ -602,20 +620,20 @@ function updateMediaRecord($db, $mediaId, $variants) {
                 medium_url = :medium_url,
                 large_url = :large_url
                 WHERE id = :id";
-        
+
         $stmt = $db->prepare($sql);
-        
+
         // Determine the file type based on the format used
-        $fileType = 'image/jpeg'; // Default to JPEG since we're converting most images
+        $fileType = 'image/webp'; // Default to WebP since we're converting most images
         if (isset($variants['medium'])) {
             $ext = pathinfo($variants['medium']['path'], PATHINFO_EXTENSION);
             if ($ext === 'png') {
                 $fileType = 'image/png';
-            } elseif ($ext === 'webp') {
-                $fileType = 'image/webp';
+            } elseif ($ext === 'jpg' || $ext === 'jpeg') {
+                $fileType = 'image/jpeg';
             }
         }
-        
+
         // Bind parameters
         $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? '');
         $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? 0);
@@ -625,7 +643,7 @@ function updateMediaRecord($db, $mediaId, $variants) {
         $stmt->bindValue(':medium_url', $variants['medium']['url'] ?? '');
         $stmt->bindValue(':large_url', $variants['large']['url'] ?? '');
         $stmt->bindValue(':id', $mediaId, PDO::PARAM_INT);
-        
+
         // Execute the statement
         return $stmt->execute();
     } catch (PDOException $e) {
@@ -636,7 +654,7 @@ function updateMediaRecord($db, $mediaId, $variants) {
 
 /**
  * Get optimized image URL for a specific size
- * 
+ *
  * @param string $originalUrl Original image URL
  * @param string $size Size identifier (thumbnail, small, medium, large)
  * @return string URL for the requested size or original URL if not available
@@ -645,7 +663,7 @@ function getOptimizedImageUrl($originalUrl, $size = 'medium') {
     // Extract the media ID from the URL if possible
     if (preg_match('/\/media\/(\d+)\//', $originalUrl, $matches)) {
         $mediaId = $matches[1];
-        
+
         // Connect to database
         try {
             $db = new PDO(
@@ -657,12 +675,12 @@ function getOptimizedImageUrl($originalUrl, $size = 'medium') {
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 ]
             );
-            
+
             // Get the media record
             $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");
             $stmt->execute([$mediaId]);
             $media = $stmt->fetch();
-            
+
             if ($media) {
                 // Return the requested size URL if available
                 $sizeUrl = $media[$size . '_url'] ?? null;
@@ -674,7 +692,7 @@ function getOptimizedImageUrl($originalUrl, $size = 'medium') {
             error_log("Database error getting optimized URL: " . $e->getMessage());
         }
     }
-    
+
     // If we can't get an optimized URL, return the original
     return $originalUrl;
 }

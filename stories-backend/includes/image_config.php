@@ -1,7 +1,7 @@
 <?php
 /**
  * Image Configuration
- * 
+ *
  * Defines standard image sizes and formats for different contexts
  */
 
@@ -34,7 +34,10 @@ $IMAGE_FORMATS = [
 ];
 
 // Default format to convert to (for better compression)
-$DEFAULT_CONVERT_FORMAT = 'jpg';
+$DEFAULT_CONVERT_FORMAT = 'webp';
+
+// Image types that should remain in PNG format (cartoons, illustrations, etc.)
+$PRESERVE_PNG_TYPES = ['cartoon', 'illustration', 'logo', 'text-heavy'];
 
 // Maximum file size before optimization is required (in bytes)
 $MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB - allow larger high-quality images
@@ -49,7 +52,7 @@ function getImageSizeConfig($size = 'medium') {
 }
 
 // Function to get image format configuration
-function getImageFormatConfig($format = 'jpg') {
+function getImageFormatConfig($format = 'webp') {
     global $IMAGE_FORMATS;
-    return $IMAGE_FORMATS[$format] ?? $IMAGE_FORMATS['jpg'];
+    return $IMAGE_FORMATS[$format] ?? $IMAGE_FORMATS['webp'];
 }

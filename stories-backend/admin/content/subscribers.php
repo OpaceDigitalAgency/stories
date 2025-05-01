@@ -67,6 +67,78 @@ echo '<style>
 // Add Bootstrap JS for modals
 echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>';
 
+// Add custom JavaScript for notification functionality
+echo '<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Handle bulk action change
+    const bulkActionSelect = document.getElementById("bulk-action");
+    const applyButton = document.getElementById("apply-bulk-action");
+    const notificationModal = new bootstrap.Modal(document.getElementById("notificationModal"));
+
+    if (bulkActionSelect && applyButton) {
+        // Override the bulk action form submission
+        const bulkForm = document.getElementById("bulk-actions-form");
+        if (bulkForm) {
+            bulkForm.addEventListener("submit", function(e) {
+                const action = bulkActionSelect.value;
+
+                // If action is notify, show the notification modal instead
+                if (action === "notify") {
+                    e.preventDefault();
+
+                    // Get selected IDs
+                    const selectedIds = [];
+                    document.querySelectorAll(".bulk-checkbox:checked").forEach(function(checkbox) {
+                        selectedIds.push(checkbox.value);
+
+                        // Create hidden inputs for the notification form
+                        const input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = "selected_ids[]";
+                        input.value = checkbox.value;
+                        document.getElementById("notification-selected-ids").appendChild(input);
+                    });
+
+                    if (selectedIds.length === 0) {
+                        alert("Please select at least one subscriber to notify.");
+                        return;
+                    }
+
+                    // Show the notification modal
+                    notificationModal.show();
+                }
+            });
+        }
+    }
+
+    // Handle single notify buttons
+    document.querySelectorAll(".notify-single-btn").forEach(function(button) {
+        button.addEventListener("click", function() {
+            const id = this.getAttribute("data-id");
+            const email = this.getAttribute("data-email");
+            const feature = this.getAttribute("data-feature");
+
+            // Clear previous selected IDs
+            document.getElementById("notification-selected-ids").innerHTML = "";
+
+            // Add the selected ID
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "selected_ids[]";
+            input.value = id;
+            document.getElementById("notification-selected-ids").appendChild(input);
+
+            // Update the message template with the subscriber info
+            const messageField = document.getElementById("notification-message");
+            const defaultMessage = messageField.value;
+
+            // Show the notification modal
+            notificationModal.show();
+        });
+    });
+});
+</script>';
+
 // Ensure we have a database connection
 if (!isset($db) || !$db) {
     // Try to connect to the database directly
@@ -274,70 +346,130 @@ try {
             </form>
         </div>
 
-        <!-- Subscribers table -->
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Subscribers List</h2>
-                <span class="badge"><?php echo isset($totalItems) ? $totalItems : count($subscribers); ?> subscribers</span>
-            </div>
+        <!-- Include bulk actions component -->
+        <?php
+        include_once '../includes/bulk-actions-component.php';
+        if (function_exists('renderBulkActionsComponent')) {
+            renderBulkActionsComponent('subscribers', ['delete', 'mark_contacted', 'mark_not_contacted', 'notify']);
+        }
+        ?>
 
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Email</th>
-                            <th>Feature</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($subscribers)): ?>
-                            <tr>
-                                <td colspan="6" class="text-center">No subscribers found</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($subscribers as $subscriber): ?>
-                                <tr>
-                                    <td><?php echo $subscriber['id']; ?></td>
-                                    <td><?php echo htmlspecialchars($subscriber['email']); ?></td>
-                                    <td>
-                                        <span class="badge bg-info text-dark">
-                                            <?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo date('M d, Y', strtotime($subscriber['created_at'])); ?></td>
-                                    <td>
-                                        <?php if ($subscriber['is_contacted']): ?>
-                                            <span class="badge bg-success">Contacted</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-warning text-dark">Not Contacted</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <div class="table-actions">
-                                            <button type="button" class="btn btn-sm btn-primary"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#subscriberModal<?php echo $subscriber['id']; ?>">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-info"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#viewModal<?php echo $subscriber['id']; ?>">
-                                                <i class="fas fa-eye"></i> View
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+        <!-- Notification Modal -->
+        <div class="modal fade" id="notificationModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Send Notification to Subscribers</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="notification-form" method="post" action="bulk-subscribers.php">
+                        <div class="modal-body">
+                            <input type="hidden" name="action" value="notify">
+                            <div id="notification-selected-ids"></div>
 
-            <!-- Modals for each subscriber -->
+                            <div class="form-group mb-3">
+                                <label for="notification-subject" class="form-label">Email Subject</label>
+                                <input type="text" class="form-control" id="notification-subject" name="notification_subject"
+                                       value="Update from Stories From The Web" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="notification-message" class="form-label">Message</label>
+                                <p class="text-muted small">You can use [NAME] and [FEATURE] as placeholders that will be replaced with the subscriber's information.</p>
+                                <textarea class="form-control" id="notification-message" name="notification_message" rows="6" required>Hello [NAME],
+
+We're excited to share that we have updates about [FEATURE] that you subscribed to. Stay tuned for more information coming soon!
+
+Best regards,
+The Stories From The Web Team</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Send Notification</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Include table component -->
+        <?php
+        include_once '../includes/table-component.php';
+        if (function_exists('renderTable')) {
+            // Define columns
+            $columns = [
+                'email' => 'Email',
+                'feature' => 'Feature',
+                'created_at' => 'Date',
+                'is_contacted' => 'Status'
+            ];
+
+            // Define custom formatters
+            $customFormatters = [
+                'feature' => function($subscriber, $key) {
+                    return '<span class="badge bg-info text-dark">' .
+                           htmlspecialchars(ucfirst($subscriber[$key])) .
+                           '</span>';
+                },
+                'created_at' => function($subscriber, $key) {
+                    return date('M d, Y', strtotime($subscriber[$key]));
+                },
+                'is_contacted' => function($subscriber, $key) {
+                    if ($subscriber[$key]) {
+                        return '<span class="badge bg-success">Contacted</span>';
+                    } else {
+                        return '<span class="badge bg-warning text-dark">Not Contacted</span>';
+                    }
+                }
+            ];
+
+            // Define custom actions
+            $customActions = function($subscriber) {
+                $output = '';
+
+                // Edit button
+                $output .= '<button type="button" class="btn btn-sm btn-primary" ' .
+                           'data-bs-toggle="modal" ' .
+                           'data-bs-target="#subscriberModal' . $subscriber['id'] . '">' .
+                           '<i class="fas fa-edit"></i> Edit' .
+                           '</button> ';
+
+                // View button
+                $output .= '<button type="button" class="btn btn-sm btn-info" ' .
+                           'data-bs-toggle="modal" ' .
+                           'data-bs-target="#viewModal' . $subscriber['id'] . '">' .
+                           '<i class="fas fa-eye"></i> View' .
+                           '</button> ';
+
+                // Notify button
+                $output .= '<button type="button" class="btn btn-sm btn-success notify-single-btn" ' .
+                           'data-id="' . $subscriber['id'] . '" ' .
+                           'data-email="' . htmlspecialchars($subscriber['email']) . '" ' .
+                           'data-feature="' . htmlspecialchars($subscriber['feature']) . '">' .
+                           '<i class="fas fa-envelope"></i> Notify' .
+                           '</button>';
+
+                return $output;
+            };
+
+            // Render the table
+            renderTable($subscribers, $columns, [
+                'content_type' => 'subscribers',
+                'name_field' => 'email',
+                'empty_message' => 'No subscribers found.',
+                'custom_formatters' => $customFormatters,
+                'custom_actions' => $customActions,
+                'actions' => [
+                    'view' => false,
+                    'edit' => false,
+                    'delete' => false
+                ]
+            ]);
+        }
+        ?>
+
+        <!-- Modals for each subscriber -->
             <?php if (!empty($subscribers)): ?>
                 <?php foreach ($subscribers as $subscriber): ?>
                     <!-- View Modal -->

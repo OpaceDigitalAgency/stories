@@ -133,9 +133,7 @@ try {
         $totalPages = ceil($totalItems / $perPage);
 
         // Add limit to the main query
-        $query .= " LIMIT ?, ?";
-        $params[] = $offset;
-        $params[] = $perPage;
+        $query .= " LIMIT " . intval($offset) . ", " . intval($perPage);
 
         error_log("Executing subscriber query: {$query} with params: " . print_r($params, true));
         $stmt = $db->prepare($query);

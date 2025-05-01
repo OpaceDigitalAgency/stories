@@ -128,7 +128,7 @@ const {
               <h3 class="text-xl font-bold text-text-primary mb-3">Get Notified When We Launch</h3>
               <p class="text-text-secondary mb-4">Sign up to be the first to know when {featureName} is available.</p>
 
-              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3" onsubmit="return false;">
+              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
                   name="email"
@@ -153,24 +153,25 @@ const {
               </div>
 
               <script>
-                // Form submission handler
+                // Simple form submission handler without TypeScript
                 document.addEventListener('DOMContentLoaded', function() {
-                  const form = document.getElementById('notifyForm') as HTMLFormElement;
-                  const resultDiv = document.getElementById('notification-result');
-                  const successMsg = document.getElementById('success-message');
-                  const errorMsg = document.getElementById('error-message');
-                  const submitBtn = document.getElementById('notify-submit-btn') as HTMLButtonElement;
+                  // Get form elements
+                  var form = document.getElementById('notifyForm');
+                  var resultDiv = document.getElementById('notification-result');
+                  var successMsg = document.getElementById('success-message');
+                  var errorMsg = document.getElementById('error-message');
+                  var submitBtn = document.getElementById('notify-submit-btn');
 
-                  // Check if we have URL parameters from a form submission
-                  const urlParams = new URLSearchParams(window.location.search);
-                  const email = urlParams.get('email');
-                  const feature = urlParams.get('feature');
+                  // Check for URL parameters (for direct form submissions)
+                  var urlParams = new URLSearchParams(window.location.search);
+                  var email = urlParams.get('email');
+                  var feature = urlParams.get('feature');
 
+                  // If we have URL parameters, show success message
                   if (email && feature) {
-                    // Clear the URL parameters
+                    // Clear URL parameters
                     if (window.history && window.history.replaceState) {
-                      const cleanUrl = window.location.pathname;
-                      window.history.replaceState({}, document.title, cleanUrl);
+                      window.history.replaceState({}, document.title, window.location.pathname);
                     }
 
                     // Show success message
@@ -181,67 +182,67 @@ const {
                     }
                   }
 
-                  if (form && resultDiv && successMsg && errorMsg && submitBtn) {
-                    form.addEventListener('submit', async function(e) {
+                  // Add form submit handler
+                  if (form) {
+                    form.addEventListener('submit', function(e) {
                       e.preventDefault();
 
-                      // Clear any existing URL parameters
-                      if (window.history && window.history.replaceState) {
-                        const cleanUrl = window.location.pathname;
-                        window.history.replaceState({}, document.title, cleanUrl);
-                      }
-
                       // Show loading state
-                      submitBtn.disabled = true;
-                      submitBtn.innerHTML = 'Submitting...';
+                      if (submitBtn) {
+                        submitBtn.setAttribute('disabled', 'disabled');
+                        submitBtn.textContent = 'Submitting...';
+                      }
 
                       // Get form data
-                      const formData = new FormData(form);
-                      const formObject: Record<string, string> = {};
-                      formData.forEach((value, key) => {
-                        if (typeof value === 'string') {
-                          formObject[key] = value;
-                        }
-                      });
+                      var email = document.getElementById('subscriber-email').value;
+                      var featureInput = document.querySelector('input[name="feature"]');
+                      var feature = featureInput ? featureInput.value : 'premium stories';
 
-                      try {
-                        console.log('Submitting subscription data:', formObject);
+                      // Create a direct form submission
+                      var directForm = document.createElement('form');
+                      directForm.method = 'POST';
+                      directForm.action = 'https://api.storiesfromtheweb.org/api/v1/subscribers.php';
 
-                        // Submit to API
-                        const response = await fetch('https://api.storiesfromtheweb.org/api/v1/subscribers.php', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify(formObject)
-                        });
+                      // Add email field
+                      var emailField = document.createElement('input');
+                      emailField.type = 'hidden';
+                      emailField.name = 'email';
+                      emailField.value = email;
+                      directForm.appendChild(emailField);
 
-                        console.log('API response status:', response.status);
-                        const data = await response.json();
-                        console.log('API response data:', data);
+                      // Add feature field
+                      var featureField = document.createElement('input');
+                      featureField.type = 'hidden';
+                      featureField.name = 'feature';
+                      featureField.value = feature;
+                      directForm.appendChild(featureField);
 
-                        // Reset form
+                      // Submit the form
+                      document.body.appendChild(directForm);
+                      directForm.submit();
+
+                      // Reset the original form
+                      if (form) {
                         form.reset();
+                      }
 
-                        // Show success message
+                      // Reset button state
+                      if (submitBtn) {
+                        submitBtn.removeAttribute('disabled');
+                        submitBtn.textContent = 'Notify Me';
+                      }
+
+                      // Show success message
+                      if (resultDiv && successMsg) {
                         resultDiv.classList.remove('hidden');
                         successMsg.classList.remove('hidden');
-                        errorMsg.classList.add('hidden');
-                        successMsg.textContent = data.message || 'Thank you for subscribing! We\'ll notify you when this feature is available.';
-
-                      } catch (error) {
-                        console.error('Subscription error details:', error);
-
-                        // Show error message
-                        resultDiv.classList.remove('hidden');
-                        errorMsg.classList.remove('hidden');
-                        successMsg.classList.add('hidden');
-                        errorMsg.textContent = 'Sorry, there was an error submitting your request. Please try again.';
-                      } finally {
-                        // Reset button state
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = 'Notify Me';
+                        if (errorMsg) {
+                          errorMsg.classList.add('hidden');
+                        }
+                        successMsg.textContent = 'Thank you for subscribing! We\'ll notify you when this feature is available.';
                       }
+
+                      return false;
                     });
                   }
                 });

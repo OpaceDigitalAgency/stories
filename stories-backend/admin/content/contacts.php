@@ -3,9 +3,13 @@
  * Admin page for managing contact form submissions
  */
 
+// Set page variables for header
+$pageTitle = 'Contact Form Submissions';
+$currentPage = 'contacts';
+$pageDescription = 'Manage and respond to contact form submissions from website visitors.';
+
 // Include common admin files
 include_once '../includes/header.php';
-include_once '../includes/sidebar.php';
 include_once '../includes/functions.php';
 
 // Process form submissions
@@ -17,11 +21,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_P
     $contactId = (int)$_POST['contact_id'];
     $isResponded = isset($_POST['is_responded']) ? 1 : 0;
     $adminNotes = $_POST['admin_notes'] ?? '';
-    
+
     try {
         $stmt = $db->prepare("UPDATE contacts SET is_responded = ?, admin_notes = ? WHERE id = ?");
         $stmt->execute([$isResponded, $adminNotes, $contactId]);
-        
+
         $successMessage = "Contact status updated successfully.";
     } catch (PDOException $e) {
         $errorMessage = "Error updating contact: " . $e->getMessage();
@@ -32,7 +36,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_P
 if (isset($_POST['action']) && $_POST['action'] === 'send_response' && isset($_POST['contact_id'])) {
     $contactId = (int)$_POST['contact_id'];
     $responseMessage = $_POST['response_message'] ?? '';
-    
+
     if (empty($responseMessage)) {
         $errorMessage = "Response message cannot be empty.";
     } else {
@@ -41,7 +45,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_response' && isset($_P
             $stmt = $db->prepare("SELECT * FROM contacts WHERE id = ?");
             $stmt->execute([$contactId]);
             $contact = $stmt->fetch();
-            
+
             if ($contact) {
                 // Send email
                 $to = $contact['email'];
@@ -49,12 +53,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_response' && isset($_P
                 $message = $responseMessage;
                 $headers = "From: Stories From The Web <noreply@storiesfromtheweb.org>\r\n";
                 $headers .= "Reply-To: support@storiesfromtheweb.org\r\n";
-                
+
                 if (mail($to, $subject, $message, $headers)) {
                     // Update contact as responded
                     $stmt = $db->prepare("UPDATE contacts SET is_responded = 1, admin_notes = CONCAT(admin_notes, '\n\nResponse sent on " . date('Y-m-d H:i:s') . ":\n', ?) WHERE id = ?");
                     $stmt->execute([$responseMessage, $contactId]);
-                    
+
                     $successMessage = "Response sent successfully to " . htmlspecialchars($contact['email']);
                 } else {
                     $errorMessage = "Failed to send email. Please check server configuration.";
@@ -76,11 +80,11 @@ try {
         // Get filter parameters
         $search = $_GET['search'] ?? '';
         $responseStatus = isset($_GET['response_status']) ? (int)$_GET['response_status'] : -1;
-        
+
         // Build query
         $query = "SELECT * FROM contacts WHERE 1=1";
         $params = [];
-        
+
         if (!empty($search)) {
             $query .= " AND (name LIKE ? OR email LIKE ? OR subject LIKE ? OR message LIKE ?)";
             $searchParam = "%{$search}%";
@@ -89,14 +93,14 @@ try {
             $params[] = $searchParam;
             $params[] = $searchParam;
         }
-        
+
         if ($responseStatus !== -1) {
             $query .= " AND is_responded = ?";
             $params[] = $responseStatus;
         }
-        
+
         $query .= " ORDER BY created_at DESC";
-        
+
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $contacts = $stmt->fetchAll();
@@ -132,21 +136,21 @@ $customFormatters = [
                 </a>
             </div>
         </div>
-        
+
         <?php if (!empty($successMessage)): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <?php echo $successMessage; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
-        
+
         <?php if (!empty($errorMessage)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <?php echo $errorMessage; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
-        
+
         <!-- Filters -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
@@ -169,7 +173,7 @@ $customFormatters = [
                 </form>
             </div>
         </div>
-        
+
         <!-- Contacts Table -->
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -207,13 +211,13 @@ $customFormatters = [
                                         <td><?php echo $customFormatters['created_at']($contact['created_at']); ?></td>
                                         <td><?php echo $customFormatters['is_responded']($contact['is_responded']); ?></td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-info" 
-                                                data-bs-toggle="modal" 
+                                            <button type="button" class="btn btn-sm btn-info"
+                                                data-bs-toggle="modal"
                                                 data-bs-target="#viewModal<?php echo $contact['id']; ?>">
                                                 <i class="fas fa-eye"></i> View
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-success" 
-                                                data-bs-toggle="modal" 
+                                            <button type="button" class="btn btn-sm btn-success"
+                                                data-bs-toggle="modal"
                                                 data-bs-target="#responseModal<?php echo $contact['id']; ?>">
                                                 <i class="fas fa-reply"></i> Respond
                                             </button>
@@ -226,7 +230,7 @@ $customFormatters = [
                 </div>
             </div>
         </div>
-        
+
         <!-- Modals for each contact -->
         <?php if (!empty($contacts)): ?>
             <?php foreach ($contacts as $contact): ?>
@@ -251,7 +255,7 @@ $customFormatters = [
                                         <form method="post" class="border rounded p-3">
                                             <input type="hidden" name="action" value="update_status">
                                             <input type="hidden" name="contact_id" value="<?php echo $contact['id']; ?>">
-                                            
+
                                             <div class="mb-3">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="is_responded<?php echo $contact['id']; ?>" name="is_responded" <?php echo $contact['is_responded'] ? 'checked' : ''; ?>>
@@ -260,17 +264,17 @@ $customFormatters = [
                                                     </label>
                                                 </div>
                                             </div>
-                                            
+
                                             <div class="mb-3">
                                                 <label for="admin_notes<?php echo $contact['id']; ?>" class="form-label">Admin Notes</label>
                                                 <textarea class="form-control" id="admin_notes<?php echo $contact['id']; ?>" name="admin_notes" rows="4"><?php echo htmlspecialchars($contact['admin_notes'] ?? ''); ?></textarea>
                                             </div>
-                                            
+
                                             <button type="submit" class="btn btn-primary">Update Status</button>
                                         </form>
                                     </div>
                                 </div>
-                                
+
                                 <div class="border rounded p-3 bg-light">
                                     <h6 class="mb-3">Message:</h6>
                                     <div class="message-content" style="white-space: pre-wrap;"><?php echo htmlspecialchars($contact['message']); ?></div>
@@ -285,7 +289,7 @@ $customFormatters = [
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Response Modal -->
                 <div class="modal fade" id="responseModal<?php echo $contact['id']; ?>" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
@@ -298,17 +302,17 @@ $customFormatters = [
                                 <div class="modal-body">
                                     <input type="hidden" name="action" value="send_response">
                                     <input type="hidden" name="contact_id" value="<?php echo $contact['id']; ?>">
-                                    
+
                                     <div class="mb-3">
                                         <p><strong>To:</strong> <?php echo htmlspecialchars($contact['name']); ?> (<?php echo htmlspecialchars($contact['email']); ?>)</p>
                                         <p><strong>Subject:</strong> Re: <?php echo htmlspecialchars($contact['subject']); ?></p>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label for="response_message<?php echo $contact['id']; ?>" class="form-label">Response Message</label>
                                         <textarea class="form-control" id="response_message<?php echo $contact['id']; ?>" name="response_message" rows="10" required>Dear <?php echo htmlspecialchars($contact['name']); ?>,
 
-Thank you for contacting Stories From The Web. 
+Thank you for contacting Stories From The Web.
 
 [Your response here]
 

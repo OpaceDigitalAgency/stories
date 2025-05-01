@@ -23,7 +23,8 @@ try {
         'directory_items' => 0,
         'ai_tools' => 0,
         'media' => 0,
-        'subscribers' => 0
+        'subscribers' => 0,
+        'contacts' => 0
     ];
 
     // Check if tables exist before querying
@@ -35,7 +36,8 @@ try {
         'directory_items',
         'ai_tools',
         'media',
-        'subscribers'
+        'subscribers',
+        'contacts'
     ];
 
     foreach ($tables as $table) {
@@ -58,7 +60,8 @@ try {
         'games' => ['title', 'created_at', 'id'],
         'directory_items' => ['title', 'created_at', 'id'],
         'ai_tools' => ['title', 'created_at', 'id'],
-        'media' => ['filename', 'created_at', 'id']
+        'media' => ['filename', 'created_at', 'id'],
+        'contacts' => ['name', 'created_at', 'id']
     ];
 
     $recentContent = [];
@@ -263,6 +266,23 @@ if (isset($error)): ?>
                     </a>
                     <a href="content/subscribers.php?filter=not_contacted" class="btn btn-warning btn-sm" aria-label="View Uncontacted">
                         <i class="fas fa-envelope" aria-hidden="true"></i> Uncontacted
+                    </a>
+                </div>
+            </div>
+
+            <div class="dashboard-card notification-card" aria-labelledby="contacts-card-title">
+                <h3 id="contacts-card-title"><i class="fas fa-envelope" aria-hidden="true"></i> Contact Submissions</h3>
+                <div class="stat-number"><?php echo isset($stats['contacts']) ? $stats['contacts'] : 0; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 5% from last month
+                </div>
+                <div class="stat-actions">
+                    <a href="content/contacts.php" class="btn btn-primary btn-sm" aria-label="Manage Contacts">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
+                    </a>
+                    <a href="content/contacts.php?filter=not_responded" class="btn btn-warning btn-sm" aria-label="View Unresponded">
+                        <i class="fas fa-reply" aria-hidden="true"></i> Unresponded
                     </a>
                 </div>
             </div>

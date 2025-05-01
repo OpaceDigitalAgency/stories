@@ -95,6 +95,9 @@ $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false
                 <button type="submit" formaction="<?php echo $contentPrefix; ?>subscribers.php" class="nav-link <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
                     <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
                 </button>
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>contacts.php" class="nav-link <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
+                    <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
+                </button>
             </form>
         </nav>
 

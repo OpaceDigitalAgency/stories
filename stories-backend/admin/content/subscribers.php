@@ -12,6 +12,9 @@ $pageDescription = 'Manage users who have subscribed to premium feature notifica
 // Include header (which includes auth check and DB connection)
 include_once '../includes/header.php';
 
+// Include common admin functions
+include_once '../includes/admin-functions.php';
+
 // Ensure we have a database connection
 if (!isset($db) || !$db) {
     // Try to connect to the database directly
@@ -25,8 +28,12 @@ if (!isset($db) || !$db) {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]
         );
+
+        // Log successful connection
+        error_log("Connected to database in subscribers.php");
     } catch (PDOException $e) {
         $errorMessage = "Database connection error: " . $e->getMessage();
+        error_log("Database connection error in subscribers.php: " . $e->getMessage());
     }
 }
 
@@ -35,6 +42,7 @@ try {
     if (isset($db) && $db) {
         $stmt = $db->query("SHOW TABLES LIKE 'subscribers'");
         if ($stmt->rowCount() === 0) {
+            error_log("Creating subscribers table as it doesn't exist");
             $db->exec("CREATE TABLE subscribers (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 email VARCHAR(255) NOT NULL UNIQUE,
@@ -48,10 +56,14 @@ try {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
             $infoMessage = "Subscribers table created successfully. You can now start collecting subscriber information.";
+            error_log("Subscribers table created successfully");
+        } else {
+            error_log("Subscribers table already exists");
         }
     }
 } catch (PDOException $e) {
     $errorMessage = "Error checking/creating subscribers table: " . $e->getMessage();
+    error_log("Error checking/creating subscribers table: " . $e->getMessage());
 }
 
 // Handle contact status update
@@ -61,237 +73,343 @@ if (isset($_POST['update_contact_status'])) {
     $adminNotes = $_POST['admin_notes'] ?? '';
 
     try {
+        error_log("Updating subscriber status - ID: {$subscriberId}, Contacted: {$isContacted}");
         $stmt = $db->prepare("UPDATE subscribers SET is_contacted = ?, admin_notes = ? WHERE id = ?");
         $stmt->execute([$isContacted, $adminNotes, $subscriberId]);
 
         $successMessage = "Subscriber status updated successfully.";
+        error_log("Subscriber status updated successfully");
     } catch (PDOException $e) {
         $errorMessage = "Error updating subscriber: " . $e->getMessage();
+        error_log("Error updating subscriber: " . $e->getMessage());
     }
 }
 
 // Get subscribers list
+$subscribers = [];
+$features = [];
+
 try {
-    // Get filter parameters
-    $feature = $_GET['feature'] ?? '';
-    $contactStatus = isset($_GET['contact_status']) ? (int)$_GET['contact_status'] : -1;
+    if (isset($db) && $db) {
+        // Get filter parameters
+        $feature = $_GET['feature'] ?? '';
+        $contactStatus = isset($_GET['contact_status']) ? (int)$_GET['contact_status'] : -1;
+        $search = $_GET['search'] ?? '';
 
-    // Build query
-    $query = "SELECT * FROM subscribers WHERE 1=1";
-    $params = [];
+        // Build query
+        $query = "SELECT * FROM subscribers WHERE 1=1";
+        $params = [];
 
-    if (!empty($feature)) {
-        $query .= " AND feature = ?";
-        $params[] = $feature;
+        if (!empty($feature)) {
+            $query .= " AND feature = ?";
+            $params[] = $feature;
+        }
+
+        if ($contactStatus !== -1) {
+            $query .= " AND is_contacted = ?";
+            $params[] = $contactStatus;
+        }
+
+        if (!empty($search)) {
+            $query .= " AND (email LIKE ? OR name LIKE ? OR feature LIKE ?)";
+            $searchParam = "%{$search}%";
+            $params[] = $searchParam;
+            $params[] = $searchParam;
+            $params[] = $searchParam;
+        }
+
+        $query .= " ORDER BY created_at DESC";
+
+        // Add pagination
+        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 20;
+        $offset = ($page - 1) * $perPage;
+
+        // Get total count for pagination
+        $countQuery = str_replace("SELECT *", "SELECT COUNT(*)", $query);
+        $countStmt = $db->prepare($countQuery);
+        $countStmt->execute($params);
+        $totalItems = $countStmt->fetchColumn();
+        $totalPages = ceil($totalItems / $perPage);
+
+        // Add limit to the main query
+        $query .= " LIMIT ?, ?";
+        $params[] = $offset;
+        $params[] = $perPage;
+
+        error_log("Executing subscriber query: {$query} with params: " . print_r($params, true));
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        $subscribers = $stmt->fetchAll();
+        error_log("Found " . count($subscribers) . " subscribers");
+
+        // Get distinct features for filter
+        $featuresStmt = $db->query("SELECT DISTINCT feature FROM subscribers ORDER BY feature");
+        $features = $featuresStmt->fetchAll(PDO::FETCH_COLUMN);
+        error_log("Found " . count($features) . " distinct features");
+    } else {
+        error_log("Database connection not available for subscriber query");
     }
-
-    if ($contactStatus !== -1) {
-        $query .= " AND is_contacted = ?";
-        $params[] = $contactStatus;
-    }
-
-    $query .= " ORDER BY created_at DESC";
-
-    $stmt = $db->prepare($query);
-    $stmt->execute($params);
-    $subscribers = $stmt->fetchAll();
-
-    // Get distinct features for filter
-    $featuresStmt = $db->query("SELECT DISTINCT feature FROM subscribers ORDER BY feature");
-    $features = $featuresStmt->fetchAll(PDO::FETCH_COLUMN);
-
 } catch (PDOException $e) {
     $errorMessage = "Database error: " . $e->getMessage();
-    $subscribers = [];
-    $features = [];
+    error_log("Database error in subscribers.php: " . $e->getMessage());
 }
 ?>
 
 <div class="content-wrapper">
     <div class="container-fluid">
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <h1 class="page-title">Premium Subscribers</h1>
-                <p class="text-muted">Manage users who have subscribed to premium feature notifications</p>
-            </div>
-            <div class="col-md-6 text-md-end">
-                <a href="../dashboard.php" class="btn btn-outline-primary">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
-            </div>
+        <!-- Page header -->
+        <div class="page-header">
+            <h1 class="page-title">Premium Subscribers</h1>
+            <p class="page-description">Manage users who have subscribed to premium feature notifications</p>
         </div>
 
+        <!-- Alerts -->
         <?php if (isset($successMessage)): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $successMessage; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="success" role="alert">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($successMessage); ?>
             </div>
         <?php endif; ?>
 
         <?php if (isset($errorMessage)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo $errorMessage; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="error" role="alert">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($errorMessage); ?>
             </div>
         <?php endif; ?>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="card-title mb-0">Filter Subscribers</h5>
+        <?php if (isset($infoMessage)): ?>
+            <div class="info" role="alert">
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                <?php echo htmlspecialchars($infoMessage); ?>
             </div>
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="feature" class="form-label">Feature</label>
-                        <select name="feature" id="feature" class="form-select">
-                            <option value="">All Features</option>
-                            <?php foreach ($features as $featureOption): ?>
-                                <option value="<?php echo htmlspecialchars($featureOption); ?>" <?php echo $feature === $featureOption ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(ucfirst($featureOption)); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="contact_status" class="form-label">Contact Status</label>
-                        <select name="contact_status" id="contact_status" class="form-select">
-                            <option value="-1" <?php echo $contactStatus === -1 ? 'selected' : ''; ?>>All</option>
-                            <option value="0" <?php echo $contactStatus === 0 ? 'selected' : ''; ?>>Not Contacted</option>
-                            <option value="1" <?php echo $contactStatus === 1 ? 'selected' : ''; ?>>Contacted</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
-                        <a href="subscribers.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-redo"></i> Reset
-                        </a>
-                    </div>
-                </form>
-            </div>
+        <?php endif; ?>
+
+        <!-- Search and filter section -->
+        <div class="search-container">
+            <form method="get" class="search-form">
+                <div class="search-input-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" name="search" class="search-input" placeholder="Search subscribers..."
+                           value="<?php echo htmlspecialchars($search ?? ''); ?>">
+                </div>
+
+                <div class="filter-group">
+                    <select name="feature" class="form-select">
+                        <option value="">All Features</option>
+                        <?php foreach ($features as $featureOption): ?>
+                            <option value="<?php echo htmlspecialchars($featureOption); ?>" <?php echo ($feature ?? '') === $featureOption ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars(ucfirst($featureOption)); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <select name="contact_status" class="form-select">
+                        <option value="-1" <?php echo ($contactStatus ?? -1) === -1 ? 'selected' : ''; ?>>All Statuses</option>
+                        <option value="0" <?php echo ($contactStatus ?? -1) === 0 ? 'selected' : ''; ?>>Not Contacted</option>
+                        <option value="1" <?php echo ($contactStatus ?? -1) === 1 ? 'selected' : ''; ?>>Contacted</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+
+                <a href="subscribers.php" class="btn btn-outline">
+                    <i class="fas fa-redo"></i> Reset
+                </a>
+            </form>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Subscribers List</h5>
-                <span class="badge bg-primary"><?php echo count($subscribers); ?> subscribers</span>
+        <!-- Subscribers table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h2>Subscribers List</h2>
+                <span class="badge"><?php echo isset($totalItems) ? $totalItems : count($subscribers); ?> subscribers</span>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Feature</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($subscribers)): ?>
                             <tr>
-                                <th>ID</th>
-                                <th>Email</th>
-                                <th>Name</th>
-                                <th>Feature</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <td colspan="7" class="text-center">No subscribers found</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($subscribers)): ?>
+                        <?php else: ?>
+                            <?php foreach ($subscribers as $subscriber): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center py-4">No subscribers found</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($subscribers as $subscriber): ?>
-                                    <tr>
-                                        <td><?php echo $subscriber['id']; ?></td>
-                                        <td><?php echo htmlspecialchars($subscriber['email']); ?></td>
-                                        <td><?php echo htmlspecialchars($subscriber['name'] ?? 'Not provided'); ?></td>
-                                        <td>
-                                            <span class="badge bg-info">
-                                                <?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>
-                                            </span>
-                                        </td>
-                                        <td><?php echo date('M d, Y', strtotime($subscriber['created_at'])); ?></td>
-                                        <td>
-                                            <?php if ($subscriber['is_contacted']): ?>
-                                                <span class="badge bg-success">Contacted</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-warning">Not Contacted</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
+                                    <td><?php echo $subscriber['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($subscriber['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($subscriber['name'] ?? 'Not provided'); ?></td>
+                                    <td>
+                                        <span class="status-indicator">
+                                            <?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo date('M d, Y', strtotime($subscriber['created_at'])); ?></td>
+                                    <td>
+                                        <?php if ($subscriber['is_contacted']): ?>
+                                            <span class="status-indicator status-published">Contacted</span>
+                                        <?php else: ?>
+                                            <span class="status-indicator status-pending">Not Contacted</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="table-actions">
                                             <button type="button" class="btn btn-sm btn-primary"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#subscriberModal<?php echo $subscriber['id']; ?>">
                                                 <i class="fas fa-edit"></i> Update
                                             </button>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </td>
+                                </tr>
 
-                                    <!-- Modal for each subscriber -->
-                                    <div class="modal fade" id="subscriberModal<?php echo $subscriber['id']; ?>" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Update Subscriber</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <form method="post">
-                                                    <div class="modal-body">
-                                                        <input type="hidden" name="subscriber_id" value="<?php echo $subscriber['id']; ?>">
-                                                        <input type="hidden" name="update_contact_status" value="1">
-
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Email</label>
-                                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['email']); ?>" readonly>
-                                                        </div>
-
-                                                        <?php if (!empty($subscriber['name'])): ?>
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Name</label>
-                                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['name']); ?>" readonly>
-                                                        </div>
-                                                        <?php endif; ?>
-
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Feature</label>
-                                                            <input type="text" class="form-control" value="<?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>" readonly>
-                                                        </div>
-
-                                                        <?php if (!empty($subscriber['message'])): ?>
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Message</label>
-                                                            <textarea class="form-control" rows="3" readonly><?php echo htmlspecialchars($subscriber['message']); ?></textarea>
-                                                        </div>
-                                                        <?php endif; ?>
-
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Subscription Date</label>
-                                                            <input type="text" class="form-control" value="<?php echo date('F d, Y H:i', strtotime($subscriber['created_at'])); ?>" readonly>
-                                                        </div>
-
-                                                        <div class="mb-3 form-check">
-                                                            <input type="checkbox" class="form-check-input" id="isContacted<?php echo $subscriber['id']; ?>" name="is_contacted" <?php echo $subscriber['is_contacted'] ? 'checked' : ''; ?>>
-                                                            <label class="form-check-label" for="isContacted<?php echo $subscriber['id']; ?>">Mark as contacted</label>
-                                                        </div>
-
-                                                        <div class="mb-3">
-                                                            <label for="adminNotes<?php echo $subscriber['id']; ?>" class="form-label">Admin Notes</label>
-                                                            <textarea class="form-control" id="adminNotes<?php echo $subscriber['id']; ?>" name="admin_notes" rows="3"><?php echo htmlspecialchars($subscriber['admin_notes'] ?? ''); ?></textarea>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                                                    </div>
-                                                </form>
+                                <!-- Modal for each subscriber -->
+                                <div class="modal fade" id="subscriberModal<?php echo $subscriber['id']; ?>" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Update Subscriber</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
+                                            <form method="post">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="subscriber_id" value="<?php echo $subscriber['id']; ?>">
+                                                    <input type="hidden" name="update_contact_status" value="1">
+
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Email</label>
+                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['email']); ?>" readonly>
+                                                    </div>
+
+                                                    <?php if (!empty($subscriber['name'])): ?>
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Name</label>
+                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($subscriber['name']); ?>" readonly>
+                                                    </div>
+                                                    <?php endif; ?>
+
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Feature</label>
+                                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars(ucfirst($subscriber['feature'])); ?>" readonly>
+                                                    </div>
+
+                                                    <?php if (!empty($subscriber['message'])): ?>
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Message</label>
+                                                        <textarea class="form-control" rows="3" readonly><?php echo htmlspecialchars($subscriber['message']); ?></textarea>
+                                                    </div>
+                                                    <?php endif; ?>
+
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label">Subscription Date</label>
+                                                        <input type="text" class="form-control" value="<?php echo date('F d, Y H:i', strtotime($subscriber['created_at'])); ?>" readonly>
+                                                    </div>
+
+                                                    <div class="form-check mb-3">
+                                                        <input type="checkbox" class="form-check-input" id="isContacted<?php echo $subscriber['id']; ?>" name="is_contacted" <?php echo $subscriber['is_contacted'] ? 'checked' : ''; ?>>
+                                                        <label class="form-check-label" for="isContacted<?php echo $subscriber['id']; ?>">Mark as contacted</label>
+                                                    </div>
+
+                                                    <div class="form-group mb-3">
+                                                        <label for="adminNotes<?php echo $subscriber['id']; ?>" class="form-label">Admin Notes</label>
+                                                        <textarea class="form-control" id="adminNotes<?php echo $subscriber['id']; ?>" name="admin_notes" rows="3"><?php echo htmlspecialchars($subscriber['admin_notes'] ?? ''); ?></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <?php if (isset($totalPages) && $totalPages > 1): ?>
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Showing <?php echo count($subscribers); ?> of <?php echo $totalItems; ?> subscribers
+                </div>
+
+                <div class="pagination">
+                    <?php if ($page > 1): ?>
+                        <div class="page-item">
+                            <a href="?page=1<?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </div>
+                        <div class="page-item">
+                            <a href="?page=<?php echo $page - 1; ?><?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php
+                    $startPage = max(1, $page - 2);
+                    $endPage = min($totalPages, $startPage + 4);
+                    if ($endPage - $startPage < 4 && $startPage > 1) {
+                        $startPage = max(1, $endPage - 4);
+                    }
+
+                    for ($i = $startPage; $i <= $endPage; $i++):
+                    ?>
+                        <div class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                            <a href="?page=<?php echo $i; ?><?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
+                                <?php echo $i; ?>
+                            </a>
+                        </div>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $totalPages): ?>
+                        <div class="page-item">
+                            <a href="?page=<?php echo $page + 1; ?><?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </div>
+                        <div class="page-item">
+                            <a href="?page=<?php echo $totalPages; ?><?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="items-per-page">
+                    <span>Items per page:</span>
+                    <select name="per_page" onchange="window.location.href=this.value">
+                        <?php foreach ([10, 20, 50, 100] as $perPageOption): ?>
+                            <option value="?page=1&per_page=<?php echo $perPageOption; ?><?php echo !empty($feature) ? '&feature=' . urlencode($feature) : ''; ?><?php echo isset($contactStatus) && $contactStatus !== -1 ? '&contact_status=' . $contactStatus : ''; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" <?php echo ($perPage ?? 20) == $perPageOption ? 'selected' : ''; ?>>
+                                <?php echo $perPageOption; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php include_once '../includes/footer.php'; ?>

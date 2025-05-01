@@ -85,7 +85,7 @@ const formattedDate = story.publishDate
   : null;
 
 // Extract the full summary and clean story content
-function processStoryContent(content, excerpt) {
+function processStoryContent(content: string, excerpt: string): { summary: string, storyContent: string } {
   if (!content) return { summary: excerpt || '', storyContent: '' };
 
   // Initialize with default values
@@ -93,23 +93,40 @@ function processStoryContent(content, excerpt) {
   let storyContent = content;
 
   // Try to extract a better summary if available in the content
-  const summaryMatch = content.match(/Summary\s*\n+([\s\S]+?)(?:\n+(?:The\s+Story|#+)|\n\n|$)/i);
+  const summaryMatch = content.match(/Summary\s*\n+([\s\S]+?)(?:\n+(?:The\s+Story|Story|#+)|\n\n|$)/i);
   if (summaryMatch && summaryMatch[1]) {
     summary = summaryMatch[1].trim();
   }
 
   // Try to extract just the story content
-  const storyMatch = content.match(/The\s+Story\s*\n+([\s\S]+)$/i);
+  // Look for patterns like "The Story" or just "Story" followed by content
+  const storyMatch = content.match(/(?:The\s+Story|Story)\s*\n+([\s\S]+)$/i);
   if (storyMatch && storyMatch[1]) {
     storyContent = storyMatch[1].trim();
   }
 
   // Remove any author information patterns from both summary and story content
   const authorPatterns = [
+    // Markdown formatted author info
     /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^*]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
     /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^\s]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
     /#+\s*\*+Author\*+\s*\*+(?:Name:|Author:)\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g,
-    /#+\s*\*+Author\*+\*+\s*\*+Author:\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g
+    /#+\s*\*+Author\*+\*+\s*\*+Author:\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g,
+
+    // Plain text author info with asterisks
+    /Author\s*\n+\*\*Name:\*\*\s*[^*\n]+\s*\n+\*\*Age:\*\*\s*[^*\n]+\s*\n+\*\*Location:\*\*\s*[^*\n]+/g,
+
+    // Plain text author section with double asterisks
+    /Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*[^\n]+\n+\*\*Location:\*\*\s*[^\n]+/g,
+
+    // Plain text "Author" section
+    /Author\s*\n+(?:\*\*)?Name:(?:\*\*)?\s*[^\n]+\n+(?:\*\*)?Age:(?:\*\*)?\s*[^\n]+\n+(?:\*\*)?Location:(?:\*\*)?\s*[^\n]+/g,
+
+    // Another variation with just Author as a heading
+    /Author\s*\n+\*\*Name:\*\*\s*[^\n*]+\s*\n+\*\*Age:\*\*\s*\d+\s*\n+\*\*Location:\*\*\s*[^\n*]+/g,
+
+    // Simple author info without markdown
+    /Author\s*\n+[^\n]+\n+[^\n]+\n+[^\n]+\n+/g
   ];
 
   authorPatterns.forEach(pattern => {
@@ -117,9 +134,31 @@ function processStoryContent(content, excerpt) {
     storyContent = storyContent.replace(pattern, '');
   });
 
+  // Remove specific patterns for the example in the screenshot
+  storyContent = storyContent.replace(/Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*[^\n]+\n+\*\*Location:\*\*\s*[^\n]+\n+/g, '');
+
+  // Also try to match the exact pattern from the screenshot
+  storyContent = storyContent.replace(/Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*\d+\n+\*\*Location:\*\*\s*[^\n]+\n+/g, '');
+
+  // Remove any lines that start with ** and contain Name:, Age:, or Location:
+  const lines = storyContent.split('\n');
+  storyContent = lines.filter((line: string) => {
+    return !(
+      (line.trim().startsWith('**Name:**') ||
+       line.trim().startsWith('**Age:**') ||
+       line.trim().startsWith('**Location:**') ||
+       line.trim() === 'Author')
+    );
+  }).join('\n');
+
   // Remove "Summary" and "The Story" labels from the content
   storyContent = storyContent.replace(/Summary\s*\n+/g, '');
-  storyContent = storyContent.replace(/The\s+Story\s*\n+/g, '');
+  storyContent = storyContent.replace(/(?:The\s+)?Story\s*\n+/g, '');
+
+  // Remove duplicate summary text from the beginning of the story content
+  if (summary && storyContent.startsWith(summary)) {
+    storyContent = storyContent.substring(summary.length).trim();
+  }
 
   // Clean up any remaining markdown headings
   summary = summary.replace(/#+\s+/g, '');

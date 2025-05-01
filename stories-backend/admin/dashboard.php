@@ -22,7 +22,8 @@ try {
         'games' => 0,
         'directory_items' => 0,
         'ai_tools' => 0,
-        'media' => 0
+        'media' => 0,
+        'subscribers' => 0
     ];
 
     // Check if tables exist before querying
@@ -33,7 +34,8 @@ try {
         'games',
         'directory_items',
         'ai_tools',
-        'media'
+        'media',
+        'subscribers'
     ];
 
     foreach ($tables as $table) {
@@ -244,6 +246,23 @@ if (isset($error)): ?>
                     </a>
                     <a href="content/media.php?action=upload" class="btn btn-success btn-sm" aria-label="Upload Media">
                         <i class="fas fa-upload" aria-hidden="true"></i> Upload
+                    </a>
+                </div>
+            </div>
+
+            <div class="dashboard-card notification-card" aria-labelledby="subscribers-card-title">
+                <h3 id="subscribers-card-title"><i class="fas fa-bell" aria-hidden="true"></i> Premium Subscribers</h3>
+                <div class="stat-number"><?php echo isset($stats['subscribers']) ? $stats['subscribers'] : 0; ?></div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    <span class="visually-hidden">Increased by</span> 10% from last month
+                </div>
+                <div class="stat-actions">
+                    <a href="content/subscribers.php" class="btn btn-primary btn-sm" aria-label="Manage Subscribers">
+                        <i class="fas fa-list" aria-hidden="true"></i> Manage
+                    </a>
+                    <a href="content/subscribers.php?filter=not_contacted" class="btn btn-warning btn-sm" aria-label="View Uncontacted">
+                        <i class="fas fa-envelope" aria-hidden="true"></i> Uncontacted
                     </a>
                 </div>
             </div>

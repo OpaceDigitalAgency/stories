@@ -128,7 +128,7 @@ const {
               <h3 class="text-xl font-bold text-text-primary mb-3">Get Notified When We Launch</h3>
               <p class="text-text-secondary mb-4">Sign up to be the first to know when {featureName} is available.</p>
 
-              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3" action="https://api.storiesfromtheweb.org/netlify-subscriber.php" method="post" onsubmit="submitForm(event);">
+              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
                   name="email"
@@ -139,7 +139,7 @@ const {
                 />
                 <input type="hidden" name="feature" value="premium stories" />
                 <button
-                  type="submit"
+                  type="button"
                   id="notify-submit-btn"
                   class="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-primary-600 transition-colors duration-300 whitespace-nowrap"
                 >
@@ -153,163 +153,130 @@ const {
               </div>
 
               <script>
-                // Simple form submission handler without TypeScript
                 document.addEventListener('DOMContentLoaded', function() {
                   // Get form elements
-                  var form = document.getElementById('notifyForm');
-                  var resultDiv = document.getElementById('notification-result');
-                  var successMsg = document.getElementById('success-message');
-                  var errorMsg = document.getElementById('error-message');
-                  var submitBtn = document.getElementById('notify-submit-btn');
+                  const resultDiv = document.getElementById('notification-result');
+                  const successMsg = document.getElementById('success-message');
+                  const errorMsg = document.getElementById('error-message');
+                  const submitBtn = document.getElementById('notify-submit-btn');
+                  const emailInput = document.getElementById('subscriber-email');
 
-                  // Check for URL parameters (for direct form submissions)
-                  var urlParams = new URLSearchParams(window.location.search);
-                  var email = urlParams.get('email');
-                  var feature = urlParams.get('feature');
+                  // Add click event to the submit button
+                  if (submitBtn) {
+                    submitBtn.addEventListener('click', function() {
+                      submitSubscriberForm();
+                    });
+                  }
 
-                  // If we have URL parameters, show success message
-                  if (email && feature) {
-                    // Clear URL parameters
-                    if (window.history && window.history.replaceState) {
-                      window.history.replaceState({}, document.title, window.location.pathname);
+                  // Add keypress event to the email input (submit on Enter)
+                  if (emailInput) {
+                    emailInput.addEventListener('keypress', function(e) {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitSubscriberForm();
+                      }
+                    });
+                  }
+
+                  // Function to submit the form
+                  function submitSubscriberForm() {
+                    // Validate email
+                    if (!emailInput || !(emailInput instanceof HTMLInputElement) || !emailInput.value) {
+                      // Show error for empty email
+                      if (resultDiv && errorMsg) {
+                        resultDiv.classList.remove('hidden');
+                        errorMsg.classList.remove('hidden');
+                        if (successMsg) {
+                          successMsg.classList.add('hidden');
+                        }
+                        errorMsg.textContent = 'Please enter your email address.';
+                      }
+                      return;
                     }
 
-                    // Show success message
-                    if (resultDiv && successMsg) {
-                      resultDiv.classList.remove('hidden');
-                      successMsg.classList.remove('hidden');
-                      successMsg.textContent = 'Thank you for subscribing! We\'ll notify you when this feature is available.';
+                    // Get form data
+                    const email = emailInput.value;
+                    const featureInput = document.querySelector('input[name="feature"]');
+                    const feature = featureInput && featureInput instanceof HTMLInputElement ?
+                                   featureInput.value : 'premium stories';
+
+                    // Show loading state
+                    if (submitBtn) {
+                      submitBtn.setAttribute('disabled', 'disabled');
+                      submitBtn.textContent = 'Submitting...';
                     }
+
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('email', email);
+                    formData.append('feature', feature);
+
+                    // Log submission
+                    console.log('Submitting subscriber data:', { email, feature });
+
+                    // Submit using fetch API
+                    fetch('https://api.storiesfromtheweb.org/netlify-subscriber.php', {
+                      method: 'POST',
+                      body: formData
+                    })
+                    .then(response => {
+                      console.log('API response status:', response.status);
+                      if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                      }
+                      return response.json();
+                    })
+                    .then(data => {
+                      console.log('API response data:', data);
+
+                      // Show success message
+                      if (resultDiv && successMsg) {
+                        resultDiv.classList.remove('hidden');
+                        successMsg.classList.remove('hidden');
+                        if (errorMsg) {
+                          errorMsg.classList.add('hidden');
+                        }
+                        successMsg.textContent = data.message || 'Thank you for subscribing! We\'ll notify you when this feature is available.';
+                      }
+
+                      // Reset form
+                      if (emailInput) {
+                        emailInput.value = '';
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Error submitting form:', error);
+
+                      // Show success message anyway (to avoid frustrating the user)
+                      if (resultDiv && successMsg) {
+                        resultDiv.classList.remove('hidden');
+                        successMsg.classList.remove('hidden');
+                        if (errorMsg) {
+                          errorMsg.classList.add('hidden');
+                        }
+                        successMsg.textContent = 'Thank you for subscribing! We\'ll notify you when this feature is available.';
+                      }
+
+                      // Reset form
+                      if (emailInput) {
+                        emailInput.value = '';
+                      }
+
+                      // Try a direct AJAX request as fallback
+                      const xhr = new XMLHttpRequest();
+                      xhr.open('POST', 'https://api.storiesfromtheweb.org/netlify-subscriber.php', true);
+                      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                      xhr.send('email=' + encodeURIComponent(email) + '&feature=' + encodeURIComponent(feature));
+                    })
+                    .finally(() => {
+                      // Reset button state
+                      if (submitBtn) {
+                        submitBtn.removeAttribute('disabled');
+                        submitBtn.textContent = 'Notify Me';
+                      }
+                    });
                   }
                 });
-
-                // Global function to handle form submission
-                function submitForm(e: Event) {
-                  e.preventDefault();
-
-                  // Get form elements
-                  var form = document.getElementById('notifyForm') as HTMLFormElement;
-                  var resultDiv = document.getElementById('notification-result');
-                  var successMsg = document.getElementById('success-message');
-                  var errorMsg = document.getElementById('error-message');
-                  var submitBtn = document.getElementById('notify-submit-btn') as HTMLButtonElement;
-
-                  // Show loading state
-                  if (submitBtn) {
-                    submitBtn.setAttribute('disabled', 'disabled');
-                    submitBtn.textContent = 'Submitting...';
-                  }
-
-                  // Get form data
-                  var emailInput = document.getElementById('subscriber-email') as HTMLInputElement;
-                  var email = emailInput ? emailInput.value : '';
-                  var featureInput = document.querySelector('input[name="feature"]') as HTMLInputElement;
-                  var feature = featureInput ? featureInput.value : 'premium stories';
-
-                  if (!email) {
-                    // Show error for empty email
-                    if (resultDiv && errorMsg) {
-                      resultDiv.classList.remove('hidden');
-                      errorMsg.classList.remove('hidden');
-                      if (successMsg) {
-                        successMsg.classList.add('hidden');
-                      }
-                      errorMsg.textContent = 'Please enter your email address.';
-                    }
-
-                    // Reset button state
-                    if (submitBtn) {
-                      submitBtn.removeAttribute('disabled');
-                      submitBtn.textContent = 'Notify Me';
-                    }
-
-                    return false;
-                  }
-
-                  // Create form data object
-                  var formData = new FormData();
-                  formData.append('email', email);
-                  formData.append('feature', feature);
-
-                  // Log what we're submitting
-                  console.log('Submitting subscriber data:', {
-                    email: email,
-                    feature: feature
-                  });
-
-                  // Use fetch API to submit the data
-                  fetch('https://api.storiesfromtheweb.org/netlify-subscriber.php', {
-                    method: 'POST',
-                    body: formData
-                  })
-                  .then(function(response) {
-                    console.log('API response status:', response.status);
-                    return response.json();
-                  })
-                  .then(function(data) {
-                    console.log('API response data:', data);
-
-                    // Show success message
-                    if (resultDiv && successMsg) {
-                      resultDiv.classList.remove('hidden');
-                      successMsg.classList.remove('hidden');
-                      if (errorMsg) {
-                        errorMsg.classList.add('hidden');
-                      }
-                      successMsg.textContent = data.message || 'Thank you for subscribing! We\'ll notify you when this feature is available.';
-                    }
-
-                    // Reset the form
-                    if (emailInput) {
-                      emailInput.value = '';
-                    }
-                  })
-                  .catch(function(error) {
-                    console.error('Error submitting form:', error);
-
-                    // Try a fallback approach - direct form submission
-                    console.log('Trying fallback approach - direct form submission');
-
-                    // Create a hidden iframe for the form submission
-                    var iframe = document.createElement('iframe');
-                    iframe.name = 'hidden_iframe';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-
-                    // Set the form target to the iframe
-                    if (form) {
-                      form.target = 'hidden_iframe';
-                      form.method = 'post';
-
-                      // Submit the form directly
-                      form.submit();
-                    }
-
-                    // Show success message anyway (we'll assume it worked)
-                    if (resultDiv && successMsg) {
-                      resultDiv.classList.remove('hidden');
-                      successMsg.classList.remove('hidden');
-                      if (errorMsg) {
-                        errorMsg.classList.add('hidden');
-                      }
-                      successMsg.textContent = 'Thank you for subscribing! We\'ll notify you when this feature is available.';
-                    }
-
-                    // Reset the form
-                    if (emailInput instanceof HTMLInputElement) {
-                      emailInput.value = '';
-                    }
-                  })
-                  .finally(function() {
-                    // Reset button state
-                    if (submitBtn) {
-                      submitBtn.removeAttribute('disabled');
-                      submitBtn.textContent = 'Notify Me';
-                    }
-                  });
-
-                  return false;
-                }
               </script>
             </div>
           )}

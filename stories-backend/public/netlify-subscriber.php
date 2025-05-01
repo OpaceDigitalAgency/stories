@@ -4,12 +4,15 @@
  * This script is specifically designed to work with the Netlify frontend
  */
 
-// Allow cross-origin requests from Netlify domains
-header('Access-Control-Allow-Origin: https://storiesfromtheweb.netlify.app');
+// Allow cross-origin requests from any domain during development
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
-header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json; charset=utf-8');
+
+// Log the origin for debugging
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'No origin header';
+error_log("Request origin: " . $origin);
 
 // Log all request details for debugging
 error_log("Netlify subscriber request received");
@@ -50,7 +53,7 @@ if (empty($data) && !empty($_POST)) {
 if (empty($data)) {
     $requestBody = file_get_contents('php://input');
     error_log("Raw request body: " . $requestBody);
-    
+
     if (!empty($requestBody)) {
         $jsonData = json_decode($requestBody, true);
         if ($jsonData) {
@@ -62,7 +65,7 @@ if (empty($data)) {
                 $data['email'] = $matches[1];
                 error_log("Manually extracted email: " . $data['email']);
             }
-            
+
             if (preg_match('/"feature"\s*:\s*"([^"]+)"/', $requestBody, $matches)) {
                 $data['feature'] = $matches[1];
                 error_log("Manually extracted feature: " . $data['feature']);
@@ -92,9 +95,9 @@ try {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     );
-    
+
     error_log("Database connection established");
-    
+
     // Check if subscribers table exists, create if not
     $stmt = $db->query("SHOW TABLES LIKE 'subscribers'");
     if ($stmt->rowCount() === 0) {
@@ -111,21 +114,21 @@ try {
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
-    
+
     // Check if email already exists
     $stmt = $db->prepare("SELECT id FROM subscribers WHERE email = ?");
     $stmt->execute([$data['email']]);
     $existingSubscriber = $stmt->fetch();
-    
+
     if ($existingSubscriber) {
         error_log("Updating existing subscriber with ID: " . $existingSubscriber['id']);
         // Update existing subscriber
-        $stmt = $db->prepare("UPDATE subscribers SET 
-            feature = ?, 
-            updated_at = NOW() 
+        $stmt = $db->prepare("UPDATE subscribers SET
+            feature = ?,
+            updated_at = NOW()
             WHERE email = ?");
         $stmt->execute([$data['feature'], $data['email']]);
-        
+
         $response = [
             'success' => true,
             'message' => 'Your subscription has been updated. We\'ll notify you when this feature is available.',
@@ -135,24 +138,24 @@ try {
     } else {
         error_log("Adding new subscriber with email: " . $data['email']);
         // Insert new subscriber
-        $stmt = $db->prepare("INSERT INTO subscribers (email, feature, created_at, updated_at) 
+        $stmt = $db->prepare("INSERT INTO subscribers (email, feature, created_at, updated_at)
             VALUES (?, ?, NOW(), NOW())");
         $stmt->execute([$data['email'], $data['feature']]);
-        
+
         $newId = $db->lastInsertId();
         error_log("New subscriber added with ID: " . $newId);
-        
+
         $response = [
             'success' => true,
             'message' => 'Thank you for subscribing! We\'ll notify you when this feature is available.',
             'id' => $newId
         ];
     }
-    
+
     // Return success response
     echo json_encode($response);
     error_log("Success response sent: " . json_encode($response));
-    
+
 } catch (PDOException $e) {
     error_log("Database error: " . $e->getMessage());
     handleError('Database error: ' . $e->getMessage());

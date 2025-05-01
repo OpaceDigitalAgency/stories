@@ -26,6 +26,8 @@ This document provides a comprehensive overview of the database schema for the S
   - [directory_categories](#directory_categories)
 - [Media Tables](#media-tables)
   - [media](#media)
+- [Feature Tables](#feature-tables)
+  - [subscribers](#subscribers)
 
 ## Overview
 
@@ -50,7 +52,7 @@ erDiagram
     USERS ||--|| AUTH_TOKENS : has
     AI_TOOLS }o--|| AI_TOOL_CATEGORIES : belongs_to
     DIRECTORY_ITEMS }o--|| DIRECTORY_CATEGORIES : belongs_to
-    
+
     STORIES {
         int id PK
         enum source_type
@@ -73,7 +75,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     AUTHORS {
         int id PK
         string name
@@ -87,7 +89,7 @@ erDiagram
         int age
         string location
     }
-    
+
     TAGS {
         int id PK
         string name
@@ -95,7 +97,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     USERS {
         int id PK
         string name
@@ -106,7 +108,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     BLOG_POSTS {
         int id PK
         string title
@@ -119,7 +121,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     GAMES {
         int id PK
         string title
@@ -138,7 +140,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     DIRECTORY_ITEMS {
         int id PK
         string title
@@ -159,7 +161,7 @@ erDiagram
         timestamp updated_at
         int story_id FK
     }
-    
+
     AI_TOOLS {
         int id PK
         string title
@@ -178,29 +180,29 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     STORY_AUTHORS {
         int story_id PK,FK
         int author_id PK,FK
     }
-    
+
     STORY_TAGS {
         int story_id PK,FK
         int tag_id PK,FK
     }
-    
+
     POST_TAGS {
         int post_id PK,FK
         int tag_id PK,FK
     }
-    
+
     AUTH_TOKENS {
         int user_id PK,FK
         string token
         datetime expires_at
         timestamp created_at
     }
-    
+
     AI_TOOL_CATEGORIES {
         int id PK
         string name
@@ -209,7 +211,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     DIRECTORY_CATEGORIES {
         int id PK
         string name
@@ -218,7 +220,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
+
     MEDIA {
         int id PK
         string filename
@@ -230,6 +232,18 @@ erDiagram
         string file_type
         int file_size
         string alt_text
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SUBSCRIBERS {
+        int id PK
+        string email
+        string name
+        string feature
+        text message
+        boolean is_contacted
+        text admin_notes
         timestamp created_at
         timestamp updated_at
     }
@@ -487,6 +501,24 @@ Stores information about uploaded media files with multiple size variants.
 | alt_text | varchar(255) | NULL | Alternative text for accessibility |
 | created_at | datetime | NOT NULL | Creation timestamp |
 | updated_at | datetime | NOT NULL | Update timestamp |
+
+## Feature Tables
+
+### subscribers
+
+Stores information about users who have subscribed to be notified about upcoming premium features.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | int | PRIMARY KEY, AUTO_INCREMENT | Unique identifier |
+| email | varchar(255) | NOT NULL, UNIQUE | Subscriber's email address |
+| name | varchar(255) | NULL | Subscriber's name (optional) |
+| feature | varchar(100) | NOT NULL | Feature they're interested in (e.g., 'premium') |
+| message | text | NULL | Optional message from subscriber |
+| is_contacted | tinyint(1) | DEFAULT 0 | Whether the subscriber has been contacted |
+| admin_notes | text | NULL | Admin notes about the subscriber |
+| created_at | datetime | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Subscription timestamp |
+| updated_at | datetime | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
 
 ## Database Constraints
 

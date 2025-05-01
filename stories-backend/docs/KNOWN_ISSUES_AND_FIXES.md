@@ -19,7 +19,7 @@ This document outlines known issues in the Stories from the Web platform and the
 
 **Cause**: This was caused by a reference issue in the PHP foreach loop. When using `foreach ($stories as &$story)`, the reference to `$story` persists after the loop, causing issues in subsequent loops.
 
-**Fix**: 
+**Fix**:
 1. Changed the loop to use array indices instead of references:
 ```php
 foreach ($stories as $index => $storyItem) {
@@ -218,21 +218,21 @@ export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<strin
     'pagination[limit]': limit,
     'pagination[page]': page
   };
-  
+
   // Set default sort if not specified in filters
   if (!filters.sort) {
     params['sort'] = 'created_at:desc';
   } else {
     params['sort'] = filters.sort;
   }
-  
+
   // Add any additional filters
   Object.entries(filters).forEach(([key, value]) => {
     if (key !== 'sort') {
       params[key] = value;
     }
   });
-  
+
   try {
     const raw = await fetchApi<any[]>('/blog-posts', params);
     return raw.map(item => ({
@@ -295,6 +295,38 @@ $db->exec("CREATE TABLE IF NOT EXISTS story_authors (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 ```
 
+### Subscribers Functionality 500 Error
+
+**Issue**: The subscribers admin page and API endpoint were returning 500 errors.
+
+**Cause**: The subscribers table was missing from the database, and there were issues with the database connection in the subscribers.php files.
+
+**Fix**:
+1. Created a browser-accessible fix script that:
+   - Creates the subscribers table if it doesn't exist
+   - Updates the admin subscribers page with proper error handling
+   - Updates the API subscribers endpoint with proper error handling
+   - Fixes the premium page width issue
+
+2. Added the subscribers table to the database:
+```php
+$db->exec("CREATE TABLE subscribers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255),
+    feature VARCHAR(100) NOT NULL,
+    message TEXT,
+    is_contacted TINYINT(1) DEFAULT 0,
+    admin_notes TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+```
+
+3. Updated the admin subscribers page to handle database connection issues and properly display subscribers.
+
+4. Updated the API subscribers endpoint to handle both POST requests (for new subscribers) and GET requests (for admin listing).
+
 ## Deployment Issues
 
 ### Static Generation vs. Server-Side Rendering
@@ -326,28 +358,28 @@ This allows the frontend to fetch the latest data from the API on each request, 
 // Function to find the best sized version of an image
 function findBestSizedVersion($originalFilename, $maxWidth = 640) {
     $baseName = getBaseName($originalFilename);
-    
+
     // Define size preferences in order (smaller to larger)
     $preferredSizes = [
         '50x50', '110x110', '150x150', '180x77', '240x240', '300x300',
         '440x330', '640x640'
     ];
-    
+
     // Define directories to search
     $searchDirs = [
         $_SERVER['DOCUMENT_ROOT'] . '/uploads/',
         $_SERVER['DOCUMENT_ROOT'] . '/uploads/2023/',
         $_SERVER['DOCUMENT_ROOT'] . '/uploads/2024/'
     ];
-    
+
     // Search for existing sized versions
     foreach ($preferredSizes as $size) {
         foreach ($searchDirs as $dir) {
             if (!is_dir($dir)) continue;
-            
+
             // Look for files with this size in the name
             $files = glob($dir . '*' . $baseName . '*' . $size . '*');
-            
+
             if (!empty($files)) {
                 // Use this sized version
                 $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $files[0]);
@@ -355,7 +387,7 @@ function findBestSizedVersion($originalFilename, $maxWidth = 640) {
             }
         }
     }
-    
+
     return null;
 }
 ```

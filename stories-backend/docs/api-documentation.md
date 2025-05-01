@@ -18,6 +18,7 @@ This document provides comprehensive documentation for the Stories from the Web 
   - [AI Tools](#ai-tools)
   - [Blog Posts](#blog-posts)
   - [Reviews](#reviews)
+  - [Subscribers](#subscribers)
 - [Authentication Endpoints](#authentication-endpoints)
 - [Admin Endpoints](#admin-endpoints)
 - [Pagination](#pagination)
@@ -695,6 +696,75 @@ Response:
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "expires_in": 86400
+}
+```
+
+### Subscribers
+
+#### Subscribe to Feature Notification
+
+```
+POST /subscribers
+```
+
+Request Body:
+
+```json
+{
+  "email": "user@example.com",
+  "name": "John Doe",
+  "feature": "premium",
+  "message": "I'm excited about this feature!"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Thank you for subscribing! We'll notify you when this feature is available."
+}
+```
+
+If the email already exists:
+
+```json
+{
+  "success": true,
+  "message": "Your subscription has been updated. We'll notify you when this feature is available.",
+  "updated": true
+}
+```
+
+#### Get Subscribers (Admin Only)
+
+```
+GET /subscribers?admin_token=stories_admin_token
+```
+
+Query Parameters:
+- `feature`: Filter by feature name
+- `admin_token`: Required for authentication
+
+Response:
+
+```json
+{
+  "success": true,
+  "subscribers": [
+    {
+      "id": 1,
+      "email": "user@example.com",
+      "name": "John Doe",
+      "feature": "premium",
+      "message": "I'm excited about this feature!",
+      "is_contacted": 0,
+      "admin_notes": null,
+      "created_at": "2025-04-26 09:17:50",
+      "updated_at": "2025-04-26 09:17:50"
+    }
+  ]
 }
 ```
 

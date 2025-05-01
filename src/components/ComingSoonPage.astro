@@ -215,7 +215,7 @@ const {
                     console.log('Submitting subscriber data:', { email, feature });
 
                     // Submit using fetch API
-                    fetch('https://api.storiesfromtheweb.org/netlify-subscriber.php', {
+                    fetch('https://api.storiesfromtheweb.org/public/netlify-subscriber.php', {
                       method: 'POST',
                       body: formData
                     })
@@ -264,7 +264,7 @@ const {
 
                       // Try a direct AJAX request as fallback
                       const xhr = new XMLHttpRequest();
-                      xhr.open('POST', 'https://api.storiesfromtheweb.org/netlify-subscriber.php', true);
+                      xhr.open('POST', 'https://api.storiesfromtheweb.org/public/netlify-subscriber.php', true);
                       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                       xhr.send('email=' + encodeURIComponent(email) + '&feature=' + encodeURIComponent(feature));
                     })

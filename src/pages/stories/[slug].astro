@@ -84,25 +84,63 @@ const formattedDate = story.publishDate
     })
   : null;
 
-// Clean up story content to remove redundant author information and fix headings
-function cleanStoryContent(content) {
-  if (!content) return '';
+// Extract the full summary and clean story content
+function processStoryContent(content, excerpt) {
+  if (!content) return { summary: excerpt || '', storyContent: '' };
 
-  // Remove author information that follows the pattern: ## **Author** **Name:** Kerry **Age:** 9 **Location:** Northern Ireland
-  let cleanedContent = content.replace(/##\s*\*\*Author\*\*\s*\*\*Name:\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^*]+\s*\*\*Location:\*\*\s*[^<\n]+/g, '');
+  // Initialize with default values
+  let summary = excerpt || '';
+  let storyContent = content;
 
-  // Replace ## Summary with <h2>Summary</h2>
-  cleanedContent = cleanedContent.replace(/##\s*Summary/g, '<h2>Summary</h2>');
+  // Try to extract a better summary if available in the content
+  const summaryMatch = content.match(/Summary\s*\n+([\s\S]+?)(?:\n+(?:The\s+Story|#+)|\n\n|$)/i);
+  if (summaryMatch && summaryMatch[1]) {
+    summary = summaryMatch[1].trim();
+  }
 
-  // Replace ## The Story with <h2>The Story</h2>
-  cleanedContent = cleanedContent.replace(/##\s*The\s*Story/g, '<h2>The Story</h2>');
+  // Try to extract just the story content
+  const storyMatch = content.match(/The\s+Story\s*\n+([\s\S]+)$/i);
+  if (storyMatch && storyMatch[1]) {
+    storyContent = storyMatch[1].trim();
+  }
 
-  return cleanedContent;
+  // Remove any author information patterns from both summary and story content
+  const authorPatterns = [
+    /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^*]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
+    /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^\s]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
+    /#+\s*\*+Author\*+\s*\*+(?:Name:|Author:)\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g,
+    /#+\s*\*+Author\*+\*+\s*\*+Author:\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g
+  ];
+
+  authorPatterns.forEach(pattern => {
+    summary = summary.replace(pattern, '');
+    storyContent = storyContent.replace(pattern, '');
+  });
+
+  // Remove "Summary" and "The Story" labels from the content
+  storyContent = storyContent.replace(/Summary\s*\n+/g, '');
+  storyContent = storyContent.replace(/The\s+Story\s*\n+/g, '');
+
+  // Clean up any remaining markdown headings
+  summary = summary.replace(/#+\s+/g, '');
+  storyContent = storyContent.replace(/#+\s+/g, '');
+
+  // Final cleanup - trim whitespace
+  summary = summary.trim();
+  storyContent = storyContent.trim();
+
+  return { summary, storyContent };
 }
 
-// Clean the story content
+// Process the story content to extract summary and story
+let processedContent = { summary: story.excerpt || '', storyContent: '' };
 if (story.content) {
-  story.content = cleanStoryContent(story.content);
+  processedContent = processStoryContent(story.content, story.excerpt);
+
+  // Update the excerpt with the better summary if available
+  if (processedContent.summary) {
+    story.excerpt = processedContent.summary;
+  }
 }
 
 // Page metadata
@@ -247,7 +285,7 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
 
           <!-- Story Content -->
           <div class="prose prose-lg max-w-none mb-16">
-            {story.content ? (
+            {processedContent.storyContent ? (
               <>
                 <div class="bg-white p-8 rounded-xl shadow-md mb-8">
                   <h2 class="text-2xl font-bold mb-4">Story Summary</h2>
@@ -255,7 +293,9 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-md">
                   <h2 class="text-2xl font-bold mb-4">Story</h2>
-                  <div set:html={story.content} />
+                  <div class="text-gray-700 whitespace-pre-line">
+                    {processedContent.storyContent}
+                  </div>
                 </div>
               </>
             ) : (

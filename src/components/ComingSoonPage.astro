@@ -128,7 +128,7 @@ const {
               <h3 class="text-xl font-bold text-text-primary mb-3">Get Notified When We Launch</h3>
               <p class="text-text-secondary mb-4">Sign up to be the first to know when {featureName} is available.</p>
 
-              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3">
+              <form id="notifyForm" class="flex flex-col sm:flex-row gap-3" action="javascript:void(0);" onsubmit="return false;">
                 <input
                   type="email"
                   name="email"
@@ -205,11 +205,14 @@ const {
                       });
 
                       // Use fetch API to submit the data
-                      fetch('https://api.storiesfromtheweb.org/save-subscriber.php', {
+                      fetch('https://api.storiesfromtheweb.org/subscriber-proxy.php', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
+                          'Accept': 'application/json'
                         },
+                        mode: 'cors',
+                        credentials: 'omit',
                         body: JSON.stringify({
                           email: email,
                           feature: feature

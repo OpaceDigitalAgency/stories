@@ -62,15 +62,36 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Get the request body
     $requestBody = file_get_contents('php://input');
+    error_log("Raw request body: " . $requestBody);
+
     $data = json_decode($requestBody, true);
 
     // If form data was submitted instead of JSON
     if (empty($data) && !empty($_POST)) {
         $data = $_POST;
+        error_log("Using POST data instead of JSON");
+    }
+
+    // If JSON parsing failed, try to handle it
+    if (empty($data) && !empty($requestBody)) {
+        error_log("JSON parsing failed, trying to parse manually");
+        // Try to extract email and feature from the raw body
+        if (preg_match('/"email"\s*:\s*"([^"]+)"/', $requestBody, $matches)) {
+            $email = $matches[1];
+            $data['email'] = $email;
+            error_log("Extracted email: " . $email);
+        }
+
+        if (preg_match('/"feature"\s*:\s*"([^"]+)"/', $requestBody, $matches)) {
+            $feature = $matches[1];
+            $data['feature'] = $feature;
+            error_log("Extracted feature: " . $feature);
+        }
     }
 
     // Debug log
     error_log("Subscriber data received in save-subscriber.php: " . print_r($data, true));
+    error_log("Request headers: " . print_r(getallheaders(), true));
 
     // Validate required fields
     if (empty($data['email'])) {

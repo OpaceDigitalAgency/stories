@@ -11,17 +11,17 @@
     font-family: 'Nunito', sans-serif;
     color: theme('colors.text-primary');
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', sans-serif;
     color: theme('colors.text-primary');
   }
-  
+
   /* Add playful underlines for headings */
   h2.fancy-underline {
     @apply relative inline-block;
   }
-  
+
   h2.fancy-underline::after {
     content: '';
     @apply absolute bottom-0 left-0 w-full h-3 bg-accent/30 -z-10 rounded-full transform -rotate-1;
@@ -33,27 +33,27 @@
   .btn {
     @apply px-8 py-4 rounded-xl font-bold transition-all duration-700 transform hover:scale-110 hover:shadow-xl backdrop-blur-xl relative overflow-hidden;
   }
-  
+
   .btn-primary {
     @apply bg-gradient-to-r from-primary via-primary/90 to-primary text-white hover:from-primary-600 hover:via-primary-500 hover:to-primary-600;
   }
-  
+
   .btn-secondary {
     @apply bg-gradient-to-r from-secondary via-secondary/90 to-secondary text-white hover:from-secondary-600 hover:via-secondary-500 hover:to-secondary-600;
   }
-  
+
   .btn-accent {
     @apply bg-gradient-to-r from-accent via-accent/90 to-accent text-text-primary hover:from-accent-400 hover:via-accent-300 hover:to-accent-400;
   }
-  
+
   .btn-tertiary {
     @apply bg-gradient-to-r from-tertiary via-tertiary/90 to-tertiary text-white hover:from-tertiary-600 hover:via-tertiary-500 hover:to-tertiary-600;
   }
-  
+
   .container {
     @apply mx-auto px-4 w-full max-w-7xl;
   }
-  
+
   /* Card styles */
   .card {
     @apply relative rounded-2xl overflow-hidden transition-all duration-700 bg-gradient-to-br from-white via-white/90 to-neutral-50 shadow-playful hover:shadow-xl backdrop-blur-xl transform-style-3d hover:translate-z-8;
@@ -140,7 +140,7 @@
   .section-newsletter::before {
     @apply bg-gradient-to-br from-secondary-100 via-white to-secondary-100;
   }
-  
+
   /* 3D transform utilities */
   .transform-style-3d {
     transform-style: preserve-3d;
@@ -154,12 +154,12 @@
   .blob-shape {
     @apply absolute -z-10 rounded-blob opacity-70 blur-2xl transition-all duration-700;
   }
-  
+
   /* Animated elements */
   .float-animation {
     animation: float 8s ease-in-out infinite;
   }
-  
+
   @keyframes float {
     0% { transform: translateY(0px) rotate(0deg); }
     25% { transform: translateY(-15px) rotate(2deg); }
@@ -167,21 +167,21 @@
     75% { transform: translateY(-15px) rotate(1deg); }
     100% { transform: translateY(0px) rotate(0deg); }
   }
-  
+
   .pulse-animation {
     animation: pulse 3s ease-in-out infinite;
   }
-  
+
   @keyframes pulse {
     0% { transform: scale(1) rotate(0deg); }
     50% { transform: scale(1.1) rotate(5deg); }
     100% { transform: scale(1) rotate(0deg); }
   }
-  
+
   .wiggle-animation {
     animation: wiggle 2s ease-in-out infinite;
   }
-  
+
   @keyframes wiggle {
     0%, 100% { transform: rotate(-3deg); }
     50% { transform: rotate(3deg); }
@@ -214,30 +214,30 @@
       transform: translate(0px, 0px) scale(1) rotate(0deg);
     }
   }
-  
+
   /* Enhanced button interactions */
   .btn-playful {
     @apply relative overflow-hidden;
   }
-  
+
   .btn-playful::before {
     content: '';
     @apply absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 transition-opacity duration-700;
   }
-  
+
   .btn-playful::after {
     content: '';
     @apply absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-700 blur-sm;
   }
-  
+
   .btn-playful:hover::before {
     @apply opacity-100;
   }
-  
+
   .btn-playful:hover::after {
     @apply opacity-100;
   }
-  
+
   .btn-playful:active {
     @apply transform scale-95;
   }
@@ -298,6 +298,34 @@
     }
   }
 
+  /* Gentle bounce animation for icons */
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce-gentle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  /* Slower pulse animation */
+  .animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+
   /* Enhanced gradient animations */
   .animate-gradient {
     animation: gradient 8s ease infinite;
@@ -335,19 +363,19 @@
   .translate-z-2 {
     transform: translateZ(2px);
   }
-  
+
   .translate-z-4 {
     transform: translateZ(4px);
   }
-  
+
   .translate-z-8 {
     transform: translateZ(8px);
   }
-  
+
   .translate-z-12 {
     transform: translateZ(12px);
   }
-  
+
   .translate-z-16 {
     transform: translateZ(16px);
   }

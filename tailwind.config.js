@@ -167,7 +167,17 @@ module.exports = {
     },
   },
   plugins: [
-    function({ addUtilities }) {
+    function({ addUtilities, matchUtilities }) {
+      // Add scale-115 utility
+      matchUtilities(
+        {
+          'scale': (value) => ({
+            transform: `scale(${value})`,
+          }),
+        },
+        { values: { '115': '1.15' } }
+      );
+
       const newUtilities = {
         '.animation-delay-100': {
           'animation-delay': '100ms',

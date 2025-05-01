@@ -1,0 +1,234 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/base.css';
+
+// Page metadata
+const title = 'About Us | Stories From The Web';
+const description = 'Learn about Stories From The Web, our history, our team, and our commitment to providing a platform for children\'s stories and young authors.';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
+    <NavHeader />
+    
+    <main class="flex-grow w-full">
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+          <h1 class="text-4xl font-bold text-text-primary mb-4">
+            About Stories From The Web
+          </h1>
+          <p class="text-xl text-text-secondary">
+            A platform for sharing and discovering children's stories
+          </p>
+        </header>
+
+        <!-- Hero Section -->
+        <div class="relative rounded-xl overflow-hidden mb-12 shadow-xl">
+          <img 
+            src="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg" 
+            alt="Children reading stories" 
+            class="w-full h-64 md:h-80 object-cover"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+            <div class="p-6 text-white">
+              <p class="text-2xl font-bold">Every child has a story worth sharing</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Our Story</h2>
+          <p class="mb-4">
+            Stories From The Web began in 2023 with a simple mission: to create a safe, engaging platform 
+            where children could share their stories and discover tales written by peers and professional 
+            authors alike. What started as a small project has grown into a vibrant community of young 
+            writers, parents, educators, and readers from across the UK and beyond.
+          </p>
+          <p class="mb-4">
+            We recognized that while there were many platforms for adult writers, there were few spaces 
+            dedicated to nurturing the creative voices of children. We wanted to build a place where 
+            young authors could be published alongside established writers, where their work would be 
+            valued, and where they could receive encouragement and feedback to help them grow.
+          </p>
+          <p>
+            Today, Stories From The Web hosts thousands of stories from authors of all ages, with a 
+            special focus on amplifying the voices of children aged 5-13. We've partnered with schools, 
+            libraries, and publishers to create a rich ecosystem that supports literacy, creativity, 
+            and a love of storytelling.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">What We Do</h2>
+          
+          <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-3">Platform for Young Authors</h3>
+              <p>
+                We provide a safe, moderated platform where children can publish their stories, 
+                receive feedback, and build confidence in their writing abilities.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-3">Curated Reading Experience</h3>
+              <p>
+                We offer a carefully curated collection of stories suitable for different age groups, 
+                making it easy for young readers to find content they'll enjoy.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-3">Educational Resources</h3>
+              <p>
+                We develop resources for parents and educators to use our stories in educational 
+                settings, supporting literacy development and reading comprehension.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-3">Community Building</h3>
+              <p>
+                We foster a supportive community where young writers can connect, collaborate, 
+                and learn from each other and from established authors.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Our Values</h2>
+          
+          <ul class="space-y-4">
+            <li class="flex items-start">
+              <div class="bg-primary/20 p-2 rounded-full mr-4 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Inclusivity</h3>
+                <p>We believe every child deserves to have their voice heard, regardless of background, ability, or experience.</p>
+              </div>
+            </li>
+            
+            <li class="flex items-start">
+              <div class="bg-primary/20 p-2 rounded-full mr-4 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Safety</h3>
+                <p>We maintain a secure environment with strict content moderation and privacy protections for our young users.</p>
+              </div>
+            </li>
+            
+            <li class="flex items-start">
+              <div class="bg-primary/20 p-2 rounded-full mr-4 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Creativity</h3>
+                <p>We encourage imagination, original thinking, and the joy of storytelling in all its forms.</p>
+              </div>
+            </li>
+            
+            <li class="flex items-start">
+              <div class="bg-primary/20 p-2 rounded-full mr-4 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Education</h3>
+                <p>We support literacy development and provide educational value through our content and resources.</p>
+              </div>
+            </li>
+            
+            <li class="flex items-start">
+              <div class="bg-primary/20 p-2 rounded-full mr-4 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Community</h3>
+                <p>We foster a supportive environment where young writers can connect, share, and grow together.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Our Team</h2>
+          
+          <p class="mb-6">
+            Stories From The Web is powered by a dedicated team of educators, writers, developers, 
+            and content moderators who are passionate about children's literature and digital literacy. 
+            Our team includes:
+          </p>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-2">Content Team</h3>
+              <p>
+                Professional writers, editors, and educators who curate content, 
+                provide feedback to young authors, and develop educational resources.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-2">Moderation Team</h3>
+              <p>
+                Trained moderators who review all submitted content to ensure it meets 
+                our safety standards and is appropriate for our young audience.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-2">Technical Team</h3>
+              <p>
+                Developers and designers who build and maintain our platform, ensuring 
+                it's secure, accessible, and user-friendly for children of all ages.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold mb-2">Community Team</h3>
+              <p>
+                Community managers who engage with our users, organize events, and 
+                foster connections between young writers and readers.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mt-8">
+          <p class="text-lg mb-4">Want to learn more about our mission?</p>
+          <div class="flex flex-wrap justify-center gap-4">
+            <a href="/mission" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+              Our Mission
+            </a>
+            <a href="/contact" class="inline-block bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary-dark transition-colors">
+              Contact Us
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

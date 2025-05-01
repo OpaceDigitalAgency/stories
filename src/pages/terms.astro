@@ -1,0 +1,249 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/base.css';
+
+// Page metadata
+const title = 'Terms of Service | Stories From The Web';
+const description = 'Our terms of service outline the rules, guidelines, and legal terms that govern your use of Stories From The Web.';
+
+// Last updated date
+const lastUpdated = "May 15, 2025";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
+    <NavHeader />
+    
+    <main class="flex-grow w-full">
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8">
+          <h1 class="text-4xl font-bold text-text-primary mb-4">
+            Terms of Service
+          </h1>
+          <p class="text-gray-500">Last Updated: {lastUpdated}</p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Introduction</h2>
+          <p class="mb-4">
+            Welcome to Stories From The Web. These Terms of Service ("Terms") govern your access to and use of 
+            storiesfromtheweb.org and all related services (collectively, the "Service"). By accessing or using 
+            the Service, you agree to be bound by these Terms. If you disagree with any part of the Terms, you 
+            may not access the Service.
+          </p>
+          <p class="mb-4">
+            These Terms apply to all visitors, users, and others who access or use the Service, including 
+            contributors of content, information, and other materials or services on the Service.
+          </p>
+          <p>
+            We reserve the right to modify these Terms at any time. We will always post the most current version 
+            on our site and update the "Last Updated" date. Your continued use of the Service after we post 
+            modifications to the Terms constitutes your agreement to those modifications.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Accounts</h2>
+          
+          <h3 class="text-xl font-semibold mb-2">Account Creation</h3>
+          <p class="mb-4">
+            When you create an account with us, you must provide accurate, complete, and current information. 
+            Failure to do so constitutes a breach of the Terms, which may result in immediate termination of 
+            your account on our Service.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Account Types</h3>
+          <p class="mb-4">
+            We offer different account types, including Child Author accounts (for users under 13, requires 
+            parental oversight), Parent Author accounts, Educator accounts, and Reader accounts. Each account 
+            type has specific features and requirements.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Account Security</h3>
+          <p class="mb-4">
+            You are responsible for safeguarding the password that you use to access the Service and for any 
+            activities or actions under your password. We encourage you to use "strong" passwords (passwords 
+            that use a combination of upper and lower case letters, numbers, and symbols) with your account.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Account Termination</h3>
+          <p>
+            We reserve the right to terminate or suspend your account immediately, without prior notice or 
+            liability, for any reason whatsoever, including without limitation if you breach the Terms. Upon 
+            termination, your right to use the Service will immediately cease.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Content</h2>
+          
+          <h3 class="text-xl font-semibold mb-2">User Content</h3>
+          <p class="mb-4">
+            Our Service allows you to post, link, store, share and otherwise make available certain information, 
+            text, graphics, videos, or other material ("Content"). You are responsible for the Content that you 
+            post on or through the Service, including its legality, reliability, and appropriateness.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Content Standards</h3>
+          <p class="mb-4">
+            All Content must comply with our Content Policy, which prohibits inappropriate content for children, 
+            harmful or dangerous content, discriminatory or hateful content, misleading or deceptive content, 
+            content that violates privacy or safety concerns, and content that infringes on copyright or 
+            intellectual property rights.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Content Moderation</h3>
+          <p class="mb-4">
+            All Content submitted to the Service undergoes a moderation process to ensure compliance with our 
+            Content Policy. We reserve the right to remove any Content that violates these Terms or our Content 
+            Policy, or that we find objectionable for any reason, without prior notice.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Content License</h3>
+          <p>
+            By posting Content on or through the Service, you grant us a non-exclusive, royalty-free, 
+            transferable, sublicensable, worldwide license to use, modify, publicly perform, publicly display, 
+            reproduce, and distribute such Content on and through the Service. You retain any and all of your 
+            rights to any Content you submit, post, or display on or through the Service and you are responsible 
+            for protecting those rights.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Intellectual Property</h2>
+          
+          <h3 class="text-xl font-semibold mb-2">Service Content</h3>
+          <p class="mb-4">
+            The Service and its original content (excluding Content provided by users), features, and 
+            functionality are and will remain the exclusive property of Stories From The Web and its licensors. 
+            The Service is protected by copyright, trademark, and other laws of both the United Kingdom and 
+            foreign countries. Our trademarks and trade dress may not be used in connection with any product 
+            or service without the prior written consent of Stories From The Web.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Copyright Policy</h3>
+          <p class="mb-4">
+            We respect the intellectual property rights of others and expect users of the Service to do the same. 
+            We will respond to notices of alleged copyright infringement that comply with applicable law and are 
+            properly provided to us.
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">DMCA Notices</h3>
+          <p>
+            If you believe that your Content has been copied in a way that constitutes copyright infringement, 
+            please provide us with the following information: (1) a physical or electronic signature of the 
+            copyright owner or a person authorized to act on their behalf; (2) identification of the copyrighted 
+            work claimed to have been infringed; (3) identification of the material that is claimed to be 
+            infringing or to be the subject of infringing activity and that is to be removed; (4) your contact 
+            information, including your address, telephone number, and an email address; (5) a statement by you 
+            that you have a good faith belief that use of the material in the manner complained of is not 
+            authorized by the copyright owner, its agent, or the law; and (6) a statement that the information 
+            in the notification is accurate, and, under penalty of perjury, that you are authorized to act on 
+            behalf of the copyright owner.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Prohibited Uses</h2>
+          <p class="mb-4">
+            You may use the Service only for lawful purposes and in accordance with these Terms. You agree not to 
+            use the Service:
+          </p>
+          
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li>In any way that violates any applicable national or international law or regulation.</li>
+            <li>For the purpose of exploiting, harming, or attempting to exploit or harm minors in any way.</li>
+            <li>To transmit, or procure the sending of, any advertising or promotional material, including any "junk mail", "chain letter," "spam," or any other similar solicitation.</li>
+            <li>To impersonate or attempt to impersonate the Company, a Company employee, another user, or any other person or entity.</li>
+            <li>In any way that infringes upon the rights of others, or in any way is illegal, threatening, fraudulent, or harmful.</li>
+            <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm or offend the Company or users of the Service or expose them to liability.</li>
+          </ul>
+          
+          <p>
+            Additionally, you agree not to:
+          </p>
+          
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li>Use the Service in any manner that could disable, overburden, damage, or impair the Service or interfere with any other party's use of the Service.</li>
+            <li>Use any robot, spider, or other automatic device, process, or means to access the Service for any purpose, including monitoring or copying any of the material on the Service.</li>
+            <li>Use any manual process to monitor or copy any of the material on the Service or for any other unauthorized purpose without our prior written consent.</li>
+            <li>Use any device, software, or routine that interferes with the proper working of the Service.</li>
+            <li>Introduce any viruses, trojan horses, worms, logic bombs, or other material which is malicious or technologically harmful.</li>
+            <li>Attempt to gain unauthorized access to, interfere with, damage, or disrupt any parts of the Service, the server on which the Service is stored, or any server, computer, or database connected to the Service.</li>
+            <li>Attack the Service via a denial-of-service attack or a distributed denial-of-service attack.</li>
+            <li>Otherwise attempt to interfere with the proper working of the Service.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Disclaimer</h2>
+          <p class="mb-4">
+            Your use of the Service is at your sole risk. The Service is provided on an "AS IS" and "AS AVAILABLE" 
+            basis. The Service is provided without warranties of any kind, whether express or implied, including, 
+            but not limited to, implied warranties of merchantability, fitness for a particular purpose, 
+            non-infringement, or course of performance.
+          </p>
+          <p>
+            Stories From The Web, its subsidiaries, affiliates, and its licensors do not warrant that a) the 
+            Service will function uninterrupted, secure, or available at any particular time or location; b) any 
+            errors or defects will be corrected; c) the Service is free of viruses or other harmful components; 
+            or d) the results of using the Service will meet your requirements.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Limitation of Liability</h2>
+          <p class="mb-4">
+            In no event shall Stories From The Web, nor its directors, employees, partners, agents, suppliers, 
+            or affiliates, be liable for any indirect, incidental, special, consequential, or punitive damages, 
+            including without limitation, loss of profits, data, use, goodwill, or other intangible losses, 
+            resulting from (i) your access to or use of or inability to access or use the Service; (ii) any 
+            conduct or content of any third party on the Service; (iii) any content obtained from the Service; 
+            and (iv) unauthorized access, use, or alteration of your transmissions or content, whether based on 
+            warranty, contract, tort (including negligence), or any other legal theory, whether or not we have 
+            been informed of the possibility of such damage, and even if a remedy set forth herein is found to 
+            have failed of its essential purpose.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Governing Law</h2>
+          <p class="mb-4">
+            These Terms shall be governed and construed in accordance with the laws of the United Kingdom, 
+            without regard to its conflict of law provisions. Our failure to enforce any right or provision of 
+            these Terms will not be considered a waiver of those rights. If any provision of these Terms is held 
+            to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in 
+            effect. These Terms constitute the entire agreement between us regarding our Service, and supersede 
+            and replace any prior agreements we might have between us regarding the Service.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Contact Us</h2>
+          <p class="mb-4">
+            If you have any questions about these Terms, please contact us at:
+          </p>
+          <div class="pl-6">
+            <p>Stories From The Web</p>
+            <p>123 Story Lane</p>
+            <p>Birmingham, B1 2AB</p>
+            <p>United Kingdom</p>
+            <p>Email: terms@storiesfromtheweb.org</p>
+            <p>Phone: +44 (0)123 456 7890</p>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

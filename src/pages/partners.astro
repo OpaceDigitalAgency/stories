@@ -1,0 +1,240 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/base.css';
+
+// Page metadata
+const title = 'Our Partners | Stories From The Web';
+const description = 'Meet the organizations and publishers that partner with Stories From The Web to support children\'s literacy and storytelling.';
+
+// Partner categories
+const partnerCategories = [
+  {
+    name: "Publishers",
+    description: "Leading children's book publishers who support our mission",
+    partners: [
+      // This section will be populated by the site owner
+      // Example structure:
+      // { name: "Publisher Name", logo: "/path/to/logo.png", website: "https://example.com" }
+    ]
+  },
+  {
+    name: "Educational Organizations",
+    description: "Organizations dedicated to literacy and education",
+    partners: []
+  },
+  {
+    name: "Libraries & Cultural Institutions",
+    description: "Libraries and cultural institutions that collaborate with us",
+    partners: []
+  },
+  {
+    name: "Technology Partners",
+    description: "Technology companies that support our platform",
+    partners: []
+  }
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
+    <NavHeader />
+    
+    <main class="flex-grow w-full">
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+          <h1 class="text-4xl font-bold text-text-primary mb-4">
+            Our Partners
+          </h1>
+          <p class="text-xl text-text-secondary">
+            Working together to inspire the next generation of readers and writers
+          </p>
+        </header>
+
+        <!-- Hero Section -->
+        <div class="bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl p-8 mb-12 text-center">
+          <h2 class="text-2xl font-bold mb-4">Partnership Program</h2>
+          <p class="text-lg mb-6">
+            Stories From The Web collaborates with publishers, educational organizations, 
+            libraries, and technology companies that share our commitment to children's 
+            literacy and creative expression.
+          </p>
+          <a href="/contact" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+            Become a Partner
+          </a>
+        </div>
+
+        <!-- Partner Categories -->
+        {partnerCategories.map(category => (
+          <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-2">{category.name}</h2>
+            <p class="text-gray-600 mb-6">{category.description}</p>
+            
+            {category.partners.length > 0 ? (
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {category.partners.map(partner => (
+                  <a 
+                    href={partner.website} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                  >
+                    <img 
+                      src={partner.logo} 
+                      alt={`${partner.name} logo`} 
+                      class="h-16 object-contain mb-3" 
+                    />
+                    <span class="text-center font-medium">{partner.name}</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <p class="text-gray-500 italic">Partner logos will be displayed here</p>
+                <p class="text-sm text-gray-400 mt-2">This section will be populated by the site owner</p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        <!-- Partnership Benefits -->
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-6">Partnership Benefits</h2>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="border border-gray-200 rounded-lg p-6">
+              <div class="flex items-center mb-4">
+                <div class="bg-primary/20 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold">Brand Visibility</h3>
+              </div>
+              <p>
+                Showcase your brand to our growing community of young readers, 
+                parents, and educators through logo placement, featured content, 
+                and collaborative campaigns.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <div class="flex items-center mb-4">
+                <div class="bg-primary/20 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold">Community Engagement</h3>
+              </div>
+              <p>
+                Connect directly with our community through sponsored writing 
+                contests, workshops, and events that promote literacy and 
+                creative expression.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <div class="flex items-center mb-4">
+                <div class="bg-primary/20 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold">Content Collaboration</h3>
+              </div>
+              <p>
+                Collaborate on exclusive content, educational resources, and 
+                special features that highlight your organization's expertise 
+                and commitment to children's literacy.
+              </p>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg p-6">
+              <div class="flex items-center mb-4">
+                <div class="bg-primary/20 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold">Social Impact</h3>
+              </div>
+              <p>
+                Demonstrate your organization's commitment to social responsibility 
+                by supporting a platform that empowers children, promotes literacy, 
+                and gives voice to diverse perspectives.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Partnership Types -->
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-6">Partnership Types</h2>
+          
+          <div class="space-y-6">
+            <div class="border-l-4 border-primary pl-6">
+              <h3 class="text-xl font-semibold mb-2">Content Partners</h3>
+              <p>
+                Publishers and content creators who provide stories, educational resources, 
+                or other content to enrich our platform. Content partners benefit from 
+                increased visibility and access to our growing audience of young readers.
+              </p>
+            </div>
+            
+            <div class="border-l-4 border-secondary pl-6">
+              <h3 class="text-xl font-semibold mb-2">Educational Partners</h3>
+              <p>
+                Schools, libraries, and educational organizations that integrate our platform 
+                into their literacy programs. Educational partners receive custom resources, 
+                workshops, and support for using Stories From The Web in educational settings.
+              </p>
+            </div>
+            
+            <div class="border-l-4 border-tertiary pl-6">
+              <h3 class="text-xl font-semibold mb-2">Technology Partners</h3>
+              <p>
+                Technology companies that provide tools, services, or expertise to enhance 
+                our platform. Technology partners collaborate with us on innovative features 
+                and solutions that improve the user experience.
+              </p>
+            </div>
+            
+            <div class="border-l-4 border-accent pl-6">
+              <h3 class="text-xl font-semibold mb-2">Community Partners</h3>
+              <p>
+                Organizations that share our mission and values, collaborating on events, 
+                campaigns, and initiatives that promote children's literacy and creative 
+                expression in the broader community.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Become a Partner CTA -->
+        <div class="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl p-8 text-center">
+          <h2 class="text-2xl font-bold mb-4">Interested in Becoming a Partner?</h2>
+          <p class="text-lg mb-6 max-w-2xl mx-auto">
+            We're always looking for organizations that share our commitment to children's 
+            literacy and creative expression. If you're interested in partnering with 
+            Stories From The Web, we'd love to hear from you.
+          </p>
+          <a href="/contact" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+            Contact Our Partnership Team
+          </a>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

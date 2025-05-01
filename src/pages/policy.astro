@@ -1,0 +1,188 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/base.css';
+
+// Page metadata
+const title = 'Content Policy | Stories From The Web';
+const description = 'Our content policy outlines the standards and guidelines for all content published on Stories From The Web, ensuring a safe and positive environment for young readers.';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
+    <NavHeader />
+    
+    <main class="flex-grow w-full">
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+          <h1 class="text-4xl font-bold text-text-primary mb-4">
+            Content Policy
+          </h1>
+          <p class="text-xl text-text-secondary">
+            Our commitment to providing a safe and positive environment
+          </p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Our Content Philosophy</h2>
+          <p class="mb-4">
+            At Stories From The Web, we believe that children deserve access to high-quality, 
+            age-appropriate content that inspires creativity, fosters empathy, and encourages 
+            a love of reading. Our content policy is designed to ensure that all stories on our 
+            platform align with these values and provide a safe, positive experience for young readers.
+          </p>
+          <p>
+            We welcome diverse perspectives and creative expression, while maintaining strict 
+            standards to protect our young audience. This policy applies to all content published 
+            on our platform, including stories, comments, profiles, and images.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Prohibited Content</h2>
+          <p class="mb-4">
+            The following types of content are strictly prohibited on Stories From The Web:
+          </p>
+          
+          <h3 class="text-xl font-semibold mb-2">Inappropriate Content for Children</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Explicit or implied sexual content of any kind</li>
+            <li>Graphic violence, gore, or horror elements</li>
+            <li>Profanity or crude language</li>
+            <li>Promotion of adult themes inappropriate for children under 13</li>
+            <li>Content that may cause significant fear or distress in young readers</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Harmful or Dangerous Content</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Promotion of dangerous activities that children might imitate</li>
+            <li>Content encouraging self-harm, eating disorders, or other harmful behaviors</li>
+            <li>Glorification of risky behaviors (e.g., running away from home)</li>
+            <li>Instructions for dangerous pranks or challenges</li>
+            <li>Promotion of substance use (including alcohol, tobacco, or drugs)</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Discriminatory or Hateful Content</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Content that promotes discrimination, prejudice, or stereotypes</li>
+            <li>Hateful content targeting individuals or groups based on protected characteristics</li>
+            <li>Bullying, harassment, or content that normalizes these behaviors</li>
+            <li>Content that demeans or belittles others</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Misleading or Deceptive Content</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Misinformation or factually incorrect educational content</li>
+            <li>Content that blurs the line between fact and fiction without clear indication</li>
+            <li>Deceptive content designed to confuse or mislead children</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Privacy and Safety Concerns</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Content containing personal information of minors</li>
+            <li>Stories that could be used to identify or locate a specific child</li>
+            <li>Content encouraging children to share personal information</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Copyright and Intellectual Property</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Plagiarized content or unauthorized use of others' work</li>
+            <li>Unauthorized use of copyrighted characters, settings, or storylines</li>
+            <li>Content that infringes on trademarks or other intellectual property rights</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Content Moderation Process</h2>
+          
+          <p class="mb-4">
+            All content submitted to Stories From The Web undergoes a moderation process to ensure 
+            compliance with our content policy:
+          </p>
+          
+          <ol class="list-decimal pl-6 mb-6 space-y-4">
+            <li>
+              <strong>Initial Submission</strong>
+              <p>Authors submit their stories through our publishing platform.</p>
+            </li>
+            <li>
+              <strong>Automated Screening</strong>
+              <p>Our system performs an initial automated check for prohibited content.</p>
+            </li>
+            <li>
+              <strong>Human Review</strong>
+              <p>Our moderation team reviews each submission to ensure it meets our content standards.</p>
+            </li>
+            <li>
+              <strong>Feedback</strong>
+              <p>If content doesn't meet our standards, we provide feedback to the author explaining why.</p>
+            </li>
+            <li>
+              <strong>Publication or Revision</strong>
+              <p>Content that meets our standards is published; otherwise, authors can revise and resubmit.</p>
+            </li>
+          </ol>
+          
+          <p>
+            We strive to complete the moderation process within 1-3 business days of submission.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Reporting Inappropriate Content</h2>
+          
+          <p class="mb-4">
+            If you encounter content that violates our policy, please report it immediately:
+          </p>
+          
+          <ol class="list-decimal pl-6 mb-6 space-y-2">
+            <li>Use the "Report" button available on all content pages</li>
+            <li>Provide specific details about why you believe the content violates our policy</li>
+            <li>Our moderation team will review all reports within 24-48 hours</li>
+            <li>If the content is found to violate our policy, it will be removed promptly</li>
+          </ol>
+          
+          <p>
+            We take all reports seriously and appreciate your help in maintaining a safe environment.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Policy Updates</h2>
+          
+          <p class="mb-4">
+            Our content policy may be updated periodically to address emerging issues or improve clarity. 
+            When significant changes are made, we will notify our community through:
+          </p>
+          
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Announcements on our website</li>
+            <li>Email notifications to registered users</li>
+            <li>Updates to this policy page with the date of revision</li>
+          </ul>
+          
+          <p>
+            It is the responsibility of all users to stay informed about our current content policy.
+          </p>
+        </div>
+
+        <div class="text-center mt-8">
+          <p class="text-lg mb-4">Questions about our content policy?</p>
+          <a href="/contact" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+            Contact Us
+          </a>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

@@ -1,0 +1,161 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/base.css';
+
+// Page metadata
+const title = 'Author Guidelines | Stories From The Web';
+const description = 'Guidelines for authors submitting stories to Stories From The Web. Learn about our content standards, formatting requirements, and submission process.';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
+    <NavHeader />
+    
+    <main class="flex-grow w-full">
+      <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+          <h1 class="text-4xl font-bold text-text-primary mb-4">
+            Author Guidelines
+          </h1>
+          <p class="text-xl text-text-secondary">
+            Everything you need to know about submitting your stories
+          </p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Content Standards</h2>
+          <p class="mb-4">
+            At Stories From The Web, we welcome stories from authors of all ages and backgrounds. 
+            To ensure our platform remains a safe and positive space for young readers, we ask all 
+            authors to adhere to the following content standards:
+          </p>
+          
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>All content must be appropriate for children aged 0-13 years</li>
+            <li>No explicit violence, gore, or frightening content that may disturb young readers</li>
+            <li>No profanity, sexual content, or adult themes</li>
+            <li>No discriminatory content based on race, gender, religion, disability, or any other protected characteristic</li>
+            <li>No promotion of harmful behaviors or dangerous activities</li>
+            <li>No unauthorized use of copyrighted characters or content</li>
+          </ul>
+          
+          <p>
+            Stories that do not meet these standards will not be published. If you're unsure whether your 
+            content is appropriate, please contact us before submitting.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Formatting Requirements</h2>
+          
+          <h3 class="text-xl font-semibold mb-2">Story Structure</h3>
+          <p class="mb-4">
+            A well-structured story typically includes:
+          </p>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>A clear beginning, middle, and end</li>
+            <li>A main character or characters that readers can connect with</li>
+            <li>A problem or challenge to overcome</li>
+            <li>A satisfying resolution</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Length Guidelines</h3>
+          <p class="mb-4">
+            Story length should be appropriate for the target age group:
+          </p>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li><strong>Ages 0-3:</strong> 100-300 words</li>
+            <li><strong>Ages 4-6:</strong> 300-800 words</li>
+            <li><strong>Ages 7-9:</strong> 800-1,500 words</li>
+            <li><strong>Ages 10-13:</strong> 1,500-5,000 words</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold mb-2">Formatting</h3>
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Use clear paragraphs with appropriate spacing</li>
+            <li>Check spelling and grammar before submitting</li>
+            <li>Include a brief summary or excerpt (50-100 words)</li>
+            <li>Add relevant tags to help readers find your story</li>
+            <li>Provide an age recommendation</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Submission Process</h2>
+          
+          <ol class="list-decimal pl-6 mb-6 space-y-4">
+            <li>
+              <strong>Create an account</strong>
+              <p>Sign up for a free account on Stories From The Web.</p>
+            </li>
+            <li>
+              <strong>Start a new story</strong>
+              <p>Go to the "Publish" section and click "Start Writing Now".</p>
+            </li>
+            <li>
+              <strong>Write or upload your story</strong>
+              <p>You can write directly in our editor or upload a document.</p>
+            </li>
+            <li>
+              <strong>Add details</strong>
+              <p>Include a title, summary, age recommendation, and tags.</p>
+            </li>
+            <li>
+              <strong>Upload a cover image</strong>
+              <p>Add an eye-catching cover image (optional but recommended).</p>
+            </li>
+            <li>
+              <strong>Preview and submit</strong>
+              <p>Review your story and submit it for moderation.</p>
+            </li>
+            <li>
+              <strong>Moderation</strong>
+              <p>Our team will review your story to ensure it meets our guidelines.</p>
+            </li>
+            <li>
+              <strong>Publication</strong>
+              <p>Once approved, your story will be published on our platform!</p>
+            </li>
+          </ol>
+          
+          <p class="mb-4">
+            The moderation process typically takes 1-3 business days. You'll receive an email notification 
+            when your story is published or if any changes are needed.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h2 class="text-2xl font-bold mb-4">Tips for Success</h2>
+          
+          <ul class="list-disc pl-6 mb-6 space-y-2">
+            <li>Write with your audience in mind – consider their interests, vocabulary, and attention span</li>
+            <li>Include relatable characters and situations</li>
+            <li>Use vivid descriptions to bring your story to life</li>
+            <li>Read your story aloud to check its flow and rhythm</li>
+            <li>Consider adding a moral or lesson, especially for younger readers</li>
+            <li>Be original – share your unique voice and perspective</li>
+            <li>Engage with the community by reading and commenting on other stories</li>
+          </ul>
+        </div>
+
+        <div class="text-center mt-8">
+          <p class="text-lg mb-4">Ready to share your story with the world?</p>
+          <a href="/publish" class="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+            Start Writing Now
+          </a>
+        </div>
+      </div>
+    </main>
+    
+    <Footer />
+  </body>
+</html>

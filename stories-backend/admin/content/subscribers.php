@@ -115,7 +115,7 @@ try {
                 <p class="text-muted">Manage users who have subscribed to premium feature notifications</p>
             </div>
             <div class="col-md-6 text-md-end">
-                <a href="dashboard.php" class="btn btn-outline-primary">
+                <a href="../dashboard.php" class="btn btn-outline-primary">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
             </div>

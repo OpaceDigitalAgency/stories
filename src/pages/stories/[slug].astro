@@ -84,6 +84,27 @@ const formattedDate = story.publishDate
     })
   : null;
 
+// Clean up story content to remove redundant author information and fix headings
+function cleanStoryContent(content) {
+  if (!content) return '';
+
+  // Remove author information that follows the pattern: ## **Author** **Name:** Kerry **Age:** 9 **Location:** Northern Ireland
+  let cleanedContent = content.replace(/##\s*\*\*Author\*\*\s*\*\*Name:\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^*]+\s*\*\*Location:\*\*\s*[^<\n]+/g, '');
+
+  // Replace ## Summary with <h2>Summary</h2>
+  cleanedContent = cleanedContent.replace(/##\s*Summary/g, '<h2>Summary</h2>');
+
+  // Replace ## The Story with <h2>The Story</h2>
+  cleanedContent = cleanedContent.replace(/##\s*The\s*Story/g, '<h2>The Story</h2>');
+
+  return cleanedContent;
+}
+
+// Clean the story content
+if (story.content) {
+  story.content = cleanStoryContent(story.content);
+}
+
 // Page metadata
 const title = `${story.title} | Stories From The Web`;
 const description = story.excerpt || `Read "${story.title}" on Stories From The Web`;

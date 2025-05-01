@@ -1,7 +1,7 @@
 <?php
 /**
  * Simple Image Optimization Wrapper
- * 
+ *
  * This script provides a simple interface to optimize images using the
  * modular image optimization library. It can be used to optimize a single
  * image or all images in the media table.
@@ -44,28 +44,28 @@ function optimizeSingleImage($imagePath, $destinationDir = null) {
         echo "<p style='color:red'>Image not found: $imagePath</p>";
         return false;
     }
-    
+
     if ($destinationDir === null) {
         $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
     }
-    
+
     if (!is_dir($destinationDir)) {
         mkdir($destinationDir, 0755, true);
         echo "<p style='color:blue'>Created destination directory: $destinationDir</p>";
     }
-    
+
     echo "<p style='color:blue'>Optimizing image: " . basename($imagePath) . "</p>";
-    
+
     // Create image variants with aggressive optimization
     $variants = createImageVariants($imagePath, $destinationDir, [
-        'convert_format' => 'jpg',
+        'convert_format' => 'webp',
         'include_original' => true,
-        'quality' => 60,
+        'quality' => 85,
         'max_width' => 300,
         'strip_metadata' => true,
         'optimize' => true
     ]);
-    
+
     if ($variants) {
         echo "<p style='color:green'>Successfully created image variants:</p>";
         echo "<ul>";
@@ -95,25 +95,25 @@ function optimizeAllMedia($db) {
         echo "<p style='color:red'>Error checking media table structure: " . $e->getMessage() . "</p>";
         return false;
     }
-    
+
     // Get all media entries
     $stmt = $db->query("SELECT * FROM media");
     $media = $stmt->fetchAll();
-    
+
     echo "<h2>Found " . count($media) . " media files to optimize</h2>";
-    
+
     $stats = [
         'total' => count($media),
         'optimized' => 0,
         'skipped' => 0,
         'failed' => 0
     ];
-    
+
     $count = 0;
     foreach ($media as $item) {
         $count++;
         $percent = round(($count / $stats['total']) * 100);
-        
+
         // Update progress bar
         echo "<script>
             document.getElementById('progress').style.width = '{$percent}%';
@@ -121,19 +121,19 @@ function optimizeAllMedia($db) {
         </script>";
         ob_flush();
         flush();
-        
+
         echo "<h3>Processing: " . htmlspecialchars($item['filename']) . " (ID: {$item['id']})</h3>";
-        
+
         // Store the current media filename in a global variable for the createOptimizedFilename function
         $GLOBALS['current_media_filename'] = $item['filename'];
-        
+
         // Skip default images
         if (strpos($item['file_path'], 'default-') !== false) {
             echo "<p style='color:blue'>Skipping default image</p>";
             $stats['skipped']++;
             continue;
         }
-        
+
         // Get the file path
         $filePath = $item['file_path'];
         if (strpos($filePath, 'http') === 0) {
@@ -152,23 +152,23 @@ function optimizeAllMedia($db) {
             if (strpos($filePath, '/') !== 0) {
                 $filePath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($filePath, '/');
             }
-            
+
             if (!file_exists($filePath)) {
                 echo "<p style='color:red'>File not found: $filePath</p>";
                 $stats['failed']++;
                 continue;
             }
         }
-        
+
         // Optimize the image
         $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
         $variants = optimizeSingleImage($filePath, $destinationDir);
-        
+
         // Clean up temp file if needed
         if (isset($tempFile) && file_exists($tempFile)) {
             unlink($tempFile);
         }
-        
+
         if ($variants) {
             // Update the media record
             if (updateMediaRecord($db, $item['id'], $variants)) {
@@ -180,13 +180,13 @@ function optimizeAllMedia($db) {
             $stats['failed']++;
         }
     }
-    
+
     echo "<h2>Optimization Summary</h2>";
     echo "<p>Total files: {$stats['total']}</p>";
     echo "<p>Optimized: {$stats['optimized']}</p>";
     echo "<p>Skipped: {$stats['skipped']}</p>";
     echo "<p>Failed: {$stats['failed']}</p>";
-    
+
     return $stats;
 }
 
@@ -223,7 +223,7 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
     <h1>Image Optimization Tool</h1>
-    
+
     <div>
         <h2>Optimize a Single Image</h2>
         <form method="post" enctype="multipart/form-data">
@@ -234,14 +234,14 @@ header('Content-Type: text/html; charset=utf-8');
             <button type="submit" name="action" value="optimize_single" class="button">Optimize Image</button>
         </form>
     </div>
-    
+
     <div>
         <h2>Optimize All Media</h2>
         <form method="post">
             <button type="submit" name="action" value="optimize_all" class="button">Optimize All Media</button>
         </form>
     </div>
-    
+
     <div>
         <h2>Results</h2>
         <?php
@@ -249,19 +249,19 @@ header('Content-Type: text/html; charset=utf-8');
         if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             $mediaId = (int)$_GET['id'];
             $db = optimizerConnectToDatabase();
-            
+
             if ($db) {
                 // Get media details
                 $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");
                 $stmt->execute([$mediaId]);
                 $media = $stmt->fetch();
-                
+
                 if ($media) {
                     echo "<h3>Optimizing media: " . htmlspecialchars($media['filename']) . " (ID: {$media['id']})</h3>";
-                    
+
                     // Store the current media filename in a global variable for the createOptimizedFilename function
                     $GLOBALS['current_media_filename'] = $media['filename'];
-                    
+
                     // Get the file path
                     $filePath = $media['file_path'];
                     if (strpos($filePath, 'http') === 0) {
@@ -275,16 +275,16 @@ header('Content-Type: text/html; charset=utf-8');
                             exit;
                         }
                     }
-                    
+
                     // Optimize the image
                     $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
                     $variants = optimizeSingleImage($filePath, $destinationDir);
-                    
+
                     // Clean up temp file if needed
                     if (isset($tempFile) && file_exists($tempFile)) {
                         unlink($tempFile);
                     }
-                    
+
                     if ($variants) {
                         // Update the media record
                         if (updateMediaRecord($db, $mediaId, $variants)) {
@@ -309,19 +309,19 @@ header('Content-Type: text/html; charset=utf-8');
                     if ($_FILES['image']['error'] === UPLOAD_ERR_OK) {
                         $tempPath = $_FILES['image']['tmp_name'];
                         $filename = $_FILES['image']['name'];
-                        
+
                         echo "<h3>Optimizing uploaded image: $filename</h3>";
-                        
+
                         // Store the current media filename in a global variable for the createOptimizedFilename function
                         $GLOBALS['current_media_filename'] = $filename;
-                        
+
                         $destinationDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
                         $variants = optimizeSingleImage($tempPath, $destinationDir);
-                        
+
                         if ($variants) {
                             echo "<p style='color:green'>Image optimized successfully!</p>";
                             echo "<h4>Preview:</h4>";
-                            
+
                             foreach ($variants as $size => $info) {
                                 echo "<div style='margin-bottom: 20px;'>";
                                 echo "<h5>$size (" . round($info['size'] / 1024) . " KB)</h5>";
@@ -341,18 +341,18 @@ header('Content-Type: text/html; charset=utf-8');
                             function scrollToBottom() {
                                 window.scrollTo(0, document.body.scrollHeight);
                             }
-                            
+
                             // Auto-scroll to bottom every second to show progress
                             const scrollInterval = setInterval(scrollToBottom, 1000);
-                            
+
                             // Stop auto-scrolling after 5 minutes (safety measure)
                             setTimeout(() => clearInterval(scrollInterval), 300000);
                         </script>";
-                        
+
                         // Flush output buffer to ensure script is loaded
                         ob_flush();
                         flush();
-                        
+
                         echo "<div id='progress-container' style='border: 1px solid #ccc; padding: 10px; margin-top: 20px;'>";
                         echo "<h3>Processing Media Files...</h3>";
                         echo "<div id='progress-bar' style='height: 20px; background-color: #f3f3f3; margin-bottom: 10px;'>";
@@ -360,13 +360,13 @@ header('Content-Type: text/html; charset=utf-8');
                         echo "</div>";
                         echo "<p id='progress-text'>Starting optimization process...</p>";
                         echo "</div>";
-                        
+
                         // Flush output buffer to show progress container
                         ob_flush();
                         flush();
-                        
+
                         optimizeAllMedia($db);
-                        
+
                         // Complete the progress bar
                         echo "<script>
                             document.getElementById('progress').style.width = '100%';

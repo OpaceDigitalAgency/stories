@@ -15,7 +15,7 @@ const allTags = stories.flatMap(story => story.tags || []);
 const tagCounts = {};
 allTags.forEach(tag => {
   if (!tag) return;
-  
+
   let tagName = '';
   if (typeof tag === 'string') {
     tagName = tag;
@@ -24,7 +24,7 @@ allTags.forEach(tag => {
   } else {
     return; // Skip invalid tags
   }
-  
+
   tagCounts[tagName] = (tagCounts[tagName] || 0) + 1;
 });
 
@@ -34,13 +34,13 @@ const sortedTags = Object.entries(tagCounts)
   .sort((a, b) => b.count - a.count);
 
 // Group stories by author type
-const childAuthorStories = stories.filter(story => 
+const childAuthorStories = stories.filter(story =>
   story.author && story.author.author_type === 'child'
 );
-const parentAuthorStories = stories.filter(story => 
+const parentAuthorStories = stories.filter(story =>
   story.author && story.author.author_type === 'parent'
 );
-const retailAuthorStories = stories.filter(story => 
+const retailAuthorStories = stories.filter(story =>
   story.author && story.author.author_type === 'retail'
 );
 
@@ -84,7 +84,7 @@ const description = 'Browse stories by category or tag. Filter by author type to
   </head>
   <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
     <NavHeader />
-    
+
     <main class="flex-grow w-full">
       <div class="container mx-auto px-4 py-8">
         <header class="mb-8">
@@ -120,7 +120,9 @@ const description = 'Browse stories by category or tag. Filter by author type to
           <h2 class="text-xl font-semibold mb-4">All Categories</h2>
           <div class="tag-grid">
             {sortedTags.map(tag => (
-              <div class="tag-item bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <div class="tag-item bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                   data-tag={tag.name}
+                   onclick="filterStories(currentAuthorType, this.dataset.tag)">
                 <TagBadge tag={tag.name} />
                 <span class="count-badge">{tag.count}</span>
               </div>
@@ -137,27 +139,32 @@ const description = 'Browse stories by category or tag. Filter by author type to
         </section>
       </div>
     </main>
-    
+
     <Footer />
 
     <script>
       // Store all stories data for client-side filtering
       const allStories = JSON.parse(`{JSON.stringify(stories)}`);
-      
+
       // Author type filter buttons
       const allAuthorsBtn = document.getElementById('all-authors');
       const childAuthorsBtn = document.getElementById('child-authors');
       const parentAuthorsBtn = document.getElementById('parent-authors');
       const retailAuthorsBtn = document.getElementById('retail-authors');
-      
+
       // Stories container
       const filteredStoriesSection = document.getElementById('filtered-stories');
       const storiesContainer = document.getElementById('stories-container');
-      
+
       // Current filter state
       let currentAuthorType = 'all';
       let currentTag = null;
-      
+
+      // Show all stories by default when page loads
+      window.addEventListener('DOMContentLoaded', () => {
+        filterStories('all', null);
+      });
+
       // Add click event to all tag badges
       document.querySelectorAll('[data-tag]').forEach(tagElement => {
         tagElement.addEventListener('click', (e) => {
@@ -166,28 +173,28 @@ const description = 'Browse stories by category or tag. Filter by author type to
           filterStories(currentAuthorType, tag);
         });
       });
-      
+
       // Add click events to author type buttons
       allAuthorsBtn.addEventListener('click', () => {
         setActiveAuthorFilter('all');
         filterStories('all', currentTag);
       });
-      
+
       childAuthorsBtn.addEventListener('click', () => {
         setActiveAuthorFilter('child');
         filterStories('child', currentTag);
       });
-      
+
       parentAuthorsBtn.addEventListener('click', () => {
         setActiveAuthorFilter('parent');
         filterStories('parent', currentTag);
       });
-      
+
       retailAuthorsBtn.addEventListener('click', () => {
         setActiveAuthorFilter('retail');
         filterStories('retail', currentTag);
       });
-      
+
       // Set active author filter button
       function setActiveAuthorFilter(type) {
         // Remove active class from all buttons
@@ -196,11 +203,11 @@ const description = 'Browse stories by category or tag. Filter by author type to
           btn.classList.remove('bg-purple-100', 'text-purple-700');
           btn.classList.add('bg-gray-100', 'text-gray-700');
         });
-        
+
         // Add active class to selected button
         currentAuthorType = type;
         let activeBtn;
-        
+
         switch(type) {
           case 'child':
             activeBtn = childAuthorsBtn;
@@ -214,32 +221,32 @@ const description = 'Browse stories by category or tag. Filter by author type to
           default:
             activeBtn = allAuthorsBtn;
         }
-        
+
         activeBtn.classList.add('filter-active');
         activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
         activeBtn.classList.add('bg-purple-100', 'text-purple-700');
       }
-      
+
       // Filter stories by author type and tag
       function filterStories(authorType, tag) {
         currentAuthorType = authorType;
         currentTag = tag;
-        
+
         // Filter stories
         let filtered = [...allStories];
-        
+
         // Filter by author type if not 'all'
         if (authorType !== 'all') {
-          filtered = filtered.filter(story => 
+          filtered = filtered.filter(story =>
             story.author && story.author.author_type === authorType
           );
         }
-        
+
         // Filter by tag if provided
         if (tag) {
           filtered = filtered.filter(story => {
             if (!story.tags || !Array.isArray(story.tags)) return false;
-            
+
             return story.tags.some(storyTag => {
               if (typeof storyTag === 'string') {
                 return storyTag.toLowerCase() === tag.toLowerCase();
@@ -251,22 +258,22 @@ const description = 'Browse stories by category or tag. Filter by author type to
             });
           });
         }
-        
+
         // Show filtered stories
         displayFilteredStories(filtered, tag);
       }
-      
+
       // Display filtered stories
       function displayFilteredStories(stories, tag) {
         // Clear container
         storiesContainer.innerHTML = '';
-        
+
         // Show/hide section based on results
         if (stories.length === 0) {
           filteredStoriesSection.classList.add('hidden');
           return;
         }
-        
+
         // Update section title if filtering by tag
         const sectionTitle = filteredStoriesSection.querySelector('h2');
         if (tag) {
@@ -274,21 +281,21 @@ const description = 'Browse stories by category or tag. Filter by author type to
         } else {
           sectionTitle.textContent = 'Filtered Stories';
         }
-        
+
         // Show section
         filteredStoriesSection.classList.remove('hidden');
-        
+
         // Create story cards
         stories.forEach(story => {
           const card = document.createElement('div');
           card.className = 'bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300';
-          
+
           const coverUrl = story.coverUrl || 'https://via.placeholder.com/400x250?text=No+Image';
           const title = story.title || 'Untitled Story';
           const excerpt = story.excerpt || 'No description available.';
           const authorName = story.author ? story.author.name : 'Unknown Author';
           const storyUrl = `/stories/${story.slug}`;
-          
+
           card.innerHTML = `
             <a href="${storyUrl}" class="block">
               <div class="relative h-48 overflow-hidden">
@@ -301,7 +308,7 @@ const description = 'Browse stories by category or tag. Filter by author type to
               </div>
             </a>
           `;
-          
+
           storiesContainer.appendChild(card);
         });
       }

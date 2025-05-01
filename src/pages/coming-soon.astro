@@ -1,0 +1,54 @@
+---
+import NavHeader from '../components/NavHeader.astro';
+import Footer from '../components/Footer.astro';
+import ComingSoonPage from '../components/ComingSoonPage.astro';
+import '../styles/base.css';
+
+// Get the feature name from the query parameter or use a default
+const featureName = Astro.url.searchParams.get('feature') || 'This Feature';
+
+// Page metadata
+const title = `${featureName} | Coming Soon`;
+const description = `We're working hard to bring you ${featureName}. Stay tuned for updates!`;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content={Astro.url.href}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content={Astro.url.href}>
+  <meta property="twitter:title" content={title}>
+  <meta property="twitter:description" content={description}>
+  <meta property="twitter:image" content="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg">
+</head>
+<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
+  <NavHeader />
+  
+  <main>
+    <ComingSoonPage
+      title={featureName}
+      description={`We're working hard to bring you ${featureName}. This section is currently under development and will be available soon.`}
+      featureName={featureName}
+      signupEnabled={true}
+      image="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg"
+      ctaText="Back to Home"
+      ctaLink="/"
+    />
+  </main>
+  
+  <Footer />
+</body>
+</html>

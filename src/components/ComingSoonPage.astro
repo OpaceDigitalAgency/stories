@@ -137,7 +137,7 @@ const {
                   class="flex-grow px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   required
                 />
-                <input type="hidden" name="feature" value={featureName.toLowerCase()} />
+                <input type="hidden" name="feature" value="premium stories" />
                 <button
                   type="submit"
                   id="notify-submit-btn"
@@ -221,6 +221,16 @@ const {
                       })
                       .then(function(data) {
                         console.log('API response data:', data);
+
+                        // Show success message
+                        if (resultDiv && successMsg) {
+                          resultDiv.classList.remove('hidden');
+                          successMsg.classList.remove('hidden');
+                          if (errorMsg) {
+                            errorMsg.classList.add('hidden');
+                          }
+                          successMsg.textContent = data.message || 'Thank you for subscribing! We\'ll notify you when this feature is available.';
+                        }
                       })
                       .catch(function(error) {
                         console.error('Error submitting form:', error);
@@ -230,10 +240,20 @@ const {
                           email: email,
                           feature: feature
                         });
+
+                        // Show error message
+                        if (resultDiv && errorMsg) {
+                          resultDiv.classList.remove('hidden');
+                          errorMsg.classList.remove('hidden');
+                          if (successMsg) {
+                            successMsg.classList.add('hidden');
+                          }
+                          errorMsg.textContent = 'There was an error submitting your request. Please try again later.';
+                        }
                       });
 
                       // Reset the original form by clearing the email field
-                      var emailInput = document.getElementById('subscriber-email');
+                      var emailInput = document.getElementById('subscriber-email') as HTMLInputElement;
                       if (emailInput) {
                         emailInput.value = '';
                       }
@@ -242,16 +262,6 @@ const {
                       if (submitBtn) {
                         submitBtn.removeAttribute('disabled');
                         submitBtn.textContent = 'Notify Me';
-                      }
-
-                      // Show success message
-                      if (resultDiv && successMsg) {
-                        resultDiv.classList.remove('hidden');
-                        successMsg.classList.remove('hidden');
-                        if (errorMsg) {
-                          errorMsg.classList.add('hidden');
-                        }
-                        successMsg.textContent = 'Thank you for subscribing! We\'ll notify you when this feature is available.';
                       }
 
                       return false;

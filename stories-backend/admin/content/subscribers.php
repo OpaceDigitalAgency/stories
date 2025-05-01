@@ -47,7 +47,25 @@ echo '<style>
         font-size: 0.85rem;
         padding: 0.35em 0.65em;
     }
+    /* Fix for Bootstrap modal issues */
+    .modal-open {
+        overflow: auto;
+        padding-right: 0 !important;
+    }
+    .modal-backdrop {
+        z-index: 1040;
+    }
+    .modal {
+        z-index: 1050;
+    }
+    /* Make sure modals don\'t show by default */
+    .modal.fade:not(.show) {
+        display: none;
+    }
 </style>';
+
+// Add Bootstrap JS for modals
+echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>';
 
 // Ensure we have a database connection
 if (!isset($db) || !$db) {

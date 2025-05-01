@@ -4,10 +4,26 @@
  * A simplified endpoint for saving subscriber information
  */
 
-// Allow cross-origin requests
-header('Access-Control-Allow-Origin: *');
+// Allow cross-origin requests from specific domains
+$allowedOrigins = [
+    'https://storiesfromtheweb.netlify.app',
+    'https://storiesfromtheweb.org',
+    'http://localhost:3000',
+    'http://localhost:4321'
+];
+
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    // For any other domain, allow it during development
+    header('Access-Control-Allow-Origin: *');
+}
+
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json; charset=utf-8');
 
 // Handle preflight requests
@@ -47,25 +63,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Get the request body
     $requestBody = file_get_contents('php://input');
     $data = json_decode($requestBody, true);
-    
+
     // If form data was submitted instead of JSON
     if (empty($data) && !empty($_POST)) {
         $data = $_POST;
     }
-    
+
     // Debug log
     error_log("Subscriber data received in save-subscriber.php: " . print_r($data, true));
-    
+
     // Validate required fields
     if (empty($data['email'])) {
         handleError('Email is required', 400);
     }
-    
+
     // Set default values
     $feature = $data['feature'] ?? 'premium';
     $name = $data['name'] ?? null;
     $message = $data['message'] ?? null;
-    
+
     try {
         // Check if subscribers table exists, create if not
         $stmt = $db->query("SHOW TABLES LIKE 'subscribers'");
@@ -83,23 +99,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         }
-        
+
         // Check if email already exists
         $stmt = $db->prepare("SELECT id FROM subscribers WHERE email = ?");
         $stmt->execute([$data['email']]);
         $existingSubscriber = $stmt->fetch();
-        
+
         if ($existingSubscriber) {
             error_log("Updating existing subscriber with ID: {$existingSubscriber['id']}");
             // Update existing subscriber
-            $stmt = $db->prepare("UPDATE subscribers SET 
-                feature = ?, 
-                name = ?, 
-                message = ?, 
-                updated_at = NOW() 
+            $stmt = $db->prepare("UPDATE subscribers SET
+                feature = ?,
+                name = ?,
+                message = ?,
+                updated_at = NOW()
                 WHERE email = ?");
             $stmt->execute([$feature, $name, $message, $data['email']]);
-            
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Your subscription has been updated. We\'ll notify you when this feature is available.',
@@ -108,13 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             error_log("Inserting new subscriber");
             // Insert new subscriber
-            $stmt = $db->prepare("INSERT INTO subscribers (email, name, feature, message, created_at, updated_at) 
+            $stmt = $db->prepare("INSERT INTO subscribers (email, name, feature, message, created_at, updated_at)
                 VALUES (?, ?, ?, ?, NOW(), NOW())");
             $stmt->execute([$data['email'], $name, $feature, $message]);
-            
+
             $newId = $db->lastInsertId();
             error_log("New subscriber inserted with ID: {$newId}");
-            
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Thank you for subscribing! We\'ll notify you when this feature is available.',

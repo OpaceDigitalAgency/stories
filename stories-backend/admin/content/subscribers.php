@@ -282,8 +282,8 @@ try {
     <div class="container-fluid">
         <!-- Page header -->
         <div class="page-header">
-            <h1 class="page-title">Premium Subscribers</h1>
-            <p class="page-description">Manage users who have subscribed to premium feature notifications</p>
+            <h1 class="page-title"><?php echo htmlspecialchars($pageTitle); ?></h1>
+            <p class="page-description"><?php echo htmlspecialchars($pageDescription); ?></p>
         </div>
 
         <!-- Alerts -->

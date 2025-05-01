@@ -198,6 +198,12 @@ const {
                       var featureInput = document.querySelector('input[name="feature"]');
                       var feature = featureInput ? featureInput.value : 'premium stories';
 
+                      // Log what we're submitting
+                      console.log('Submitting to save-subscriber.php with data:', {
+                        email: email,
+                        feature: feature
+                      });
+
                       // Use fetch API to submit the data
                       fetch('https://api.storiesfromtheweb.org/save-subscriber.php', {
                         method: 'POST',

@@ -198,32 +198,38 @@ const {
                       var featureInput = document.querySelector('input[name="feature"]');
                       var feature = featureInput ? featureInput.value : 'premium stories';
 
-                      // Create a direct form submission
-                      var directForm = document.createElement('form');
-                      directForm.method = 'POST';
-                      directForm.action = 'https://api.storiesfromtheweb.org/api/v1/subscribers.php';
+                      // Use fetch API to submit the data
+                      fetch('https://api.storiesfromtheweb.org/save-subscriber.php', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          email: email,
+                          feature: feature
+                        })
+                      })
+                      .then(function(response) {
+                        console.log('API response status:', response.status);
+                        return response.json();
+                      })
+                      .then(function(data) {
+                        console.log('API response data:', data);
+                      })
+                      .catch(function(error) {
+                        console.error('Error submitting form:', error);
 
-                      // Add email field
-                      var emailField = document.createElement('input');
-                      emailField.type = 'hidden';
-                      emailField.name = 'email';
-                      emailField.value = email;
-                      directForm.appendChild(emailField);
+                        // Log the submission data for debugging
+                        console.log('Submission data:', {
+                          email: email,
+                          feature: feature
+                        });
+                      });
 
-                      // Add feature field
-                      var featureField = document.createElement('input');
-                      featureField.type = 'hidden';
-                      featureField.name = 'feature';
-                      featureField.value = feature;
-                      directForm.appendChild(featureField);
-
-                      // Submit the form
-                      document.body.appendChild(directForm);
-                      directForm.submit();
-
-                      // Reset the original form
-                      if (form) {
-                        form.reset();
+                      // Reset the original form by clearing the email field
+                      var emailInput = document.getElementById('subscriber-email');
+                      if (emailInput) {
+                        emailInput.value = '';
                       }
 
                       // Reset button state

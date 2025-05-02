@@ -291,7 +291,7 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
 
             // Send data to backend
-            fetch('https://api.storiesfromtheweb.org/save-contact.php', {
+            fetch('https://api.storiesfromtheweb.org/public/save-contact.php', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

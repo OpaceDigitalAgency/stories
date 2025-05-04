@@ -1,13 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { fetchAiTools, type AiTool as ApiAiTool, type CoverImageUrls } from '../../lib/api';
+import { fetchAiTools, type AiTool } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
-
-// Extend AiTool type to handle both string and CoverImageUrls for coverImage
-interface AiTool extends Omit<ApiAiTool, 'coverImage'> {
-  coverImage?: string | CoverImageUrls;
-}
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -110,9 +105,8 @@ try {
                   <a href={`/ai-tools/${tool.slug}`} class="block">
                     <div class="h-48 bg-gray-200">
                       <img
-                        src={typeof tool.coverImage === 'string' ? tool.coverImage :
-                             tool.coverImage?.default || '/images/default-cover.svg'}
-                        alt={tool.title}
+                        src={tool.logo || '/images/default-cover.svg'}
+                        alt={tool.name}
                         class="w-full h-full object-cover"
                       />
                     </div>
@@ -130,7 +124,7 @@ try {
                       </div>
 
                       <h3 class="text-xl font-display font-bold text-text-primary mb-3 hover:text-primary transition-colors">
-                        {tool.title}
+                        {tool.name}
                       </h3>
 
                       <p class="text-text-secondary text-sm mb-4 line-clamp-3">

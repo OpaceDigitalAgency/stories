@@ -332,7 +332,7 @@ export async function fetchGames(): Promise<Game[]> {
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
   try {
-    const raw = await fetchApi<any>(`/directory-items/${slug}`);
+    const raw = await fetchApi<any>(`/directory-items/by-slug/${slug}`);
 
     if (!raw) {
       console.error(`No directory item found with slug: ${slug}`);
@@ -361,7 +361,7 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
 
 export async function fetchAiTool(slug: string): Promise<AiTool | null> {
   try {
-    const raw = await fetchApi<any>(`/ai-tools/${slug}`);
+    const raw = await fetchApi<any>(`/ai-tools/by-slug/${slug}`);
 
     if (!raw) {
       console.error(`No AI tool found with slug: ${slug}`);
@@ -427,13 +427,19 @@ export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
-    title: item.title,
+    name: item.name,
     description: item.description || '',
-    coverImage: item.cover_url || '',
+    logo: item.logo || '',
+    url: item.url,
     slug: item.slug,
     category: item.category || '',
     rating: Number(item.rating) || 0,
-    priceRange: item.price_range || ''
+    priceRange: item.priceRange || '',
+    contactEmail: item.contactEmail,
+    contactPhone: item.contactPhone,
+    address: item.address,
+    featured: Boolean(item.featured),
+    isPublished: Boolean(item.isPublished)
   }));
 }
 

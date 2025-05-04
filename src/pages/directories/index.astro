@@ -1,13 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { fetchDirectoryItems, type DirectoryItem as ApiDirectoryItem, type CoverImageUrls } from '../../lib/api';
+import { fetchDirectoryItems, type DirectoryItem } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
-
-// Extend the DirectoryItem type to handle both string and CoverImageUrls for coverImage
-interface DirectoryItem extends Omit<ApiDirectoryItem, 'coverImage'> {
-  coverImage?: string | CoverImageUrls;
-}
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -130,13 +125,12 @@ try {
               items.map(item => (
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                   <img
-                    src={typeof item.coverImage === 'string' ? item.coverImage :
-                         item.coverImage?.default || '/images/default-cover.svg'}
-                    alt={item.title}
+                    src={item.logo || '/images/default-cover.svg'}
+                    alt={item.name}
                     class="w-full h-48 object-cover"
                   />
                   <div class="p-6">
-                    <h3 class="text-xl font-bold mb-2">{item.title}</h3>
+                    <h3 class="text-xl font-bold mb-2">{item.name}</h3>
                     <p class="text-gray-600 mb-4">{item.description || 'No description available.'}</p>
                     <div class="flex items-center justify-between">
                       <span class="text-sm text-gray-500">{item.category || 'General'}</span>

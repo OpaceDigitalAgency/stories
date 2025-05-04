@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Subscribers';
+$currentPage = 'bulk-subscribers';
+
 /**
  * Bulk Actions Handler for Subscribers
  * 
@@ -133,8 +142,10 @@ if (isset($_POST['action']) && isset($_POST['selected_ids']) && is_array($_POST[
                                 <p>© ' . date('Y') . ' Stories From The Web. All rights reserved.</p>
                             </div>
                         </div>
-                    </body>
-                    </html>';
+                    
+// Include footer
+include '../includes/footer.php';
+;
                     
                     // Send the email
                     $mailSuccess = mail($to, $subject, $emailBody, implode("\r\n", $headers));

@@ -1,96 +1,20 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import { fetchStories } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Get the slug from the URL
-const { slug } = Astro.params;
-
-// Fetch blog posts
-const stories = await fetchStories();
-const blogPosts = stories.filter(story => story.type === 'blog');
-const post = blogPosts.find(p => p.slug === slug);
-
-// If post not found, redirect to 404
-if (!post) {
-  return Astro.redirect('/404');
-}
-
-// Get related posts (same category or tags)
-const relatedPosts = blogPosts
-  .filter(p => 
-    p.slug !== slug && 
-    (p.category === post.category || 
-     p.tags?.some(tag => post.tags?.includes(tag)))
-  )
-  .slice(0, 3);
-
-// Format date if available
-const formattedDate = post.publishDate 
-  ? new Date(post.publishDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  : null;
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = `${post.title} | Blog | Stories From The Web`;
-const description = post.excerpt || `Read "${post.title}" on Stories From The Web`;
+const title = siteName;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  
-  <!-- Open Graph / Social Media Meta Tags -->
-  <meta property="og:title" content={post.title}>
-  <meta property="og:description" content={description}>
-  <meta property="og:image" content={post.coverImage}>
-  <meta property="og:url" content={`https://storiesfromtheweb.org/blog/${slug}`}>
-  <meta property="og:type" content="article">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content={post.title}>
-  <meta name="twitter:description" content={description}>
-  <meta name="twitter:image" content={post.coverImage}>
-  
-  <!-- Structured Data -->
-  <script type="application/ld+json">
-    {JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      "headline": post.title,
-      "image": post.coverImage,
-      "datePublished": post.publishDate,
-      "author": {
-        "@type": "Person",
-        "name": post.author?.name || 'Anonymous'
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "Stories From The Web",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://storiesfromtheweb.org/logo.png"
-        }
-      },
-      "description": post.excerpt
-    })}
-  </script>
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-  
-  <main class="pt-24 pb-32">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <article class="relative overflow-hidden">
       <!-- Enhanced decorative blobs -->
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
@@ -395,10 +319,8 @@ const description = post.excerpt || `Read "${post.title}" on Stories From The We
       </div>
     </section>
   </main>
-  
-  <Footer />
-  
-  <style>
+  <style slot="scripts">
+    
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -479,6 +401,6 @@ const description = post.excerpt || `Read "${post.title}" on Stories From The We
       padding: 1rem 1.5rem;
       border-radius: 0.5rem;
     }
+  
   </style>
-</body>
-</html>
+</Layout>

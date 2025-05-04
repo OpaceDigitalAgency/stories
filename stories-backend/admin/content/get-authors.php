@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Get Authors';
+$currentPage = 'get-authors';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -50,3 +59,6 @@ try {
     header('Content-Type: application/json');
     echo json_encode(['error' => $e->getMessage()]);
 }
+
+// Include footer
+include '../includes/footer.php';

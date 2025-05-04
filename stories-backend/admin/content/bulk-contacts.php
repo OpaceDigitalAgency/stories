@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Contacts';
+$currentPage = 'bulk-contacts';
+
 /**
  * Bulk Actions for Contact Form Submissions
  * Handles bulk operations on contact form submissions
@@ -137,3 +146,7 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
 // Redirect back to contacts page
 header('Location: contacts.php');
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

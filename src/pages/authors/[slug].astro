@@ -1,85 +1,22 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import { fetchAuthors, fetchStories } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Get the slug from the URL
-const { slug } = Astro.params;
-
-// Fetch author data
-const authors = await fetchAuthors();
-const author = authors.find(a => a.slug === slug);
-
-// If author not found, redirect to 404
-if (!author) {
-  return Astro.redirect('/404');
-}
-
-// Fetch stories by this author
-const stories = await fetchStories();
-const authorStories = stories.filter(s => s.author?.slug === slug);
-
-// Get popular tags from author's stories
-const allTags = authorStories.flatMap(story => story.tags || []);
-
-// Process tags to ensure they're strings
-const processedTags = allTags.map(tag => {
-  if (typeof tag === 'string') {
-    return tag;
-  } else if (tag && typeof tag === 'object') {
-    // If it's an object, try to get the name or title
-    if (tag.name) return tag.name;
-    if (tag.title) return tag.title;
-    return 'Tag'; // Fallback
-  }
-  return String(tag || 'Tag');
-});
-
-const tagCounts: Record<string, number> = processedTags.reduce((acc: Record<string, number>, tag: string) => {
-  acc[tag] = (acc[tag] || 0) + 1;
-  return acc;
-}, {});
-
-const popularTags = Object.entries(tagCounts)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 8)
-  .map(([tag]) => tag);
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = `${author.name} | Stories From The Web`;
-const description = author.bio || `Discover stories by ${author.name} on Stories From The Web`;
+const title = siteName;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-
-  <!-- Open Graph / Social Media Meta Tags -->
-  <meta property="og:title" content={title}>
-  <meta property="og:description" content={description}>
-  <meta property="og:image" content={author.avatar}>
-  <meta property="og:url" content={`https://storiesfromtheweb.org/authors/${slug}`}>
-  <meta property="og:type" content="profile">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content={title}>
-  <meta name="twitter:description" content={description}>
-  <meta name="twitter:image" content={author.avatar}>
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-
-  <main class="pt-24 pb-32">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <!-- Author Header -->
     <section class="relative py-16 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -266,10 +203,8 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
       </section>
     )}
   </main>
-
-  <Footer />
-
-  <style>
+  <style slot="scripts">
+    
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -307,6 +242,6 @@ const description = author.bio || `Discover stories by ${author.name} on Stories
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
+  
   </style>
-</body>
-</html>
+</Layout>

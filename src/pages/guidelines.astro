@@ -1,27 +1,19 @@
 ---
-import NavHeader from '../components/NavHeader.astro';
-import Footer from '../components/Footer.astro';
-import '../styles/base.css';
+import Layout from '../layouts/Layout.astro';
+import { getConfig } from '../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Author Guidelines | Stories From The Web';
-const description = 'Guidelines for authors submitting stories to Stories From The Web. Learn about our content standards, formatting requirements, and submission process.';
+const title = `Author Guidelines | ${siteName}`;
+const description = `Guidelines for authors submitting stories to ${siteName}. Learn about our content standards, formatting requirements, and submission process.`;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
-    <NavHeader />
-    
-    <main class="flex-grow w-full">
-      <div class="container mx-auto px-4 py-8 max-w-4xl">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
         <header class="mb-8 text-center">
           <h1 class="text-4xl font-bold text-text-primary mb-4">
             Author Guidelines
@@ -154,8 +146,5 @@ const description = 'Guidelines for authors submitting stories to Stories From T
           </a>
         </div>
       </div>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

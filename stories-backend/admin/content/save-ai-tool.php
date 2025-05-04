@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Save Ai Tool';
+$currentPage = 'save-ai-tool';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -171,3 +180,6 @@ try {
     header("Location: $redirect");
     exit;
 }
+
+// Include footer
+include '../includes/footer.php';

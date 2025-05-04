@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Fix Games';
+$currentPage = 'fix-games';
+
 // Database configuration
 $config = [
     'host' => 'localhost',
@@ -44,3 +53,6 @@ try {
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
+
+// Include footer
+include '../includes/footer.php';

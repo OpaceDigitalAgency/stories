@@ -1,40 +1,23 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import PremiumBlock from '../../components/PremiumBlock.astro';
 import SponsoredCarousel from '../../components/SponsoredCarousel.astro';
-import Favicon from '../../components/Favicon.astro';
 import { fetchStories } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Fetch stories from API
-const stories = await fetchStories();
-
-// Popular tags
-const popularTags = [
-  'Adventure', 'Fantasy', 'Mystery', 'Science Fiction',
-  'Historical', 'Educational', 'Animals', 'Friendship'
-];
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Stories | Stories From The Web';
-const description = 'Discover amazing stories for all ages. Browse our collection of children\'s stories, educational tales, and more.';
+const title = `Stories | ${siteName}`;
+const description = `Discover amazing stories for all ages. Browse our collection of children\'s stories, educational tales, and more.`;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <Favicon />
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-
-  <main class="pt-24 pb-32">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <!-- Hero Section -->
     <section class="relative py-20 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -121,10 +104,8 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
       carouselId="sponsored-carousel"
     />
   </main>
-
-  <Footer />
-
-  <style>
+  <style slot="scripts">
+    
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -162,6 +143,6 @@ const description = 'Discover amazing stories for all ages. Browse our collectio
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
+  
   </style>
-</body>
-</html>
+</Layout>

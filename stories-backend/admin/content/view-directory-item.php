@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'View Directory Item';
+$currentPage = 'view-directory-item';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -279,5 +288,6 @@ try {
             gap: 1rem;
         }
     </style>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

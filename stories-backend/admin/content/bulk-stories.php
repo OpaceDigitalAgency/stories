@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Stories';
+$currentPage = 'bulk-stories';
+
 /**
  * Bulk Actions Handler for Stories
  *
@@ -151,3 +160,7 @@ if (!empty($success)) {
 
 header('Location: ' . $redirectUrl);
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

@@ -1,178 +1,19 @@
 ---
-import NavHeader from '../components/NavHeader.astro';
-import Footer from '../components/Footer.astro';
-import '../styles/base.css';
+import Layout from '../layouts/Layout.astro';
+import { getConfig } from '../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Frequently Asked Questions | Stories From The Web';
-const description = 'Find answers to common questions about Stories From The Web, including how to publish stories, account management, and using our platform.';
+const title = `Frequently Asked Questions | ${siteName}`;
+const description = `Find answers to common questions about ${siteName}, including how to publish stories, account management, and using our platform.`;
 
-// FAQ categories and questions
-const faqCategories = [
-  {
-    name: "General",
-    questions: [
-      {
-        question: "What is Stories From The Web?",
-        answer: "Stories From The Web is a platform where children and adults can share and discover stories. We provide a safe, moderated environment for young authors to publish their work and for readers to explore stories from writers of all ages."
-      },
-      {
-        question: "Who can use Stories From The Web?",
-        answer: "Our platform is designed for users of all ages, with a special focus on children aged 5-13. We have different account types for child authors (with parental supervision), parent authors, educators, and retail authors (published writers and professionals)."
-      },
-      {
-        question: "Is Stories From The Web free to use?",
-        answer: "Yes, the basic features of Stories From The Web are completely free. This includes reading stories, publishing your own stories, and participating in our community. We plan to introduce premium features in the future, but our core services will always remain free."
-      },
-      {
-        question: "How do you ensure the platform is safe for children?",
-        answer: "We maintain strict content moderation policies, age-appropriate design, and robust privacy protections. All content is reviewed before publication, and we have reporting tools for users to flag any concerns. Child accounts require parental consent and oversight."
-      }
-    ]
-  },
-  {
-    name: "Account & Registration",
-    questions: [
-      {
-        question: "How do I create an account?",
-        answer: "Click on the 'Sign Up' button in the top right corner of the page. You'll be asked to provide some basic information and choose an account type (reader, child author, parent author, or educator). For child accounts, a parent or guardian must complete the registration process."
-      },
-      {
-        question: "What's the difference between account types?",
-        answer: "We have different account types to ensure appropriate access and features: Child Author accounts (for users under 13, requires parental oversight), Parent Author accounts (for adults publishing their own stories), Educator accounts (for teachers and librarians), and Reader accounts (for those who just want to read stories)."
-      },
-      {
-        question: "Can I change my account type later?",
-        answer: "Yes, you can update your account type in your profile settings. Note that changing to a Child Author account will require parental verification if you're under 13."
-      },
-      {
-        question: "How do I reset my password?",
-        answer: "Click on the 'Login' button, then select 'Forgot Password'. Enter the email address associated with your account, and we'll send you instructions to reset your password."
-      }
-    ]
-  },
-  {
-    name: "Publishing Stories",
-    questions: [
-      {
-        question: "How do I publish a story?",
-        answer: "Log in to your account, go to the 'Publish' section, and click 'Start Writing Now'. You can write directly in our editor or upload a document. Add a title, summary, age recommendation, and tags, then submit for moderation."
-      },
-      {
-        question: "What types of stories can I publish?",
-        answer: "You can publish any type of children's story suitable for ages 0-13. This includes picture books, early readers, chapter books, and middle-grade stories. All content must be appropriate for children and follow our content guidelines."
-      },
-      {
-        question: "How long does the moderation process take?",
-        answer: "Our moderation team typically reviews stories within 1-3 business days. You'll receive an email notification when your story is published or if any changes are needed."
-      },
-      {
-        question: "Can I edit my story after it's published?",
-        answer: "Yes, you can edit your published stories at any time. However, significant changes will require re-moderation before the updated version appears on the site."
-      },
-      {
-        question: "Are there any length restrictions for stories?",
-        answer: "We recommend different lengths based on target age groups: Ages 0-3: 100-300 words, Ages 4-6: 300-800 words, Ages 7-9: 800-1,500 words, Ages 10-13: 1,500-5,000 words. However, these are guidelines rather than strict limits."
-      }
-    ]
-  },
-  {
-    name: "Reading & Discovering Stories",
-    questions: [
-      {
-        question: "How can I find stories to read?",
-        answer: "You can browse stories by category, age group, or author type. We also feature new and popular stories on our homepage. Use the search function to find specific topics or authors that interest you."
-      },
-      {
-        question: "Can I save stories to read later?",
-        answer: "Yes, you can bookmark stories to read later by clicking the bookmark icon on any story card or page. Access your saved stories from your profile."
-      },
-      {
-        question: "How do I leave feedback on a story?",
-        answer: "At the bottom of each story, you'll find options to leave a rating and comment. Your constructive feedback helps authors improve their writing and encourages them to create more stories."
-      },
-      {
-        question: "Are there reading recommendations?",
-        answer: "Yes, we provide personalized reading recommendations based on your reading history and preferences. You'll find these on your dashboard and throughout the site as you use it more."
-      }
-    ]
-  },
-  {
-    name: "Parents & Educators",
-    questions: [
-      {
-        question: "How can I monitor my child's activity?",
-        answer: "When you create a child account, you'll have access to a parent dashboard where you can review your child's published stories, comments, and reading history. You'll also receive notifications about their activity."
-      },
-      {
-        question: "Are there resources for using Stories From The Web in the classroom?",
-        answer: "Yes, we offer lesson plans, writing prompts, and other educational resources for teachers. Educator accounts have access to additional features like class management and group writing projects."
-      },
-      {
-        question: "Can I set up accounts for my entire class?",
-        answer: "Yes, educator accounts can create and manage student accounts for an entire class. This feature includes simplified login options for younger students and tools to track reading and writing progress."
-      },
-      {
-        question: "How can schools partner with Stories From The Web?",
-        answer: "We offer partnership programs for schools and libraries. These include workshops, author visits, and custom resources. Contact us at partnerships@storiesfromtheweb.org to learn more."
-      }
-    ]
-  },
-  {
-    name: "Technical Support",
-    questions: [
-      {
-        question: "What devices and browsers are supported?",
-        answer: "Stories From The Web works on all modern browsers (Chrome, Firefox, Safari, Edge) and devices (computers, tablets, smartphones). For the best experience, we recommend using the latest version of your preferred browser."
-      },
-      {
-        question: "I'm having trouble uploading images. What should I do?",
-        answer: "Make sure your images are in JPG, PNG, or WebP format and under 5MB in size. If you're still having issues, try using a different browser or device, or contact our support team for assistance."
-      },
-      {
-        question: "The site isn't loading properly. How can I fix this?",
-        answer: "Try clearing your browser cache and cookies, then reload the page. If the problem persists, check your internet connection or try using a different browser. If you're still experiencing issues, please contact our support team."
-      },
-      {
-        question: "How do I report a technical issue?",
-        answer: "You can report technical issues through our Contact page. Please provide as much detail as possible, including the device and browser you're using, what you were trying to do, and any error messages you received."
-      }
-    ]
-  }
-];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <style>
-      /* Custom styles for FAQ page */
-      .faq-nav-item {
-        transition: all 0.3s ease;
-      }
-      .faq-nav-item.active {
-        background-color: #f3e8ff;
-        color: #8b5cf6;
-        border-color: #8b5cf6;
-      }
-      details summary {
-        cursor: pointer;
-      }
-      details summary::-webkit-details-marker {
-        display: none;
-      }
-    </style>
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
-    <NavHeader />
-    
-    <main class="flex-grow w-full">
-      <div class="container mx-auto px-4 py-8 max-w-5xl">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
         <header class="mb-8 text-center">
           <h1 class="text-4xl font-bold text-text-primary mb-4">
             Frequently Asked Questions
@@ -268,11 +109,9 @@ const faqCategories = [
           </a>
         </div>
       </div>
-    </main>
+  </main>
+  <script slot="scripts">
     
-    <Footer />
-
-    <script>
       // Category navigation
       const categoryButtons = document.querySelectorAll('.faq-nav-item');
       const faqCategories = document.querySelectorAll('.faq-category');
@@ -369,6 +208,6 @@ const faqCategories = [
           }
         });
       });
-    </script>
-  </body>
-</html>
+    
+  </script>
+</Layout>

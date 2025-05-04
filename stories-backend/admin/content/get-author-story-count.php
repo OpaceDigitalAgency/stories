@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Get Author Story Count';
+$currentPage = 'get-author-story-count';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -56,3 +65,7 @@ try {
     header('Content-Type: application/json');
     echo json_encode(['error' => $e->getMessage()]);
 }
+
+
+// Include footer
+include '../includes/footer.php';

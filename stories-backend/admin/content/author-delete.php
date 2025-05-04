@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Author Delete';
+$currentPage = 'author-delete';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -217,5 +226,6 @@ if (isset($_SESSION['error'])) {
             </div>
         </div>
     </div>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

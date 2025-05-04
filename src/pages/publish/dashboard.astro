@@ -1,81 +1,19 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import TagBadge from '../../components/TagBadge.astro';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Mock data for user's stories
-const userStories = [
-  {
-    id: 1,
-    title: "The Magic Library",
-    status: "published",
-    publishDate: new Date('2025-04-10'),
-    lastEdited: new Date('2025-04-10'),
-    views: 245,
-    likes: 32,
-    comments: 8,
-    coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66"
-  },
-  {
-    id: 2,
-    title: "The Brave Little Turtle",
-    status: "draft",
-    publishDate: null,
-    lastEdited: new Date('2025-04-12'),
-    views: 0,
-    likes: 0,
-    comments: 0,
-    coverImage: "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f"
-  },
-  {
-    id: 3,
-    title: "Space Explorers: Journey to the Stars",
-    status: "review",
-    publishDate: null,
-    lastEdited: new Date('2025-04-14'),
-    views: 0,
-    likes: 0,
-    comments: 0,
-    coverImage: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa"
-  }
-];
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// User stats
-const userStats = {
-  totalStories: 3,
-  publishedStories: 1,
-  totalViews: 245,
-  totalLikes: 32,
-  totalComments: 8,
-  followers: 15
-};
+// Page metadata
+const title = siteName;
 
-// Format date
-function formatDate(date) {
-  if (!date) return 'N/A';
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }).format(date);
-}
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Author Dashboard | Stories From The Web</title>
-    <meta name="description" content="Manage your stories, track performance, and create new content." />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
-    <NavHeader />
-    
-    <main class="flex-grow py-8">
-      <div class="container mx-auto px-4">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4">
         <div class="max-w-6xl mx-auto">
           <!-- Dashboard Header -->
           <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
@@ -271,8 +209,5 @@ function formatDate(date) {
           </div>
         </div>
       </div>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Search Component';
+$currentPage = 'search-component';
+
 /**
  * Search Component
  * 
@@ -81,3 +90,7 @@ function renderSearchComponent($contentType, $searchFields = [], $currentSearch 
     </div>
     <?php
 }
+
+
+// Include footer
+include 'footer.php';

@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Fix Blog Posts';
+$currentPage = 'fix-blog-posts';
+
 // Database configuration
 $config = [
     'host' => 'localhost',
@@ -46,3 +55,6 @@ try {
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
+
+// Include footer
+include '../includes/footer.php';

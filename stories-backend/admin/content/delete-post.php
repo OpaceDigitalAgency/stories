@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Delete Post';
+$currentPage = 'delete-post';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -84,3 +93,6 @@ try {
     header("Location: blog-posts.php");
     exit;
 }
+
+// Include footer
+include '../includes/footer.php';

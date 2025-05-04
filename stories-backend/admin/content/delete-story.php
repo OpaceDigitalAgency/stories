@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Delete Story';
+$currentPage = 'delete-story';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -78,3 +87,6 @@ try {
     header("Location: stories.php");
     exit;
 }
+
+// Include footer
+include '../includes/footer.php';

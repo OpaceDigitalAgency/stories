@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Form Component';
+$currentPage = 'form-component';
+
 /**
  * Form Component
  * 
@@ -333,3 +342,7 @@ function renderFormEnd($submitLabel = 'Save', $options = []) {
     </form>
     <?php
 }
+
+
+// Include footer
+include 'footer.php';

@@ -1,102 +1,21 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import { fetchStories } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Fetch all stories to extract tags
-const stories = await fetchStories(1, 100);
-console.log("Fetched stories:", stories.length);
-
-// Extract all tags from stories
-const allTags = stories.flatMap(story => story.tags || []);
-console.log("Extracted tags:", allTags.length);
-
-// Process tags to ensure they're strings and count occurrences
-const tagCounts = {};
-allTags.forEach(tag => {
-  if (!tag) return;
-
-  let tagName = '';
-  if (typeof tag === 'string') {
-    tagName = tag;
-  } else if (tag && typeof tag === 'object' && (tag.name || tag.title)) {
-    tagName = tag.name || tag.title;
-  } else {
-    return; // Skip invalid tags
-  }
-
-  tagCounts[tagName] = (tagCounts[tagName] || 0) + 1;
-});
-
-// Convert to array and sort by popularity
-const sortedTags = Object.entries(tagCounts)
-  .map(([name, count]) => ({ name, count }))
-  .sort((a, b) => b.count - a.count);
-
-console.log("Sorted tags:", sortedTags.length);
-
-// Group stories by author type
-const childAuthorStories = stories.filter(story =>
-  story.author && story.author.author_type === 'child'
-);
-const parentAuthorStories = stories.filter(story =>
-  story.author && story.author.author_type === 'parent'
-);
-const retailAuthorStories = stories.filter(story =>
-  story.author && story.author.author_type === 'retail'
-);
-
-console.log("Author types:", {
-  child: childAuthorStories.length,
-  parent: parentAuthorStories.length,
-  retail: retailAuthorStories.length
-});
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Categories | Stories From The Web';
-const description = 'Browse stories by category or tag. Filter by author type to find exactly what you\'re looking for.';
+const title = `Categories | ${siteName}`;
+const description = `Browse stories by category or tag. Filter by author type to find exactly what you\'re looking for.`;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <style>
-      .tag-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem;
-      }
-      .tag-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .count-badge {
-        background-color: #f3f4f6;
-        color: #4b5563;
-        border-radius: 9999px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-      }
-      .filter-active {
-        background-color: #8b5cf6;
-        color: white;
-      }
-    </style>
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
-    <NavHeader />
-
-    <main class="flex-grow w-full">
-      <div class="container mx-auto px-4 py-8">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4 py-8">
         <header class="mb-8">
           <h1 class="text-3xl font-bold text-text-primary mb-2">
             Categories
@@ -148,11 +67,9 @@ const description = 'Browse stories by category or tag. Filter by author type to
           </div>
         </section>
       </div>
-    </main>
-
-    <Footer />
-
-    <script>
+  </main>
+  <script slot="scripts">
+    
       // Store all stories data for client-side filtering
       const allStoriesData = `{JSON.stringify(stories)}`;
       const allStories = JSON.parse(allStoriesData);
@@ -369,6 +286,6 @@ const description = 'Browse stories by category or tag. Filter by author type to
           storiesContainer.appendChild(card);
         });
       }
-    </script>
-  </body>
-</html>
+    
+  </script>
+</Layout>

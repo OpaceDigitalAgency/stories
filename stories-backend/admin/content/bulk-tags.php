@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Tags';
+$currentPage = 'bulk-tags';
+
 /**
  * Bulk Actions Handler for Tags
  * 
@@ -85,3 +94,7 @@ if (!empty($success)) {
 
 header('Location: ' . $redirectUrl);
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

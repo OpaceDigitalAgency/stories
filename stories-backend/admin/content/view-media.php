@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'View Media';
+$currentPage = 'view-media';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -440,5 +449,6 @@ try {
             content: "🖼️";
         }
     </style>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

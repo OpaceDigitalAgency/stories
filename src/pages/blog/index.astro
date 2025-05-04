@@ -1,59 +1,21 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import { fetchBlogPosts } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Fetch blog posts
-let blogPosts = [];
-let categories = [];
-let error = null;
-
-try {
-  // Fetch blog posts from API
-  blogPosts = await fetchBlogPosts();
-  
-  // Safely extract categories from blog posts
-  const allCategories = [];
-  
-  if (Array.isArray(blogPosts)) {
-    blogPosts.forEach(post => {
-      if (post && post.tags && Array.isArray(post.tags) && post.tags.length > 0) {
-        allCategories.push(post.tags[0]);
-      } else {
-        allCategories.push('Uncategorized');
-      }
-    });
-  }
-  
-  // Get unique categories
-  categories = [...new Set(allCategories)].map(name => ({ name }));
-} catch (e) {
-  console.error('Error fetching blog data:', e);
-  error = e.message;
-  blogPosts = [];
-  categories = [];
-}
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Blog | Stories From The Web';
-const description = 'Read our latest blog posts about children\'s literature, educational resources, and more.';
+const title = `Blog | ${siteName}`;
+const description = `Read our latest blog posts about children\'s literature, educational resources, and more.`;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-  
-  <main class="pt-24 pb-32">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <!-- Hero Section -->
     <section class="relative py-20 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -328,10 +290,8 @@ const description = 'Read our latest blog posts about children\'s literature, ed
       </div>
     </section>
   </main>
-  
-  <Footer />
-  
-  <style>
+  <style slot="scripts">
+    
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -369,6 +329,6 @@ const description = 'Read our latest blog posts about children\'s literature, ed
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
+  
   </style>
-</body>
-</html>
+</Layout>

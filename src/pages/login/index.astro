@@ -1,23 +1,18 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
-import '../../styles/base.css';
+import Layout from '../../layouts/Layout.astro';
+import { getConfig } from '../../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
+
+// Page metadata
+const title = siteName;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Login or Sign Up | Stories From The Web</title>
-    <meta name="description" content="Join our community of readers, authors, parents, and teachers. Create an account or log in to access all features." />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral w-full">
-    <NavHeader />
-    
-    <main class="flex-grow w-full py-12">
-      <div class="container mx-auto px-4 max-w-4xl">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4 max-w-4xl">
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
           <!-- Tabs -->
           <div class="flex border-b">
@@ -293,11 +288,9 @@ import '../../styles/base.css';
           </div>
         </div>
       </div>
-    </main>
+  </main>
+  <script slot="scripts">
     
-    <Footer />
-    
-    <script>
       document.addEventListener('DOMContentLoaded', () => {
         const loginTab = document.getElementById('login-tab');
         const signupTab = document.getElementById('signup-tab');
@@ -341,6 +334,6 @@ import '../../styles/base.css';
           });
         });
       });
-    </script>
-  </body>
-</html>
+    
+  </script>
+</Layout>

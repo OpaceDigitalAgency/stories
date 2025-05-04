@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Logout';
+$currentPage = 'logout';
+
 require_once '../simple_auth.php';
 
 // Database configuration
@@ -20,3 +29,6 @@ SimpleAuth::logout();
 // Redirect to login page
 header("Location: login.php");
 exit;
+
+// Include footer
+include 'includes/footer.php';

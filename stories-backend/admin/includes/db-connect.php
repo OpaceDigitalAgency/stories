@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Db Connect';
+$currentPage = 'db-connect';
+
 /**
  * Database Connection Include
  *
@@ -67,3 +76,7 @@ if (!$db) {
     // Set error message
     $error = "Database connection error. Please try again.";
 }
+
+
+// Include footer
+include 'footer.php';

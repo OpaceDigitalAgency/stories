@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Login';
+$currentPage = 'login';
+
 /**
  * Login Page
  *
@@ -206,5 +215,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
-</body>
-</html>
+
+// Include footer
+include 'includes/footer.php';

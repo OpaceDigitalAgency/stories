@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Table Component';
+$currentPage = 'table-component';
+
 /**
  * Table Component
  *
@@ -181,3 +190,7 @@ function renderTable($items, $columns, $options = []) {
     </div>
     <?php
 }
+
+
+// Include footer
+include 'footer.php';

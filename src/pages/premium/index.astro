@@ -1,41 +1,19 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import ComingSoonPage from '../../components/ComingSoonPage.astro';
-import Favicon from '../../components/Favicon.astro';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Premium Stories | Coming Soon';
-const description = 'Unlock exclusive content, personalized recommendations, and an enhanced reading experience with our premium subscription.';
+const title = `Premium Stories | Coming Soon`;
+const description = `Unlock exclusive content, personalized recommendations, and an enhanced reading experience with our premium subscription.`;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <Favicon />
-
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://storiesfromtheweb.netlify.app/premium/">
-  <meta property="og:title" content={title}>
-  <meta property="og:description" content={description}>
-  <meta property="og:image" content="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg">
-
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://storiesfromtheweb.netlify.app/premium/">
-  <meta property="twitter:title" content={title}>
-  <meta property="twitter:description" content={description}>
-  <meta property="twitter:image" content="https://api.storiesfromtheweb.org/uploads/optimized/68128956b67985-46295508-premium-reading-large.jpg">
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-
-  <main class="w-full">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <ComingSoonPage
       title="Premium Stories"
       description="We're working on something special! Our premium subscription will give you access to exclusive content, personalized recommendations, and an enhanced reading experience."
@@ -48,7 +26,4 @@ const description = 'Unlock exclusive content, personalized recommendations, and
       fullWidth={true}
     />
   </main>
-
-  <Footer />
-</body>
-</html>
+</Layout>

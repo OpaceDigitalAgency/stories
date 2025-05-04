@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Tag Form';
+$currentPage = 'tag-form';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -211,5 +220,6 @@ if (isset($_SESSION['error'])) {
             document.getElementById('slug').value = slug;
         }
     </script>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

@@ -1,4 +1,8 @@
 <?php
+
+// Include header
+include 'header.php';
+
 /**
  * Pagination Component
  * 
@@ -149,3 +153,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     </nav>
     <?php
 }
+
+
+// Include footer
+include 'footer.php';

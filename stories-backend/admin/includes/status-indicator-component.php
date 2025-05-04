@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Status Indicator Component';
+$currentPage = 'status-indicator-component';
+
 /**
  * Status Indicator Component
  * 
@@ -90,3 +99,7 @@ function getPublishedStatusIndicator($isPublished) {
 function getModerationStatusIndicator($needsModeration) {
     return getBooleanStatusIndicator($needsModeration, 'Needs Review', 'Approved', 'status-pending', 'status-published');
 }
+
+
+// Include footer
+include 'footer.php';

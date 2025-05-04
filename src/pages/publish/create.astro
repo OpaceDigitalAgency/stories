@@ -1,39 +1,19 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import TagBadge from '../../components/TagBadge.astro';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Available genres/tags
-const availableTags = [
-  "Adventure", "Fantasy", "Animals", "Friendship", "Family", 
-  "School", "Magic", "Science Fiction", "Mystery", "Humor"
-];
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Age groups
-const ageGroups = [
-  { id: "0-3", label: "0-3 years (Toddlers)" },
-  { id: "4-6", label: "4-6 years (Early Readers)" },
-  { id: "7-9", label: "7-9 years (Chapter Books)" },
-  { id: "10-12", label: "10-12 years (Middle Grade)" },
-  { id: "13+", label: "13+ years (Young Teen)" }
-];
+// Page metadata
+const title = siteName;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Create Your Story | Stories From The Web</title>
-    <meta name="description" content="Use our story creation wizard to write, format, and publish your children's story." />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
-    <NavHeader />
-    
-    <main class="flex-grow py-8">
-      <div class="container mx-auto px-4">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4">
         <div class="max-w-5xl mx-auto">
           <!-- Wizard Header -->
           <div class="mb-8">
@@ -194,15 +174,13 @@ const ageGroups = [
           </div>
         </div>
       </div>
-    </main>
+  </main>
+  <script slot="scripts">
     
-    <Footer />
-    
-    <script>
       document.addEventListener('DOMContentLoaded', () => {
         // This would contain the wizard navigation logic in a real implementation
         console.log('Story creation wizard loaded');
       });
-    </script>
-  </body>
-</html>
+    
+  </script>
+</Layout>

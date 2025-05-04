@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'View Ai Tool';
+$currentPage = 'view-ai-tool';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -295,5 +304,6 @@ try {
             color: var(--primary-color);
         }
     </style>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Ai Tools';
+$currentPage = 'bulk-ai-tools';
+
 /**
  * Bulk Actions Handler for AI Tools
  * 
@@ -92,3 +101,7 @@ if (!empty($success)) {
 
 header('Location: ' . $redirectUrl);
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

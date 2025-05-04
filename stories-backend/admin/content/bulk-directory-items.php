@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Directory Items';
+$currentPage = 'bulk-directory-items';
+
 /**
  * Bulk Actions Handler for Directory Items
  * 
@@ -92,3 +101,7 @@ if (!empty($success)) {
 
 header('Location: ' . $redirectUrl);
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

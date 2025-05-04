@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Test Db Connection';
+$currentPage = 'test-db-connection';
+
 /**
  * Test Database Connection for Admin
  * This script tests the database connection for the admin panel
@@ -111,3 +120,7 @@ if (isset($db) && $db) {
     echo "<h2>JSON Response</h2>";
     echo "<pre>" . json_encode($response, JSON_PRETTY_PRINT) . "</pre>";
 }
+
+
+// Include footer
+include 'includes/footer.php';

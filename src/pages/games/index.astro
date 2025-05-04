@@ -1,53 +1,19 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import { fetchGames, type Game } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-export const prerender = false;
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Fetch games from API
-const games = await fetchGames();
+// Page metadata
+const title = siteName;
 
-// Define categories
-const categories = [
-  "Educational",
-  "Adventure",
-  "Puzzle",
-  "Word Games",
-  "Math Games",
-  "Science Games"
-];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Educational Games | Stories From The Web</title>
-    <meta name="description" content="Explore fun and educational games for children of all ages. Develop skills while having fun!" />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://storiesfromtheweb.org/games" />
-    <meta property="og:title" content="Educational Games | Stories From The Web" />
-    <meta property="og:description" content="Explore fun and educational games for children of all ages. Develop skills while having fun!" />
-    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-games.jpg" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://storiesfromtheweb.org/games" />
-    <meta property="twitter:title" content="Educational Games | Stories From The Web" />
-    <meta property="twitter:description" content="Explore fun and educational games for children of all ages. Develop skills while having fun!" />
-    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-games.jpg" />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral w-full">
-    <NavHeader />
-    
-    <main class="flex-grow w-full">
-      <!-- Hero Section -->
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <!-- Hero Section -->
       <section class="bg-gradient-to-r from-tertiary/90 to-accent/90 text-white py-16">
         <div class="container mx-auto px-4">
           <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
@@ -181,8 +147,5 @@ const categories = [
           </form>
         </div>
       </section>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

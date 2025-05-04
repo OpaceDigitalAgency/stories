@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Auth Check';
+$currentPage = 'auth-check';
+
 /**
  * Authentication Check Include
  *
@@ -52,3 +61,7 @@ if (!$user && $currentScript !== 'login.php') {
     header("Location: $loginPath");
     exit;
 }
+
+
+// Include footer
+include 'footer.php';

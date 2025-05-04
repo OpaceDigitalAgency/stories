@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Get Tags';
+$currentPage = 'get-tags';
+
 /**
  * Get Tags API
  * 
@@ -68,3 +77,7 @@ try {
 // Return tags as JSON
 header('Content-Type: application/json');
 echo json_encode($tags);
+
+
+// Include footer
+include '../includes/footer.php';

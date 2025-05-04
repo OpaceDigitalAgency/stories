@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include 'header.php';
+
+
+// Page variables
+$pageTitle = 'Email Functions';
+$currentPage = 'email-functions';
+
 /**
  * Email Functions
  * 
@@ -37,3 +46,7 @@ function sendEmail($to, $subject, $message, $headers = '') {
     // In a production environment, you might want to implement SMTP or other methods here
     return true;
 }
+
+
+// Include footer
+include 'footer.php';

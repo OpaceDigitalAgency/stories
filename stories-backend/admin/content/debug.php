@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Debug';
+$currentPage = 'debug';
+
 // Start session
 session_start();
 
@@ -48,3 +57,7 @@ if ($user) {
 }
 echo "</pre>";
 ?>
+
+
+// Include footer
+include '../includes/footer.php';

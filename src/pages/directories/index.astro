@@ -1,65 +1,19 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import { fetchDirectoryItems } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-export const prerender = false;
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Fetch directory items from API
-const items = await fetchDirectoryItems();
+// Page metadata
+const title = siteName;
 
-// Define static categories
-const categories = [
-  {
-    title: "Educational Tools",
-    description: "Learning resources and teaching materials",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
-    color: "primary"
-  },
-  {
-    title: "Reading Materials",
-    description: "Books, stories, and literature resources",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
-    color: "secondary"
-  },
-  {
-    title: "Teaching Resources",
-    description: "Lesson plans and classroom materials",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
-    color: "accent"
-  }
-];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Educational Resources Directory | Stories From The Web</title>
-    <meta name="description" content="Browse our curated collection of educational resources, including books, learning materials, and teaching tools." />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://storiesfromtheweb.org/directories" />
-    <meta property="og:title" content="Educational Resources Directory | Stories From The Web" />
-    <meta property="og:description" content="Browse our curated collection of educational resources, including books, learning materials, and teaching tools." />
-    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-directories.jpg" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://storiesfromtheweb.org/directories" />
-    <meta property="twitter:title" content="Educational Resources Directory | Stories From The Web" />
-    <meta property="twitter:description" content="Browse our curated collection of educational resources, including books, learning materials, and teaching tools." />
-    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-directories.jpg" />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral w-full">
-    <NavHeader />
-    
-    <main class="flex-grow w-full">
-      <!-- Hero Section -->
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <!-- Hero Section -->
       <section class="bg-gradient-to-r from-primary/90 to-accent/90 text-white py-16">
         <div class="container mx-auto px-4">
           <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
@@ -185,8 +139,5 @@ const categories = [
           </form>
         </div>
       </section>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

@@ -1,6 +1,5 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import RatingStars from '../../components/RatingStars.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
@@ -8,210 +7,19 @@ import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
 import { fetchStories, fetchStory } from '../../lib/api';
-// Import Story type from the API module to ensure type compatibility
 import type { Story } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Helper function to get image URL from story
-function getImageUrl(story: Story): string {
-  if (typeof story.coverImage === 'string') {
-    return story.coverImage;
-  }
-  if (story.coverImage?.default) {
-    return story.coverImage.default;
-  }
-  if (story.cover_urls?.default) {
-    return story.cover_urls.default;
-  }
-  return '/images/default-cover.svg';
-}
-
-// Get the slug from the URL
-const { slug } = Astro.params;
-
-if (!slug) {
-  return Astro.redirect('/404');
-}
-
-// Fetch story data
-let story;
-
-// First try to get the story using fetchStory (which includes content)
-try {
-  story = await fetchStory(slug);
-
-  // If story not found with fetchStory, try the old method with fetchStories
-  if (!story) {
-    console.log(`Story not found with fetchStory, trying fetchStories for slug: ${slug}`);
-    const stories = await fetchStories();
-    story = stories.find(s => s.slug === slug);
-  }
-} catch (error) {
-  console.error(`Error fetching story with slug ${slug}:`, error);
-  // Don't redirect yet, try the fallback method
-  const stories = await fetchStories();
-  story = stories.find(s => s.slug === slug);
-}
-
-// If story still not found after both attempts, redirect to 404
-if (!story) {
-  console.error(`Story not found with slug: ${slug}`);
-  return Astro.redirect('/404');
-}
-
-// Get related stories (same author or tags)
-let relatedStories: Story[] = [];
-try {
-  // Fetch all stories for related content
-  const allStories = await fetchStories();
-  relatedStories = allStories
-    .filter(s =>
-      s.slug !== slug &&
-      (s.author?.slug === story.author?.slug ||
-       s.tags?.some((tag: string) => story.tags?.includes(tag)))
-    )
-    .slice(0, 4);
-} catch (error) {
-  console.error("Error fetching related stories:", error);
-}
-
-// Format date if available
-const formattedDate = story.publishDate
-  ? new Date(story.publishDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  : null;
-
-// Extract the full summary and clean story content
-function processStoryContent(content: string, excerpt: string): { summary: string, storyContent: string } {
-  if (!content) return { summary: excerpt || '', storyContent: '' };
-
-  // Initialize with default values
-  let summary = excerpt || '';
-  let storyContent = content;
-
-  // Try to extract a better summary if available in the content
-  const summaryMatch = content.match(/Summary\s*\n+([\s\S]+?)(?:\n+(?:The\s+Story|Story|#+)|\n\n|$)/i);
-  if (summaryMatch && summaryMatch[1]) {
-    summary = summaryMatch[1].trim();
-  }
-
-  // Try to extract just the story content
-  // Look for patterns like "The Story" or just "Story" followed by content
-  const storyMatch = content.match(/(?:The\s+Story|Story)\s*\n+([\s\S]+)$/i);
-  if (storyMatch && storyMatch[1]) {
-    storyContent = storyMatch[1].trim();
-  }
-
-  // Remove any author information patterns from both summary and story content
-  const authorPatterns = [
-    // Markdown formatted author info
-    /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^*]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
-    /##\s*\*\*Author\*\*\s*\*\*(?:Name:|Author:)\*\*\s*[^*]+\s*\*\*Age:\*\*\s*[^\s]+\s*\*\*Location:\*\*\s*[^<\n]+/g,
-    /#+\s*\*+Author\*+\s*\*+(?:Name:|Author:)\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g,
-    /#+\s*\*+Author\*+\*+\s*\*+Author:\s*[^*]+\*+\s*\*+Age:\*+\s*[^*]+\s*\*+Location:\*+\s*[^<\n]+/g,
-
-    // Plain text author info with asterisks
-    /Author\s*\n+\*\*Name:\*\*\s*[^*\n]+\s*\n+\*\*Age:\*\*\s*[^*\n]+\s*\n+\*\*Location:\*\*\s*[^*\n]+/g,
-
-    // Plain text author section with double asterisks
-    /Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*[^\n]+\n+\*\*Location:\*\*\s*[^\n]+/g,
-
-    // Plain text "Author" section
-    /Author\s*\n+(?:\*\*)?Name:(?:\*\*)?\s*[^\n]+\n+(?:\*\*)?Age:(?:\*\*)?\s*[^\n]+\n+(?:\*\*)?Location:(?:\*\*)?\s*[^\n]+/g,
-
-    // Another variation with just Author as a heading
-    /Author\s*\n+\*\*Name:\*\*\s*[^\n*]+\s*\n+\*\*Age:\*\*\s*\d+\s*\n+\*\*Location:\*\*\s*[^\n*]+/g,
-
-    // Simple author info without markdown
-    /Author\s*\n+[^\n]+\n+[^\n]+\n+[^\n]+\n+/g
-  ];
-
-  authorPatterns.forEach(pattern => {
-    summary = summary.replace(pattern, '');
-    storyContent = storyContent.replace(pattern, '');
-  });
-
-  // Remove specific patterns for the example in the screenshot
-  storyContent = storyContent.replace(/Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*[^\n]+\n+\*\*Location:\*\*\s*[^\n]+\n+/g, '');
-
-  // Also try to match the exact pattern from the screenshot
-  storyContent = storyContent.replace(/Author\s*\n+\*\*Name:\*\*\s*[^\n]+\n+\*\*Age:\*\*\s*\d+\n+\*\*Location:\*\*\s*[^\n]+\n+/g, '');
-
-  // Remove any lines that start with ** and contain Name:, Age:, or Location:
-  const lines = storyContent.split('\n');
-  storyContent = lines.filter((line: string) => {
-    return !(
-      (line.trim().startsWith('**Name:**') ||
-       line.trim().startsWith('**Age:**') ||
-       line.trim().startsWith('**Location:**') ||
-       line.trim() === 'Author')
-    );
-  }).join('\n');
-
-  // Remove "Summary" and "The Story" labels from the content
-  storyContent = storyContent.replace(/Summary\s*\n+/g, '');
-  storyContent = storyContent.replace(/(?:The\s+)?Story\s*\n+/g, '');
-
-  // Remove duplicate summary text from the beginning of the story content
-  if (summary && storyContent.startsWith(summary)) {
-    storyContent = storyContent.substring(summary.length).trim();
-  }
-
-  // Clean up any remaining markdown headings
-  summary = summary.replace(/#+\s+/g, '');
-  storyContent = storyContent.replace(/#+\s+/g, '');
-
-  // Final cleanup - trim whitespace
-  summary = summary.trim();
-  storyContent = storyContent.trim();
-
-  return { summary, storyContent };
-}
-
-// Process the story content to extract summary and story
-let processedContent = { summary: story.excerpt || '', storyContent: '' };
-if (story.content) {
-  processedContent = processStoryContent(story.content, story.excerpt);
-
-  // Update the excerpt with the better summary if available
-  if (processedContent.summary) {
-    story.excerpt = processedContent.summary;
-  }
-}
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = `${story.title} | Stories From The Web`;
-const description = story.excerpt || `Read "${story.title}" on Stories From The Web`;
+const title = siteName;
+
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-
-  <!-- Open Graph / Social Media Meta Tags -->
-  <meta property="og:title" content={title}>
-  <meta property="og:description" content={description}>
-  <meta property="og:image" content={getImageUrl(story)}>
-  <meta property="og:url" content={`https://storiesfromtheweb.org/stories/${slug}`}>
-  <meta property="og:type" content="article">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content={title}>
-  <meta name="twitter:description" content={description}>
-  <meta name="twitter:image" content={getImageUrl(story)}>
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
-
-  <main class="pt-24 pb-32">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
     <!-- Story Header -->
     <section class="relative py-16 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -396,10 +204,8 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
       </section>
     )}
   </main>
-
-  <Footer />
-
-  <style>
+  <style slot="scripts">
+    
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -437,6 +243,6 @@ const description = story.excerpt || `Read "${story.title}" on Stories From The 
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
+  
   </style>
-</body>
-</html>
+</Layout>

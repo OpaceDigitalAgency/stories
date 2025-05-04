@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Save Story';
+$currentPage = 'save-story';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -368,3 +377,6 @@ try {
     header("Location: $redirect");
     exit;
 }
+
+// Include footer
+include '../includes/footer.php';

@@ -1,82 +1,18 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
-import '../../styles/base.css';
+import Layout from '../../layouts/Layout.astro';
+import { getConfig } from '../../lib/config';
 
-// Publishing steps
-const publishingSteps = [
-  {
-    title: "Create Your Account",
-    description: "Sign up for a free account to start sharing your stories with our community.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />'
-  },
-  {
-    title: "Write Your Story",
-    description: "Use our easy-to-use editor to write and format your story. Add images, headings, and more.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />'
-  },
-  {
-    title: "Add Details",
-    description: "Choose categories, tags, age range, and upload a cover image to help readers find your story.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />'
-  },
-  {
-    title: "Preview & Publish",
-    description: "Preview how your story will look to readers, make any final edits, and publish when ready.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />'
-  },
-  {
-    title: "Share & Connect",
-    description: "Share your published story with friends and family, and connect with other authors.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />'
-  }
-];
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// FAQ items
-const faqItems = [
-  {
-    question: "What types of stories can I publish?",
-    answer: "You can publish any type of children's story suitable for ages 0-13. This includes picture books, early readers, chapter books, and middle-grade stories. All content must be appropriate for children and follow our content guidelines."
-  },
-  {
-    question: "Do I retain the copyright to my stories?",
-    answer: "Yes, you retain full copyright to all stories you publish on our platform. By publishing, you grant us a non-exclusive license to display your work on our website and promote it through our channels."
-  },
-  {
-    question: "Can I include illustrations in my stories?",
-    answer: "Absolutely! You can upload images to accompany your story. Make sure you have the rights to use any images you upload. We also offer a library of free-to-use illustrations for authors."
-  }
-];
+// Page metadata
+const title = siteName;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Publish Your Story | Stories From The Web</title>
-    <meta name="description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://storiesfromtheweb.org/publish" />
-    <meta property="og:title" content="Publish Your Story | Stories From The Web" />
-    <meta property="og:description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
-    <meta property="og:image" content="https://storiesfromtheweb.org/og-image-publish.jpg" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://storiesfromtheweb.org/publish" />
-    <meta property="twitter:title" content="Publish Your Story | Stories From The Web" />
-    <meta property="twitter:description" content="Share your children's stories with our community. Our simple publishing process makes it easy to reach young readers around the world." />
-    <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image-publish.jpg" />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
-    <NavHeader />
-    
-    <main class="flex-grow">
-      <!-- Hero Section -->
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <!-- Hero Section -->
       <section class="bg-gradient-to-r from-primary/90 to-accent/90 text-white py-16 md:py-24">
         <div class="container mx-auto px-4 text-center">
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
@@ -179,8 +115,5 @@ const faqItems = [
           </a>
         </div>
       </section>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

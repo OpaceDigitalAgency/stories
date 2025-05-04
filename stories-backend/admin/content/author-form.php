@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Author Form';
+$currentPage = 'author-form';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -278,5 +287,6 @@ if (isset($_SESSION['error'])) {
         // Initialize form state
         handleAuthorTypeChange();
     </script>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

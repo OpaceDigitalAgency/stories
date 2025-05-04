@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Directory Item Form';
+$currentPage = 'directory-item-form';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -304,5 +313,6 @@ if (isset($_SESSION['error'])) {
             }
         });
     </script>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

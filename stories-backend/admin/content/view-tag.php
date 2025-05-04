@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'View Tag';
+$currentPage = 'view-tag';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -319,5 +328,6 @@ try {
             gap: 0.5rem;
         }
     </style>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

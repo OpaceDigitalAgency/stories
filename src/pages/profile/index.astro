@@ -1,48 +1,20 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import ProfileSwitcher from '../../components/ProfileSwitcher.astro';
 import ReadingHistory from '../../components/ReadingHistory.astro';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Mock user data
-const user = {
-  name: "Alex Johnson",
-  username: "alexj",
-  email: "alex@example.com",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  role: "child", // child, parent, teacher
-  joinDate: new Date('2025-01-15'),
-  stats: {
-    storiesRead: 42,
-    booksCompleted: 12,
-    timeSpent: 840, // minutes
-    achievements: 8
-  }
-};
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Format minutes to hours and minutes
-function formatReadingTime(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
-}
+// Page metadata
+const title = siteName;
+
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Your Profile | Stories From The Web</title>
-    <meta name="description" content="View and manage your profile, reading history, and preferences." />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral">
-    <NavHeader />
-    
-    <main class="flex-grow py-8">
-      <div class="container mx-auto px-4">
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <div class="container mx-auto px-4">
         <div class="max-w-6xl mx-auto">
           <!-- Profile Header -->
           <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
@@ -259,8 +231,5 @@ function formatReadingTime(minutes) {
           </div>
         </div>
       </div>
-    </main>
-    
-    <Footer />
-  </body>
-</html>
+  </main>
+</Layout>

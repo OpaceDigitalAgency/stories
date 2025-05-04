@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Bulk Posts';
+$currentPage = 'bulk-posts';
+
 /**
  * Bulk Actions Handler for Blog Posts
  * 
@@ -137,3 +146,7 @@ if (!empty($success)) {
 
 header('Location: ' . $redirectUrl);
 exit;
+
+
+// Include footer
+include '../includes/footer.php';

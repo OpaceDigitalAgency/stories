@@ -1,36 +1,20 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import RatingStars from '../../components/RatingStars.astro';
 import { fetchStories } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
-// Fetch stories from API
-const stories = await fetchStories();
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Sort stories by rating (highest first)
-const sortedStories = [...stories].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+// Page metadata
+const title = siteName;
 
-// Filter options
-const ageGroups = ['0-2 years', '3-5 years', '6-8 years', '9-12 years', '13+ years'];
-const reviewerTypes = ['Parent', 'Teacher', 'Librarian', 'Child'];
-const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Reviews & Recommendations | Stories From The Web</title>
-    <meta name="description" content="Read honest reviews from parents, teachers, and young readers." />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral w-full">
-    <NavHeader />
-    
-    <main class="flex-grow w-full">
-      <!-- Hero Section -->
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <!-- Hero Section -->
       <section class="bg-gradient-to-r from-secondary/90 to-tertiary/90 text-white py-16 md:py-24">
         <div class="container mx-auto px-4 text-center">
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6">
@@ -411,8 +395,94 @@ const sortOptions = ['Highest Rating', 'Most Recent', 'Most Helpful'];
           </div>
         </div>
       </section>
-    </main>
+  </main>
+  <script slot="scripts">
     
-    <Footer />
-  </body>
-</html>
+                  document.addEventListener('DOMContentLoaded', () => {
+                    const ratingStarsContainer = document.querySelector('[data-rating-stars]');
+                    const ratingInput = document.getElementById('rating');
+                    
+                    if (ratingStarsContainer && ratingInput) {
+                      // The event is dispatched on the component ID, not the container
+                      const ratingComponent = ratingStarsContainer.querySelector('div[id^="rating-stars-"]');
+                      
+                      if (ratingComponent) {
+                        ratingComponent.addEventListener('rating-changed', (event) => {
+                          ratingInput.value = event.detail.rating;
+                          console.log('Rating changed to:', event.detail.rating);
+                        });
+                      }
+                    }
+                  });
+                
+
+              document.addEventListener('DOMContentLoaded', () => {
+                const form = document.getElementById('review-form');
+                const submitBtn = document.getElementById('submit-review-btn');
+                const successMsg = document.getElementById('review-success');
+                const errorMsg = document.getElementById('review-error');
+                
+                if (form) {
+                  form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    // Hide any previous messages
+                    successMsg.classList.add('hidden');
+                    errorMsg.classList.add('hidden');
+                    
+                    // Disable submit button
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Submitting...';
+                    
+                    try {
+                      // Get form data
+                      const formData = new FormData(form);
+                      
+                      // Convert to JSON
+                      const data = {};
+                      formData.forEach((value, key) => {
+                        data[key] = value;
+                      });
+                      
+                      // Send request
+                      const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                      });
+                      
+                      const result = await response.json();
+                      
+                      if (response.ok && result.success) {
+                        // Show success message
+                        successMsg.classList.remove('hidden');
+                        
+                        // Reset form
+                        form.reset();
+                        
+                        // Reload the page after 2 seconds to show updated ratings
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 2000);
+                      } else {
+                        // Show error message
+                        errorMsg.classList.remove('hidden');
+                        console.error('Error submitting review:', result);
+                      }
+                    } catch (error) {
+                      // Show error message
+                      errorMsg.classList.remove('hidden');
+                      console.error('Error submitting review:', error);
+                    } finally {
+                      // Re-enable submit button
+                      submitBtn.disabled = false;
+                      submitBtn.textContent = 'Submit Review';
+                    }
+                  });
+                }
+              });
+            
+  </script>
+</Layout>

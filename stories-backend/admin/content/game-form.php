@@ -1,4 +1,13 @@
 <?php
+
+// Include header
+include '../includes/header.php';
+
+
+// Page variables
+$pageTitle = 'Game Form';
+$currentPage = 'game-form';
+
 require_once '../../simple_auth.php';
 
 // Database configuration
@@ -259,5 +268,6 @@ if (isset($_SESSION['error'])) {
             }
         });
     </script>
-</body>
-</html>
+
+// Include footer
+include '../includes/footer.php';

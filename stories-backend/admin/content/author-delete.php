@@ -1,4 +1,11 @@
-<?php session_start(); // Start session before any output
+<?php
+// Start output buffering to prevent "headers already sent" errors
+ob_start();
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 /**
  * Author Delete Page
@@ -186,4 +193,9 @@ if (isset($_SESSION['error'])) {
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php
+require_once '../includes/footer.php';
+
+// End output buffering and flush
+if (ob_get_length()) ob_end_flush();
+?>

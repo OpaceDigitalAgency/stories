@@ -336,7 +336,9 @@ export async function fetchGame(slug: string): Promise<Game | null> {
   try {
     const raw = await fetchApi<any[]>('/games', {
       'filters[slug][$eq]': slug,
-      'populate': '*'
+      'populate': '*',
+      'pagination[limit]': 1,
+      'pagination[start]': 0
     });
 
     if (!raw || !Array.isArray(raw) || raw.length === 0) {
@@ -345,11 +347,16 @@ export async function fetchGame(slug: string): Promise<Game | null> {
     }
 
     const item = raw[0];
+    if (!item || typeof item !== 'object') {
+      console.error('Invalid game data structure:', item);
+      return null;
+    }
+
     return {
-      title: item.title,
+      title: item.title || '',
       description: item.description || '',
       coverImage: item.cover_url || '',
-      slug: item.slug,
+      slug: item.slug || '',
       price: Number(item.price) || 0,
       rating: Number(item.rating) || 0,
       category: item.category || 'General',

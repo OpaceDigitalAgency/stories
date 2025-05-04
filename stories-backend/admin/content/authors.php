@@ -177,10 +177,7 @@ if (!function_exists('renderEnhancedTable')) {
             echo '<td>';
             echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
             echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            echo '<form method="GET" action="author-delete-process.php" style="display:inline;">';
-            echo '<input type="hidden" name="id" value="' . $author['id'] . '">';
-            echo '<button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</button>';
-            echo '</form>';
+            echo '<a href="author-delete-process.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
             echo '</td>';
             echo '</tr>';
         }
@@ -198,7 +195,9 @@ if (!function_exists('renderEnhancedTable')) {
         'custom_formatters' => $customFormatters,
         'view_url' => 'view-author.php?id={id}',
         'edit_url' => 'author-form.php?id={id}',
-        'delete_url' => 'author-delete-process.php'
+        'delete_url' => 'author-delete-process.php',
+        'delete_type' => 'confirm',
+        'delete_dependencies' => ['stories']
     ]);
 }
 

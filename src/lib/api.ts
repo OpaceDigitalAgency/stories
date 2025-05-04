@@ -451,5 +451,22 @@ export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<strin
   }
 }
 
+// Fetch tags
+export async function fetchTags(): Promise<any[]> {
+  try {
+    const raw = await fetchApi<any[]>('/tags', {
+      'sort': 'name:asc'
+    });
+    return raw.map(item => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug || item.name.toLowerCase().replace(/\s+/g, '-')
+    }));
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+}
+
 // Export fetchFromApi as an alias for backward compatibility
 export const fetchFromApi = fetchApi;

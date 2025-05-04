@@ -6,7 +6,61 @@ import { getConfig } from '../../lib/config';
 const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = siteName;
+const title = `Publish Your Story | ${siteName}`;
+const description = "Share your stories with young readers around the world. Our simple publishing process makes it easy to get started.";
+
+// Define publishing steps
+const publishingSteps = [
+  {
+    title: "Create an Account",
+    description: "Sign up for a free account to get started with publishing.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />'
+  },
+  {
+    title: "Write Your Story",
+    description: "Use our simple editor to write and format your story.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />'
+  },
+  {
+    title: "Add Illustrations",
+    description: "Upload images or use our AI tools to create illustrations.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />'
+  },
+  {
+    title: "Preview & Submit",
+    description: "Review your story and submit it for publication.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+  },
+  {
+    title: "Share & Engage",
+    description: "Share your published story and engage with readers.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />'
+  }
+];
+
+// Define FAQ items
+const faqItems = [
+  {
+    question: "Who can publish stories on your platform?",
+    answer: "Anyone can publish stories on our platform, including children, parents, teachers, and professional authors. We welcome stories from all backgrounds and experience levels."
+  },
+  {
+    question: "Is there a cost to publish stories?",
+    answer: "Basic publishing is completely free. We offer premium features for a small fee, but you can publish and share your stories without any cost."
+  },
+  {
+    question: "How long does the review process take?",
+    answer: "Most stories are reviewed within 48-72 hours. We check all submissions to ensure they meet our community guidelines before they're published."
+  },
+  {
+    question: "Can I edit my story after publishing?",
+    answer: "Yes, you can edit your story at any time. Changes will be saved immediately, though major revisions may require a brief review."
+  },
+  {
+    question: "Do I retain the rights to my stories?",
+    answer: "Absolutely! You retain full copyright and ownership of all content you publish. We simply request a non-exclusive license to display your work on our platform."
+  }
+];
 
 ---
 
@@ -26,7 +80,7 @@ const title = siteName;
           </a>
         </div>
       </section>
-      
+
       <!-- How It Works Section -->
       <section id="get-started" class="py-16">
         <div class="container mx-auto px-4">
@@ -36,7 +90,7 @@ const title = siteName;
               Follow these simple steps to share your story with our community of young readers.
             </p>
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8">
             {publishingSteps.map((step, index) => (
               <div class="flex flex-col items-center text-center">
@@ -55,7 +109,7 @@ const title = siteName;
               </div>
             ))}
           </div>
-          
+
           <div class="mt-12 text-center">
             <a href="/publish/create" class="btn btn-primary text-lg px-6 py-3 rounded-md font-medium">
               Start Writing Now
@@ -63,7 +117,7 @@ const title = siteName;
           </div>
         </div>
       </section>
-      
+
       <!-- FAQ Section -->
       <section class="py-16 bg-gray-50">
         <div class="container mx-auto px-4 max-w-4xl">
@@ -73,7 +127,7 @@ const title = siteName;
               Have questions about publishing your story? Find answers to common questions below.
             </p>
           </div>
-          
+
           <div class="space-y-6">
             {faqItems.map(item => (
               <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -93,7 +147,7 @@ const title = siteName;
               </div>
             ))}
           </div>
-          
+
           <div class="mt-10 text-center">
             <p class="text-gray-600 mb-4">Still have questions?</p>
             <a href="/contact" class="btn btn-secondary px-6 py-2 rounded-md font-medium">
@@ -102,7 +156,7 @@ const title = siteName;
           </div>
         </div>
       </section>
-      
+
       <!-- CTA Section -->
       <section class="py-16 bg-primary/10">
         <div class="container mx-auto px-4 text-center">

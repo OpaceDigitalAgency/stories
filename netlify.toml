@@ -3,13 +3,13 @@
   publish = "dist"
 
 [build.environment]
-  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+  PUBLIC_API_URL = "/.netlify/functions/api"
 
 [context.production.environment]
-  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+  PUBLIC_API_URL = "/.netlify/functions/api"
 
 [context.deploy-preview.environment]
-  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
+  PUBLIC_API_URL = "/.netlify/functions/api"
 
 [[headers]]
   for = "/api/*"
@@ -24,6 +24,6 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://api.storiesfromtheweb.org/api/v1/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
   force = true

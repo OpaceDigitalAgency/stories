@@ -177,11 +177,7 @@ if (!function_exists('renderEnhancedTable')) {
             echo '<td>';
             echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
             echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            echo '<form method="POST" action="delete-author.php" style="display:inline;">';
-            echo '<input type="hidden" name="id" value="' . $author['id'] . '">';
-            echo '<input type="hidden" name="action" value="delete_all">';
-            echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this author?\');"><i class="fas fa-trash"></i> Delete</button>';
-            echo '</form>';
+            echo '<a href="author-delete-process.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
             echo '</td>';
             echo '</tr>';
         }

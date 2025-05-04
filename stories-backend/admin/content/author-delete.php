@@ -1,4 +1,5 @@
-<?php
+<?php session_start(); // Start session before any output
+
 /**
  * Author Delete Page
  *
@@ -6,9 +7,6 @@
  * It handles the case where an author has associated stories by providing
  * options to either delete all stories or reassign them to another author.
  */
-
-// Start session before any output
-session_start();
 
 // Page variables
 $pageTitle = 'Author Delete';

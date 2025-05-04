@@ -11,6 +11,10 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 try {
     // Check if blog_posts or blog table exists
     $blogTableName = 'blog_posts';
@@ -81,13 +85,15 @@ try {
                bp.status,
                bp.created_at,
                bp.updated_at,
-               a.name as author_name,
-               (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
-                FROM $postTagsTableName pt
-                JOIN tags t ON pt.tag_id = t.id
-                WHERE pt.post_id = bp.id) as tags
+               a.name as author_name
        FROM $blogTableName bp
        LEFT JOIN authors a ON $authorJoinCondition
+       LEFT JOIN (
+           SELECT post_id, GROUP_CONCAT(t.name SEPARATOR ', ') as tag_list
+           FROM $postTagsTableName pt
+           JOIN tags t ON pt.tag_id = t.id
+           GROUP BY post_id
+       ) tags ON tags.post_id = bp.id
         ORDER BY bp.created_at DESC
         LIMIT $offset, $perPage
     ";
@@ -95,7 +101,7 @@ try {
     $stmt->execute();
     $posts = $stmt->fetchAll();
 } catch (PDOException $e) {
-    error_log("Blog posts page error: " . $e->getMessage());
+    error_log("Blog posts page error: " . $e->getMessage() . "\nQuery: " . $query);
     $error = "Error loading blog posts. Please try again.";
     $posts = [];
 }
@@ -182,7 +188,7 @@ if (function_exists('renderEnhancedTable')) {
             return htmlspecialchars($post[$key] ?? 'Unknown');
         },
         'tags' => function($post, $key) {
-            return htmlspecialchars($post[$key] ?? '');
+            return htmlspecialchars($post['tag_list'] ?? '');
         },
         'status' => function($post, $key) {
             $status = $post[$key] ?? 'draft';

@@ -146,8 +146,7 @@ export async function fetchApi<T>(
     }
 
     const data = await response.json();
-    // Handle Strapi's data structure
-    return data.data || data;
+    return data;
   } catch (error) {
     console.error(`API request failed for ${url}:`, error);
 
@@ -347,9 +346,8 @@ export async function fetchAiTool(slug: string): Promise<AiTool | null> {
 
 export async function fetchGame(slug: string): Promise<Game | null> {
   try {
-    const raw = await fetchApi<any>('/games', {
-      'filters[slug][$eq]': slug,
-      'populate': '*'
+    const raw = await fetchApi<any[]>('/games', {
+      'filters[slug]': slug
     });
 
     if (!raw || !Array.isArray(raw) || raw.length === 0) {
@@ -357,7 +355,7 @@ export async function fetchGame(slug: string): Promise<Game | null> {
       return null;
     }
 
-    const item = raw[0].attributes || raw[0];
+    const item = raw[0];
     return {
       title: item.title,
       description: item.description || '',
@@ -473,9 +471,8 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
-    const raw = await fetchApi<any>('/stories', {
-      'filters[slug][$eq]': slug,
-      'populate': '*'  // Ensure we get all fields including content
+    const raw = await fetchApi<any[]>('/stories', {
+      'filters[slug]': slug
     });
 
     // Check if we got any results
@@ -484,7 +481,7 @@ export async function fetchStory(slug: string): Promise<Story | null> {
       return null;
     }
 
-    const item = raw[0].attributes || raw[0];
+    const item = raw[0];
     return {
       title: item.title,
       excerpt: item.excerpt || '',
@@ -530,9 +527,8 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
-    const raw = await fetchApi<any>('/authors', {
-      'filters[slug][$eq]': slug,
-      'populate': '*'  // Ensure we get all fields
+    const raw = await fetchApi<any[]>('/authors', {
+      'filters[slug]': slug
     });
 
     // Check if we got any results
@@ -541,7 +537,7 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       return null;
     }
 
-    const item = raw[0].attributes || raw[0];
+    const item = raw[0];
     return {
       name: item.name,
       bio: item.bio || '',

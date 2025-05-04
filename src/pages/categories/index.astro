@@ -11,6 +11,46 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Categories | ${siteName}`;
 const description = `Browse stories by category or tag. Filter by author type to find exactly what you\'re looking for.`;
 
+// Fetch all stories
+const stories = await fetchStories();
+
+// Group stories by author type
+const childAuthorStories = stories.filter(story => story.author?.author_type === 'child');
+const parentAuthorStories = stories.filter(story => story.author?.author_type === 'parent');
+const retailAuthorStories = stories.filter(story => story.author?.author_type === 'retail');
+
+// Define tag interface
+interface TagCount {
+  [key: string]: number;
+}
+
+interface TagInfo {
+  name: string;
+  count: number;
+}
+
+// Get unique tags from all stories
+const allTags = stories.reduce<TagCount>((tags, story) => {
+  if (story.tags && Array.isArray(story.tags)) {
+    story.tags.forEach(tag => {
+      const tagName = typeof tag === 'string' ? tag :
+                     typeof tag === 'object' && tag !== null ?
+                     (tag as {name?: string; title?: string}).name ||
+                     (tag as {name?: string; title?: string}).title : '';
+      if (tagName) {
+        const normalizedTag = tagName.toLowerCase();
+        tags[normalizedTag] = (tags[normalizedTag] || 0) + 1;
+      }
+    });
+  }
+  return tags;
+}, {});
+
+// Convert to array and sort by count
+const sortedTags: TagInfo[] = Object.entries(allTags)
+  .map(([name, count]): TagInfo => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
 ---
 
 <Layout title={title} description={description}>

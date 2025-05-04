@@ -55,9 +55,7 @@ export function getConfig(key: string, defaultValue: any = null): any {
   return value;
 }
 
-// Export config object and helper functions
-export { getConfig };
-
+// Export config object
 export const config = {
   apiUrl: PUBLIC_API_URL,
   assetsUrl: PUBLIC_ASSETS_URL,

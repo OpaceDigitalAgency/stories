@@ -1,0 +1,12 @@
+[
+  { "id": 1, "name": "Adventure", "slug": "adventure" },
+  { "id": 2, "name": "Fantasy", "slug": "fantasy" },
+  { "id": 3, "name": "Educational", "slug": "educational" },
+  { "id": 4, "name": "Animals", "slug": "animals" },
+  { "id": 5, "name": "Science", "slug": "science" },
+  { "id": 6, "name": "Friendship", "slug": "friendship" },
+  { "id": 7, "name": "Robots", "slug": "robots" },
+  { "id": 8, "name": "Space", "slug": "space" },
+  { "id": 9, "name": "Courage", "slug": "courage" },
+  { "id": 10, "name": "Magic", "slug": "magic" }
+]

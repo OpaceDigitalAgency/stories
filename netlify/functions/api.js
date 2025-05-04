@@ -1,23 +1,39 @@
 // Mock API function for Netlify
 exports.handler = async function(event, context) {
-  // Parse the path from the event
-  const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
-  
-  // Log the request for debugging
-  console.log('API Request:', {
-    path,
-    method: event.httpMethod,
-    queryParams: event.queryStringParameters
-  });
-  
-  // Handle different API endpoints
-  if (path === '/stories' || path === '/stories/') {
+  try {
+    // Parse the path from the event
+    const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
+
+    // Log the request for debugging
+    console.log('API Request:', {
+      path,
+      method: event.httpMethod,
+      queryParams: event.queryStringParameters
+    });
+
+    // Set CORS headers
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE',
+      'Content-Type': 'application/json'
+    };
+
+    // Handle OPTIONS request (CORS preflight)
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'CORS preflight successful' })
+      };
+    }
+
+    // Handle different API endpoints
+    if (path === '/stories' || path === '/stories/') {
     // Return mock stories data
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify([
         {
           id: 1,
@@ -136,9 +152,7 @@ exports.handler = async function(event, context) {
     // Return mock authors data
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify([
         {
           id: 1,
@@ -190,9 +204,7 @@ exports.handler = async function(event, context) {
     // Return mock tags data
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify([
         { id: 1, name: 'Adventure', slug: 'adventure' },
         { id: 2, name: 'Fantasy', slug: 'fantasy' },
@@ -208,9 +220,26 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // Default response for unhandled endpoints
-  return {
-    statusCode: 404,
-    body: JSON.stringify({ error: 'Not Found' })
-  };
+    // Default response for unhandled endpoints
+    return {
+      statusCode: 404,
+      headers,
+      body: JSON.stringify({ error: 'Not Found' })
+    };
+  } catch (error) {
+    console.error('API Error:', error);
+
+    // Return error response
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        error: 'Internal Server Error',
+        message: error.message
+      })
+    };
+  }
 };

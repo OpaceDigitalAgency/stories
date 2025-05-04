@@ -1,0 +1,27 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# If the request is for a real file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# If the request is for a JSON file that exists, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule \.(json)$ - [L]
+
+# Otherwise, route all requests to index.php
+RewriteRule ^(.*)$ index.php [L]
+
+# Set proper MIME type for JSON files
+AddType application/json .json
+
+# Disable directory listing
+Options -Indexes
+
+# Set CORS headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>

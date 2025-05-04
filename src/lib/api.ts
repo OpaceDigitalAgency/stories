@@ -8,14 +8,6 @@ if (!API_URL) {
 const ASSETS_URL = import.meta.env.PUBLIC_ASSETS_URL || '/images';
 
 // Type definitions
-export interface CoverImageUrls {
-  default: string;
-  thumbnail?: string;
-  small?: string;
-  medium?: string;
-  large?: string;
-}
-
 // Helper function to build asset URLs
 export const getAssetUrl = (path: string): string => {
   if (!path) return '';
@@ -30,9 +22,8 @@ export interface Story {
   title: string;
   excerpt: string;
   content?: string;
-  coverImage: string | CoverImageUrls;
+  coverImage: string;
   cover_url?: string; // API response field
-  cover_urls?: CoverImageUrls;
   slug: string;
   publishDate: string;
   publishedAt?: string; // API response field
@@ -77,9 +68,8 @@ export interface Author {
 export interface Game {
   title: string;
   description: string;
-  coverImage: string | CoverImageUrls;
+  coverImage: string;
   cover_url?: string; // API response field
-  cover_urls?: CoverImageUrls;
   slug: string;
   price: number;
   rating: number;
@@ -215,13 +205,7 @@ export async function fetchStories(page = 1, limit = 10, filters: StoryFilters =
     title: item.title,
     excerpt: item.excerpt || '',
     content: item.content || '',  // Include content field
-    coverImage: item.cover_urls ? {
-      default: item.cover_url || '',
-      thumbnail: item.cover_urls.thumbnail || '',
-      small: item.cover_urls.small || '',
-      medium: item.cover_urls.medium || '',
-      large: item.cover_urls.large || ''
-    } : item.cover_url || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
     publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),
@@ -351,13 +335,7 @@ export async function fetchGame(slug: string): Promise<Game | null> {
     return {
       title: item.title,
       description: item.description || '',
-      coverImage: item.cover_urls ? {
-        default: item.cover_url || '',
-        thumbnail: item.cover_urls.thumbnail || '',
-        small: item.cover_urls.small || '',
-        medium: item.cover_urls.medium || '',
-        large: item.cover_urls.large || ''
-      } : item.cover_url || '',
+      coverImage: item.cover_url || '',
       slug: item.slug,
       price: Number(item.price) || 0,
       rating: Number(item.rating) || 0,
@@ -421,13 +399,7 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
       title: item.title,
       excerpt: item.excerpt || '',
       content: item.content,
-      coverImage: item.cover_urls ? {
-        default: item.cover_url || '',
-        thumbnail: item.cover_urls.thumbnail || '',
-        small: item.cover_urls.small || '',
-        medium: item.cover_urls.medium || '',
-        large: item.cover_urls.large || ''
-      } : item.cover_url || '',
+      coverImage: item.cover_url || '',
       slug: item.slug,
       publishDate: item.publishedAt || '',
       featured: Boolean(item.featured),

@@ -92,14 +92,7 @@ try {
     exit;
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Game - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
+
 <body>
     <header class="admin-header">
         <div class="header-container">

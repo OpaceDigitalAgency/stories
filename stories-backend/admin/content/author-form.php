@@ -79,14 +79,7 @@ if (isset($_SESSION['error'])) {
     unset($_SESSION['error']);
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $author ? 'Edit' : 'Add'; ?> Author - Admin</title>
-    <link rel="stylesheet" href="../assets/css/modern-admin.css">
-</head>
+
 <body>
     <header class="admin-header">
         <div class="header-container">

@@ -113,20 +113,7 @@ if (isset($_POST['action']) && isset($_POST['selected_ids']) && is_array($_POST[
                     
                     // HTML email template
                     $emailBody = '
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>' . htmlspecialchars($subject) . '</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                            .header { background-color: #4361ee; color: white; padding: 20px; text-align: center; }
-                            .content { padding: 20px; background-color: #f9f9f9; }
-                            .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-                            a { color: #4361ee; }
-                        </style>
-                    </head>
+                    
                     <body>
                         <div class="container">
                             <div class="header">

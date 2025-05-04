@@ -5,9 +5,17 @@
  */
 
 // Include common admin files
-include_once '../includes/header.php';
 include_once '../includes/functions.php';
 include_once '../includes/email-functions.php';
+include_once '../includes/db-connect.php';
+
+// Set page variables for header
+$pageTitle = 'Processing Bulk Actions';
+$currentPage = 'contacts';
+$pageDescription = 'Processing bulk actions for contacts...';
+
+// Include header
+include_once '../includes/header.php';
 
 // Check if user is logged in
 if (!isLoggedIn()) {

@@ -4,6 +4,12 @@
  * A simplified endpoint for saving subscriber information
  */
 
+// Start session for anti-bot protection
+session_start();
+
+// Include anti-bot protection
+include_once '../includes/anti-bot.php';
+
 // Allow cross-origin requests from specific domains
 $allowedOrigins = [
     'https://storiesfromtheweb.netlify.app',
@@ -93,9 +99,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("Subscriber data received in save-subscriber.php: " . print_r($data, true));
     error_log("Request headers: " . print_r(getallheaders(), true));
 
+    // Check for bot submissions
+    if (isLikelyBot($data)) {
+        // Pretend success but don't actually save the data
+        error_log("Bot submission detected and blocked in subscriber form");
+        echo json_encode([
+            'success' => true,
+            'message' => 'Thank you for subscribing! We\'ll notify you when this feature is available.'
+        ]);
+        exit;
+    }
+
     // Validate required fields
     if (empty($data['email'])) {
         handleError('Email is required', 400);
+    }
+
+    // Validate email format
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        handleError('Please enter a valid email address', 400);
     }
 
     // Set default values

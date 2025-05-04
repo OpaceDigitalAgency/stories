@@ -31,10 +31,10 @@ $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false
     $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
 
     // Use absolute path for favicon to ensure it works in all environments
-    $faviconPath = '/favicon.png';
+    $faviconPath = 'https://api.storiesfromtheweb.org/public/favicon.png';
     ?>
-    <link rel="icon" type="image/x-icon" href="<?php echo $faviconPath; ?>">
-    <link rel="shortcut icon" type="image/x-icon" href="<?php echo $faviconPath; ?>">
+    <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
+    <link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="stylesheet" href="<?php echo $assetsPath; ?>">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

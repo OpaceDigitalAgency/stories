@@ -129,6 +129,12 @@ const {
               <p class="text-text-secondary mb-4">Sign up to be the first to know when {featureName} is available.</p>
 
               <form id="notifyForm" class="flex flex-col sm:flex-row gap-3">
+                <!-- Honeypot field to catch bots -->
+                <input type="text" name="website" style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1;" tabindex="-1" autocomplete="off">
+
+                <!-- Hidden token field for anti-bot protection -->
+                <input type="hidden" name="token" id="subscriber-token" value="">
+
                 <input
                   type="email"
                   name="email"
@@ -153,7 +159,23 @@ const {
               </div>
 
               <script>
+                // Generate a random token for anti-bot protection
+                function generateToken(length = 32) {
+                  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                  let token = '';
+                  for (let i = 0; i < length; i++) {
+                    token += chars.charAt(Math.floor(Math.random() * chars.length));
+                  }
+                  return token;
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
+                  // Set token when page loads
+                  const tokenField = document.getElementById('subscriber-token');
+                  if (tokenField) {
+                    tokenField.value = generateToken();
+                  }
+
                   // Get form elements
                   const resultDiv = document.getElementById('notification-result');
                   const successMsg = document.getElementById('success-message');

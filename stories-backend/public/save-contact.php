@@ -9,6 +9,12 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Start session for anti-bot protection
+session_start();
+
+// Include anti-bot protection
+include_once '../includes/anti-bot.php';
+
 // Allow cross-origin requests
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -47,6 +53,17 @@ if (empty($data) && !empty($_POST)) {
 // Debug log
 error_log("Contact form data received: " . print_r($data, true));
 
+// Check for bot submissions
+if (isLikelyBot($data)) {
+    // Pretend success but don't actually save the data
+    error_log("Bot submission detected and blocked");
+    echo json_encode([
+        'success' => true,
+        'message' => 'Thank you for your message! We\'ll get back to you as soon as possible.'
+    ]);
+    exit;
+}
+
 // Validate required fields
 if (empty($data['email'])) {
     handleError('Email is required');
@@ -62,6 +79,11 @@ if (empty($data['subject'])) {
 
 if (empty($data['message'])) {
     handleError('Message is required');
+}
+
+// Validate email format
+if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+    handleError('Please enter a valid email address');
 }
 
 // Set default values

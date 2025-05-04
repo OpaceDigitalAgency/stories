@@ -32,7 +32,7 @@ try {
   }
 
   // Then fetch stories using author's ID
-  authorStories = await fetchStories(author.id);
+  authorStories = await fetchStories(1, 50, { authorId: author.id });
 
   // Extract popular tags from author's stories
   const tagCounts = new Map<string, number>();

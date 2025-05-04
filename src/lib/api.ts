@@ -189,7 +189,7 @@ interface StoryFilters {
   sort?: string;
   'filters[tags][$contains]'?: string;
   'filters[tags][$containsi]'?: string;
-  'filters[author][slug][$eq]'?: string;
+  authorId?: number;
 }
 
 // Resource-specific fetch functions with proper mapping
@@ -229,10 +229,38 @@ function mapStoryResponse(item: any): Story {
   };
 }
 
-export async function fetchStories(authorId?: number): Promise<Story[]> {
+export async function fetchStories(page = 1, limit = 10, filters: StoryFilters = {}): Promise<Story[]> {
   try {
-    // Fetch all stories
-    const stories = await fetchApi<any[]>('/stories');
+    // Default parameters
+    const params: Record<string, string | number | boolean> = {
+      'pagination[limit]': limit,
+      'pagination[page]': page
+    };
+
+    // Set default sort if not specified in filters
+    if (!filters.sort) {
+      params['sort'] = 'publishedAt:desc';
+    } else {
+      params['sort'] = filters.sort;
+    }
+
+    // Add filters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (key.startsWith('filters[tags]')) {
+        params[key] = value;
+      } else if (key === 'featured' && value === true) {
+        params['featured'] = 1;
+      } else if (key === 'sponsored' && value === true) {
+        params['is_sponsored'] = 1;
+      } else if (key === 'isSelfPublished' && value === true) {
+        params['is_self_published'] = 1;
+      } else if (key === 'isAiEnhanced' && value === true) {
+        params['is_ai_enhanced'] = 1;
+      }
+    });
+
+    // Fetch stories
+    const stories = await fetchApi<any[]>('/stories', params);
 
     // If no stories found, return empty array
     if (!stories || !Array.isArray(stories)) {
@@ -240,9 +268,9 @@ export async function fetchStories(authorId?: number): Promise<Story[]> {
       return [];
     }
 
-    // If authorId is provided, filter stories by author
-    const filteredStories = authorId
-      ? stories.filter(story => story.author && Number(story.author.id) === authorId)
+    // If authorId is provided in filters, filter by author
+    const filteredStories = filters.authorId
+      ? stories.filter(story => story.author && Number(story.author.id) === filters.authorId)
       : stories;
 
     // Map stories to correct format

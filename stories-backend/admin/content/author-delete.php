@@ -30,7 +30,10 @@ require_once '../includes/db-connect.php';
 require_once '../includes/header.php';
 
 // Get author details
-$authorId = $_GET['id'] ?? 0;
+$authorId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Debug information
+error_log("Author Delete - Received ID: " . $authorId);
 
 try {
     // Ensure we have a database connection
@@ -52,13 +55,24 @@ try {
         }
     }
 
-    // Get author details
-    $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
-    $stmt->execute([$authorId]);
-    $author = $stmt->fetch();
-
-    if (!$author) {
-        $_SESSION['error'] = "Author not found.";
+    // Get author details with additional error checking
+    try {
+        error_log("About to query author with ID: " . $authorId);
+        $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
+        $stmt->execute([$authorId]);
+        $author = $stmt->fetch();
+        
+        if (!$author) {
+            error_log("Author not found with ID: " . $authorId);
+            $_SESSION['error'] = "Author not found.";
+            header("Location: authors.php");
+            exit;
+        } else {
+            error_log("Author found: " . $author['name'] . " (ID: " . $author['id'] . ")");
+        }
+    } catch (Exception $e) {
+        error_log("Error querying author: " . $e->getMessage());
+        $_SESSION['error'] = "Error retrieving author information: " . $e->getMessage();
         header("Location: authors.php");
         exit;
     }

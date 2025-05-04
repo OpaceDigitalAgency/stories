@@ -154,17 +154,13 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                         <?php endif; ?>
 
                                         <?php if ($options['actions']['delete']): ?>
-                                            <form method="POST" action="<?php echo $options['delete_url']; ?>" style="display: inline;">
-                                                <input type="hidden" name="id" value="<?php echo $item[$options['id_field']]; ?>">
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete this <?php echo htmlspecialchars($content_type_singular); ?>?')"
-                                                    aria-label="Delete <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
-                                                >
-                                                    <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
-                                                </button>
-                                            </form>
+                                            <a
+                                                href="<?php echo $options['delete_url'] . '?id=' . $item[$options['id_field']]; ?>"
+                                                class="btn btn-danger btn-sm"
+                                                aria-label="Delete <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
+                                            >
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
+                                            </a>
                                         <?php endif; ?>
 
                                         <?php if (isset($options['custom_actions']) && is_callable($options['custom_actions'])): ?>

@@ -198,7 +198,7 @@ if (!function_exists('renderEnhancedTable')) {
         'custom_formatters' => $customFormatters,
         'view_url' => 'view-author.php?id={id}',
         'edit_url' => 'author-form.php?id={id}',
-        'delete_url' => 'delete-author.php'
+        'delete_url' => 'author-delete-process.php'
     ]);
 }
 

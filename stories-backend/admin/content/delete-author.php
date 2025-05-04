@@ -199,7 +199,6 @@ try {
         echo json_encode(['success' => true, 'message' => 'Author deleted successfully']);
     } else {
         // Store success message and redirect for regular form submissions
-        session_start();
         $_SESSION['success'] = "Author deleted successfully";
         header("Location: authors.php");
     }
@@ -223,7 +222,6 @@ try {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     } else {
         // Store error in session and redirect for regular form submissions
-        session_start();
         $_SESSION['error'] = $e->getMessage();
         header("Location: authors.php");
     }

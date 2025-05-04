@@ -14,11 +14,8 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include header
-require_once '../includes/header.php';
-
 // Include email functions
-include_once '../includes/email-functions.php';
+require_once '../includes/email-functions.php';
 
 // Add custom CSS for contact details
 echo '<style>

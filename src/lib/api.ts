@@ -64,6 +64,11 @@ export interface Author {
   twitter_url?: string;
   instagram_url?: string;
   website_url?: string;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+  };
 }
 
 export interface CoverImageUrls {
@@ -170,10 +175,9 @@ interface StoryFilters {
   'filters[author][slug][$eq]'?: string;
 }
 
-// Resource-specific fetch functions with proper mapping
-export async function fetchStories(): Promise<Story[]> {
-  const raw = await fetchApi<any[]>('/stories');
-  return raw.map(item => ({
+// Helper function to map story response
+function mapStoryResponse(item: any): Story {
+  return {
     title: item.title,
     excerpt: item.excerpt || '',
     content: item.content || '',
@@ -204,7 +208,51 @@ export async function fetchStories(): Promise<Story[]> {
       age: item.author.age || null,
       location: item.author.location || null
     } : undefined
-  }));
+  };
+}
+
+// Resource-specific fetch functions with proper mapping
+export async function fetchStories(authorId?: string): Promise<Story[]> {
+  const [raw, storyAuthors, authors] = await Promise.all([
+    fetchApi<any[]>('/stories'),
+    fetchApi<any[]>('/story_authors'),
+    fetchApi<any[]>('/authors')
+  ]);
+
+  // If authorId is provided, filter stories by author
+  if (authorId) {
+    const authorStoryIds = storyAuthors
+      .filter(sa => sa.author_id === authorId)
+      .map(sa => sa.story_id);
+    
+    const filteredStories = raw.filter(story => authorStoryIds.includes(story.id));
+    
+    // Add author data to each story
+    filteredStories.forEach(story => {
+      const storyAuthor = storyAuthors.find(sa => sa.story_id === story.id);
+      if (storyAuthor) {
+        const author = authors.find(a => a.id === storyAuthor.author_id);
+        if (author) {
+          story.author = author;
+        }
+      }
+    });
+
+    return filteredStories.map(mapStoryResponse);
+  }
+
+  // Add author data to all stories
+  raw.forEach(story => {
+    const storyAuthor = storyAuthors.find(sa => sa.story_id === story.id);
+    if (storyAuthor) {
+      const author = authors.find(a => a.id === storyAuthor.author_id);
+      if (author) {
+        story.author = author;
+      }
+    }
+  });
+
+  return raw.map(mapStoryResponse);
 }
 
 export async function fetchAuthors(): Promise<Author[]> {
@@ -408,7 +456,11 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
-    const raw = await fetchApi<any[]>('/stories');
+    const [raw, storyAuthors, authors] = await Promise.all([
+      fetchApi<any[]>('/stories'),
+      fetchApi<any[]>('/story_authors'),
+      fetchApi<any[]>('/authors')
+    ]);
 
     // Find the story with matching slug
     const item = raw.find(story => story.slug === slug);
@@ -417,38 +469,17 @@ export async function fetchStory(slug: string): Promise<Story | null> {
       console.error(`No story found with slug: ${slug}`);
       return null;
     }
-    return {
-      title: item.title,
-      excerpt: item.excerpt || '',
-      content: item.content || '',
-      coverImage: item.cover_urls || item.cover_url || '',
-      cover_urls: item.cover_urls,
-      slug: item.slug,
-      publishDate: item.publishedAt || '',
-      featured: Boolean(item.featured),
-      sponsored: Boolean(item.is_sponsored),
-      isAiEnhanced: Boolean(item.is_ai_enhanced),
-      isSelfPublished: Boolean(item.is_self_published),
-      needsModeration: Boolean(item.needs_moderation),
-      is_published: Boolean(item.is_published),
-      rating: Number(item.average_rating) || 0,
-      reviewCount: Number(item.review_count) || 0,
-      source_type: item.source_type || 'child',
-      allow_reviews: Boolean(item.allow_reviews),
-      estimated_reading_time: item.estimated_reading_time || '1',
-      age_group: item.age_group || '7-12',
-      tags: Array.isArray(item.tags) ? item.tags :
-            (item.tags ? [String(item.tags)] : []),
-      author: {
-        name: item.author_name || '',
-        bio: item.author_bio || '',
-        avatar: item.author_avatar_url || '',
-        slug: item.author_slug || '',
-        author_type: item.author_type || 'retail',
-        age: item.author_age || null,
-        location: item.author_location || null
+
+    // Find the author for this story
+    const storyAuthor = storyAuthors.find(sa => sa.story_id === item.id);
+    if (storyAuthor) {
+      const author = authors.find(a => a.id === storyAuthor.author_id);
+      if (author) {
+        item.author = author;
       }
-    };
+    }
+
+    return mapStoryResponse(item);
   } catch (error) {
     console.error(`Error fetching story with slug ${slug}:`, error);
     return null;
@@ -480,7 +511,12 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       joinDate: item.join_date || item.created_at || new Date().toISOString(),
       twitter_url: item.twitter_url || '',
       instagram_url: item.instagram_url || '',
-      website_url: item.website_url || ''
+      website_url: item.website_url || '',
+      socialLinks: {
+        twitter: item.twitter_url || undefined,
+        instagram: item.instagram_url || undefined,
+        website: item.website_url || undefined
+      }
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);

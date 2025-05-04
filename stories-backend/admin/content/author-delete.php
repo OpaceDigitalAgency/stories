@@ -30,10 +30,17 @@ require_once '../includes/db-connect.php';
 require_once '../includes/header.php';
 
 // Get author details
-$authorId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$authorId = 0;
+
+// Check for ID in either GET or POST parameters
+if (isset($_GET['id']) && intval($_GET['id']) > 0) {
+    $authorId = intval($_GET['id']);
+} elseif (isset($_POST['id']) && intval($_POST['id']) > 0) {
+    $authorId = intval($_POST['id']);
+}
 
 // Debug information
-error_log("Author Delete - Received ID: " . $authorId);
+error_log("Author Delete - Received ID: " . $authorId . " (Method: " . $_SERVER['REQUEST_METHOD'] . ")");
 
 try {
     // Ensure we have a database connection

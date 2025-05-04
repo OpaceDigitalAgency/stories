@@ -54,9 +54,9 @@ try {
         // Table might not exist, ignore
     }
 
-    // Build the query based on available tables and columns
-    $storyCountQuery = "0"; // Default to 0
-
+    // Default story count query
+    $storyCountQuery = "0";
+    
     if ($hasStoryAuthorsTable) {
         // Use the junction table if it exists
         $storyCountQuery = "(SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id)";
@@ -143,39 +143,22 @@ $customFormatters = [
     }
 ];
 
-// Table options
-$tableOptions = [
-    'content_type' => 'authors',
-    'name_field' => 'name',
-    'empty_message' => 'No authors found. Add your first author!',
-    'custom_formatters' => $customFormatters,
-    'view_url' => 'view-author.php?id={id}',
-    'edit_url' => 'author-form.php?id={id}',
-    'delete_url' => 'author-delete.php?id={id}'
-];
-
-// Render the table using the appropriate function
-if (function_exists('renderEnhancedTable')) {
-    renderEnhancedTable($authors, $columns, $tableOptions);
-} else if (function_exists('renderTable')) {
-    renderTable($authors, $columns, $tableOptions);
-} else {
-    echo '<div class="alert alert-warning">Table component not available. Please check your installation.</div>';
-
-    // Basic table rendering
-    echo '<div class="table-responsive">';
-    echo '<table class="table">';
-    echo '<thead><tr>';
-    foreach ($columns as $key => $label) {
+// If the table component is not available, render the table manually
+if (!function_exists('renderTable')) {
+    // Render table
+    echo '<div class="table-container">';
+    echo '<table id="data-table" class="table">';
+    echo '<thead>';
+    echo '<tr>';
+    foreach ($columns as $label) {
         echo '<th>' . htmlspecialchars($label) . '</th>';
     }
     echo '<th>Actions</th>';
-    echo '</tr></thead>';
+    echo '</tr>';
+    echo '</thead>';
     echo '<tbody>';
-
-    if (empty($authors)) {
-        echo '<tr><td colspan="' . (count($columns) + 1) . '" class="text-center">No authors found. Add your first author!</td></tr>';
-    } else {
+    
+    if ($authors) {
         foreach ($authors as $author) {
             echo '<tr>';
             foreach ($columns as $key => $label) {
@@ -190,16 +173,23 @@ if (function_exists('renderEnhancedTable')) {
             echo '<td>';
             echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
             echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            echo '<a href="author-delete.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
+            // Include data attributes for the JavaScript modal
+            echo '<a href="javascript:void(0)" class="btn btn-sm btn-danger" onclick="showDeleteAuthorModal(' . $author['id'] . ', \'' . htmlspecialchars(addslashes($author['name'])) . '\', ' . (isset($author['story_count']) ? $author['story_count'] : 0) . ')"><i class="fas fa-trash"></i> Delete</a>';
             echo '</td>';
             echo '</tr>';
         }
     }
-
+    
     echo '</tbody>';
     echo '</table>';
     echo '</div>';
+} else {
+    // Use the table component
+    renderTable('authors', $columns, $authors, $customFormatters);
 }
 
+// Include the author-delete.js script for delete functionality
+echo '<script src="../js/author-delete.js"></script>';
+
 // Include footer
-include_once '../includes/footer.php';
+require_once '../includes/footer.php';

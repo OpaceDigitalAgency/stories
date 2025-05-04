@@ -103,7 +103,7 @@ function deleteAuthor(authorId) {
     }
 
     // Send delete request
-    fetch('../admin/content/delete-author.php', {
+    fetch('../admin/content/author-delete-process.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

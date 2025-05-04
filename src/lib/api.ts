@@ -79,8 +79,9 @@ export interface Author {
 export interface Game {
   title: string;
   description: string;
-  coverImage: string;
+  coverImage: string | CoverImageUrls;
   cover_url?: string; // API response field
+  cover_urls?: CoverImageUrls;
   slug: string;
   price: number;
   rating: number;
@@ -171,6 +172,7 @@ interface StoryFilters {
   sort?: string;
   'filters[tags][$contains]'?: string;
   'filters[tags][$containsi]'?: string;
+  'filters[author][slug][$eq]'?: string;
 }
 
 // Resource-specific fetch functions with proper mapping
@@ -271,13 +273,110 @@ export async function fetchGames(): Promise<Game[]> {
   return raw.map(item => ({
     title: item.title,
     description: item.description || '',
-    coverImage: item.cover_url || '',
+    coverImage: item.cover_urls ? {
+      default: item.cover_url || '',
+      thumbnail: item.cover_urls.thumbnail || '',
+      small: item.cover_urls.small || '',
+      medium: item.cover_urls.medium || '',
+      large: item.cover_urls.large || ''
+    } : item.cover_url || '',
     slug: item.slug,
     price: Number(item.price) || 0,
     rating: Number(item.rating) || 0,
     category: item.category || 'General',
     ageRange: item.age_range || 'All Ages'
   }));
+}
+
+export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
+  try {
+    const raw = await fetchApi<any[]>('/directory-items', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'
+    });
+
+    if (!raw || raw.length === 0) {
+      console.error(`No directory item found with slug: ${slug}`);
+      return null;
+    }
+
+    const item = raw[0];
+    return {
+      title: item.title,
+      description: item.description || '',
+      coverImage: item.cover_url || '',
+      slug: item.slug,
+      category: item.category || '',
+      rating: Number(item.rating) || 0,
+      priceRange: item.price_range || ''
+    };
+  } catch (error) {
+    console.error(`Error fetching directory item with slug ${slug}:`, error);
+    return null;
+  }
+}
+
+export async function fetchAiTool(slug: string): Promise<AiTool | null> {
+  try {
+    const raw = await fetchApi<any[]>('/ai-tools', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'
+    });
+
+    if (!raw || raw.length === 0) {
+      console.error(`No AI tool found with slug: ${slug}`);
+      return null;
+    }
+
+    const item = raw[0];
+    return {
+      title: item.title,
+      description: item.description || '',
+      coverImage: item.cover_url || '',
+      slug: item.slug,
+      category: item.category || '',
+      pricingType: item.pricing_type || '',
+      featured: Boolean(item.featured)
+    };
+  } catch (error) {
+    console.error(`Error fetching AI tool with slug ${slug}:`, error);
+    return null;
+  }
+}
+
+export async function fetchGame(slug: string): Promise<Game | null> {
+  try {
+    const raw = await fetchApi<any[]>('/games', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'
+    });
+
+    if (!raw || raw.length === 0) {
+      console.error(`No game found with slug: ${slug}`);
+      return null;
+    }
+
+    const item = raw[0];
+    return {
+      title: item.title,
+      description: item.description || '',
+      coverImage: item.cover_urls ? {
+        default: item.cover_url || '',
+        thumbnail: item.cover_urls.thumbnail || '',
+        small: item.cover_urls.small || '',
+        medium: item.cover_urls.medium || '',
+        large: item.cover_urls.large || ''
+      } : item.cover_url || '',
+      slug: item.slug,
+      price: Number(item.price) || 0,
+      rating: Number(item.rating) || 0,
+      category: item.category || 'General',
+      ageRange: item.age_range || 'All Ages'
+    };
+  } catch (error) {
+    console.error(`Error fetching game with slug ${slug}:`, error);
+    return null;
+  }
 }
 
 export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
@@ -431,7 +530,8 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
     const raw = await fetchApi<any[]>('/authors', {
-      'filters[slug][$eq]': slug
+      'filters[slug][$eq]': slug,
+      'populate': '*'  // Ensure we get all fields
     });
 
     // Check if we got any results
@@ -449,7 +549,15 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       author_type: item.author_type || 'parent',
       featured: Boolean(item.featured),
       age: item.age || null,
-      location: item.location || null
+      location: item.location || null,
+      id: item.id?.toString() || slug,
+      storyCount: Number(item.story_count) || 0,
+      joinDate: item.join_date || item.created_at || new Date().toISOString(),
+      socialLinks: item.social_links || {
+        twitter: item.twitter_url,
+        instagram: item.instagram_url,
+        website: item.website_url
+      }
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);

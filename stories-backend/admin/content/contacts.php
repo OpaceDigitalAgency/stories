@@ -450,61 +450,73 @@ The Stories From The Web Team</textarea>
         // Include the component file first
         require_once '../includes/table-component.php';
 
-        // Now we can safely call the function
-        if (function_exists('renderTable')) {
-            // Define columns
-            $columns = [
-                'name' => 'Name',
-                'email' => 'Email',
-                'subject' => 'Subject',
-                'message' => 'Message',
-                'created_at' => 'Date',
-                'is_responded' => 'Status'
-            ];
+        // Define columns
+        $columns = [
+            'name' => 'Name',
+            'email' => 'Email',
+            'subject' => 'Subject',
+            'message' => 'Message',
+            'created_at' => 'Date',
+            'is_responded' => 'Status'
+        ];
 
-            // Define custom formatters
-            $customFormatters = [
-                'message' => function($contact, $key) {
-                    return '<div class="message-preview">' .
-                           htmlspecialchars(substr($contact[$key], 0, 100)) .
-                           (strlen($contact[$key]) > 100 ? '...' : '') .
-                           '</div>';
-                },
-                'created_at' => function($contact, $key) {
-                    return date('M d, Y H:i', strtotime($contact[$key]));
-                },
-                'is_responded' => function($contact, $key) {
-                    if ($contact[$key]) {
-                        return '<span class="badge bg-success">Responded</span>';
-                    } else {
-                        return '<span class="badge bg-warning text-dark">Not Responded</span>';
-                    }
+        // Define custom formatters
+        $customFormatters = [
+            'message' => function($contact, $key) {
+                return '<div class="message-preview">' .
+                       htmlspecialchars(substr($contact[$key], 0, 100)) .
+                       (strlen($contact[$key]) > 100 ? '...' : '') .
+                       '</div>';
+            },
+            'created_at' => function($contact, $key) {
+                return date('M d, Y H:i', strtotime($contact[$key]));
+            },
+            'is_responded' => function($contact, $key) {
+                if ($contact[$key]) {
+                    return '<span class="badge bg-success">Responded</span>';
+                } else {
+                    return '<span class="badge bg-warning text-dark">Not Responded</span>';
                 }
-            ];
+            }
+        ];
 
-            // Define custom actions
-            $customActions = function($contact) {
-                $output = '';
+        // Define custom actions
+        $customActions = function($contact) {
+            $output = '';
 
-                // View button
-                $output .= '<button type="button" class="btn btn-sm btn-info" ' .
-                           'data-bs-toggle="modal" ' .
-                           'data-bs-target="#viewModal' . $contact['id'] . '">' .
-                           '<i class="fas fa-eye"></i> View' .
-                           '</button> ';
+            // View button
+            $output .= '<button type="button" class="btn btn-sm btn-info" ' .
+                       'data-bs-toggle="modal" ' .
+                       'data-bs-target="#viewModal' . $contact['id'] . '">' .
+                       '<i class="fas fa-eye"></i> View' .
+                       '</button> ';
 
-                // Respond button
-                $output .= '<button type="button" class="btn btn-sm btn-success notify-single-btn" ' .
-                           'data-id="' . $contact['id'] . '" ' .
-                           'data-email="' . htmlspecialchars($contact['email']) . '" ' .
-                           'data-subject="' . htmlspecialchars($contact['subject']) . '">' .
-                           '<i class="fas fa-reply"></i> Respond' .
-                           '</button>';
+            // Respond button
+            $output .= '<button type="button" class="btn btn-sm btn-success notify-single-btn" ' .
+                       'data-id="' . $contact['id'] . '" ' .
+                       'data-email="' . htmlspecialchars($contact['email']) . '" ' .
+                       'data-subject="' . htmlspecialchars($contact['subject']) . '">' .
+                       '<i class="fas fa-reply"></i> Respond' .
+                       '</button>';
 
-                return $output;
-            };
+            return $output;
+        };
 
-            // Render the table
+        // Render the table using the appropriate function
+        if (function_exists('renderEnhancedTable')) {
+            renderEnhancedTable($contacts, $columns, [
+                'content_type' => 'contacts',
+                'name_field' => 'name',
+                'empty_message' => 'No contact submissions found.',
+                'custom_formatters' => $customFormatters,
+                'custom_actions' => $customActions,
+                'actions' => [
+                    'view' => false,
+                    'edit' => false,
+                    'delete' => false
+                ]
+            ]);
+        } else if (function_exists('renderTable')) {
             renderTable($contacts, $columns, [
                 'content_type' => 'contacts',
                 'name_field' => 'name',

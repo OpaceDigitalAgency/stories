@@ -97,4 +97,4 @@ exit;
 
 
 // Include footer
-include '../includes/footer.php';
+require_once '../includes/footer.php';

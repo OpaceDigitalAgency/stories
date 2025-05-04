@@ -452,64 +452,77 @@ The Stories From The Web Team</textarea>
             }
         }
 
-        if (function_exists('renderTable')) {
-            // Define columns
-            $columns = [
-                'email' => 'Email',
-                'feature' => 'Feature',
-                'created_at' => 'Date',
-                'is_contacted' => 'Status'
-            ];
+        // Define columns
+        $columns = [
+            'email' => 'Email',
+            'feature' => 'Feature',
+            'created_at' => 'Date',
+            'is_contacted' => 'Status'
+        ];
 
-            // Define custom formatters
-            $customFormatters = [
-                'feature' => function($subscriber, $key) {
-                    return '<span class="badge bg-info text-dark">' .
-                           htmlspecialchars(ucfirst($subscriber[$key])) .
-                           '</span>';
-                },
-                'created_at' => function($subscriber, $key) {
-                    return date('M d, Y', strtotime($subscriber[$key]));
-                },
-                'is_contacted' => function($subscriber, $key) {
-                    if ($subscriber[$key]) {
-                        return '<span class="badge bg-success">Contacted</span>';
-                    } else {
-                        return '<span class="badge bg-warning text-dark">Not Contacted</span>';
-                    }
+        // Define custom formatters
+        $customFormatters = [
+            'feature' => function($subscriber, $key) {
+                return '<span class="badge bg-info text-dark">' .
+                       htmlspecialchars(ucfirst($subscriber[$key])) .
+                       '</span>';
+            },
+            'created_at' => function($subscriber, $key) {
+                return date('M d, Y', strtotime($subscriber[$key]));
+            },
+            'is_contacted' => function($subscriber, $key) {
+                if ($subscriber[$key]) {
+                    return '<span class="badge bg-success">Contacted</span>';
+                } else {
+                    return '<span class="badge bg-warning text-dark">Not Contacted</span>';
                 }
-            ];
+            }
+        ];
 
-            // Define custom actions
-            $customActions = function($subscriber) {
-                $output = '';
+        // Define custom actions
+        $customActions = function($subscriber) {
+            $output = '';
 
-                // Edit button
-                $output .= '<button type="button" class="btn btn-sm btn-primary" ' .
-                           'data-bs-toggle="modal" ' .
-                           'data-bs-target="#subscriberModal' . $subscriber['id'] . '">' .
-                           '<i class="fas fa-edit"></i> Edit' .
-                           '</button> ';
+            // Edit button
+            $output .= '<button type="button" class="btn btn-sm btn-primary" ' .
+                       'data-bs-toggle="modal" ' .
+                       'data-bs-target="#subscriberModal' . $subscriber['id'] . '">' .
+                       '<i class="fas fa-edit"></i> Edit' .
+                       '</button> ';
 
-                // View button
-                $output .= '<button type="button" class="btn btn-sm btn-info" ' .
-                           'data-bs-toggle="modal" ' .
-                           'data-bs-target="#viewModal' . $subscriber['id'] . '">' .
-                           '<i class="fas fa-eye"></i> View' .
-                           '</button> ';
+            // View button
+            $output .= '<button type="button" class="btn btn-sm btn-info" ' .
+                       'data-bs-toggle="modal" ' .
+                       'data-bs-target="#viewModal' . $subscriber['id'] . '">' .
+                       '<i class="fas fa-eye"></i> View' .
+                       '</button> ';
 
-                // Notify button
-                $output .= '<button type="button" class="btn btn-sm btn-success notify-single-btn" ' .
-                           'data-id="' . $subscriber['id'] . '" ' .
-                           'data-email="' . htmlspecialchars($subscriber['email']) . '" ' .
-                           'data-feature="' . htmlspecialchars($subscriber['feature']) . '">' .
-                           '<i class="fas fa-envelope"></i> Notify' .
-                           '</button>';
+            // Notify button
+            $output .= '<button type="button" class="btn btn-sm btn-success notify-single-btn" ' .
+                       'data-id="' . $subscriber['id'] . '" ' .
+                       'data-email="' . htmlspecialchars($subscriber['email']) . '" ' .
+                       'data-feature="' . htmlspecialchars($subscriber['feature']) . '">' .
+                       '<i class="fas fa-envelope"></i> Notify' .
+                       '</button>';
 
-                return $output;
-            };
+            return $output;
+        };
 
-            // Render the table
+        // Render the table using the appropriate function
+        if (function_exists('renderEnhancedTable')) {
+            renderEnhancedTable($subscribers, $columns, [
+                'content_type' => 'subscribers',
+                'name_field' => 'email',
+                'empty_message' => 'No subscribers found.',
+                'custom_formatters' => $customFormatters,
+                'custom_actions' => $customActions,
+                'actions' => [
+                    'view' => false,
+                    'edit' => false,
+                    'delete' => false
+                ]
+            ]);
+        } else if (function_exists('renderTable')) {
             renderTable($subscribers, $columns, [
                 'content_type' => 'subscribers',
                 'name_field' => 'email',
@@ -522,6 +535,43 @@ The Stories From The Web Team</textarea>
                     'delete' => false
                 ]
             ]);
+        } else {
+            // Fallback if no table rendering function is available
+            echo '<div class="alert alert-warning">Table component not available. Please check your installation.</div>';
+
+            // Basic table rendering
+            echo '<div class="table-responsive">';
+            echo '<table class="table">';
+            echo '<thead><tr>';
+            foreach ($columns as $key => $label) {
+                echo '<th>' . htmlspecialchars($label) . '</th>';
+            }
+            echo '<th>Actions</th>';
+            echo '</tr></thead>';
+            echo '<tbody>';
+
+            if (empty($subscribers)) {
+                echo '<tr><td colspan="' . (count($columns) + 1) . '" class="text-center">No subscribers found.</td></tr>';
+            } else {
+                foreach ($subscribers as $subscriber) {
+                    echo '<tr>';
+                    foreach ($columns as $key => $label) {
+                        echo '<td>';
+                        if (isset($customFormatters[$key])) {
+                            echo $customFormatters[$key]($subscriber, $key);
+                        } else {
+                            echo isset($subscriber[$key]) ? htmlspecialchars($subscriber[$key]) : '';
+                        }
+                        echo '</td>';
+                    }
+                    echo '<td>' . $customActions($subscriber) . '</td>';
+                    echo '</tr>';
+                }
+            }
+
+            echo '</tbody>';
+            echo '</table>';
+            echo '</div>';
         }
         ?>
 

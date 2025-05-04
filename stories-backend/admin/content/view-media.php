@@ -1,33 +1,17 @@
 <?php
 
-// Include header
-include '../includes/header.php';
-
-
 // Page variables
 $pageTitle = 'View Media';
 $currentPage = 'view-media';
 
-require_once '../../simple_auth.php';
+// Include auth check
+require_once '../includes/auth-check.php';
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include database connection
+require_once '../includes/db-connect.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include header
+require_once '../includes/header.php';
 
 // Include the image optimizer library
 require_once '../../includes/image_optimizer.php';
@@ -90,17 +74,24 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $mediaId = (int)$_GET['id'];
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
+    // Ensure we have a database connection
+    if (!isset($db) || !$db) {
+        // Try to connect to the database directly
+        try {
+            $db = new PDO(
+                'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                'stories_user',
+                '$tw1cac3*sOt',
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]
+            );
+        } catch (PDOException $e) {
+            $errorMessage = "Database connection error: " . $e->getMessage();
+            error_log("Database connection error in view-media.php: " . $e->getMessage());
+        }
+    }
 
     // Get media details
     $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");
@@ -142,37 +133,8 @@ try {
 }
 ?>
 
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link active">Media</button>
-            </form>
-        </nav>
-
+<div class="content-wrapper">
+    <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="page-title">View Media</h1>
@@ -329,8 +291,9 @@ try {
             </div>
         </div>
     </div>
-    
-    <style>
+</div>
+
+<style>
         .media-preview {
             display: flex;
             align-items: center;
@@ -443,5 +406,4 @@ try {
         }
     </style>
 
-// Include footer
-include '../includes/footer.php';
+<?php require_once '../includes/footer.php'; ?>

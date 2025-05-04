@@ -68,27 +68,74 @@ try {
         throw new Exception("Author not found");
     }
 
+    // Check if story_authors junction table exists
+    $hasStoryAuthorsTable = false;
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+        $hasStoryAuthorsTable = $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore
+    }
+
     // Get story count
-    $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
-    $stmt->execute([$id]);
-    $storyCount = $stmt->fetchColumn();
+    $storyCount = 0;
+    if ($hasStoryAuthorsTable) {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM story_authors WHERE author_id = ?");
+        $stmt->execute([$id]);
+        $storyCount = $stmt->fetchColumn();
+    } else {
+        // Check if stories table has author_id column
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+            if ($stmt->rowCount() > 0) {
+                $stmt = $db->prepare("SELECT COUNT(*) FROM stories WHERE author_id = ?");
+                $stmt->execute([$id]);
+                $storyCount = $stmt->fetchColumn();
+            }
+        } catch (PDOException $e) {
+            // Table might not exist, ignore
+        }
+    }
 
     if ($action === 'delete_all') {
-        // Get all stories by this author
-        $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
-        $stmt->execute([$id]);
-        $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $storyIds = [];
 
-        // Delete story tags
-        if (!empty($storyIds)) {
-            $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
-            $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
-            $stmt->execute($storyIds);
+        // Get all stories by this author
+        if ($hasStoryAuthorsTable) {
+            $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id = ?");
+            $stmt->execute([$id]);
+            $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            // Delete story authors
+            $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
+            $stmt->execute([$id]);
+        } else {
+            // Check if stories table has author_id column
+            try {
+                $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+                if ($stmt->rowCount() > 0) {
+                    $stmt = $db->prepare("SELECT id FROM stories WHERE author_id = ?");
+                    $stmt->execute([$id]);
+                    $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                }
+            } catch (PDOException $e) {
+                // Table might not exist, ignore
+            }
         }
 
-        // Delete story authors
-        $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id = ?");
-        $stmt->execute([$id]);
+        // Delete story tags if they exist
+        if (!empty($storyIds)) {
+            try {
+                $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+                if ($stmt->rowCount() > 0) {
+                    $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                    $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
+                    $stmt->execute($storyIds);
+                }
+            } catch (PDOException $e) {
+                // Table might not exist, ignore
+            }
+        }
 
         // Delete stories
         if (!empty($storyIds)) {
@@ -111,9 +158,23 @@ try {
             throw new Exception("New author not found");
         }
 
-        // Update story_authors table
-        $stmt = $db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id = ?");
-        $stmt->execute([$newAuthorId, $id]);
+        if ($hasStoryAuthorsTable) {
+            // Update story_authors table
+            $stmt = $db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id = ?");
+            $stmt->execute([$newAuthorId, $id]);
+        } else {
+            // Check if stories table has author_id column
+            try {
+                $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+                if ($stmt->rowCount() > 0) {
+                    // Update stories table directly
+                    $stmt = $db->prepare("UPDATE stories SET author_id = ? WHERE author_id = ?");
+                    $stmt->execute([$newAuthorId, $id]);
+                }
+            } catch (PDOException $e) {
+                // Table might not exist, ignore
+            }
+        }
 
         // Delete old author
         $stmt = $db->prepare("DELETE FROM authors WHERE id = ?");

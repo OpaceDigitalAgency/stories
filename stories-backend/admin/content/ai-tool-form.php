@@ -1,33 +1,18 @@
 <?php
 
-// Include header
-include '../includes/header.php';
-
-
 // Page variables
-$pageTitle = 'Ai Tool Form';
-$currentPage = 'ai-tool-form';
+$pageTitle = 'AI Tool Form';
+$currentPage = 'ai-tools';
+$pageDescription = 'Add or edit AI tool information';
 
-require_once '../../simple_auth.php';
+// Include auth check
+require_once '../includes/auth-check.php';
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include database connection
+require_once '../includes/db-connect.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
-}
+// Include header
+require_once '../includes/header.php';
 
 // Initialize variables
 $tool = null;
@@ -35,17 +20,24 @@ $categories = [];
 $error = null;
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
+    // Ensure we have a database connection
+    if (!isset($db) || !$db) {
+        // Try to connect to the database directly
+        try {
+            $db = new PDO(
+                'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                'stories_user',
+                '$tw1cac3*sOt',
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]
+            );
+        } catch (PDOException $e) {
+            $errorMessage = "Database connection error: " . $e->getMessage();
+            error_log("Database connection error in ai-tool-form.php: " . $e->getMessage());
+        }
+    }
 
     // Get all categories
     $stmt = $db->query("SHOW TABLES LIKE 'ai_tool_categories'");
@@ -58,7 +50,7 @@ try {
         $stmt = $db->prepare("SELECT * FROM ai_tools WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $tool = $stmt->fetch();
-        
+
         if (!$tool) {
             header("Location: ai-tools.php");
             exit;
@@ -77,37 +69,8 @@ if (isset($_SESSION['error'])) {
 }
 ?>
 
-<body>
-    <header class="admin-header">
-        <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
-            </div>
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name']); ?></span>
-                <form method="POST" action="../logout.php" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <nav class="nav-menu">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <button type="submit" formaction="../dashboard.php" class="nav-link">Dashboard</button>
-                <button type="submit" formaction="stories.php" class="nav-link">Stories</button>
-                <button type="submit" formaction="blog-posts.php" class="nav-link">Blog Posts</button>
-                <button type="submit" formaction="authors.php" class="nav-link">Authors</button>
-                <button type="submit" formaction="tags.php" class="nav-link">Tags</button>
-                <button type="submit" formaction="games.php" class="nav-link">Games</button>
-                <button type="submit" formaction="directory-items.php" class="nav-link">Directory</button>
-                <button type="submit" formaction="ai-tools.php" class="nav-link active">AI Tools</button>
-                <button type="submit" formaction="media.php" class="nav-link">Media</button>
-            </form>
-        </nav>
-
+<div class="content-wrapper">
+    <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="page-title"><?php echo $tool ? 'Edit' : 'Add'; ?> AI Tool</h1>
@@ -160,8 +123,8 @@ if (isset($_SESSION['error'])) {
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="description">Description</label>
-                        <textarea id="description" name="description" class="form-control" rows="5"><?php 
-                            echo htmlspecialchars($tool['description'] ?? ''); 
+                        <textarea id="description" name="description" class="form-control" rows="5"><?php
+                            echo htmlspecialchars($tool['description'] ?? '');
                         ?></textarea>
                     </div>
 
@@ -190,8 +153,8 @@ if (isset($_SESSION['error'])) {
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="features">Features</label>
-                        <textarea id="features" name="features" class="form-control" rows="5"><?php 
-                            echo htmlspecialchars($tool['features'] ?? ''); 
+                        <textarea id="features" name="features" class="form-control" rows="5"><?php
+                            echo htmlspecialchars($tool['features'] ?? '');
                         ?></textarea>
                         <small>List key features, one per line</small>
                     </div>
@@ -254,70 +217,70 @@ if (isset($_SESSION['error'])) {
             </div>
         <?php endif; ?>
     </div>
-    
-    <style>
-        .metadata-list {
-            background-color: var(--gray-50);
-            border-radius: var(--radius-md);
-            padding: 1rem;
-        }
-        
-        .metadata-item {
-            margin-bottom: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--gray-200);
-        }
-        
-        .metadata-item:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
-        }
-        
-        .form-check {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .form-check-input {
-            margin-top: 0;
-        }
-        
-        .text-muted {
-            color: var(--gray-600);
-            font-size: 0.875rem;
-        }
-    </style>
-    
-    <script>
-        // Auto-generate slug from title
-        document.addEventListener('DOMContentLoaded', function() {
-            const titleInput = document.getElementById('title');
-            const slugInput = document.getElementById('slug');
-            
-            if (titleInput && slugInput) {
-                titleInput.addEventListener('input', function() {
-                    // Only auto-generate if slug is empty or hasn't been manually edited
-                    if (!slugInput.value || slugInput._autoGenerated) {
-                        const slug = titleInput.value
-                            .toLowerCase()
-                            .replace(/[^\w\s-]/g, '') // Remove special characters
-                            .replace(/\s+/g, '-')     // Replace spaces with hyphens
-                            .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-                        
-                        slugInput.value = slug;
-                        slugInput._autoGenerated = true;
-                    }
-                });
-                
-                // Mark when user manually edits the slug
-                slugInput.addEventListener('input', function() {
-                    slugInput._autoGenerated = false;
-                });
-            }
-        });
-    </script>
+</div>
 
-// Include footer
-include '../includes/footer.php';
+<style>
+    .metadata-list {
+        background-color: var(--gray-50);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+    }
+
+    .metadata-item {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .metadata-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-check-input {
+        margin-top: 0;
+    }
+
+    .text-muted {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+</style>
+
+<script>
+    // Auto-generate slug from title
+    document.addEventListener('DOMContentLoaded', function() {
+        const titleInput = document.getElementById('title');
+        const slugInput = document.getElementById('slug');
+
+        if (titleInput && slugInput) {
+            titleInput.addEventListener('input', function() {
+                // Only auto-generate if slug is empty or hasn't been manually edited
+                if (!slugInput.value || slugInput._autoGenerated) {
+                    const slug = titleInput.value
+                        .toLowerCase()
+                        .replace(/[^\w\s-]/g, '') // Remove special characters
+                        .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                        .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+
+                    slugInput.value = slug;
+                    slugInput._autoGenerated = true;
+                }
+            });
+
+            // Mark when user manually edits the slug
+            slugInput.addEventListener('input', function() {
+                slugInput._autoGenerated = false;
+            });
+        }
+    });
+</script>
+
+<?php require_once '../includes/footer.php'; ?>

@@ -6,18 +6,18 @@
  *
  * Usage:
  * include '../includes/table-component.php';
- * renderTable($items, $columns, $options);
+ * renderEnhancedTable($items, $columns, $options);
  */
 
 /**
- * Renders a table for the specified content
+ * Renders an enhanced table for the specified content
  *
  * @param array $items The items to display in the table
  * @param array $columns The columns to display (format: ['key' => 'Label'])
  * @param array $options Additional options for the table
  * @return void
  */
-function renderTable($items, $columns, $options = []) {
+function renderEnhancedTable($items, $columns, $options = []) {
     // Default options
     $defaults = [
         'id' => 'data-table',

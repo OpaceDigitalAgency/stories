@@ -122,37 +122,83 @@ if (function_exists('renderBulkActionsComponent')) {
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
-    // Define columns
-    $columns = [
-        'name' => 'Name',
-        'email' => 'Email',
-        'author_type' => 'Type',
-        'bio' => 'Bio',
-        'story_count' => 'Stories',
-        'post_count' => 'Blog Posts'
-    ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'author_type' => function($author, $key) {
-            return ucfirst(htmlspecialchars($author[$key] ?? 'retail'));
-        },
-        'bio' => function($author, $key) {
-            return htmlspecialchars(substr($author[$key] ?? '', 0, 100) . (strlen($author[$key] ?? '') > 100 ? '...' : ''));
+// Define columns
+$columns = [
+    'name' => 'Name',
+    'email' => 'Email',
+    'author_type' => 'Type',
+    'bio' => 'Bio',
+    'story_count' => 'Stories',
+    'post_count' => 'Blog Posts'
+];
+
+// Define custom formatters
+$customFormatters = [
+    'author_type' => function($author, $key) {
+        return ucfirst(htmlspecialchars($author[$key] ?? 'retail'));
+    },
+    'bio' => function($author, $key) {
+        return htmlspecialchars(substr($author[$key] ?? '', 0, 100) . (strlen($author[$key] ?? '') > 100 ? '...' : ''));
+    }
+];
+
+// Table options
+$tableOptions = [
+    'content_type' => 'authors',
+    'name_field' => 'name',
+    'empty_message' => 'No authors found. Add your first author!',
+    'custom_formatters' => $customFormatters,
+    'view_url' => 'view-author.php?id={id}',
+    'edit_url' => 'author-form.php?id={id}',
+    'delete_url' => 'author-delete.php?id={id}'
+];
+
+// Render the table using the appropriate function
+if (function_exists('renderEnhancedTable')) {
+    renderEnhancedTable($authors, $columns, $tableOptions);
+} else if (function_exists('renderTable')) {
+    renderTable($authors, $columns, $tableOptions);
+} else {
+    echo '<div class="alert alert-warning">Table component not available. Please check your installation.</div>';
+
+    // Basic table rendering
+    echo '<div class="table-responsive">';
+    echo '<table class="table">';
+    echo '<thead><tr>';
+    foreach ($columns as $key => $label) {
+        echo '<th>' . htmlspecialchars($label) . '</th>';
+    }
+    echo '<th>Actions</th>';
+    echo '</tr></thead>';
+    echo '<tbody>';
+
+    if (empty($authors)) {
+        echo '<tr><td colspan="' . (count($columns) + 1) . '" class="text-center">No authors found. Add your first author!</td></tr>';
+    } else {
+        foreach ($authors as $author) {
+            echo '<tr>';
+            foreach ($columns as $key => $label) {
+                echo '<td>';
+                if (isset($customFormatters[$key])) {
+                    echo $customFormatters[$key]($author, $key);
+                } else {
+                    echo isset($author[$key]) ? htmlspecialchars($author[$key]) : '';
+                }
+                echo '</td>';
+            }
+            echo '<td>';
+            echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
+            echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
+            echo '<a href="author-delete.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this author?\');"><i class="fas fa-trash"></i> Delete</a>';
+            echo '</td>';
+            echo '</tr>';
         }
-    ];
+    }
 
-    // Render the table
-    renderTable($authors, $columns, [
-        'content_type' => 'authors',
-        'name_field' => 'name',
-        'empty_message' => 'No authors found. Add your first author!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-author.php?id={id}',
-        'edit_url' => 'author-form.php?id={id}',
-        'delete_url' => 'author-delete.php?id={id}'
-    ]);
+    echo '</tbody>';
+    echo '</table>';
+    echo '</div>';
 }
 
 // Include footer

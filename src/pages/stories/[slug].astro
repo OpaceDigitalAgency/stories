@@ -31,6 +31,18 @@ let processedContent = {
   storyContent: null as string | null
 };
 
+// Function to process story content
+function processStoryContent(content: string): string {
+  if (!content) return '';
+  
+  // Remove markdown headers and metadata
+  return content
+    .replace(/^##\s+\*\*Author\*\*[\s\S]*?##\s+Summary\s*\n/m, '') // Remove author and metadata section
+    .replace(/^\*\*.*?\*\*:.*$/gm, '') // Remove any remaining **key**: value pairs
+    .replace(/^##.*$/gm, '') // Remove any remaining ## headers
+    .trim(); // Clean up whitespace
+}
+
 let formattedDate: string | null = null;
 
 try {
@@ -45,7 +57,7 @@ try {
 
   if (story) {
     // Process story content
-    processedContent.storyContent = story.content?.trim() || null;
+    processedContent.storyContent = story.content ? processStoryContent(story.content) : null;
 
     // Format date
     formattedDate = story.publishDate

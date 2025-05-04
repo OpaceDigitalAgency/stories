@@ -873,7 +873,30 @@ sequenceDiagram
         <li><strong>Passwords:</strong> Bcrypt hashing, rate‑limited login attempts.</li>
         <li><strong>HTTPS:</strong> All traffic via TLS, cookies <code>Secure</code> & <code>HttpOnly</code>.</li>
         <li><strong>CSP & Sanitisation:</strong> Prevent XSS, validate inputs server‑side.</li>
+        <li><strong>Anti-Bot Protection:</strong> Robust form protection without CAPTCHA.</li>
     </ul>
+
+    <h3>Anti-Bot Protection System</h3>
+    <p>The system includes comprehensive anti-bot protection for forms without requiring CAPTCHA:</p>
+    <ul>
+        <li><strong>Honeypot Fields:</strong> Hidden fields that only bots would fill out</li>
+        <li><strong>Token-based Protection:</strong> Each form submission requires a valid token</li>
+        <li><strong>Submission Timing:</strong> Checks for abnormally fast form submissions</li>
+        <li><strong>User Agent Analysis:</strong> Detects common bot signatures in user agents</li>
+        <li><strong>IP-based Rate Limiting:</strong> Prevents too many submissions from the same IP address</li>
+        <li><strong>Silent Rejection:</strong> Bot submissions are silently rejected without alerting the bot</li>
+    </ul>
+    <pre><code>// Anti-Bot Protection Implementation
+function isLikelyBot($data = []) {
+    // Check for common bot signatures
+    // 1. Check user agent
+    // 2. Check if request has no user agent or referer
+    // 3. Check for abnormally fast form submission
+    // 4. Check for hidden honeypot field
+    // 5. Check for missing or invalid token
+    // 6. Check for too many submissions from the same IP
+    // ...
+}</code></pre>
 
     <h2 id="caching-performance">Caching & Performance</h2>
     <ul>
@@ -1021,6 +1044,10 @@ npm run dev
           <tr><td>Admin form “stuck on processing”</td><td>Legacy JS handler in PHP CMS</td><td>Remove JS; rely on server redirects</td><td>Fixed (Apr 19)</td></tr>
           <tr><td>Database write lock issues</td><td>Shared hosting lock contention</td><td>Added SimpleAuth fallback</td><td>Mitigated (Apr 26)</td></tr>
           <tr><td>Unexpected API response formats</td><td>Inconsistent controller error handling</td><td>Normalise JSON in middleware</td><td>Under review</td></tr>
+          <tr><td>Missing favicon in admin</td><td>Incorrect path to favicon</td><td>Use absolute URL for favicon</td><td>Fixed (May 4)</td></tr>
+          <tr><td>Duplicate headings on contact page</td><td>Header included twice</td><td>Remove duplicate header</td><td>Fixed (May 4)</td></tr>
+          <tr><td>Bulk actions showing blank screen</td><td>Missing authentication check</td><td>Use auth-check.php include</td><td>Fixed (May 4)</td></tr>
+          <tr><td>Bot submissions to forms</td><td>Lack of anti-bot protection</td><td>Implement anti-bot.php library</td><td>Fixed (May 4)</td></tr>
           <tr><td>Admin save/edit issues</td><td>Adding JS breaks the admin and prevents saving to the DB</td><td>Until understood, remove JS and rely on a pure HTML and CSS solutoon apart from auto slug generation</td><td>Under review</td></tr>
           <tr><td>Missing homepage content with prerender enabled</td><td>New stories don't sow until a fresh deploy is triggered</td><td>Remove prerender for now but consider webhooks to auto deploy when stories are added/removed</td><td>Under review</td></tr>
         </tbody>

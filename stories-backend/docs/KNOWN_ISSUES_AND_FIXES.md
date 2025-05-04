@@ -13,6 +13,51 @@ This document outlines known issues in the Stories from the Web platform and the
 
 ## Admin Interface Issues
 
+### Missing Favicon in Admin Dashboard
+
+**Issue**: The favicon was not displaying in the admin dashboard pages.
+
+**Cause**: The favicon path was incorrect and not using an absolute URL.
+
+**Fix**:
+1. Updated the favicon path in the header.php file to use an absolute URL:
+```php
+// Use absolute path for favicon to ensure it works in all environments
+$faviconPath = 'https://api.storiesfromtheweb.org/public/favicon.png';
+?>
+<link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
+<link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
+```
+
+### Duplicate Headings on Contact Page
+
+**Issue**: The contacts page was showing duplicate headings.
+
+**Cause**: The page header was included both in the header.php file and again in the contacts.php file.
+
+**Fix**:
+1. Removed the duplicate page header in contacts.php:
+```php
+<!-- Page header is already included in header.php, so we don't need to repeat it here -->
+```
+
+### Bulk Actions Showing Blank Screen
+
+**Issue**: Bulk actions on the contacts page were showing a blank "Admin" screen.
+
+**Cause**: The bulk-contacts.php file wasn't properly including the database connection and authentication files.
+
+**Fix**:
+1. Updated the bulk-contacts.php file to include the auth-check.php file:
+```php
+// Include auth check
+include_once '../includes/auth-check.php';
+```
+2. Updated the response handling to use session-based messages like other admin pages:
+```php
+$_SESSION['success'] = "$count contact(s) deleted successfully";
+```
+
 ### Duplicate Stories in Admin List
 
 **Issue**: The admin interface sometimes shows duplicate entries for the same story.
@@ -46,6 +91,58 @@ unset($story); // Break the reference
 $db->exec("ALTER TABLE authors ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL");
 ```
 2. Updated the save-author.php file to include the avatar_url field in both the update and insert queries.
+
+## Security Issues
+
+### Bot Submissions to Contact and Subscriber Forms
+
+**Issue**: The contact and subscriber forms were receiving spam submissions from bots.
+
+**Cause**: The forms lacked proper bot protection mechanisms.
+
+**Fix**:
+1. Created a comprehensive anti-bot.php library with multiple protection methods:
+```php
+// includes/anti-bot.php
+function isLikelyBot($data = []) {
+    // Check for common bot signatures
+    // 1. Check user agent
+    // 2. Check if request has no user agent or referer
+    // 3. Check for abnormally fast form submission
+    // 4. Check for hidden honeypot field
+    // 5. Check for missing or invalid token
+    // 6. Check for too many submissions from the same IP
+    // ...
+}
+```
+2. Added honeypot fields to forms (hidden fields that only bots would fill out):
+```html
+<!-- Honeypot field to catch bots -->
+<input type="text" name="website" style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1;" tabindex="-1" autocomplete="off">
+```
+3. Added token-based protection to prevent automated submissions:
+```php
+// Generate a form token
+function generateToken() {
+    $token = bin2hex(random_bytes(32));
+    $_SESSION['form_token'] = $token;
+    $_SESSION['form_start_time'] = time();
+    return $token;
+}
+```
+4. Updated the form processing scripts to check for bot submissions:
+```php
+// Check for bot submissions
+if (isLikelyBot($data)) {
+    // Pretend success but don't actually save the data
+    error_log("Bot submission detected and blocked");
+    echo json_encode([
+        'success' => true,
+        'message' => 'Thank you for your message! We\'ll get back to you as soon as possible.'
+    ]);
+    exit;
+}
+```
 
 ## Frontend Display Issues
 

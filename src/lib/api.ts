@@ -491,13 +491,7 @@ export async function fetchStory(slug: string): Promise<Story | null> {
       title: item.title,
       excerpt: item.excerpt || '',
       content: item.content || '',
-      coverImage: item.cover_urls ? {
-        default: item.cover_url || '',
-        thumbnail: item.cover_urls.thumbnail || '',
-        small: item.cover_urls.small || '',
-        medium: item.cover_urls.medium || '',
-        large: item.cover_urls.large || ''
-      } : item.cover_url || '',
+      coverImage: item.cover_url || '',
       slug: item.slug,
       publishDate: item.publishedAt || '',
       featured: Boolean(item.featured),
@@ -514,15 +508,15 @@ export async function fetchStory(slug: string): Promise<Story | null> {
       age_group: item.age_group || '7-12',
       tags: Array.isArray(item.tags) ? item.tags :
             (item.tags ? [String(item.tags)] : []),
-      author: item.author ? {
-        name: item.author.name,
-        bio: item.author.bio || '',
-        avatar: item.author.avatar_url || '',
-        slug: item.author.slug,
-        author_type: item.author.author_type || 'retail',
-        age: item.author.age || null,
-        location: item.author.location || null
-      } : undefined
+      author: {
+        name: item.author_name || '',
+        bio: item.author_bio || '',
+        avatar: item.author_avatar_url || '',
+        slug: item.author_slug || '',
+        author_type: item.author_type || 'retail',
+        age: item.author_age || null,
+        location: item.author_location || null
+      }
     };
   } catch (error) {
     console.error(`Error fetching story with slug ${slug}:`, error);
@@ -555,11 +549,9 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       id: item.id?.toString() || slug,
       storyCount: Number(item.story_count) || 0,
       joinDate: item.join_date || item.created_at || new Date().toISOString(),
-      socialLinks: item.social_links || {
-        twitter: item.twitter_url,
-        instagram: item.instagram_url,
-        website: item.website_url
-      }
+      twitter_url: item.twitter_url || '',
+      instagram_url: item.instagram_url || '',
+      website_url: item.website_url || ''
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);

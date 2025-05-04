@@ -11,12 +11,22 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
+  for = "/_astro/*"
+    [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
   for = "/images/*"
     [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/_astro/*"
+  for = "/*.css"
+    [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
     [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
@@ -25,26 +35,13 @@
   to = "https://api.storiesfromtheweb.org/api/v1/:splat"
   status = 200
   force = true
-  headers = { X-From = "Netlify" }
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/200.html"
   status = 200
-  force = true
 
 [build.environment]
   PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
   PUBLIC_ASSETS_URL = "/images"
   NODE_VERSION = "18"
-
-[context.production.environment]
-  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
-  PUBLIC_ASSETS_URL = "/images"
-
-[context.deploy-preview.environment]
-  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
-  PUBLIC_ASSETS_URL = "/images"
-
-[functions]
-  node_bundler = "esbuild"

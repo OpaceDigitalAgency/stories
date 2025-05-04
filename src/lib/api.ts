@@ -65,7 +65,7 @@ export interface Author {
   featured?: boolean;
   age?: number | string | null;
   location?: string | null;
-  id?: number;
+  id: number;  // Make id required
   storyCount?: number;
   joinDate?: string;
   twitter_url?: string;
@@ -193,46 +193,69 @@ interface StoryFilters {
 }
 
 // Resource-specific fetch functions with proper mapping
-export async function fetchStories(page = 1, limit = 10, filters: StoryFilters = {}): Promise<Story[]> {
-  // Default parameters
-  const params: Record<string, string | number | boolean> = {
-    'pagination[limit]': limit,
-    'pagination[page]': page
-  };
-
-  // Set default sort if not specified in filters
-  if (!filters.sort) {
-    params['sort'] = 'publishedAt:desc';
-  } else {
-    params['sort'] = filters.sort;
-  }
-
-  // Add filters
-  Object.entries(filters).forEach(([key, value]) => {
-    if (key.startsWith('filters[tags]')) {
-      params[key] = value;
-    } else if (key === 'featured' && value === true) {
-      params['featured'] = 1;
-    } else if (key === 'sponsored' && value === true) {
-      params['is_sponsored'] = 1;
-    } else if (key === 'isSelfPublished' && value === true) {
-      params['is_self_published'] = 1;
-    } else if (key === 'isAiEnhanced' && value === true) {
-      params['is_ai_enhanced'] = 1;
-    } else if (key === 'sort') {
-      params['sort'] = value;
-    }
-  });
-
-  console.log("Final API params:", JSON.stringify(params));
-
-  // Add populate parameter to ensure we get content
-  params['populate'] = '*';
-
-  const raw = await fetchApi<any[]>('/stories', params);
-  return raw.map(item => ({
+// Helper function to map story response
+function mapStoryResponse(item: any): Story {
+  return {
     title: item.title,
     excerpt: item.excerpt || '',
+    content: item.content || '',
+    coverImage: item.cover_urls || item.cover_url || '',
+    cover_urls: item.cover_urls,
+    slug: item.slug,
+    publishDate: item.publishedAt || '',
+    featured: Boolean(item.featured),
+    sponsored: Boolean(item.is_sponsored),
+    isAiEnhanced: Boolean(item.is_ai_enhanced),
+    isSelfPublished: Boolean(item.is_self_published),
+    needsModeration: Boolean(item.needs_moderation),
+    is_published: Boolean(item.is_published),
+    rating: Number(item.average_rating) > 0 ? Number(item.average_rating) : undefined,
+    reviewCount: Number(item.review_count) || 0,
+    source_type: item.source_type || 'child',
+    allow_reviews: Boolean(item.allow_reviews),
+    estimated_reading_time: item.estimated_reading_time || '1',
+    age_group: item.age_group || '7-12',
+    tags: Array.isArray(item.tags) ? item.tags :
+          (item.tags ? [String(item.tags)] : []),
+    author: item.author ? {
+      name: item.author.name,
+      bio: item.author.bio || '',
+      avatar: item.author.avatar_url || '',
+      slug: item.author.slug,
+      author_type: item.author.author_type || 'retail',
+      age: item.author.age || null,
+      location: item.author.location || null
+    } : undefined
+  };
+}
+
+export async function fetchStories(authorId?: number): Promise<Story[]> {
+  try {
+    const stories = await fetchApi<any[]>('/stories');
+
+    // Debug log to see what we're getting
+    console.log('Author ID:', authorId);
+    console.log('Stories:', stories.map(s => ({
+      id: s.id,
+      title: s.title,
+      author: s.author
+    })));
+
+    // If authorId is provided, filter stories by author
+    const filteredStories = authorId
+      ? stories.filter(story => {
+          console.log('Story author:', story.author);
+          return story.author && story.author.id === authorId;
+        })
+      : stories;
+
+    console.log('Filtered stories:', filteredStories.length);
+    return filteredStories.map(mapStoryResponse);
+  } catch (error) {
+    console.error('Error fetching stories:', error);
+    return [];
+  }
+}
     content: item.content || '',  // Include content field
     coverImage: item.cover_url || '',
     slug: item.slug,

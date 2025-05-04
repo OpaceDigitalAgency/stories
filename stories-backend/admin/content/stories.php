@@ -16,19 +16,7 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 try {
-    // Enable detailed error reporting
-    error_log("Starting stories page load...");
-    
-    // Verify database connection
-    if (!$db) {
-        throw new Exception("Database connection is not available");
-    }
-    error_log("Database connection verified");
 
     // Check if stories table exists and has the correct structure
     $requiredTables = ['stories', 'authors', 'story_authors', 'story_tags'];
@@ -37,7 +25,6 @@ try {
         if ($stmt->rowCount() === 0) {
             throw new Exception("Required table '$table' does not exist");
         }
-        error_log("Table '$table' exists");
     }
 
     // Get stories table structure
@@ -46,8 +33,6 @@ try {
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
     }
-    error_log("Stories table columns: " . implode(", ", $columns));
-
     // Verify required columns exist
     $requiredColumns = ['id', 'title', 'content', 'created_at', 'updated_at'];
     foreach ($requiredColumns as $column) {
@@ -86,9 +71,6 @@ try {
             }
         }
 
-        // Log the query for debugging
-        error_log("Search parameters: " . json_encode(['search' => $search, 'searchField' => $searchField]));
-
         // Get total count for pagination
         $countQuery = "
             SELECT COUNT(DISTINCT s.id)
@@ -100,8 +82,6 @@ try {
         $stmt = $db->prepare($countQuery);
         $stmt->execute($params);
         $totalItems = $stmt->fetchColumn();
-
-        error_log("Total stories found: $totalItems");
 
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
@@ -127,14 +107,19 @@ try {
                    s.cover_url,
                    s.created_at,
                    s.updated_at,
-                   GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ') as author_names,
-                   GROUP_CONCAT(DISTINCT a.id SEPARATOR ',') as author_ids,
-                   GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ') as tag_names
-            FROM stories s
-            LEFT JOIN story_authors sa ON s.id = sa.story_id
-            LEFT JOIN authors a ON sa.author_id = a.id
-            LEFT JOIN story_tags st ON s.id = st.story_id
-            LEFT JOIN tags t ON st.tag_id = t.id
+                   (SELECT GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ')
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = s.id) as author_names,
+                   (SELECT GROUP_CONCAT(DISTINCT a.id SEPARATOR ',')
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = s.id) as author_ids,
+                   (SELECT GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ')
+                    FROM story_tags st
+                    JOIN tags t ON st.tag_id = t.id
+                    WHERE st.story_id = s.id) as tag_names
+           FROM stories s
             $whereClause
             GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
                      s.featured, s.average_rating, s.allow_reviews, s.review_count,
@@ -144,13 +129,9 @@ try {
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
-        error_log("Executing query: " . $query);
-        error_log("Stories query: $query");
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $allStories = $stmt->fetchAll();
-
-        error_log("Number of stories fetched: " . count($allStories));
 
         // Process the stories and their authors
         $stories = [];
@@ -168,10 +149,7 @@ try {
             unset($story['author_ids']);
             
             $stories[] = $story;
-            error_log("Processed story ID: " . $story['id'] . ", Authors: " . $story['author_name']);
         }
-
-        error_log("Number of stories processed: " . count($stories));
 
         // Get tags for each story
         foreach ($stories as $index => $storyItem) {
@@ -193,12 +171,9 @@ try {
                     $stories[$index]['tags'] = '';
                 }
             } catch (Exception $e) {
-                error_log("Error fetching tags for story ID " . $storyItem['id'] . ": " . $e->getMessage());
                 $stories[$index]['tags'] = '';
             }
 
-            // Debug log for author information
-            error_log("Story ID: " . $storyItem['id'] . ", Author ID: " . ($stories[$index]['author_id'] ?? 'null') . ", Author Name: " . ($stories[$index]['author_name'] ?? 'null'));
         }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());
@@ -240,16 +215,6 @@ $pageActions = '
     </button>
 </div>
 ';
-
-// Add additional debug logging if debug mode is enabled
-if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-    error_log("DEBUG MODE ENABLED");
-    error_log("PHP Version: " . phpversion());
-    error_log("MySQL Version: " . $db->getAttribute(PDO::ATTR_SERVER_VERSION));
-    error_log("Current User: " . ($user['name'] ?? 'Unknown'));
-    error_log("Session Status: " . session_status());
-    error_log("Memory Usage: " . memory_get_usage(true) / 1024 / 1024 . " MB");
-}
 
 // Include header
 require_once '../includes/header.php';
@@ -362,12 +327,6 @@ if (function_exists('renderEnhancedTable')) {
     ];
 
     // Render the table
-    // Add debug output before rendering
-    error_log("Rendering table with " . count($stories) . " stories");
-    error_log("Stories data: " . json_encode(array_slice($stories, 0, 2)));
-    error_log("Columns: " . json_encode($columns));
-    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
-
     renderEnhancedTable($stories, $columns, [
         'content_type' => 'stories',
         'name_field' => 'title',
@@ -379,11 +338,9 @@ if (function_exists('renderEnhancedTable')) {
     ]);
 }
 
-// Include pagination component
+// Include pagination component if needed
 include_once '../includes/pagination-component.php';
-if (function_exists('renderPagination')) {
-    // Use the total items from the query for accurate pagination
-    // $totalItems is already set from the count query
+if (function_exists('renderPagination') && $totalItems > $perPage) {
     renderPagination($totalItems, $perPage, $page);
 }
 

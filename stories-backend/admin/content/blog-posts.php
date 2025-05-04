@@ -11,20 +11,7 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 try {
-    // Enable detailed error reporting
-    error_log("Starting blog posts page load...");
-    
-    // Verify database connection
-    if (!$db) {
-        throw new Exception("Database connection is not available");
-    }
-    error_log("Database connection verified");
-
     // Check if blog_posts or blog table exists
     $blogTableName = 'blog_posts';
     $stmt = $db->query("SHOW TABLES LIKE 'blog_posts'");
@@ -85,8 +72,6 @@ try {
     // Get total count for pagination
     $countQuery = "SELECT COUNT(*) FROM $blogTableName";
     $totalItems = $db->query($countQuery)->fetchColumn();
-    error_log("Total blog posts found: $totalItems");
-
     // Get blog posts with pagination
     $query = "
         SELECT bp.id,
@@ -100,19 +85,18 @@ try {
                GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ') as tags
         FROM $blogTableName bp
         LEFT JOIN authors a ON $authorJoinCondition
-        LEFT JOIN $postTagsTableName pt ON bp.id = pt.post_id
-        LEFT JOIN tags t ON pt.tag_id = t.id
-        GROUP BY bp.id, bp.title, bp.content, bp.excerpt, bp.status, bp.created_at, bp.updated_at, a.name
+        LEFT JOIN (
+            SELECT post_id, GROUP_CONCAT(t.name SEPARATOR ', ') as tags
+            FROM $postTagsTableName pt
+            JOIN tags t ON pt.tag_id = t.id
+            GROUP BY post_id
+        ) post_tags ON bp.id = post_tags.post_id
         ORDER BY bp.created_at DESC
         LIMIT $offset, $perPage
     ";
-    error_log("Executing query: " . $query);
-
     $stmt = $db->prepare($query);
     $stmt->execute();
     $posts = $stmt->fetchAll();
-    error_log("Number of posts fetched: " . count($posts));
-
 } catch (PDOException $e) {
     error_log("Blog posts page error: " . $e->getMessage());
     $error = "Error loading blog posts. Please try again.";
@@ -148,16 +132,6 @@ $pageActions = '
     </button>
 </div>
 ';
-
-// Add additional debug logging if debug mode is enabled
-if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-    error_log("DEBUG MODE ENABLED");
-    error_log("PHP Version: " . phpversion());
-    error_log("MySQL Version: " . $db->getAttribute(PDO::ATTR_SERVER_VERSION));
-    error_log("Current User: " . ($user['name'] ?? 'Unknown'));
-    error_log("Session Status: " . session_status());
-    error_log("Memory Usage: " . memory_get_usage(true) / 1024 / 1024 . " MB");
-}
 
 // Include header
 require_once '../includes/header.php';
@@ -249,12 +223,6 @@ if (function_exists('renderEnhancedTable')) {
         }
     ];
 
-    // Add debug output before rendering
-    error_log("Rendering table with " . count($posts) . " posts");
-    error_log("Posts data: " . json_encode(array_slice($posts, 0, 2)));
-    error_log("Columns: " . json_encode($columns));
-    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
-
     // Render the table
     renderEnhancedTable($posts, $columns, [
         'content_type' => 'posts',
@@ -267,9 +235,9 @@ if (function_exists('renderEnhancedTable')) {
     ]);
 }
 
-// Include pagination component
+// Include pagination component if needed
 include_once '../includes/pagination-component.php';
-if (function_exists('renderPagination')) {
+if (function_exists('renderPagination') && $totalItems > $perPage) {
     renderPagination($totalItems, $perPage, $page);
 }
 

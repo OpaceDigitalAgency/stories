@@ -11,20 +11,7 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 try {
-    // Enable detailed error reporting
-    error_log("Starting AI tools page load...");
-    
-    // Verify database connection
-    if (!$db) {
-        throw new Exception("Database connection is not available");
-    }
-    error_log("Database connection verified");
-
     // Check if ai_tools table exists
     $stmt = $db->query("SHOW TABLES LIKE 'ai_tools'");
     if ($stmt->rowCount() === 0) {
@@ -79,8 +66,6 @@ try {
     // Get total count for pagination
     $countQuery = "SELECT COUNT(*) FROM ai_tools";
     $totalItems = $db->query($countQuery)->fetchColumn();
-    error_log("Total AI tools found: $totalItems");
-
     // Get AI tools with pagination
     $query = "
         SELECT a.id,
@@ -103,13 +88,9 @@ try {
         ORDER BY a.created_at DESC
         LIMIT $offset, $perPage
     ";
-    error_log("Executing query: " . $query);
-
     $stmt = $db->prepare($query);
     $stmt->execute();
     $ai_tools = $stmt->fetchAll();
-    error_log("Number of tools fetched: " . count($ai_tools));
-
 } catch (PDOException $e) {
     error_log("AI tools page error: " . $e->getMessage());
     $error = "Error loading AI tools data. Please try again.";
@@ -146,16 +127,6 @@ $pageActions = '
     </button>
 </div>
 ';
-
-// Add additional debug logging if debug mode is enabled
-if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-    error_log("DEBUG MODE ENABLED");
-    error_log("PHP Version: " . phpversion());
-    error_log("MySQL Version: " . $db->getAttribute(PDO::ATTR_SERVER_VERSION));
-    error_log("Current User: " . ($user['name'] ?? 'Unknown'));
-    error_log("Session Status: " . session_status());
-    error_log("Memory Usage: " . memory_get_usage(true) / 1024 / 1024 . " MB");
-}
 
 // Include header
 require_once '../includes/header.php';
@@ -262,9 +233,9 @@ if (function_exists('renderEnhancedTable')) {
     ]);
 }
 
-// Include pagination component
+// Include pagination component if needed
 include_once '../includes/pagination-component.php';
-if (function_exists('renderPagination')) {
+if (function_exists('renderPagination') && $totalItems > $perPage) {
     renderPagination($totalItems, $perPage, $page);
 }
 

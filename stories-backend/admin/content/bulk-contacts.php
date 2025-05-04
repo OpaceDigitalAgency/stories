@@ -4,8 +4,10 @@
  * Handles bulk operations on contact form submissions
  */
 
+// Include auth check
+include_once '../includes/auth-check.php';
+
 // Include common admin files
-include_once '../includes/functions.php';
 include_once '../includes/email-functions.php';
 include_once '../includes/db-connect.php';
 
@@ -17,18 +19,9 @@ $pageDescription = 'Processing bulk actions for contacts...';
 // Include header
 include_once '../includes/header.php';
 
-// Check if user is logged in
-if (!isLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
-
 // Initialize response
-$response = [
-    'success' => false,
-    'message' => 'No action specified',
-    'redirect' => 'contacts.php'
-];
+$_SESSION['error'] = null;
+$_SESSION['success'] = null;
 
 // Check if action is specified
 if (isset($_POST['action']) && !empty($_POST['action'])) {
@@ -37,7 +30,9 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
 
     // Validate selected IDs
     if (empty($selectedIds)) {
-        $response['message'] = 'No items selected';
+        $_SESSION['error'] = 'No contacts selected';
+        header('Location: contacts.php');
+        exit;
     } else {
         // Convert to integers to prevent SQL injection
         $selectedIds = array_map('intval', $selectedIds);
@@ -51,8 +46,7 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     $stmt->execute();
                     $count = $stmt->rowCount();
 
-                    $response['success'] = true;
-                    $response['message'] = "$count contact(s) deleted successfully";
+                    $_SESSION['success'] = "$count contact(s) deleted successfully";
                     break;
 
                 case 'mark_responded':
@@ -61,8 +55,7 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     $stmt->execute();
                     $count = $stmt->rowCount();
 
-                    $response['success'] = true;
-                    $response['message'] = "$count contact(s) marked as responded";
+                    $_SESSION['success'] = "$count contact(s) marked as responded";
                     break;
 
                 case 'mark_not_responded':
@@ -71,8 +64,7 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     $stmt->execute();
                     $count = $stmt->rowCount();
 
-                    $response['success'] = true;
-                    $response['message'] = "$count contact(s) marked as not responded";
+                    $_SESSION['success'] = "$count contact(s) marked as not responded";
                     break;
 
                 case 'notify':
@@ -81,8 +73,9 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     $message = $_POST['notification_message'] ?? '';
 
                     if (empty($message)) {
-                        $response['message'] = 'Notification message cannot be empty';
-                        break;
+                        $_SESSION['error'] = 'Notification message cannot be empty';
+                        header('Location: contacts.php');
+                        exit;
                     }
 
                     // Get contact details
@@ -125,32 +118,23 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     }
 
                     if ($errorCount === 0) {
-                        $response['success'] = true;
-                        $response['message'] = "Notification sent successfully to $successCount contact(s)";
+                        $_SESSION['success'] = "Notification sent successfully to $successCount contact(s)";
                     } else {
-                        $response['message'] = "Sent to $successCount contact(s), failed for $errorCount contact(s)";
+                        $_SESSION['success'] = "Sent to $successCount contact(s), failed for $errorCount contact(s)";
                     }
                     break;
 
                 default:
-                    $response['message'] = "Unknown action: $action";
+                    $_SESSION['error'] = "Unknown action: $action";
                     break;
             }
         } catch (PDOException $e) {
-            $response['message'] = "Database error: " . $e->getMessage();
+            $_SESSION['error'] = "Database error: " . $e->getMessage();
             error_log("Error in bulk-contacts.php: " . $e->getMessage());
         }
     }
 }
 
-// Redirect with message
-$redirectUrl = $response['redirect'];
-if (strpos($redirectUrl, '?') !== false) {
-    $redirectUrl .= '&';
-} else {
-    $redirectUrl .= '?';
-}
-
-$redirectUrl .= 'status=' . ($response['success'] ? 'success' : 'error') . '&message=' . urlencode($response['message']);
-header("Location: $redirectUrl");
+// Redirect back to contacts page
+header('Location: contacts.php');
 exit;

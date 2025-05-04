@@ -10,20 +10,20 @@ $currentPage = 'subscribers';
 $pageDescription = 'Manage users who have subscribed to premium feature notifications';
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 
 // Include common admin functions
 if (file_exists('../includes/admin-functions.php')) {
-    include_once '../includes/admin-functions.php';
+    require_once '../includes/admin-functions.php';
 } else {
     // Fallback path for admin functions
-    include_once dirname(dirname(__FILE__)) . '/includes/admin-functions.php';
+    require_once dirname(dirname(__FILE__)) . '/includes/admin-functions.php';
 }
 
 // Add custom CSS for subscriber details
@@ -365,17 +365,19 @@ try {
         $bulkActionsIncluded = false;
         foreach ($bulkActionsComponentPaths as $path) {
             if (file_exists($path)) {
-                include_once $path;
+                require_once $path;
                 $bulkActionsIncluded = true;
                 break;
             }
         }
 
-        // If we have the function, render the component
-        if (function_exists('renderBulkActionsComponent')) {
+        // If we have the enhanced function, use it, otherwise fall back to the basic one
+        if (function_exists('renderEnhancedBulkActionsComponent')) {
+            renderEnhancedBulkActionsComponent('subscribers', ['delete', 'mark_contacted', 'mark_not_contacted', 'notify']);
+        } else if (function_exists('renderBulkActionsComponent')) {
             renderBulkActionsComponent('subscribers', ['delete', 'mark_contacted', 'mark_not_contacted', 'notify']);
         } else {
-            // Fallback rendering if the component couldn't be included
+            // Fallback rendering if no component function is available
             echo '<div class="bulk-actions-container">';
             echo '<form id="bulk-actions-form" method="post" action="bulk-subscribers.php">';
             echo '<div class="bulk-actions">';
@@ -444,7 +446,7 @@ The Stories From The Web Team</textarea>
         $tableComponentIncluded = false;
         foreach ($tableComponentPaths as $path) {
             if (file_exists($path)) {
-                include_once $path;
+                require_once $path;
                 $tableComponentIncluded = true;
                 break;
             }
@@ -730,4 +732,4 @@ The Stories From The Web Team</textarea>
     </div>
 </div>
 
-<?php include_once '../includes/footer.php'; ?>
+<?php require_once '../includes/footer.php'; ?>

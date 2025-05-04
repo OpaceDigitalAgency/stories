@@ -9,13 +9,13 @@ $currentPage = 'contacts';
 $pageDescription = 'Manage and respond to contact form submissions from website visitors.';
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 
 // Include email functions
 include_once '../includes/email-functions.php';
@@ -392,13 +392,15 @@ $customFormatters = [
         <!-- Include bulk actions component -->
         <?php
         // Include the component file first
-        include_once '../includes/bulk-actions-component.php';
+        require_once '../includes/bulk-actions-component.php';
 
-        // Now we can safely call the function
-        if (function_exists('renderBulkActionsComponent')) {
+        // Now we can safely call the function - use the enhanced version if available
+        if (function_exists('renderEnhancedBulkActionsComponent')) {
+            renderEnhancedBulkActionsComponent('contacts', ['delete', 'mark_responded', 'mark_not_responded', 'notify']);
+        } else if (function_exists('renderBulkActionsComponent')) {
             renderBulkActionsComponent('contacts', ['delete', 'mark_responded', 'mark_not_responded', 'notify']);
         } else {
-            echo '<div class="error">Error: renderBulkActionsComponent function not found</div>';
+            echo '<div class="error">Error: Bulk actions component functions not found</div>';
         }
         ?>
 
@@ -446,7 +448,7 @@ The Stories From The Web Team</textarea>
         <!-- Include table component -->
         <?php
         // Include the component file first
-        include_once '../includes/table-component.php';
+        require_once '../includes/table-component.php';
 
         // Now we can safely call the function
         if (function_exists('renderTable')) {
@@ -711,4 +713,4 @@ The Stories From The Web Team</textarea>
     </div>
 </div>
 
-<?php include_once '../includes/footer.php'; ?>
+<?php require_once '../includes/footer.php'; ?>

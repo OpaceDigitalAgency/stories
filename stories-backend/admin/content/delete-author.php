@@ -5,10 +5,10 @@ $pageTitle = 'Delete Author';
 $currentPage = 'delete-author';
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Check if we already have a database connection
 if (!isset($db) || !$db) {

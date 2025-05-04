@@ -16,7 +16,7 @@
  * @param array $actions The available actions (e.g., ['delete', 'publish'])
  * @return void
  */
-function renderBulkActionsComponent($contentType, $actions = []) {
+function renderEnhancedBulkActionsComponent($contentType, $actions = []) {
     // Action labels mapping
     $actionLabels = [
         'delete' => 'Delete Selected',

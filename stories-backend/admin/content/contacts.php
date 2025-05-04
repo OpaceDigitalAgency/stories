@@ -330,9 +330,7 @@ $customFormatters = [
 ];
 ?>
 
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <!-- Page header is already included in header.php, so we don't need to repeat it here -->
+<!-- The header is already included above, so we start directly with content -->
 
         <!-- Alerts -->
         <?php if (isset($successMessage) && !empty($successMessage)): ?>
@@ -716,7 +714,4 @@ The Stories From The Web Team</textarea>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
-    </div>
-</div>
-
 <?php require_once '../includes/footer.php'; ?>

@@ -11,13 +11,16 @@ $pageDescription = 'Manage and respond to contact form submissions from website 
 // Include database connection first
 include_once '../includes/db-connect.php';
 
-// Include common admin files
-include_once '../includes/functions.php';
-include_once '../includes/admin-functions.php';
+// Include email functions
 include_once '../includes/email-functions.php';
 
 // Include header after database connection
 include_once '../includes/header.php';
+
+// We'll include the component files when we need them
+// These files contain the functions we need:
+// - table-component.php (renderTable)
+// - bulk-actions-component.php (renderBulkActionsComponent)
 
 // Add custom CSS for contact details
 echo '<style>
@@ -369,9 +372,14 @@ $customFormatters = [
 
         <!-- Include bulk actions component -->
         <?php
+        // Include the component file first
         include_once '../includes/bulk-actions-component.php';
+
+        // Now we can safely call the function
         if (function_exists('renderBulkActionsComponent')) {
             renderBulkActionsComponent('contacts', ['delete', 'mark_responded', 'mark_not_responded', 'notify']);
+        } else {
+            echo '<div class="error">Error: renderBulkActionsComponent function not found</div>';
         }
         ?>
 
@@ -418,7 +426,10 @@ The Stories From The Web Team</textarea>
 
         <!-- Include table component -->
         <?php
+        // Include the component file first
         include_once '../includes/table-component.php';
+
+        // Now we can safely call the function
         if (function_exists('renderTable')) {
             // Define columns
             $columns = [
@@ -485,6 +496,27 @@ The Stories From The Web Team</textarea>
                     'delete' => false
                 ]
             ]);
+        } else {
+            echo '<div class="error">Error: renderTable function not found</div>';
+
+            // Fallback: Display a simple table if the function is not available
+            if (!empty($contacts)) {
+                echo '<table class="table">';
+                echo '<thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Date</th><th>Status</th></tr></thead>';
+                echo '<tbody>';
+                foreach ($contacts as $contact) {
+                    echo '<tr>';
+                    echo '<td>' . htmlspecialchars($contact['name']) . '</td>';
+                    echo '<td>' . htmlspecialchars($contact['email']) . '</td>';
+                    echo '<td>' . htmlspecialchars($contact['subject']) . '</td>';
+                    echo '<td>' . date('M d, Y H:i', strtotime($contact['created_at'])) . '</td>';
+                    echo '<td>' . ($contact['is_responded'] ? 'Responded' : 'Not Responded') . '</td>';
+                    echo '</tr>';
+                }
+                echo '</tbody></table>';
+            } else {
+                echo '<p>No contact submissions found.</p>';
+            }
         }
 
         // Add pagination

@@ -23,12 +23,8 @@
   status = 200
   force = true
 
-# Fallback for main site if SPA fails to load
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
+# Single redirect for SPA
+# No fallback needed
 
 [[redirects]]
   from = "/api/*"

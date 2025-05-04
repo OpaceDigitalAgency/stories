@@ -1,9 +1,6 @@
 // Base API URL - use environment variable or fallback to proxy path
 const API_URL = import.meta.env.PUBLIC_API_URL || '/api';
 
-// Add fallback URL for when the main API fails
-const FALLBACK_API_URL = '/api';
-
 // Type definitions
 export interface CoverImageUrls {
   default: string;
@@ -100,13 +97,11 @@ export const buildUrl = (endpoint: string, params: Record<string, string | numbe
   return url.toString();
 };
 
-// Generic fetch function with error handling and fallback
+// Generic fetch function with error handling
 export async function fetchApi<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
-  // Try the primary API URL first
-  try {
-    const url = buildUrl(endpoint, params);
-    console.log(`Fetching from primary API: ${url}`);
+  const url = buildUrl(endpoint, params);
 
+  try {
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
@@ -115,42 +110,16 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
     });
 
     if (!response.ok) {
-      console.warn(`Primary API error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.warn(`Error with primary API, trying fallback: ${error}`);
-
-    // Try the fallback URL
-    try {
-      const fallbackUrl = buildUrl(endpoint, params).replace(API_URL, FALLBACK_API_URL);
-      console.log(`Fetching from fallback API: ${fallbackUrl}`);
-
-      const fallbackResponse = await fetch(fallbackUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      });
-
-      if (!fallbackResponse.ok) {
-        console.error(`Fallback API error: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
-        throw new Error(`Fallback API error: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
-      }
-
-      return await fallbackResponse.json();
-    } catch (fallbackError) {
-      console.error(`Both primary and fallback APIs failed:`, fallbackError);
-
-      // If both APIs fail, throw a clear error - never use mock data
-      const errorObj: any = new Error(`API request failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
-      errorObj.endpoint = endpoint;
-      errorObj.originalError = error;
-      errorObj.fallbackError = fallbackError;
-      throw errorObj;
-    }
+    console.error(`API request failed for ${url}:`, error);
+    const errorObj: any = new Error(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    errorObj.endpoint = endpoint;
+    errorObj.originalError = error;
+    throw errorObj;
   }
 }
 

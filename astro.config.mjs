@@ -6,12 +6,8 @@ import netlify from '@astrojs/netlify';
 // https://astro.build/config
 export default defineConfig({
   integrations: [
-    tailwind() // Use default config
+    tailwind()
   ],
   adapter: netlify(),
-  output: "server", // Revert to server mode for dynamic content
-  site: 'https://storiesfromtheweb.netlify.app',
-  base: '/',
-  // Ensure public directory is properly handled
-  publicDir: 'public'
+  output: "server"
 });

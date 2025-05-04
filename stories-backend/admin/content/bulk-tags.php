@@ -1,16 +1,7 @@
 <?php
-
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Tags';
-$currentPage = 'bulk-tags';
-
 /**
  * Bulk Actions Handler for Tags
- * 
+ *
  * Handles bulk operations on tags like delete, etc.
  */
 
@@ -83,18 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect back to the tags page with success/error message
-$redirectUrl = 'tags.php';
-
+// Store message in session and redirect
 if (!empty($success)) {
-    $redirectUrl .= '?success=' . urlencode($success);
+    $_SESSION['success'] = $success;
 } elseif (!empty($error)) {
-    $redirectUrl .= '?error=' . urlencode($error);
+    $_SESSION['error'] = $error;
 }
 
-header('Location: ' . $redirectUrl);
+// Redirect back to the tags page
+header('Location: tags.php');
 exit;
-
-
-// Include footer
-require_once '../includes/footer.php';

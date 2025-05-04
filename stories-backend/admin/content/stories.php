@@ -257,12 +257,6 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
     renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
 }
 
-// Include bulk actions component
-include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderBulkActionsComponent')) {
-    renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
-}
-
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 

@@ -9,7 +9,7 @@ export default defineConfig({
     tailwind() // Use default config
   ],
   adapter: netlify(),
-  output: "static", // Change to static for now to simplify debugging
+  output: "server", // Revert to server mode for dynamic content
   site: 'https://storiesfromtheweb.netlify.app',
   base: '/',
   // Ensure public directory is properly handled

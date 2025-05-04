@@ -6,8 +6,12 @@ import { getConfig } from '../lib/config';
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
 
+// Define feature name that was missing
+const featureName = 'This Feature';
+
 // Page metadata
 const title = siteName;
+const description = `${featureName} is coming soon to ${siteName}. Stay tuned for updates!`;
 
 ---
 

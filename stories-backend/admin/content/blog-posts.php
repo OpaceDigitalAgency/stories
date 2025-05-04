@@ -96,10 +96,16 @@ try {
     $countQuery = "SELECT COUNT(*) FROM $blogTableName";
     $totalItems = $db->query($countQuery)->fetchColumn();
     // Get blog posts with pagination
-    // First try a simple query to verify table access
+    // Get blog posts with pagination
     $query = "
-        SELECT *
-        FROM $blogTableName
+        SELECT bp.*,
+               a.name as author_name,
+               (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+                FROM $postTagsTableName pt
+                JOIN tags t ON pt.tag_id = t.id
+                WHERE pt.post_id = bp.id) as tags
+        FROM $blogTableName bp
+        LEFT JOIN authors a ON bp.author_id = a.id
         ORDER BY bp.created_at DESC
         LIMIT $offset, $perPage
     ";

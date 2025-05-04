@@ -1,6 +1,5 @@
 ---
-import NavHeader from '../components/NavHeader.astro';
-import Footer from '../components/Footer.astro';
+import Layout from '../layouts/Layout.astro';
 import CardStory from '../components/CardStory.astro';
 import CardAuthor from '../components/CardAuthor.astro';
 import StoryCarousel from '../components/StoryCarousel.astro';
@@ -10,9 +9,7 @@ import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
 import ApiErrorMessage from '../components/ApiErrorMessage.astro';
-import Favicon from '../components/Favicon.astro';
 import { fetchStories, fetchAuthors } from '../lib/api';
-import '../styles/base.css';
 
 // Remove prerender directive to enable server-side rendering
 // export const prerender = false;
@@ -148,15 +145,11 @@ try {
 }
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <Favicon />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Stories From The Web | Share and Discover Children's Stories</title>
-    <meta name="description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
-
+<Layout
+  title="Stories From The Web | Share and Discover Children's Stories"
+  description="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling."
+>
+  <Fragment slot="head">
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://storiesfromtheweb.org/" />
@@ -170,73 +163,69 @@ try {
     <meta property="twitter:title" content="Stories From The Web | Share and Discover Children's Stories" />
     <meta property="twitter:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
     <meta property="twitter:image" content="https://storiesfromtheweb.org/twitter-image.jpg" />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral w-full">
-    <NavHeader />
+  </Fragment>
 
-    <main class="flex-grow w-full">
-      {apiError && (
-        <div class="container mx-auto px-4 py-4">
-          <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />
+  {apiError && (
+    <div class="container mx-auto px-4 py-4">
+      <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />
+    </div>
+  )}
+  
+  <!-- Hero Section -->
+  <section class="relative py-16 md:py-24 overflow-hidden">
+    <!-- Decorative blobs -->
+    <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
+    <div class="blob-shape bg-secondary/30 w-96 h-96 -bottom-40 -right-20"></div>
+    <div class="blob-shape bg-accent/20 w-80 h-80 top-40 right-20"></div>
+
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="flex flex-col lg:flex-row items-center">
+        <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight text-text-primary">
+            <span class="relative inline-block">
+              Every Child
+              <span class="absolute -bottom-2 left-0 w-full h-4 bg-accent/40 -z-10 rounded-full transform -rotate-1"></span>
+            </span>
+            <br />
+            Has a Story Worth Sharing
+          </h1>
+          <p class="text-xl md:text-2xl text-text-secondary max-w-xl mx-auto lg:mx-0 mb-8">
+            Discover magical tales from around the world or share your own story with our community.
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
+            <a href="/stories" class="btn btn-primary text-lg px-6 py-3 shadow-playful btn-playful">
+              <span class="flex items-center">
+                Explore Stories
+              </span>
+            </a>
+            <a href="/publish" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful">
+              <span class="flex items-center">
+                Share Your Story
+              </span>
+            </a>
+          </div>
         </div>
-      )}
-      <!-- Hero Section -->
-      <section class="relative py-16 md:py-24 overflow-hidden">
-        <!-- Decorative blobs -->
-        <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
-        <div class="blob-shape bg-secondary/30 w-96 h-96 -bottom-40 -right-20"></div>
-        <div class="blob-shape bg-accent/20 w-80 h-80 top-40 right-20"></div>
 
-        <div class="container mx-auto px-4 relative z-10">
-          <div class="flex flex-col lg:flex-row items-center">
-            <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
-              <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight text-text-primary">
-                <span class="relative inline-block">
-                  Every Child
-                  <span class="absolute -bottom-2 left-0 w-full h-4 bg-accent/40 -z-10 rounded-full transform -rotate-1"></span>
-                </span>
-                <br />
-                Has a Story Worth Sharing
-              </h1>
-              <p class="text-xl md:text-2xl text-text-secondary max-w-xl mx-auto lg:mx-0 mb-8">
-                Discover magical tales from around the world or share your own story with our community.
-              </p>
-              <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                <a href="/stories" class="btn btn-primary text-lg px-6 py-3 shadow-playful btn-playful">
-                  <span class="flex items-center">
-                    Explore Stories
-                  </span>
-                </a>
-                <a href="/publish" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful">
-                  <span class="flex items-center">
-                    Share Your Story
-                  </span>
-                </a>
-              </div>
-            </div>
+        <!-- Animated illustration -->
+        <div class="lg:w-1/2 relative">
+          <div class="relative w-full max-w-md mx-auto">
+            <div class="relative w-full h-full rounded-2xl shadow-playful overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-tertiary/10 p-6 float-animation">
+              <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
+              <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
+              <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
 
-            <!-- Animated illustration -->
-            <div class="lg:w-1/2 relative">
-              <div class="relative w-full max-w-md mx-auto">
-                <div class="relative w-full h-full rounded-2xl shadow-playful overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-tertiary/10 p-6 float-animation">
-                  <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
-                  <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
-                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
-
-                  <div class="relative z-10 flex items-center justify-center h-full">
-                    <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
-                      <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
-                      <div class="absolute left-6 top-0 right-0 bottom-0 bg-neutral-light p-4">
-                        <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
-                        <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
-                        <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
-                        <div class="absolute bottom-4 right-4 w-16 h-16 bg-accent rounded-full flex items-center justify-center">
-                          <div class="w-8 h-8 bg-white rounded-full relative">
-                            <div class="absolute top-2 left-2 w-1 h-1 bg-text-primary rounded-full"></div>
-                            <div class="absolute top-2 right-2 w-1 h-1 bg-text-primary rounded-full"></div>
-                            <div class="absolute bottom-2 left-0 right-0 mx-auto w-4 h-1 bg-text-primary rounded-full"></div>
-                          </div>
-                        </div>
+              <div class="relative z-10 flex items-center justify-center h-full">
+                <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
+                  <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
+                  <div class="absolute left-6 top-0 right-0 bottom-0 bg-neutral-light p-4">
+                    <div class="h-4 w-3/4 bg-text-light/20 rounded-full mb-3"></div>
+                    <div class="h-4 w-1/2 bg-text-light/20 rounded-full mb-3"></div>
+                    <div class="h-4 w-2/3 bg-text-light/20 rounded-full mb-3"></div>
+                    <div class="absolute bottom-4 right-4 w-16 h-16 bg-accent rounded-full flex items-center justify-center">
+                      <div class="w-8 h-8 bg-white rounded-full relative">
+                        <div class="absolute top-2 left-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                        <div class="absolute top-2 right-2 w-1 h-1 bg-text-primary rounded-full"></div>
+                        <div class="absolute bottom-2 left-0 right-0 mx-auto w-4 h-1 bg-text-primary rounded-full"></div>
                       </div>
                     </div>
                   </div>
@@ -245,304 +234,304 @@ try {
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <!-- Sponsored Carousel -->
-      {sponsoredStories.length > 0 && (
-        <SponsoredCarousel
-          title="Sponsored Stories"
-          viewAllLink="/stories?type=sponsored"
-          stories={sponsoredStories}
-          carouselId="sponsored-stories"
-        />
+  <!-- Sponsored Carousel -->
+  {sponsoredStories.length > 0 && (
+    <SponsoredCarousel
+      title="Sponsored Stories"
+      viewAllLink="/stories?type=sponsored"
+      stories={sponsoredStories}
+      carouselId="sponsored-stories"
+    />
+  )}
+
+  <!-- Story Carousels -->
+  {mostLovedStories.length > 0 && (
+    <StoryCarousel
+      title="Most Loved Stories"
+      viewAllLink="/stories?sort=highest-rated"
+      stories={mostLovedStories}
+      carouselId="most-loved"
+    />
+  )}
+
+  {latestSelfPublishedStories.length > 0 && (
+    <StoryCarousel
+      title="Latest Self-Published"
+      viewAllLink="/stories?type=self-published"
+      stories={latestSelfPublishedStories}
+      carouselId="self-published"
+    />
+  )}
+
+  {aiEnhancedStories.length > 0 && (
+    <StoryCarousel
+      title="AI-Enhanced Picks"
+      viewAllLink="/stories?type=ai-enhanced"
+      stories={aiEnhancedStories}
+      carouselId="ai-enhanced"
+    />
+  )}
+
+  <!-- Recommended Book Authors Section -->
+  <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
+    <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Recommended Book Authors</h2>
+        <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+          View All Authors →
+        </a>
+      </div>
+
+      {retailAuthors.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {retailAuthors.slice(0, 3).map(author => (
+            <CardAuthor author={author} />
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12">
+          <p class="text-text-secondary">No recommended book authors available at the moment.</p>
+        </div>
       )}
+    </div>
+  </section>
 
-      <!-- Story Carousels -->
-      {mostLovedStories.length > 0 && (
-        <StoryCarousel
-          title="Most Loved Stories"
-          viewAllLink="/stories?sort=highest-rated"
-          stories={mostLovedStories}
-          carouselId="most-loved"
-        />
-      )}
+  <!-- Latest Children & Family Writers Section -->
+  <section class="py-16 relative overflow-hidden">
+    <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Latest Children & Family Writers</h2>
+        <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
+          View All Authors →
+        </a>
+      </div>
 
-      {latestSelfPublishedStories.length > 0 && (
-        <StoryCarousel
-          title="Latest Self-Published"
-          viewAllLink="/stories?type=self-published"
-          stories={latestSelfPublishedStories}
-          carouselId="self-published"
-        />
-      )}
-
-      {aiEnhancedStories.length > 0 && (
-        <StoryCarousel
-          title="AI-Enhanced Picks"
-          viewAllLink="/stories?type=ai-enhanced"
-          stories={aiEnhancedStories}
-          carouselId="ai-enhanced"
-        />
-      )}
-
-      <!-- Recommended Book Authors Section -->
-      <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
-        <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
-        <div class="container mx-auto px-4 relative z-10">
-          <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Recommended Book Authors</h2>
-            <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
-              View All Authors →
+      {familyAuthors.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {familyAuthors.slice(0, 3).map(author => (
+            <CardAuthor author={author} />
+          ))}
+          <!-- Become an Author Card -->
+          <div class="card p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
+            <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful pulse-animation relative">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-text-primary mb-3 group-hover:text-primary transition-colors">
+              Become an Author
+            </h3>
+            <p class="text-text-secondary mb-8">
+              Share your stories with our community and inspire young readers around the world.
+            </p>
+            <a href="/publish" class="btn btn-accent w-full py-3 px-6 shadow-playful btn-playful">
+              <span class="flex items-center justify-center">
+                Get Started
+              </span>
             </a>
           </div>
-
-          {retailAuthors.length > 0 ? (
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {retailAuthors.slice(0, 3).map(author => (
-                <CardAuthor author={author} />
-              ))}
-            </div>
-          ) : (
-            <div class="text-center py-12">
-              <p class="text-text-secondary">No recommended book authors available at the moment.</p>
-            </div>
-          )}
         </div>
-      </section>
-
-      <!-- Latest Children & Family Writers Section -->
-      <section class="py-16 relative overflow-hidden">
-        <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
-        <div class="container mx-auto px-4 relative z-10">
-          <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Latest Children & Family Writers</h2>
-            <a href="/authors" class="text-secondary font-medium hover:text-secondary/80 transition-colors">
-              View All Authors →
-            </a>
-          </div>
-
-          {familyAuthors.length > 0 ? (
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {familyAuthors.slice(0, 3).map(author => (
-                <CardAuthor author={author} />
-              ))}
-              <!-- Become an Author Card -->
-              <div class="card p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-accent/30 group hover:border-accent/60">
-                <div class="bg-accent/15 text-text-primary w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-playful pulse-animation relative">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                </div>
-                <h3 class="text-2xl font-display font-bold text-text-primary mb-3 group-hover:text-primary transition-colors">
-                  Become an Author
-                </h3>
-                <p class="text-text-secondary mb-8">
-                  Share your stories with our community and inspire young readers around the world.
-                </p>
-                <a href="/publish" class="btn btn-accent w-full py-3 px-6 shadow-playful btn-playful">
-                  <span class="flex items-center justify-center">
-                    Get Started
-                  </span>
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div class="text-center py-12">
-              <p class="text-text-secondary">No family authors available at the moment.</p>
-            </div>
-          )}
+      ) : (
+        <div class="text-center py-12">
+          <p class="text-text-secondary">No family authors available at the moment.</p>
         </div>
-      </section>
+      )}
+    </div>
+  </section>
 
-      <!-- Parent & Teacher Areas -->
-      <section class="py-16 relative overflow-hidden">
-        <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
-          <EducatorSection
-            educator={{
-              name: "Dr. Sarah Johnson",
-              title: "Education Specialist",
-              institution: "Children's Literacy Foundation",
-              avatar: {
-                url: "https://i.pravatar.cc/150?img=5"
-              }
-            }}
+  <!-- Parent & Teacher Areas -->
+  <section class="py-16 relative overflow-hidden">
+    <div class="container mx-auto px-4 relative z-10">
+      <h2 class="text-3xl font-display font-bold text-text-primary mb-8 fancy-underline">Resources for Parents & Teachers</h2>
+      <EducatorSection
+        educator={{
+          name: "Dr. Sarah Johnson",
+          title: "Education Specialist",
+          institution: "Children's Literacy Foundation",
+          avatar: {
+            url: "https://i.pravatar.cc/150?img=5"
+          }
+        }}
+      />
+    </div>
+  </section>
+
+  <!-- Sign-Up Prompts -->
+  <section class="py-16 bg-neutral-dark relative overflow-hidden">
+    <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
+    <div class="container mx-auto px-4 relative z-10">
+      <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
+      <SignUpPrompts type="author" />
+    </div>
+  </section>
+
+  <!-- AI Recommendation Box -->
+  <section class="py-16 relative overflow-hidden">
+    <div class="container mx-auto px-4 relative z-10">
+      <AIRecommendationBox
+        story={{
+          slug: "enchanted-forest",
+          title: "The Enchanted Forest",
+          author: {
+            name: "David Brown"
+          }
+        }}
+        recommendationText="Based on your reading history, we think you'll enjoy this magical adventure story!"
+      />
+    </div>
+  </section>
+
+  <!-- Newsletter Section -->
+  <section class="py-16 bg-secondary/10 relative overflow-hidden">
+    <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
+    <div class="container mx-auto px-4 max-w-4xl relative z-10">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
+        <p class="text-text-secondary text-lg">
+          Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
+        </p>
+      </div>
+      <form class="max-w-2xl mx-auto">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input
+            type="email"
+            placeholder="Your email address"
+            class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
+            required
           />
+          <button
+            type="submit"
+            class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
+          >
+            <span class="flex items-center">
+              Subscribe
+            </span>
+          </button>
         </div>
-      </section>
+        <p class="text-sm text-gray-500 mt-3">
+          We respect your privacy. Unsubscribe at any time.
+        </p>
+      </form>
+    </div>
+  </section>
 
-      <!-- Sign-Up Prompts -->
-      <section class="py-16 bg-neutral-dark relative overflow-hidden">
-        <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
-        <div class="container mx-auto px-4 relative z-10">
-          <h2 class="text-3xl font-display font-bold text-text-primary text-center mb-10 fancy-underline">Join Our Community</h2>
-          <SignUpPrompts type="author" />
-        </div>
-      </section>
+  <style slot="scripts">
+    .blob-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      z-index: 0;
+      transition: transform 0.5s ease;
+    }
 
-      <!-- AI Recommendation Box -->
-      <section class="py-16 relative overflow-hidden">
-        <div class="container mx-auto px-4 relative z-10">
-          <AIRecommendationBox
-            story={{
-              slug: "enchanted-forest",
-              title: "The Enchanted Forest",
-              author: {
-                name: "David Brown"
-              }
-            }}
-            recommendationText="Based on your reading history, we think you'll enjoy this magical adventure story!"
-          />
-        </div>
-      </section>
+    .float-animation {
+      animation: float 6s ease-in-out infinite;
+    }
 
-      <!-- Newsletter Section -->
-      <section class="py-16 bg-secondary/10 relative overflow-hidden">
-        <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
-        <div class="container mx-auto px-4 max-w-4xl relative z-10">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
-            <p class="text-text-secondary text-lg">
-              Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
-            </p>
-          </div>
-          <form class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                placeholder="Your email address"
-                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
-                required
-              />
-              <button
-                type="submit"
-                class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
-              >
-                <span class="flex items-center">
-                  Subscribe
-                </span>
-              </button>
-            </div>
-            <p class="text-sm text-gray-500 mt-3">
-              We respect your privacy. Unsubscribe at any time.
-            </p>
-          </form>
-        </div>
-      </section>
-    </main>
+    .pulse-animation {
+      animation: pulse 3s ease-in-out infinite;
+    }
 
-    <Footer />
-
-    <style>
-      .blob-shape {
-        position: absolute;
-        border-radius: 50%;
-        filter: blur(40px);
-        z-index: 0;
-        transition: transform 0.5s ease;
+    @keyframes float {
+      0% {
+        transform: translateY(0px);
       }
-
-      .float-animation {
-        animation: float 6s ease-in-out infinite;
+      50% {
+        transform: translateY(-20px);
       }
-
-      .pulse-animation {
-        animation: pulse 3s ease-in-out infinite;
+      100% {
+        transform: translateY(0px);
       }
+    }
 
-      @keyframes float {
-        0% {
-          transform: translateY(0px);
-        }
-        50% {
-          transform: translateY(-20px);
-        }
-        100% {
-          transform: translateY(0px);
-        }
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
       }
-
-      @keyframes pulse {
-        0% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.05);
-        }
-        100% {
-          transform: scale(1);
-        }
+      50% {
+        transform: scale(1.05);
       }
-
-      .fancy-underline {
-        position: relative;
-        display: inline-block;
+      100% {
+        transform: scale(1);
       }
+    }
 
-      .fancy-underline::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        bottom: -5px;
-        width: 100%;
-        height: 3px;
-        background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
-        border-radius: 3px;
-        transform: scaleX(0.7);
-        transform-origin: center;
-        transition: transform 0.5s ease;
-      }
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
 
-      .fancy-underline:hover::after {
-        transform: scaleX(1);
-      }
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
 
-      .btn-playful {
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-      }
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
 
-      .btn-playful::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: all 0.6s ease;
-      }
+    .btn-playful {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
 
-      .btn-playful:hover::before {
-        left: 100%;
-      }
+    .btn-playful::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: all 0.6s ease;
+    }
 
-      .shadow-playful {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        transition: all 0.3s ease;
-      }
+    .btn-playful:hover::before {
+      left: 100%;
+    }
 
-      .shadow-playful:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        transform: translateY(-3px);
-      }
-    </style>
+    .shadow-playful {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
 
-    <script>
-      // Parallax effect for blobs
-      document.addEventListener('mousemove', (e) => {
-        const blobs = document.querySelectorAll('.blob-shape');
-        const mouseX = e.clientX / window.innerWidth;
-        const mouseY = e.clientY / window.innerHeight;
+    .shadow-playful:hover {
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(-3px);
+    }
+  </style>
 
-        blobs.forEach((blob, index) => {
-          const speed = (index + 1) * 20;
-          const x = (mouseX - 0.5) * speed;
-          const y = (mouseY - 0.5) * speed;
+  <script slot="scripts">
+    // Parallax effect for blobs
+    document.addEventListener('mousemove', (e) => {
+      const blobs = document.querySelectorAll('.blob-shape');
+      const mouseX = e.clientX / window.innerWidth;
+      const mouseY = e.clientY / window.innerHeight;
+
+      blobs.forEach((blob, index) => {
+        const speed = (index + 1) * 20;
+        const x = (mouseX - 0.5) * speed;
+        const y = (mouseY - 0.5) * speed;
+        if (blob instanceof HTMLElement) {
           blob.style.transform = `translate(${x}px, ${y}px)`;
-        });
+        }
       });
-    </script>
-  </body>
-</html>
+    });
+  </script>
+</Layout>

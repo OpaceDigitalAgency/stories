@@ -230,6 +230,24 @@ $extraHeadContent = '
         overflow: hidden;
         transition: all 0.2s ease;
         background-color: white;
+        position: relative;
+    }
+
+    .media-card .bulk-checkbox {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 2;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        background-color: white;
+        border-radius: 4px;
+        border: 2px solid var(--primary);
+    }
+
+    .media-card .bulk-checkbox:checked {
+        background-color: var(--primary);
     }
 
     .media-card:hover {
@@ -421,6 +439,15 @@ require_once '../includes/header.php';
     </div>
 
     <?php
+    // Include bulk actions component
+    include_once '../includes/bulk-actions-component.php';
+    if (function_exists('renderBulkActionsComponent')) {
+        renderBulkActionsComponent('media', [
+            'delete' => 'Delete',
+            'optimize' => 'Optimize'
+        ]);
+    }
+
     // Include search component
     include_once '../includes/search-component.php';
     if (function_exists('renderSearchComponent')) {
@@ -449,6 +476,7 @@ require_once '../includes/header.php';
             <div class="media-grid">
                 <?php foreach ($media as $item): ?>
                     <div class="media-card">
+                        <input type="checkbox" class="bulk-checkbox" name="selected_ids[]" value="<?php echo $item['id']; ?>" style="position: absolute; top: 10px; right: 10px;">
                         <?php
                         $isImage = strpos($item['file_type'], 'image/') === 0;
                         $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';

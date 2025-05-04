@@ -14,7 +14,140 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Check if this is a bulk deletion
+// Process deletion if form was submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'cancel';
+    $selectedIds = isset($_POST['selected_ids']) ? array_map('intval', $_POST['selected_ids']) : [];
+    $newAuthorId = isset($_POST['new_author_id']) ? intval($_POST['new_author_id']) : null;
+
+    if (empty($selectedIds)) {
+        $_SESSION['error'] = "No authors selected";
+        header("Location: authors.php");
+        exit;
+    }
+
+    try {
+        // Start transaction
+        $db->beginTransaction();
+
+        // Check if story_authors table exists
+        $hasStoryAuthorsTable = false;
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+            $hasStoryAuthorsTable = $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            // Table might not exist, ignore
+        }
+
+        if ($action === 'delete_all') {
+            // Get all stories by these authors
+            $placeholders = str_repeat('?,', count($selectedIds) - 1) . '?';
+            $storyIds = [];
+
+            if ($hasStoryAuthorsTable) {
+                $stmt = $db->prepare("SELECT story_id FROM story_authors WHERE author_id IN ($placeholders)");
+                $stmt->execute($selectedIds);
+                $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                // Delete from story_authors
+                $stmt = $db->prepare("DELETE FROM story_authors WHERE author_id IN ($placeholders)");
+                $stmt->execute($selectedIds);
+            } else {
+                // Check if stories table has author_id column
+                try {
+                    $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+                    if ($stmt->rowCount() > 0) {
+                        $stmt = $db->prepare("SELECT id FROM stories WHERE author_id IN ($placeholders)");
+                        $stmt->execute($selectedIds);
+                        $storyIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    }
+                } catch (PDOException $e) {
+                    // Table might not exist, ignore
+                }
+            }
+
+            // Delete story tags if they exist
+            if (!empty($storyIds)) {
+                try {
+                    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+                    if ($stmt->rowCount() > 0) {
+                        $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                        $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($placeholders)");
+                        $stmt->execute($storyIds);
+                    }
+                } catch (PDOException $e) {
+                    // Table might not exist, ignore
+                }
+
+                // Delete stories
+                $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                $stmt = $db->prepare("DELETE FROM stories WHERE id IN ($placeholders)");
+                $stmt->execute($storyIds);
+            }
+
+            // Delete authors
+            $placeholders = str_repeat('?,', count($selectedIds) - 1) . '?';
+            $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
+            $stmt->execute($selectedIds);
+
+            $_SESSION['success'] = count($selectedIds) . " author(s) and their stories deleted successfully";
+
+        } elseif ($action === 'reassign' && $newAuthorId) {
+            // Verify new author exists
+            $stmt = $db->prepare("SELECT id FROM authors WHERE id = ?");
+            $stmt->execute([$newAuthorId]);
+            if (!$stmt->fetch()) {
+                throw new Exception("New author not found");
+            }
+
+            if ($hasStoryAuthorsTable) {
+                // Update story_authors table
+                $placeholders = str_repeat('?,', count($selectedIds) - 1) . '?';
+                $stmt = $db->prepare("UPDATE story_authors SET author_id = ? WHERE author_id IN ($placeholders)");
+                $params = array_merge([$newAuthorId], $selectedIds);
+                $stmt->execute($params);
+            } else {
+                // Check if stories table has author_id column
+                try {
+                    $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+                    if ($stmt->rowCount() > 0) {
+                        $placeholders = str_repeat('?,', count($selectedIds) - 1) . '?';
+                        $stmt = $db->prepare("UPDATE stories SET author_id = ? WHERE author_id IN ($placeholders)");
+                        $params = array_merge([$newAuthorId], $selectedIds);
+                        $stmt->execute($params);
+                    }
+                } catch (PDOException $e) {
+                    // Table might not exist, ignore
+                }
+            }
+
+            // Delete old authors
+            $placeholders = str_repeat('?,', count($selectedIds) - 1) . '?';
+            $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
+            $stmt->execute($selectedIds);
+
+            $_SESSION['success'] = "Stories reassigned and " . count($selectedIds) . " author(s) deleted successfully";
+        } else {
+            throw new Exception("Invalid action");
+        }
+
+        // Commit transaction
+        $db->commit();
+        header("Location: authors.php");
+        exit;
+
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        if (isset($db)) {
+            $db->rollBack();
+        }
+        $_SESSION['error'] = $e->getMessage();
+        header("Location: authors.php");
+        exit;
+    }
+}
+
+// Handle GET request for confirmation page
 $isBulk = isset($_GET['bulk']) && $_GET['bulk'] == '1';
 $selectedIds = [];
 
@@ -27,8 +160,8 @@ if ($isBulk) {
     }
     $selectedIds = $_SESSION['bulk_delete_authors'];
 } else {
-    // Get single author ID from GET or POST
-    $id = isset($_POST['id']) ? intval($_POST['id']) : (isset($_GET['id']) ? intval($_GET['id']) : 0);
+    // Get single author ID from GET
+    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
     if (!$id) {
         $_SESSION['error'] = "No author specified";
         header("Location: authors.php");
@@ -142,7 +275,7 @@ require_once '../includes/header.php';
                     <p>Please choose how to handle these stories:</p>
                 </div>
 
-                <form method="POST" action="delete-author.php" class="mb-3">
+                <form method="POST" action="author-delete-process.php" class="mb-3">
                     <?php foreach ($selectedIds as $selectedId): ?>
                         <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
                     <?php endforeach; ?>
@@ -177,7 +310,7 @@ require_once '../includes/header.php';
                 </form>
             <?php else: ?>
                 <p>Are you sure you want to delete <?php echo $isBulk ? 'these authors' : 'this author'; ?>?</p>
-                <form method="POST" action="delete-author.php">
+                <form method="POST" action="author-delete-process.php">
                     <?php foreach ($selectedIds as $selectedId): ?>
                         <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
                     <?php endforeach; ?>

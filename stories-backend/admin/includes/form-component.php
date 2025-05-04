@@ -1,18 +1,9 @@
 <?php
-
-// Include header
-include 'header.php';
-
-
-// Page variables
-$pageTitle = 'Form Component';
-$currentPage = 'form-component';
-
 /**
  * Form Component
- * 
+ *
  * A reusable form component for content editing pages.
- * 
+ *
  * Usage:
  * include '../includes/form-component.php';
  * renderFormStart($action, $method, $options);
@@ -22,7 +13,7 @@ $currentPage = 'form-component';
 
 /**
  * Renders the start of a form
- * 
+ *
  * @param string $action The form action URL
  * @param string $method The form method (GET or POST)
  * @param array $options Additional options for the form
@@ -37,16 +28,16 @@ function renderFormStart($action, $method = 'POST', $options = []) {
         'novalidate' => false,
         'autocomplete' => 'on',
     ];
-    
+
     // Merge options with defaults
     $options = array_merge($defaults, $options);
-    
+
     // Render the form start
     ?>
-    <form 
-        id="<?php echo htmlspecialchars($options['id']); ?>" 
+    <form
+        id="<?php echo htmlspecialchars($options['id']); ?>"
         class="<?php echo htmlspecialchars($options['class']); ?>"
-        action="<?php echo htmlspecialchars($action); ?>" 
+        action="<?php echo htmlspecialchars($action); ?>"
         method="<?php echo htmlspecialchars($method); ?>"
         <?php if (!empty($options['enctype'])): ?>enctype="<?php echo htmlspecialchars($options['enctype']); ?>"<?php endif; ?>
         <?php if ($options['novalidate']): ?>novalidate<?php endif; ?>
@@ -57,7 +48,7 @@ function renderFormStart($action, $method = 'POST', $options = []) {
 
 /**
  * Renders a form field
- * 
+ *
  * @param string $type The field type (text, textarea, select, checkbox, radio, file, hidden)
  * @param string $name The field name
  * @param string $label The field label
@@ -92,10 +83,10 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
         'label_class' => 'form-label',
         'input_wrapper_class' => '',
     ];
-    
+
     // Merge options with defaults
     $options = array_merge($defaults, $options);
-    
+
     // Render the field wrapper
     ?>
     <div class="<?php echo htmlspecialchars($options['wrapper_class']); ?>">
@@ -108,18 +99,18 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                 <?php endif; ?>
             </label>
         <?php endif; ?>
-        
+
         <?php if (!empty($options['input_wrapper_class'])): ?>
             <div class="<?php echo htmlspecialchars($options['input_wrapper_class']); ?>">
         <?php endif; ?>
-        
+
         <?php
         // Render the field based on type
         switch ($type) {
             case 'textarea':
                 ?>
-                <textarea 
-                    id="<?php echo htmlspecialchars($options['id']); ?>" 
+                <textarea
+                    id="<?php echo htmlspecialchars($options['id']); ?>"
                     name="<?php echo htmlspecialchars($name); ?>"
                     class="<?php echo htmlspecialchars($options['class']); ?> <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                     placeholder="<?php echo htmlspecialchars($options['placeholder']); ?>"
@@ -134,11 +125,11 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                 ><?php echo htmlspecialchars($value); ?></textarea>
                 <?php
                 break;
-                
+
             case 'select':
                 ?>
-                <select 
-                    id="<?php echo htmlspecialchars($options['id']); ?>" 
+                <select
+                    id="<?php echo htmlspecialchars($options['id']); ?>"
                     name="<?php echo htmlspecialchars($name); ?><?php echo $options['multiple'] ? '[]' : ''; ?>"
                     class="<?php echo htmlspecialchars($options['class']); ?> <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                     <?php if ($options['required']): ?>required<?php endif; ?>
@@ -146,7 +137,7 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                     <?php if ($options['multiple']): ?>multiple<?php endif; ?>
                 >
                     <?php foreach ($options['options'] as $optionValue => $optionLabel): ?>
-                        <option 
+                        <option
                             value="<?php echo htmlspecialchars($optionValue); ?>"
                             <?php
                             if ($options['multiple'] && is_array($value)) {
@@ -162,15 +153,15 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                 </select>
                 <?php
                 break;
-                
+
             case 'checkbox':
                 if (empty($options['options'])) {
                     // Single checkbox
                     ?>
                     <div class="form-check">
-                        <input 
-                            type="checkbox" 
-                            id="<?php echo htmlspecialchars($options['id']); ?>" 
+                        <input
+                            type="checkbox"
+                            id="<?php echo htmlspecialchars($options['id']); ?>"
                             name="<?php echo htmlspecialchars($name); ?>"
                             class="form-check-input <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                             value="1"
@@ -189,9 +180,9 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                         $checkboxId = $options['id'] . '_' . $optionValue;
                         ?>
                         <div class="form-check">
-                            <input 
-                                type="checkbox" 
-                                id="<?php echo htmlspecialchars($checkboxId); ?>" 
+                            <input
+                                type="checkbox"
+                                id="<?php echo htmlspecialchars($checkboxId); ?>"
                                 name="<?php echo htmlspecialchars($name); ?>[]"
                                 class="form-check-input <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                                 value="<?php echo htmlspecialchars($optionValue); ?>"
@@ -206,15 +197,15 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                     }
                 }
                 break;
-                
+
             case 'radio':
                 foreach ($options['options'] as $optionValue => $optionLabel) {
                     $radioId = $options['id'] . '_' . $optionValue;
                     ?>
                     <div class="form-check">
-                        <input 
-                            type="radio" 
-                            id="<?php echo htmlspecialchars($radioId); ?>" 
+                        <input
+                            type="radio"
+                            id="<?php echo htmlspecialchars($radioId); ?>"
                             name="<?php echo htmlspecialchars($name); ?>"
                             class="form-check-input <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                             value="<?php echo htmlspecialchars($optionValue); ?>"
@@ -229,12 +220,12 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                     <?php
                 }
                 break;
-                
+
             case 'file':
                 ?>
-                <input 
-                    type="file" 
-                    id="<?php echo htmlspecialchars($options['id']); ?>" 
+                <input
+                    type="file"
+                    id="<?php echo htmlspecialchars($options['id']); ?>"
                     name="<?php echo htmlspecialchars($name); ?>"
                     class="<?php echo htmlspecialchars($options['class']); ?> <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                     <?php if ($options['required']): ?>required<?php endif; ?>
@@ -244,24 +235,24 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                 >
                 <?php
                 break;
-                
+
             case 'hidden':
                 ?>
-                <input 
-                    type="hidden" 
-                    id="<?php echo htmlspecialchars($options['id']); ?>" 
+                <input
+                    type="hidden"
+                    id="<?php echo htmlspecialchars($options['id']); ?>"
                     name="<?php echo htmlspecialchars($name); ?>"
                     value="<?php echo htmlspecialchars($value); ?>"
                 >
                 <?php
                 break;
-                
+
             default:
                 // Default to text input
                 ?>
-                <input 
-                    type="<?php echo htmlspecialchars($type); ?>" 
-                    id="<?php echo htmlspecialchars($options['id']); ?>" 
+                <input
+                    type="<?php echo htmlspecialchars($type); ?>"
+                    id="<?php echo htmlspecialchars($options['id']); ?>"
                     name="<?php echo htmlspecialchars($name); ?>"
                     class="<?php echo htmlspecialchars($options['class']); ?> <?php echo !empty($options['error']) ? 'is-invalid' : ''; ?>"
                     value="<?php echo htmlspecialchars($value); ?>"
@@ -281,19 +272,19 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
                 break;
         }
         ?>
-        
+
         <?php if (!empty($options['error'])): ?>
             <div class="invalid-feedback">
                 <?php echo htmlspecialchars($options['error']); ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (!empty($options['help_text'])): ?>
             <div class="form-text text-muted">
                 <?php echo $options['help_text']; ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (!empty($options['input_wrapper_class'])): ?>
             </div>
         <?php endif; ?>
@@ -303,7 +294,7 @@ function renderFormField($type, $name, $label, $value = '', $options = []) {
 
 /**
  * Renders the end of a form
- * 
+ *
  * @param string $submitLabel The label for the submit button
  * @param array $options Additional options for the form end
  * @return void
@@ -318,23 +309,23 @@ function renderFormEnd($submitLabel = 'Save', $options = []) {
         'buttons_wrapper_class' => 'form-buttons',
         'additional_buttons' => '',
     ];
-    
+
     // Merge options with defaults
     $options = array_merge($defaults, $options);
-    
+
     // Render the form end
     ?>
     <div class="<?php echo htmlspecialchars($options['buttons_wrapper_class']); ?>">
         <button type="submit" class="<?php echo htmlspecialchars($options['submit_class']); ?>">
             <?php echo htmlspecialchars($submitLabel); ?>
         </button>
-        
+
         <?php if (!empty($options['cancel_url'])): ?>
             <a href="<?php echo htmlspecialchars($options['cancel_url']); ?>" class="<?php echo htmlspecialchars($options['cancel_class']); ?>">
                 <?php echo htmlspecialchars($options['cancel_label']); ?>
             </a>
         <?php endif; ?>
-        
+
         <?php if (!empty($options['additional_buttons'])): ?>
             <?php echo $options['additional_buttons']; ?>
         <?php endif; ?>
@@ -344,5 +335,4 @@ function renderFormEnd($submitLabel = 'Save', $options = []) {
 }
 
 
-// Include footer
-include 'footer.php';
+

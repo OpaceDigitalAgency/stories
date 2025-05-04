@@ -1,13 +1,4 @@
 <?php
-
-// Include header
-include 'header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Actions Component';
-$currentPage = 'bulk-actions-component';
-
 /**
  * Bulk Actions Component
  *
@@ -190,5 +181,3 @@ function renderBulkActionsComponent($contentType, $actions = []) {
 }
 
 
-// Include footer
-include 'footer.php';

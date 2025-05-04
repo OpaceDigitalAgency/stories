@@ -16,6 +16,12 @@ $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = $currentPage ?? '';
 $pageDescription = $pageDescription ?? '';
 
+// Include database connection
+$dbConnectPath = dirname(__FILE__) . '/db-connect.php';
+if (file_exists($dbConnectPath)) {
+    include_once $dbConnectPath;
+}
+
 // Determine if we're in the content directory or main admin directory
 $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false;
 ?>

@@ -144,8 +144,24 @@ $errorMessage = '';
 
 // Ensure we have a database connection
 if (!isset($db) || !$db) {
-    error_log("Database connection not available in contacts.php");
-    $errorMessage = "Database connection error. Please check the server logs.";
+    // Try to connect to the database directly
+    try {
+        $db = new PDO(
+            'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+            'stories_user',
+            '$tw1cac3*sOt',
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]
+        );
+
+        // Log successful connection
+        error_log("Connected to database in contacts.php");
+    } catch (PDOException $e) {
+        $errorMessage = "Database connection error: " . $e->getMessage();
+        error_log("Database connection error in contacts.php: " . $e->getMessage());
+    }
 }
 
 // Check if contacts table exists, create if not

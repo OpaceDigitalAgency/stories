@@ -67,6 +67,48 @@
   force = true
 
 [[redirects]]
+  from = "/register"
+  to = "/login"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/games/category/*"
+  to = "/games"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/stories/*"
+  to = "/stories"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/ai-tools/*"
+  to = "/ai-tools"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/directories/*"
+  to = "/directories"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/*"
+  to = "/blog"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/publish/create"
+  to = "/publish"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

@@ -93,13 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute($selectedIds);
                     $authorsWithStories = $stmt->fetchAll();
                     
+                    // If any authors have stories, redirect to confirmation page
                     if (!empty($authorsWithStories)) {
-                        // Some authors have associated stories, cannot delete
-                        $authorNames = array_map(function($author) {
-                            return $author['name'] . ' (' . $author['story_count'] . ' stories)';
-                        }, $authorsWithStories);
-                        
-                        $error = 'Cannot delete the following authors because they have associated stories: ' . implode(', ', $authorNames);
+                        $_SESSION['bulk_delete_authors'] = $selectedIds;
+                        header('Location: author-delete-process.php?bulk=1');
+                        exit;
                     } else {
                         // Delete the selected authors
                         $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");

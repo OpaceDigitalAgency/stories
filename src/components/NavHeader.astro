@@ -14,32 +14,30 @@ const navItems = [
   { text: 'Blog', href: '/blog' }
 ];
 
-// Remove duplicate Reviews entry from the original list
-
 // Determine the current path to highlight the active nav item
 const currentPath = Astro.url.pathname;
 ---
 
-<header class="sticky top-0 z-50 py-4" style="background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<header class="sticky top-0 z-50 py-4">
   <!-- Background with enhanced blur effect -->
   <div class="absolute inset-0 bg-white/90 backdrop-blur-md"></div>
   
   <!-- Decorative gradient for sticky header -->
   <div class="absolute inset-0 bg-gradient-to-b from-white/80 to-neutral-50/80"></div>
   
-  <div class="container mx-auto px-4 flex items-center h-20 relative" style="max-width: 1280px; margin: 0 auto; display: flex; align-items: center; height: 80px; position: relative;">
+  <div class="container mx-auto px-4 flex items-center h-20 relative">
     <!-- Logo -->
-    <a href="/" class="inline-block" style="display: inline-block;">
+    <a href="/" class="inline-block">
       <img
         src="/logo-new2.png"
         alt="Stories From The Web"
         class="h-20 w-auto"
-        style="height: 80px; width: auto; display: inline-block; margin-right: 40px;"
+        style="margin-right:40px"
       />
     </a>
     
     <!-- Desktop Navigation -->
-    <nav class="hidden md:flex items-center space-x-4" style="display: flex; align-items: center; gap: 1rem;">
+    <nav class="hidden md:flex items-center space-x-4">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
@@ -51,39 +49,45 @@ const currentPath = Astro.url.pathname;
                 ? 'text-primary bg-primary-50/50'
                 : 'text-text-primary hover:text-primary hover:scale-105 hover:bg-neutral-50/80'
             }`}
-            style={`font-weight: bold; padding: 0.25rem 0.5rem; border-radius: 0.75rem; ${isActive ? 'color: #4361ee; background-color: rgba(67, 97, 238, 0.1);' : 'color: #333;'}`}
           >
             {item.text}
             <span class={`absolute bottom-0 left-0 w-full h-1 rounded-full transform transition-all duration-500 ${
               isActive
                 ? 'bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200 scale-x-100'
                 : 'bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200 scale-x-0 group-hover:scale-x-100'
-            }`} style={`position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; border-radius: 9999px; transform: ${isActive ? 'scaleX(1)' : 'scaleX(0)'}; transition: transform 0.3s; background-color: ${isActive ? '#4361ee' : 'transparent'};`}></span>
+            }`}></span>
+            <!-- Hover glow effect -->
+            <span class="absolute inset-0 -z-10 bg-primary-100/0 rounded-full blur-lg transition-colors duration-500 group-hover:bg-primary-100/20"></span>
           </a>
         );
       })}
       
       <!-- Login/Profile Button -->
-      <div class="flex items-center ml-6" style="display: flex; align-items: center; margin-left: 1.5rem;">
-        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-all duration-500 transform-style-3d hover:translate-z-4 hover:scale-105 group px-1 py-1 rounded-xl hover:bg-neutral-50/80" style="display: flex; align-items: center; color: #333; padding: 0.25rem 0.5rem; border-radius: 0.75rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" style="width: 1.5rem; height: 1.5rem; margin-right: 0.75rem;">
+      <div class="flex items-center ml-6">
+        <a href="/login" class="flex items-center text-text-primary hover:text-primary transition-all duration-500 transform-style-3d hover:translate-z-4 hover:scale-105 group px-1 py-1 rounded-xl hover:bg-neutral-50/80">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
           <span>Login</span>
         </a>
       </div>
       
+      <!-- Profile Switcher (only visible when logged in) -->
+      <div class="ml-4 hidden">
+        <ProfileSwitcher currentProfile="child" showLabels={false} size="sm" />
+      </div>
+      
       <a
         href="/publish"
         class="btn btn-primary ml-1 px-1 py-1 shadow-playful btn-playful transform-style-3d hover:translate-z-4 group"
-        style="background-color: #4361ee; color: white; padding: 0.5rem 1rem; border-radius: 0.75rem; margin-left: 0.5rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"
       >
-        <span class="relative z-10 flex items-center" style="position: relative; z-index: 10; display: flex; align-items: center; padding: 5px;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" style="width: 1.5rem; height: 1.5rem; margin-right: 0.75rem;">
+        <span class="relative z-10 flex items-center" style="padding:5px">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
           </svg>
           Share Your <br/>Story
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </a>
     </nav>
     
@@ -92,23 +96,22 @@ const currentPath = Astro.url.pathname;
       id="mobile-menu-button"
       class="ml-auto md:hidden flex items-center p-2 rounded-xl text-text-primary hover:text-primary hover:bg-neutral-dark transition-all duration-300"
       aria-label="Toggle menu"
-      style="margin-left: auto; display: flex; align-items: center; padding: 0.5rem; border-radius: 0.75rem; color: #333;"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 1.5rem; height: 1.5rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
       </svg>
     </button>
   </div>
   
   <!-- Mobile Navigation (hidden by default) -->
-  <div id="mobile-menu" class="md:hidden hidden overflow-hidden relative" style="max-height: 0; transition: max-height 0.3s ease-in-out; display: none;">
+  <div id="mobile-menu" class="md:hidden hidden overflow-hidden relative" style="max-height: 0; transition: max-height 0.3s ease-in-out;">
     <!-- Background with blur effect -->
     <div class="absolute inset-0 bg-white/90 backdrop-blur-md"></div>
     
     <!-- Decorative gradient -->
     <div class="absolute inset-0 bg-gradient-to-b from-white/50 to-neutral-50/50"></div>
     
-    <div class="container mx-auto px-4 py-4 space-y-2 relative" style="max-width: 1280px; margin: 0 auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; position: relative;">
+    <div class="container mx-auto px-4 py-4 space-y-2 relative">
       {navItems.map(item => {
         const isActive = currentPath === item.href ||
                          (item.href !== '/' && currentPath.startsWith(item.href));
@@ -120,7 +123,6 @@ const currentPath = Astro.url.pathname;
                 ? 'bg-primary-50/80 text-primary font-bold shadow-playful'
                 : 'text-text-primary hover:bg-neutral-50/80 hover:text-primary hover:shadow-playful'
             }`}
-            style={`display: block; padding: 1rem 1.5rem; border-radius: 0.75rem; ${isActive ? 'background-color: rgba(67, 97, 238, 0.1); color: #4361ee; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);' : 'color: #333;'}`}
           >
             {item.text}
           </a>
@@ -131,25 +133,30 @@ const currentPath = Astro.url.pathname;
       <a
         href="/login"
         class="block py-4 px-6 mt-6 bg-gradient-to-r from-white to-neutral-50 text-text-primary rounded-xl font-bold flex items-center justify-center hover:from-neutral-50 hover:to-white transition-all duration-500 transform-style-3d hover:translate-z-4 shadow-playful hover:shadow-xl"
-        style="display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; margin-top: 1.5rem; background-color: white; color: #333; border-radius: 0.75rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" style="width: 1.5rem; height: 1.5rem; margin-right: 0.75rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
         Login
       </a>
       
+      <!-- Profile Switcher (only visible when logged in) -->
+      <div class="px-4 py-3 mt-2 hidden">
+        <p class="text-sm text-gray-600 mb-2">Switch Profile:</p>
+        <ProfileSwitcher currentProfile="child" showLabels={true} size="sm" />
+      </div>
+      
       <a
         href="/publish"
         class="block py-4 px-6 mt-6 bg-gradient-to-r from-primary to-primary/90 text-white rounded-xl font-bold shadow-playful hover:shadow-xl transform-style-3d hover:translate-z-4 transition-all duration-500 group"
-        style="display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; margin-top: 1.5rem; background-color: #4361ee; color: white; border-radius: 0.75rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"
       >
-        <span class="flex items-center justify-center" style="display: flex; align-items: center; justify-content: center;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" style="width: 1.5rem; height: 1.5rem; margin-right: 0.75rem;">
+        <span class="flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 mr-3 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
           </svg>
           Share Your Story
         </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-primary-600/0 via-primary-600/30 to-primary-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
       </a>
     </div>
   </div>
@@ -163,10 +170,9 @@ const currentPath = Astro.url.pathname;
     
     if (mobileMenuButton && mobileMenu) {
       mobileMenuButton.addEventListener('click', () => {
-        if (mobileMenu.classList.contains('hidden') || mobileMenu.style.display === 'none') {
+        if (mobileMenu.classList.contains('hidden')) {
           // Show menu with animation
           mobileMenu.classList.remove('hidden');
-          mobileMenu.style.display = 'block';
           mobileMenu.style.maxHeight = '0';
           setTimeout(() => {
             mobileMenu.style.maxHeight = mobileMenu.scrollHeight + 'px';
@@ -176,7 +182,6 @@ const currentPath = Astro.url.pathname;
           mobileMenu.style.maxHeight = '0';
           setTimeout(() => {
             mobileMenu.classList.add('hidden');
-            mobileMenu.style.display = 'none';
           }, 300); // Match the transition duration
         }
       });

@@ -116,7 +116,11 @@ if (function_exists('renderSearchComponent')) {
 
 // Include bulk actions component
 include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderBulkActionsComponent')) {
+if (function_exists('renderEnhancedBulkActionsComponent')) {
+    renderEnhancedBulkActionsComponent('authors', [
+        'delete' => 'Delete Selected'
+    ]);
+} else if (function_exists('renderBulkActionsComponent')) {
     renderBulkActionsComponent('authors', ['delete']);
 }
 

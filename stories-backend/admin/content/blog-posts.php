@@ -179,7 +179,13 @@ if (function_exists('renderSearchComponent')) {
 
 // Include bulk actions component
 include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderBulkActionsComponent')) {
+if (function_exists('renderEnhancedBulkActionsComponent')) {
+    renderEnhancedBulkActionsComponent('posts', [
+        'delete' => 'Delete Selected',
+        'publish' => 'Publish Selected',
+        'unpublish' => 'Unpublish Selected'
+    ]);
+} else if (function_exists('renderBulkActionsComponent')) {
     renderBulkActionsComponent('posts', ['delete', 'publish', 'unpublish']);
 }
 

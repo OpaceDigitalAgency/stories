@@ -441,11 +441,13 @@ require_once '../includes/header.php';
     <?php
     // Include bulk actions component
     include_once '../includes/bulk-actions-component.php';
-    if (function_exists('renderBulkActionsComponent')) {
-        renderBulkActionsComponent('media', [
-            'delete' => 'Delete',
-            'optimize' => 'Optimize'
+    if (function_exists('renderEnhancedBulkActionsComponent')) {
+        renderEnhancedBulkActionsComponent('media', [
+            'delete' => 'Delete Selected',
+            'optimize' => 'Optimize Selected'
         ]);
+    } else if (function_exists('renderBulkActionsComponent')) {
+        renderBulkActionsComponent('media', ['delete', 'optimize']);
     }
 
     // Include search component
@@ -476,7 +478,7 @@ require_once '../includes/header.php';
             <div class="media-grid">
                 <?php foreach ($media as $item): ?>
                     <div class="media-card">
-                        <input type="checkbox" class="bulk-checkbox" name="selected_ids[]" value="<?php echo $item['id']; ?>" style="position: absolute; top: 10px; right: 10px;">
+                        <input type="checkbox" class="bulk-checkbox" name="selected_ids[]" value="<?php echo $item['id']; ?>">
                         <?php
                         $isImage = strpos($item['file_type'], 'image/') === 0;
                         $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';

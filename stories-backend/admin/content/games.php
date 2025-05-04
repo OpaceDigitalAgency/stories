@@ -118,7 +118,15 @@ if (function_exists('renderSearchComponent')) {
 
 // Include bulk actions component
 include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderBulkActionsComponent')) {
+if (function_exists('renderEnhancedBulkActionsComponent')) {
+    renderEnhancedBulkActionsComponent('games', [
+        'delete' => 'Delete Selected',
+        'publish' => 'Publish Selected',
+        'unpublish' => 'Unpublish Selected',
+        'feature' => 'Feature Selected',
+        'unfeature' => 'Unfeature Selected'
+    ]);
+} else if (function_exists('renderBulkActionsComponent')) {
     renderBulkActionsComponent('games', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
 }
 

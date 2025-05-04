@@ -150,28 +150,22 @@ $errorMessage = '';
 
 // Ensure we have a database connection
 if (!isset($db) || !$db) {
-    // Include the database connection file
-    require_once dirname(__FILE__) . '/../../includes/db-connect.php';
+    try {
+        $db = new PDO(
+            'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+            'stories_user',
+            '$tw1cac3*sOt',
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]
+        );
 
-    // If still no connection, try to connect directly
-    if (!isset($db) || !$db) {
-        try {
-            $db = new PDO(
-                'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-                'stories_user',
-                '$tw1cac3*sOt',
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                ]
-            );
-
-            // Log successful connection
-            error_log("Connected to database in contacts.php");
-        } catch (PDOException $e) {
-            $errorMessage = "Database connection error: " . $e->getMessage();
-            error_log("Database connection error in contacts.php: " . $e->getMessage());
-        }
+        // Log successful connection
+        error_log("Connected to database in contacts.php");
+    } catch (PDOException $e) {
+        $errorMessage = "Database connection error: " . $e->getMessage();
+        error_log("Database connection error in contacts.php: " . $e->getMessage());
     }
 }
 

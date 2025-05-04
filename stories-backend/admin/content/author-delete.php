@@ -11,7 +11,7 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include header
+// Include header - must be after auth check and db connection
 require_once '../includes/header.php';
 
 // Get author details

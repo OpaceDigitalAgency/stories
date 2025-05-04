@@ -1,9 +1,4 @@
 <?php
-
-// Include header
-include 'includes/header.php';
-
-
 // Page variables
 $pageTitle = 'Logout';
 $currentPage = 'logout';
@@ -30,5 +25,4 @@ SimpleAuth::logout();
 header("Location: login.php");
 exit;
 
-// Include footer
-include 'includes/footer.php';
+// No footer needed for logout page

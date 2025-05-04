@@ -4,10 +4,15 @@
  * Saves contact form submissions to the database
  */
 
+// Set error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Allow cross-origin requests
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
 header('Content-Type: application/json; charset=utf-8');
 
 // Handle preflight requests
@@ -69,15 +74,48 @@ $admin_notes = '';
 
 // Connect to database
 try {
-    $db = new PDO(
-        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-        'stories_user',
-        '$tw1cac3*sOt',
+    // Try different database configurations
+    $dbConfigs = [
         [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            'host' => 'localhost',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'pass' => '$tw1cac3*sOt'
+        ],
+        [
+            'host' => '127.0.0.1',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'pass' => '$tw1cac3*sOt'
         ]
-    );
+    ];
+
+    $db = null;
+    $connectionError = null;
+
+    foreach ($dbConfigs as $config) {
+        try {
+            error_log("Trying connection to {$config['host']}");
+            $db = new PDO(
+                "mysql:host={$config['host']};dbname={$config['dbname']};charset=utf8mb4",
+                $config['user'],
+                $config['pass'],
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]
+            );
+            error_log("Connection successful to {$config['host']}");
+            break;
+        } catch (PDOException $e) {
+            $connectionError = $e->getMessage();
+            error_log("Connection failed to {$config['host']}: {$connectionError}");
+        }
+    }
+
+    if (!$db) {
+        throw new Exception("Could not connect to any database. Last error: " . $connectionError);
+    }
 
     // Check if contacts table exists, create if not
     $stmt = $db->query("SHOW TABLES LIKE 'contacts'");

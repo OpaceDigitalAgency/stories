@@ -4,17 +4,61 @@
  * This script tests the contact form submission by inserting a test record
  */
 
+// Set error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Output header
+echo "<h1>Contact Form Test Script</h1>";
+echo "<p>This script tests the database connection and inserts a test contact record.</p>";
+
 // Connect to database
 try {
-    $db = new PDO(
-        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-        'stories_user',
-        '$tw1cac3*sOt',
+    echo "<h2>Attempting Database Connection</h2>";
+
+    // Try different database configurations
+    $dbConfigs = [
         [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            'host' => 'localhost',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'pass' => '$tw1cac3*sOt'
+        ],
+        [
+            'host' => '127.0.0.1',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'pass' => '$tw1cac3*sOt'
         ]
-    );
+    ];
+
+    $db = null;
+    $connectionError = null;
+
+    foreach ($dbConfigs as $config) {
+        try {
+            echo "Trying connection to {$config['host']}...<br>";
+            $db = new PDO(
+                "mysql:host={$config['host']};dbname={$config['dbname']};charset=utf8mb4",
+                $config['user'],
+                $config['pass'],
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]
+            );
+            echo "<p style='color:green'>Connection successful to {$config['host']}!</p>";
+            break;
+        } catch (PDOException $e) {
+            $connectionError = $e->getMessage();
+            echo "<p style='color:orange'>Connection failed to {$config['host']}: {$connectionError}</p>";
+        }
+    }
+
+    if (!$db) {
+        throw new Exception("Could not connect to any database. Last error: " . $connectionError);
+    }
 
     // Check if contacts table exists, create if not
     $stmt = $db->query("SHOW TABLES LIKE 'contacts'");
@@ -56,7 +100,7 @@ try {
     echo "<h2>All Contacts</h2>";
     echo "<table border='1' cellpadding='5'>";
     echo "<tr><th>ID</th><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th>Responded</th><th>Created At</th></tr>";
-    
+
     foreach ($contacts as $contact) {
         echo "<tr>";
         echo "<td>{$contact['id']}</td>";
@@ -68,7 +112,7 @@ try {
         echo "<td>{$contact['created_at']}</td>";
         echo "</tr>";
     }
-    
+
     echo "</table>";
 
 } catch (PDOException $e) {

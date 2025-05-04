@@ -9,7 +9,13 @@ $pageTitle = 'Premium Subscribers';
 $currentPage = 'subscribers';
 $pageDescription = 'Manage users who have subscribed to premium feature notifications';
 
-// Include header (which includes auth check and DB connection)
+// Include auth check
+include_once '../includes/auth-check.php';
+
+// Include database connection
+include_once '../includes/db-connect.php';
+
+// Include header
 include_once '../includes/header.php';
 
 // Include common admin functions
@@ -285,11 +291,7 @@ try {
 
 <div class="content-wrapper">
     <div class="container-fluid">
-        <!-- Page header -->
-        <div class="page-header">
-            <h1 class="page-title"><?php echo htmlspecialchars($pageTitle); ?></h1>
-            <p class="page-description"><?php echo htmlspecialchars($pageDescription); ?></p>
-        </div>
+        <!-- Page header is already included in header.php, so we don't need to repeat it here -->
 
         <!-- Alerts -->
         <?php if (isset($successMessage)): ?>

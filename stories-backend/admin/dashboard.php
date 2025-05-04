@@ -6,10 +6,10 @@
  */
 
 // Include auth check
-include_once 'includes/auth-check.php';
+require_once 'includes/auth-check.php';
 
 // Include database connection
-include_once 'includes/db-connect.php';
+require_once 'includes/db-connect.php';
 
 try {
     // Get content statistics
@@ -121,7 +121,7 @@ $pageActions = '
 ';
 
 // Include header
-include_once 'includes/header.php';
+require_once 'includes/header.php';
 
 // Display error message if any
 if (isset($error)): ?>
@@ -491,5 +491,5 @@ if (isset($error)): ?>
 
 <?php
 // Include footer
-include_once 'includes/footer.php';
+require_once 'includes/footer.php';
 ?>

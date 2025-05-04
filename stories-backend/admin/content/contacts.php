@@ -8,7 +8,13 @@ $pageTitle = 'Contact Form Submissions';
 $currentPage = 'contacts';
 $pageDescription = 'Manage and respond to contact form submissions from website visitors.';
 
-// Include header (which includes auth check and DB connection)
+// Include auth check
+include_once '../includes/auth-check.php';
+
+// Include database connection
+include_once '../includes/db-connect.php';
+
+// Include header
 include_once '../includes/header.php';
 
 // Include email functions

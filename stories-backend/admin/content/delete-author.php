@@ -1,32 +1,43 @@
 <?php
 
-// Include header
-include '../includes/header.php';
-
-
 // Page variables
 $pageTitle = 'Delete Author';
 $currentPage = 'delete-author';
 
-require_once '../../simple_auth.php';
+// Include auth check
+include_once '../includes/auth-check.php';
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include database connection
+include_once '../includes/db-connect.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
+// Check if we already have a database connection
+if (!isset($db) || !$db) {
+    try {
+        // Database configuration
+        $config = [
+            'host' => 'localhost',
+            'name' => 'stories_db',
+            'user' => 'stories_user',
+            'password' => '$tw1cac3*sOt',
+            'charset' => 'utf8mb4',
+            'port' => 3306
+        ];
 
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header("Location: ../login.php");
-    exit;
+        // Connect to database
+        $db = new PDO(
+            "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+            $config['user'],
+            $config['password'],
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]
+        );
+    } catch (PDOException $e) {
+        error_log("Database connection error in delete-author.php: " . $e->getMessage());
+        die("Database connection error. Please try again later.");
+    }
 }
 
 // Check if form was submitted
@@ -45,18 +56,6 @@ if ($action === 'cancel') {
 }
 
 try {
-    // Connect to database
-    $db = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
-        $config['user'],
-        $config['password'],
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]
-    );
-
     // Start transaction
     $db->beginTransaction();
 
@@ -170,5 +169,4 @@ try {
     exit;
 }
 
-// Include footer
-include '../includes/footer.php';
+// We don't include the footer here as this is a processing script

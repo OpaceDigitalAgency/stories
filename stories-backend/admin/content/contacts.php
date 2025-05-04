@@ -8,19 +8,11 @@ $pageTitle = 'Contact Form Submissions';
 $currentPage = 'contacts';
 $pageDescription = 'Manage and respond to contact form submissions from website visitors.';
 
-// Include database connection first
-include_once '../includes/db-connect.php';
+// Include header (which includes auth check and DB connection)
+include_once '../includes/header.php';
 
 // Include email functions
 include_once '../includes/email-functions.php';
-
-// Include header after database connection
-include_once '../includes/header.php';
-
-// We'll include the component files when we need them
-// These files contain the functions we need:
-// - table-component.php (renderTable)
-// - bulk-actions-component.php (renderBulkActionsComponent)
 
 // Add custom CSS for contact details
 echo '<style>

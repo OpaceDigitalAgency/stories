@@ -1,0 +1,27 @@
+{
+  "site": {
+    "name": "Stories From The Web",
+    "title": "Stories From The Web | Share and Discover Children's Stories",
+    "description": "A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling.",
+    "url": "https://storiesfromtheweb.org",
+    "version": "2.1",
+    "favicon": {
+      "png": "/favicon.png"
+    },
+    "social": {
+      "twitter": "storiesfromtheweb",
+      "facebook": "storiesfromtheweb",
+      "instagram": "storiesfromtheweb"
+    },
+    "contact": {
+      "email": "support@storiesfromtheweb.org"
+    },
+    "footer": {
+      "copyright": "Stories from the Web. All rights reserved."
+    },
+    "meta": {
+      "og_image": "https://storiesfromtheweb.org/og-image.jpg",
+      "twitter_image": "https://storiesfromtheweb.org/twitter-image.jpg"
+    }
+  }
+}

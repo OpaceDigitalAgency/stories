@@ -1,3 +1,10 @@
+---
+import { getConfig } from '../lib/config';
+
+// Get favicon from config
+const faviconPng = getConfig('site.favicon.png', '/favicon.png');
+---
+
 <!-- Favicon component to be included in all pages -->
-<link rel="icon" type="image/x-icon" href="/favicon.png">
-<link rel="shortcut icon" type="image/x-icon" href="/favicon.png">
+<link rel="icon" type="image/x-icon" href={faviconPng}>
+<link rel="shortcut icon" type="image/x-icon" href={faviconPng}>

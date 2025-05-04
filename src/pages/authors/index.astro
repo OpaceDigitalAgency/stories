@@ -1,12 +1,13 @@
 ---
-import NavHeader from '../../components/NavHeader.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
 import CardAuthor from '../../components/CardAuthor.astro';
-import Favicon from '../../components/Favicon.astro';
 import { fetchAuthors } from '../../lib/api';
-import '../../styles/base.css';
+import { getConfig } from '../../lib/config';
 
 export const prerender = false;
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Fetch authors from API
 const allAuthors = await fetchAuthors();
@@ -23,20 +24,11 @@ const familyAuthors = [...parentAuthors, ...childAuthors];
 const featuredAuthors = allAuthors.filter(author => author.featured);
 
 // Page metadata
-const title = 'Authors | Stories From The Web';
-const description = 'Discover amazing storytellers on Stories From The Web. Browse our collection of children\'s book authors, educators, and more.';
+const title = `Authors | ${siteName}`;
+const description = `Discover amazing storytellers on ${siteName}. Browse our collection of children's book authors, educators, and more.`;
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <Favicon />
-</head>
-<body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
-  <NavHeader />
+<Layout title={title} description={description}>
 
   <main class="pt-24 pb-32">
     <!-- Hero Section -->
@@ -205,9 +197,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
     </section>
   </main>
 
-  <Footer />
-
-  <style>
+  <style slot="scripts">
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -254,5 +244,4 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
       transition: transform 0.5s ease;
     }
   </style>
-</body>
-</html>
+</Layout>

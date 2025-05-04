@@ -11,6 +11,12 @@
  * include '../includes/header.php';
  */
 
+// Include the configuration
+$configPath = dirname(dirname(dirname(__FILE__))) . '/includes/config.php';
+if (file_exists($configPath)) {
+    include_once $configPath;
+}
+
 // Default values if not set
 $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = $currentPage ?? '';
@@ -24,20 +30,29 @@ if (file_exists($dbConnectPath)) {
 
 // Determine if we're in the content directory or main admin directory
 $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false;
+
+// Get site name from config
+$siteName = get_config('site.name', 'Stories From The Web');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?> - Stories Admin</title>
+    <title><?php echo htmlspecialchars($pageTitle); ?> - <?php echo htmlspecialchars($siteName); ?> Admin</title>
     <?php
     // Determine the correct path to assets based on the current file location
     $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
     $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
 
-    // Use relative path for favicon to ensure it works in all environments
-    $faviconPath = $isContentDir ? '../../public/favicon.png' : '../public/favicon.png';
+    // Get favicon from config or use default
+    $faviconPath = get_config('site.favicon.png', '/favicon.png');
+
+    // Make sure the favicon path is correct for the admin environment
+    if (strpos($faviconPath, '/') === 0) {
+        // If it starts with a slash, it's a root-relative path
+        $faviconPath = $isContentDir ? '../../public' . $faviconPath : '../public' . $faviconPath;
+    }
     ?>
     <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
@@ -45,7 +60,7 @@ $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Meta tags for better accessibility -->
-    <meta name="description" content="<?php echo htmlspecialchars($pageTitle); ?> - Stories Admin">
+    <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
     <meta name="theme-color" content="#4361ee">
     <?php if (isset($extraHeadContent)) echo $extraHeadContent; ?>
 </head>

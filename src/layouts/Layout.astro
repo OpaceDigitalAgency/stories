@@ -1,6 +1,7 @@
 ---
 import NavHeader from '../components/NavHeader.astro';
 import Footer from '../components/Footer.astro';
+import { getConfig } from '../lib/config';
 import '../styles/base.css';
 
 export interface Props {
@@ -8,7 +9,16 @@ export interface Props {
   description?: string;
 }
 
-const { title, description = "Stories From The Web - Share and discover children's stories" } = Astro.props;
+// Get site information from config
+const siteName = getConfig('site.name', 'Stories From The Web');
+const siteDescription = getConfig('site.description', "Share and discover children's stories");
+const faviconPng = getConfig('site.favicon.png', '/favicon.png');
+
+// Use props or fallback to config values
+const {
+  title = getConfig('site.title', `${siteName} | ${siteDescription}`),
+  description = siteDescription
+} = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -18,8 +28,8 @@ const { title, description = "Stories From The Web - Share and discover children
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
     <meta name="description" content={description}>
-    <link rel="icon" type="image/x-icon" href="/favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.png">
+    <link rel="icon" type="image/x-icon" href={faviconPng}>
+    <link rel="shortcut icon" type="image/x-icon" href={faviconPng}>
     <meta name="generator" content={Astro.generator} />
     <slot name="head" />
   </head>

@@ -1,23 +1,37 @@
 <?php
 /**
  * Common Footer Include
- * 
+ *
  * This file contains the common footer elements for all admin pages.
  * It should be included at the bottom of each admin page.
- * 
+ *
  * Usage:
  * include '../includes/footer.php';
  */
+
+// Include the configuration if not already included
+if (!function_exists('get_config')) {
+    $configPath = dirname(dirname(dirname(__FILE__))) . '/includes/config.php';
+    if (file_exists($configPath)) {
+        include_once $configPath;
+    }
+}
+
+// Get site information from config
+$siteName = get_config('site.name', 'Stories from the Web');
+$siteVersion = get_config('site.version', '2.1');
+$siteCopyright = get_config('site.footer.copyright', 'Stories from the Web. All rights reserved.');
+$contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org');
 ?>
     <footer class="admin-footer" role="contentinfo">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3 class="footer-heading">Stories from the Web</h3>
-                    <p>&copy; <?php echo date('Y'); ?> Stories from the Web. All rights reserved.</p>
-                    <p class="text-muted">Version 2.1 - Enhanced Admin Dashboard</p>
+                    <h3 class="footer-heading"><?php echo htmlspecialchars($siteName); ?></h3>
+                    <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteCopyright); ?></p>
+                    <p class="text-muted">Version <?php echo htmlspecialchars($siteVersion); ?> - Enhanced Admin Dashboard</p>
                 </div>
-                
+
                 <div class="footer-section">
                     <h3 class="footer-heading">Quick Links</h3>
                     <ul class="footer-links">
@@ -26,18 +40,18 @@
                         <li><a href="/public/optimize_image.php" target="_blank">Image Optimization Tool</a></li>
                     </ul>
                 </div>
-                
+
                 <div class="footer-section">
                     <h3 class="footer-heading">Support</h3>
                     <ul class="footer-links">
-                        <li><a href="mailto:support@storiesfromtheweb.org">Email Support</a></li>
+                        <li><a href="mailto:<?php echo htmlspecialchars($contactEmail); ?>">Email Support</a></li>
                         <li><a href="https://github.com/OpaceDigitalAgency/stories/issues" target="_blank">Report an Issue</a></li>
                     </ul>
                 </div>
             </div>
-            
+
             <div class="footer-bottom">
-                <p>Made with <span aria-hidden="true">❤️</span><span class="visually-hidden">love</span> by the Stories from the Web team</p>
+                <p>Made with <span aria-hidden="true">❤️</span><span class="visually-hidden">love</span> by the <?php echo htmlspecialchars($siteName); ?> team</p>
             </div>
         </div>
     </footer>

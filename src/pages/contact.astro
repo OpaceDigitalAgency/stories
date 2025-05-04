@@ -1,27 +1,16 @@
 ---
-import NavHeader from '../components/NavHeader.astro';
-import Footer from '../components/Footer.astro';
-import Favicon from '../components/Favicon.astro';
-import '../styles/base.css';
+import Layout from '../layouts/Layout.astro';
+import { getConfig } from '../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = 'Contact Us | Stories From The Web';
-const description = 'Get in touch with the Stories From The Web team. We\'re here to help with any questions, feedback, or support you may need.';
+const title = `Contact Us | ${siteName}`;
+const description = `Get in touch with the ${siteName} team. We're here to help with any questions, feedback, or support you may need.`;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <Favicon />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-  </head>
-  <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
-    <NavHeader />
-
-    <main class="flex-grow w-full">
+<Layout title={title} description={description}>
       <div class="container mx-auto px-4 py-8 max-w-4xl">
         <header class="mb-8 text-center">
           <h1 class="text-4xl font-bold text-text-primary mb-4">
@@ -274,10 +263,8 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
       </div>
     </main>
 
-    <Footer />
-
-    <script>
-      // Generate a random token for anti-bot protection
+  <script slot="scripts">
+    // Generate a random token for anti-bot protection
       function generateToken(length = 32) {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let token = '';
@@ -363,5 +350,4 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
         });
       }
     </script>
-  </body>
-</html>
+</Layout>

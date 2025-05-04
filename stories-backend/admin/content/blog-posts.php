@@ -215,7 +215,7 @@ include_once '../includes/status-indicator-component.php';
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
+if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
         'title' => 'Title',
@@ -249,8 +249,14 @@ if (function_exists('renderTable')) {
         }
     ];
 
+    // Add debug output before rendering
+    error_log("Rendering table with " . count($posts) . " posts");
+    error_log("Posts data: " . json_encode(array_slice($posts, 0, 2)));
+    error_log("Columns: " . json_encode($columns));
+    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
+
     // Render the table
-    renderTable($posts, $columns, [
+    renderEnhancedTable($posts, $columns, [
         'content_type' => 'posts',
         'name_field' => 'title',
         'empty_message' => 'No blog posts found. Add your first post!',

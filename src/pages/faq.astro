@@ -9,6 +9,88 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Frequently Asked Questions | ${siteName}`;
 const description = `Find answers to common questions about ${siteName}, including how to publish stories, account management, and using our platform.`;
 
+// FAQ interfaces
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+interface FaqCategory {
+  name: string;
+  questions: FaqItem[];
+}
+
+// FAQ categories data
+const faqCategories: FaqCategory[] = [
+  {
+    name: "Getting Started",
+    questions: [
+      {
+        question: "What is Stories From The Web?",
+        answer: "Stories From The Web is a platform where children can share their creative writing and stories with others. We provide a safe, moderated environment for young writers to publish their work and connect with other storytellers."
+      },
+      {
+        question: "How do I create an account?",
+        answer: "To create an account, click the 'Sign Up' button in the top right corner. You'll need to provide a username, email address (parent's email for children under 13), and choose a password. Parents must approve accounts for children under 13."
+      },
+      {
+        question: "Is Stories From The Web free to use?",
+        answer: "Yes, Stories From The Web is free to use! We offer basic features to all users, with optional premium features available through our subscription plans."
+      }
+    ]
+  },
+  {
+    name: "Publishing Stories",
+    questions: [
+      {
+        question: "How do I publish a story?",
+        answer: "To publish a story, log into your account and click the 'Create Story' button. You can write directly in our editor or paste your story from another document. Add a title, cover image, and tags, then submit for moderation."
+      },
+      {
+        question: "What types of stories can I publish?",
+        answer: "You can publish any original story suitable for children. This includes fiction, non-fiction, poetry, and personal experiences. All content must follow our community guidelines and be appropriate for young readers."
+      },
+      {
+        question: "How long does moderation take?",
+        answer: "Most stories are reviewed within 24-48 hours. We check all content to ensure it's appropriate for our young audience and follows our community guidelines."
+      }
+    ]
+  },
+  {
+    name: "Account Management",
+    questions: [
+      {
+        question: "How do I reset my password?",
+        answer: "Click 'Forgot Password' on the login page and enter your email address. We'll send you instructions to reset your password. For child accounts, the reset link will be sent to the parent's email."
+      },
+      {
+        question: "Can I change my username?",
+        answer: "Yes, you can change your username once every 30 days. Go to your account settings and select 'Edit Profile' to make this change."
+      },
+      {
+        question: "How do I delete my account?",
+        answer: "To delete your account, go to your account settings and select 'Delete Account'. For child accounts, a parent must approve the deletion request."
+      }
+    ]
+  },
+  {
+    name: "Safety & Privacy",
+    questions: [
+      {
+        question: "How do you protect children's privacy?",
+        answer: "We follow strict privacy guidelines and never share personal information. Child accounts have additional safety features and require parental consent. All interactions are monitored and moderated."
+      },
+      {
+        question: "Can I make my stories private?",
+        answer: "Yes, when publishing a story you can choose to make it private (visible only to you) or public (visible to all users). You can change this setting at any time."
+      },
+      {
+        question: "How do I report inappropriate content?",
+        answer: "Click the 'Report' button on any story, comment, or user profile to alert our moderation team. We review all reports within 24 hours and take appropriate action."
+      }
+    ]
+  }
+];
 ---
 
 <Layout title={title} description={description}>

@@ -2,15 +2,80 @@
 import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
-import { fetchStories } from '../../lib/api';
+import { fetchBlogPosts } from '../../lib/api';
 import { getConfig } from '../../lib/config';
+
+// Type definitions
+interface Tag {
+  name: string;
+  slug: string;
+}
+
+interface BlogPost {
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  coverImage?: string;
+  publishDate?: string;
+  tags?: Tag[];
+  author?: {
+    name: string;
+    slug: string;
+    avatar?: string;
+    bio?: string;
+  };
+  category?: string;
+}
+
+// Get the slug from the URL
+const { slug } = Astro.params;
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Page metadata
-const title = siteName;
+// Initialize variables
+let post: BlogPost | null = null;
+let relatedPosts: BlogPost[] = [];
+let error: Error | null = null;
 
+try {
+  // Fetch the current post and related posts
+  const [posts, relatedPostsData] = await Promise.all([
+    fetchBlogPosts(1, 1, { slug: { $eq: slug } }),
+    fetchBlogPosts(1, 3, { slug: { $ne: slug } })
+  ]);
+
+  // Get the current post
+  post = posts?.[0];
+  
+  if (!post) {
+    error = new Error('Post not found');
+  }
+
+  // Get related posts
+  relatedPosts = relatedPostsData || [];
+
+} catch (err) {
+  error = err instanceof Error ? err : new Error('An unknown error occurred');
+  console.error('Error fetching blog post:', error);
+}
+
+// Format the date
+const formattedDate = post?.publishDate ? new Date(post.publishDate).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+}) : null;
+
+// Page metadata
+const title = post ? `${post.title} | ${siteName}` : siteName;
+const description = post?.excerpt || `Read our latest blog posts about children's literature, educational resources, and more.`;
+
+// Redirect to 404 if post not found
+if (!post) {
+  return Astro.redirect('/404');
+}
 ---
 
 <Layout title={title} description={description}>

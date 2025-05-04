@@ -66,6 +66,14 @@ export interface Author {
   featured?: boolean;
   age?: number | string | null;
   location?: string | null;
+  id?: string;
+  storyCount?: number;
+  joinDate?: string;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+  };
 }
 
 export interface Game {
@@ -492,6 +500,35 @@ export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<strin
     }));
   } catch (error) {
     console.error("Error fetching blog posts:", error);
+    return [];
+  }
+}
+
+// Category interface
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  count?: number;
+}
+
+// Fetch categories
+export async function fetchCategories(): Promise<Category[]> {
+  try {
+    const raw = await fetchApi<any[]>('/categories', {
+      'sort': 'name:asc'
+    });
+
+    return raw.map(item => ({
+      id: item.id,
+      name: item.name || 'Uncategorized',
+      slug: item.slug || 'uncategorized',
+      description: item.description || '',
+      count: Number(item.count) || 0
+    }));
+  } catch (error) {
+    console.error("Error fetching categories:", error);
     return [];
   }
 }

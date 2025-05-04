@@ -9,6 +9,67 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Our Partners | ${siteName}`;
 const description = `Meet the organizations and publishers that partner with ${siteName} to support children\'s literacy and storytelling.`;
 
+// Partner interface
+interface Partner {
+  name: string;
+  logo: string;
+  website: string;
+}
+
+// Partner category interface
+interface PartnerCategory {
+  name: string;
+  description: string;
+  partners: Partner[];
+}
+
+// Partner categories data
+const partnerCategories: PartnerCategory[] = [
+  {
+    name: "Publishers",
+    description: "Leading publishers who provide quality children's literature and educational content.",
+    partners: [
+      {
+        name: "Story Books Ltd",
+        logo: "/images/partners/publisher1.svg",
+        website: "https://example.com/publisher1"
+      }
+    ]
+  },
+  {
+    name: "Educational Organizations",
+    description: "Schools, libraries, and educational institutions that promote literacy and learning.",
+    partners: [
+      {
+        name: "Learning Center",
+        logo: "/images/partners/education1.svg",
+        website: "https://example.com/education1"
+      }
+    ]
+  },
+  {
+    name: "Technology Partners",
+    description: "Technology companies that help enhance our digital storytelling platform.",
+    partners: [
+      {
+        name: "Tech Solutions",
+        logo: "/images/partners/tech1.svg",
+        website: "https://example.com/tech1"
+      }
+    ]
+  },
+  {
+    name: "Community Organizations",
+    description: "Local and national organizations supporting children's literacy and creativity.",
+    partners: [
+      {
+        name: "Community Reads",
+        logo: "/images/partners/community1.svg",
+        website: "https://example.com/community1"
+      }
+    ]
+  }
+];
 ---
 
 <Layout title={title} description={description}>

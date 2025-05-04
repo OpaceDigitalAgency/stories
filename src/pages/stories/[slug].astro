@@ -6,20 +6,81 @@ import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
 import ModerationCTA from '../../components/ModerationCTA.astro';
 import CardStory from '../../components/CardStory.astro';
+import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
 import { fetchStories, fetchStory } from '../../lib/api';
 import type { Story } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 
+// Get the slug from the URL
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Page metadata
-const title = siteName;
+// Initialize data
+let story: Story | null = null;
+let relatedStories: Story[] = [];
+let apiError = false;
+let apiErrorDetails: Error | null = null;
 
+// Initialize content processing variables
+let processedContent = {
+  storyContent: null as string | null
+};
+
+let formattedDate: string | null = null;
+
+try {
+  // Fetch the story and related stories
+  const [currentStory, relatedStoriesData] = await Promise.all([
+    fetchStory(slug),
+    fetchStories(1, 4, { sort: 'publishedAt:desc' }) // Get most recent stories instead of filtering by slug
+  ]);
+
+  story = currentStory;
+  relatedStories = relatedStoriesData || [];
+
+  if (story) {
+    // Process story content
+    processedContent.storyContent = story.content?.trim() || null;
+
+    // Format date
+    formattedDate = story.publishDate
+      ? new Date(story.publishDate).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      : null;
+  } else {
+    return Astro.redirect('/404');
+  }
+} catch (err) {
+  console.error('Error fetching story:', err);
+  apiError = true;
+  apiErrorDetails = err instanceof Error ? err : new Error('An unknown error occurred');
+  story = null;
+  relatedStories = [];
+  return Astro.redirect('/404');
+}
+
+// Page metadata
+const title = story ? `${story.title} | ${siteName}` : siteName;
+const description = story?.excerpt || `Read this story on ${siteName}`;
 ---
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
+    {apiError ? (
+      <section class="py-8">
+        <div class="container mx-auto px-4">
+          <ApiErrorMessage error={apiErrorDetails} message="We're having trouble loading this story. Please try again later." />
+        </div>
+      </section>
+    ) : story ? (
     <!-- Story Header -->
     <section class="relative py-16 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -199,6 +260,16 @@ const title = siteName;
                 <CardStory story={relatedStory} className="rounded-xl shadow-md hover:shadow-lg transition" />
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+    )}
+    ) : (
+      <section class="py-8">
+        <div class="container mx-auto px-4">
+          <div class="text-center">
+            <h1 class="text-2xl font-bold text-text-primary mb-4">Story Not Found</h1>
+            <p class="text-text-secondary">The story you're looking for could not be found.</p>
           </div>
         </div>
       </section>

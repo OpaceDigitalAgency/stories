@@ -2,8 +2,9 @@
 import Layout from '../../layouts/Layout.astro';
 import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
-import { fetchBlogPosts } from '../../lib/api';
+import { fetchBlogPosts, fetchCategories } from '../../lib/api';
 import { getConfig } from '../../lib/config';
+import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -11,6 +12,31 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 // Page metadata
 const title = `Blog | ${siteName}`;
 const description = `Read our latest blog posts about children\'s literature, educational resources, and more.`;
+
+// Initialize error state
+let error = '';
+let apiError = false;
+let apiErrorDetails = null;
+let blogPosts = [];
+let categories = [];
+
+try {
+  // Fetch blog posts and categories
+  const [postsResult, categoriesResult] = await Promise.all([
+    fetchBlogPosts(),
+    fetchCategories()
+  ]);
+
+  blogPosts = postsResult || [];
+  categories = categoriesResult || [];
+} catch (err) {
+  console.error('Error fetching blog data:', err);
+  error = err instanceof Error ? err.message : 'Failed to load blog content';
+  apiError = true;
+  apiErrorDetails = err;
+  blogPosts = [];
+  categories = [];
+}
 
 ---
 
@@ -22,7 +48,7 @@ const description = `Read our latest blog posts about children\'s literature, ed
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <div class="container relative z-10">
         <div class="max-w-3xl mx-auto text-center mb-16">
           <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
@@ -31,12 +57,12 @@ const description = `Read our latest blog posts about children\'s literature, ed
           <p class="text-lg text-text-secondary mb-8">
             Insights, tips, and stories about children's literature, education, and the joy of reading. Stay updated with our latest articles and resources.
           </p>
-          
+
           <!-- Search Bar -->
           <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
-            <input 
-              type="text" 
-              placeholder="Search blog posts..." 
+            <input
+              type="text"
+              placeholder="Search blog posts..."
               class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
             />
             <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
@@ -48,18 +74,15 @@ const description = `Read our latest blog posts about children\'s literature, ed
         </div>
       </div>
     </section>
-    
-    {error && (
+
+    {apiError && (
       <section class="py-8 bg-white border-b">
         <div class="container mx-auto px-4">
-          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold">Error:</strong>
-            <span class="block sm:inline"> {error}</span>
-          </div>
+          <ApiErrorMessage error={apiErrorDetails} message="We're having trouble loading blog posts right now. Please try again later." />
         </div>
       </section>
     )}
-    
+
     <!-- Categories Section -->
     <section class="py-8 bg-white border-b">
       <div class="container mx-auto px-4">
@@ -79,7 +102,7 @@ const description = `Read our latest blog posts about children\'s literature, ed
         </div>
       </div>
     </section>
-    
+
     <!-- Featured Post -->
     {blogPosts.length > 0 && (
       <section class="py-16">
@@ -87,40 +110,40 @@ const description = `Read our latest blog posts about children\'s literature, ed
           <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
             Featured Post
           </h2>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div class="rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
-              <img 
-                src={typeof blogPosts[0].coverImage === 'string' ? blogPosts[0].coverImage : '/images/default-cover.svg'} 
-                alt={blogPosts[0].title} 
+              <img
+                src={typeof blogPosts[0].coverImage === 'string' ? blogPosts[0].coverImage : '/images/default-cover.svg'}
+                alt={blogPosts[0].title}
                 class="w-full h-auto object-cover"
               />
             </div>
-            
+
             <div>
               <div class="flex flex-wrap gap-3 mb-4">
                 {blogPosts[0].tags && Array.isArray(blogPosts[0].tags) && blogPosts[0].tags.map(tag => (
                   <TagBadge tag={tag} size="md" />
                 ))}
               </div>
-              
+
               <h3 class="text-2xl md:text-3xl font-bold text-text-primary mb-4">
                 <a href={`/blog/${blogPosts[0].slug}`} class="hover:text-primary transition-colors duration-300">
                   {blogPosts[0].title}
                 </a>
               </h3>
-              
+
               <p class="text-text-secondary mb-6">
                 {blogPosts[0].excerpt || 'Click to read this featured blog post.'}
               </p>
-              
+
               <div class="flex items-center mb-6">
                 {blogPosts[0].author && (
                   <a href={`/authors/${blogPosts[0].author.slug}`} class="flex items-center group">
                     <div class="w-10 h-10 rounded-full overflow-hidden mr-3 border-2 border-white shadow-md">
-                      <img 
-                        src={typeof blogPosts[0].author.avatar === 'string' ? blogPosts[0].author.avatar : '/images/default-avatar.svg'} 
-                        alt={blogPosts[0].author.name} 
+                      <img
+                        src={typeof blogPosts[0].author.avatar === 'string' ? blogPosts[0].author.avatar : '/images/default-avatar.svg'}
+                        alt={blogPosts[0].author.name}
                         class="w-full h-full object-cover"
                       />
                     </div>
@@ -141,9 +164,9 @@ const description = `Read our latest blog posts about children\'s literature, ed
                   </a>
                 )}
               </div>
-              
-              <a 
-                href={`/blog/${blogPosts[0].slug}`} 
+
+              <a
+                href={`/blog/${blogPosts[0].slug}`}
                 class="inline-block bg-primary text-white font-bold py-3 px-6 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
               >
                 Read More
@@ -153,31 +176,31 @@ const description = `Read our latest blog posts about children\'s literature, ed
         </div>
       </section>
     )}
-    
+
     <!-- All Blog Posts -->
     <section class="py-16 bg-white">
       <div class="container">
         <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
           Latest Articles
         </h2>
-        
+
         {blogPosts.length > 0 ? (
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 perspective-1000">
             {blogPosts.slice(1).map((post, index) => (
-              <div 
+              <div
                 class="transform-style-3d hover:translate-z-8 transition-transform duration-700"
                 style={`animation: fadeInUp 0.7s ease-out forwards ${index * 0.15}s;`}
               >
                 <article class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
                   <a href={`/blog/${post.slug}`} class="block relative">
                     <div class="relative h-48 overflow-hidden">
-                      <img 
-                        src={typeof post.coverImage === 'string' ? post.coverImage : '/images/default-cover.svg'} 
-                        alt={post.title} 
+                      <img
+                        src={typeof post.coverImage === 'string' ? post.coverImage : '/images/default-cover.svg'}
+                        alt={post.title}
                         class="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                       />
                       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
-                      
+
                       {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
                         <div class="absolute bottom-4 left-4 flex flex-wrap gap-2">
                           {post.tags.slice(0, 2).map(tag => (
@@ -192,27 +215,27 @@ const description = `Read our latest blog posts about children\'s literature, ed
                       )}
                     </div>
                   </a>
-                  
+
                   <div class="p-5">
                     <h3 class="text-lg font-bold text-text-primary mb-3 line-clamp-2 hover:text-primary transition-colors duration-300">
                       <a href={`/blog/${post.slug}`}>
                         {post.title}
                       </a>
                     </h3>
-                    
+
                     {post.excerpt && (
                       <p class="text-sm text-text-secondary mb-4 line-clamp-3">
                         {post.excerpt}
                       </p>
                     )}
-                    
+
                     <div class="flex items-center justify-between mt-auto pt-3 border-t border-neutral-100">
                       {post.author && (
                         <a href={`/authors/${post.author.slug}`} class="flex items-center group">
                           <div class="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white shadow-sm">
-                            <img 
-                              src={typeof post.author.avatar === 'string' ? post.author.avatar : '/images/default-avatar.svg'} 
-                              alt={post.author.name} 
+                            <img
+                              src={typeof post.author.avatar === 'string' ? post.author.avatar : '/images/default-avatar.svg'}
+                              alt={post.author.name}
                               class="w-full h-full object-cover"
                             />
                           </div>
@@ -221,7 +244,7 @@ const description = `Read our latest blog posts about children\'s literature, ed
                           </span>
                         </a>
                       )}
-                      
+
                       {post.publishDate && (
                         <span class="text-xs text-text-secondary/70">
                           {new Date(post.publishDate).toLocaleDateString('en-US', {
@@ -255,7 +278,7 @@ const description = `Read our latest blog posts about children\'s literature, ed
         )}
       </div>
     </section>
-    
+
     <!-- Newsletter Signup -->
     <section class="py-16">
       <div class="container">
@@ -266,17 +289,17 @@ const description = `Read our latest blog posts about children\'s literature, ed
               Stay updated with our latest blog posts, stories, and educational resources.
             </p>
           </div>
-          
+
           <form class="max-w-xl mx-auto">
             <div class="flex flex-col sm:flex-row gap-4">
-              <input 
-                type="email" 
-                placeholder="Your email address" 
+              <input
+                type="email"
+                placeholder="Your email address"
                 class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
                 required
               />
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
               >
                 Subscribe
@@ -291,7 +314,7 @@ const description = `Read our latest blog posts about children\'s literature, ed
     </section>
   </main>
   <style slot="scripts">
-    
+
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -306,12 +329,12 @@ const description = `Read our latest blog posts about children\'s literature, ed
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .fancy-underline {
       position: relative;
       display: inline-block;
     }
-    
+
     .fancy-underline::after {
       content: '';
       position: absolute;
@@ -325,10 +348,10 @@ const description = `Read our latest blog posts about children\'s literature, ed
       transform-origin: center;
       transition: transform 0.5s ease;
     }
-    
+
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
-  
+
   </style>
 </Layout>

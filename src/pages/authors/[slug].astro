@@ -4,19 +4,79 @@ import CardStory from '../../components/CardStory.astro';
 import TagBadge from '../../components/TagBadge.astro';
 import ReviewSection from '../../components/ReviewSection.astro';
 import SponsoredBadge from '../../components/SponsoredBadge.astro';
-import { fetchAuthors, fetchStories } from '../../lib/api';
+import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
+import { fetchAuthor, fetchStories, type Author, type Story } from '../../lib/api';
 import { getConfig } from '../../lib/config';
+
+// Get the slug from the URL
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/404');
+}
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
 
-// Page metadata
-const title = siteName;
+// Initialize data
+let author: Author | null = null;
+let authorStories: Story[] = [];
+let popularTags: string[] = [];
+let apiError = false;
+let apiErrorDetails: Error | null = null;
 
+try {
+  // Fetch author and their stories
+  const [authorData, storiesData] = await Promise.all([
+    fetchAuthor(slug),
+    fetchStories(1, 50, { sort: 'publishedAt:desc' })
+  ]);
+
+  author = authorData;
+  if (!author) {
+    return Astro.redirect('/404');
+  }
+
+  // Filter stories by author
+  authorStories = storiesData.filter(story => story.author?.slug === slug);
+
+  // Extract popular tags from author's stories
+  const tagCounts = new Map<string, number>();
+  authorStories.forEach(story => {
+    story.tags?.forEach(tag => {
+      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    });
+  });
+
+  // Get top 5 most used tags
+  popularTags = Array.from(tagCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tag]) => tag);
+
+} catch (err) {
+  console.error('Error fetching author data:', err);
+  apiError = true;
+  apiErrorDetails = err instanceof Error ? err : new Error('An unknown error occurred');
+  author = null;
+  authorStories = [];
+  popularTags = [];
+  return Astro.redirect('/404');
+}
+
+// Page metadata
+const title = author ? `${author.name} | ${siteName}` : siteName;
+const description = author?.bio || `Read stories by ${author?.name} on ${siteName}`;
 ---
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
+    {apiError ? (
+      <section class="py-8">
+        <div class="container mx-auto px-4">
+          <ApiErrorMessage error={apiErrorDetails} message="We're having trouble loading this author's profile. Please try again later." />
+        </div>
+      </section>
+    ) : author ? (
     <!-- Author Header -->
     <section class="relative py-16 overflow-hidden">
       <!-- Enhanced decorative blobs -->
@@ -198,6 +258,16 @@ const title = siteName;
               itemName={author.name}
               authorType={author.author_type || 'retail'}
             />
+          </div>
+        </div>
+      </section>
+    )}
+    ) : (
+      <section class="py-8">
+        <div class="container mx-auto px-4">
+          <div class="text-center">
+            <h1 class="text-2xl font-bold text-text-primary mb-4">Author Not Found</h1>
+            <p class="text-text-secondary">The author you're looking for could not be found.</p>
           </div>
         </div>
       </section>

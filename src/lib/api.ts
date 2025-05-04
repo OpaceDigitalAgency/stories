@@ -146,7 +146,8 @@ export async function fetchApi<T>(
     }
 
     const data = await response.json();
-    return data;
+    // Handle Strapi's data structure
+    return data.data || data;
   } catch (error) {
     console.error(`API request failed for ${url}:`, error);
 
@@ -346,17 +347,17 @@ export async function fetchAiTool(slug: string): Promise<AiTool | null> {
 
 export async function fetchGame(slug: string): Promise<Game | null> {
   try {
-    const raw = await fetchApi<any[]>('/games', {
+    const raw = await fetchApi<any>('/games', {
       'filters[slug][$eq]': slug,
       'populate': '*'
     });
 
-    if (!raw || raw.length === 0) {
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No game found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
+    const item = raw[0].attributes || raw[0];
     return {
       title: item.title,
       description: item.description || '',
@@ -472,18 +473,18 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
-    const raw = await fetchApi<any[]>('/stories', {
+    const raw = await fetchApi<any>('/stories', {
       'filters[slug][$eq]': slug,
       'populate': '*'  // Ensure we get all fields including content
     });
 
     // Check if we got any results
-    if (!raw || raw.length === 0) {
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No story found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
+    const item = raw[0].attributes || raw[0];
     return {
       title: item.title,
       excerpt: item.excerpt || '',
@@ -529,18 +530,18 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
-    const raw = await fetchApi<any[]>('/authors', {
+    const raw = await fetchApi<any>('/authors', {
       'filters[slug][$eq]': slug,
       'populate': '*'  // Ensure we get all fields
     });
 
     // Check if we got any results
-    if (!raw || raw.length === 0) {
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No author found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
+    const item = raw[0].attributes || raw[0];
     return {
       name: item.name,
       bio: item.bio || '',

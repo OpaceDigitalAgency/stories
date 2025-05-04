@@ -21,103 +21,39 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 try {
-
-    // Check if stories table exists
-    $stmt = $db->query("SHOW TABLES LIKE 'stories'");
-    if ($stmt->rowCount() === 0) {
-        // Create stories table if it doesn't exist
-        $db->exec("CREATE TABLE IF NOT EXISTS stories (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            content TEXT NOT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL
-        )");
-
-        // Log this important information
-        error_log("Stories table did not exist and was created");
+    // Enable detailed error reporting
+    error_log("Starting stories page load...");
+    
+    // Verify database connection
+    if (!$db) {
+        throw new Exception("Database connection is not available");
     }
+    error_log("Database connection verified");
 
-    // Check if stories table has any data
-    $countStories = $db->query("SELECT COUNT(*) FROM stories")->fetchColumn();
-    error_log("Number of stories in database: " . $countStories);
-
-    // If no stories, create a sample story for testing
-    if ($countStories == 0) {
-        error_log("No stories found in database, creating a sample story");
-
-        // First check if we have any authors
-        $authorCount = $db->query("SELECT COUNT(*) FROM authors")->fetchColumn();
-        $authorId = null;
-
-        if ($authorCount > 0) {
-            // Get the first author
-            $authorId = $db->query("SELECT id FROM authors LIMIT 1")->fetchColumn();
-        } else {
-            // Create a sample author
-            $db->exec("INSERT INTO authors (name, slug, bio, created_at, updated_at)
-                      VALUES ('Sample Author', 'sample-author', 'This is a sample author', NOW(), NOW())");
-            $authorId = $db->lastInsertId();
+    // Check if stories table exists and has the correct structure
+    $requiredTables = ['stories', 'authors', 'story_authors', 'story_tags'];
+    foreach ($requiredTables as $table) {
+        $stmt = $db->query("SHOW TABLES LIKE '$table'");
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Required table '$table' does not exist");
         }
-
-        // Create a sample story
-        $db->exec("INSERT INTO stories (title, content, created_at, updated_at)
-                  VALUES ('Sample Story', 'This is a sample story content.', NOW(), NOW())");
-        $storyId = $db->lastInsertId();
-
-        // Link the story to the author
-        if ($authorId) {
-            $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES ($storyId, $authorId)");
-        }
+        error_log("Table '$table' exists");
     }
 
-    // Check if story_tags table exists
-    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
-    if ($stmt->rowCount() === 0) {
-        // Create story_tags table if it doesn't exist
-        $db->exec("CREATE TABLE IF NOT EXISTS story_tags (
-            story_id INT NOT NULL,
-            tag_id INT NOT NULL,
-            PRIMARY KEY (story_id, tag_id)
-        )");
-        error_log("story_tags table did not exist and was created");
-    }
-
-    // Check if story_authors table exists
-    $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
-    if ($stmt->rowCount() === 0) {
-        // Create story_authors table if it doesn't exist
-        $db->exec("CREATE TABLE IF NOT EXISTS story_authors (
-            story_id INT NOT NULL,
-            author_id INT NOT NULL,
-            PRIMARY KEY (story_id, author_id)
-        )");
-        error_log("story_authors table did not exist and was created");
-
-        // Check if we have stories with author_id column
-        if (in_array('author_id', $columns)) {
-            // Migrate data from author_id column to junction table
-            $stories = $db->query("SELECT id, author_id FROM stories WHERE author_id IS NOT NULL")->fetchAll();
-            foreach ($stories as $story) {
-                $db->exec("INSERT IGNORE INTO story_authors (story_id, author_id) VALUES ({$story['id']}, {$story['author_id']})");
-            }
-            error_log("Migrated " . count($stories) . " stories with author_id to story_authors junction table");
-        }
-    }
-
-    // Get all columns from stories table
+    // Get stories table structure
     $columns = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
     }
+    error_log("Stories table columns: " . implode(", ", $columns));
 
-    // Determine the join condition based on available columns
-    $joinCondition = "1=0"; // Default to no join if neither column exists
-    if (in_array('author_id', $columns)) {
-        $joinCondition = "s.author_id = a.id";
-    } elseif (in_array('author', $columns)) {
-        $joinCondition = "s.author = a.name";
+    // Verify required columns exist
+    $requiredColumns = ['id', 'title', 'content', 'created_at', 'updated_at'];
+    foreach ($requiredColumns as $column) {
+        if (!in_array($column, $columns)) {
+            throw new Exception("Required column '$column' missing from stories table");
+        }
     }
 
     // Get search parameters
@@ -172,17 +108,39 @@ try {
 
         // Get stories with pagination - include author information through story_authors
         $query = "
-            SELECT s.*,
-                   GROUP_CONCAT(DISTINCT a.name) as author_names,
-                   GROUP_CONCAT(DISTINCT a.id) as author_ids
+            SELECT s.id,
+                   s.title,
+                   s.content,
+                   s.excerpt,
+                   s.slug,
+                   s.is_published,
+                   s.featured,
+                   s.average_rating,
+                   s.allow_reviews,
+                   s.review_count,
+                   s.estimated_reading_time,
+                   s.is_sponsored,
+                   s.age_group,
+                   s.needs_moderation,
+                   s.is_self_published,
+                   s.is_ai_enhanced,
+                   s.cover_url,
+                   s.created_at,
+                   s.updated_at,
+                   GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ') as author_names,
+                   GROUP_CONCAT(DISTINCT a.id SEPARATOR ',') as author_ids,
+                   GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ') as tag_names
             FROM stories s
             LEFT JOIN story_authors sa ON s.id = sa.story_id
             LEFT JOIN authors a ON sa.author_id = a.id
+            LEFT JOIN story_tags st ON s.id = st.story_id
+            LEFT JOIN tags t ON st.tag_id = t.id
             $whereClause
             GROUP BY s.id
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
+        error_log("Executing query: " . $query);
         error_log("Stories query: $query");
         $stmt = $db->prepare($query);
         $stmt->execute($params);
@@ -264,15 +222,69 @@ $pageTitle = 'Stories';
 $currentPage = 'stories';
 $pageDescription = 'Manage all your stories from here.';
 $pageActions = '
-<form method="GET" action="story-form.php">
-    <button type="submit" class="btn btn-success">
-        <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
+<div class="d-flex gap-2">
+    <form method="GET" action="story-form.php">
+        <button type="submit" class="btn btn-success">
+            <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
+        </button>
+    </form>
+    <button onclick="window.location.reload()" class="btn btn-secondary">
+        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-</form>
+    <button onclick="window.location.href=\'?debug=1\'" class="btn btn-info">
+        <i class="fas fa-bug" aria-hidden="true"></i> Debug Mode
+    </button>
+</div>
 ';
+
+// Add additional debug logging if debug mode is enabled
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    error_log("DEBUG MODE ENABLED");
+    error_log("PHP Version: " . phpversion());
+    error_log("MySQL Version: " . $db->getAttribute(PDO::ATTR_SERVER_VERSION));
+    error_log("Current User: " . ($user['name'] ?? 'Unknown'));
+    error_log("Session Status: " . session_status());
+    error_log("Memory Usage: " . memory_get_usage(true) / 1024 / 1024 . " MB");
+}
 
 // Include header
 require_once '../includes/header.php';
+
+// Display any database connection errors
+if (!$db) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo '<h4 class="alert-heading"><i class="fas fa-database"></i> Database Connection Error</h4>';
+    echo '<p>Could not connect to the database. Please check your configuration.</p>';
+    echo '</div>';
+}
+
+// Display any errors prominently
+if (isset($error)) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo '<h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Error Loading Stories</h4>';
+    echo '<p>' . htmlspecialchars($error) . '</p>';
+    echo '<hr>';
+    echo '<p class="mb-0">Please check the error logs for more details or contact support.</p>';
+    echo '</div>';
+}
+
+// Display debug information for administrators
+if ($user && $user['role'] === 'admin') {
+    echo '<div class="card mb-3">';
+    echo '<div class="card-header bg-info text-white">';
+    echo '<i class="fas fa-bug"></i> Debug Information';
+    echo '</div>';
+    echo '<div class="card-body">';
+    echo '<pre class="mb-0">';
+    echo "Database Connection: " . ($db ? "Success" : "Failed") . "\n";
+    echo "Total Stories Found: " . ($totalItems ?? 0) . "\n";
+    echo "Stories Loaded: " . (isset($stories) ? count($stories) : 0) . "\n";
+    echo "Current Page: " . $page . "\n";
+    echo "Items Per Page: " . $perPage . "\n";
+    echo '</pre>';
+    echo '</div>';
+    echo '</div>';
+}
 
 // Include search component
 include_once '../includes/search-component.php';

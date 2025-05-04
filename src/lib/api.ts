@@ -325,17 +325,12 @@ export async function fetchGames(): Promise<Game[]> {
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
   try {
-    const raw = await fetchApi<any[]>('/directory-items', {
-      'filters[slug][$eq]': slug,
-      'populate': '*'
-    });
+    const raw = await fetchApi<any>(`/directory-items/slug/${slug}`);
 
-    if (!raw || raw.length === 0) {
+    if (!raw) {
       console.error(`No directory item found with slug: ${slug}`);
       return null;
     }
-
-    const item = raw[0];
     return {
       title: item.title,
       description: item.description || '',
@@ -353,17 +348,12 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
 
 export async function fetchAiTool(slug: string): Promise<AiTool | null> {
   try {
-    const raw = await fetchApi<any[]>('/ai-tools', {
-      'filters[slug][$eq]': slug,
-      'populate': '*'
-    });
+    const raw = await fetchApi<any>(`/ai-tools/slug/${slug}`);
 
-    if (!raw || raw.length === 0) {
+    if (!raw) {
       console.error(`No AI tool found with slug: ${slug}`);
       return null;
     }
-
-    const item = raw[0];
     return {
       title: item.title,
       description: item.description || '',

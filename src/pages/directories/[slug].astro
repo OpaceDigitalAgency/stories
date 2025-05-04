@@ -25,13 +25,11 @@ try {
   item = await fetchDirectoryItem(slug);
   
   if (!item) {
-    return Astro.redirect('/404');
+    return Astro.redirect('/directories');
   }
 } catch (err) {
   console.error('Error fetching directory item:', err);
-  apiError = true;
-  apiErrorDetails = err instanceof Error ? err : new Error('An unknown error occurred');
-  item = null;
+  return Astro.redirect('/directories');
 }
 
 // Page metadata
@@ -42,22 +40,7 @@ const description = item ? item.description : `We couldn't find the directory it
 <Layout title={title} description={description}>
   <main class="flex-grow w-full pt-24 pb-16">
     <div class="container mx-auto px-4 max-w-4xl">
-      {apiError ? (
-        <section class="py-8">
-          <div class="container mx-auto px-4">
-            <ApiErrorMessage error={apiErrorDetails} message="We're having trouble loading this directory item. Please try again later." />
-          </div>
-        </section>
-      ) : !item ? (
-        <section class="py-8">
-          <div class="container mx-auto px-4">
-            <div class="text-center">
-              <h1 class="text-2xl font-bold text-text-primary mb-4">Directory Item Not Found</h1>
-              <p class="text-text-secondary">The directory item you're looking for could not be found.</p>
-            </div>
-          </div>
-        </section>
-      ) : (
+      {item && (
         <>
           <header class="mb-8">
             <h1 class="text-4xl font-bold text-text-primary mb-4">{item.title}</h1>

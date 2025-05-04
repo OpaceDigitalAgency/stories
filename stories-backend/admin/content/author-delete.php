@@ -1,8 +1,14 @@
 <?php
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+/**
+ * Author Delete Page
+ *
+ * This page displays a confirmation form for deleting an author.
+ * It handles the case where an author has associated stories by providing
+ * options to either delete all stories or reassign them to another author.
+ */
+
+// Start session before any output
+session_start();
 
 // Page variables
 $pageTitle = 'Author Delete';

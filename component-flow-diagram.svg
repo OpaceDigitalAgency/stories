@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold" fill="#333">Admin Page Component Flow</text>
+  
+  <!-- Page Container -->
+  <rect x="100" y="70" width="600" height="500" rx="10" ry="10" fill="white" stroke="#ced4da" stroke-width="2" />
+  <text x="400" y="100" font-family="Arial" font-size="18" text-anchor="middle" fill="#333" font-weight="bold">Admin Page (e.g., authors.php)</text>
+  
+  <!-- Step 1: Page Variables -->
+  <rect x="150" y="120" width="500" height="50" rx="5" ry="5" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="170" y="150" font-family="Arial" font-size="14" fill="#333" font-weight="bold">1. Set page variables</text>
+  <text x="400" y="150" font-family="Arial" font-size="12" fill="#333">$pageTitle = 'Authors'; $currentPage = 'authors';</text>
+  
+  <!-- Step 2: Auth Check -->
+  <rect x="150" y="180" width="500" height="60" rx="5" ry="5" fill="#4361ee" stroke="#2a3eb1" stroke-width="1" />
+  <text x="170" y="210" font-family="Arial" font-size="14" fill="white" font-weight="bold">2. Include auth-check.php</text>
+  <text x="400" y="230" font-family="Arial" font-size="12" fill="white">Validates user session and redirects to login if not authenticated</text>
+  
+  <!-- Step 3: DB Connection -->
+  <rect x="150" y="250" width="500" height="60" rx="5" ry="5" fill="#4361ee" stroke="#2a3eb1" stroke-width="1" />
+  <text x="170" y="280" font-family="Arial" font-size="14" fill="white" font-weight="bold">3. Include db-connect.php</text>
+  <text x="400" y="300" font-family="Arial" font-size="12" fill="white">Establishes database connection</text>
+  
+  <!-- Step 4: Header -->
+  <rect x="150" y="320" width="500" height="60" rx="5" ry="5" fill="#4361ee" stroke="#2a3eb1" stroke-width="1" />
+  <text x="170" y="350" font-family="Arial" font-size="14" fill="white" font-weight="bold">4. Include header.php</text>
+  <text x="400" y="370" font-family="Arial" font-size="12" fill="white">Outputs HTML head, navigation, page title</text>
+  
+  <!-- Step 5: Page Content -->
+  <rect x="150" y="390" width="500" height="80" rx="5" ry="5" fill="#20c997" stroke="#0ca678" stroke-width="1" />
+  <text x="170" y="420" font-family="Arial" font-size="14" fill="white" font-weight="bold">5. Page-specific content</text>
+  <text x="400" y="440" font-family="Arial" font-size="12" fill="white">May include reusable components</text>
+  <text x="400" y="460" font-family="Arial" font-size="12" fill="white">(table-component.php, bulk-actions-component.php)</text>
+  
+  <!-- Step 6: Footer -->
+  <rect x="150" y="480" width="500" height="60" rx="5" ry="5" fill="#4361ee" stroke="#2a3eb1" stroke-width="1" />
+  <text x="170" y="510" font-family="Arial" font-size="14" fill="white" font-weight="bold">6. Include footer.php</text>
+  <text x="400" y="530" font-family="Arial" font-size="12" fill="white">Outputs closing HTML tags, footer content</text>
+  
+  <!-- Arrows connecting steps -->
+  <line x1="400" y1="170" x2="400" y2="180" stroke="#333" stroke-width="2" />
+  <line x1="400" y1="240" x2="400" y2="250" stroke="#333" stroke-width="2" />
+  <line x1="400" y1="310" x2="400" y2="320" stroke="#333" stroke-width="2" />
+  <line x1="400" y1="380" x2="400" y2="390" stroke="#333" stroke-width="2" />
+  <line x1="400" y1="470" x2="400" y2="480" stroke="#333" stroke-width="2" />
+</svg>

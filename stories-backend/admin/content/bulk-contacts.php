@@ -1,12 +1,10 @@
 <?php
-
-// Page variables
-$pageTitle = 'Bulk Contacts';
-$currentPage = 'bulk-contacts';
-
 /**
  * Bulk Actions for Contact Form Submissions
  * Handles bulk operations on contact form submissions
+ *
+ * This is a processing script that doesn't output any HTML.
+ * It processes form submissions and redirects back to the contacts.php page.
  */
 
 // Start session if not already started

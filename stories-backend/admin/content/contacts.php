@@ -3,6 +3,9 @@
  * Admin page for managing contact form submissions
  */
 
+// Start output buffering to capture any premature output
+ob_start();
+
 // Set page variables for header
 $pageTitle = 'Contact Form Submissions';
 $currentPage = 'contacts';
@@ -745,4 +748,9 @@ The Stories From The Web Team</textarea>
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php
+require_once '../includes/footer.php';
+
+// End output buffering and flush the content
+if (ob_get_length()) ob_end_flush();
+?>

@@ -136,7 +136,11 @@ try {
             LEFT JOIN story_tags st ON s.id = st.story_id
             LEFT JOIN tags t ON st.tag_id = t.id
             $whereClause
-            GROUP BY s.id
+            GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
+                     s.featured, s.average_rating, s.allow_reviews, s.review_count,
+                     s.estimated_reading_time, s.is_sponsored, s.age_group,
+                     s.needs_moderation, s.is_self_published, s.is_ai_enhanced,
+                     s.cover_url, s.created_at, s.updated_at
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
@@ -303,7 +307,7 @@ include_once '../includes/status-indicator-component.php';
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
+if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
         'id' => 'ID',
@@ -358,11 +362,20 @@ if (function_exists('renderTable')) {
     ];
 
     // Render the table
-    renderTable($stories, $columns, [
+    // Add debug output before rendering
+    error_log("Rendering table with " . count($stories) . " stories");
+    error_log("Stories data: " . json_encode(array_slice($stories, 0, 2)));
+    error_log("Columns: " . json_encode($columns));
+    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
+
+    renderEnhancedTable($stories, $columns, [
         'content_type' => 'stories',
         'name_field' => 'title',
         'empty_message' => 'No stories found. Add your first story!',
-        'custom_formatters' => $customFormatters
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-story.php?id={id}',
+        'edit_url' => 'story-form.php?id={id}',
+        'delete_url' => 'delete-story.php'
     ]);
 }
 

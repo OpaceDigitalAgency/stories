@@ -6,7 +6,8 @@ import { getConfig } from '../../lib/config';
 const siteName = getConfig('site.name', 'Stories From The Web');
 
 // Page metadata
-const title = siteName;
+const title = `Login or Sign Up | ${siteName}`;
+const description = `Join ${siteName} to share and discover stories. Create an account as a child author, parent, or teacher.`;
 
 ---
 
@@ -289,51 +290,51 @@ const title = siteName;
         </div>
       </div>
   </main>
-  <script slot="scripts">
+  <script>
+    // Tab switching
+    const loginTab = document.getElementById('login-tab');
+    const signupTab = document.getElementById('signup-tab');
+    const loginPanel = document.getElementById('login-panel');
+    const signupPanel = document.getElementById('signup-panel');
     
-      document.addEventListener('DOMContentLoaded', () => {
-        const loginTab = document.getElementById('login-tab');
-        const signupTab = document.getElementById('signup-tab');
-        const loginPanel = document.getElementById('login-panel');
-        const signupPanel = document.getElementById('signup-panel');
+    if (loginTab && signupTab && loginPanel && signupPanel) {
+      loginTab.addEventListener('click', () => {
+        loginTab.classList.add('border-primary', 'text-primary');
+        loginTab.classList.remove('border-transparent', 'text-gray-500');
+        signupTab.classList.remove('border-primary', 'text-primary');
+        signupTab.classList.add('border-transparent', 'text-gray-500');
         
-        // Tab switching
-        loginTab.addEventListener('click', () => {
-          loginTab.classList.add('border-primary', 'text-primary');
-          loginTab.classList.remove('border-transparent', 'text-gray-500');
-          signupTab.classList.remove('border-primary', 'text-primary');
-          signupTab.classList.add('border-transparent', 'text-gray-500');
-          
-          loginPanel.classList.remove('hidden');
-          signupPanel.classList.add('hidden');
-        });
-        
-        signupTab.addEventListener('click', () => {
-          signupTab.classList.add('border-primary', 'text-primary');
-          signupTab.classList.remove('border-transparent', 'text-gray-500');
-          loginTab.classList.remove('border-primary', 'text-primary');
-          loginTab.classList.add('border-transparent', 'text-gray-500');
-          
-          signupPanel.classList.remove('hidden');
-          loginPanel.classList.add('hidden');
-        });
-        
-        // Profile type selection
-        const profileOptions = document.querySelectorAll('.profile-type-option');
-        
-        profileOptions.forEach(option => {
-          option.addEventListener('click', () => {
-            // Remove active class from all options in the same form
-            const parentForm = option.closest('form');
-            parentForm.querySelectorAll('.profile-type-option').forEach(opt => {
-              opt.classList.remove('active', 'bg-primary/5', 'border-primary');
-            });
-            
-            // Add active class to clicked option
-            option.classList.add('active', 'bg-primary/5', 'border-primary');
-          });
-        });
+        loginPanel.classList.remove('hidden');
+        signupPanel.classList.add('hidden');
       });
+      
+      signupTab.addEventListener('click', () => {
+        signupTab.classList.add('border-primary', 'text-primary');
+        signupTab.classList.remove('border-transparent', 'text-gray-500');
+        loginTab.classList.remove('border-primary', 'text-primary');
+        loginTab.classList.add('border-transparent', 'text-gray-500');
+        
+        signupPanel.classList.remove('hidden');
+        loginPanel.classList.add('hidden');
+      });
+    }
     
+    // Profile type selection
+    const profileOptions = document.querySelectorAll('.profile-type-option');
+    
+    profileOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove active class from all options in the same form
+        const parentForm = option.closest('form');
+        if (parentForm) {
+          parentForm.querySelectorAll('.profile-type-option').forEach(opt => {
+            opt.classList.remove('active', 'bg-primary/5', 'border-primary');
+          });
+          
+          // Add active class to clicked option
+          option.classList.add('active', 'bg-primary/5', 'border-primary');
+        }
+      });
+    });
   </script>
 </Layout>

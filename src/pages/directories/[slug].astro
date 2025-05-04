@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getConfig } from '../../lib/config';
-import { fetchData } from '../../lib/api';
+import { fetchDirectoryItems, type DirectoryItem } from '../../lib/api';
 
 export const prerender = false;
 
@@ -12,19 +12,24 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const { slug } = Astro.params;
 
 // Fetch data based on slug
-let item = null;
+let item: DirectoryItem | null = null;
 let error = null;
 
 try {
-  // Replace with the appropriate fetch function for this page type
-  item = await fetchData(slug);
+  // Fetch all directory items and find the one with the matching slug
+  const items = await fetchDirectoryItems();
+  item = items.find(i => i.slug === slug) || null;
+
+  if (!item) {
+    error = "Directory item not found";
+  }
 } catch (e) {
-  error = e.message;
+  error = e instanceof Error ? e.message : "An error occurred";
 }
 
 // Page metadata
-const title = item ? `${item.title} | ${siteName}` : `Item Not Found | ${siteName}`;
-const description = item ? item.description : `We couldn't find the item you're looking for.`;
+const title = item ? `${item.title} | ${siteName}` : `Directory Item Not Found | ${siteName}`;
+const description = item ? item.description : `We couldn't find the directory item you're looking for.`;
 ---
 
 <Layout title={title} description={description}>
@@ -44,14 +49,27 @@ const description = item ? item.description : `We couldn't find the item you're 
         <>
           <header class="mb-8">
             <h1 class="text-4xl font-bold text-text-primary mb-4">{item.title}</h1>
-            {item.subtitle && (
-              <p class="text-xl text-text-secondary">{item.subtitle}</p>
-            )}
+            <p class="text-xl text-text-secondary">{item.category}</p>
           </header>
-          
+
           <div class="prose prose-lg max-w-none">
-            {/* Replace with appropriate content structure for this page type */}
-            <div set:html={item.content} />
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold mb-2">Description</h2>
+              <p>{item.description}</p>
+            </div>
+
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold mb-2">Price Range</h2>
+              <p>{item.priceRange}</p>
+            </div>
+
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold mb-2">Rating</h2>
+              <div class="flex items-center">
+                <span class="text-yellow-500 mr-2">★</span>
+                <span>{item.rating} / 5</span>
+              </div>
+            </div>
           </div>
         </>
       )}

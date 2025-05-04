@@ -141,6 +141,85 @@ document.addEventListener("DOMContentLoaded", function() {
 $successMessage = '';
 $errorMessage = '';
 
+// Ensure we have a database connection
+if (!isset($db) || !$db) {
+    // Try different database configurations
+    $dbConfigs = [
+        [
+            'host' => 'localhost',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'password' => '$tw1cac3*sOt',
+            'charset' => 'utf8mb4'
+        ],
+        [
+            'host' => '127.0.0.1',
+            'dbname' => 'stories_db',
+            'user' => 'stories_user',
+            'password' => '$tw1cac3*sOt',
+            'charset' => 'utf8mb4'
+        ]
+    ];
+
+    $db = null;
+    $connectionError = null;
+
+    foreach ($dbConfigs as $config) {
+        try {
+            error_log("Trying connection to {$config['host']} in contacts.php");
+            $db = new PDO(
+                "mysql:host={$config['host']};dbname={$config['dbname']};charset={$config['charset']}",
+                $config['user'],
+                $config['password'],
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ]
+            );
+            error_log("Connection successful to {$config['host']} in contacts.php");
+            break;
+        } catch (PDOException $e) {
+            $connectionError = $e->getMessage();
+            error_log("Connection failed to {$config['host']} in contacts.php: {$connectionError}");
+        }
+    }
+
+    if (!$db) {
+        $errorMessage = "Database connection error: " . ($connectionError ?? 'Unknown error');
+        error_log("All database connection attempts failed in contacts.php. Last error: " . ($connectionError ?? 'Unknown error'));
+    }
+}
+
+// Check if contacts table exists, create if not
+try {
+    if (isset($db) && $db) {
+        $stmt = $db->query("SHOW TABLES LIKE 'contacts'");
+        if ($stmt->rowCount() === 0) {
+            error_log("Creating contacts table as it doesn't exist");
+            $db->exec("CREATE TABLE contacts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                is_responded TINYINT(1) DEFAULT 0,
+                admin_notes TEXT,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            $infoMessage = "Contacts table created successfully. You can now start collecting contact form submissions.";
+            error_log("Contacts table created successfully");
+        } else {
+            error_log("Contacts table already exists");
+        }
+    }
+} catch (PDOException $e) {
+    $errorMessage = "Error checking/creating contacts table: " . $e->getMessage();
+    error_log("Error checking/creating contacts table: " . $e->getMessage());
+}
+
 // Handle contact status update
 if (isset($_POST['action']) && $_POST['action'] === 'update_status' && isset($_POST['contact_id'])) {
     $contactId = (int)$_POST['contact_id'];
@@ -241,9 +320,11 @@ try {
         // Add limit to the main query
         $query .= " LIMIT " . intval($offset) . ", " . intval($perPage);
 
+        error_log("Executing contacts query: {$query} with params: " . print_r($params, true));
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $contacts = $stmt->fetchAll();
+        error_log("Found " . count($contacts) . " contacts");
     }
 } catch (PDOException $e) {
     $errorMessage = "Database error: " . $e->getMessage();

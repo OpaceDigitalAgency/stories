@@ -65,7 +65,7 @@ export interface Author {
   featured?: boolean;
   age?: number | string | null;
   location?: string | null;
-  id: number;  // Make id required
+  id?: number;
   storyCount?: number;
   joinDate?: string;
   twitter_url?: string;
@@ -255,35 +255,6 @@ export async function fetchStories(authorId?: number): Promise<Story[]> {
     console.error('Error fetching stories:', error);
     return [];
   }
-}
-    content: item.content || '',  // Include content field
-    coverImage: item.cover_url || '',
-    slug: item.slug,
-    publishDate: item.publishedAt || '',
-    featured: Boolean(item.featured),
-    sponsored: Boolean(item.is_sponsored),
-    isAiEnhanced: Boolean(item.is_ai_enhanced),
-    isSelfPublished: Boolean(item.is_self_published),
-    needsModeration: Boolean(item.needs_moderation),
-    is_published: Boolean(item.is_published),  // Include is_published field
-    rating: Number(item.average_rating) > 0 ? Number(item.average_rating) : undefined,
-    reviewCount: Number(item.review_count) || 0,
-    source_type: item.source_type || 'child',
-    allow_reviews: Boolean(item.allow_reviews),
-    estimated_reading_time: item.estimated_reading_time || '1',  // Include reading time
-    age_group: item.age_group || '7-12',  // Include age group
-    tags: Array.isArray(item.tags) ? item.tags :
-          (item.tags ? [String(item.tags)] : []),
-    author: item.author ? {
-      name: item.author.name,
-      bio: item.author.bio || '',
-      avatar: item.author.avatar_url || '',
-      slug: item.author.slug,
-      author_type: item.author.author_type || 'retail',
-      age: item.author.age || null,  // Include author age
-      location: item.author.location || null  // Include author location
-    } : undefined
-  }));
 }
 
 export async function fetchAuthors(): Promise<Author[]> {

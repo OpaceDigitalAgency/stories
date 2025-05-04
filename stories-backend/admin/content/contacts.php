@@ -14,6 +14,9 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Include header
+require_once '../includes/header.php';
+
 // Include email functions
 require_once '../includes/email-functions.php';
 

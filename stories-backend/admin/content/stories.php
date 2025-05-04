@@ -3,39 +3,22 @@
  * Stories Admin Page
  *
  * This page displays a list of all stories and allows for searching, filtering, and bulk actions.
+ *
+ * Updated 2025-05-04: Aligned authentication and database connection pattern with dashboard.php
+ * - Removed duplicate database configuration
+ * - Using auth-check.php for consistent authentication
+ * - Added error reporting for debugging
  */
 
-// Start session if not already started
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Include simple_auth.php directly
-require_once '../../simple_auth.php';
-
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
-
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-$user = SimpleAuth::check();
-if (!$user) {
-    // Redirect to login
-    header("Location: ../login.php");
-    exit;
-}
+// Include auth check
+require_once '../includes/auth-check.php';
 
 // Include database connection
 require_once '../includes/db-connect.php';
+
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 try {
 
@@ -50,6 +33,42 @@ try {
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
+
+        // Log this important information
+        error_log("Stories table did not exist and was created");
+    }
+
+    // Check if stories table has any data
+    $countStories = $db->query("SELECT COUNT(*) FROM stories")->fetchColumn();
+    error_log("Number of stories in database: " . $countStories);
+
+    // If no stories, create a sample story for testing
+    if ($countStories == 0) {
+        error_log("No stories found in database, creating a sample story");
+
+        // First check if we have any authors
+        $authorCount = $db->query("SELECT COUNT(*) FROM authors")->fetchColumn();
+        $authorId = null;
+
+        if ($authorCount > 0) {
+            // Get the first author
+            $authorId = $db->query("SELECT id FROM authors LIMIT 1")->fetchColumn();
+        } else {
+            // Create a sample author
+            $db->exec("INSERT INTO authors (name, slug, bio, created_at, updated_at)
+                      VALUES ('Sample Author', 'sample-author', 'This is a sample author', NOW(), NOW())");
+            $authorId = $db->lastInsertId();
+        }
+
+        // Create a sample story
+        $db->exec("INSERT INTO stories (title, content, created_at, updated_at)
+                  VALUES ('Sample Story', 'This is a sample story content.', NOW(), NOW())");
+        $storyId = $db->lastInsertId();
+
+        // Link the story to the author
+        if ($authorId) {
+            $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES ($storyId, $authorId)");
+        }
     }
 
     // Check if story_tags table exists
@@ -61,6 +80,29 @@ try {
             tag_id INT NOT NULL,
             PRIMARY KEY (story_id, tag_id)
         )");
+        error_log("story_tags table did not exist and was created");
+    }
+
+    // Check if story_authors table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_authors table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_authors (
+            story_id INT NOT NULL,
+            author_id INT NOT NULL,
+            PRIMARY KEY (story_id, author_id)
+        )");
+        error_log("story_authors table did not exist and was created");
+
+        // Check if we have stories with author_id column
+        if (in_array('author_id', $columns)) {
+            // Migrate data from author_id column to junction table
+            $stories = $db->query("SELECT id, author_id FROM stories WHERE author_id IS NOT NULL")->fetchAll();
+            foreach ($stories as $story) {
+                $db->exec("INSERT IGNORE INTO story_authors (story_id, author_id) VALUES ({$story['id']}, {$story['author_id']})");
+            }
+            error_log("Migrated " . count($stories) . " stories with author_id to story_authors junction table");
+        }
     }
 
     // Get all columns from stories table
@@ -93,87 +135,84 @@ try {
         $whereClause = '';
 
         if (!empty($search)) {
-            if ($searchField === 'all') {
-                // Search in all searchable fields
-                $whereClause = " WHERE (title LIKE ? OR content LIKE ?";
+            if ($searchField === 'all' || $searchField === 'title') {
+                // Search in title field
+                $whereClause = " WHERE s.title LIKE ?";
                 $params[] = "%$search%";
+            } else if ($searchField === 'content') {
+                // Search in content field
+                $whereClause = " WHERE s.content LIKE ?";
                 $params[] = "%$search%";
-
-                // Add author search if the column exists
-                if (in_array('author', $columns)) {
-                    $whereClause .= " OR author LIKE ?";
-                    $params[] = "%$search%";
-                }
-
-                // Close the where clause
-                $whereClause .= ")";
-            } else {
+            } else if (in_array($searchField, $columns)) {
                 // Search in a specific field
-                if (in_array($searchField, $columns)) {
-                    $whereClause = " WHERE $searchField LIKE ?";
-                    $params[] = "%$search%";
-                }
+                $whereClause = " WHERE s.$searchField LIKE ?";
+                $params[] = "%$search%";
             }
         }
 
+        // Log the query for debugging
+        error_log("Search parameters: " . json_encode(['search' => $search, 'searchField' => $searchField]));
+
         // Get total count for pagination
-        $countQuery = "SELECT COUNT(*) FROM stories" . $whereClause;
+        $countQuery = "
+            SELECT COUNT(DISTINCT s.id)
+            FROM stories s
+            LEFT JOIN story_authors sa ON s.id = sa.story_id
+            LEFT JOIN authors a ON sa.author_id = a.id
+            $whereClause
+        ";
         $stmt = $db->prepare($countQuery);
         $stmt->execute($params);
         $totalItems = $stmt->fetchColumn();
 
+        error_log("Total stories found: $totalItems");
+
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
 
-        // Get stories with pagination
-        $query = "SELECT * FROM stories" . $whereClause . " ORDER BY created_at DESC LIMIT $offset, $perPage";
+        // Get stories with pagination - include author information through story_authors
+        $query = "
+            SELECT s.*,
+                   GROUP_CONCAT(DISTINCT a.name) as author_names,
+                   GROUP_CONCAT(DISTINCT a.id) as author_ids
+            FROM stories s
+            LEFT JOIN story_authors sa ON s.id = sa.story_id
+            LEFT JOIN authors a ON sa.author_id = a.id
+            $whereClause
+            GROUP BY s.id
+            ORDER BY s.created_at DESC
+            LIMIT $offset, $perPage
+        ";
+        error_log("Stories query: $query");
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $allStories = $stmt->fetchAll();
 
         error_log("Number of stories fetched: " . count($allStories));
 
-        // Create a new array to store unique stories by ID
+        // Process the stories and their authors
         $stories = [];
-        $seenIds = [];
-
-        // Only add each story ID once
         foreach ($allStories as $story) {
-            $id = $story['id'];
-            if (!in_array($id, $seenIds)) {
-                $stories[] = $story;
-                $seenIds[] = $id;
-                error_log("Adding story ID: " . $id . ", Title: " . $story['title']);
-            } else {
-                error_log("Skipping duplicate story ID: " . $id . ", Title: " . $story['title']);
-            }
+            // Split author names and IDs into arrays
+            $authorNames = $story['author_names'] ? explode(',', $story['author_names']) : [];
+            $authorIds = $story['author_ids'] ? explode(',', $story['author_ids']) : [];
+            
+            // Format author name for display
+            $story['author_name'] = $authorNames ? implode(', ', $authorNames) : 'Unknown';
+            $story['author_id'] = $authorIds ? $authorIds[0] : null; // Keep first author ID for compatibility
+            
+            // Remove the concatenated fields from display
+            unset($story['author_names']);
+            unset($story['author_ids']);
+            
+            $stories[] = $story;
+            error_log("Processed story ID: " . $story['id'] . ", Authors: " . $story['author_name']);
         }
 
-        error_log("Number of unique stories: " . count($stories));
+        error_log("Number of stories processed: " . count($stories));
 
-        // Then for each story, try to get the author information from story_authors table
+        // Get tags for each story
         foreach ($stories as $index => $storyItem) {
-            try {
-                // Get author from story_authors table
-                $stmt = $db->prepare("
-                    SELECT a.id, a.name
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = ?
-                ");
-                $stmt->execute([$storyItem['id']]);
-                $author = $stmt->fetch();
-
-                if ($author) {
-                    $stories[$index]['author_id'] = $author['id'];
-                    $stories[$index]['author_name'] = $author['name'];
-                } else {
-                    $stories[$index]['author_name'] = 'Unknown';
-                }
-            } catch (Exception $e) {
-                error_log("Error fetching author for story ID " . $storyItem['id'] . ": " . $e->getMessage());
-                $stories[$index]['author_name'] = 'Unknown';
-            }
 
             // Get tags for the story
             try {

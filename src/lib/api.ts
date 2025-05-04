@@ -231,25 +231,21 @@ function mapStoryResponse(item: any): Story {
 
 export async function fetchStories(authorId?: number): Promise<Story[]> {
   try {
+    // Fetch all stories
     const stories = await fetchApi<any[]>('/stories');
 
-    // Debug log to see what we're getting
-    console.log('Author ID:', authorId);
-    console.log('Stories:', stories.map(s => ({
-      id: s.id,
-      title: s.title,
-      author: s.author
-    })));
+    // If no stories found, return empty array
+    if (!stories || !Array.isArray(stories)) {
+      console.error('No stories found or invalid response');
+      return [];
+    }
 
     // If authorId is provided, filter stories by author
     const filteredStories = authorId
-      ? stories.filter(story => {
-          console.log('Story author:', story.author);
-          return story.author && story.author.id === authorId;
-        })
+      ? stories.filter(story => story.author && Number(story.author.id) === authorId)
       : stories;
 
-    console.log('Filtered stories:', filteredStories.length);
+    // Map stories to correct format
     return filteredStories.map(mapStoryResponse);
   } catch (error) {
     console.error('Error fetching stories:', error);

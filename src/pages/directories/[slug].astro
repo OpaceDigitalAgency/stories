@@ -25,11 +25,13 @@ try {
   item = await fetchDirectoryItem(slug);
   
   if (!item) {
-    return Astro.redirect('/directories');
+    apiError = true;
+    apiErrorDetails = new Error('Directory item not found');
   }
 } catch (err) {
   console.error('Error fetching directory item:', err);
-  return Astro.redirect('/directories');
+  apiError = true;
+  apiErrorDetails = err instanceof Error ? err : new Error('An unknown error occurred');
 }
 
 // Page metadata
@@ -40,7 +42,13 @@ const description = item ? item.description : `We couldn't find the directory it
 <Layout title={title} description={description}>
   <main class="flex-grow w-full pt-24 pb-16">
     <div class="container mx-auto px-4 max-w-4xl">
-      {item && (
+      {apiError ? (
+        <section class="py-8">
+          <div class="container mx-auto px-4">
+            <ApiErrorMessage error={apiErrorDetails} message="We couldn't find this directory item. It may have been moved or deleted." />
+          </div>
+        </section>
+      ) : item && (
         <>
           <header class="mb-8">
             <h1 class="text-4xl font-bold text-text-primary mb-4">{item.title}</h1>

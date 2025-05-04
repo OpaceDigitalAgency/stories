@@ -25,11 +25,13 @@ try {
   item = await fetchAiTool(slug);
   
   if (!item) {
-    return Astro.redirect('/ai-tools');
+    apiError = true;
+    apiErrorDetails = new Error('AI tool not found');
   }
 } catch (err) {
   console.error('Error fetching AI tool:', err);
-  return Astro.redirect('/ai-tools');
+  apiError = true;
+  apiErrorDetails = err instanceof Error ? err : new Error('An unknown error occurred');
 }
 
 // Page metadata
@@ -40,7 +42,13 @@ const description = item ? item.description : `We couldn't find the AI tool you'
 <Layout title={title} description={description}>
   <main class="flex-grow w-full pt-24 pb-16">
     <div class="container mx-auto px-4 max-w-4xl">
-      {item && (
+      {apiError ? (
+        <section class="py-8">
+          <div class="container mx-auto px-4">
+            <ApiErrorMessage error={apiErrorDetails} message="We couldn't find this AI tool. It may have been moved or deleted." />
+          </div>
+        </section>
+      ) : item && (
         <>
           <header class="mb-8">
             <h1 class="text-4xl font-bold text-text-primary mb-4">{item.title}</h1>

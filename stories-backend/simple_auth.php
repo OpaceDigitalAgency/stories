@@ -6,9 +6,11 @@
  * It uses standard PHP sessions and database authentication.
  */
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
+// Start session if not already started and no output has been sent
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
+} elseif (session_status() === PHP_SESSION_NONE && headers_sent()) {
+    error_log("Warning: Attempted to start session after headers were sent in simple_auth.php");
 }
 
 class SimpleAuth {

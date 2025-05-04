@@ -22,10 +22,21 @@ $pageTitle = $pageTitle ?? 'Admin';
 $currentPage = $currentPage ?? '';
 $pageDescription = $pageDescription ?? '';
 
-// Include database connection
-$dbConnectPath = dirname(__FILE__) . '/db-connect.php';
-if (file_exists($dbConnectPath)) {
-    include_once $dbConnectPath;
+// Database connection
+try {
+    $db = new PDO(
+        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+        'stories_user',
+        '$tw1cac3*sOt',
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+} catch (PDOException $e) {
+    error_log("Database connection error in header.php: " . $e->getMessage());
+    $db = null;
 }
 
 // Determine if we're in the content directory or main admin directory

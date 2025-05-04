@@ -1,13 +1,5 @@
 <?php
 
-// Include header
-include 'header.php';
-
-
-// Page variables
-$pageTitle = 'Db Connect';
-$currentPage = 'db-connect';
-
 /**
  * Database Connection Include
  *
@@ -78,5 +70,4 @@ if (!$db) {
 }
 
 
-// Include footer
-include 'footer.php';
+// No footer include here - this is just a database connection

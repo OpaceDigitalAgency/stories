@@ -13,7 +13,12 @@ $pageDescription = 'Manage users who have subscribed to premium feature notifica
 include_once '../includes/header.php';
 
 // Include common admin functions
-include_once '../includes/admin-functions.php';
+if (file_exists('../includes/admin-functions.php')) {
+    include_once '../includes/admin-functions.php';
+} else {
+    // Fallback path for admin functions
+    include_once dirname(dirname(__FILE__)) . '/includes/admin-functions.php';
+}
 
 // Add custom CSS for subscriber details
 echo '<style>
@@ -346,11 +351,43 @@ try {
             </form>
         </div>
 
-        <!-- Include bulk actions component -->
+        <!-- Bulk actions component -->
         <?php
-        include_once '../includes/bulk-actions-component.php';
+        // Try multiple paths for the bulk actions component
+        $bulkActionsComponentPaths = [
+            '../includes/bulk-actions-component.php',
+            dirname(dirname(__FILE__)) . '/includes/bulk-actions-component.php',
+            'includes/bulk-actions-component.php'
+        ];
+
+        $bulkActionsIncluded = false;
+        foreach ($bulkActionsComponentPaths as $path) {
+            if (file_exists($path)) {
+                include_once $path;
+                $bulkActionsIncluded = true;
+                break;
+            }
+        }
+
+        // If we have the function, render the component
         if (function_exists('renderBulkActionsComponent')) {
             renderBulkActionsComponent('subscribers', ['delete', 'mark_contacted', 'mark_not_contacted', 'notify']);
+        } else {
+            // Fallback rendering if the component couldn't be included
+            echo '<div class="bulk-actions-container">';
+            echo '<form id="bulk-actions-form" method="post" action="bulk-subscribers.php">';
+            echo '<div class="bulk-actions">';
+            echo '<select id="bulk-action" name="action" class="form-select">';
+            echo '<option value="">Bulk Actions</option>';
+            echo '<option value="delete">Delete</option>';
+            echo '<option value="mark_contacted">Mark Contacted</option>';
+            echo '<option value="mark_not_contacted">Mark Not Contacted</option>';
+            echo '<option value="notify">Notify</option>';
+            echo '</select>';
+            echo '<button type="submit" id="apply-bulk-action" class="btn btn-primary">Apply</button>';
+            echo '</div>';
+            echo '</form>';
+            echo '</div>';
         }
         ?>
 
@@ -393,9 +430,24 @@ The Stories From The Web Team</textarea>
             </div>
         </div>
 
-        <!-- Include table component -->
+        <!-- Table component -->
         <?php
-        include_once '../includes/table-component.php';
+        // Try multiple paths for the table component
+        $tableComponentPaths = [
+            '../includes/table-component.php',
+            dirname(dirname(__FILE__)) . '/includes/table-component.php',
+            'includes/table-component.php'
+        ];
+
+        $tableComponentIncluded = false;
+        foreach ($tableComponentPaths as $path) {
+            if (file_exists($path)) {
+                include_once $path;
+                $tableComponentIncluded = true;
+                break;
+            }
+        }
+
         if (function_exists('renderTable')) {
             // Define columns
             $columns = [

@@ -1,13 +1,4 @@
 <?php
-
-// Include header
-include 'header.php';
-
-
-// Page variables
-$pageTitle = 'Auth Check';
-$currentPage = 'auth-check';
-
 /**
  * Authentication Check Include
  *
@@ -19,9 +10,11 @@ $currentPage = 'auth-check';
  * // Now $user is available for use
  */
 
-// Start session if not already started
-if (session_status() == PHP_SESSION_NONE) {
+// Start session if not already started and no output has been sent
+if (session_status() == PHP_SESSION_NONE && !headers_sent()) {
     session_start();
+} elseif (session_status() == PHP_SESSION_NONE && headers_sent()) {
+    error_log("Warning: Attempted to start session after headers were sent in auth-check.php");
 }
 
 // Determine if we're in the content directory or main admin directory
@@ -63,5 +56,4 @@ if (!$user && $currentScript !== 'login.php') {
 }
 
 
-// Include footer
-include 'footer.php';
+// No footer include here - this is just an authentication check

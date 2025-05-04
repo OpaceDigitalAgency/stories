@@ -4,7 +4,7 @@ import { getConfig } from '../../lib/config';
 import { fetchDirectoryItem, type DirectoryItem } from '../../lib/api';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
 
-export const prerender = false;
+// Dynamic route for directory details
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');

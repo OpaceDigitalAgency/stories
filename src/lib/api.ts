@@ -119,15 +119,18 @@ export interface DirectoryItem {
 }
 
 export interface AiTool {
-  title: string;
+  name: string;
   description: string;
-  coverImage: string;
-  cover_url?: string; // API response field
+  logo: string;
+  url?: string;
   slug: string;
   category: string;
   pricingType: string;
-  pricing_type?: string; // API response field
+  priceInfo?: string;
+  features?: string;
+  rating?: number;
   featured: boolean;
+  isPublished: boolean;
 }
 
 // Helper function to build URL with query parameters
@@ -325,20 +328,20 @@ export async function fetchGames(): Promise<Game[]> {
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
   try {
-    const raw = await fetchApi<any>(`/directory-items/slug/${slug}`);
+    const raw = await fetchApi<any>(`/directory-items/${slug}`);
 
     if (!raw) {
       console.error(`No directory item found with slug: ${slug}`);
       return null;
     }
     return {
-      title: item.title,
-      description: item.description || '',
-      coverImage: item.cover_url || '',
-      slug: item.slug,
-      category: item.category || '',
-      rating: Number(item.rating) || 0,
-      priceRange: item.price_range || ''
+      title: raw.title,
+      description: raw.description || '',
+      coverImage: raw.cover_url || '',
+      slug: raw.slug,
+      category: raw.category || '',
+      rating: Number(raw.rating) || 0,
+      priceRange: raw.price_range || ''
     };
   } catch (error) {
     console.error(`Error fetching directory item with slug ${slug}:`, error);
@@ -348,20 +351,25 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
 
 export async function fetchAiTool(slug: string): Promise<AiTool | null> {
   try {
-    const raw = await fetchApi<any>(`/ai-tools/slug/${slug}`);
+    const raw = await fetchApi<any>(`/ai-tools/${slug}`);
 
     if (!raw) {
       console.error(`No AI tool found with slug: ${slug}`);
       return null;
     }
     return {
-      title: item.title,
-      description: item.description || '',
-      coverImage: item.cover_url || '',
-      slug: item.slug,
-      category: item.category || '',
-      pricingType: item.pricing_type || '',
-      featured: Boolean(item.featured)
+      name: raw.name,
+      description: raw.description || '',
+      logo: raw.logo || '',
+      url: raw.url,
+      slug: raw.slug,
+      category: raw.category || '',
+      pricingType: raw.pricingType || '',
+      priceInfo: raw.priceInfo,
+      features: raw.features,
+      rating: raw.rating,
+      featured: Boolean(raw.featured),
+      isPublished: Boolean(raw.isPublished)
     };
   } catch (error) {
     console.error(`Error fetching AI tool with slug ${slug}:`, error);
@@ -424,13 +432,18 @@ export async function fetchAiTools(): Promise<AiTool[]> {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
-    title: item.title,
+    name: item.name,
     description: item.description || '',
-    coverImage: item.cover_url || '',
+    logo: item.logo || '',
+    url: item.url,
     slug: item.slug,
     category: item.category || '',
-    pricingType: item.pricing_type || '',
-    featured: Boolean(item.featured)
+    pricingType: item.pricingType || '',
+    priceInfo: item.priceInfo,
+    features: item.features,
+    rating: item.rating,
+    featured: Boolean(item.featured),
+    isPublished: Boolean(item.isPublished)
   }));
 }
 

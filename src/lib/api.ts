@@ -18,26 +18,34 @@ export const getAssetUrl = (path: string): string => {
   return `${ASSETS_URL}/${encodedPath}`;
 };
 
+export interface CoverImageUrls {
+  default: string;
+  thumbnail?: string;
+  medium?: string;
+  large?: string;
+}
+
 export interface Story {
   title: string;
   excerpt: string;
   content?: string;
   coverImage: string;
-  cover_url?: string; // API response field
+  cover_url?: string;
+  cover_urls?: CoverImageUrls;
   slug: string;
   publishDate: string;
-  publishedAt?: string; // API response field
+  publishedAt?: string;
   featured?: boolean;
   sponsored?: boolean;
-  is_sponsored?: boolean; // API response field
+  is_sponsored?: boolean;
   isAiEnhanced?: boolean;
-  is_ai_enhanced?: boolean; // API response field
+  is_ai_enhanced?: boolean;
   isSelfPublished?: boolean;
-  is_self_published?: boolean; // API response field
+  is_self_published?: boolean;
   needsModeration?: boolean;
-  needs_moderation?: boolean; // API response field
-  is_published?: boolean; // Whether the story is published
-  rating?: number | undefined;
+  needs_moderation?: boolean;
+  is_published?: boolean;
+  rating?: number;
   reviewCount?: number;
   tags?: string[];
   author?: Author;
@@ -51,7 +59,7 @@ export interface Author {
   name: string;
   bio: string;
   avatar: string;
-  avatar_url?: string; // API response field
+  avatar_url?: string;
   slug: string;
   author_type?: 'retail' | 'parent' | 'child' | 'educator';
   featured?: boolean;
@@ -63,18 +71,31 @@ export interface Author {
   twitter_url?: string;
   instagram_url?: string;
   website_url?: string;
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    website?: string;
+  };
 }
 
 export interface Game {
   title: string;
   description: string;
   coverImage: string;
-  cover_url?: string; // API response field
+  cover_url?: string;
   slug: string;
   price: number;
   rating: number;
   category: string;
   ageRange: string;
+  featured?: boolean;
+  website_url?: string;
+  platform?: string;
+  developer?: string;
+  publisher?: string;
+  release_date?: string | null;
+  is_published?: boolean;
+  genre?: string;
 }
 
 export interface DirectoryItem {
@@ -334,33 +355,32 @@ export async function fetchAiTool(slug: string): Promise<AiTool | null> {
 
 export async function fetchGame(slug: string): Promise<Game | null> {
   try {
-    const raw = await fetchApi<any[]>('/games', {
-      'filters[slug][$eq]': slug,
-      'populate': '*',
-      'pagination[limit]': 1,
-      'pagination[start]': 0
-    });
-
-    if (!raw || !Array.isArray(raw) || raw.length === 0) {
+    const raw = await fetchApi<any[]>('/games');
+    
+    // Find game with matching slug
+    const item = raw.find(game => game.slug === slug);
+    
+    if (!item) {
       console.error(`No game found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
-    if (!item || typeof item !== 'object') {
-      console.error('Invalid game data structure:', item);
-      return null;
-    }
-
     return {
-      title: item.title || '',
+      title: item.title,
       description: item.description || '',
       coverImage: item.cover_url || '',
-      slug: item.slug || '',
+      slug: item.slug,
       price: Number(item.price) || 0,
       rating: Number(item.rating) || 0,
-      category: item.category || 'General',
-      ageRange: item.age_range || 'All Ages'
+      category: item.genre || 'General',
+      ageRange: item.age_range || 'All Ages',
+      featured: Boolean(item.featured),
+      website_url: item.website_url || '',
+      platform: item.platform || '',
+      developer: item.developer || '',
+      publisher: item.publisher || '',
+      release_date: item.release_date || null,
+      is_published: Boolean(item.is_published)
     };
   } catch (error) {
     console.error(`Error fetching game with slug ${slug}:`, error);
@@ -455,17 +475,16 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
-    const raw = await fetchApi<any[]>('/stories', {
-      'filters[slug]': slug
-    });
-
-    // Check if we got any results
-    if (!raw || !Array.isArray(raw) || raw.length === 0) {
+    const raw = await fetchApi<any[]>('/stories');
+    
+    // Find story with matching slug
+    const item = raw.find(story => story.slug === slug);
+    
+    if (!item) {
       console.error(`No story found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
     return {
       title: item.title,
       excerpt: item.excerpt || '',
@@ -487,15 +506,15 @@ export async function fetchStory(slug: string): Promise<Story | null> {
       age_group: item.age_group || '7-12',
       tags: Array.isArray(item.tags) ? item.tags :
             (item.tags ? [String(item.tags)] : []),
-      author: {
-        name: item.author_name || '',
-        bio: item.author_bio || '',
-        avatar: item.author_avatar_url || '',
-        slug: item.author_slug || '',
-        author_type: item.author_type || 'retail',
-        age: item.author_age || null,
-        location: item.author_location || null
-      }
+      author: item.author ? {
+        name: item.author.name,
+        bio: item.author.bio || '',
+        avatar: item.author.avatar_url || '',
+        slug: item.author.slug,
+        author_type: item.author.author_type || 'retail',
+        age: item.author.age || null,
+        location: item.author.location || null
+      } : undefined
     };
   } catch (error) {
     console.error(`Error fetching story with slug ${slug}:`, error);
@@ -505,17 +524,23 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
-    const raw = await fetchApi<any[]>('/authors', {
-      'filters[slug]': slug
-    });
-
-    // Check if we got any results
-    if (!raw || !Array.isArray(raw) || raw.length === 0) {
+    const raw = await fetchApi<any[]>('/authors');
+    
+    // Find author with matching slug
+    const item = raw.find(author => author.slug === slug);
+    
+    if (!item) {
       console.error(`No author found with slug: ${slug}`);
       return null;
     }
 
-    const item = raw[0];
+    // Map social links
+    const socialLinks = {
+      twitter: item.twitter_url || undefined,
+      instagram: item.instagram_url || undefined,
+      website: item.website_url || undefined
+    };
+
     return {
       name: item.name,
       bio: item.bio || '',
@@ -530,7 +555,8 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       joinDate: item.join_date || item.created_at || new Date().toISOString(),
       twitter_url: item.twitter_url || '',
       instagram_url: item.instagram_url || '',
-      website_url: item.website_url || ''
+      website_url: item.website_url || '',
+      socialLinks: Object.values(socialLinks).some(v => v !== undefined) ? socialLinks : undefined
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);

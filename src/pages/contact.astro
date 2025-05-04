@@ -11,7 +11,7 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/Online Childrens Stories.png" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
@@ -291,13 +291,39 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
 
             // Send data to backend
-            fetch('https://api.storiesfromtheweb.org/public/save-contact.php', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(formObject)
-            })
+            // Try multiple URLs to ensure it works in different environments
+            const urls = [
+              '/stories-backend/public/save-contact.php',
+              '../stories-backend/public/save-contact.php',
+              '../../stories-backend/public/save-contact.php',
+              'https://api.storiesfromtheweb.org/public/save-contact.php'
+            ];
+
+            // Try the first URL
+            let currentUrlIndex = 0;
+
+            const tryNextUrl = () => {
+              if (currentUrlIndex >= urls.length) {
+                throw new Error('All URLs failed');
+              }
+
+              const currentUrl = urls[currentUrlIndex];
+              currentUrlIndex++;
+
+              return fetch(currentUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formObject)
+              })
+              .catch(error => {
+                console.error(`Error with URL ${currentUrl}:`, error);
+                return tryNextUrl();
+              });
+            };
+
+            tryNextUrl()
             .then(response => {
               if (!response.ok) {
                 throw new Error('Network response was not ok');

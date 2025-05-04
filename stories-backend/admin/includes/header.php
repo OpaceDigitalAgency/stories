@@ -29,7 +29,11 @@ $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false
     // Determine the correct path to assets based on the current file location
     $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
     $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
+
+    // Use absolute path for favicon to ensure it works in all environments
+    $faviconPath = '/public/Online Childrens Stories.png';
     ?>
+    <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="stylesheet" href="<?php echo $assetsPath; ?>">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

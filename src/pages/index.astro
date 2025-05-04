@@ -10,6 +10,7 @@ import AIRecommendationBox from '../components/AIRecommendationBox.astro';
 import EducatorSection from '../components/EducatorSection.astro';
 import SignUpPrompts from '../components/SignUpPrompts.astro';
 import ApiErrorMessage from '../components/ApiErrorMessage.astro';
+import Favicon from '../components/Favicon.astro';
 import { fetchStories, fetchAuthors } from '../lib/api';
 import '../styles/base.css';
 
@@ -34,7 +35,7 @@ let apiErrorEndpoint = null;
 try {
   // Fetch all stories first as a fallback
   const allStories = await fetchStories(1, 12);
-  
+
   // Try to fetch specific categories, but fall back to all stories if they fail
   try {
     featuredStories = await fetchStories(1, 3, { featured: true });
@@ -51,7 +52,7 @@ try {
     console.error('Error fetching featured stories:', err);
     featuredStories = allStories.slice(0, 3);
   }
-  
+
   try {
     // Ensure "Most Loved" shows stories with highest ratings
     mostLovedStories = await fetchStories(1, 6, { sort: 'average_rating:desc' });
@@ -65,7 +66,7 @@ try {
     console.error('Error fetching most loved stories:', err);
     mostLovedStories = allStories.slice(0, 6);
   }
-  
+
   try {
     latestSelfPublishedStories = await fetchStories(1, 6, { isSelfPublished: true });
     console.log('Self-published stories:', latestSelfPublishedStories);
@@ -82,7 +83,7 @@ try {
     console.error('Error fetching self-published stories:', err);
     latestSelfPublishedStories = allStories.filter(story => story.isSelfPublished).slice(0, 6);
   }
-  
+
   try {
     aiEnhancedStories = await fetchStories(1, 6, { isAiEnhanced: true });
     console.log('AI-enhanced stories:', aiEnhancedStories);
@@ -99,7 +100,7 @@ try {
     console.error('Error fetching AI-enhanced stories:', err);
     aiEnhancedStories = allStories.filter(story => story.isAiEnhanced).slice(0, 6);
   }
-  
+
   try {
     // Use is_sponsored instead of sponsored to match the API parameter
     sponsoredStories = await fetchStories(1, 6, { sponsored: true });
@@ -117,21 +118,21 @@ try {
     console.error('Error fetching sponsored stories:', err);
     sponsoredStories = allStories.filter(story => story.sponsored).slice(0, 6);
   }
-  
+
   // Fetch all authors
   const allAuthors = await fetchAuthors();
-  
+
   // Filter authors by type
   retailAuthors = allAuthors.filter(author => author.author_type === 'retail');
   const parentAuthors = allAuthors.filter(author => author.author_type === 'parent');
   const childAuthors = allAuthors.filter(author => author.author_type === 'child');
-  
+
   // Combine parent and child authors for the family section
   familyAuthors = [...parentAuthors, ...childAuthors];
-  
+
   // Featured authors
   featuredAuthors = allAuthors.filter(author => author.featured);
-  
+
   // If no featured authors, use some from each category
   if (featuredAuthors.length === 0) {
     featuredAuthors = [
@@ -150,19 +151,19 @@ try {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/Online Childrens Stories.png" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Stories From The Web | Share and Discover Children's Stories</title>
     <meta name="description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://storiesfromtheweb.org/" />
     <meta property="og:title" content="Stories From The Web | Share and Discover Children's Stories" />
     <meta property="og:description" content="A platform for sharing and discovering stories from around the web. We believe everyone has a story worth telling." />
     <meta property="og:image" content="https://storiesfromtheweb.org/og-image.jpg" />
-    
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://storiesfromtheweb.org/" />
@@ -172,7 +173,7 @@ try {
   </head>
   <body class="min-h-screen flex flex-col bg-neutral w-full">
     <NavHeader />
-    
+
     <main class="flex-grow w-full">
       {apiError && (
         <div class="container mx-auto px-4 py-4">
@@ -185,7 +186,7 @@ try {
         <div class="blob-shape bg-primary/30 w-64 h-64 -top-20 -left-20"></div>
         <div class="blob-shape bg-secondary/30 w-96 h-96 -bottom-40 -right-20"></div>
         <div class="blob-shape bg-accent/20 w-80 h-80 top-40 right-20"></div>
-        
+
         <div class="container mx-auto px-4 relative z-10">
           <div class="flex flex-col lg:flex-row items-center">
             <div class="lg:w-1/2 text-center lg:text-left mb-10 lg:mb-0">
@@ -213,7 +214,7 @@ try {
                 </a>
               </div>
             </div>
-            
+
             <!-- Animated illustration -->
             <div class="lg:w-1/2 relative">
               <div class="relative w-full max-w-md mx-auto">
@@ -221,7 +222,7 @@ try {
                   <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent/30 rounded-full blur-xl"></div>
                   <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/30 rounded-full blur-xl"></div>
                   <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-secondary/20 rounded-full blur-lg"></div>
-                  
+
                   <div class="relative z-10 flex items-center justify-center h-full">
                     <div class="relative w-64 h-48 bg-white rounded-lg shadow-lg transform rotate-3 overflow-hidden">
                       <div class="absolute left-0 top-0 bottom-0 w-6 bg-primary rounded-l-lg"></div>
@@ -245,7 +246,7 @@ try {
           </div>
         </div>
       </section>
-      
+
       <!-- Sponsored Carousel -->
       {sponsoredStories.length > 0 && (
         <SponsoredCarousel
@@ -255,7 +256,7 @@ try {
           carouselId="sponsored-stories"
         />
       )}
-      
+
       <!-- Story Carousels -->
       {mostLovedStories.length > 0 && (
         <StoryCarousel
@@ -265,7 +266,7 @@ try {
           carouselId="most-loved"
         />
       )}
-      
+
       {latestSelfPublishedStories.length > 0 && (
         <StoryCarousel
           title="Latest Self-Published"
@@ -274,7 +275,7 @@ try {
           carouselId="self-published"
         />
       )}
-      
+
       {aiEnhancedStories.length > 0 && (
         <StoryCarousel
           title="AI-Enhanced Picks"
@@ -283,7 +284,7 @@ try {
           carouselId="ai-enhanced"
         />
       )}
-      
+
       <!-- Recommended Book Authors Section -->
       <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
         <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
@@ -294,7 +295,7 @@ try {
               View All Authors →
             </a>
           </div>
-          
+
           {retailAuthors.length > 0 ? (
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {retailAuthors.slice(0, 3).map(author => (
@@ -308,7 +309,7 @@ try {
           )}
         </div>
       </section>
-      
+
       <!-- Latest Children & Family Writers Section -->
       <section class="py-16 relative overflow-hidden">
         <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
@@ -319,7 +320,7 @@ try {
               View All Authors →
             </a>
           </div>
-          
+
           {familyAuthors.length > 0 ? (
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {familyAuthors.slice(0, 3).map(author => (
@@ -352,7 +353,7 @@ try {
           )}
         </div>
       </section>
-      
+
       <!-- Parent & Teacher Areas -->
       <section class="py-16 relative overflow-hidden">
         <div class="container mx-auto px-4 relative z-10">
@@ -369,7 +370,7 @@ try {
           />
         </div>
       </section>
-      
+
       <!-- Sign-Up Prompts -->
       <section class="py-16 bg-neutral-dark relative overflow-hidden">
         <div class="blob-shape bg-tertiary/10 w-96 h-96 top-20 left-20"></div>
@@ -378,7 +379,7 @@ try {
           <SignUpPrompts type="author" />
         </div>
       </section>
-      
+
       <!-- AI Recommendation Box -->
       <section class="py-16 relative overflow-hidden">
         <div class="container mx-auto px-4 relative z-10">
@@ -394,7 +395,7 @@ try {
           />
         </div>
       </section>
-      
+
       <!-- Newsletter Section -->
       <section class="py-16 bg-secondary/10 relative overflow-hidden">
         <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
@@ -429,9 +430,9 @@ try {
         </div>
       </section>
     </main>
-    
+
     <Footer />
-    
+
     <style>
       .blob-shape {
         position: absolute;
@@ -440,15 +441,15 @@ try {
         z-index: 0;
         transition: transform 0.5s ease;
       }
-      
+
       .float-animation {
         animation: float 6s ease-in-out infinite;
       }
-      
+
       .pulse-animation {
         animation: pulse 3s ease-in-out infinite;
       }
-      
+
       @keyframes float {
         0% {
           transform: translateY(0px);
@@ -460,7 +461,7 @@ try {
           transform: translateY(0px);
         }
       }
-      
+
       @keyframes pulse {
         0% {
           transform: scale(1);
@@ -472,12 +473,12 @@ try {
           transform: scale(1);
         }
       }
-      
+
       .fancy-underline {
         position: relative;
         display: inline-block;
       }
-      
+
       .fancy-underline::after {
         content: '';
         position: absolute;
@@ -491,17 +492,17 @@ try {
         transform-origin: center;
         transition: transform 0.5s ease;
       }
-      
+
       .fancy-underline:hover::after {
         transform: scaleX(1);
       }
-      
+
       .btn-playful {
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
       }
-      
+
       .btn-playful::before {
         content: '';
         position: absolute;
@@ -512,29 +513,29 @@ try {
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
         transition: all 0.6s ease;
       }
-      
+
       .btn-playful:hover::before {
         left: 100%;
       }
-      
+
       .shadow-playful {
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         transition: all 0.3s ease;
       }
-      
+
       .shadow-playful:hover {
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         transform: translateY(-3px);
       }
     </style>
-    
+
     <script>
       // Parallax effect for blobs
       document.addEventListener('mousemove', (e) => {
         const blobs = document.querySelectorAll('.blob-shape');
         const mouseX = e.clientX / window.innerWidth;
         const mouseY = e.clientY / window.innerHeight;
-        
+
         blobs.forEach((blob, index) => {
           const speed = (index + 1) * 20;
           const x = (mouseX - 0.5) * speed;

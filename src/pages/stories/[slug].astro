@@ -32,15 +32,24 @@ let processedContent = {
 };
 
 // Function to process story content
-function processStoryContent(content: string): string {
+function processStoryContent(content: string, summary: string): string {
   if (!content) return '';
   
   // Remove markdown headers and metadata
-  return content
-    .replace(/^##\s+\*\*Author\*\*[\s\S]*?##\s+Summary\s*\n/m, '') // Remove author and metadata section
-    .replace(/^\*\*.*?\*\*:.*$/gm, '') // Remove any remaining **key**: value pairs
-    .replace(/^##.*$/gm, '') // Remove any remaining ## headers
-    .trim(); // Clean up whitespace
+  let processed = content
+    // Remove everything from start until "## The Story" or similar
+    .replace(/^[\s\S]*?(?:##\s+(?:The\s+)?Story|My\s+Story)\s*\n/mi, '')
+    // Remove any remaining markdown sections
+    .replace(/^##\s+.*?$/gm, '')
+    // Remove any remaining **key**: value pairs
+    .replace(/^\*\*.*?\*\*:.*$/gm, '')
+    // Remove the summary text if it appears in the content
+    .replace(new RegExp(summary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '')
+    // Clean up any double newlines and whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return processed;
 }
 
 let formattedDate: string | null = null;
@@ -57,7 +66,7 @@ try {
 
   if (story) {
     // Process story content
-    processedContent.storyContent = story.content ? processStoryContent(story.content) : null;
+    processedContent.storyContent = story.content ? processStoryContent(story.content, story.excerpt || '') : null;
 
     // Format date
     formattedDate = story.publishDate
@@ -205,14 +214,15 @@ const description = story?.excerpt || `Read this story on ${siteName}`;
 
           <!-- Story Content -->
           <div class="prose prose-lg max-w-none mb-16">
-            {processedContent.storyContent ? (
+            {processedContent.storyContent && processedContent.storyContent.length > 0 ? (
               <>
-                <div class="bg-white p-8 rounded-xl shadow-md mb-8">
-                  <h2 class="text-2xl font-bold mb-4">Story Summary</h2>
-                  <p class="text-gray-700">{story.excerpt}</p>
-                </div>
+                {story.excerpt && (
+                  <div class="bg-white p-8 rounded-xl shadow-md mb-8">
+                    <h2 class="text-2xl font-bold mb-4">Story Summary</h2>
+                    <p class="text-gray-700">{story.excerpt}</p>
+                  </div>
+                )}
                 <div class="bg-white p-8 rounded-xl shadow-md">
-                  <h2 class="text-2xl font-bold mb-4">Story</h2>
                   <div class="text-gray-700 whitespace-pre-line">
                     {processedContent.storyContent}
                   </div>

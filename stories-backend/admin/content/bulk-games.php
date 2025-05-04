@@ -1,7 +1,7 @@
 <?php
 
 // Include header
-include '../includes/header.php';
+require_once '../includes/header.php';
 
 
 // Page variables
@@ -15,10 +15,10 @@ $currentPage = 'bulk-games';
  */
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Initialize variables
 $success = '';

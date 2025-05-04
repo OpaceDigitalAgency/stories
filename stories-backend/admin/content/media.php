@@ -6,10 +6,10 @@
  */
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Include image optimizer
 require_once '../../includes/image_optimizer.php';
@@ -384,7 +384,7 @@ $extraHeadContent = '
 ';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 ?>
 
 <div class="content-section mb-4">

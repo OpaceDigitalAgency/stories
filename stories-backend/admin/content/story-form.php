@@ -35,7 +35,7 @@ if (!$user) {
 }
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 try {
 
@@ -176,7 +176,7 @@ $extraHeadContent = '
 ';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 
 // Display error message if any
 if (isset($error)): ?>

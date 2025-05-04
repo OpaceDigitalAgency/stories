@@ -1,7 +1,7 @@
 <?php
 
 // Include header
-include '../includes/header.php';
+require_once '../includes/header.php';
 
 
 // Page variables
@@ -19,11 +19,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include common admin files
 include_once '../includes/email-functions.php';
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Initialize response
 $_SESSION['error'] = null;

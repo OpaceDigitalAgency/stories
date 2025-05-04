@@ -10,7 +10,7 @@ $currentPage = 'subscribers';
 $pageDescription = 'Manage users who have subscribed to premium feature notifications';
 
 // Include header (which includes auth check and DB connection)
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 
 // Ensure we have a database connection
 if (!isset($db) || !$db) {

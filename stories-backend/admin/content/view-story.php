@@ -35,7 +35,7 @@ if (!$user) {
 }
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Check if ID is provided
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -157,7 +157,7 @@ $extraHeadContent = '
 ';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 ?>
 
         <div class="content-section mb-4">

@@ -6,10 +6,10 @@
  */
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 try {
 
@@ -106,7 +106,7 @@ $pageActions = '
 ';
 
 // Include header
-include_once '../includes/header.php';
+require_once '../includes/header.php';
 
 // Include search component
 include_once '../includes/search-component.php';

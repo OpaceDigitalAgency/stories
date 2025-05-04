@@ -12,10 +12,10 @@ $pageDescription = 'Process bulk actions for subscribers';
  */
 
 // Include auth check
-include_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';
 
 // Include database connection
-include_once '../includes/db-connect.php';
+require_once '../includes/db-connect.php';
 
 // Initialize response
 $response = [
@@ -111,21 +111,20 @@ if (isset($_POST['action']) && isset($_POST['selected_ids']) && is_array($_POST[
                     // HTML email template
                     $emailBody = '
 
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <h1>Stories From The Web</h1>
-                            </div>
-                            <div class="content">
-                                <p>Hello ' . htmlspecialchars($name) . ',</p>
-                                ' . nl2br(htmlspecialchars($personalizedMessage)) . '
-                                <p>Thank you for your interest in Stories From The Web!</p>
-                            </div>
-                            <div class="footer">
-                                <p>This email was sent to ' . htmlspecialchars($to) . ' because you subscribed to updates about ' . htmlspecialchars($feature) . '.</p>
-                                <p>© ' . date('Y') . ' Stories From The Web. All rights reserved.</p>
-                            </div>
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+                        <div style="text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                            <h1 style="color: #4a6ee0;">Stories From The Web</h1>
                         </div>
+                        <div style="margin-bottom: 30px;">
+                            <p>Hello ' . htmlspecialchars($name) . ',</p>
+                            ' . nl2br(htmlspecialchars($personalizedMessage)) . '
+                            <p>Thank you for your interest in Stories From The Web!</p>
+                        </div>
+                        <div style="font-size: 12px; color: #666; text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                            <p>This email was sent to ' . htmlspecialchars($to) . ' because you subscribed to updates about ' . htmlspecialchars($feature) . '.</p>
+                            <p>© ' . date('Y') . ' Stories From The Web. All rights reserved.</p>
+                        </div>
+                    </div>
                     ';
 
                     // Send the email

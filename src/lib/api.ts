@@ -69,11 +69,9 @@ export interface Author {
   id?: string;
   storyCount?: number;
   joinDate?: string;
-  socialLinks?: {
-    twitter?: string;
-    instagram?: string;
-    website?: string;
-  };
+  twitter_url?: string;
+  instagram_url?: string;
+  website_url?: string;
 }
 
 export interface Game {
@@ -267,17 +265,10 @@ export async function fetchAuthors(): Promise<Author[]> {
 }
 
 export async function fetchGames(): Promise<Game[]> {
-  try {
-    const raw = await fetchApi<any[]>('/games', {
-      'sort': 'created_at:desc'
-    });
-
-    if (!raw || !Array.isArray(raw)) {
-      console.error('Invalid response from games endpoint');
-      return [];
-    }
-
-    return raw.map(item => ({
+  const raw = await fetchApi<any[]>('/games', {
+    'sort': 'created_at:desc'
+  });
+  return raw.map(item => ({
     title: item.title,
     description: item.description || '',
     coverImage: item.cover_url || '',
@@ -286,11 +277,7 @@ export async function fetchGames(): Promise<Game[]> {
     rating: Number(item.rating) || 0,
     category: item.category || 'General',
     ageRange: item.age_range || 'All Ages'
-    }));
-  } catch (error) {
-    console.error('Error fetching games:', error);
-    return [];
-  }
+  }));
 }
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {

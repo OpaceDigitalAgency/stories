@@ -522,8 +522,8 @@ The Stories From The Web Team</textarea>
                     'delete' => false
                 ]
             ]);
-        } else if (function_exists('renderTable')) {
-            renderTable($subscribers, $columns, [
+        } else if (function_exists('renderEnhancedTable')) {
+            renderEnhancedTable($subscribers, $columns, [
                 'content_type' => 'subscribers',
                 'name_field' => 'email',
                 'empty_message' => 'No subscribers found.',

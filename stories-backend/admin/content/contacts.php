@@ -542,8 +542,8 @@ The Stories From The Web Team</textarea>
                     'delete' => false
                 ]
             ]);
-        } else if (function_exists('renderTable')) {
-            renderTable($contacts, $columns, [
+        } else if (function_exists('renderEnhancedTable')) {
+            renderEnhancedTable($contacts, $columns, [
                 'content_type' => 'contacts',
                 'name_field' => 'name',
                 'empty_message' => 'No contact submissions found.',
@@ -556,7 +556,7 @@ The Stories From The Web Team</textarea>
                 ]
             ]);
         } else {
-            echo '<div class="error">Error: renderTable function not found</div>';
+            echo '<div class="error">Error: renderEnhancedTable function not found</div>';
 
             // Fallback: Display a simple table if the function is not available
             if (!empty($contacts)) {

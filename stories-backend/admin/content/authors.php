@@ -144,7 +144,7 @@ $customFormatters = [
 ];
 
 // If the table component is not available, render the table manually
-if (!function_exists('renderTable')) {
+if (!function_exists('renderEnhancedTable')) {
     // Render table
     echo '<div class="table-container">';
     echo '<table id="data-table" class="table">';
@@ -184,7 +184,15 @@ if (!function_exists('renderTable')) {
     echo '</div>';
 } else {
     // Use the table component
-    renderTable('authors', $columns, $authors, $customFormatters);
+    renderEnhancedTable($authors, $columns, [
+        'content_type' => 'authors',
+        'name_field' => 'name',
+        'empty_message' => 'No authors found. Add your first author!',
+        'custom_formatters' => $customFormatters,
+        'view_url' => 'view-author.php?id={id}',
+        'edit_url' => 'author-form.php?id={id}',
+        'delete_url' => 'delete-author.php'
+    ]);
 }
 
 // No need for JavaScript includes

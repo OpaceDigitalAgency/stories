@@ -11,12 +11,19 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Initialize variables
-$directory_items = [];
-$error = null;
-$success = null;
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 try {
+    // Enable detailed error reporting
+    error_log("Starting directory items page load...");
+    
+    // Verify database connection
+    if (!$db) {
+        throw new Exception("Database connection is not available");
+    }
+    error_log("Database connection verified");
 
     // Check if directory_items table exists
     $stmt = $db->query("SHOW TABLES LIKE 'directory_items'");
@@ -61,13 +68,43 @@ try {
         ");
     }
 
-    // Get all directory items with category names
-    $directory_items = $db->query("
-        SELECT d.*, c.name as category_name
+    // Get pagination parameters
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
+    $offset = ($page - 1) * $perPage;
+
+    // Get total count for pagination
+    $countQuery = "SELECT COUNT(*) FROM directory_items";
+    $totalItems = $db->query($countQuery)->fetchColumn();
+    error_log("Total directory items found: $totalItems");
+
+    // Get directory items with pagination
+    $query = "
+        SELECT d.id,
+               d.title,
+               d.description,
+               d.website_url,
+               d.contact_email,
+               d.contact_phone,
+               d.address,
+               d.featured,
+               d.is_published,
+               d.slug,
+               d.published_at,
+               d.created_at,
+               d.updated_at,
+               c.name as category_name
         FROM directory_items d
         LEFT JOIN directory_categories c ON d.category_id = c.id
         ORDER BY d.created_at DESC
-    ")->fetchAll();
+        LIMIT $offset, $perPage
+    ";
+    error_log("Executing query: " . $query);
+
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $directory_items = $stmt->fetchAll();
+    error_log("Number of items fetched: " . count($directory_items));
 
 } catch (PDOException $e) {
     error_log("Directory items page error: " . $e->getMessage());
@@ -91,15 +128,69 @@ $pageTitle = 'Directory Items';
 $currentPage = 'directory';
 $pageDescription = 'Manage all your directory items from here.';
 $pageActions = '
-<form method="GET" action="directory-item-form.php">
-    <button type="submit" class="btn btn-success">
-        <i class="fas fa-plus" aria-hidden="true"></i> Add New Directory Item
+<div class="d-flex gap-2">
+    <form method="GET" action="directory-item-form.php">
+        <button type="submit" class="btn btn-success">
+            <i class="fas fa-plus" aria-hidden="true"></i> Add New Directory Item
+        </button>
+    </form>
+    <button onclick="window.location.reload()" class="btn btn-secondary">
+        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-</form>
+    <button onclick="window.location.href=\'?debug=1\'" class="btn btn-info">
+        <i class="fas fa-bug" aria-hidden="true"></i> Debug Mode
+    </button>
+</div>
 ';
+
+// Add additional debug logging if debug mode is enabled
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    error_log("DEBUG MODE ENABLED");
+    error_log("PHP Version: " . phpversion());
+    error_log("MySQL Version: " . $db->getAttribute(PDO::ATTR_SERVER_VERSION));
+    error_log("Current User: " . ($user['name'] ?? 'Unknown'));
+    error_log("Session Status: " . session_status());
+    error_log("Memory Usage: " . memory_get_usage(true) / 1024 / 1024 . " MB");
+}
 
 // Include header
 require_once '../includes/header.php';
+
+// Display any database connection errors
+if (!$db) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo '<h4 class="alert-heading"><i class="fas fa-database"></i> Database Connection Error</h4>';
+    echo '<p>Could not connect to the database. Please check your configuration.</p>';
+    echo '</div>';
+}
+
+// Display any errors prominently
+if (isset($error)) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo '<h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Error Loading Directory Items</h4>';
+    echo '<p>' . htmlspecialchars($error) . '</p>';
+    echo '<hr>';
+    echo '<p class="mb-0">Please check the error logs for more details or contact support.</p>';
+    echo '</div>';
+}
+
+// Display debug information for administrators
+if ($user && $user['role'] === 'admin') {
+    echo '<div class="card mb-3">';
+    echo '<div class="card-header bg-info text-white">';
+    echo '<i class="fas fa-bug"></i> Debug Information';
+    echo '</div>';
+    echo '<div class="card-body">';
+    echo '<pre class="mb-0">';
+    echo "Database Connection: " . ($db ? "Success" : "Failed") . "\n";
+    echo "Total Items Found: " . ($totalItems ?? 0) . "\n";
+    echo "Items Loaded: " . (isset($directory_items) ? count($directory_items) : 0) . "\n";
+    echo "Current Page: " . $page . "\n";
+    echo "Items Per Page: " . $perPage . "\n";
+    echo '</pre>';
+    echo '</div>';
+    echo '</div>';
+}
 
 // Include search component
 include_once '../includes/search-component.php';
@@ -163,6 +254,12 @@ if (function_exists('renderTable')) {
         'edit_url' => 'directory-item-form.php?id={id}',
         'delete_url' => 'delete-directory-item.php'
     ]);
+}
+
+// Include pagination component
+include_once '../includes/pagination-component.php';
+if (function_exists('renderPagination')) {
+    renderPagination($totalItems, $perPage, $page);
 }
 
 // Include footer

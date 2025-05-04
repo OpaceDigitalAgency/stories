@@ -56,18 +56,13 @@ let formattedDate: string | null = null;
 
 try {
   // Fetch the story and related stories
-  const [currentStory, allStories] = await Promise.all([
+  const [currentStory, relatedStoriesData] = await Promise.all([
     fetchStory(slug),
-    fetchStories()
+    fetchStories(1, 4, { sort: 'publishedAt:desc' }) // Get most recent stories instead of filtering by slug
   ]);
 
   story = currentStory;
-  
-  // Get 4 most recent stories excluding current story
-  relatedStories = allStories
-    .filter(s => s.slug !== slug)
-    .sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
-    .slice(0, 4);
+  relatedStories = relatedStoriesData || [];
 
   if (story) {
     // Process story content

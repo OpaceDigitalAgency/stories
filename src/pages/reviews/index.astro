@@ -36,13 +36,11 @@ const reviewerTypes = ['Parent', 'Teacher', 'Child', 'Librarian', 'Other'];
 const sortOptions = ['Newest First', 'Oldest First', 'Highest Rated', 'Most Reviewed'];
 
 try {
-  // Fetch all stories
-  stories = await fetchStories();
+  // Fetch stories with ratings
+  stories = await fetchStories(1, 50, { sort: 'average_rating:desc' });
 
-  // Filter and sort stories with ratings
-  sortedStories = stories
-    .filter(story => story.rating && story.rating > 0)
-    .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  // Filter stories with ratings
+  sortedStories = stories.filter(story => story.rating && story.rating > 0);
 } catch (err) {
   console.error('Error fetching reviews data:', err);
   apiError = true;

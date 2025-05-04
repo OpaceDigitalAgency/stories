@@ -22,9 +22,8 @@ export interface Story {
   title: string;
   excerpt: string;
   content?: string;
-  coverImage: string | CoverImageUrls;
+  coverImage: string;
   cover_url?: string; // API response field
-  cover_urls?: CoverImageUrls; // API response field
   slug: string;
   publishDate: string;
   publishedAt?: string; // API response field
@@ -64,24 +63,12 @@ export interface Author {
   twitter_url?: string;
   instagram_url?: string;
   website_url?: string;
-  socialLinks?: {
-    twitter?: string;
-    instagram?: string;
-    website?: string;
-  };
-}
-
-export interface CoverImageUrls {
-  default: string;
-  thumbnail?: string;
-  medium?: string;
-  large?: string;
 }
 
 export interface Game {
   title: string;
   description: string;
-  coverImage: string | CoverImageUrls;
+  coverImage: string;
   cover_url?: string; // API response field
   slug: string;
   price: number;
@@ -128,9 +115,10 @@ export const buildUrl = (endpoint: string, params: Record<string, string | numbe
 // Generic fetch function with enhanced error handling and retries
 export async function fetchApi<T>(
   endpoint: string,
+  params: Record<string, string | number | boolean> = {},
   retries = 2
 ): Promise<T> {
-  const url = buildUrl(endpoint);
+  const url = buildUrl(endpoint, params);
 
   try {
     const response = await fetch(url, {
@@ -153,7 +141,7 @@ export async function fetchApi<T>(
     // Retry logic for network errors
     if (retries > 0 && error instanceof Error && error.message.includes('fetch')) {
       console.log(`Retrying... (${retries} attempts left)`);
-      return fetchApi(endpoint, retries - 1);
+      return fetchApi(endpoint, params, retries - 1);
     }
 
     const errorObj: any = new Error(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -175,14 +163,49 @@ interface StoryFilters {
   'filters[author][slug][$eq]'?: string;
 }
 
-// Helper function to map story response
-function mapStoryResponse(item: any): Story {
-  return {
+// Resource-specific fetch functions with proper mapping
+export async function fetchStories(page = 1, limit = 10, filters: StoryFilters = {}): Promise<Story[]> {
+  // Default parameters
+  const params: Record<string, string | number | boolean> = {
+    'pagination[limit]': limit,
+    'pagination[page]': page
+  };
+
+  // Set default sort if not specified in filters
+  if (!filters.sort) {
+    params['sort'] = 'publishedAt:desc';
+  } else {
+    params['sort'] = filters.sort;
+  }
+
+  // Add filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key.startsWith('filters[tags]')) {
+      params[key] = value;
+    } else if (key === 'featured' && value === true) {
+      params['featured'] = 1;
+    } else if (key === 'sponsored' && value === true) {
+      params['is_sponsored'] = 1;
+    } else if (key === 'isSelfPublished' && value === true) {
+      params['is_self_published'] = 1;
+    } else if (key === 'isAiEnhanced' && value === true) {
+      params['is_ai_enhanced'] = 1;
+    } else if (key === 'sort') {
+      params['sort'] = value;
+    }
+  });
+
+  console.log("Final API params:", JSON.stringify(params));
+
+  // Add populate parameter to ensure we get content
+  params['populate'] = '*';
+
+  const raw = await fetchApi<any[]>('/stories', params);
+  return raw.map(item => ({
     title: item.title,
     excerpt: item.excerpt || '',
-    content: item.content || '',
-    coverImage: item.cover_urls || item.cover_url || '',
-    cover_urls: item.cover_urls,
+    content: item.content || '',  // Include content field
+    coverImage: item.cover_url || '',
     slug: item.slug,
     publishDate: item.publishedAt || '',
     featured: Boolean(item.featured),
@@ -190,13 +213,13 @@ function mapStoryResponse(item: any): Story {
     isAiEnhanced: Boolean(item.is_ai_enhanced),
     isSelfPublished: Boolean(item.is_self_published),
     needsModeration: Boolean(item.needs_moderation),
-    is_published: Boolean(item.is_published),
+    is_published: Boolean(item.is_published),  // Include is_published field
     rating: Number(item.average_rating) > 0 ? Number(item.average_rating) : undefined,
     reviewCount: Number(item.review_count) || 0,
     source_type: item.source_type || 'child',
     allow_reviews: Boolean(item.allow_reviews),
-    estimated_reading_time: item.estimated_reading_time || '1',
-    age_group: item.age_group || '7-12',
+    estimated_reading_time: item.estimated_reading_time || '1',  // Include reading time
+    age_group: item.age_group || '7-12',  // Include age group
     tags: Array.isArray(item.tags) ? item.tags :
           (item.tags ? [String(item.tags)] : []),
     author: item.author ? {
@@ -205,58 +228,16 @@ function mapStoryResponse(item: any): Story {
       avatar: item.author.avatar_url || '',
       slug: item.author.slug,
       author_type: item.author.author_type || 'retail',
-      age: item.author.age || null,
-      location: item.author.location || null
+      age: item.author.age || null,  // Include author age
+      location: item.author.location || null  // Include author location
     } : undefined
-  };
-}
-
-// Resource-specific fetch functions with proper mapping
-export async function fetchStories(authorId?: string): Promise<Story[]> {
-  const [raw, storyAuthors, authors] = await Promise.all([
-    fetchApi<any[]>('/stories'),
-    fetchApi<any[]>('/story_authors'),
-    fetchApi<any[]>('/authors')
-  ]);
-
-  // If authorId is provided, filter stories by author
-  if (authorId) {
-    const authorStoryIds = storyAuthors
-      .filter(sa => sa.author_id === authorId)
-      .map(sa => sa.story_id);
-    
-    const filteredStories = raw.filter(story => authorStoryIds.includes(story.id));
-    
-    // Add author data to each story
-    filteredStories.forEach(story => {
-      const storyAuthor = storyAuthors.find(sa => sa.story_id === story.id);
-      if (storyAuthor) {
-        const author = authors.find(a => a.id === storyAuthor.author_id);
-        if (author) {
-          story.author = author;
-        }
-      }
-    });
-
-    return filteredStories.map(mapStoryResponse);
-  }
-
-  // Add author data to all stories
-  raw.forEach(story => {
-    const storyAuthor = storyAuthors.find(sa => sa.story_id === story.id);
-    if (storyAuthor) {
-      const author = authors.find(a => a.id === storyAuthor.author_id);
-      if (author) {
-        story.author = author;
-      }
-    }
-  });
-
-  return raw.map(mapStoryResponse);
+  }));
 }
 
 export async function fetchAuthors(): Promise<Author[]> {
-  const raw = await fetchApi<any[]>('/authors');
+  const raw = await fetchApi<any[]>('/authors', {
+    'sort': 'name:asc'
+  });
   return raw.map(item => ({
     name: item.name,
     bio: item.bio || '',
@@ -269,7 +250,10 @@ export async function fetchAuthors(): Promise<Author[]> {
 
 export async function fetchGames(): Promise<Game[]> {
   try {
-    const raw = await fetchApi<any[]>('/games');
+    const raw = await fetchApi<any[]>('/games', {
+      'sort': 'created_at:desc',
+      'populate': '*'
+    });
 
     if (!raw || !Array.isArray(raw)) {
       console.error('Invalid games data received');
@@ -294,7 +278,10 @@ export async function fetchGames(): Promise<Game[]> {
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
   try {
-    const raw = await fetchApi<any[]>('/directory-items');
+    const raw = await fetchApi<any[]>('/directory-items', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'
+    });
 
     if (!raw || raw.length === 0) {
       console.error(`No directory item found with slug: ${slug}`);
@@ -319,7 +306,10 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
 
 export async function fetchAiTool(slug: string): Promise<AiTool | null> {
   try {
-    const raw = await fetchApi<any[]>('/ai-tools');
+    const raw = await fetchApi<any[]>('/ai-tools', {
+      'filters[slug][$eq]': slug,
+      'populate': '*'
+    });
 
     if (!raw || raw.length === 0) {
       console.error(`No AI tool found with slug: ${slug}`);
@@ -344,15 +334,19 @@ export async function fetchAiTool(slug: string): Promise<AiTool | null> {
 
 export async function fetchGame(slug: string): Promise<Game | null> {
   try {
-    const raw = await fetchApi<any[]>('/games');
+    const raw = await fetchApi<any[]>('/games', {
+      'filters[slug][$eq]': slug,
+      'populate': '*',
+      'pagination[limit]': 1,
+      'pagination[start]': 0
+    });
 
-    // Find the game with matching slug
-    const item = raw.find(game => game.slug === slug);
-
-    if (!item) {
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No game found with slug: ${slug}`);
       return null;
     }
+
+    const item = raw[0];
     if (!item || typeof item !== 'object') {
       console.error('Invalid game data structure:', item);
       return null;
@@ -375,7 +369,9 @@ export async function fetchGame(slug: string): Promise<Game | null> {
 }
 
 export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
-  const raw = await fetchApi<any[]>('/directory-items');
+  const raw = await fetchApi<any[]>('/directory-items', {
+    'sort': 'created_at:desc'
+  });
   return raw.map(item => ({
     title: item.title,
     description: item.description || '',
@@ -388,7 +384,9 @@ export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
 }
 
 export async function fetchAiTools(): Promise<AiTool[]> {
-  const raw = await fetchApi<any[]>('/ai-tools');
+  const raw = await fetchApi<any[]>('/ai-tools', {
+    'sort': 'created_at:desc'
+  });
   return raw.map(item => ({
     title: item.title,
     description: item.description || '',
@@ -404,12 +402,13 @@ export async function fetchAiTools(): Promise<AiTool[]> {
 export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
   try {
     console.log(`Fetching stories with tag: ${tag}`);
-    const raw = await fetchApi<any[]>('/stories');
-    
-    // Filter stories with matching tag
-    const stories = raw.filter(story =>
-      story.tags && story.tags.includes(tag)
-    );
+
+    // Try with contains first
+    let raw = await fetchApi<any[]>('/stories', {
+      'filters[tags]': tag,
+      'sort': 'publishedAt:desc',
+      'populate': '*'
+    });
 
     if (!raw || raw.length === 0) {
       console.log(`No stories found with tag: ${tag}`);
@@ -456,30 +455,48 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 // Single item fetch functions
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
-    const [raw, storyAuthors, authors] = await Promise.all([
-      fetchApi<any[]>('/stories'),
-      fetchApi<any[]>('/story_authors'),
-      fetchApi<any[]>('/authors')
-    ]);
+    const raw = await fetchApi<any[]>('/stories', {
+      'filters[slug]': slug
+    });
 
-    // Find the story with matching slug
-    const item = raw.find(story => story.slug === slug);
-
-    if (!item) {
+    // Check if we got any results
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No story found with slug: ${slug}`);
       return null;
     }
 
-    // Find the author for this story
-    const storyAuthor = storyAuthors.find(sa => sa.story_id === item.id);
-    if (storyAuthor) {
-      const author = authors.find(a => a.id === storyAuthor.author_id);
-      if (author) {
-        item.author = author;
+    const item = raw[0];
+    return {
+      title: item.title,
+      excerpt: item.excerpt || '',
+      content: item.content || '',
+      coverImage: item.cover_url || '',
+      slug: item.slug,
+      publishDate: item.publishedAt || '',
+      featured: Boolean(item.featured),
+      sponsored: Boolean(item.is_sponsored),
+      isAiEnhanced: Boolean(item.is_ai_enhanced),
+      isSelfPublished: Boolean(item.is_self_published),
+      needsModeration: Boolean(item.needs_moderation),
+      is_published: Boolean(item.is_published),
+      rating: Number(item.average_rating) || 0,
+      reviewCount: Number(item.review_count) || 0,
+      source_type: item.source_type || 'child',
+      allow_reviews: Boolean(item.allow_reviews),
+      estimated_reading_time: item.estimated_reading_time || '1',
+      age_group: item.age_group || '7-12',
+      tags: Array.isArray(item.tags) ? item.tags :
+            (item.tags ? [String(item.tags)] : []),
+      author: {
+        name: item.author_name || '',
+        bio: item.author_bio || '',
+        avatar: item.author_avatar_url || '',
+        slug: item.author_slug || '',
+        author_type: item.author_type || 'retail',
+        age: item.author_age || null,
+        location: item.author_location || null
       }
-    }
-
-    return mapStoryResponse(item);
+    };
   } catch (error) {
     console.error(`Error fetching story with slug ${slug}:`, error);
     return null;
@@ -488,15 +505,17 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
-    const raw = await fetchApi<any[]>('/authors');
+    const raw = await fetchApi<any[]>('/authors', {
+      'filters[slug]': slug
+    });
 
-    // Find the author with matching slug
-    const item = raw.find(author => author.slug === slug);
-
-    if (!item) {
+    // Check if we got any results
+    if (!raw || !Array.isArray(raw) || raw.length === 0) {
       console.error(`No author found with slug: ${slug}`);
       return null;
     }
+
+    const item = raw[0];
     return {
       name: item.name,
       bio: item.bio || '',
@@ -511,12 +530,7 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       joinDate: item.join_date || item.created_at || new Date().toISOString(),
       twitter_url: item.twitter_url || '',
       instagram_url: item.instagram_url || '',
-      website_url: item.website_url || '',
-      socialLinks: {
-        twitter: item.twitter_url || undefined,
-        instagram: item.instagram_url || undefined,
-        website: item.website_url || undefined
-      }
+      website_url: item.website_url || ''
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);
@@ -525,9 +539,31 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
 }
 
 // Fetch blog posts
-export async function fetchBlogPosts(): Promise<any[]> {
+export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<string, any> = {}): Promise<any[]> {
+  // Default parameters
+  const params: Record<string, string | number | boolean> = {
+    'pagination[limit]': limit,
+    'pagination[page]': page
+  };
+
+  // Set default sort if not specified in filters
+  if (!filters.sort) {
+    params['sort'] = 'created_at:desc';
+  } else {
+    params['sort'] = filters.sort;
+  }
+
+  // Add any additional filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key !== 'sort') {
+      params[key] = value;
+    }
+  });
+
+  console.log("Fetching blog posts with params:", JSON.stringify(params));
+
   try {
-    const raw = await fetchApi<any[]>('/blog-posts');
+    const raw = await fetchApi<any[]>('/blog-posts', params);
     return raw.map(item => ({
       id: item.id,
       title: item.title,
@@ -561,7 +597,9 @@ export interface Category {
 // Fetch categories
 export async function fetchCategories(): Promise<Category[]> {
   try {
-    const raw = await fetchApi<any[]>('/categories');
+    const raw = await fetchApi<any[]>('/categories', {
+      'sort': 'name:asc'
+    });
 
     return raw.map(item => ({
       id: item.id,
@@ -579,7 +617,9 @@ export async function fetchCategories(): Promise<Category[]> {
 // Fetch tags
 export async function fetchTags(): Promise<any[]> {
   try {
-    const raw = await fetchApi<any[]>('/tags');
+    const raw = await fetchApi<any[]>('/tags', {
+      'sort': 'name:asc'
+    });
     return raw.map(item => ({
       id: item.id,
       name: item.name,

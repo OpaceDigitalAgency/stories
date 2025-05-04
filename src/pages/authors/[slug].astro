@@ -25,14 +25,21 @@ let apiError = false;
 let apiErrorDetails: Error | null = null;
 
 try {
-  // Fetch author first
-  author = await fetchAuthor(slug);
+  // Fetch author and their stories
+  const [authorData, storiesData] = await Promise.all([
+    fetchAuthor(slug),
+    fetchStories(1, 50, {
+      sort: 'publishedAt:desc',
+      'filters[author][slug][$eq]': slug
+    })
+  ]);
+
+  author = authorData;
   if (!author) {
     return Astro.redirect('/404');
   }
 
-  // Then fetch stories using author's ID
-  authorStories = await fetchStories(author.id);
+  authorStories = storiesData;
 
   // Extract popular tags from author's stories
   const tagCounts = new Map<string, number>();

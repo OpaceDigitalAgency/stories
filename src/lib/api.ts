@@ -65,10 +65,17 @@ export interface Author {
   website_url?: string;
 }
 
+export interface CoverImageUrls {
+  default: string;
+  thumbnail?: string;
+  medium?: string;
+  large?: string;
+}
+
 export interface Game {
   title: string;
   description: string;
-  coverImage: string;
+  coverImage: string | CoverImageUrls;
   cover_url?: string; // API response field
   slug: string;
   price: number;
@@ -456,7 +463,8 @@ export async function fetchStoriesByTag(tag: string): Promise<Story[]> {
 export async function fetchStory(slug: string): Promise<Story | null> {
   try {
     const raw = await fetchApi<any[]>('/stories', {
-      'filters[slug]': slug
+      'filters[slug][$eq]': slug,
+      'populate': '*'
     });
 
     // Check if we got any results
@@ -506,7 +514,8 @@ export async function fetchStory(slug: string): Promise<Story | null> {
 export async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
     const raw = await fetchApi<any[]>('/authors', {
-      'filters[slug]': slug
+      'filters[slug][$eq]': slug,
+      'populate': '*'
     });
 
     // Check if we got any results

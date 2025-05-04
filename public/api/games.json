@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Another Game",
+    "description": "An exciting educational game for children",
+    "cover_url": "/images/default-cover.svg",
+    "slug": "another-game",
+    "price": 9.99,
+    "rating": 4.5,
+    "category": "Educational",
+    "age_range": "7-12"
+  }
+]

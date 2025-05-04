@@ -588,80 +588,71 @@ The Stories From The Web Team</textarea>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
+                                <!-- Contact Information Card -->
                                 <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Contact Information</h6>
+                                    </div>
                                     <div class="card-body">
-                                        <div class="contact-details">
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <div class="detail-item">
-                                                        <strong>Name:</strong>
-                                                        <span><?php echo htmlspecialchars($contact['name']); ?></span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="detail-item">
-                                                        <strong>Email:</strong>
-                                                        <span><?php echo htmlspecialchars($contact['email']); ?></span>
-                                                    </div>
-                                                </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold text-secondary">Name:</div>
+                                            <div class="col-md-9"><?php echo htmlspecialchars($contact['name']); ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold text-secondary">Email:</div>
+                                            <div class="col-md-9"><?php echo htmlspecialchars($contact['email']); ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold text-secondary">Subject:</div>
+                                            <div class="col-md-9"><?php echo htmlspecialchars($contact['subject']); ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold text-secondary">Date:</div>
+                                            <div class="col-md-9"><?php echo date('M d, Y H:i', strtotime($contact['created_at'])); ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold text-secondary">Status:</div>
+                                            <div class="col-md-9">
+                                                <?php if ($contact['is_responded']): ?>
+                                                    <span class="badge bg-success">Responded</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning text-dark">Not Responded</span>
+                                                <?php endif; ?>
                                             </div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <div class="detail-item">
-                                                        <strong>Subject:</strong>
-                                                        <span><?php echo htmlspecialchars($contact['subject']); ?></span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="detail-item">
-                                                        <strong>Date:</strong>
-                                                        <span><?php echo date('M d, Y H:i', strtotime($contact['created_at'])); ?></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-12">
-                                                    <div class="detail-item">
-                                                        <strong>Status:</strong>
-                                                        <span>
-                                                            <?php if ($contact['is_responded']): ?>
-                                                                <span class="badge bg-success">Responded</span>
-                                                            <?php else: ?>
-                                                                <span class="badge bg-warning text-dark">Not Responded</span>
-                                                            <?php endif; ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-12">
-                                                    <div class="detail-item">
-                                                        <strong>Message:</strong>
-                                                        <div class="message-content p-3 bg-light rounded mt-2"><?php echo nl2br(htmlspecialchars($contact['message'])); ?></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <?php if (!empty($contact['admin_notes'])): ?>
-                                            <div class="row">
-                                                <div class="col-12">
-                                                    <div class="detail-item">
-                                                        <strong>Admin Notes:</strong>
-                                                        <div class="notes-content p-3 bg-light rounded mt-2"><?php echo nl2br(htmlspecialchars($contact['admin_notes'])); ?></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
 
+                                <!-- Message Card -->
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-envelope me-2"></i>Message</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="p-3 bg-light rounded">
+                                            <?php echo nl2br(htmlspecialchars($contact['message'])); ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Admin Notes Card (if any) -->
+                                <?php if (!empty($contact['admin_notes'])): ?>
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Admin Notes</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="p-3 bg-light rounded">
+                                            <?php echo nl2br(htmlspecialchars($contact['admin_notes'])); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
+                                <!-- Update Form Card -->
                                 <form method="post" class="card">
-                                    <div class="card-header">
-                                        <h5 class="mb-0">Update Contact</h5>
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-edit me-2"></i>Update Contact</h6>
                                     </div>
                                     <div class="card-body">
                                         <input type="hidden" name="action" value="update_status">

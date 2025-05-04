@@ -12,8 +12,9 @@ error_reporting(E_ALL);
 // Start session for anti-bot protection
 session_start();
 
-// Include anti-bot protection
-include_once '../includes/anti-bot.php';
+// Include anti-bot protection but in a way that matches subscriber system
+// Use a modified version that logs but doesn't block submissions
+// include_once '../includes/anti-bot.php';
 
 // Allow cross-origin requests
 header('Access-Control-Allow-Origin: *');
@@ -53,15 +54,25 @@ if (empty($data) && !empty($_POST)) {
 // Debug log
 error_log("Contact form data received: " . print_r($data, true));
 
-// Check for bot submissions
-if (isLikelyBot($data)) {
-    // Pretend success but don't actually save the data
-    error_log("Bot submission detected and blocked");
-    echo json_encode([
-        'success' => true,
-        'message' => 'Thank you for your message! We\'ll get back to you as soon as possible.'
-    ]);
-    exit;
+// Instead of blocking submissions, log suspicious activity but continue processing
+$suspiciousActivity = false;
+
+// Check for honeypot fields - only clear sign of a bot
+if (!empty($data['website']) || !empty($data['url']) || !empty($data['honey'])) {
+    error_log("Contact form: Honeypot field filled, likely bot but continuing");
+    $suspiciousActivity = true;
+    // But we'll still process it and flag it in notes
+}
+
+// Log any suspicious user agent but don't block
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$suspiciousUserAgents = ['bot', 'crawl', 'spider', 'curl', 'wget', 'python'];
+foreach ($suspiciousUserAgents as $agent) {
+    if (stripos($userAgent, $agent) !== false) {
+        error_log("Contact form: Suspicious user agent detected: $userAgent");
+        $suspiciousActivity = true;
+        break;
+    }
 }
 
 // Validate required fields
@@ -92,7 +103,15 @@ $email = $data['email'] ?? '';
 $subject = $data['subject'] ?? '';
 $message = $data['message'] ?? '';
 $is_responded = 0;
+
+// Add suspicious activity to admin notes if detected
 $admin_notes = '';
+if ($suspiciousActivity) {
+    $admin_notes = "SYSTEM NOTE: This submission was flagged for suspicious activity. " .
+                  "User Agent: " . ($userAgent ?: 'Not provided') . ". " .
+                  "IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'Unknown') . ". " .
+                  "Time: " . date('Y-m-d H:i:s');
+}
 
 // Connect to database
 try {

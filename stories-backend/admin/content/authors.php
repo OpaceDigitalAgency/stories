@@ -190,7 +190,7 @@ if (function_exists('renderEnhancedTable')) {
             echo '<td>';
             echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
             echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            echo '<a href="author-delete.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this author?\');"><i class="fas fa-trash"></i> Delete</a>';
+            echo '<a href="author-delete-debug.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete (Debug)</a>';
             echo '</td>';
             echo '</tr>';
         }

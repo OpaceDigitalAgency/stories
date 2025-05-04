@@ -5,7 +5,13 @@ import netlify from '@astrojs/netlify';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [tailwind()],
+  integrations: [
+    tailwind() // Use default config
+  ],
   adapter: netlify(),
-  output: "server"  // Add this line to set the output mode
+  output: "static", // Change to static for now to simplify debugging
+  site: 'https://storiesfromtheweb.netlify.app',
+  base: '/',
+  // Ensure public directory is properly handled
+  publicDir: 'public'
 });

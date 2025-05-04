@@ -5,9 +5,7 @@ import netlify from '@astrojs/netlify';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [
-    tailwind()
-  ],
+  integrations: [tailwind()],
   adapter: netlify(),
-  output: "server"
+  output: "server"  // Add this line to set the output mode
 });

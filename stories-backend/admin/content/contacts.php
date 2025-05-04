@@ -17,6 +17,9 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Define flag to track if header has been included
+$GLOBALS['header_included'] = true;
+
 // Include header
 require_once '../includes/header.php';
 

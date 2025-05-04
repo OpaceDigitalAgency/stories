@@ -32,8 +32,6 @@ export interface Story {
   is_published?: boolean; // Whether the story is published
   rating?: number | undefined;
   reviewCount?: number;
-  review_count?: number; // API response field
-  average_rating?: number; // API response field
   tags?: string[];
   author?: Author;
   source_type?: 'child' | 'parent' | 'classic';
@@ -92,46 +90,11 @@ export interface AiTool {
 
 // Helper function to build URL with query parameters
 export const buildUrl = (endpoint: string, params: Record<string, string | number | boolean> = {}) => {
-  try {
-    // If we're using a Netlify function, manually construct an absolute URL
-    if (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app') && API_URL.includes('/.netlify/functions/api')) {
-      const baseUrl = `${window.location.protocol}//${window.location.host}${API_URL}`;
-      const url = new URL(endpoint, baseUrl);
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, String(value));
-      });
-      return url.toString();
-    }
-    
-    // For regular API endpoints
-    let apiBase = API_URL;
-    // Ensure endpoint starts with a slash if the API URL doesn't end with one
-    if (!apiBase.endsWith('/') && !endpoint.startsWith('/')) {
-      apiBase += '/';
-    }
-    
-    // If API_URL is a relative path, ensure it's properly formatted
-    const fullUrl = apiBase + endpoint;
-    const url = new URL(fullUrl, 'https://api.example.com'); // Use a dummy base for relative URLs
-    
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, String(value));
-    });
-    
-    // If using relative URLs, return just the pathname + search
-    if (API_URL.startsWith('/')) {
-      return `${url.pathname}${url.search}`;
-    }
-    
-    return url.toString();
-  } catch (e) {
-    console.error('Error building URL:', e);
-    // Fallback to simple concatenation
-    let queryString = new URLSearchParams(
-      Object.entries(params).map(([k, v]) => [k, String(v)])
-    ).toString();
-    return `${API_URL}${endpoint}${queryString ? '?' + queryString : ''}`;
-  }
+  const url = new URL(`${API_URL}${endpoint}`);
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.append(key, String(value));
+  });
+  return url.toString();
 };
 
 // Generic fetch function with error handling
@@ -139,7 +102,6 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
   const url = buildUrl(endpoint, params);
 
   try {
-    console.log(`Fetching from API: ${url}`);
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',

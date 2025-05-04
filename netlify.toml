@@ -3,38 +3,16 @@
   publish = "dist"
 
 [build.environment]
-  PUBLIC_API_URL = "/.netlify/functions/api"
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
 [context.production.environment]
-  PUBLIC_API_URL = "/.netlify/functions/api"
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
 [context.deploy-preview.environment]
-  PUBLIC_API_URL = "/.netlify/functions/api"
-
-[[headers]]
-  for = "/api/*"
-  [headers.values]
-    Cache-Control = "no-store"
-    Access-Control-Allow-Origin = "*"
+  PUBLIC_API_URL = "https://api.storiesfromtheweb.org/api/v1"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
   force = true
-
-# Single redirect for SPA
-# No fallback needed
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
-
-# Fallback for API if Netlify function fails
-[[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 200
-  force = false

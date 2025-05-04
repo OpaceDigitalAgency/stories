@@ -1,16 +1,7 @@
 <?php
-
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Ai Tools';
-$currentPage = 'bulk-ai-tools';
-
 /**
  * Bulk Actions Handler for AI Tools
- * 
+ *
  * Handles bulk operations on AI tools like delete, publish, unpublish, feature, unfeature, etc.
  */
 
@@ -90,18 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect back to the AI tools page with success/error message
-$redirectUrl = 'ai-tools.php';
-
+// Store message in session and redirect
 if (!empty($success)) {
-    $redirectUrl .= '?success=' . urlencode($success);
+    $_SESSION['success'] = $success;
 } elseif (!empty($error)) {
-    $redirectUrl .= '?error=' . urlencode($error);
+    $_SESSION['error'] = $error;
 }
 
-header('Location: ' . $redirectUrl);
+// Redirect back to the AI tools page
+header('Location: ai-tools.php');
 exit;
-
-
-// Include footer
-require_once '../includes/footer.php';

@@ -1,16 +1,7 @@
 <?php
-
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Directory Items';
-$currentPage = 'bulk-directory-items';
-
 /**
  * Bulk Actions Handler for Directory Items
- * 
+ *
  * Handles bulk operations on directory items like delete, publish, unpublish, feature, unfeature, etc.
  */
 
@@ -90,18 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect back to the directory items page with success/error message
-$redirectUrl = 'directory-items.php';
-
+// Store message in session and redirect
 if (!empty($success)) {
-    $redirectUrl .= '?success=' . urlencode($success);
+    $_SESSION['success'] = $success;
 } elseif (!empty($error)) {
-    $redirectUrl .= '?error=' . urlencode($error);
+    $_SESSION['error'] = $error;
 }
 
-header('Location: ' . $redirectUrl);
+// Redirect back to the directory items page
+header('Location: directory-items.php');
 exit;
-
-
-// Include footer
-require_once '../includes/footer.php';

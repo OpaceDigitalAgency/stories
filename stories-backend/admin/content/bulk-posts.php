@@ -1,16 +1,7 @@
 <?php
-
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Posts';
-$currentPage = 'bulk-posts';
-
 /**
  * Bulk Actions Handler for Blog Posts
- * 
+ *
  * Handles bulk operations on blog posts like delete, publish, unpublish, etc.
  */
 
@@ -135,18 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect back to the posts page with success/error message
-$redirectUrl = 'blog-posts.php';
-
+// Store message in session and redirect
 if (!empty($success)) {
-    $redirectUrl .= '?success=' . urlencode($success);
+    $_SESSION['success'] = $success;
 } elseif (!empty($error)) {
-    $redirectUrl .= '?error=' . urlencode($error);
+    $_SESSION['error'] = $error;
 }
 
-header('Location: ' . $redirectUrl);
+// Redirect back to the posts page
+header('Location: blog-posts.php');
 exit;
-
-
-// Include footer
-require_once '../includes/footer.php';

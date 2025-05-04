@@ -237,24 +237,6 @@ if (isset($error)) {
     echo '</div>';
 }
 
-// Display debug information for administrators
-if ($user && $user['role'] === 'admin') {
-    echo '<div class="card mb-3">';
-    echo '<div class="card-header bg-info text-white">';
-    echo '<i class="fas fa-bug"></i> Debug Information';
-    echo '</div>';
-    echo '<div class="card-body">';
-    echo '<pre class="mb-0">';
-    echo "Database Connection: " . ($db ? "Success" : "Failed") . "\n";
-    echo "Total Stories Found: " . ($totalItems ?? 0) . "\n";
-    echo "Stories Loaded: " . (isset($stories) ? count($stories) : 0) . "\n";
-    echo "Current Page: " . $page . "\n";
-    echo "Items Per Page: " . $perPage . "\n";
-    echo '</pre>';
-    echo '</div>';
-    echo '</div>';
-}
-
 // Include search component
 include_once '../includes/search-component.php';
 if (function_exists('renderSearchComponent')) {

@@ -82,15 +82,12 @@ try {
                bp.created_at,
                bp.updated_at,
                a.name as author_name,
-               GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ') as tags
-        FROM $blogTableName bp
-        LEFT JOIN authors a ON $authorJoinCondition
-        LEFT JOIN (
-            SELECT post_id, GROUP_CONCAT(t.name SEPARATOR ', ') as tags
-            FROM $postTagsTableName pt
-            JOIN tags t ON pt.tag_id = t.id
-            GROUP BY post_id
-        ) post_tags ON bp.id = post_tags.post_id
+               (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+                FROM $postTagsTableName pt
+                JOIN tags t ON pt.tag_id = t.id
+                WHERE pt.post_id = bp.id) as tags
+       FROM $blogTableName bp
+       LEFT JOIN authors a ON $authorJoinCondition
         ORDER BY bp.created_at DESC
         LIMIT $offset, $perPage
     ";
@@ -127,9 +124,6 @@ $pageActions = '
     <button onclick="window.location.reload()" class="btn btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-    <button onclick="window.location.href=\'?debug=1\'" class="btn btn-info">
-        <i class="fas fa-bug" aria-hidden="true"></i> Debug Mode
-    </button>
 </div>
 ';
 
@@ -151,24 +145,6 @@ if (isset($error)) {
     echo '<p>' . htmlspecialchars($error) . '</p>';
     echo '<hr>';
     echo '<p class="mb-0">Please check the error logs for more details or contact support.</p>';
-    echo '</div>';
-}
-
-// Display debug information for administrators
-if ($user && $user['role'] === 'admin') {
-    echo '<div class="card mb-3">';
-    echo '<div class="card-header bg-info text-white">';
-    echo '<i class="fas fa-bug"></i> Debug Information';
-    echo '</div>';
-    echo '<div class="card-body">';
-    echo '<pre class="mb-0">';
-    echo "Database Connection: " . ($db ? "Success" : "Failed") . "\n";
-    echo "Total Posts Found: " . ($totalItems ?? 0) . "\n";
-    echo "Posts Loaded: " . (isset($posts) ? count($posts) : 0) . "\n";
-    echo "Current Page: " . $page . "\n";
-    echo "Items Per Page: " . $perPage . "\n";
-    echo '</pre>';
-    echo '</div>';
     echo '</div>';
 }
 

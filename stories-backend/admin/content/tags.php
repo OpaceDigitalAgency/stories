@@ -49,13 +49,25 @@ try {
         )");
     }
 
+    // Get pagination parameters
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
+    $offset = ($page - 1) * $perPage;
+
+    // Get total count for pagination
+    $countQuery = "SELECT COUNT(*) FROM tags";
+    $totalItems = $db->query($countQuery)->fetchColumn();
+
     // Get all tags with usage counts
     $query = "SELECT t.*,
               (SELECT COUNT(*) FROM story_tags WHERE tag_id = t.id) as story_count,
               (SELECT COUNT(*) FROM post_tags WHERE tag_id = t.id) as post_count
               FROM tags t
-              ORDER BY t.name ASC";
-    $tags = $db->query($query)->fetchAll();
+              ORDER BY t.name ASC
+              LIMIT $offset, $perPage";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $tags = $stmt->fetchAll();
 
 } catch (PDOException $e) {
     error_log("Tags page error: " . $e->getMessage());
@@ -102,7 +114,7 @@ if (function_exists('renderBulkActionsComponent')) {
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
+if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
         'name' => 'Name',
@@ -120,7 +132,7 @@ if (function_exists('renderTable')) {
     ];
 
     // Render the table
-    renderTable($tags, $columns, [
+    renderEnhancedTable($tags, $columns, [
         'content_type' => 'tags',
         'name_field' => 'name',
         'empty_message' => 'No tags found. Add your first tag!',
@@ -129,6 +141,12 @@ if (function_exists('renderTable')) {
         'edit_url' => 'tag-form.php?id={id}',
         'delete_url' => 'delete-tag.php'
     ]);
+}
+
+// Include pagination component if needed
+include_once '../includes/pagination-component.php';
+if (function_exists('renderPagination') && $totalItems > $perPage) {
+    renderPagination($totalItems, $perPage, $page);
 }
 
 // Include footer

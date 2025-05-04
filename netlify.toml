@@ -85,13 +85,13 @@
   force = true
 
 [[redirects]]
-  from = "/ai-tools/*"
+  from = "/ai-tools/category/*"
   to = "/ai-tools"
   status = 301
   force = true
 
 [[redirects]]
-  from = "/directories/*"
+  from = "/directories/category/*"
   to = "/directories"
   status = 301
   force = true

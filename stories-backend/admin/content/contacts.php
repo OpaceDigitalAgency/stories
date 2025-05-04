@@ -330,7 +330,9 @@ $customFormatters = [
 ];
 ?>
 
-<!-- The header is already included above, so we start directly with content -->
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <!-- Page header is already included in header.php, so we don't need to repeat it here -->
 
         <!-- Alerts -->
         <?php if (isset($successMessage) && !empty($successMessage)): ?>
@@ -383,10 +385,23 @@ $customFormatters = [
 
         <!-- Include bulk actions component -->
         <?php
-        // Include the component file first
-        require_once '../includes/bulk-actions-component.php';
+        // Try multiple paths for the bulk actions component
+        $bulkActionsComponentPaths = [
+            '../includes/bulk-actions-component.php',
+            dirname(dirname(__FILE__)) . '/includes/bulk-actions-component.php',
+            'includes/bulk-actions-component.php'
+        ];
 
-        // Now we can safely call the function - use the enhanced version if available
+        $bulkActionsIncluded = false;
+        foreach ($bulkActionsComponentPaths as $path) {
+            if (file_exists($path)) {
+                require_once $path;
+                $bulkActionsIncluded = true;
+                break;
+            }
+        }
+
+        // If we have the enhanced function, use it, otherwise fall back to the basic one
         if (function_exists('renderEnhancedBulkActionsComponent')) {
             renderEnhancedBulkActionsComponent('contacts', ['delete', 'mark_responded', 'mark_not_responded', 'notify']);
         } else if (function_exists('renderBulkActionsComponent')) {
@@ -439,8 +454,21 @@ The Stories From The Web Team</textarea>
 
         <!-- Include table component -->
         <?php
-        // Include the component file first
-        require_once '../includes/table-component.php';
+        // Try multiple paths for the table component
+        $tableComponentPaths = [
+            '../includes/table-component.php',
+            dirname(dirname(__FILE__)) . '/includes/table-component.php',
+            'includes/table-component.php'
+        ];
+
+        $tableComponentIncluded = false;
+        foreach ($tableComponentPaths as $path) {
+            if (file_exists($path)) {
+                require_once $path;
+                $tableComponentIncluded = true;
+                break;
+            }
+        }
 
         // Define columns
         $columns = [
@@ -714,4 +742,7 @@ The Stories From The Web Team</textarea>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
+    </div>
+</div>
+
 <?php require_once '../includes/footer.php'; ?>

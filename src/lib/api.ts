@@ -1,5 +1,11 @@
-// Base API URL - use environment variable or fallback to proxy path
-const API_URL = import.meta.env.PUBLIC_API_URL || '/api';
+// Base API URL from environment variable
+const API_URL = import.meta.env.PUBLIC_API_URL;
+if (!API_URL) {
+  throw new Error('PUBLIC_API_URL environment variable is not set');
+}
+
+// Assets URL from environment variable
+const ASSETS_URL = import.meta.env.PUBLIC_ASSETS_URL || '/images';
 
 // Type definitions
 export interface CoverImageUrls {
@@ -9,6 +15,16 @@ export interface CoverImageUrls {
   medium?: string;
   large?: string;
 }
+
+// Helper function to build asset URLs
+export const getAssetUrl = (path: string): string => {
+  if (!path) return '';
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  // Replace spaces with dashes and encode the filename
+  const encodedPath = cleanPath.replace(/\s+/g, '-').toLowerCase();
+  return `${ASSETS_URL}/${encodedPath}`;
+};
 
 export interface Story {
   title: string;
@@ -90,15 +106,21 @@ export interface AiTool {
 
 // Helper function to build URL with query parameters
 export const buildUrl = (endpoint: string, params: Record<string, string | number | boolean> = {}) => {
-  const url = new URL(`${API_URL}${endpoint}`);
+  // Remove leading slash if present to avoid double slashes
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  const url = new URL(`${API_URL}/${cleanEndpoint}`);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, String(value));
   });
   return url.toString();
 };
 
-// Generic fetch function with error handling
-export async function fetchApi<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+// Generic fetch function with enhanced error handling and retries
+export async function fetchApi<T>(
+  endpoint: string,
+  params: Record<string, string | number | boolean> = {},
+  retries = 2
+): Promise<T> {
   const url = buildUrl(endpoint, params);
 
   try {
@@ -110,12 +132,21 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error(`API request failed for ${url}:`, error);
+
+    // Retry logic for network errors
+    if (retries > 0 && error instanceof Error && error.message.includes('fetch')) {
+      console.log(`Retrying... (${retries} attempts left)`);
+      return fetchApi(endpoint, params, retries - 1);
+    }
+
     const errorObj: any = new Error(`API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     errorObj.endpoint = endpoint;
     errorObj.originalError = error;

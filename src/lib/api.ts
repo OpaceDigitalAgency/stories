@@ -107,15 +107,19 @@ export interface Game {
 }
 
 export interface DirectoryItem {
-  title: string;
+  name: string;
   description: string;
-  coverImage: string;
-  cover_url?: string; // API response field
+  logo: string;
+  url?: string;
   slug: string;
   category: string;
   rating: number;
   priceRange: string;
-  price_range?: string; // API response field
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  featured: boolean;
+  isPublished: boolean;
 }
 
 export interface AiTool {
@@ -335,13 +339,19 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
       return null;
     }
     return {
-      title: raw.title,
+      name: raw.name,
       description: raw.description || '',
-      coverImage: raw.cover_url || '',
+      logo: raw.logo || '',
+      url: raw.url,
       slug: raw.slug,
       category: raw.category || '',
       rating: Number(raw.rating) || 0,
-      priceRange: raw.price_range || ''
+      priceRange: raw.priceRange || '',
+      contactEmail: raw.contactEmail,
+      contactPhone: raw.contactPhone,
+      address: raw.address,
+      featured: Boolean(raw.featured),
+      isPublished: Boolean(raw.isPublished)
     };
   } catch (error) {
     console.error(`Error fetching directory item with slug ${slug}:`, error);

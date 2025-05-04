@@ -1,6 +1,7 @@
 ---
 import NavHeader from '../components/NavHeader.astro';
 import Footer from '../components/Footer.astro';
+import Favicon from '../components/Favicon.astro';
 import '../styles/base.css';
 
 // Page metadata
@@ -11,8 +12,7 @@ const description = 'Get in touch with the Stories From The Web team. We\'re her
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.png">
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.png">
+    <Favicon />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>

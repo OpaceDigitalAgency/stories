@@ -2,6 +2,7 @@
 import NavHeader from '../../components/NavHeader.astro';
 import Footer from '../../components/Footer.astro';
 import CardAuthor from '../../components/CardAuthor.astro';
+import Favicon from '../../components/Favicon.astro';
 import { fetchAuthors } from '../../lib/api';
 import '../../styles/base.css';
 
@@ -32,11 +33,11 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
   <meta name="description" content={description}>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <Favicon />
 </head>
 <body class="min-h-screen bg-neutral-50 text-text-primary font-sans">
   <NavHeader />
-  
+
   <main class="pt-24 pb-32">
     <!-- Hero Section -->
     <section class="relative py-20 overflow-hidden">
@@ -44,7 +45,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
       <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
       <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-      
+
       <div class="container relative z-10">
         <div class="max-w-3xl mx-auto text-center mb-16">
           <h1 class="text-4xl md:text-5xl font-display font-bold mb-6 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
@@ -53,12 +54,12 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
           <p class="text-lg text-text-secondary mb-8">
             Discover the talented storytellers behind our collection of amazing stories. From award-winning children's book authors to innovative educators, our community of writers brings diverse perspectives and creative voices to young readers.
           </p>
-          
+
           <!-- Search Bar -->
           <div class="relative max-w-2xl mx-auto transform-style-3d hover:translate-z-4 transition-transform duration-500">
-            <input 
-              type="text" 
-              placeholder="Search for authors by name or genre..." 
+            <input
+              type="text"
+              placeholder="Search for authors by name or genre..."
               class="w-full px-6 py-4 rounded-full border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
             />
             <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full hover:bg-primary-600 transition-colors duration-300">
@@ -70,14 +71,14 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         </div>
       </div>
     </section>
-    
+
     <!-- Featured Authors -->
     <section class="py-16 bg-white">
       <div class="container">
         <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
           Featured Authors
         </h2>
-        
+
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
           {featuredAuthors.slice(0, 4).map((author, index) => (
             <div
@@ -90,7 +91,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         </div>
       </div>
     </section>
-    
+
     <!-- Recommended Book Authors Section -->
     <section class="py-16 bg-gradient-to-br from-purple-50 to-purple-100 relative overflow-hidden">
       <div class="blob-shape bg-primary/20 w-80 h-80 -bottom-20 left-20"></div>
@@ -98,7 +99,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         <div class="flex justify-between items-center mb-8">
           <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Recommended Book Authors</h2>
         </div>
-        
+
         {retailAuthors.length > 0 ? (
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
             {retailAuthors.map((author, index) => (
@@ -117,7 +118,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         )}
       </div>
     </section>
-    
+
     <!-- Latest Children & Family Writers Section -->
     <section class="py-16 relative overflow-hidden">
       <div class="blob-shape bg-secondary/20 w-80 h-80 -bottom-20 right-20"></div>
@@ -125,7 +126,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         <div class="flex justify-between items-center mb-8">
           <h2 class="text-3xl font-display font-bold text-text-primary fancy-underline relative z-10">Latest Children & Family Writers</h2>
         </div>
-        
+
         {familyAuthors.length > 0 ? (
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 perspective-1000">
             {familyAuthors.map((author, index) => (
@@ -144,7 +145,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         )}
       </div>
     </section>
-    
+
     <!-- Become an Author CTA -->
     <section class="py-16 bg-gradient-to-br from-primary-50 to-primary-100">
       <div class="container">
@@ -155,7 +156,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
               Join our community of storytellers and share your stories with young readers around the world.
             </p>
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -168,7 +169,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
                 Our intuitive tools make it simple to write, format, and publish your stories.
               </p>
             </div>
-            
+
             <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
@@ -180,7 +181,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
                 Connect with a global audience of young readers, parents, and educators.
               </p>
             </div>
-            
+
             <div class="bg-primary-50 p-6 rounded-xl text-center transform-style-3d hover:translate-z-4 transition-transform duration-500">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary">
@@ -193,7 +194,7 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
               </p>
             </div>
           </div>
-          
+
           <div class="text-center">
             <a href="/publish" class="inline-block bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105">
               Start Writing Today
@@ -203,9 +204,9 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
       </div>
     </section>
   </main>
-  
+
   <Footer />
-  
+
   <style>
     @keyframes fadeInUp {
       from {
@@ -221,12 +222,12 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .fancy-underline {
       position: relative;
       display: inline-block;
     }
-    
+
     .fancy-underline::after {
       content: '';
       position: absolute;
@@ -240,11 +241,11 @@ const description = 'Discover amazing storytellers on Stories From The Web. Brow
       transform-origin: center;
       transition: transform 0.5s ease;
     }
-    
+
     .fancy-underline:hover::after {
       transform: scaleX(1);
     }
-    
+
     .blob-shape {
       position: absolute;
       border-radius: 50%;

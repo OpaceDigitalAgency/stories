@@ -267,10 +267,17 @@ export async function fetchAuthors(): Promise<Author[]> {
 }
 
 export async function fetchGames(): Promise<Game[]> {
-  const raw = await fetchApi<any[]>('/games', {
-    'sort': 'created_at:desc'
-  });
-  return raw.map(item => ({
+  try {
+    const raw = await fetchApi<any[]>('/games', {
+      'sort': 'created_at:desc'
+    });
+
+    if (!raw || !Array.isArray(raw)) {
+      console.error('Invalid response from games endpoint');
+      return [];
+    }
+
+    return raw.map(item => ({
     title: item.title,
     description: item.description || '',
     coverImage: item.cover_urls ? {
@@ -285,7 +292,11 @@ export async function fetchGames(): Promise<Game[]> {
     rating: Number(item.rating) || 0,
     category: item.category || 'General',
     ageRange: item.age_range || 'All Ages'
-  }));
+    }));
+  } catch (error) {
+    console.error('Error fetching games:', error);
+    return [];
+  }
 }
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {

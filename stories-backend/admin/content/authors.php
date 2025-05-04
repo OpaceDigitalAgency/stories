@@ -173,8 +173,7 @@ if (!function_exists('renderTable')) {
             echo '<td>';
             echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
             echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            // Include data attributes for the JavaScript modal
-            echo '<a href="javascript:void(0)" class="btn btn-sm btn-danger" onclick="showDeleteAuthorModal(' . $author['id'] . ', \'' . htmlspecialchars(addslashes($author['name'])) . '\', ' . (isset($author['story_count']) ? $author['story_count'] : 0) . ')"><i class="fas fa-trash"></i> Delete</a>';
+            echo '<a href="author-delete.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
             echo '</td>';
             echo '</tr>';
         }
@@ -188,12 +187,7 @@ if (!function_exists('renderTable')) {
     renderTable('authors', $columns, $authors, $customFormatters);
 }
 
-// Include jQuery and the author-delete.js script for delete functionality
-echo '
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../js/author-delete.js"></script>
-';
+// No need for JavaScript includes
 
 // Include footer
 require_once '../includes/footer.php';

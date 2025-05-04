@@ -4,20 +4,17 @@
  * Handles bulk operations on contact form submissions
  */
 
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Include auth check
 include_once '../includes/auth-check.php';
 
 // Include common admin files
 include_once '../includes/email-functions.php';
 include_once '../includes/db-connect.php';
-
-// Set page variables for header
-$pageTitle = 'Processing Bulk Actions';
-$currentPage = 'contacts';
-$pageDescription = 'Processing bulk actions for contacts...';
-
-// Include header
-include_once '../includes/header.php';
 
 // Initialize response
 $_SESSION['error'] = null;
@@ -36,14 +33,16 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
     } else {
         // Convert to integers to prevent SQL injection
         $selectedIds = array_map('intval', $selectedIds);
-        $idList = implode(',', $selectedIds);
+
+        // Prepare placeholders for SQL query
+        $idPlaceholders = implode(',', array_fill(0, count($selectedIds), '?'));
 
         try {
             switch ($action) {
                 case 'delete':
                     // Delete selected contacts
-                    $stmt = $db->prepare("DELETE FROM contacts WHERE id IN ($idList)");
-                    $stmt->execute();
+                    $stmt = $db->prepare("DELETE FROM contacts WHERE id IN ($idPlaceholders)");
+                    $stmt->execute($selectedIds);
                     $count = $stmt->rowCount();
 
                     $_SESSION['success'] = "$count contact(s) deleted successfully";
@@ -51,8 +50,8 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
 
                 case 'mark_responded':
                     // Mark selected contacts as responded
-                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 1 WHERE id IN ($idList)");
-                    $stmt->execute();
+                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 1 WHERE id IN ($idPlaceholders)");
+                    $stmt->execute($selectedIds);
                     $count = $stmt->rowCount();
 
                     $_SESSION['success'] = "$count contact(s) marked as responded";
@@ -60,8 +59,8 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
 
                 case 'mark_not_responded':
                     // Mark selected contacts as not responded
-                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 0 WHERE id IN ($idList)");
-                    $stmt->execute();
+                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 0 WHERE id IN ($idPlaceholders)");
+                    $stmt->execute($selectedIds);
                     $count = $stmt->rowCount();
 
                     $_SESSION['success'] = "$count contact(s) marked as not responded";
@@ -79,8 +78,8 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
                     }
 
                     // Get contact details
-                    $stmt = $db->prepare("SELECT * FROM contacts WHERE id IN ($idList)");
-                    $stmt->execute();
+                    $stmt = $db->prepare("SELECT * FROM contacts WHERE id IN ($idPlaceholders)");
+                    $stmt->execute($selectedIds);
                     $contacts = $stmt->fetchAll();
 
                     $successCount = 0;

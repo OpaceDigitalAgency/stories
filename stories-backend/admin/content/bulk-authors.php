@@ -1,16 +1,7 @@
 <?php
-
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Bulk Authors';
-$currentPage = 'bulk-authors';
-
 /**
  * Bulk Actions Handler for Authors
- * 
+ *
  * Handles bulk operations on authors like delete, etc.
  */
 
@@ -44,17 +35,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             // Perform the selected action
-            switch ($action) {
+            // Strip "Selected" from action name
+            $action = str_replace(' Selected', '', $action);
+            
+            switch (strtolower($action)) {
                 case 'delete':
                     // First check if any of the authors have associated stories
-                    $stmt = $pdo->prepare("
-                        SELECT a.id, a.name, COUNT(sa.story_id) as story_count
-                        FROM authors a
-                        LEFT JOIN story_authors sa ON a.id = sa.author_id
-                        WHERE a.id IN ($placeholders)
-                        GROUP BY a.id
-                        HAVING story_count > 0
-                    ");
+                    // Check if story_authors table exists
+                    $hasStoryAuthorsTable = false;
+                    try {
+                        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+                        $hasStoryAuthorsTable = $stmt->rowCount() > 0;
+                    } catch (PDOException $e) {
+                        // Table might not exist, ignore
+                    }
+
+                    // Build query based on table structure
+                    if ($hasStoryAuthorsTable) {
+                        $stmt = $db->prepare("
+                            SELECT a.id, a.name, COUNT(sa.story_id) as story_count
+                            FROM authors a
+                            LEFT JOIN story_authors sa ON a.id = sa.author_id
+                            WHERE a.id IN ($placeholders)
+                            GROUP BY a.id
+                            HAVING story_count > 0
+                        ");
+                    } else {
+                        // Check if stories table has author_id column
+                        try {
+                            $stmt = $db->query("SHOW COLUMNS FROM stories LIKE 'author_id'");
+                            if ($stmt->rowCount() > 0) {
+                                $stmt = $db->prepare("
+                                    SELECT a.id, a.name, COUNT(s.id) as story_count
+                                    FROM authors a
+                                    LEFT JOIN stories s ON a.id = s.author_id
+                                    WHERE a.id IN ($placeholders)
+                                    GROUP BY a.id
+                                    HAVING story_count > 0
+                                ");
+                            } else {
+                                // No story associations possible
+                                $stmt = $db->prepare("
+                                    SELECT a.id, a.name, 0 as story_count
+                                    FROM authors a
+                                    WHERE a.id IN ($placeholders)
+                                ");
+                            }
+                        } catch (PDOException $e) {
+                            // Table might not exist, ignore
+                            $stmt = $db->prepare("
+                                SELECT a.id, a.name, 0 as story_count
+                                FROM authors a
+                                WHERE a.id IN ($placeholders)
+                            ");
+                        }
+                    }
                     $stmt->execute($selectedIds);
                     $authorsWithStories = $stmt->fetchAll();
                     
@@ -67,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Cannot delete the following authors because they have associated stories: ' . implode(', ', $authorNames);
                     } else {
                         // Delete the selected authors
-                        $stmt = $pdo->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
+                        $stmt = $db->prepare("DELETE FROM authors WHERE id IN ($placeholders)");
                         $stmt->execute($selectedIds);
                         $success = count($selectedIds) . ' authors deleted successfully.';
                     }
@@ -83,18 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect back to the authors page with success/error message
-$redirectUrl = 'authors.php';
-
+// Store message in session and redirect
 if (!empty($success)) {
-    $redirectUrl .= '?success=' . urlencode($success);
+    $_SESSION['success'] = $success;
 } elseif (!empty($error)) {
-    $redirectUrl .= '?error=' . urlencode($error);
+    $_SESSION['error'] = $error;
 }
 
-header('Location: ' . $redirectUrl);
+// Redirect back to the authors page
+header('Location: authors.php');
 exit;
-
-
-// Include footer
-require_once '../includes/footer.php';

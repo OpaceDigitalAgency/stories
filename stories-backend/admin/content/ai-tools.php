@@ -213,7 +213,7 @@ include_once '../includes/status-indicator-component.php';
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
+if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
         'id' => 'ID',
@@ -244,8 +244,14 @@ if (function_exists('renderTable')) {
         }
     ];
 
+    // Add debug output before rendering
+    error_log("Rendering table with " . count($ai_tools) . " tools");
+    error_log("Tools data: " . json_encode(array_slice($ai_tools, 0, 2)));
+    error_log("Columns: " . json_encode($columns));
+    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
+
     // Render the table
-    renderTable($ai_tools, $columns, [
+    renderEnhancedTable($ai_tools, $columns, [
         'content_type' => 'ai_tools',
         'name_field' => 'title',
         'empty_message' => 'No AI tools found. Add your first AI tool!',

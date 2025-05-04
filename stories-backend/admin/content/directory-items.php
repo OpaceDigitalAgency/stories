@@ -209,7 +209,7 @@ include_once '../includes/status-indicator-component.php';
 
 // Include table component
 include_once '../includes/table-component.php';
-if (function_exists('renderTable')) {
+if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
         'id' => 'ID',
@@ -244,8 +244,14 @@ if (function_exists('renderTable')) {
         }
     ];
 
+    // Add debug output before rendering
+    error_log("Rendering table with " . count($directory_items) . " items");
+    error_log("Items data: " . json_encode(array_slice($directory_items, 0, 2)));
+    error_log("Columns: " . json_encode($columns));
+    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
+
     // Render the table
-    renderTable($directory_items, $columns, [
+    renderEnhancedTable($directory_items, $columns, [
         'content_type' => 'directory_items',
         'name_field' => 'title',
         'empty_message' => 'No directory items found. Add your first directory item!',

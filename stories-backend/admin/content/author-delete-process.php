@@ -291,7 +291,7 @@ require_once '../includes/header.php';
                     <?php endif; ?>
                     
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="action" id="delete_all" value="delete_all">
+                        <input class="form-check-input" type="radio" name="action" id="delete_all" value="delete_all" checked>
                         <label class="form-check-label" for="delete_all">
                             Delete <?php echo $isBulk ? 'authors' : 'author'; ?> and all their stories
                         </label>
@@ -299,7 +299,7 @@ require_once '../includes/header.php';
 
                     <?php if (!empty($otherAuthors)): ?>
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="action" id="reassign" value="reassign">
+                            <input class="form-check-input" type="radio" name="action" id="reassign" value="reassign" <?php echo empty($otherAuthors) ? 'disabled' : ''; ?>>
                             <label class="form-check-label" for="reassign">
                                 Reassign stories to another author:
                             </label>

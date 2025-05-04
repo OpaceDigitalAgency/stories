@@ -35,7 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             // Perform the selected action
-            switch ($action) {
+            // Strip "Selected" from action name
+            $action = str_replace(' Selected', '', $action);
+            
+            switch (strtolower($action)) {
                 case 'delete':
                     // First check if any of the tags are in use
                     $stmt = $db->prepare("

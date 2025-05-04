@@ -35,7 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             // Perform the selected action
-            switch ($action) {
+            // Strip "Selected" from action name
+            $action = str_replace(' Selected', '', $action);
+            
+            switch (strtolower($action)) {
                 case 'delete':
                     // Delete the selected AI tools
                     $stmt = $db->prepare("DELETE FROM ai_tools WHERE id IN ($placeholders)");

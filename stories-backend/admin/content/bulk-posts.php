@@ -48,7 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Perform the selected action
-            switch ($action) {
+            // Strip "Selected" from action name
+            $action = str_replace(' Selected', '', $action);
+            
+            switch (strtolower($action)) {
                 case 'delete':
                     // Delete the selected posts
                     $stmt = $db->prepare("DELETE FROM $blogTableName WHERE id IN ($placeholders)");

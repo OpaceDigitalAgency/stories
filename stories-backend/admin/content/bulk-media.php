@@ -38,7 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Perform the selected action
-            switch ($action) {
+            // Strip "Selected" from action name
+            $action = str_replace(' Selected', '', $action);
+            
+            switch (strtolower($action)) {
                 case 'delete':
                     // First get file paths
                     $stmt = $db->prepare("SELECT file_path FROM media WHERE id IN ($placeholders)");

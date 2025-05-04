@@ -11,10 +11,6 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 try {
     // Check if blog_posts or blog table exists
     $blogTableName = 'blog_posts';
@@ -26,18 +22,41 @@ try {
             $blogTableName = 'blog';
         } else {
             // Create blog_posts table if neither exists
-            $db->exec("CREATE TABLE IF NOT EXISTS blog_posts (
+            $createTableSql = "CREATE TABLE IF NOT EXISTS blog_posts (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
-                author_id INT NOT NULL,
+                author_id INT,
                 content TEXT NOT NULL,
                 excerpt TEXT,
                 status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
-            )");
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )";
+            error_log("Creating blog_posts table with SQL: " . $createTableSql);
+            $db->exec($createTableSql);
+
+            // Insert a test post
+            $insertSql = "INSERT INTO blog_posts (title, content, status) VALUES ('Test Post', 'This is a test post content', 'draft')";
+            error_log("Inserting test post with SQL: " . $insertSql);
+            $db->exec($insertSql);
+            // Verify table was created
+            $verifyTableSql = "SHOW TABLES LIKE 'blog_posts'";
+            error_log("Verifying table exists with SQL: " . $verifyTableSql);
+            $stmt = $db->query($verifyTableSql);
+            if ($stmt->rowCount() === 0) {
+                throw new Exception("Failed to create blog_posts table");
+            }
+            error_log("blog_posts table created successfully");
+            
+            $blogTableName = 'blog_posts';
         }
     }
+
+    // Verify we have a valid table name
+    if (empty($blogTableName)) {
+        throw new Exception("No valid blog table found");
+    }
+    error_log("Using table: " . $blogTableName);
 
     // Check if post_tags table exists
     $postTagsTableName = 'post_tags';
@@ -77,23 +96,10 @@ try {
     $countQuery = "SELECT COUNT(*) FROM $blogTableName";
     $totalItems = $db->query($countQuery)->fetchColumn();
     // Get blog posts with pagination
+    // First try a simple query to verify table access
     $query = "
-        SELECT bp.id,
-               bp.title,
-               bp.content,
-               bp.excerpt,
-               bp.status,
-               bp.created_at,
-               bp.updated_at,
-               a.name as author_name
-       FROM $blogTableName bp
-       LEFT JOIN authors a ON $authorJoinCondition
-       LEFT JOIN (
-           SELECT post_id, GROUP_CONCAT(t.name SEPARATOR ', ') as tag_list
-           FROM $postTagsTableName pt
-           JOIN tags t ON pt.tag_id = t.id
-           GROUP BY post_id
-       ) tags ON tags.post_id = bp.id
+        SELECT *
+        FROM $blogTableName
         ORDER BY bp.created_at DESC
         LIMIT $offset, $perPage
     ";
@@ -101,8 +107,9 @@ try {
     $stmt->execute();
     $posts = $stmt->fetchAll();
 } catch (PDOException $e) {
-    error_log("Blog posts page error: " . $e->getMessage() . "\nQuery: " . $query);
-    $error = "Error loading blog posts. Please try again.";
+    $errorMsg = $e->getMessage();
+    error_log("Blog posts page error: " . $errorMsg . "\nQuery: " . $query . "\nTable name: " . $blogTableName);
+    $error = "Database error: " . $errorMsg;
     $posts = [];
 }
 
@@ -149,8 +156,12 @@ if (isset($error)) {
     echo '<div class="alert alert-danger" role="alert">';
     echo '<h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Error Loading Blog Posts</h4>';
     echo '<p>' . htmlspecialchars($error) . '</p>';
-    echo '<hr>';
-    echo '<p class="mb-0">Please check the error logs for more details or contact support.</p>';
+    if ($user && $user['role'] === 'admin') {
+        echo '<hr>';
+        echo '<p class="mb-0">Debug info:<br>';
+        echo 'Table: ' . htmlspecialchars($blogTableName) . '<br>';
+        echo 'Query: ' . htmlspecialchars($query) . '</p>';
+    }
     echo '</div>';
 }
 

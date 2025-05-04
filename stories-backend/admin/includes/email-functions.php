@@ -1,17 +1,9 @@
 <?php
-
-// Include header
-include 'header.php';
-
-
-// Page variables
-$pageTitle = 'Email Functions';
-$currentPage = 'email-functions';
-
 /**
  * Email Functions
- * 
+ *
  * Helper functions for sending emails
+ * This file should only define functions, not include layout or output content
  */
 
 /**
@@ -48,5 +40,3 @@ function sendEmail($to, $subject, $message, $headers = '') {
 }
 
 
-// Include footer
-include 'footer.php';

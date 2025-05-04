@@ -11,6 +11,12 @@
  * include '../includes/header.php';
  */
 
+// Guard against multiple inclusions
+if (defined('HEADER_INCLUDED')) {
+    return;
+}
+define('HEADER_INCLUDED', true);
+
 // Include the configuration
 $configPath = dirname(dirname(dirname(__FILE__))) . '/includes/config.php';
 if (file_exists($configPath)) {

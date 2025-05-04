@@ -280,13 +280,7 @@ export async function fetchGames(): Promise<Game[]> {
     return raw.map(item => ({
     title: item.title,
     description: item.description || '',
-    coverImage: item.cover_urls ? {
-      default: item.cover_url || '',
-      thumbnail: item.cover_urls.thumbnail || '',
-      small: item.cover_urls.small || '',
-      medium: item.cover_urls.medium || '',
-      large: item.cover_urls.large || ''
-    } : item.cover_url || '',
+    coverImage: item.cover_url || '',
     slug: item.slug,
     price: Number(item.price) || 0,
     rating: Number(item.rating) || 0,

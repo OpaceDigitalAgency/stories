@@ -37,6 +37,36 @@
   force = true
 
 [[redirects]]
+  from = "/tags"
+  to = "/categories"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tags/*"
+  to = "/categories/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/reviews/story-*"
+  to = "/reviews"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/reviews/story-*/write"
+  to = "/reviews"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/reviews/author-*"
+  to = "/reviews"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

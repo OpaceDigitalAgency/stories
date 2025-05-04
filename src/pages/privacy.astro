@@ -9,6 +9,13 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Privacy Policy | ${siteName}`;
 const description = `Our privacy policy explains how we collect, use, and protect your personal information when you use ${siteName}.`;
 
+// Last updated date
+const lastUpdated = new Date().toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
 ---
 
 <Layout title={title} description={description}>

@@ -9,6 +9,13 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Cookie Policy | ${siteName}`;
 const description = `Our cookie policy explains how we use cookies and similar technologies on ${siteName} to enhance your browsing experience.`;
 
+// Last updated date
+const lastUpdated = new Date().toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
 ---
 
 <Layout title={title} description={description}>

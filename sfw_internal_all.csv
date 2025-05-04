@@ -1,0 +1,47 @@
+Address,Status Code,Status,Indexability,Indexability Status,URL Encoded Address
+https://storiesfromtheweb.netlify.app/terms,502,Bad Gateway,Non-Indexable,Server Error,https://storiesfromtheweb.netlify.app/terms
+https://storiesfromtheweb.netlify.app/cookies,502,Bad Gateway,Non-Indexable,Server Error,https://storiesfromtheweb.netlify.app/cookies
+https://storiesfromtheweb.netlify.app/privacy,502,Bad Gateway,Non-Indexable,Server Error,https://storiesfromtheweb.netlify.app/privacy
+https://storiesfromtheweb.netlify.app/login,500,Internal Server Error,Non-Indexable,Server Error,https://storiesfromtheweb.netlify.app/login
+https://storiesfromtheweb.netlify.app/publish/create,500,Internal Server Error,Non-Indexable,Server Error,https://storiesfromtheweb.netlify.app/publish/create
+https://storiesfromtheweb.netlify.app/teachers,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/teachers
+https://storiesfromtheweb.netlify.app/parents,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/parents
+https://storiesfromtheweb.netlify.app/images/images/default-avatar.svg,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/images/images/default-avatar.svg
+https://storiesfromtheweb.netlify.app/ai-tools/category/illustration,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/ai-tools/category/illustration
+https://storiesfromtheweb.netlify.app/reviews/story-little-star-by-ellie-aged-8-from-northern-ireland/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-little-star-by-ellie-aged-8-from-northern-ireland/write
+https://storiesfromtheweb.netlify.app/images/partners/education1.svg,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/images/partners/education1.svg
+https://storiesfromtheweb.netlify.app/reviews/story-milly-by-abigail-aged-7-from-dorset-england,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-milly-by-abigail-aged-7-from-dorset-england
+https://storiesfromtheweb.netlify.app/tags,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/tags
+https://storiesfromtheweb.netlify.app/ai-tools/category/plot-development,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/ai-tools/category/plot-development
+https://storiesfromtheweb.netlify.app/reviews/author-3,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/author-3
+https://storiesfromtheweb.netlify.app/reviews/story-my-bog-poeming-by-cory-aged-3-from-cae-garw-wales/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-my-bog-poeming-by-cory-aged-3-from-cae-garw-wales/write
+https://storiesfromtheweb.netlify.app/ai-tools/category/character-creation,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/ai-tools/category/character-creation
+https://storiesfromtheweb.netlify.app/ai-tools/category/editing,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/ai-tools/category/editing
+https://storiesfromtheweb.netlify.app/sponsored,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/sponsored
+https://storiesfromtheweb.netlify.app/reviews/story-little-star-by-ellie-aged-8-from-northern-ireland,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-little-star-by-ellie-aged-8-from-northern-ireland
+https://storiesfromtheweb.netlify.app/images/partners/community1.svg,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/images/partners/community1.svg
+https://storiesfromtheweb.netlify.app/reviews/story-another-story2,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-another-story2
+https://storiesfromtheweb.netlify.app/reviews/story-another-story2/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-another-story2/write
+https://storiesfromtheweb.netlify.app/reviews/story-omagh-library-of-the-future-by-danielle-aged-11-from-omagh,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-omagh-library-of-the-future-by-danielle-aged-11-from-omagh
+https://storiesfromtheweb.netlify.app/images/partners/tech1.svg,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/images/partners/tech1.svg
+https://storiesfromtheweb.netlify.app/reviews/story-milly-by-abigail-aged-7-from-dorset-england/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-milly-by-abigail-aged-7-from-dorset-england/write
+https://storiesfromtheweb.netlify.app/reviews/story-dave-by-aine-k-aged-9-from-northern-ireland/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-dave-by-aine-k-aged-9-from-northern-ireland/write
+https://storiesfromtheweb.netlify.app/images/partners/publisher1.svg,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/images/partners/publisher1.svg
+https://storiesfromtheweb.netlify.app/ai-tools/category/story-generation,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/ai-tools/category/story-generation
+https://storiesfromtheweb.netlify.app/reviews/story-my-bog-poeming-by-cory-aged-3-from-cae-garw-wales,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-my-bog-poeming-by-cory-aged-3-from-cae-garw-wales
+https://storiesfromtheweb.netlify.app/reviews/story-dave-by-aine-k-aged-9-from-northern-ireland,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-dave-by-aine-k-aged-9-from-northern-ireland
+https://storiesfromtheweb.netlify.app/reviews/author-3/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/author-3/write
+https://storiesfromtheweb.netlify.app/reviews/story-omagh-library-of-the-future-by-danielle-aged-11-from-omagh/write,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/reviews/story-omagh-library-of-the-future-by-danielle-aged-11-from-omagh/write
+https://storiesfromtheweb.netlify.app/404,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/404
+https://storiesfromtheweb.netlify.app/games/category/general,404,Not Found,Non-Indexable,Client Error,https://storiesfromtheweb.netlify.app/games/category/general
+https://storiesfromtheweb.netlify.app/stories/enchanted-forest,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/stories/enchanted-forest
+https://storiesfromtheweb.netlify.app/ai-tools/test-ai-tool,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/ai-tools/test-ai-tool
+https://storiesfromtheweb.netlify.app/directories/another-directory,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/directories/another-directory
+https://storiesfromtheweb.netlify.app/ai-tools/another-ai-tool,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/ai-tools/another-ai-tool
+https://storiesfromtheweb.netlify.app/blog/importance-of-reading,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/blog/importance-of-reading
+https://storiesfromtheweb.netlify.app/ai-tools/33333,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/ai-tools/33333
+https://storiesfromtheweb.netlify.app/directories/test-directory,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/directories/test-directory
+https://storiesfromtheweb.netlify.app/blog/writing-tips-for-children,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/blog/writing-tips-for-children
+https://storiesfromtheweb.netlify.app/ai-tools/222222,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/ai-tools/222222
+https://storiesfromtheweb.netlify.app/authors/author-3,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/authors/author-3
+https://storiesfromtheweb.netlify.app/blog/dsfadsfds,302,Found,Non-Indexable,Redirected,https://storiesfromtheweb.netlify.app/blog/dsfadsfds

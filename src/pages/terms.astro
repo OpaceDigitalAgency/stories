@@ -9,6 +9,13 @@ const siteName = getConfig('site.name', 'Stories From The Web');
 const title = `Terms of Service | ${siteName}`;
 const description = `Our terms of service outline the rules, guidelines, and legal terms that govern your use of ${siteName}.`;
 
+// Last updated date
+const lastUpdated = new Date().toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
 ---
 
 <Layout title={title} description={description}>

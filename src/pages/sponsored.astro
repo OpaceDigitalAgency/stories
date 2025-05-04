@@ -1,0 +1,166 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getConfig } from '../lib/config';
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
+
+// Page metadata
+const title = `Sponsored Content | ${siteName}`;
+const description = `Discover featured stories and content from our partners at ${siteName}.`;
+---
+
+<Layout title={title} description={description}>
+  <main class="flex-grow w-full">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-r from-primary/90 to-tertiary/90 text-white py-16">
+      <div class="container mx-auto px-4">
+        <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
+          Sponsored Content
+        </h1>
+        <p class="text-lg md:text-xl max-w-3xl mb-6">
+          Featured stories and content from our trusted partners and sponsors.
+        </p>
+      </div>
+    </section>
+
+    <!-- Featured Content Section -->
+    <section class="py-12 bg-white">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-8">Featured Stories</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Placeholder for featured stories -->
+          <div class="bg-neutral-light p-6 rounded-xl text-center">
+            <p class="text-gray-600">Featured stories coming soon!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Partner Spotlight Section -->
+    <section class="py-12 bg-neutral-dark">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-8">Partner Spotlight</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Placeholder for partner spotlights -->
+          <div class="bg-white p-6 rounded-xl text-center">
+            <p class="text-gray-600">Partner spotlights coming soon!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sponsorship Information -->
+    <section class="py-12 bg-white">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-8 text-center">Become a Sponsor</h2>
+        
+        <div class="max-w-3xl mx-auto">
+          <p class="text-gray-600 mb-6">
+            Interested in partnering with Stories From The Web? We offer various sponsorship opportunities 
+            for organizations that share our commitment to fostering creativity and literacy in young minds.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-neutral-light p-6 rounded-xl">
+              <h3 class="text-xl font-bold mb-4">Why Partner With Us?</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Reach engaged young readers and writers</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Support literacy and creativity</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Brand alignment with education</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="bg-neutral-light p-6 rounded-xl">
+              <h3 class="text-xl font-bold mb-4">Sponsorship Options</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Featured story sponsorship</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Writing contest sponsorship</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Educational resource sponsorship</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="text-center">
+            <a href="/contact" class="btn btn-primary px-8 py-3 shadow-playful btn-playful inline-block">
+              Contact Us About Sponsorship
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sponsorship Guidelines -->
+    <section class="py-12 bg-neutral-dark">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-8 text-center">Sponsorship Guidelines</h2>
+        
+        <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl">
+          <p class="text-gray-600 mb-6">
+            At Stories From The Web, we carefully select our sponsors to ensure they align with our values 
+            and mission. All sponsored content must:
+          </p>
+
+          <ul class="space-y-3">
+            <li class="flex items-start">
+              <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>Be age-appropriate and educational</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>Support creativity and literacy</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>Be clearly marked as sponsored content</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-6 h-6 text-primary mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>Meet our content quality standards</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>

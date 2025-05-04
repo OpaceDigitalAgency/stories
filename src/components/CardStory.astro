@@ -10,8 +10,8 @@ import { getAssetUrl } from '../lib/config';
 // Default cover image with source type indicator
 let defaultCoverImage = getAssetUrl('default-cover.svg');
 // We'll use the same default image for all source types for now
-// In production, you would create specific default images for each source type
-const defaultAvatarImage = getAssetUrl('default-avatar.svg');
+// Use direct path for default avatar to match other components
+const defaultAvatarImage = '/images/default-avatar.svg';
 
 // Handle cover image - use the appropriate size for cards
 let coverImageUrl = defaultCoverImage;

@@ -12,6 +12,7 @@ $pageDescription = 'Manage and respond to contact form submissions from website 
 include_once '../includes/header.php';
 include_once '../includes/functions.php';
 include_once '../includes/admin-functions.php';
+include_once '../includes/email-functions.php';
 
 // Add custom CSS for contact details
 echo '<style>
@@ -257,14 +258,22 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_response' && isset($_P
                 $message = $responseMessage;
                 $headers = "From: Stories From The Web <noreply@storiesfromtheweb.org>\r\n";
                 $headers .= "Reply-To: support@storiesfromtheweb.org\r\n";
+                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+                $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
 
-                if (mail($to, $subject, $message, $headers)) {
+                // Use our sendEmail function instead of mail()
+                $mailResult = sendEmail($to, $subject, $message, $headers);
+
+                if ($mailResult) {
+                    error_log("Individual response sent successfully to {$to}");
+
                     // Update contact as responded
-                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 1, admin_notes = CONCAT(admin_notes, '\n\nResponse sent on " . date('Y-m-d H:i:s') . ":\n', ?) WHERE id = ?");
+                    $stmt = $db->prepare("UPDATE contacts SET is_responded = 1, admin_notes = CONCAT(IFNULL(admin_notes, ''), '\n\nResponse sent on " . date('Y-m-d H:i:s') . ":\n', ?) WHERE id = ?");
                     $stmt->execute([$responseMessage, $contactId]);
 
                     $successMessage = "Response sent successfully to " . htmlspecialchars($contact['email']);
                 } else {
+                    error_log("Failed to send individual response to {$to}. PHP mail() function returned false.");
                     $errorMessage = "Failed to send email. Please check server configuration.";
                 }
             } else {
@@ -576,86 +585,119 @@ The Stories From The Web Team</textarea>
             <?php foreach ($contacts as $contact): ?>
                 <!-- View Modal -->
                 <div class="modal fade" id="viewModal<?php echo $contact['id']; ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
+                    <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title">Contact Details</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="contact-details">
-                                    <div class="detail-item">
-                                        <strong>Name:</strong>
-                                        <span><?php echo htmlspecialchars($contact['name']); ?></span>
-                                    </div>
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <div class="contact-details">
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <div class="detail-item">
+                                                        <strong>Name:</strong>
+                                                        <span><?php echo htmlspecialchars($contact['name']); ?></span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="detail-item">
+                                                        <strong>Email:</strong>
+                                                        <span><?php echo htmlspecialchars($contact['email']); ?></span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div class="detail-item">
-                                        <strong>Email:</strong>
-                                        <span><?php echo htmlspecialchars($contact['email']); ?></span>
-                                    </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <div class="detail-item">
+                                                        <strong>Subject:</strong>
+                                                        <span><?php echo htmlspecialchars($contact['subject']); ?></span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="detail-item">
+                                                        <strong>Date:</strong>
+                                                        <span><?php echo date('M d, Y H:i', strtotime($contact['created_at'])); ?></span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div class="detail-item">
-                                        <strong>Subject:</strong>
-                                        <span><?php echo htmlspecialchars($contact['subject']); ?></span>
-                                    </div>
+                                            <div class="row mb-3">
+                                                <div class="col-12">
+                                                    <div class="detail-item">
+                                                        <strong>Status:</strong>
+                                                        <span>
+                                                            <?php if ($contact['is_responded']): ?>
+                                                                <span class="badge bg-success">Responded</span>
+                                                            <?php else: ?>
+                                                                <span class="badge bg-warning text-dark">Not Responded</span>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div class="detail-item">
-                                        <strong>Date:</strong>
-                                        <span><?php echo date('M d, Y H:i', strtotime($contact['created_at'])); ?></span>
-                                    </div>
+                                            <div class="row mb-3">
+                                                <div class="col-12">
+                                                    <div class="detail-item">
+                                                        <strong>Message:</strong>
+                                                        <div class="message-content p-3 bg-light rounded mt-2"><?php echo nl2br(htmlspecialchars($contact['message'])); ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div class="detail-item">
-                                        <strong>Status:</strong>
-                                        <span>
-                                            <?php if ($contact['is_responded']): ?>
-                                                <span class="badge bg-success">Responded</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-warning text-dark">Not Responded</span>
+                                            <?php if (!empty($contact['admin_notes'])): ?>
+                                            <div class="row">
+                                                <div class="col-12">
+                                                    <div class="detail-item">
+                                                        <strong>Admin Notes:</strong>
+                                                        <div class="notes-content p-3 bg-light rounded mt-2"><?php echo nl2br(htmlspecialchars($contact['admin_notes'])); ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <?php endif; ?>
-                                        </span>
-                                    </div>
-
-                                    <div class="detail-item">
-                                        <strong>Message:</strong>
-                                        <div class="message-content"><?php echo nl2br(htmlspecialchars($contact['message'])); ?></div>
-                                    </div>
-
-                                    <?php if (!empty($contact['admin_notes'])): ?>
-                                    <div class="detail-item">
-                                        <strong>Admin Notes:</strong>
-                                        <div class="notes-content"><?php echo nl2br(htmlspecialchars($contact['admin_notes'])); ?></div>
-                                    </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <form method="post" class="mt-4">
-                                    <input type="hidden" name="action" value="update_status">
-                                    <input type="hidden" name="contact_id" value="<?php echo $contact['id']; ?>">
-
-                                    <div class="form-group mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="is_responded<?php echo $contact['id']; ?>"
-                                                   name="is_responded" <?php echo $contact['is_responded'] ? 'checked' : ''; ?>>
-                                            <label class="form-check-label" for="is_responded<?php echo $contact['id']; ?>">
-                                                Mark as Responded
-                                            </label>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="form-group mb-3">
-                                        <label for="admin_notes<?php echo $contact['id']; ?>" class="form-label">Admin Notes</label>
-                                        <textarea class="form-control" id="admin_notes<?php echo $contact['id']; ?>"
-                                                  name="admin_notes" rows="3"><?php echo htmlspecialchars($contact['admin_notes'] ?? ''); ?></textarea>
+                                <form method="post" class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Update Contact</h5>
                                     </div>
+                                    <div class="card-body">
+                                        <input type="hidden" name="action" value="update_status">
+                                        <input type="hidden" name="contact_id" value="<?php echo $contact['id']; ?>">
 
-                                    <div class="d-flex justify-content-between">
-                                        <button type="submit" class="btn btn-primary">Update Status</button>
-                                        <button type="button" class="btn btn-success notify-single-btn"
-                                                data-id="<?php echo $contact['id']; ?>"
-                                                data-email="<?php echo htmlspecialchars($contact['email']); ?>"
-                                                data-subject="<?php echo htmlspecialchars($contact['subject']); ?>">
-                                            <i class="fas fa-reply"></i> Send Response
-                                        </button>
+                                        <div class="form-group mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="is_responded<?php echo $contact['id']; ?>"
+                                                       name="is_responded" <?php echo $contact['is_responded'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="is_responded<?php echo $contact['id']; ?>">
+                                                    Mark as Responded
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group mb-3">
+                                            <label for="admin_notes<?php echo $contact['id']; ?>" class="form-label">Admin Notes</label>
+                                            <textarea class="form-control" id="admin_notes<?php echo $contact['id']; ?>"
+                                                      name="admin_notes" rows="3"><?php echo htmlspecialchars($contact['admin_notes'] ?? ''); ?></textarea>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-save"></i> Update Status
+                                            </button>
+                                            <button type="button" class="btn btn-success notify-single-btn"
+                                                    data-id="<?php echo $contact['id']; ?>"
+                                                    data-email="<?php echo htmlspecialchars($contact['email']); ?>"
+                                                    data-subject="<?php echo htmlspecialchars($contact['subject']); ?>">
+                                                <i class="fas fa-reply"></i> Send Response
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>

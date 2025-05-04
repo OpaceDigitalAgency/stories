@@ -188,8 +188,12 @@ if (!function_exists('renderTable')) {
     renderTable('authors', $columns, $authors, $customFormatters);
 }
 
-// Include the author-delete.js script for delete functionality
-echo '<script src="../js/author-delete.js"></script>';
+// Include jQuery and the author-delete.js script for delete functionality
+echo '
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/author-delete.js"></script>
+';
 
 // Include footer
 require_once '../includes/footer.php';

@@ -249,19 +249,31 @@ export async function fetchAuthors(): Promise<Author[]> {
 }
 
 export async function fetchGames(): Promise<Game[]> {
-  const raw = await fetchApi<any[]>('/games', {
-    'sort': 'created_at:desc'
-  });
-  return raw.map(item => ({
-    title: item.title,
-    description: item.description || '',
-    coverImage: item.cover_url || '',
-    slug: item.slug,
-    price: Number(item.price) || 0,
-    rating: Number(item.rating) || 0,
-    category: item.category || 'General',
-    ageRange: item.age_range || 'All Ages'
-  }));
+  try {
+    const raw = await fetchApi<any[]>('/games', {
+      'sort': 'created_at:desc',
+      'populate': '*'
+    });
+
+    if (!raw || !Array.isArray(raw)) {
+      console.error('Invalid games data received');
+      return [];
+    }
+
+    return raw.map(item => ({
+      title: item.title,
+      description: item.description || '',
+      coverImage: item.cover_url || '',
+      slug: item.slug,
+      price: Number(item.price) || 0,
+      rating: Number(item.rating) || 0,
+      category: item.category || 'General',
+      ageRange: item.age_range || 'All Ages'
+    }));
+  } catch (error) {
+    console.error('Error fetching games:', error);
+    return [];
+  }
 }
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
@@ -323,7 +335,8 @@ export async function fetchAiTool(slug: string): Promise<AiTool | null> {
 export async function fetchGame(slug: string): Promise<Game | null> {
   try {
     const raw = await fetchApi<any[]>('/games', {
-      'filters[slug]': slug
+      'filters[slug][$eq]': slug,
+      'populate': '*'
     });
 
     if (!raw || !Array.isArray(raw) || raw.length === 0) {

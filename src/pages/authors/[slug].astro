@@ -28,7 +28,10 @@ try {
   // Fetch author and their stories
   const [authorData, storiesData] = await Promise.all([
     fetchAuthor(slug),
-    fetchStories(1, 50, { sort: 'publishedAt:desc' })
+    fetchStories(1, 50, {
+      sort: 'publishedAt:desc',
+      'filters[author][slug][$eq]': slug
+    })
   ]);
 
   author = authorData;
@@ -36,8 +39,7 @@ try {
     return Astro.redirect('/404');
   }
 
-  // Filter stories by author
-  authorStories = storiesData.filter(story => story.author?.slug === slug);
+  authorStories = storiesData;
 
   // Extract popular tags from author's stories
   const tagCounts = new Map<string, number>();

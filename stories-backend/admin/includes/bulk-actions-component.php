@@ -40,9 +40,9 @@ function renderEnhancedBulkActionsComponent($contentType, $actions = []) {
                 <label for="bulk-action" class="form-label mb-0">Bulk Actions:</label>
                 <select name="action" id="bulk-action" class="form-control" style="width: auto;">
                     <option value="">-- Select Action --</option>
-                    <?php foreach ($actions as $action): ?>
-                        <option value="<?php echo $action; ?>">
-                            <?php echo isset($actionLabels[$action]) ? $actionLabels[$action] : ucfirst($action); ?>
+                    <?php foreach ($actions as $action => $label): ?>
+                        <option value="<?php echo htmlspecialchars($action); ?>">
+                            <?php echo htmlspecialchars($label); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

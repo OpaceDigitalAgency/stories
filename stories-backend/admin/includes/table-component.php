@@ -36,6 +36,7 @@ function renderEnhancedTable($items, $columns, $options = []) {
         'view_url' => 'view-{content_type}.php?id={id}',
         'edit_url' => '{content_type}-form.php?id={id}',
         'delete_url' => 'delete-{content_type}.php',
+        'delete_type' => 'simple', // Default to simple delete, override for special cases
         'custom_formatters' => [], // Custom formatters for specific columns
         'row_classes' => [], // Custom classes for specific rows
     ];
@@ -154,13 +155,26 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                         <?php endif; ?>
 
                                         <?php if ($options['actions']['delete']): ?>
-                                            <a
-                                                href="<?php echo $options['delete_url'] . '?id=' . $item[$options['id_field']]; ?>"
-                                                class="btn btn-danger btn-sm"
-                                                aria-label="Delete <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
-                                            >
-                                                <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
-                                            </a>
+                                            <?php if ($options['delete_type'] === 'confirm'): ?>
+                                                <a
+                                                    href="<?php echo $options['delete_url'] . '?id=' . $item[$options['id_field']]; ?>"
+                                                    class="btn btn-danger btn-sm"
+                                                    aria-label="Delete <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
+                                                >
+                                                    <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
+                                                </a>
+                                            <?php else: ?>
+                                                <form method="POST" action="<?php echo $options['delete_url']; ?>" style="display: inline;">
+                                                    <input type="hidden" name="id" value="<?php echo $item[$options['id_field']]; ?>">
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-danger btn-sm"
+                                                        aria-label="Delete <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
+                                                    >
+                                                        <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
                                         <?php endif; ?>
 
                                         <?php if (isset($options['custom_actions']) && is_callable($options['custom_actions'])): ?>

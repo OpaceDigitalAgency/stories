@@ -1,6 +1,3 @@
-// Import mock data for fallback
-import { mockStories, mockAuthors, mockTags } from './mockData';
-
 // Base API URL - use environment variable or fallback to proxy path
 const API_URL = import.meta.env.PUBLIC_API_URL || '/api';
 
@@ -147,21 +144,7 @@ export async function fetchApi<T>(endpoint: string, params: Record<string, strin
     } catch (fallbackError) {
       console.error(`Both primary and fallback APIs failed:`, fallbackError);
 
-      // If both APIs fail, try to use mock data as a last resort
-      console.log(`Attempting to use mock data for endpoint: ${endpoint}`);
-
-      if (endpoint === '/stories') {
-        console.log('Using mock stories data');
-        return mockStories as unknown as T;
-      } else if (endpoint === '/authors') {
-        console.log('Using mock authors data');
-        return mockAuthors as unknown as T;
-      } else if (endpoint === '/tags') {
-        console.log('Using mock tags data');
-        return mockTags as unknown as T;
-      }
-
-      // If no mock data available for this endpoint, throw error
+      // If both APIs fail, throw a clear error - never use mock data
       const errorObj: any = new Error(`API request failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
       errorObj.endpoint = endpoint;
       errorObj.originalError = error;

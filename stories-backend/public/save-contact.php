@@ -12,9 +12,8 @@ error_reporting(E_ALL);
 // Start session for anti-bot protection
 session_start();
 
-// Include anti-bot protection but in a way that matches subscriber system
-// Use a modified version that logs but doesn't block submissions
-// include_once '../includes/anti-bot.php';
+// Include anti-bot protection
+include_once '../includes/anti-bot.php';
 
 // Allow cross-origin requests
 header('Access-Control-Allow-Origin: *');
@@ -54,25 +53,47 @@ if (empty($data) && !empty($_POST)) {
 // Debug log
 error_log("Contact form data received: " . print_r($data, true));
 
-// Instead of blocking submissions, log suspicious activity but continue processing
+// Modified anti-bot check - only block clear bot submissions
 $suspiciousActivity = false;
+$isConfirmedBot = false;
 
-// Check for honeypot fields - only clear sign of a bot
+// Check for honeypot fields - clear sign of a bot
 if (!empty($data['website']) || !empty($data['url']) || !empty($data['honey'])) {
-    error_log("Contact form: Honeypot field filled, likely bot but continuing");
-    $suspiciousActivity = true;
-    // But we'll still process it and flag it in notes
+    error_log("Contact form: Honeypot field filled");
+    $isConfirmedBot = true;
 }
 
-// Log any suspicious user agent but don't block
+// Only check for extremely suspicious user agents (known bots)
 $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-$suspiciousUserAgents = ['bot', 'crawl', 'spider', 'curl', 'wget', 'python'];
-foreach ($suspiciousUserAgents as $agent) {
+$blockedUserAgents = ['bot', 'crawl', 'spider', 'selenium', 'phantom', 'headless'];
+foreach ($blockedUserAgents as $agent) {
     if (stripos($userAgent, $agent) !== false) {
-        error_log("Contact form: Suspicious user agent detected: $userAgent");
-        $suspiciousActivity = true;
+        error_log("Contact form: Clearly bot user agent detected: $userAgent");
+        $isConfirmedBot = true;
         break;
     }
+}
+
+// Check for missing user agent - very suspicious
+if (empty($userAgent)) {
+    error_log("Contact form: Missing user agent");
+    $isConfirmedBot = true;
+}
+
+// Block confirmed bots only
+if ($isConfirmedBot) {
+    error_log("Bot submission detected and blocked");
+    echo json_encode([
+        'success' => true,
+        'message' => 'Thank you for your message! We\'ll get back to you as soon as possible.'
+    ]);
+    exit;
+}
+
+// For other checks like token, just mark as suspicious for admin notes
+$suspiciousActivity = !$isConfirmedBot && isLikelyBot($data);
+if ($suspiciousActivity) {
+    error_log("Contact form: Submission flagged as suspicious but not blocked");
 }
 
 // Validate required fields

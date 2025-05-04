@@ -148,7 +148,7 @@ if (isset($_SESSION['error'])) {
                     <div class="alert alert-warning">
                         <p>This author has <?php echo $storyCount; ?> associated stories. Please choose how to handle them:</p>
 
-                        <form action="delete-author.php" method="post" class="mt-3">
+                        <form action="author-delete-process.php" method="post" class="mt-3">
                             <input type="hidden" name="id" value="<?php echo $authorId; ?>">
 
                             <div class="form-check mb-3">
@@ -195,7 +195,7 @@ if (isset($_SESSION['error'])) {
                     });
                     </script>
                 <?php else: ?>
-                    <form action="delete-author.php" method="post">
+                    <form action="author-delete-process.php" method="post">
                         <input type="hidden" name="id" value="<?php echo $authorId; ?>">
                         <input type="hidden" name="action" value="delete_all">
                         <button type="submit" class="btn btn-danger">Delete Author</button>

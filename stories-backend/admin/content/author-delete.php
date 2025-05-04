@@ -1,4 +1,8 @@
 <?php
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Page variables
 $pageTitle = 'Author Delete';
@@ -13,11 +17,6 @@ require_once '../includes/db-connect.php';
 
 // Include header - must be after auth check and db connection
 require_once '../includes/header.php';
-
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 // Get author details
 $authorId = $_GET['id'] ?? 0;

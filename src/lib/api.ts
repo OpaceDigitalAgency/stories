@@ -65,7 +65,7 @@ export interface Author {
   featured?: boolean;
   age?: number | string | null;
   location?: string | null;
-  id?: string;
+  id?: number;
   storyCount?: number;
   joinDate?: string;
   twitter_url?: string;
@@ -78,11 +78,19 @@ export interface Author {
   };
 }
 
+export interface CoverImageUrls {
+  default: string;
+  thumbnail?: string;
+  medium?: string;
+  large?: string;
+}
+
 export interface Game {
   title: string;
   description: string;
-  coverImage: string;
+  coverImage: string | CoverImageUrls;
   cover_url?: string;
+  cover_urls?: CoverImageUrls;
   slug: string;
   price: number;
   rating: number;
@@ -541,6 +549,9 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       website: item.website_url || undefined
     };
 
+    // Only include socialLinks if at least one social URL exists
+    const hasSocialLinks = Object.values(socialLinks).some(v => v !== undefined);
+
     return {
       name: item.name,
       bio: item.bio || '',
@@ -550,13 +561,13 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
       featured: Boolean(item.featured),
       age: item.age || null,
       location: item.location || null,
-      id: item.id?.toString() || slug,
+      id: Number(item.id) || undefined,
       storyCount: Number(item.story_count) || 0,
       joinDate: item.join_date || item.created_at || new Date().toISOString(),
       twitter_url: item.twitter_url || '',
       instagram_url: item.instagram_url || '',
       website_url: item.website_url || '',
-      socialLinks: Object.values(socialLinks).some(v => v !== undefined) ? socialLinks : undefined
+      socialLinks: hasSocialLinks ? socialLinks : undefined
     };
   } catch (error) {
     console.error(`Error fetching author with slug ${slug}:`, error);

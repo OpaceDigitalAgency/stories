@@ -104,14 +104,13 @@ error_reporting(E_ALL);
                     if ($authorCount > 0) {
                         echo '<h3>Author List (first 10)</h3>';
                         echo '<table>';
-                        echo '<tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr>';
+                        echo '<tr><th>ID</th><th>Name</th><th>Actions</th></tr>';
                         
-                        $stmt = $db->query("SELECT id, name, email FROM authors ORDER BY id DESC LIMIT 10");
+                        $stmt = $db->query("SELECT id, name FROM authors ORDER BY id DESC LIMIT 10");
                         while ($author = $stmt->fetch()) {
                             echo '<tr>';
                             echo '<td>' . htmlspecialchars($author['id']) . '</td>';
                             echo '<td>' . htmlspecialchars($author['name']) . '</td>';
-                            echo '<td>' . htmlspecialchars($author['email']) . '</td>';
                             echo '<td><a href="?action=test_author&id=' . $author['id'] . '" class="btn">Test Author</a></td>';
                             echo '</tr>';
                         }

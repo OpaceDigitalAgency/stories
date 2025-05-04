@@ -17,8 +17,14 @@ require_once '../includes/db-connect.php';
 // Process deletion if form was submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'cancel';
-    $selectedIds = isset($_POST['selected_ids']) ? array_map('intval', $_POST['selected_ids']) : [];
     $newAuthorId = isset($_POST['new_author_id']) ? intval($_POST['new_author_id']) : null;
+
+    // Handle both single ID and array of IDs
+    if (isset($_POST['id'])) {
+        $selectedIds = [intval($_POST['id'])];
+    } else {
+        $selectedIds = isset($_POST['selected_ids']) ? array_map('intval', $_POST['selected_ids']) : [];
+    }
 
     if (empty($selectedIds)) {
         $_SESSION['error'] = "No authors selected";
@@ -276,9 +282,13 @@ require_once '../includes/header.php';
                 </div>
 
                 <form method="POST" action="author-delete-process.php" class="mb-3">
-                    <?php foreach ($selectedIds as $selectedId): ?>
-                        <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
-                    <?php endforeach; ?>
+                    <?php if ($isBulk): ?>
+                        <?php foreach ($selectedIds as $selectedId): ?>
+                            <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <input type="hidden" name="id" value="<?php echo $selectedIds[0]; ?>">
+                    <?php endif; ?>
                     
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="radio" name="action" id="delete_all" value="delete_all">
@@ -311,9 +321,13 @@ require_once '../includes/header.php';
             <?php else: ?>
                 <p>Are you sure you want to delete <?php echo $isBulk ? 'these authors' : 'this author'; ?>?</p>
                 <form method="POST" action="author-delete-process.php">
-                    <?php foreach ($selectedIds as $selectedId): ?>
-                        <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
-                    <?php endforeach; ?>
+                    <?php if ($isBulk): ?>
+                        <?php foreach ($selectedIds as $selectedId): ?>
+                            <input type="hidden" name="selected_ids[]" value="<?php echo $selectedId; ?>">
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <input type="hidden" name="id" value="<?php echo $selectedIds[0]; ?>">
+                    <?php endif; ?>
                     <input type="hidden" name="action" value="delete_all">
                     <button type="submit" class="btn btn-danger">Delete <?php echo $isBulk ? 'Authors' : 'Author'; ?></button>
                     <a href="authors.php" class="btn btn-secondary">Cancel</a>

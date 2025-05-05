@@ -31,19 +31,19 @@ $diagnosticTools = [
         [
             'name' => 'API Test Suite',
             'description' => 'Comprehensive API testing tool that checks endpoint availability, response format consistency, and validates data structures',
-            'path' => 'api_test_suite.php',
+            'path' => 'diagnostics/api/api_test_suite.php',
             'icon' => 'fa-exchange-alt'
         ],
         [
             'name' => 'Test API Endpoints',
             'description' => 'Test API endpoints and functionality',
-            'path' => 'admin/test_api.php',
+            'path' => 'diagnostics/api/test_api_endpoints.php',
             'icon' => 'fa-plug'
         ],
         [
             'name' => 'Verify API',
             'description' => 'Verify API connectivity and functionality',
-            'path' => 'public/verify_api.php',
+            'path' => 'diagnostics/api/verify_api.php',
             'icon' => 'fa-check-circle'
         ]
     ],
@@ -57,21 +57,27 @@ $diagnosticTools = [
         [
             'name' => 'Check Auth Status',
             'description' => 'Check current authentication status',
-            'path' => 'check_auth_status.php',
+            'path' => 'diagnostics/auth/check_auth_status.php',
             'icon' => 'fa-user-check'
         ],
         [
             'name' => 'Clear Session',
             'description' => 'Clear all session data and cookies to fix login issues',
-            'path' => 'admin/clear_session.php',
+            'path' => 'diagnostics/auth/clear_session.php',
             'icon' => 'fa-broom'
+        ],
+        [
+            'name' => 'Emergency Login',
+            'description' => 'Emergency login tool to bypass normal authentication in case of issues',
+            'path' => 'diagnostics/auth/emergency_login.php',
+            'icon' => 'fa-key'
         ]
     ],
     'Admin Tests' => [
         [
             'name' => 'Admin Diagnostic',
             'description' => 'Comprehensive admin interface diagnostic tool that tests authentication, form submission, API integration, and database connectivity',
-            'path' => 'admin_diagnostic.php',
+            'path' => 'admin/diagnostic.php',
             'icon' => 'fa-tools'
         ],
         [
@@ -91,7 +97,7 @@ $diagnosticTools = [
         [
             'name' => 'Check Database',
             'description' => 'Check database schema and data',
-            'path' => 'public/check_database.php',
+            'path' => 'diagnostics/database/check_database.php',
             'icon' => 'fa-table'
         ],
         [
@@ -125,20 +131,20 @@ $diagnosticTools = [
         [
             'name' => 'Media Diagnostic',
             'description' => 'Diagnose and fix issues with media uploads and image optimization',
-            'path' => 'admin/diagnostic.php',
+            'path' => 'diagnostics/media/media_diagnostic.php',
             'icon' => 'fa-images'
         ],
         [
-            'name' => 'Emergency Login',
-            'description' => 'Emergency login tool to bypass normal authentication in case of issues',
-            'path' => 'admin/emergency_login.php',
-            'icon' => 'fa-key'
+            'name' => 'Fix Media Issues',
+            'description' => 'Fix common issues with media uploads and image optimization',
+            'path' => 'diagnostics/media/fix_media.php',
+            'icon' => 'fa-wrench'
         ],
         [
-            'name' => 'Fix Auth Tables',
-            'description' => 'Fix authentication tables and create default admin user if needed',
-            'path' => 'admin/fix_auth_tables.php',
-            'icon' => 'fa-table'
+            'name' => 'Admin Media Diagnostic',
+            'description' => 'Admin-specific media diagnostic tool',
+            'path' => 'admin/diagnostic.php',
+            'icon' => 'fa-tools'
         ]
     ],
     'Documentation' => [

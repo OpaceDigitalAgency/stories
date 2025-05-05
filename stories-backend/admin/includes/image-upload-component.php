@@ -47,7 +47,9 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
         <div class="image-preview-container <?php echo $hasImage ? 'has-image' : ''; ?>">
             <?php if ($hasImage): ?>
                 <div class="image-preview">
-                    <img src="<?php echo htmlspecialchars($currentValue); ?>" alt="Preview">
+                    <img src="<?php echo htmlspecialchars($currentValue); ?>"
+                         alt="Preview"
+                         id="<?php echo $fieldName; ?>-preview">
                     <div class="image-info">
                         <?php if (!empty($imageDimensions)): ?>
                             <span class="dimensions"><?php echo $imageDimensions; ?></span>
@@ -63,6 +65,10 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
                         <i class="fas fa-image"></i>
                         <span>No image selected</span>
                     </div>
+                    <img src=""
+                         alt="Preview"
+                         id="<?php echo $fieldName; ?>-preview"
+                         style="display: none;">
                 </div>
             <?php endif; ?>
         </div>

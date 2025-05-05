@@ -16,6 +16,9 @@ require_once '../includes/header.php';
 // Include image upload component
 require_once '../includes/image-upload-component.php';
 
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 // Initialize variables
 $game = null;
 $error = null;
@@ -119,6 +122,21 @@ if (isset($_SESSION['error'])) {
                         'game',
                         $game['id'] ?? null
                     );
+
+                    // Add AI image generator button
+                    echo '<div class="mt-2">';
+                    renderAiImageGenerator(
+                        'game',
+                        [
+                            'title' => $game['title'] ?? '',
+                            'description' => $game['description'] ?? '',
+                            'genre' => $game['genre'] ?? '',
+                            'platform' => $game['platform'] ?? ''
+                        ],
+                        'image_url',
+                        'image_url-preview'
+                    );
+                    echo '</div>';
                     ?>
 
                     <div class="form-group mb-3">

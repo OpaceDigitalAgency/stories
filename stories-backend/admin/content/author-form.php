@@ -16,6 +16,9 @@ require_once '../includes/header.php';
 // Include image upload component
 require_once '../includes/image-upload-component.php';
 
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 try {
     // Ensure we have a database connection
     if (!isset($db) || !$db) {
@@ -134,6 +137,22 @@ if (isset($_SESSION['error'])) {
                         'author',
                         $author['id'] ?? null
                     );
+
+                    // Add AI image generator button
+                    echo '<div class="mt-2">';
+                    renderAiImageGenerator(
+                        'author',
+                        [
+                            'name' => $author['name'] ?? '',
+                            'bio' => $author['bio'] ?? '',
+                            'author_type' => $author['type'] ?? '',
+                            'age' => $author['age'] ?? '',
+                            'location' => $author['location'] ?? ''
+                        ],
+                        'avatar_url',
+                        'avatar_url-preview'
+                    );
+                    echo '</div>';
                     ?>
 
                     <div class="form-group">

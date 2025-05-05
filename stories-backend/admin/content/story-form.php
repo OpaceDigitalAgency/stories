@@ -181,6 +181,9 @@ require_once '../includes/header.php';
 // Include image upload component
 require_once '../includes/image-upload-component.php';
 
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 // Display error message if any
 if (isset($error)): ?>
     <div class="error"><?php echo htmlspecialchars($error); ?></div>
@@ -272,6 +275,21 @@ if (isset($error)): ?>
                             'story',
                             $story['id'] ?? null
                         );
+
+                        // Add AI image generator button
+                        echo '<div class="mt-2">';
+                        renderAiImageGenerator(
+                            'story',
+                            [
+                                'title' => $story['title'] ?? '',
+                                'excerpt' => $story['excerpt'] ?? '',
+                                'age_group' => $story['age_group'] ?? '',
+                                'description' => $story['content'] ?? ''
+                            ],
+                            $coverImageField,
+                            $coverImageField . '-preview'
+                        );
+                        echo '</div>';
                     endif;
                     ?>
 

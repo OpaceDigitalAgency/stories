@@ -135,6 +135,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
                 <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-tools.php" class="nav-link <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
                     <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
                 </button>
+                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                    <i class="fas fa-cog" aria-hidden="true"></i> AI Settings
+                </button>
                 <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
                     <i class="fas fa-images" aria-hidden="true"></i> Media
                 </button>

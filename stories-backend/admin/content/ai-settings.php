@@ -1,17 +1,12 @@
 <?php
 /**
  * AI Settings Admin Page
- *
+ * 
  * This page provides an interface for managing AI configuration,
  * including API keys, models, and provider settings.
  */
 
-// Include necessary files
-require_once '../includes/header.php';
-require_once '../includes/auth-check.php';
-require_once '../includes/db-connect.php';
-
-// Set page variables
+// Set page variables before including header
 $pageTitle = 'AI Settings';
 $currentPage = 'ai-settings';
 $pageDescription = 'Configure AI providers, models, and view usage statistics';
@@ -21,6 +16,11 @@ $pageActions = '
 <a href="ai-image-generator.php" class="btn btn-success">
     <i class="fas fa-image"></i> Test Image Generator
 </a>';
+
+// Include necessary files
+require_once '../includes/header.php';
+require_once '../includes/auth-check.php';
+require_once '../includes/db-connect.php';
 
 // Get current settings
 try {
@@ -58,6 +58,7 @@ try {
     $usage = $stmt->fetch();
     
 } catch (Exception $e) {
+    error_log("Error in AI Settings: " . $e->getMessage());
     $_SESSION['error'] = 'Error loading settings: ' . $e->getMessage();
 }
 
@@ -84,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['success'] = 'OpenAI settings updated successfully';
         }
     } catch (Exception $e) {
+        error_log("Error updating settings: " . $e->getMessage());
         $_SESSION['error'] = 'Error updating settings: ' . $e->getMessage();
     }
     
@@ -94,34 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <div class="content-section">
-    <div class="section-header">
-        <h2 class="section-title">
-            <i class="fas fa-cog" aria-hidden="true"></i> 
-            AI Settings
-        </h2>
-        <p class="section-description">
-            Configure AI providers and monitor usage
-        </p>
-    </div>
-
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success">
-            <?php 
-            echo $_SESSION['success'];
-            unset($_SESSION['success']);
-            ?>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-danger">
-            <?php 
-            echo $_SESSION['error'];
-            unset($_SESSION['error']);
-            ?>
-        </div>
-    <?php endif; ?>
-
     <div class="section-body">
         <!-- Usage Overview -->
         <div class="card mb-4">
@@ -274,75 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
-
-<style>
-.settings-form {
-    max-width: 800px;
-}
-
-.card {
-    background: var(--surface-2);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-2);
-    margin-bottom: 2rem;
-}
-
-.card-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--surface-3);
-}
-
-.card-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-row {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.form-actions {
-    margin-top: 2rem;
-}
-
-.table {
-    width: 100%;
-    margin-bottom: 1rem;
-}
-
-.table th,
-.table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.alert {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--radius-1);
-}
-
-.alert-success {
-    background: var(--success-bg);
-    color: var(--success-text);
-}
-
-.alert-danger {
-    background: var(--error-bg);
-    color: var(--error-text);
-}
-</style>
 
 <?php
 require_once '../includes/footer.php';

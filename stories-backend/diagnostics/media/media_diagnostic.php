@@ -1,7 +1,7 @@
 <?php
 /**
  * Media Diagnostic
- * 
+ *
  * This tool diagnoses and fixes issues with media uploads and image optimization.
  */
 
@@ -35,7 +35,7 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
-    
+
     $db = new PDO($dsn, $config['user'], $config['password'], $options);
     $dbConnected = true;
 } catch (PDOException $e) {
@@ -47,6 +47,7 @@ try {
 $directories = [
     'uploads' => __DIR__ . '/../../../uploads',
     'optimized' => __DIR__ . '/../../../uploads/optimized',
+    'includes' => __DIR__ . '/../../../includes',
 ];
 
 $directoryResults = [];
@@ -76,22 +77,22 @@ if ($dbConnected) {
             $mediaTableResult['error'] = 'media table does not exist';
         } else {
             $mediaTableResult['exists'] = true;
-            
+
             // Check if media table has all required columns
             $columns = [];
             $stmt = $db->query("DESCRIBE media");
             while ($row = $stmt->fetch()) {
                 $columns[] = $row['Field'];
             }
-            
+
             $mediaTableResult['columns'] = $columns;
-            
+
             $requiredColumns = [
                 'id', 'filename', 'file_path', 'file_type', 'file_size', 'alt_text',
                 'thumbnail_url', 'small_url', 'medium_url', 'large_url', 'width', 'height',
                 'created_at', 'updated_at'
             ];
-            
+
             $mediaTableResult['missing_columns'] = array_diff($requiredColumns, $columns);
         }
     } catch (PDOException $e) {
@@ -126,15 +127,22 @@ if (!is_dir($optimizedDir)) {
 }
 
 // Include image optimizer if it exists
-$imageOptimizerPath = __DIR__ . '/../../../includes/image_optimizer.php';
+$includesDir = __DIR__ . '/../../../includes';
+$imageOptimizerPath = $includesDir . '/image_optimizer.php';
+
+// Create includes directory if it doesn't exist
+if (!file_exists($includesDir)) {
+    mkdir($includesDir, 0755, true);
+}
+
 if (file_exists($imageOptimizerPath)) {
     require_once $imageOptimizerPath;
-    
+
     // Test optimization
     try {
         if (function_exists('createImageVariants')) {
             $variants = createImageVariants($testImage, $optimizedDir);
-            
+
             if ($variants) {
                 $testImageResult['success'] = true;
                 $testImageResult['variants'] = $variants;
@@ -236,21 +244,21 @@ echo "<div class='card-body'>";
 foreach ($directoryResults as $name => $result) {
     echo "<h5>" . ucfirst($name) . " Directory</h5>";
     echo "<p><strong>Path:</strong> " . htmlspecialchars($result['path']) . "</p>";
-    
+
     if ($result['exists']) {
         echo "<p><strong>Status:</strong> <span class='success'>Exists</span></p>";
     } else {
         echo "<p><strong>Status:</strong> <span class='error'>Does not exist</span></p>";
     }
-    
+
     if ($result['created']) {
         echo "<p><strong>Created:</strong> <span class='success'>Yes</span></p>";
     }
-    
+
     if ($result['exists']) {
         echo "<p><strong>Writable:</strong> " . ($result['writable'] ? "<span class='success'>Yes</span>" : "<span class='error'>No</span>") . "</p>";
     }
-    
+
     if ($result['error']) {
         echo "<p><strong>Error:</strong> <span class='error'>" . htmlspecialchars($result['error']) . "</span></p>";
     }
@@ -270,7 +278,7 @@ if ($dbConnected) {
     echo "<p><strong>Status:</strong> <span class='success'>Connected</span></p>";
 } else {
     echo "<p><strong>Status:</strong> <span class='error'>Not connected</span></p>";
-    
+
     if (isset($dbError)) {
         echo "<p><strong>Error:</strong> <span class='error'>" . htmlspecialchars($dbError) . "</span></p>";
     }
@@ -288,14 +296,14 @@ echo "<div class='card-body'>";
 
 if ($mediaTableResult['exists']) {
     echo "<p><strong>Status:</strong> <span class='success'>Exists</span></p>";
-    
+
     echo "<h5>Columns:</h5>";
     echo "<ul>";
     foreach ($mediaTableResult['columns'] as $column) {
         echo "<li>" . htmlspecialchars($column) . "</li>";
     }
     echo "</ul>";
-    
+
     if (!empty($mediaTableResult['missing_columns'])) {
         echo "<h5>Missing Columns:</h5>";
         echo "<ul class='error'>";
@@ -303,16 +311,16 @@ if ($mediaTableResult['exists']) {
             echo "<li>" . htmlspecialchars($column) . "</li>";
         }
         echo "</ul>";
-        
+
         echo "<p><a href='fix_media_table.php' class='btn btn-warning'>Fix Media Table</a></p>";
     }
 } else {
     echo "<p><strong>Status:</strong> <span class='error'>Does not exist</span></p>";
-    
+
     if ($mediaTableResult['error']) {
         echo "<p><strong>Error:</strong> <span class='error'>" . htmlspecialchars($mediaTableResult['error']) . "</span></p>";
     }
-    
+
     echo "<p><a href='create_media_table.php' class='btn btn-warning'>Create Media Table</a></p>";
 }
 
@@ -328,16 +336,16 @@ echo "<div class='card-body'>";
 
 if ($testImageResult['success']) {
     echo "<p><strong>Status:</strong> <span class='success'>Working</span></p>";
-    
+
     echo "<h5>Image Variants:</h5>";
     echo "<pre>" . htmlspecialchars(print_r($testImageResult['variants'], true)) . "</pre>";
 } else {
     echo "<p><strong>Status:</strong> <span class='error'>Not working</span></p>";
-    
+
     if ($testImageResult['error']) {
         echo "<p><strong>Error:</strong> <span class='error'>" . htmlspecialchars($testImageResult['error']) . "</span></p>";
     }
-    
+
     echo "<p><a href='fix_image_optimizer.php' class='btn btn-warning'>Fix Image Optimizer</a></p>";
 }
 
@@ -370,7 +378,7 @@ echo "
             </a>
         </div>
     </div>
-    
+
     <script src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
 </body>
 </html>";

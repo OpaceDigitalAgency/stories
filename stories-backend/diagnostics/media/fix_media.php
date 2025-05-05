@@ -1,7 +1,7 @@
 <?php
 /**
  * Fix Media Issues
- * 
+ *
  * This tool fixes common issues with media uploads and image optimization.
  */
 
@@ -35,7 +35,7 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
-    
+
     $db = new PDO($dsn, $config['user'], $config['password'], $options);
     $dbConnected = true;
 } catch (PDOException $e) {
@@ -69,7 +69,7 @@ foreach ($directories as $name => $path) {
         'success' => false,
         'message' => ''
     ];
-    
+
     if (!file_exists($path)) {
         if (mkdir($path, 0755, true)) {
             $result['success'] = true;
@@ -80,7 +80,7 @@ foreach ($directories as $name => $path) {
     } else {
         $result['success'] = true;
         $result['message'] = "$name directory already exists";
-        
+
         // Check if directory is writable
         if (!is_writable($path)) {
             if (chmod($path, 0755)) {
@@ -91,7 +91,7 @@ foreach ($directories as $name => $path) {
             }
         }
     }
-    
+
     $results['directories'][] = $result;
 }
 
@@ -118,7 +118,7 @@ if ($dbConnected) {
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )");
-            
+
             $results['media_table']['success'] = true;
             $results['media_table']['message'] = "Created media table";
         } else {
@@ -128,15 +128,15 @@ if ($dbConnected) {
             while ($row = $stmt->fetch()) {
                 $columns[] = $row['Field'];
             }
-            
+
             $requiredColumns = [
                 'id', 'filename', 'file_path', 'file_type', 'file_size', 'alt_text',
                 'thumbnail_url', 'small_url', 'medium_url', 'large_url', 'width', 'height',
                 'created_at', 'updated_at'
             ];
-            
+
             $missingColumns = array_diff($requiredColumns, $columns);
-            
+
             if (!empty($missingColumns)) {
                 // Add missing columns
                 foreach ($missingColumns as $column) {
@@ -156,7 +156,7 @@ if ($dbConnected) {
                         // Ignore errors
                     }
                 }
-                
+
                 $results['media_table']['success'] = true;
                 $results['media_table']['message'] = "Added missing columns to media table: " . implode(', ', $missingColumns);
             } else {
@@ -170,15 +170,22 @@ if ($dbConnected) {
 }
 
 // Fix image optimizer
-$imageOptimizerPath = __DIR__ . '/../../../includes/image_optimizer.php';
-$imageConfigPath = __DIR__ . '/../../../includes/image_config.php';
+$includesDir = __DIR__ . '/../../../includes';
+$imageOptimizerPath = $includesDir . '/image_optimizer.php';
+$imageConfigPath = $includesDir . '/image_config.php';
+
+// Create includes directory if it doesn't exist
+if (!file_exists($includesDir)) {
+    mkdir($includesDir, 0755, true);
+    $results['image_optimizer']['message'] = "Created includes directory";
+}
 
 if (!file_exists($imageOptimizerPath)) {
     // Create image optimizer file
     $imageOptimizerContent = '<?php
 /**
  * Image Optimizer
- * 
+ *
  * This file contains functions for optimizing images.
  */
 
@@ -187,41 +194,41 @@ require_once __DIR__ . \'/image_config.php\';
 
 /**
  * Create image variants (thumbnail, small, medium, large)
- * 
+ *
  * @param string $sourcePath Path to source image
  * @param string $targetDir Directory to save optimized images
  * @return array|false Array of image variants or false on failure
  */
 function createImageVariants($sourcePath, $targetDir) {
     global $imageConfig;
-    
+
     // Check if source file exists
     if (!file_exists($sourcePath)) {
         return false;
     }
-    
+
     // Create target directory if it doesn\'t exist
     if (!file_exists($targetDir)) {
         mkdir($targetDir, 0755, true);
     }
-    
+
     // Get image information
     $imageInfo = getimagesize($sourcePath);
     if ($imageInfo === false) {
         return false;
     }
-    
+
     $width = $imageInfo[0];
     $height = $imageInfo[1];
     $mime = $imageInfo[\'mime\'];
-    
+
     // Get file extension
     $extension = pathinfo($sourcePath, PATHINFO_EXTENSION);
     $filename = pathinfo($sourcePath, PATHINFO_FILENAME);
-    
+
     // Create unique filename
     $uniqueFilename = $filename . \'_\' . time();
-    
+
     // Initialize variants array
     $variants = [
         \'original\' => [
@@ -231,12 +238,12 @@ function createImageVariants($sourcePath, $targetDir) {
             \'height\' => $height
         ]
     ];
-    
+
     // Create variants
     foreach ($imageConfig[\'sizes\'] as $size => $dimensions) {
         $targetWidth = $dimensions[\'width\'];
         $targetHeight = $dimensions[\'height\'];
-        
+
         // Calculate new dimensions while maintaining aspect ratio
         if ($targetWidth && $targetHeight) {
             // Both width and height specified, use exact dimensions
@@ -255,11 +262,11 @@ function createImageVariants($sourcePath, $targetDir) {
             $newWidth = $width;
             $newHeight = $height;
         }
-        
+
         // Create target filename
         $targetFilename = $uniqueFilename . \'_\' . $size . \'.webp\';
         $targetPath = $targetDir . \'/\' . $targetFilename;
-        
+
         // Create image resource based on mime type
         switch ($mime) {
             case \'image/jpeg\':
@@ -277,17 +284,17 @@ function createImageVariants($sourcePath, $targetDir) {
             default:
                 return false;
         }
-        
+
         // Create new image
         $newImage = imagecreatetruecolor($newWidth, $newHeight);
-        
+
         // Preserve transparency for PNG and GIF images
         if ($mime === \'image/png\' || $mime === \'image/gif\') {
             imagecolortransparent($newImage, imagecolorallocate($newImage, 0, 0, 0));
             imagealphablending($newImage, false);
             imagesavealpha($newImage, true);
         }
-        
+
         // Resize image
         imagecopyresampled(
             $newImage,
@@ -296,13 +303,13 @@ function createImageVariants($sourcePath, $targetDir) {
             $newWidth, $newHeight,
             $width, $height
         );
-        
+
         // Save image as WebP
         imagewebp($newImage, $targetPath, $imageConfig[\'quality\']);
-        
+
         // Free memory
         imagedestroy($newImage);
-        
+
         // Add variant to array
         $variants[$size] = [
             \'path\' => $targetPath,
@@ -311,18 +318,18 @@ function createImageVariants($sourcePath, $targetDir) {
             \'height\' => $newHeight
         ];
     }
-    
+
     // Free memory
     if (isset($image)) {
         imagedestroy($image);
     }
-    
+
     return $variants;
 }
 
 /**
  * Save image to media table
- * 
+ *
  * @param array $variants Image variants
  * @param string $altText Alt text for image
  * @param PDO $db Database connection
@@ -333,13 +340,13 @@ function saveImageToDatabase($variants, $altText, $db) {
     if (!isset($variants[\'original\'])) {
         return false;
     }
-    
+
     // Get original image information
     $original = $variants[\'original\'];
     $filename = pathinfo($original[\'path\'], PATHINFO_BASENAME);
     $fileSize = filesize($original[\'path\']);
     $fileType = mime_content_type($original[\'path\']);
-    
+
     // Prepare SQL statement
     $sql = "INSERT INTO media (
         filename, file_path, file_type, file_size, alt_text,
@@ -350,42 +357,42 @@ function saveImageToDatabase($variants, $altText, $db) {
         :thumbnail_url, :small_url, :medium_url, :large_url,
         :width, :height, NOW(), NOW()
     )";
-    
+
     try {
         $stmt = $db->prepare($sql);
-        
+
         // Bind parameters
         $stmt->bindParam(\':filename\', $filename);
         $stmt->bindParam(\':file_path\', $original[\'path\']);
         $stmt->bindParam(\':file_type\', $fileType);
         $stmt->bindParam(\':file_size\', $fileSize);
         $stmt->bindParam(\':alt_text\', $altText);
-        
+
         // Bind variant URLs
         $thumbnailUrl = isset($variants[\'thumbnail\']) ? $variants[\'thumbnail\'][\'url\'] : null;
         $smallUrl = isset($variants[\'small\']) ? $variants[\'small\'][\'url\'] : null;
         $mediumUrl = isset($variants[\'medium\']) ? $variants[\'medium\'][\'url\'] : null;
         $largeUrl = isset($variants[\'large\']) ? $variants[\'large\'][\'url\'] : null;
-        
+
         $stmt->bindParam(\':thumbnail_url\', $thumbnailUrl);
         $stmt->bindParam(\':small_url\', $smallUrl);
         $stmt->bindParam(\':medium_url\', $mediumUrl);
         $stmt->bindParam(\':large_url\', $largeUrl);
-        
+
         // Bind dimensions
         $stmt->bindParam(\':width\', $original[\'width\']);
         $stmt->bindParam(\':height\', $original[\'height\']);
-        
+
         // Execute statement
         $stmt->execute();
-        
+
         // Return ID of inserted record
         return $db->lastInsertId();
     } catch (PDOException $e) {
         return false;
     }
 }';
-    
+
     file_put_contents($imageOptimizerPath, $imageOptimizerContent);
     $results['image_optimizer']['success'] = true;
     $results['image_optimizer']['message'] = "Created image optimizer file";
@@ -396,7 +403,7 @@ if (!file_exists($imageConfigPath)) {
     $imageConfigContent = '<?php
 /**
  * Image Configuration
- * 
+ *
  * This file contains configuration for image optimization.
  */
 
@@ -420,13 +427,13 @@ $imageConfig = [
             \'height\' => null
         ]
     ],
-    
+
     // Image quality (0-100)
     \'quality\' => 80,
-    
+
     // Maximum file size in bytes (5MB)
     \'max_file_size\' => 5 * 1024 * 1024,
-    
+
     // Allowed file types
     \'allowed_types\' => [
         \'image/jpeg\',
@@ -434,14 +441,14 @@ $imageConfig = [
         \'image/gif\',
         \'image/webp\'
     ],
-    
+
     // Upload directory
     \'upload_dir\' => __DIR__ . \'/../uploads\',
-    
+
     // Optimized directory
     \'optimized_dir\' => __DIR__ . \'/../uploads/optimized\'
 ];';
-    
+
     file_put_contents($imageConfigPath, $imageConfigContent);
     $results['image_optimizer']['success'] = true;
     $results['image_optimizer']['message'] .= ", created image config file";
@@ -505,7 +512,7 @@ echo "<!DOCTYPE html>
     <div class='container'>
         <h1>Fix Media Issues</h1>
         <p class='lead'>This tool fixes common issues with media uploads and image optimization.</p>
-        
+
         <div class='alert alert-success mb-4'>
             <h4 class='alert-heading'>Fix Completed</h4>
             <p>The media system has been fixed. See details below.</p>
@@ -582,7 +589,7 @@ echo "
             </a>
         </div>
     </div>
-    
+
     <script src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
 </body>
 </html>";

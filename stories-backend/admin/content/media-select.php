@@ -357,7 +357,7 @@ try {
             </div>
         <?php else: ?>
             <div class="media-grid">
-                <?php foreach ($media as $item): 
+                <?php foreach ($media as $item):
                     $isImage = strpos($item['file_type'], 'image/') === 0;
                 ?>
                 <div class="media-card" data-id="<?php echo $item['id']; ?>">
@@ -411,36 +411,36 @@ try {
         // Handle search
         const searchInput = document.querySelector('.search-input');
         const searchButton = document.querySelector('.search-button');
-        
+
         searchButton.addEventListener('click', function() {
             const searchValue = searchInput.value.trim();
             window.location.href = '?search=' + encodeURIComponent(searchValue);
         });
-        
+
         searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 searchButton.click();
             }
         });
-        
+
         // Handle media selection
         const mediaCards = document.querySelectorAll('.media-card');
         mediaCards.forEach(card => {
             card.addEventListener('click', function() {
                 const mediaId = this.getAttribute('data-id');
                 const imgElement = this.querySelector('img');
-                
+
                 if (imgElement) {
                     const url = imgElement.getAttribute('src');
                     const dimensions = imgElement.naturalWidth + 'x' + imgElement.naturalHeight;
-                    
+
                     // Send message to parent window
                     window.parent.postMessage({
                         type: 'media-selected',
                         url: url,
                         dimensions: dimensions
                     }, '*');
-                    
+
                     // Also send to opener in case we're in a popup
                     if (window.opener) {
                         window.opener.postMessage({
@@ -452,50 +452,63 @@ try {
                 }
             });
         });
-        
+
         // Handle file upload
         const fileInput = document.getElementById('file-input');
         const dropzone = document.getElementById('upload-dropzone');
-        
+
         fileInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 uploadFile(this.files[0]);
             }
         });
-        
+
         dropzone.addEventListener('dragover', function(e) {
             e.preventDefault();
             this.classList.add('dragover');
         });
-        
+
         dropzone.addEventListener('dragleave', function() {
             this.classList.remove('dragover');
         });
-        
+
         dropzone.addEventListener('drop', function(e) {
             e.preventDefault();
             this.classList.remove('dragover');
-            
+
             if (e.dataTransfer.files.length > 0) {
                 uploadFile(e.dataTransfer.files[0]);
             }
         });
-        
+
         dropzone.addEventListener('click', function() {
             fileInput.click();
         });
-        
+
         function uploadFile(file) {
             const formData = new FormData();
-            formData.append('media_file', file);
-            
+            formData.append('media_file_file', file);
+
             fetch('media.php', {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
                 if (response.ok) {
-                    window.location.reload();
+                    return response.text().then(text => {
+                        try {
+                            // Try to parse as JSON
+                            const json = JSON.parse(text);
+                            if (json.success) {
+                                window.location.reload();
+                            } else {
+                                alert(json.message || 'Upload failed. Please try again.');
+                            }
+                        } catch (e) {
+                            // If not JSON, just reload
+                            window.location.reload();
+                        }
+                    });
                 } else {
                     alert('Upload failed. Please try again.');
                 }
@@ -505,18 +518,18 @@ try {
                 alert('Upload failed. Please try again.');
             });
         }
-        
+
         // Handle bulk actions
         const bulkSelect = document.querySelector('.bulk-select');
         const applyButton = document.querySelector('.apply-button');
         const selectedCount = document.querySelector('.selected-count');
         let selectedItems = [];
-        
+
         mediaCards.forEach(card => {
             card.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
                 this.classList.toggle('selected');
-                
+
                 const mediaId = this.getAttribute('data-id');
                 if (this.classList.contains('selected')) {
                     if (!selectedItems.includes(mediaId)) {
@@ -525,23 +538,23 @@ try {
                 } else {
                     selectedItems = selectedItems.filter(id => id !== mediaId);
                 }
-                
+
                 selectedCount.textContent = selectedItems.length + ' items selected';
             });
         });
-        
+
         applyButton.addEventListener('click', function() {
             const action = bulkSelect.value;
             if (!action) {
                 alert('Please select an action');
                 return;
             }
-            
+
             if (selectedItems.length === 0) {
                 alert('Please select at least one item');
                 return;
             }
-            
+
             if (action === 'delete') {
                 if (confirm('Are you sure you want to delete the selected items?')) {
                     // Implement delete functionality

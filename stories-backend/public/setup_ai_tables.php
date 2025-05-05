@@ -2,11 +2,19 @@
 /**
  * AI Tables Setup Script
  * 
- * This script creates the necessary database tables for the AI functionality.
- * You can either:
- * 1. Run this script directly to install the tables
- * 2. Copy the SQL from the $sql variable and run it in phpMyAdmin
+ * This script automatically creates the necessary database tables for the AI functionality
+ * using the existing database configuration.
  */
+
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3*sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
 
 // The complete SQL for creating AI tables
 $sql = <<<SQL
@@ -118,156 +126,38 @@ LEFT JOIN ai_usage u ON u.provider_id = p.id
 GROUP BY p.name, g.type, DATE(g.created_at);
 SQL;
 
-// If this script is being run directly
-if (basename($_SERVER['PHP_SELF']) === basename(__FILE__)) {
-    // Check if we should just display the SQL
-    if (isset($_GET['show_sql'])) {
-        header('Content-Type: text/plain');
-        echo $sql;
-        exit;
-    }
-
-    // Otherwise, try to install the tables
-    if (isset($_POST['install'])) {
-        try {
-            $db = new PDO(
-                "mysql:host={$_POST['host']};dbname={$_POST['database']};charset=utf8mb4",
-                $_POST['username'],
-                $_POST['password']
-            );
-            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            // Split the SQL into individual statements
-            $statements = array_filter(
-                array_map('trim', 
-                    explode(';', str_replace('DELIMITER //', '', str_replace('DELIMITER ;', '', $sql)))
-                )
-            );
-
-            // Execute each statement
-            foreach ($statements as $statement) {
-                if (!empty($statement)) {
-                    $db->exec($statement);
-                }
-            }
-
-            $success = "AI tables installed successfully!";
-
-        } catch (PDOException $e) {
-            $error = "Error installing AI tables: " . $e->getMessage();
-        }
-    }
-}
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <title>AI Tables Setup</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            line-height: 1.6;
-        }
-        .options {
-            margin: 2rem 0;
-        }
-        .button {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            margin-right: 1rem;
-            border: none;
-            cursor: pointer;
-        }
-        .button:hover {
-            background: #0056b3;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .success {
-            padding: 1rem;
-            background: #d4edda;
-            color: #155724;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-        .error {
-            padding: 1rem;
-            background: #f8d7da;
-            color: #721c24;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <h1>AI Tables Setup</h1>
-    <p>This script helps you set up the necessary database tables for the AI functionality.</p>
+try {
+    // Connect to database
+    $db = new PDO(
+        "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+        $config['user'],
+        $config['password']
+    );
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    <?php if (isset($success)): ?>
-        <div class="success"><?php echo htmlspecialchars($success); ?></div>
-    <?php endif; ?>
+    // Split the SQL into individual statements
+    $statements = array_filter(
+        array_map('trim', 
+            explode(';', str_replace('DELIMITER //', '', str_replace('DELIMITER ;', '', $sql)))
+        )
+    );
 
-    <?php if (isset($error)): ?>
-        <div class="error"><?php echo htmlspecialchars($error); ?></div>
-    <?php endif; ?>
+    // Execute each statement
+    foreach ($statements as $statement) {
+        if (!empty($statement)) {
+            $db->exec($statement);
+        }
+    }
 
-    <div class="options">
-        <h2>Options:</h2>
-        
-        <h3>1. Install Tables Directly</h3>
-        <form method="post">
-            <div class="form-group">
-                <label for="host">Database Host:</label>
-                <input type="text" id="host" name="host" value="localhost" required>
-            </div>
-            <div class="form-group">
-                <label for="database">Database Name:</label>
-                <input type="text" id="database" name="database" value="stories_db" required>
-            </div>
-            <div class="form-group">
-                <label for="username">Database Username:</label>
-                <input type="text" id="username" name="username" value="stories_user" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Database Password:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit" name="install" class="button">Install Tables</button>
-        </form>
+    echo json_encode([
+        'success' => true,
+        'message' => 'AI tables installed successfully!'
+    ]);
 
-        <h3>2. Get SQL for phpMyAdmin</h3>
-        <p>
-            <a href="?show_sql=1" class="button">Show SQL</a>
-        </p>
-    </div>
-
-    <div class="instructions">
-        <h2>Instructions:</h2>
-        <ol>
-            <li>Either fill in your database details and click "Install Tables"</li>
-            <li>Or click "Show SQL" to get the SQL that you can copy and paste into phpMyAdmin</li>
-            <li>After installation, make sure to set your OpenAI API key in the environment variables</li>
-        </ol>
-    </div>
-</body>
-</html>
+} catch (PDOException $e) {
+    error_log("Error installing AI tables: " . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}

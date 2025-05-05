@@ -281,6 +281,38 @@ if (isset($error)): ?>
                                value="<?php echo isset($story['published_at']) ? date('Y-m-d\TH:i', strtotime($story['published_at'])) : ''; ?>">
                     </div>
 
+                    <!-- Hidden source_type field for JavaScript functionality -->
+                    <input type="hidden" id="source_type" name="source_type" value="<?php
+                        // Determine source type based on author type
+                        $sourceType = 'classic'; // Default
+                        if (isset($story['author_id'])) {
+                            $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
+                            $stmt->execute([$story['author_id']]);
+                            $authorType = $stmt->fetchColumn();
+
+                            if ($authorType === 'child') {
+                                $sourceType = 'child';
+                            } else if ($authorType === 'parent') {
+                                $sourceType = 'parent';
+                            }
+                        }
+                        echo htmlspecialchars($story['source_type'] ?? $sourceType);
+                    ?>"><?php
+
+                    // Hidden allow_reviews field for JavaScript functionality
+                    $allowReviews = 1; // Default to true
+                    if (isset($story['author_id'])) {
+                        $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
+                        $stmt->execute([$story['author_id']]);
+                        $authorType = $stmt->fetchColumn();
+
+                        if ($authorType === 'child') {
+                            $allowReviews = 0; // Child authors never get reviews
+                        }
+                    }
+                    ?>
+                    <input type="hidden" id="allow_reviews" name="allow_reviews" value="<?php echo $allowReviews; ?>">
+
                     <!-- Group all checkboxes together -->
                     <h3 class="form-section-title">Options</h3>
                     <div class="checkbox-section">
@@ -392,15 +424,19 @@ if (isset($error)): ?>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    <?php elseif (($field === 'average_rating' || $field === 'review_count') && isset($story['author_id'])): ?>
+                    <?php elseif (($field === 'average_rating' || $field === 'review_count')): ?>
                         <?php
                         // Check if author is a child
-                        $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
-                        $stmt->execute([$story['author_id']]);
-                        $authorType = $stmt->fetchColumn();
+                        $isChildAuthor = false;
+                        if (isset($story['author_id'])) {
+                            $stmt = $db->prepare("SELECT author_type FROM authors WHERE id = ?");
+                            $stmt->execute([$story['author_id']]);
+                            $authorType = $stmt->fetchColumn();
+                            $isChildAuthor = ($authorType === 'child');
+                        }
 
                         // Only show rating fields for non-child authors
-                        if ($authorType !== 'child'):
+                        if (!$isChildAuthor):
                         ?>
                             <?php if ($field === 'average_rating'): ?>
                                 <div class="form-group">

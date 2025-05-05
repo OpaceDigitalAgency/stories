@@ -16,6 +16,52 @@ require_once '../includes/db-connect.php';
 $openai = null;
 $openaiConfig = [];
 $usage = ['total_generations' => 0, 'total_cost' => 0];
+$availableModels = [];
+
+// Function to fetch available models from OpenAI
+function fetchAvailableModels($apiKey) {
+    $url = "https://api.openai.com/v1/models";
+    $headers = [
+        "Authorization: Bearer $apiKey"
+    ];
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers
+    ]);
+
+    $response = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        throw new Exception("Failed to fetch models: $err");
+    }
+
+    $models = json_decode($response, true);
+    if (!isset($models['data'])) {
+        throw new Exception("Invalid response from OpenAI API");
+    }
+
+    // Filter and categorize models
+    $categorizedModels = [
+        'image' => [
+            'gpt-image-1' => 'GPT Image 1 (Latest)',
+            'dall-e-3' => 'DALL·E 3 (Legacy)',
+            'dall-e-2' => 'DALL·E 2 (Legacy)'
+        ],
+        'text' => [
+            'gpt-4.1' => 'GPT-4.1 (Latest)',
+            'gpt-4o' => 'GPT-4o',
+            'o4-mini' => 'o4-mini (Fast)',
+            'o3' => 'o3 (Powerful)',
+            'o3-mini' => 'o3-mini (Balanced)'
+        ]
+    ];
+
+    return $categorizedModels;
+}
 
 try {
     // Check if ai_providers table exists
@@ -33,7 +79,7 @@ try {
             VALUES ('openai', 'image', ?, true)
         ");
         $defaultConfig = [
-            'model' => 'dall-e-3',
+            'model' => 'gpt-image-1',
             'max_tokens' => 2000,
             'temperature' => 0.7
         ];
@@ -45,6 +91,16 @@ try {
     $stmt->execute();
     $openai = $stmt->fetch();
     $openaiConfig = json_decode($openai['config'], true) ?? [];
+
+    // Fetch available models if we have an API key
+    if (!empty($openaiConfig['api_key'])) {
+        try {
+            $availableModels = fetchAvailableModels($openaiConfig['api_key']);
+        } catch (Exception $e) {
+            error_log("Error fetching models: " . $e->getMessage());
+            // Don't throw - we'll use hardcoded model list
+        }
+    }
     
     // Get usage statistics
     $stmt = $db->prepare("
@@ -104,7 +160,7 @@ $pageActions = '
         <i class="fas fa-image"></i> Test Image Generator
     </a>
     <button onclick="window.location.reload()" class="btn btn-secondary">
-        <i class="fas fa-sync"></i> Refresh
+        <i class="fas fa-sync"></i> Refresh Models
     </button>
 </div>';
 
@@ -167,6 +223,9 @@ if (isset($_SESSION['success'])) {
                             value="<?php echo htmlspecialchars($openaiConfig['api_key'] ?? ''); ?>"
                             required
                         >
+                        <small class="form-text text-muted">
+                            Enter your OpenAI API key to enable AI features
+                        </small>
                     </div>
 
                     <div class="form-group">
@@ -181,15 +240,20 @@ if (isset($_SESSION['success'])) {
                     </div>
 
                     <div class="form-group">
-                        <label for="openai_model">Default Model</label>
+                        <label for="openai_model">Image Generation Model</label>
                         <select id="openai_model" name="openai_model" class="form-control" required>
-                            <option value="dall-e-3" <?php echo ($openaiConfig['model'] ?? '') === 'dall-e-3' ? 'selected' : ''; ?>>
-                                DALL-E 3 (Best Quality)
-                            </option>
-                            <option value="dall-e-2" <?php echo ($openaiConfig['model'] ?? '') === 'dall-e-2' ? 'selected' : ''; ?>>
-                                DALL-E 2 (Faster)
-                            </option>
+                            <?php foreach ($availableModels['image'] as $id => $name): ?>
+                                <option value="<?php echo htmlspecialchars($id); ?>" 
+                                    <?php echo ($openaiConfig['model'] ?? '') === $id ? 'selected' : ''; ?>
+                                    <?php echo $id === 'gpt-image-1' ? '' : 'disabled'; ?>>
+                                    <?php echo htmlspecialchars($name); ?>
+                                    <?php echo $id === 'gpt-image-1' ? '' : ' (Not Recommended)'; ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
+                        <small class="form-text text-muted">
+                            Only GPT Image 1 is recommended for image generation
+                        </small>
                     </div>
 
                     <div class="form-row">

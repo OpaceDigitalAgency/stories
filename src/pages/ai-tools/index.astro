@@ -190,54 +190,7 @@ try {
         </div>
       </section>
 
-      <!-- Newsletter Section -->
-      <section class="py-16">
-        <div class="container mx-auto px-4">
-          <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500 text-center">
-          <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Stay Updated</h2>
-          <p class="text-text-secondary text-lg mb-8">
-            Subscribe to our newsletter to receive updates about new AI tools and features.
-          </p>
 
-          <form id="ai-tools-newsletter-form" class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                name="email"
-                id="ai-tools-newsletter-email"
-                placeholder="Your email address"
-                class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                required
-              />
-              <input type="hidden" name="feature" value="ai-tools-updates" />
-              <button
-                type="submit"
-                id="ai-tools-newsletter-submit"
-                class="btn btn-primary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
-              >
-                <span class="flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                  Subscribe
-                </span>
-              </button>
-            </div>
-            <p class="text-sm text-gray-500 mt-3">
-              We respect your privacy. Unsubscribe at any time.
-            </p>
-            <!-- Success message (hidden by default) -->
-            <div id="ai-tools-newsletter-success" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
-              Thank you for subscribing! We'll keep you updated with new AI tools and features.
-            </div>
-            <!-- Error message (hidden by default) -->
-            <div id="ai-tools-newsletter-error" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
-              There was an error processing your subscription. Please try again.
-            </div>
-          </form>
-          </div>
-        </div>
-      </section>
   </main>
 
   <script slot="scripts">

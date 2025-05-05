@@ -2,12 +2,14 @@
 import NavHeader from '../components/NavHeader.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import NewsletterSignup from '../components/NewsletterSignup.astro';
 import { getConfig } from '../lib/config';
 import '../styles/base.css';
 
 export interface Props {
   title: string;
   description?: string;
+  showNewsletter?: boolean;
 }
 
 // Get site information from config
@@ -18,7 +20,8 @@ const faviconPng = getConfig('site.favicon.png', '/favicon.png');
 // Use props or fallback to config values
 const {
   title = getConfig('site.title', `${siteName} | ${siteDescription}`),
-  description = siteDescription
+  description = siteDescription,
+  showNewsletter = true
 } = Astro.props;
 ---
 
@@ -40,6 +43,7 @@ const {
     <main class="flex-grow w-full">
       <slot />
     </main>
+    {showNewsletter && <NewsletterSignup />}
     <Footer />
     <slot name="scripts" />
   </body>

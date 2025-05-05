@@ -387,51 +387,6 @@ try {
     </div>
   </section>
 
-  <!-- Newsletter Section -->
-  <section class="py-16 bg-secondary/10 relative overflow-hidden">
-    <div class="blob-shape bg-secondary/20 w-96 h-96 top-20 right-20"></div>
-    <div class="container mx-auto px-4 max-w-4xl relative z-10">
-      <div class="text-center mb-8">
-        <h2 class="text-3xl font-display font-bold text-text-primary mb-4 fancy-underline">Stay Updated</h2>
-        <p class="text-text-secondary text-lg">
-          Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
-        </p>
-      </div>
-      <form id="newsletter-form" class="max-w-2xl mx-auto">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            name="email"
-            id="newsletter-email"
-            placeholder="Your email address"
-            class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
-            required
-          />
-          <input type="hidden" name="feature" value="newsletter" />
-          <button
-            type="submit"
-            id="newsletter-submit"
-            class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
-          >
-            <span class="flex items-center">
-              Subscribe
-            </span>
-          </button>
-        </div>
-        <p class="text-sm text-gray-500 mt-3">
-          We respect your privacy. Unsubscribe at any time.
-        </p>
-        <!-- Success message (hidden by default) -->
-        <div id="newsletter-success" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
-          Thank you for subscribing! We'll keep you updated with the latest stories and news.
-        </div>
-        <!-- Error message (hidden by default) -->
-        <div id="newsletter-error" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
-          There was an error processing your subscription. Please try again.
-        </div>
-      </form>
-    </div>
-  </section>
 
   <style slot="scripts">
     .blob-shape {

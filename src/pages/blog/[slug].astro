@@ -356,51 +356,7 @@ if (!post) {
       </section>
     )}
 
-    <!-- Newsletter Signup -->
-    <section class="py-16">
-      <div class="container">
-        <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Subscribe to Our Newsletter</h2>
-            <p class="text-lg text-text-secondary">
-              Stay updated with our latest blog posts, stories, and educational resources.
-            </p>
-          </div>
 
-          <form id="blogpost-newsletter-form" class="max-w-xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-4">
-              <input
-                type="email"
-                name="email"
-                id="blogpost-newsletter-email"
-                placeholder="Your email address"
-                class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
-                required
-              />
-              <input type="hidden" name="feature" value="blog-newsletter" />
-              <button
-                type="submit"
-                id="blogpost-newsletter-submit"
-                class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
-              >
-                Subscribe
-              </button>
-            </div>
-            <p class="text-xs text-text-secondary/70 text-center mt-4">
-              By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
-            </p>
-            <!-- Success message (hidden by default) -->
-            <div id="blogpost-newsletter-success" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
-              Thank you for subscribing! We'll keep you updated with the latest blog posts and resources.
-            </div>
-            <!-- Error message (hidden by default) -->
-            <div id="blogpost-newsletter-error" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
-              There was an error processing your subscription. Please try again.
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
   </main>
   <style slot="scripts">
 

@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { fetchAiTools, type AiTool } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
+import PageHero from '../../components/PageHero.astro';
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -44,30 +45,27 @@ try {
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
-    <!-- Hero Section -->
-      <section class="bg-gradient-to-r from-primary/90 to-tertiary/90 text-white py-16">
-        <div class="container mx-auto px-4">
-          <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
-            AI-Powered Storytelling Tools
-          </h1>
-          <p class="text-lg md:text-xl max-w-3xl mb-6">
-            Enhance your creativity with our suite of AI tools designed to help you craft engaging stories for young readers.
-          </p>
+    <PageHero
+      title="AI-Powered Storytelling Tools"
+      description="Enhance your creativity with our suite of AI tools designed to help you craft engaging stories for young readers."
+      type="ai-tools"
+      showSearch={true}
+    />
 
-          <div class="flex flex-col sm:flex-row gap-4 mt-8">
-            <a href="#tools" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful">
-              <span class="flex items-center">
-                Explore Tools
-              </span>
-            </a>
-            <a href="/publish" class="btn btn-white bg-white text-primary text-lg px-6 py-3 shadow-playful btn-playful">
-              <span class="flex items-center">
-                Start Writing
-              </span>
-            </a>
-          </div>
-        </div>
-      </section>
+    <div class="container mx-auto px-4 -mt-8 mb-8 relative z-10">
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="#tools" class="btn btn-accent text-lg px-6 py-3 shadow-playful btn-playful bg-white/90 backdrop-blur-sm">
+          <span class="flex items-center">
+            Explore Tools
+          </span>
+        </a>
+        <a href="/publish" class="btn btn-white text-primary text-lg px-6 py-3 shadow-playful btn-playful bg-white/90 backdrop-blur-sm">
+          <span class="flex items-center">
+            Start Writing
+          </span>
+        </a>
+      </div>
+    </div>
 
       {apiError && (
         <section class="py-8 bg-white border-b">
@@ -78,7 +76,7 @@ try {
       )}
 
       <!-- Categories Section -->
-      <section class="py-8 bg-white border-b">
+      <section class="py-8 bg-white/50 backdrop-blur-sm border-b">
         <div class="container mx-auto px-4">
           <div class="flex flex-wrap gap-2 justify-center">
             <a href="/ai-tools" class="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium">
@@ -101,7 +99,7 @@ try {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {aiTools.length > 0 ? (
               aiTools.map(tool => (
-                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                   <a href={`/ai-tools/${tool.slug}`} class="block">
                     <div class="h-48 bg-gray-200">
                       <img
@@ -160,12 +158,12 @@ try {
       </section>
 
       <!-- How It Works Section -->
-      <section class="py-16 bg-neutral-dark">
+      <section class="py-16 bg-white/50 backdrop-blur-sm">
         <div class="container mx-auto px-4">
           <h2 class="text-3xl font-display font-bold text-text-primary mb-12 text-center">How It Works</h2>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white rounded-xl p-6 text-center">
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center shadow-md">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="text-2xl font-bold text-primary">1</span>
               </div>
@@ -173,7 +171,7 @@ try {
               <p class="text-gray-600">Select from our range of AI-powered tools designed for different aspects of storytelling.</p>
             </div>
 
-            <div class="bg-white rounded-xl p-6 text-center">
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center shadow-md">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="text-2xl font-bold text-primary">2</span>
               </div>
@@ -181,7 +179,7 @@ try {
               <p class="text-gray-600">Provide some basic information or starting points for the AI to work with.</p>
             </div>
 
-            <div class="bg-white rounded-xl p-6 text-center">
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center shadow-md">
               <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="text-2xl font-bold text-primary">3</span>
               </div>
@@ -193,8 +191,9 @@ try {
       </section>
 
       <!-- Newsletter Section -->
-      <section class="py-16 bg-gradient-to-r from-primary/10 to-tertiary/10">
-        <div class="container mx-auto px-4 max-w-4xl text-center">
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500 text-center">
           <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Stay Updated</h2>
           <p class="text-text-secondary text-lg mb-8">
             Subscribe to our newsletter to receive updates about new AI tools and features.
@@ -224,6 +223,7 @@ try {
               We respect your privacy. Unsubscribe at any time.
             </p>
           </form>
+          </div>
         </div>
       </section>
   </main>

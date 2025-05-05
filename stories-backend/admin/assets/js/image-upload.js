@@ -1,6 +1,6 @@
 /**
  * Image Upload Module
- * 
+ *
  * Handles image upload functionality for the admin interface.
  * Features:
  * - Drag and drop
@@ -16,18 +16,18 @@ class ImageUploader {
     constructor() {
         this.initComponents();
     }
-    
+
     /**
      * Initialize all image upload components on the page
      */
     initComponents() {
         const components = document.querySelectorAll('.image-upload-component');
-        
+
         components.forEach(component => {
             this.initComponent(component);
         });
     }
-    
+
     /**
      * Initialize a single image upload component
      * @param {HTMLElement} component - The component element
@@ -44,26 +44,26 @@ class ImageUploader {
         const generateAiButton = component.querySelector('.generate-ai');
         const progressBar = component.querySelector('.progress-bar');
         const progressContainer = component.querySelector('.upload-progress');
-        
+
         // Get entity info
         const entityType = component.querySelector('.entity-type').value;
         const entityId = component.querySelector('.entity-id').value;
-        
+
         // Handle drag and drop
         if (dropzone) {
             dropzone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropzone.classList.add('dragover');
             });
-            
+
             dropzone.addEventListener('dragleave', () => {
                 dropzone.classList.remove('dragover');
             });
-            
+
             dropzone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropzone.classList.remove('dragover');
-                
+
                 if (e.dataTransfer.files.length) {
                     const file = e.dataTransfer.files[0];
                     if (this.validateFile(file)) {
@@ -72,7 +72,7 @@ class ImageUploader {
                 }
             });
         }
-        
+
         // Handle file input change
         if (fileInput) {
             fileInput.addEventListener('change', () => {
@@ -84,21 +84,21 @@ class ImageUploader {
                 }
             });
         }
-        
+
         // Handle remove button
         if (removeButton) {
             removeButton.addEventListener('click', () => {
                 this.removeImage(component);
             });
         }
-        
+
         // Handle select from media button
         if (selectFromMediaButton) {
             selectFromMediaButton.addEventListener('click', () => {
                 this.openMediaLibrary(component);
             });
         }
-        
+
         // Handle generate AI button
         if (generateAiButton) {
             generateAiButton.addEventListener('click', () => {
@@ -106,7 +106,7 @@ class ImageUploader {
             });
         }
     }
-    
+
     /**
      * Validate the selected file
      * @param {File} file - The file to validate
@@ -118,17 +118,17 @@ class ImageUploader {
             alert('Please select an image file.');
             return false;
         }
-        
+
         // Check file size (max 10MB)
         const maxSize = 10 * 1024 * 1024; // 10MB
         if (file.size > maxSize) {
             alert('File size exceeds 10MB. Please select a smaller file.');
             return false;
         }
-        
+
         return true;
     }
-    
+
     /**
      * Upload a file using AJAX
      * @param {File} file - The file to upload
@@ -142,23 +142,23 @@ class ImageUploader {
         const preview = component.querySelector('.image-preview');
         const progressBar = component.querySelector('.progress-bar');
         const progressContainer = component.querySelector('.upload-progress');
-        
+
         // Create FormData
         const formData = new FormData();
         formData.append('file', file);
         formData.append('entity_type', entityType);
         formData.append('entity_id', entityId);
         formData.append('field_name', urlInput.name);
-        
+
         // Show progress bar
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
-        
+
         // Create AJAX request
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '../handlers/upload-image.php', true);
-        
+
         // Track upload progress
         xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
@@ -168,20 +168,20 @@ class ImageUploader {
                 progressBar.setAttribute('aria-valuenow', percent);
             }
         });
-        
+
         // Handle response
         xhr.addEventListener('load', () => {
             if (xhr.status === 200) {
                 try {
                     const response = JSON.parse(xhr.responseText);
-                    
+
                     if (response.success) {
                         // Update the URL input
                         urlInput.value = response.url;
-                        
+
                         // Update the preview
                         this.updatePreview(component, response.url, response.dimensions);
-                        
+
                         // Hide progress bar after a delay
                         setTimeout(() => {
                             progressContainer.style.display = 'none';
@@ -199,17 +199,17 @@ class ImageUploader {
                 progressContainer.style.display = 'none';
             }
         });
-        
+
         // Handle errors
         xhr.addEventListener('error', () => {
             alert('Upload failed. Please try again.');
             progressContainer.style.display = 'none';
         });
-        
+
         // Send the request
         xhr.send(formData);
     }
-    
+
     /**
      * Update the image preview
      * @param {HTMLElement} component - The component element
@@ -219,24 +219,24 @@ class ImageUploader {
     updatePreview(component, url, dimensions = '') {
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
-        
+
         // Add has-image class to container
         previewContainer.classList.add('has-image');
-        
+
         // Clear existing preview content
         preview.innerHTML = '';
         preview.classList.remove('empty');
-        
+
         // Create image element
         const img = document.createElement('img');
         img.src = url;
         img.alt = 'Preview';
         preview.appendChild(img);
-        
+
         // Create info div
         const infoDiv = document.createElement('div');
         infoDiv.className = 'image-info';
-        
+
         // Add dimensions if available
         if (dimensions) {
             const dimensionsSpan = document.createElement('span');
@@ -244,7 +244,7 @@ class ImageUploader {
             dimensionsSpan.textContent = dimensions;
             infoDiv.appendChild(dimensionsSpan);
         }
-        
+
         // Add remove button
         const removeButton = document.createElement('button');
         removeButton.type = 'button';
@@ -254,10 +254,10 @@ class ImageUploader {
             this.removeImage(component);
         });
         infoDiv.appendChild(removeButton);
-        
+
         preview.appendChild(infoDiv);
     }
-    
+
     /**
      * Remove the current image
      * @param {HTMLElement} component - The component element
@@ -266,14 +266,14 @@ class ImageUploader {
         const urlInput = component.querySelector('.image-url-input');
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
-        
+
         // Clear the URL input
         urlInput.value = '';
         urlInput.removeAttribute('readonly');
-        
+
         // Remove has-image class from container
         previewContainer.classList.remove('has-image');
-        
+
         // Reset preview
         preview.innerHTML = `
             <div class="placeholder">
@@ -283,7 +283,7 @@ class ImageUploader {
         `;
         preview.classList.add('empty');
     }
-    
+
     /**
      * Open the media library in a modal
      * @param {HTMLElement} component - The component element
@@ -300,7 +300,7 @@ class ImageUploader {
         backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
         backdrop.style.zIndex = '1050';
         document.body.appendChild(backdrop);
-        
+
         // Create modal dialog
         const modal = document.createElement('div');
         modal.className = 'modal-dialog modal-lg';
@@ -316,7 +316,7 @@ class ImageUploader {
         modal.style.zIndex = '1051';
         modal.style.overflow = 'hidden';
         document.body.appendChild(modal);
-        
+
         // Create modal content
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
@@ -324,7 +324,7 @@ class ImageUploader {
         modalContent.style.flexDirection = 'column';
         modalContent.style.height = '80vh';
         modal.appendChild(modalContent);
-        
+
         // Create modal header
         const modalHeader = document.createElement('div');
         modalHeader.className = 'modal-header';
@@ -334,13 +334,13 @@ class ImageUploader {
         modalHeader.style.justifyContent = 'space-between';
         modalHeader.style.alignItems = 'center';
         modalContent.appendChild(modalHeader);
-        
+
         // Create modal title
         const modalTitle = document.createElement('h5');
         modalTitle.className = 'modal-title';
         modalTitle.textContent = 'Select from Media Library';
         modalHeader.appendChild(modalTitle);
-        
+
         // Create close button
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
@@ -356,7 +356,7 @@ class ImageUploader {
             document.body.removeChild(modal);
         });
         modalHeader.appendChild(closeButton);
-        
+
         // Create modal body
         const modalBody = document.createElement('div');
         modalBody.className = 'modal-body';
@@ -364,35 +364,35 @@ class ImageUploader {
         modalBody.style.overflowY = 'auto';
         modalBody.style.flex = '1';
         modalContent.appendChild(modalBody);
-        
+
         // Create iframe to load media library
         const iframe = document.createElement('iframe');
-        iframe.src = '../content/media.php?select_mode=true';
+        iframe.src = '../content/media-select.php';
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = 'none';
         modalBody.appendChild(iframe);
-        
+
         // Handle message from iframe
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'media-selected') {
                 const url = event.data.url;
                 const dimensions = event.data.dimensions || '';
-                
+
                 // Update the component
                 const urlInput = component.querySelector('.image-url-input');
                 urlInput.value = url;
-                
+
                 // Update the preview
                 this.updatePreview(component, url, dimensions);
-                
+
                 // Close the modal
                 document.body.removeChild(backdrop);
                 document.body.removeChild(modal);
             }
         });
     }
-    
+
     /**
      * Open the AI image generator (placeholder)
      * @param {HTMLElement} component - The component element

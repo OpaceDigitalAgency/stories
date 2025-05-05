@@ -513,19 +513,137 @@ require_once '../includes/header.php';
             </div>
 
             <div class="upload-tab-content" id="bulk-upload" style="display: none;">
-                <div class="bulk-dropzone" id="bulk-dropzone">
-                    <div class="dropzone-message">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <span>Drag & drop multiple images here or</span>
-                        <label for="bulk-file-input" class="btn btn-primary">
-                            Browse Files
-                        </label>
-                        <input type="file" id="bulk-file-input" multiple accept="image/*" style="display: none;">
-                        <div class="dropzone-info">
-                            <small>Supported formats: JPG, PNG, GIF, WebP. Max size per file: 10MB</small>
+                <form method="POST" enctype="multipart/form-data" action="../handlers/bulk-upload.php" id="bulk-upload-form">
+                    <div class="bulk-dropzone" id="bulk-dropzone" style="border: 2px dashed #ccc; padding: 20px; text-align: center; background-color: #f9f9f9; margin-bottom: 20px; cursor: pointer;">
+                        <div class="dropzone-message">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #4361ee; margin-bottom: 10px;"></i>
+                            <p>Drag & drop multiple images here or</p>
+                            <label for="bulk-file-input" class="btn btn-primary" id="browse-files-btn">
+                                Browse Files
+                            </label>
+                            <input type="file" name="files[]" id="bulk-file-input" multiple accept="image/*" style="display: none;">
+                            <input type="hidden" name="entity_type" value="media">
+                            <div class="dropzone-info" style="margin-top: 10px;">
+                                <small>Supported formats: JPG, PNG, GIF, WebP. Max size per file: 10MB</small>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <button type="submit" class="btn btn-success" id="bulk-upload-submit">
+                            <i class="fas fa-upload"></i> Upload Files
+                        </button>
+                    </div>
+                </form>
+
+                <script>
+                // Direct event handler for the browse files button
+                document.addEventListener('DOMContentLoaded', function() {
+                    const browseBtn = document.getElementById('browse-files-btn');
+                    const fileInput = document.getElementById('bulk-file-input');
+                    const uploadForm = document.getElementById('bulk-upload-form');
+                    const progressContainer = document.querySelector('.bulk-upload-progress');
+                    const progressBar = document.querySelector('.bulk-upload-progress .progress-bar');
+
+                    if (browseBtn && fileInput) {
+                        browseBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            fileInput.click();
+                        });
+                    }
+
+                    // Also make the entire dropzone clickable
+                    const dropzone = document.getElementById('bulk-dropzone');
+                    if (dropzone && fileInput) {
+                        dropzone.addEventListener('click', function(e) {
+                            // Don't trigger if they clicked the button directly
+                            if (e.target !== browseBtn && !browseBtn.contains(e.target)) {
+                                fileInput.click();
+                            }
+                        });
+                    }
+
+                    // Show selected files count
+                    if (fileInput) {
+                        fileInput.addEventListener('change', function() {
+                            const fileCount = this.files ? this.files.length : 0;
+                            const submitBtn = document.getElementById('bulk-upload-submit');
+
+                            if (submitBtn && fileCount > 0) {
+                                submitBtn.textContent = `Upload ${fileCount} Files`;
+                                submitBtn.disabled = false;
+                            } else if (submitBtn) {
+                                submitBtn.textContent = 'Upload Files';
+                                submitBtn.disabled = true;
+                            }
+                        });
+                    }
+
+                    // Handle form submission with progress
+                    if (uploadForm && progressContainer && progressBar) {
+                        uploadForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+
+                            const files = fileInput.files;
+                            if (!files || files.length === 0) {
+                                alert('Please select at least one file to upload.');
+                                return;
+                            }
+
+                            // Show progress
+                            progressContainer.style.display = 'block';
+                            progressBar.style.width = '0%';
+                            progressBar.textContent = '0%';
+
+                            // Create FormData from the form
+                            const formData = new FormData(this);
+
+                            // Send AJAX request
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('POST', this.action, true);
+
+                            // Track progress
+                            xhr.upload.addEventListener('progress', function(e) {
+                                if (e.lengthComputable) {
+                                    const percent = Math.round((e.loaded / e.total) * 100);
+                                    progressBar.style.width = percent + '%';
+                                    progressBar.textContent = percent + '%';
+                                }
+                            });
+
+                            // Handle completion
+                            xhr.addEventListener('load', function() {
+                                if (xhr.status === 200) {
+                                    try {
+                                        const response = JSON.parse(xhr.responseText);
+                                        if (response.success) {
+                                            alert('Files uploaded successfully!');
+                                            // Reload the page after a delay
+                                            setTimeout(function() {
+                                                window.location.reload();
+                                            }, 1000);
+                                        } else {
+                                            alert('Upload failed: ' + response.message);
+                                        }
+                                    } catch (e) {
+                                        alert('Error processing server response.');
+                                    }
+                                } else {
+                                    alert('Upload failed. Server returned status: ' + xhr.status);
+                                }
+                            });
+
+                            // Handle errors
+                            xhr.addEventListener('error', function() {
+                                alert('Network error occurred. Please try again.');
+                            });
+
+                            // Send the request
+                            xhr.send(formData);
+                        });
+                    }
+                });
+                </script>
 
                 <div class="bulk-upload-progress" style="display: none;">
                     <div class="progress mb-3">

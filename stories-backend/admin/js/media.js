@@ -310,6 +310,16 @@ document.addEventListener("DOMContentLoaded", function() {
     const currentFileSpan = document.querySelector('.current-file');
     const uploadCountSpan = document.querySelector('.upload-count');
 
+    // Debug info
+    console.log('Bulk upload elements:', {
+        bulkDropzone: bulkDropzone ? 'Found' : 'Not found',
+        bulkFileInput: bulkFileInput ? 'Found' : 'Not found',
+        progressBar: progressBar ? 'Found' : 'Not found',
+        progressContainer: progressContainer ? 'Found' : 'Not found',
+        resultsContainer: resultsContainer ? 'Found' : 'Not found',
+        resultsList: resultsList ? 'Found' : 'Not found'
+    });
+
     // Handle drag and drop
     if (bulkDropzone) {
         bulkDropzone.addEventListener('dragover', (e) => {
@@ -333,21 +343,50 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Handle file input change
     if (bulkFileInput) {
-        bulkFileInput.addEventListener('change', () => {
-            if (bulkFileInput.files.length) {
-                handleBulkUpload(bulkFileInput.files);
+        console.log('Adding change event listener to bulk file input');
+        bulkFileInput.addEventListener('change', function(e) {
+            console.log('Bulk file input change event triggered', e);
+            console.log('Files selected:', this.files ? this.files.length : 'No files');
+
+            if (this.files && this.files.length) {
+                console.log('Calling handleBulkUpload with files');
+                handleBulkUpload(this.files);
             }
         });
+
+        // Also add a direct click handler to ensure it's working
+        const browseBtn = document.getElementById('browse-files-btn');
+        if (browseBtn) {
+            console.log('Adding click event listener to browse files button');
+            browseBtn.addEventListener('click', function(e) {
+                console.log('Browse files button clicked');
+                e.preventDefault();
+                bulkFileInput.click();
+            });
+        }
+    } else {
+        console.error('Bulk file input element not found');
     }
 
     // Function to handle bulk upload
     function handleBulkUpload(files) {
+        console.log('handleBulkUpload called with', files.length, 'files');
+
         // Check if we have the necessary elements
-        if (!progressBar || !progressContainer || !resultsContainer || !resultsList || !uploadCountSpan) {
-            console.error("Missing UI elements for bulk upload");
-            alert("Bulk upload functionality is not fully initialized. Please refresh the page and try again.");
+        const missingElements = [];
+        if (!progressBar) missingElements.push('progressBar');
+        if (!progressContainer) missingElements.push('progressContainer');
+        if (!resultsContainer) missingElements.push('resultsContainer');
+        if (!resultsList) missingElements.push('resultsList');
+        if (!uploadCountSpan) missingElements.push('uploadCountSpan');
+
+        if (missingElements.length > 0) {
+            console.error("Missing UI elements for bulk upload:", missingElements.join(', '));
+            alert("Bulk upload functionality is not fully initialized. Missing elements: " + missingElements.join(', ') + ". Please refresh the page and try again.");
             return;
         }
+
+        console.log('All UI elements for bulk upload are present');
 
         // Reset UI
         progressBar.style.width = '0%';
@@ -371,8 +410,15 @@ document.addEventListener("DOMContentLoaded", function() {
         uploadCountSpan.textContent = `0/${files.length} files uploaded`;
 
         // Create AJAX request
+        console.log('Creating AJAX request to ../handlers/bulk-upload.php');
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '../handlers/bulk-upload.php', true);
+
+        // Add error handling
+        xhr.onerror = function(e) {
+            console.error('XHR error:', e);
+            alert('Network error occurred. Please check your connection and try again.');
+        };
 
         // Track upload progress
         xhr.upload.addEventListener('progress', (e) => {
@@ -386,9 +432,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Handle response
         xhr.addEventListener('load', () => {
+            console.log('XHR response received, status:', xhr.status);
+            console.log('Response text:', xhr.responseText);
+
             if (xhr.status === 200) {
                 try {
                     const response = JSON.parse(xhr.responseText);
+                    console.log('Parsed response:', response);
 
                     // Show results
                     resultsContainer.style.display = 'block';

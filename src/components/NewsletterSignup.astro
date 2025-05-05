@@ -26,7 +26,12 @@ const {
         {description}
       </p>
 
-      <form id="global-newsletter-form" class="max-w-2xl mx-auto">
+      <form
+        id="global-newsletter-form"
+        class="max-w-2xl mx-auto"
+        action="https://api.storiesfromtheweb.org/public/save-subscriber.php"
+        method="POST"
+      >
         <div class="flex flex-col sm:flex-row gap-3">
           <input
             type="email"
@@ -40,7 +45,8 @@ const {
           <button
             type="submit"
             id="global-newsletter-submit"
-            class="btn btn-primary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
+            class="bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105 cursor-pointer active:scale-95 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            onclick="document.getElementById('global-newsletter-form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true})); return false;"
           >
             <span class="flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
@@ -67,11 +73,27 @@ const {
 </section>
 
 <script is:inline>
+  console.log('NewsletterSignup component script loaded');
   // Newsletter form submission
   document.addEventListener('DOMContentLoaded', function() {
     console.log('Newsletter form script loaded');
     const newsletterForm = document.getElementById('global-newsletter-form');
     console.log('Newsletter form found:', !!newsletterForm);
+
+    // Also add a click event to the button directly
+    const submitButton = document.getElementById('global-newsletter-submit');
+    if (submitButton) {
+      console.log('Submit button found, adding click event');
+      submitButton.addEventListener('click', function(e) {
+        console.log('Button clicked');
+        if (newsletterForm) {
+          console.log('Triggering form submission');
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          newsletterForm.dispatchEvent(submitEvent);
+        }
+      });
+    }
+
     if (newsletterForm) {
       newsletterForm.addEventListener('submit', function(e) {
         console.log('Form submitted');

@@ -359,6 +359,12 @@
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
   }
 
+  /* Newsletter submit button specific styles */
+  #global-newsletter-submit {
+    @apply cursor-pointer !important;
+    pointer-events: auto !important;
+  }
+
   /* Translate Z utilities */
   .translate-z-2 {
     transform: translateZ(2px);

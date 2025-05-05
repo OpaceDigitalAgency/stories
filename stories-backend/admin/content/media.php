@@ -16,23 +16,99 @@ try {
     if (file_exists('../../includes/image_optimizer.php')) {
         require_once '../../includes/image_optimizer.php';
     } else {
-        error_log("image_optimizer.php file not found");
+        error_log("image_optimizer.php file not found in media.php");
+
         // Define fallback functions to prevent errors
         if (!function_exists('createImageVariants')) {
             function createImageVariants($sourcePath, $destinationDir, $options = []) {
                 error_log("createImageVariants function not available");
+
+                // Create a simple fallback that just copies the file
+                $filename = basename($sourcePath);
+                $destination = rtrim($destinationDir, '/') . '/' . $filename;
+
+                if (copy($sourcePath, $destination)) {
+                    $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $destination);
+                    $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+
+                    return [
+                        'medium' => [
+                            'path' => $destination,
+                            'url' => $url,
+                            'size' => filesize($destination)
+                        ],
+                        'original' => [
+                            'path' => $sourcePath,
+                            'url' => $url,
+                            'size' => filesize($sourcePath)
+                        ]
+                    ];
+                }
+
                 return false;
             }
         }
+
         if (!function_exists('updateMediaRecord')) {
             function updateMediaRecord($db, $mediaId, $variants) {
                 error_log("updateMediaRecord function not available");
-                return false;
+
+                try {
+                    // Simple update of the file_path field
+                    $stmt = $db->prepare("UPDATE media SET file_path = ? WHERE id = ?");
+                    return $stmt->execute([
+                        $variants['medium']['url'] ?? $variants['original']['url'] ?? '',
+                        $mediaId
+                    ]);
+                } catch (Exception $e) {
+                    error_log("Error in fallback updateMediaRecord: " . $e->getMessage());
+                    return false;
+                }
+            }
+        }
+
+        if (!function_exists('getImageDimensions')) {
+            function getImageDimensions($path) {
+                if (!file_exists($path)) {
+                    return null;
+                }
+
+                $info = getimagesize($path);
+                if (!$info) {
+                    return null;
+                }
+
+                return [
+                    'width' => $info[0],
+                    'height' => $info[1]
+                ];
             }
         }
     }
 } catch (Exception $e) {
-    error_log("Error including image_optimizer.php: " . $e->getMessage());
+    error_log("Error including image_optimizer.php in media.php: " . $e->getMessage());
+
+    // Define emergency fallback functions
+    if (!function_exists('createImageVariants')) {
+        function createImageVariants($sourcePath, $destinationDir, $options = []) {
+            error_log("Emergency fallback for createImageVariants");
+            return false;
+        }
+    }
+
+    if (!function_exists('updateMediaRecord')) {
+        function updateMediaRecord($db, $mediaId, $variants) {
+            error_log("Emergency fallback for updateMediaRecord");
+            return false;
+        }
+    }
+
+    if (!function_exists('getImageDimensions')) {
+        function getImageDimensions($path) {
+            error_log("Emergency fallback for getImageDimensions");
+            return null;
+        }
+    }
 }
 
 // Function to handle file paths for display and access
@@ -123,7 +199,7 @@ try {
                 // Check if it's an image and automatically optimize it
                 if (strpos($fileType, 'image/') === 0) {
                     // Create optimized directory if it doesn't exist
-                    $optimizedDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/optimized/';
+                    $optimizedDir = '../../uploads/optimized/';
                     if (!is_dir($optimizedDir)) {
                         mkdir($optimizedDir, 0755, true);
                     }

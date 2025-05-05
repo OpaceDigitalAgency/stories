@@ -6,8 +6,80 @@
  * across all parts of the application.
  */
 
-// Include the image configuration
-require_once __DIR__ . '/image_config.php';
+// Include the image configuration with error handling
+try {
+    if (file_exists(__DIR__ . '/image_config.php')) {
+        require_once __DIR__ . '/image_config.php';
+    } else {
+        error_log("image_config.php file not found in image_optimizer.php");
+
+        // Define fallback configuration
+        $IMAGE_SIZES = [
+            'thumbnail' => ['width' => 150, 'height' => 150, 'crop' => true],
+            'small'     => ['width' => 300, 'height' => 300, 'crop' => false],
+            'medium'    => ['width' => 640, 'height' => 640, 'crop' => false],
+            'large'     => ['width' => 1200, 'height' => 800, 'crop' => false],
+            'original'  => ['width' => null, 'height' => null, 'crop' => false]
+        ];
+
+        $IMAGE_FORMATS = [
+            'jpg' => [
+                'mime' => 'image/jpeg',
+                'quality' => 85,
+                'extension' => 'jpg'
+            ],
+            'png' => [
+                'mime' => 'image/png',
+                'quality' => 9,
+                'extension' => 'png'
+            ],
+            'webp' => [
+                'mime' => 'image/webp',
+                'quality' => 85,
+                'extension' => 'webp'
+            ]
+        ];
+
+        $DEFAULT_CONVERT_FORMAT = 'webp';
+        $PRESERVE_PNG_TYPES = ['cartoon', 'illustration', 'logo', 'text-heavy'];
+        $MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        $OPTIMIZED_DIR = 'optimized';
+    }
+} catch (Exception $e) {
+    error_log("Error including image_config.php: " . $e->getMessage());
+
+    // Define fallback configuration
+    $IMAGE_SIZES = [
+        'thumbnail' => ['width' => 150, 'height' => 150, 'crop' => true],
+        'small'     => ['width' => 300, 'height' => 300, 'crop' => false],
+        'medium'    => ['width' => 640, 'height' => 640, 'crop' => false],
+        'large'     => ['width' => 1200, 'height' => 800, 'crop' => false],
+        'original'  => ['width' => null, 'height' => null, 'crop' => false]
+    ];
+
+    $IMAGE_FORMATS = [
+        'jpg' => [
+            'mime' => 'image/jpeg',
+            'quality' => 85,
+            'extension' => 'jpg'
+        ],
+        'png' => [
+            'mime' => 'image/png',
+            'quality' => 9,
+            'extension' => 'png'
+        ],
+        'webp' => [
+            'mime' => 'image/webp',
+            'quality' => 85,
+            'extension' => 'webp'
+        ]
+    ];
+
+    $DEFAULT_CONVERT_FORMAT = 'webp';
+    $PRESERVE_PNG_TYPES = ['cartoon', 'illustration', 'logo', 'text-heavy'];
+    $MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    $OPTIMIZED_DIR = 'optimized';
+}
 
 /**
  * Check if image libraries are available

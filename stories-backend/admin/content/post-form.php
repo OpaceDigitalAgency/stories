@@ -10,6 +10,9 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
 // Include header
 require_once '../includes/header.php';
 
@@ -102,6 +105,18 @@ try {
     foreach ($columns as $column) {
         if (!in_array($column, ['id', 'title', 'author_id', 'content', 'excerpt', 'status', 'is_published', 'created_at', 'updated_at'])) {
             $additionalFields[] = $column;
+        }
+    }
+
+    // Add featured_image field if it doesn't exist
+    if (!in_array('featured_image', $columns)) {
+        // Alter table to add featured_image column
+        try {
+            $db->exec("ALTER TABLE $blogTableName ADD COLUMN featured_image VARCHAR(255) DEFAULT NULL");
+            $additionalFields[] = 'featured_image';
+            error_log("Added featured_image column to $blogTableName table");
+        } catch (PDOException $e) {
+            error_log("Error adding featured_image column: " . $e->getMessage());
         }
     }
 

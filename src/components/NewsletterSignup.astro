@@ -18,9 +18,9 @@ const {
 } = Astro.props;
 ---
 
-<section class="py-16">
+<section class="py-16 relative z-20">
   <div class="container mx-auto px-4">
-    <div class={`max-w-4xl mx-auto ${bgClass} rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500 text-center`}>
+    <div class={`max-w-4xl mx-auto ${bgClass} rounded-3xl p-12 shadow-xl text-center relative z-30`}>
       <h2 class="text-3xl font-display font-bold text-text-primary mb-4">{title}</h2>
       <p class="text-text-secondary text-lg mb-8">
         {description}
@@ -28,7 +28,7 @@ const {
 
       <form
         id="global-newsletter-form"
-        class="max-w-2xl mx-auto"
+        class="max-w-2xl mx-auto relative z-40"
         action="https://api.storiesfromtheweb.org/public/save-subscriber.php"
         method="POST"
       >
@@ -42,12 +42,10 @@ const {
             required
           />
           <input type="hidden" name="feature" value={feature} />
-          <a
-            href="#"
+          <button
+            type="submit"
             id="global-newsletter-submit"
-            class="inline-block bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105 cursor-pointer active:scale-95 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            onclick="event.preventDefault(); document.getElementById('global-newsletter-form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));"
-            style="cursor: pointer; pointer-events: auto; position: relative; z-index: 10;"
+            class="inline-block bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 cursor-pointer active:scale-95 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 relative z-50"
           >
             <span class="flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
@@ -55,7 +53,7 @@ const {
               </svg>
               {buttonText}
             </span>
-          </a>
+          </button>
         </div>
         <p class="text-sm text-gray-500 mt-3">
           We respect your privacy. Unsubscribe at any time.
@@ -81,19 +79,10 @@ const {
     const newsletterForm = document.getElementById('global-newsletter-form');
     console.log('Newsletter form found:', !!newsletterForm);
 
-    // Also add a click event to the button directly
+    // Log that we found the submit button
     const submitButton = document.getElementById('global-newsletter-submit');
     if (submitButton) {
-      console.log('Submit button found, adding click event');
-      submitButton.addEventListener('click', function(e) {
-        console.log('Button clicked');
-        e.preventDefault();
-        if (newsletterForm) {
-          console.log('Triggering form submission');
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          newsletterForm.dispatchEvent(submitEvent);
-        }
-      });
+      console.log('Submit button found');
     }
 
     if (newsletterForm) {
@@ -116,7 +105,7 @@ const {
         const submitButton = document.getElementById('global-newsletter-submit');
         if (submitButton) {
           const originalButtonText = submitButton.innerHTML;
-          submitButton.style.pointerEvents = 'none';
+          submitButton.disabled = true;
           submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subscribing...';
 
           // Create form data
@@ -157,7 +146,7 @@ const {
           })
           .finally(() => {
             // Re-enable form elements
-            submitButton.style.pointerEvents = 'auto';
+            submitButton.disabled = false;
             submitButton.innerHTML = originalButtonText;
           });
         }

@@ -1,0 +1,327 @@
+---
+interface Props {
+  buttonText?: string;
+  buttonClass?: string;
+}
+
+const {
+  buttonText = 'Generate AI Image',
+  buttonClass = 'btn btn-primary'
+} = Astro.props;
+---
+
+<div class="ai-image-generator-wrapper">
+  <button 
+    type="button" 
+    class={buttonClass} 
+    id="openAiGeneratorBtn"
+  >
+    <i class="fas fa-robot" aria-hidden="true"></i>
+    {buttonText}
+  </button>
+
+  <!-- Modal -->
+  <div class="modal" id="aiGeneratorModal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Generate AI Image</h3>
+        <button type="button" class="close-btn" id="closeAiGeneratorBtn">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form id="aiGeneratorForm">
+          <div class="form-group">
+            <label for="imagePrompt">Image Description</label>
+            <textarea
+              id="imagePrompt"
+              name="prompt"
+              class="form-control"
+              rows="3"
+              placeholder="Describe the image you want to generate..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="imageSize">Image Size</label>
+            <select id="imageSize" name="size" class="form-select">
+              <option value="1024x1024" selected>Square (1024x1024)</option>
+              <option value="1024x1792">Portrait (1024x1792)</option>
+              <option value="1792x1024">Landscape (1792x1024)</option>
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="generateBtn">
+              <span class="spinner" style="display: none;">
+                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+              </span>
+              Generate
+            </button>
+            <button type="button" class="btn btn-secondary" id="cancelBtn">
+              Cancel
+            </button>
+          </div>
+        </form>
+
+        <div id="resultContainer" class="result-container" style="display: none;">
+          <img id="generatedImage" src="" alt="" class="generated-image">
+          <div class="result-actions">
+            <button type="button" class="btn btn-success" id="useImageBtn">
+              Use This Image
+            </button>
+            <button type="button" class="btn btn-secondary" id="generateAnotherBtn">
+              Generate Another
+            </button>
+          </div>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+  }
+
+  .modal-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    margin: 2rem auto;
+    background: white;
+    border-radius: var(--radius-2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    color: var(--text-2);
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .form-control,
+  .form-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-1);
+    background: var(--surface-1);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  .result-container {
+    margin-top: 1rem;
+    text-align: center;
+  }
+
+  .generated-image {
+    max-width: 100%;
+    border-radius: var(--radius-1);
+    margin-bottom: 1rem;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .error-message {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-radius: var(--radius-1);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--radius-1);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-secondary {
+    background: var(--surface-2);
+    color: var(--text-1);
+  }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+</style>
+
+<script>
+  interface GenerationResult {
+    url: string;
+    variations?: string[];
+  }
+
+  // Initialize elements
+  const modal = document.getElementById('aiGeneratorModal') as HTMLDivElement;
+  const openBtn = document.getElementById('openAiGeneratorBtn') as HTMLButtonElement;
+  const closeBtn = document.getElementById('closeAiGeneratorBtn') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('cancelBtn') as HTMLButtonElement;
+  const form = document.getElementById('aiGeneratorForm') as HTMLFormElement;
+  const generateBtn = document.getElementById('generateBtn') as HTMLButtonElement;
+  const spinner = generateBtn.querySelector('.spinner') as HTMLElement;
+  const resultContainer = document.getElementById('resultContainer') as HTMLDivElement;
+  const generatedImage = document.getElementById('generatedImage') as HTMLImageElement;
+  const useImageBtn = document.getElementById('useImageBtn') as HTMLButtonElement;
+  const generateAnotherBtn = document.getElementById('generateAnotherBtn') as HTMLButtonElement;
+  const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+
+  let selectedImageUrl: string | null = null;
+
+  // Show modal
+  openBtn.addEventListener('click', () => {
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  });
+
+  // Hide modal
+  function hideModal() {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    form.reset();
+    resultContainer.style.display = 'none';
+    errorMessage.style.display = 'none';
+  }
+
+  closeBtn.addEventListener('click', hideModal);
+  cancelBtn.addEventListener('click', hideModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) hideModal();
+  });
+
+  // Handle form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Reset state
+    errorMessage.style.display = 'none';
+    resultContainer.style.display = 'none';
+    generateBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch('/api/ai/image.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: formData.get('prompt'),
+          size: formData.get('size')
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate image');
+      }
+
+      // Show generated image
+      selectedImageUrl = result.data.url;
+      generatedImage.src = selectedImageUrl as string; // Type assertion here
+      generatedImage.alt = formData.get('prompt') as string;
+      resultContainer.style.display = 'block';
+      form.style.display = 'none';
+
+    } catch (error) {
+      console.error('Image generation error:', error);
+      errorMessage.textContent = error instanceof Error ? error.message : 'Failed to generate image';
+      errorMessage.style.display = 'block';
+    } finally {
+      generateBtn.disabled = false;
+      spinner.style.display = 'none';
+    }
+  });
+
+  // Handle use image button
+  useImageBtn.addEventListener('click', () => {
+    if (selectedImageUrl) {
+      // Create a custom event with the selected image URL
+      const event = new CustomEvent('aiImageSelected', {
+        detail: { url: selectedImageUrl }
+      });
+      document.dispatchEvent(event);
+      hideModal();
+    }
+  });
+
+  // Handle generate another button
+  generateAnotherBtn.addEventListener('click', () => {
+    resultContainer.style.display = 'none';
+    form.style.display = 'block';
+    selectedImageUrl = null;
+  });
+</script>

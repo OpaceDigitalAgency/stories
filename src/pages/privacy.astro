@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getConfig } from '../lib/config';
+import PageHero from '../components/PageHero.astro';
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -20,15 +21,18 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <header class="mb-8">
-          <h1 class="text-4xl font-bold text-text-primary mb-4">
-            Privacy Policy
-          </h1>
-          <p class="text-gray-500">Last Updated: {lastUpdated}</p>
-        </header>
+    <PageHero
+      title="Privacy Policy"
+      description={`Last Updated: ${lastUpdated}`}
+      type="blog"
+      crumbs={[
+        { text: 'Privacy Policy' }
+      ]}
+    />
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Introduction</h2>
           <p class="mb-4">
             At Stories From The Web, we take your privacy seriously. This Privacy Policy explains how we collect, 
@@ -48,7 +52,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Information We Collect</h2>
           
           <h3 class="text-xl font-semibold mb-2">Personal Data</h3>
@@ -94,7 +98,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Use of Your Information</h2>
           <p class="mb-4">
             Having accurate information about you permits us to provide you with a smooth, efficient, and 
@@ -122,7 +126,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </ul>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Disclosure of Your Information</h2>
           <p class="mb-4">
             We may share information we have collected about you in certain situations. Your information may be 
@@ -200,7 +204,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Tracking Technologies</h2>
           
           <h3 class="text-xl font-semibold mb-2">Cookies and Web Beacons</h3>
@@ -230,7 +234,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Third-Party Websites</h2>
           <p class="mb-4">
             The Site may contain links to third-party websites and applications of interest, including 
@@ -245,7 +249,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Security of Your Information</h2>
           <p class="mb-4">
             We use administrative, technical, and physical security measures to help protect your personal 
@@ -257,7 +261,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Children's Privacy</h2>
           <p class="mb-4">
             We take children's privacy very seriously. Our Site is designed to be appropriate for users of all ages, 
@@ -273,7 +277,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Your Rights</h2>
           
           <h3 class="text-xl font-semibold mb-2">Account Information</h3>
@@ -307,7 +311,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Contact Us</h2>
           <p class="mb-4">
             If you have questions or comments about this Privacy Policy, please contact us at:

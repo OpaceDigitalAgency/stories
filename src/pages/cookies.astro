@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getConfig } from '../lib/config';
+import PageHero from '../components/PageHero.astro';
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -20,15 +21,18 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <header class="mb-8">
-          <h1 class="text-4xl font-bold text-text-primary mb-4">
-            Cookie Policy
-          </h1>
-          <p class="text-gray-500">Last Updated: {lastUpdated}</p>
-        </header>
+    <PageHero
+      title="Cookie Policy"
+      description={`Last Updated: ${lastUpdated}`}
+      type="blog"
+      crumbs={[
+        { text: 'Cookie Policy' }
+      ]}
+    />
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Introduction</h2>
           <p class="mb-4">
             Stories From The Web ("we", "our", or "us") uses cookies and similar technologies on our website 
@@ -40,7 +44,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">What Are Cookies</h2>
           <p class="mb-4">
             Cookies are small pieces of text sent to your web browser by a website you visit. A cookie file is 
@@ -54,7 +58,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">How We Use Cookies</h2>
           <p class="mb-4">
             When you use and access the Service, we may place a number of cookie files in your web browser. We 
@@ -103,7 +107,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Cookies We Use</h2>
           <p class="mb-4">
             Below is a detailed list of the cookies we use on our Service:
@@ -167,7 +171,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">What Are Your Choices Regarding Cookies</h2>
           <p class="mb-4">
             If you'd like to delete cookies or instruct your web browser to delete or refuse cookies, please 
@@ -198,7 +202,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Cookie Consent</h2>
           <p class="mb-4">
             When you first visit our Service, you will be shown a cookie banner requesting your consent to set 
@@ -211,7 +215,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Similar Technologies</h2>
           <p class="mb-4">
             In addition to cookies, we may use other similar technologies on our Service:
@@ -233,7 +237,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Changes to This Cookie Policy</h2>
           <p class="mb-4">
             We may update our Cookie Policy from time to time. We will notify you of any changes by posting the 
@@ -245,7 +249,7 @@ const lastUpdated = new Date().toLocaleDateString('en-GB', {
           </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md p-8 mb-8">
+        <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
           <h2 class="text-2xl font-bold mb-4">Contact Us</h2>
           <p class="mb-4">
             If you have any questions about our Cookie Policy, please contact us at:

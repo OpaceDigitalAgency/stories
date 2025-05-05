@@ -619,6 +619,11 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
 }
 
 // Fetch blog posts
+interface Tag {
+  name: string;
+  slug: string;
+}
+
 interface BlogPost {
   id: number;
   title: string;
@@ -633,6 +638,7 @@ interface BlogPost {
     slug: string;
     avatar?: string;
   };
+  tags?: Tag[];
 }
 
 export async function fetchBlogPosts(): Promise<BlogPost[]> {
@@ -645,15 +651,19 @@ export async function fetchBlogPosts(): Promise<BlogPost[]> {
       title: item.title,
       excerpt: item.excerpt || '',
       content: item.content || '',
-      coverImage: item.cover_url || '/images/default-cover.svg',
+      coverImage: item.cover_url || item.coverImage || '/images/default-cover.svg',
       slug: item.slug,
-      publishDate: item.created_at || '',
+      publishDate: item.created_at || item.publishDate || '',
       author: item.author_id ? {
         id: item.author_id,
         name: item.author_name || 'Author ' + item.author_id,
         slug: item.author_slug || 'author-' + item.author_id,
         avatar: item.author_avatar || '/images/default-avatar.svg'
-      } : undefined
+      } : undefined,
+      tags: Array.isArray(item.tags) ? item.tags.map((tag: string | Tag) => ({
+        name: typeof tag === 'string' ? tag : tag.name || '',
+        slug: typeof tag === 'string' ? tag.toLowerCase().replace(/\s+/g, '-') : tag.slug || ''
+      })) : []
     }));
   } catch (error) {
     console.error("Error fetching blog posts:", error);

@@ -24,7 +24,7 @@ let apiErrorDetails: Error | null = null;
 try {
   // Fetch game by slug
   item = await fetchGame(slug);
-  
+
   if (!item) {
     return Astro.redirect('/404');
   }
@@ -232,39 +232,7 @@ const description = item ? item.description : `We couldn't find the game you're 
       </div>
     </section>
 
-    <!-- Newsletter Signup -->
-    <section class="py-16">
-      <div class="container">
-        <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
-          <div class="text-center mb-8">
-            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Stay Updated</h2>
-            <p class="text-lg text-text-secondary">
-              Subscribe to our newsletter to receive updates about new games and features.
-            </p>
-          </div>
 
-          <form class="max-w-xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-4">
-              <input
-                type="email"
-                placeholder="Your email address"
-                class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
-                required
-              />
-              <button
-                type="submit"
-                class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
-              >
-                Subscribe
-              </button>
-            </div>
-            <p class="text-xs text-text-secondary/70 text-center mt-4">
-              By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
-            </p>
-          </form>
-        </div>
-      </div>
-    </section>
   </main>
 
   <style slot="scripts">

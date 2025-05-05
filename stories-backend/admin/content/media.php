@@ -5,8 +5,34 @@
  * This page displays a list of all media files and allows for uploading, searching, and managing media.
  */
 
-// Include auth check
-require_once '../includes/auth-check.php';
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Include simple_auth.php directly
+require_once '../simple_auth.php';
+
+// Database configuration
+$config = [
+    'host' => 'localhost',
+    'name' => 'stories_db',
+    'user' => 'stories_user',
+    'password' => '$tw1cac3+sOt',
+    'charset' => 'utf8mb4',
+    'port' => 3306
+];
+
+// Initialize SimpleAuth
+SimpleAuth::initDB($config);
+
+// Check if user is logged in
+$user = SimpleAuth::check();
+if (!$user) {
+    // Redirect to login
+    header("Location: ../login.php");
+    exit;
+}
 
 // Include database connection
 require_once '../includes/db-connect.php';
@@ -785,7 +811,6 @@ $extraHeadContent = '
 
 // Include header
 require_once '../includes/header.php';
-?>
 
 <div class="content-section mb-4">
     <div class="section-header">

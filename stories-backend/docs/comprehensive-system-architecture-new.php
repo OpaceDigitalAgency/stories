@@ -81,6 +81,7 @@
         <li><strong>Database:</strong> MySQL (v8.0.x)</li>
         <li><strong>Server:</strong> Apache on cPanel shared hosting</li>
         <li><strong>Authentication:</strong> Custom JWT</li>
+        <li><strong>AI Integration:</strong> OpenAI API</li>
         <li><strong>Deployment:</strong> cPanel Git Version Control</li>
     </ul>
 
@@ -211,6 +212,147 @@ export async function fetchStories() {
 ├── styles/             # Global styles (Tailwind imports)
 └── types/              # TypeScript definitions
 </code></pre>
+
+    <h2 id="ai-library">AI Library Architecture</h2>
+    <p>The AI library provides a reusable system for AI integrations, supporting both frontend (Astro) and backend (PHP) environments. It's designed to be provider-agnostic, with initial support for OpenAI's DALL-E.</p>
+
+    <div class="mermaid">
+graph TD
+    subgraph Frontend [Frontend - Astro]
+        AC[AI Controllers]
+        AH[AI Hooks]
+        AS[AI Services]
+        AC --> AH
+        AH --> AS
+        AS --> API
+    end
+
+    subgraph Backend [Backend - PHP]
+        API[API Layer]
+        AL[AI Library]
+        AC[AI Controllers]
+        API --> AC
+        AC --> AL
+        
+        subgraph AILib [AI Library Core]
+            CM[Configuration Manager]
+            PM[Provider Manager]
+            IM[Image Manager]
+            TM[Text Manager]
+            CM --> PM
+            PM --> IM
+            PM --> TM
+        end
+        
+        AL --> AILib
+    end
+
+    subgraph Storage [Storage]
+        DB[(Database)]
+        FS[File System]
+        AL --> DB
+        AL --> FS
+    end
+
+    subgraph Providers [AI Providers]
+        OAI[OpenAI]
+        SD[Stable Diffusion]
+        Other[Other Providers...]
+        PM --> OAI
+        PM --> SD
+        PM --> Other
+    end
+    </div>
+
+    <h3>Key Components</h3>
+    <ul>
+        <li><strong>AI Library Core</strong>:
+            <ul>
+                <li>Provider interface for different AI services</li>
+                <li>Configuration management</li>
+                <li>Response standardization</li>
+                <li>Error handling</li>
+            </ul>
+        </li>
+        <li><strong>Image Generation</strong>:
+            <ul>
+                <li>DALL-E integration</li>
+                <li>Image optimization</li>
+                <li>File storage management</li>
+                <li>Usage tracking</li>
+            </ul>
+        </li>
+        <li><strong>Frontend Components</strong>:
+            <ul>
+                <li>ImageGenerator.astro</li>
+                <li>ImageGeneratorButton.astro</li>
+                <li>AI service hooks</li>
+                <li>Type definitions</li>
+            </ul>
+        </li>
+        <li><strong>Admin Interface</strong>:
+            <ul>
+                <li>AI settings management</li>
+                <li>Provider configuration</li>
+                <li>Usage monitoring</li>
+                <li>Cost tracking</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Directory Structure</h3>
+    <pre><code>src/
+├── lib/
+│   ├── ai/
+│   │   ├── core/
+│   │   │   ├── Provider.php
+│   │   │   ├── Response.php
+│   │   │   └── Config.php
+│   │   ├── providers/
+│   │   │   ├── OpenAIProvider.php
+│   │   │   └── StableDiffusionProvider.php
+│   │   ├── services/
+│   │   │   ├── ImageService.php
+│   │   │   └── TextService.php
+│   │   └── utils/
+│   │       ├── Validator.php
+│   │       └── ErrorHandler.php
+│   └── shared/
+│       └── types/
+│           └── ai.ts
+├── components/
+│   └── ai/
+│       ├── ImageGenerator.astro
+│       └── ImageGeneratorButton.astro
+└── api/
+    └── ai/
+        ├── image.php
+        └── text.php</code></pre>
+
+    <h3>AI API Endpoints</h3>
+    <div class="endpoint">
+        <h4>Generate Image</h4>
+        <p><code>POST /api/v1/ai/image</code></p>
+        <p>Generate an image from a text prompt using configured AI provider.</p>
+        <pre><code>{
+  "prompt": "A serene landscape with mountains",
+  "size": "1024x1024",
+  "style": "natural",
+  "variations": 1
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <h4>Get Usage Statistics</h4>
+        <p><code>GET /api/v1/ai/usage</code></p>
+        <p>Retrieve AI usage statistics and costs.</p>
+    </div>
+
+    <div class="endpoint">
+        <h4>Get Generation History</h4>
+        <p><code>GET /api/v1/ai/history</code></p>
+        <p>Get history of AI image generations with metadata.</p>
+    </div>
 
     <h2 id="backend-architecture">Backend Architecture</h2>
     <p>A custom MVC‑style PHP backend exposes a versioned REST API and an admin interface.</p>
@@ -386,6 +528,46 @@ erDiagram
     <p>All authors have a location field that stores their city, county, or country, enabling filtering by location.</p>
 
     <pre><code>-- Full DB Schema (DDL)
+CREATE TABLE `ai_providers` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+    config JSON,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_name (name)
+);
+
+CREATE TABLE `ai_generations` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT,
+    type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+    prompt TEXT NOT NULL,
+    result_url VARCHAR(255),
+    metadata JSON,
+    status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+);
+
+CREATE TABLE `ai_usage` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    provider_id INT,
+    type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+    cost DECIMAL(10,6) NOT NULL DEFAULT 0,
+    tokens INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+);
+
+CREATE TABLE `ai_rate_limit` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE `ai_tools` (
   `id` int NOT NULL,
   `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,

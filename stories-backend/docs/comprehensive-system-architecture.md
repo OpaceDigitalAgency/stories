@@ -10,6 +10,7 @@ This document provides a detailed and comprehensive overview of the Stories from
 - [Architecture Components](#architecture-components)
 - [Frontend Architecture](#frontend-architecture)
 - [Backend Architecture](#backend-architecture)
+- [AI Library Architecture](#ai-library-architecture)
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
 - [Authentication System](#authentication-system)
@@ -43,6 +44,7 @@ The platform is designed with a clear separation between the frontend and backen
 - **Database**: MySQL (v8.0.x)
 - **Server**: Apache (on cPanel shared hosting)
 - **Authentication**: Custom JWT implementation
+- **AI Integration**: OpenAI API
 - **Deployment**: cPanel Git Version Control
 
 ### Development Tools
@@ -202,6 +204,120 @@ src/
 
 The backend is built with PHP and follows a custom MVC-like architecture. It provides a RESTful API for the frontend and an admin interface for content management.
 
+## AI Library Architecture
+
+### Overview
+
+The AI library provides a reusable system for AI integrations, supporting both frontend (Astro) and backend (PHP) environments. It's designed to be provider-agnostic, with initial support for OpenAI's DALL-E.
+
+### Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph Frontend [Frontend - Astro]
+        AC[AI Controllers]
+        AH[AI Hooks]
+        AS[AI Services]
+        AC --> AH
+        AH --> AS
+        AS --> API
+    end
+
+    subgraph Backend [Backend - PHP]
+        API[API Layer]
+        AL[AI Library]
+        AC[AI Controllers]
+        API --> AC
+        AC --> AL
+        
+        subgraph AILib [AI Library Core]
+            CM[Configuration Manager]
+            PM[Provider Manager]
+            IM[Image Manager]
+            TM[Text Manager]
+            CM --> PM
+            PM --> IM
+            PM --> TM
+        end
+        
+        AL --> AILib
+    end
+
+    subgraph Storage [Storage]
+        DB[(Database)]
+        FS[File System]
+        AL --> DB
+        AL --> FS
+    end
+
+    subgraph Providers [AI Providers]
+        OAI[OpenAI]
+        SD[Stable Diffusion]
+        Other[Other Providers...]
+        PM --> OAI
+        PM --> SD
+        PM --> Other
+    end
+```
+
+### Key Components
+
+1. **AI Library Core**:
+   - Provider interface for different AI services
+   - Configuration management
+   - Response standardization
+   - Error handling
+
+2. **Image Generation**:
+   - DALL-E integration
+   - Image optimization
+   - File storage management
+   - Usage tracking
+
+3. **Frontend Components**:
+   - ImageGenerator.astro
+   - ImageGeneratorButton.astro
+   - AI service hooks
+   - Type definitions
+
+4. **Admin Interface**:
+   - AI settings management
+   - Provider configuration
+   - Usage monitoring
+   - Cost tracking
+
+### Directory Structure
+
+```
+src/
+├── lib/
+│   ├── ai/
+│   │   ├── core/
+│   │   │   ├── Provider.php
+│   │   │   ├── Response.php
+│   │   │   └── Config.php
+│   │   ├── providers/
+│   │   │   ├── OpenAIProvider.php
+│   │   │   └── StableDiffusionProvider.php
+│   │   ├── services/
+│   │   │   ├── ImageService.php
+│   │   │   └── TextService.php
+│   │   └── utils/
+│   │       ├── Validator.php
+│   │       └── ErrorHandler.php
+│   └── shared/
+│       └── types/
+│           └── ai.ts
+├── components/
+│   └── ai/
+│       ├── ImageGenerator.astro
+│       └── ImageGeneratorButton.astro
+└── api/
+    └── ai/
+        ├── image.php
+        └── text.php
+```
+
 ### Folder Structure
 
 ```
@@ -345,6 +461,53 @@ erDiagram
    - `directory_items`: Directory listings (can link to stories via story_id)
    - `ai_tools`: AI tool listings
 
+2. **AI Tables**:
+   ```sql
+   -- AI Provider Table
+   CREATE TABLE ai_providers (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       name VARCHAR(50) NOT NULL,
+       type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+       config JSON,
+       is_active BOOLEAN DEFAULT true,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       UNIQUE KEY unique_name (name)
+   );
+
+   -- AI Generations Table
+   CREATE TABLE ai_generations (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       provider_id INT,
+       type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+       prompt TEXT NOT NULL,
+       result_url VARCHAR(255),
+       metadata JSON,
+       status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+   );
+
+   -- AI Usage Tracking Table
+   CREATE TABLE ai_usage (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       provider_id INT,
+       type ENUM('image', 'text', 'audio', 'video') NOT NULL,
+       cost DECIMAL(10,6) NOT NULL DEFAULT 0,
+       tokens INT,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+   );
+
+   -- AI Rate Limiting Table
+   CREATE TABLE ai_rate_limit (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       ip_address VARCHAR(45) NOT NULL,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+
 2. **Relationship Tables**:
    - `story_authors`: Many-to-many relationship between stories and authors
    - `story_tags`: Many-to-many relationship between stories and tags
@@ -413,6 +576,14 @@ These fields implement the following business rules:
 | `/api/v1/directory-items` | GET | List all directory items | Flat Array |
 | `/api/v1/ai-tools` | GET | List all AI tools | Flat Array |
 | `/api/v1/blog-posts` | GET | List all blog posts | Flat Array |
+
+### AI Endpoints
+
+| Endpoint | Method | Description | Response Format |
+|----------|--------|-------------|-----------------|
+| `/api/v1/ai/image` | POST | Generate image from prompt | JSON with URL |
+| `/api/v1/ai/usage` | GET | Get AI usage statistics | JSON |
+| `/api/v1/ai/history` | GET | Get generation history | JSON Array |
 
 ### Authentication Endpoints
 

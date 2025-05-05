@@ -6,24 +6,24 @@
  * including API keys, models, and provider settings.
  */
 
-// Set page variables before including header
-$pageTitle = 'AI Settings';
-$currentPage = 'ai-settings';
-$pageDescription = 'Configure AI providers, models, and view usage statistics';
-
-// Add page actions
-$pageActions = '
-<a href="ai-image-generator.php" class="btn btn-success">
-    <i class="fas fa-image"></i> Test Image Generator
-</a>';
-
-// Include necessary files
-require_once '../includes/header.php';
+// Include auth check
 require_once '../includes/auth-check.php';
+
+// Include database connection
 require_once '../includes/db-connect.php';
 
-// Get current settings
+// Initialize variables
+$openai = null;
+$openaiConfig = [];
+$usage = ['total_generations' => 0, 'total_cost' => 0];
+
 try {
+    // Check if ai_providers table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'ai_providers'");
+    if ($stmt->rowCount() === 0) {
+        throw new Exception("Required table 'ai_providers' does not exist. Please run setup_ai_tables.php first.");
+    }
+
     // Check if OpenAI provider exists, create if not
     $stmt = $db->prepare("SELECT COUNT(*) FROM ai_providers WHERE name = 'openai'");
     $stmt->execute();
@@ -58,7 +58,7 @@ try {
     $usage = $stmt->fetch();
     
 } catch (Exception $e) {
-    error_log("Error in AI Settings: " . $e->getMessage());
+    error_log("AI Settings error: " . $e->getMessage());
     $_SESSION['error'] = 'Error loading settings: ' . $e->getMessage();
 }
 
@@ -92,6 +92,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Redirect to prevent form resubmission
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
+}
+
+// Set page variables for header
+$pageTitle = 'AI Settings';
+$currentPage = 'ai-settings';
+$pageDescription = 'Configure AI providers, models, and view usage statistics';
+$pageActions = '
+<div class="d-flex gap-2">
+    <a href="ai-image-generator.php" class="btn btn-success">
+        <i class="fas fa-image"></i> Test Image Generator
+    </a>
+    <button onclick="window.location.reload()" class="btn btn-secondary">
+        <i class="fas fa-sync"></i> Refresh
+    </button>
+</div>';
+
+// Include header
+require_once '../includes/header.php';
+
+// Display any errors prominently
+if (isset($_SESSION['error'])) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo '<h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Error</h4>';
+    echo '<p>' . htmlspecialchars($_SESSION['error']) . '</p>';
+    echo '</div>';
+    unset($_SESSION['error']);
+}
+
+// Display success messages
+if (isset($_SESSION['success'])) {
+    echo '<div class="alert alert-success" role="alert">';
+    echo '<i class="fas fa-check-circle"></i> ' . htmlspecialchars($_SESSION['success']);
+    echo '</div>';
+    unset($_SESSION['success']);
 }
 ?>
 
@@ -191,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="form-actions">
                         <button type="submit" name="update_openai" class="btn btn-primary">
-                            Save OpenAI Settings
+                            <i class="fas fa-save"></i> Save OpenAI Settings
                         </button>
                     </div>
                 </form>
@@ -217,30 +251,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </thead>
                         <tbody>
                             <?php
-                            $stmt = $db->query("
-                                SELECT 
-                                    DATE(u.created_at) as date,
-                                    p.name as provider,
-                                    u.type,
-                                    COUNT(*) as generations,
-                                    SUM(u.cost) as cost
-                                FROM ai_usage u
-                                JOIN ai_providers p ON u.provider_id = p.id
-                                WHERE u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                                GROUP BY DATE(u.created_at), p.name, u.type
-                                ORDER BY date DESC
-                                LIMIT 10
-                            ");
-                            
-                            while ($row = $stmt->fetch()): ?>
-                                <tr>
-                                    <td><?php echo date('M j, Y', strtotime($row['date'])); ?></td>
-                                    <td><?php echo htmlspecialchars($row['provider']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['type']); ?></td>
-                                    <td><?php echo number_format($row['generations']); ?></td>
-                                    <td>$<?php echo number_format($row['cost'], 2); ?></td>
-                                </tr>
-                            <?php endwhile; ?>
+                            try {
+                                $stmt = $db->query("
+                                    SELECT 
+                                        DATE(u.created_at) as date,
+                                        p.name as provider,
+                                        u.type,
+                                        COUNT(*) as generations,
+                                        SUM(u.cost) as cost
+                                    FROM ai_usage u
+                                    JOIN ai_providers p ON u.provider_id = p.id
+                                    WHERE u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                                    GROUP BY DATE(u.created_at), p.name, u.type
+                                    ORDER BY date DESC
+                                    LIMIT 10
+                                ");
+                                
+                                while ($row = $stmt->fetch()): ?>
+                                    <tr>
+                                        <td><?php echo date('M j, Y', strtotime($row['date'])); ?></td>
+                                        <td><?php echo htmlspecialchars($row['provider']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['type']); ?></td>
+                                        <td><?php echo number_format($row['generations']); ?></td>
+                                        <td>$<?php echo number_format($row['cost'], 2); ?></td>
+                                    </tr>
+                                <?php endwhile;
+                            } catch (Exception $e) {
+                                echo '<tr><td colspan="5" class="text-center text-muted">No usage data available</td></tr>';
+                            }
+                            ?>
                         </tbody>
                     </table>
                 </div>
@@ -250,5 +289,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <?php
+// Include footer
 require_once '../includes/footer.php';
 ?>

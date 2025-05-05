@@ -47,16 +47,14 @@ const description = item ? item.description : `We couldn't find the directory it
       title={item?.name || 'Directory Item'}
       description={item?.description}
       type="directories"
+      crumbs={[
+        { text: 'Directories', href: '/directories' },
+        { text: item?.name || '' }
+      ]}
     />
 
     <div class="container relative z-10">
       <div class="max-w-4xl mx-auto">
-        <Breadcrumbs
-          crumbs={[
-            { text: 'Directories', href: '/directories' },
-            { text: item?.name || '' }
-          ]}
-        />
       {apiError ? (
         <section class="py-8">
           <div class="container mx-auto px-4">

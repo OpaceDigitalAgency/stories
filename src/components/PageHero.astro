@@ -1,12 +1,20 @@
 ---
+import Breadcrumbs from './Breadcrumbs.astro';
+
+interface Crumb {
+  text: string;
+  href?: string;
+}
+
 interface Props {
   title: string;
   description?: string;
   type: 'ai-tools' | 'games' | 'directories' | 'stories' | 'authors' | 'blog';
   showSearch?: boolean;
+  crumbs?: Crumb[];
 }
 
-const { title, description, type, showSearch = false } = Astro.props;
+const { title, description, type, showSearch = false, crumbs = [] } = Astro.props;
 
 // Define background colors based on page type
 const backgrounds = {
@@ -21,9 +29,14 @@ const backgrounds = {
 const background = backgrounds[type];
 ---
 
-<section class={`relative py-16 overflow-hidden ${background}`}>
+<section class={`relative pt-8 pb-16 overflow-hidden ${background}`}>
   <div class="container">
     <div class="max-w-4xl mx-auto">
+      {crumbs.length > 0 && (
+        <div class="mb-8">
+          <Breadcrumbs crumbs={crumbs} />
+        </div>
+      )}
       <h1 class="text-4xl md:text-5xl font-display font-bold mb-4 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
         {title}
       </h1>
@@ -34,7 +47,7 @@ const background = backgrounds[type];
       )}
 
       {showSearch && (
-        <div class="max-w-2xl mt-8">
+        <div class="max-w-2xl mt-6">
           <div class="relative">
             <input
               type="text"

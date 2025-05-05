@@ -47,16 +47,14 @@ const description = item ? item.description : `We couldn't find the game you're 
       title={item?.title || 'Game'}
       description={item?.description}
       type="games"
+      crumbs={[
+        { text: 'Games', href: '/games' },
+        { text: item?.title || '' }
+      ]}
     />
 
     <div class="container relative z-10">
       <div class="max-w-4xl mx-auto">
-        <Breadcrumbs
-          crumbs={[
-            { text: 'Games', href: '/games' },
-            { text: item?.title || '' }
-          ]}
-        />
       {apiError ? (
         <section class="py-8">
           <div class="container mx-auto px-4">

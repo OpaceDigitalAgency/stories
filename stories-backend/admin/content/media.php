@@ -92,7 +92,29 @@ try {
     // Handle file upload
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Check if we have a direct file upload or a URL from the image component
-        if (isset($_FILES['media_file']) && $_FILES['media_file']['error'] === 0) {
+        // First check for the file from the component (media_file_file)
+        if (isset($_FILES['media_file_file']) && $_FILES['media_file_file']['error'] === 0) {
+            // Handle file upload from component
+            $uploadDir = '../../uploads/';
+
+            // Create uploads directory if it doesn't exist
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            $file = $_FILES['media_file_file'];
+            $fileName = $file['name'];
+            $fileTmpName = $file['tmp_name'];
+            $fileSize = $file['size'];
+            $fileError = $file['error'];
+            $fileType = $file['type'];
+
+            // Generate unique filename
+            $fileNameNew = uniqid('', true) . '_' . $fileName;
+            $fileDestination = $uploadDir . $fileNameNew;
+        }
+        // Then check for the traditional file input
+        else if (isset($_FILES['media_file']) && $_FILES['media_file']['error'] === 0) {
             // Handle direct file upload
             $uploadDir = '../../uploads/';
 

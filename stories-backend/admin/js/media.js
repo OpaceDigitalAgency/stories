@@ -4,16 +4,28 @@ document.addEventListener("DOMContentLoaded", function() {
     const imageUploadComponents = document.querySelectorAll('.image-upload-component');
 
     imageUploadComponents.forEach(component => {
+        // Safely get elements, checking if they exist first
         const dropzone = component.querySelector('.dropzone');
         const fileInput = component.querySelector('.file-input');
         const urlInput = component.querySelector('.image-url-input');
         const previewContainer = component.querySelector('.image-preview-container');
+
+        // Check if required elements exist before proceeding
+        if (!previewContainer || !urlInput) {
+            console.error('Image upload component is missing required elements');
+            return;
+        }
+
         const previewImage = previewContainer.querySelector('img');
         const removeButton = component.querySelector('.remove-image');
         const selectFromMediaButton = component.querySelector('.select-from-media');
         const generateAiButton = component.querySelector('.generate-ai');
-        const entityType = component.querySelector('.entity-type').value;
-        const entityId = component.querySelector('.entity-id').value;
+
+        // Safely get values from elements that might not exist
+        const entityTypeElement = component.querySelector('.entity-type');
+        const entityIdElement = component.querySelector('.entity-id');
+        const entityType = entityTypeElement ? entityTypeElement.value : 'media';
+        const entityId = entityIdElement ? entityIdElement.value : '0';
 
         // Handle file selection
         if (fileInput) {
@@ -159,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         // Function to reset the image upload
-        function resetImageUpload() {
+        const resetImageUpload = function() {
             if (fileInput) {
                 fileInput.value = '';
             }
@@ -169,16 +181,18 @@ document.addEventListener("DOMContentLoaded", function() {
                 urlInput.removeAttribute('readonly');
             }
 
-            previewContainer.classList.remove('has-image');
-            previewContainer.innerHTML = `
-                <div class="image-preview empty">
-                    <div class="placeholder">
-                        <i class="fas fa-image"></i>
-                        <span>No image selected</span>
+            if (previewContainer) {
+                previewContainer.classList.remove('has-image');
+                previewContainer.innerHTML = `
+                    <div class="image-preview empty">
+                        <div class="placeholder">
+                            <i class="fas fa-image"></i>
+                            <span>No image selected</span>
+                        </div>
                     </div>
-                </div>
-            `;
-        }
+                `;
+            }
+        };
     });
     // Get all buttons that trigger optimization
     const optimizeButtons = document.querySelectorAll("a[href*=\"optimize_image.php\"]");
@@ -208,18 +222,34 @@ document.addEventListener("DOMContentLoaded", function() {
     const uploadForm = document.querySelector("form.upload-form");
     if (uploadForm) {
         uploadForm.addEventListener("submit", function(e) {
-            // Only show progress if a file is selected
-            const fileInput = document.getElementById("media_file");
-            if (fileInput && fileInput.files.length > 0) {
+            // Check for either a file input with files or a URL input with value
+            const fileInput = document.getElementById("media_file-file") || document.getElementById("media_file");
+            const urlInput = document.querySelector(".image-url-input");
+
+            let hasFile = false;
+
+            // Check if we have a file selected
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                hasFile = true;
+            }
+
+            // Check if we have a URL entered
+            if (urlInput && urlInput.value && urlInput.value.trim() !== '') {
+                hasFile = true;
+            }
+
+            if (hasFile) {
                 const overlay = document.getElementById("progressOverlay");
-                overlay.style.visibility = "visible";
-                overlay.style.opacity = "1";
+                if (overlay) {
+                    overlay.style.visibility = "visible";
+                    overlay.style.opacity = "1";
 
-                const title = document.getElementById("progressTitle");
-                const message = document.getElementById("progressMessage");
+                    const title = document.getElementById("progressTitle");
+                    const message = document.getElementById("progressMessage");
 
-                title.textContent = "Uploading and Optimizing";
-                message.textContent = "Please wait while we upload and optimize your image.";
+                    if (title) title.textContent = "Uploading and Optimizing";
+                    if (message) message.textContent = "Please wait while we upload and optimize your image.";
+                }
             }
         });
     }

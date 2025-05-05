@@ -1,4 +1,9 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Page variables
 $pageTitle = 'Logout';
 $currentPage = 'logout';
@@ -20,6 +25,15 @@ SimpleAuth::initDB($config);
 
 // Logout user
 SimpleAuth::logout();
+
+// Explicitly destroy the session
+session_unset();
+session_destroy();
+
+// Clear any problematic cookies
+if (isset($_COOKIE['auth_token'])) {
+    setcookie('auth_token', '', time() - 3600, '/', '', false, true);
+}
 
 // Redirect to login page
 header("Location: login.php");

@@ -2,16 +2,8 @@
 /**
  * Simple Authentication Solution
  *
- * This file provides a simplified authentication system to replace the complex JWT implementation.
- * It uses standard PHP sessions and database authentication.
+ * This file provides a simplified authentication system using standard PHP sessions and database authentication.
  */
-
-// Start session if not already started and no output has been sent
-if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-    session_start();
-} elseif (session_status() === PHP_SESSION_NONE && headers_sent()) {
-    error_log("Warning: Attempted to start session after headers were sent in simple_auth.php");
-}
 
 class SimpleAuth {
     private static $db = null;
@@ -21,27 +13,45 @@ class SimpleAuth {
      */
     public static function initDB($config) {
         try {
-            // Set default values if keys don't exist
-            $host = isset($config['host']) ? $config['host'] : 'localhost';
-            $name = isset($config['name']) ? $config['name'] : 'stories_db';
-            $charset = isset($config['charset']) ? $config['charset'] : 'utf8mb4';
-            $port = isset($config['port']) ? $config['port'] : '3306';
-            $user = isset($config['user']) ? $config['user'] : 'root';
-            $password = isset($config['password']) ? $config['password'] : '';
-
-            $dsn = "mysql:host={$host};dbname={$name};charset={$charset};port={$port}";
+            $dsn = "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}";
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
 
-            self::$db = new PDO($dsn, $user, $password, $options);
+            self::$db = new PDO($dsn, $config['user'], $config['password'], $options);
             return true;
         } catch (PDOException $e) {
             error_log("SimpleAuth DB Connection Error: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Check if user is authenticated
+     */
+    public static function check() {
+        // Check session first
+        if (isset($_SESSION['auth_user']) && !empty($_SESSION['auth_user'])) {
+            return $_SESSION['auth_user'];
+        }
+
+        // Check for token in cookie
+        if (isset($_COOKIE['auth_token']) && !empty($_COOKIE['auth_token'])) {
+            $token = $_COOKIE['auth_token'];
+            $userData = self::validateSimpleToken($token);
+
+            if ($userData) {
+                // Store in session for future checks
+                $_SESSION['auth_user'] = $userData;
+                $_SESSION['auth_time'] = time();
+                $_SESSION['auth_token'] = $token;
+                return $userData;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -76,7 +86,7 @@ class SimpleAuth {
             $token = self::generateSimpleToken($user['id'], $user['role']);
             $_SESSION['auth_token'] = $token;
 
-            // Set cookie for persistent login
+            // Set cookie for persistent login - set secure to false for HTTP
             setcookie('auth_token', $token, time() + 86400, '/', '', false, true);
 
             return $user;
@@ -84,32 +94,6 @@ class SimpleAuth {
             error_log("SimpleAuth login error: " . $e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * Check if user is authenticated
-     */
-    public static function check() {
-        // Check session first
-        if (isset($_SESSION['auth_user']) && !empty($_SESSION['auth_user'])) {
-            return $_SESSION['auth_user'];
-        }
-
-        // Check for token in cookie
-        if (isset($_COOKIE['auth_token']) && !empty($_COOKIE['auth_token'])) {
-            $token = $_COOKIE['auth_token'];
-            $userData = self::validateSimpleToken($token);
-
-            if ($userData) {
-                // Store in session for future checks
-                $_SESSION['auth_user'] = $userData;
-                $_SESSION['auth_time'] = time();
-                $_SESSION['auth_token'] = $token;
-                return $userData;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -121,7 +105,7 @@ class SimpleAuth {
         unset($_SESSION['auth_time']);
         unset($_SESSION['auth_token']);
 
-        // Clear cookie
+        // Clear cookie - set secure to false for HTTP
         setcookie('auth_token', '', time() - 3600, '/', '', false, true);
     }
 
@@ -196,51 +180,6 @@ class SimpleAuth {
             return $stmt->fetch();
         } catch (Exception $e) {
             error_log("SimpleAuth token validation error: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Get current authenticated user
-     */
-    public static function user() {
-        return self::check();
-    }
-
-    /**
-     * Check if user has a specific role
-     */
-    public static function hasRole($role) {
-        $user = self::user();
-        if (!$user) {
-            return false;
-        }
-
-        if (is_array($role)) {
-            return in_array($user['role'], $role);
-        }
-
-        return $user['role'] === $role;
-    }
-
-    /**
-     * Create auth_tokens table if it doesn't exist
-     */
-    public static function setupTokensTable() {
-        $query = "CREATE TABLE IF NOT EXISTS auth_tokens (
-            user_id INT NOT NULL,
-            token VARCHAR(255) NOT NULL,
-            expires_at DATETIME NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id),
-            UNIQUE KEY (token)
-        )";
-
-        try {
-            self::$db->exec($query);
-            return true;
-        } catch (Exception $e) {
-            error_log("SimpleAuth setup error: " . $e->getMessage());
             return false;
         }
     }

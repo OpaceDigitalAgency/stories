@@ -11,7 +11,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Include simple_auth.php directly
-require_once '../simple_auth.php';
+require_once '../../simple_auth.php';
 
 // Database configuration
 $config = [

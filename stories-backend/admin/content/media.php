@@ -317,10 +317,10 @@ if (isset($_SESSION['error'])) {
 }
 
 // Set page variables for header
-$pageTitle = 'Media';
+$pageTitle = $selectMode ? 'Select from Media Library' : 'Media';
 $currentPage = 'media';
-$pageDescription = 'Manage all your media files from here.';
-$pageActions = '
+$pageDescription = $selectMode ? 'Select a media file to use in your content' : 'Manage all your media files from here.';
+$pageActions = $selectMode ? '' : '
 <a href="../../public/optimize_image.php" class="btn btn-success">
     <i class="fas fa-image" aria-hidden="true"></i> Optimize All Media
 </a>
@@ -692,6 +692,51 @@ require_once '../includes/header.php';
         <p id="progressMessage">Please wait while we optimize your images.</p>
     </div>
 </div>
+
+<?php if ($selectMode): ?>
+<script>
+// Add script for select mode
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle selection
+    const selectButtons = document.querySelectorAll('.select-media-item');
+    selectButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            const dimensions = this.getAttribute('data-dimensions');
+
+            // Send message to parent window
+            window.parent.postMessage({
+                type: 'media-selected',
+                url: url,
+                dimensions: dimensions
+            }, '*');
+
+            // Also send to opener in case we're in a popup
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'media-selected',
+                    url: url,
+                    dimensions: dimensions
+                }, '*');
+            }
+        });
+    });
+
+    // Make thumbnails clickable
+    const thumbnails = document.querySelectorAll('.media-thumbnail');
+    thumbnails.forEach(thumbnail => {
+        thumbnail.style.cursor = 'pointer';
+        thumbnail.addEventListener('click', function() {
+            const card = this.closest('.media-card');
+            const selectButton = card.querySelector('.select-media-item');
+            if (selectButton) {
+                selectButton.click();
+            }
+        });
+    });
+});
+</script>
+<?php endif; ?>
 
 <?php
 // Include footer

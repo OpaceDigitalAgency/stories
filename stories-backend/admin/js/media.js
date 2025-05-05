@@ -58,7 +58,9 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         } else {
                             const img = previewContainer.querySelector('img');
-                            img.src = e.target.result;
+                            if (img) {
+                                img.src = e.target.result;
+                            }
                         }
 
                         previewContainer.classList.add('has-image');
@@ -113,53 +115,101 @@ document.addEventListener("DOMContentLoaded", function() {
             selectFromMediaButton.addEventListener('click', function() {
                 // Open media library in a popup
                 const mediaUrl = '../content/media.php?select_mode=true';
+                // Use a modal dialog instead of a new window
+                const modalContent = `
+                <div class="modal fade" id="mediaLibraryModal" tabindex="-1" role="dialog" aria-labelledby="mediaLibraryModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="mediaLibraryModalLabel">Select from Media Library</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <iframe src="${mediaUrl}" style="width: 100%; height: 500px; border: none;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+
+                // Add the modal to the page
+                const modalContainer = document.createElement('div');
+                modalContainer.innerHTML = modalContent;
+                document.body.appendChild(modalContainer);
+
+                // Show the modal
+                $('#mediaLibraryModal').modal('show');
+
+                // Remove the modal when it's closed
+                $('#mediaLibraryModal').on('hidden.bs.modal', function() {
+                    document.body.removeChild(modalContainer);
+                });
+
+                // For browsers that don't support the above
                 const mediaWindow = window.open(mediaUrl, 'MediaLibrary', 'width=1000,height=600');
 
-                // Listen for message from the popup
-                window.addEventListener('message', function(event) {
+                // Listen for message from the popup or iframe
+                const messageHandler = function(event) {
                     if (event.data && event.data.type === 'media-selected') {
                         // Update the input value
-                        urlInput.value = event.data.url;
-
-                        // Update preview
-                        if (!previewContainer.querySelector('.image-preview')) {
-                            previewContainer.innerHTML = `
-                                <div class="image-preview">
-                                    <img src="${event.data.url}" alt="Preview">
-                                    <div class="image-info">
-                                        <span class="dimensions">${event.data.dimensions || ''}</span>
-                                        <button type="button" class="btn btn-sm btn-danger remove-image">
-                                            <i class="fas fa-times"></i> Remove
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-
-                            // Add event listener to the new remove button
-                            const newRemoveButton = previewContainer.querySelector('.remove-image');
-                            if (newRemoveButton) {
-                                newRemoveButton.addEventListener('click', function() {
-                                    resetImageUpload();
-                                });
-                            }
-                        } else {
-                            const img = previewContainer.querySelector('img');
-                            img.src = event.data.url;
-
-                            const dimensionsSpan = previewContainer.querySelector('.dimensions');
-                            if (dimensionsSpan) {
-                                dimensionsSpan.textContent = event.data.dimensions || '';
-                            }
+                        if (urlInput) {
+                            urlInput.value = event.data.url;
+                            urlInput.setAttribute('readonly', 'readonly');
                         }
 
-                        previewContainer.classList.add('has-image');
+                        // Update preview
+                        if (previewContainer) {
+                            if (!previewContainer.querySelector('.image-preview')) {
+                                previewContainer.innerHTML = `
+                                    <div class="image-preview">
+                                        <img src="${event.data.url}" alt="Preview">
+                                        <div class="image-info">
+                                            <span class="dimensions">${event.data.dimensions || ''}</span>
+                                            <button type="button" class="btn btn-sm btn-danger remove-image">
+                                                <i class="fas fa-times"></i> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
 
-                        // Close the popup
+                                // Add event listener to the new remove button
+                                const newRemoveButton = previewContainer.querySelector('.remove-image');
+                                if (newRemoveButton) {
+                                    newRemoveButton.addEventListener('click', function() {
+                                        resetImageUpload();
+                                    });
+                                }
+                            } else {
+                                const img = previewContainer.querySelector('img');
+                                if (img) {
+                                    img.src = event.data.url;
+                                }
+
+                                const dimensionsSpan = previewContainer.querySelector('.dimensions');
+                                if (dimensionsSpan) {
+                                    dimensionsSpan.textContent = event.data.dimensions || '';
+                                }
+                            }
+
+                            previewContainer.classList.add('has-image');
+                        }
+
+                        // Close the popup window if it exists
                         if (mediaWindow) {
                             mediaWindow.close();
                         }
+
+                        // Close the modal if it exists
+                        if ($('#mediaLibraryModal').length) {
+                            $('#mediaLibraryModal').modal('hide');
+                        }
                     }
-                });
+                };
+
+                // Add event listener for messages
+                window.addEventListener('message', messageHandler);
             });
         }
 

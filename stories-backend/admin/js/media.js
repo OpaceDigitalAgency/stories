@@ -1,5 +1,185 @@
 // Show progress indicator when optimizing images
 document.addEventListener("DOMContentLoaded", function() {
+    // Handle image upload component
+    const imageUploadComponents = document.querySelectorAll('.image-upload-component');
+
+    imageUploadComponents.forEach(component => {
+        const dropzone = component.querySelector('.dropzone');
+        const fileInput = component.querySelector('.file-input');
+        const urlInput = component.querySelector('.image-url-input');
+        const previewContainer = component.querySelector('.image-preview-container');
+        const previewImage = previewContainer.querySelector('img');
+        const removeButton = component.querySelector('.remove-image');
+        const selectFromMediaButton = component.querySelector('.select-from-media');
+        const generateAiButton = component.querySelector('.generate-ai');
+        const entityType = component.querySelector('.entity-type').value;
+        const entityId = component.querySelector('.entity-id').value;
+
+        // Handle file selection
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        // Update preview
+                        if (!previewContainer.querySelector('.image-preview')) {
+                            previewContainer.innerHTML = `
+                                <div class="image-preview">
+                                    <img src="${e.target.result}" alt="Preview">
+                                    <div class="image-info">
+                                        <span class="dimensions"></span>
+                                        <button type="button" class="btn btn-sm btn-danger remove-image">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Add event listener to the new remove button
+                            const newRemoveButton = previewContainer.querySelector('.remove-image');
+                            if (newRemoveButton) {
+                                newRemoveButton.addEventListener('click', function() {
+                                    resetImageUpload();
+                                });
+                            }
+                        } else {
+                            const img = previewContainer.querySelector('img');
+                            img.src = e.target.result;
+                        }
+
+                        previewContainer.classList.add('has-image');
+
+                        // Get image dimensions when loaded
+                        const img = new Image();
+                        img.onload = function() {
+                            const dimensionsSpan = previewContainer.querySelector('.dimensions');
+                            if (dimensionsSpan) {
+                                dimensionsSpan.textContent = `${this.width}x${this.height}`;
+                            }
+                        };
+                        img.src = e.target.result;
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Handle drag and drop
+        if (dropzone) {
+            dropzone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', function() {
+                this.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        // Handle remove button
+        if (removeButton) {
+            removeButton.addEventListener('click', function() {
+                resetImageUpload();
+            });
+        }
+
+        // Handle select from media button
+        if (selectFromMediaButton) {
+            selectFromMediaButton.addEventListener('click', function() {
+                // Open media library in a popup
+                const mediaUrl = '../content/media.php?select_mode=true';
+                const mediaWindow = window.open(mediaUrl, 'MediaLibrary', 'width=1000,height=600');
+
+                // Listen for message from the popup
+                window.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'media-selected') {
+                        // Update the input value
+                        urlInput.value = event.data.url;
+
+                        // Update preview
+                        if (!previewContainer.querySelector('.image-preview')) {
+                            previewContainer.innerHTML = `
+                                <div class="image-preview">
+                                    <img src="${event.data.url}" alt="Preview">
+                                    <div class="image-info">
+                                        <span class="dimensions">${event.data.dimensions || ''}</span>
+                                        <button type="button" class="btn btn-sm btn-danger remove-image">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Add event listener to the new remove button
+                            const newRemoveButton = previewContainer.querySelector('.remove-image');
+                            if (newRemoveButton) {
+                                newRemoveButton.addEventListener('click', function() {
+                                    resetImageUpload();
+                                });
+                            }
+                        } else {
+                            const img = previewContainer.querySelector('img');
+                            img.src = event.data.url;
+
+                            const dimensionsSpan = previewContainer.querySelector('.dimensions');
+                            if (dimensionsSpan) {
+                                dimensionsSpan.textContent = event.data.dimensions || '';
+                            }
+                        }
+
+                        previewContainer.classList.add('has-image');
+
+                        // Close the popup
+                        if (mediaWindow) {
+                            mediaWindow.close();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Handle generate AI button
+        if (generateAiButton) {
+            generateAiButton.addEventListener('click', function() {
+                alert('AI image generation is coming soon!');
+            });
+        }
+
+        // Function to reset the image upload
+        function resetImageUpload() {
+            if (fileInput) {
+                fileInput.value = '';
+            }
+
+            if (urlInput) {
+                urlInput.value = '';
+                urlInput.removeAttribute('readonly');
+            }
+
+            previewContainer.classList.remove('has-image');
+            previewContainer.innerHTML = `
+                <div class="image-preview empty">
+                    <div class="placeholder">
+                        <i class="fas fa-image"></i>
+                        <span>No image selected</span>
+                    </div>
+                </div>
+            `;
+        }
+    });
     // Get all buttons that trigger optimization
     const optimizeButtons = document.querySelectorAll("a[href*=\"optimize_image.php\"]");
 

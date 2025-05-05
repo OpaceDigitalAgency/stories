@@ -90,23 +90,24 @@ try {
     }
 
     // Handle file upload
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['media_file'])) {
-        $uploadDir = '../../uploads/';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Check if we have a direct file upload or a URL from the image component
+        if (isset($_FILES['media_file']) && $_FILES['media_file']['error'] === 0) {
+            // Handle direct file upload
+            $uploadDir = '../../uploads/';
 
-        // Create uploads directory if it doesn't exist
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+            // Create uploads directory if it doesn't exist
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
 
-        $file = $_FILES['media_file'];
-        $fileName = $file['name'];
-        $fileTmpName = $file['tmp_name'];
-        $fileSize = $file['size'];
-        $fileError = $file['error'];
-        $fileType = $file['type'];
+            $file = $_FILES['media_file'];
+            $fileName = $file['name'];
+            $fileTmpName = $file['tmp_name'];
+            $fileSize = $file['size'];
+            $fileError = $file['error'];
+            $fileType = $file['type'];
 
-        // Validate file
-        if ($fileError === 0) {
             // Generate unique filename
             $fileNameNew = uniqid('', true) . '_' . $fileName;
             $fileDestination = $uploadDir . $fileNameNew;
@@ -149,8 +150,74 @@ try {
             } else {
                 $error = "Error moving uploaded file";
             }
+        } elseif (isset($_POST['media_file']) && !empty($_POST['media_file'])) {
+            // Handle URL from image component
+            $fileUrl = $_POST['media_file'];
+
+            // Check if this is already a file in our system
+            if (strpos($fileUrl, $_SERVER['HTTP_HOST']) !== false) {
+                $success = "File selected successfully";
+            } else {
+                // This is an external URL, try to download it
+                $fileName = basename($fileUrl);
+                $uploadDir = '../../uploads/';
+                $fileDestination = $uploadDir . uniqid('', true) . '_' . $fileName;
+
+                // Create uploads directory if it doesn't exist
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                // Try to get the file
+                $fileContent = @file_get_contents($fileUrl);
+                if ($fileContent !== false) {
+                    if (file_put_contents($fileDestination, $fileContent)) {
+                        // Determine file type
+                        $fileType = mime_content_type($fileDestination);
+                        $fileSize = filesize($fileDestination);
+
+                        // Save file info to database
+                        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+                        $stmt->execute([
+                            $fileName,
+                            $fileDestination,
+                            $fileType,
+                            $fileSize,
+                            $_POST['alt_text'] ?? ''
+                        ]);
+
+                        $mediaId = $db->lastInsertId();
+
+                        // Check if it's an image and automatically optimize it
+                        if (strpos($fileType, 'image/') === 0) {
+                            // Create optimized directory if it doesn't exist
+                            $optimizedDir = '../../uploads/optimized/';
+                            if (!is_dir($optimizedDir)) {
+                                mkdir($optimizedDir, 0755, true);
+                            }
+
+                            // Optimize the image
+                            $variants = createImageVariants($fileDestination, $optimizedDir);
+
+                            if ($variants) {
+                                // Update the media record with optimized URLs
+                                updateMediaRecord($db, $mediaId, $variants);
+                                $success = "File downloaded and optimized successfully";
+                            } else {
+                                $success = "File downloaded successfully, but optimization failed";
+                            }
+                        } else {
+                            $success = "File downloaded successfully";
+                        }
+                    } else {
+                        $error = "Error saving downloaded file";
+                    }
+                } else {
+                    $error = "Error downloading file from URL";
+                }
+            }
         } else {
-            $error = "Error uploading file: " . $fileError;
+            $error = "No file uploaded or URL provided";
         }
     }
 
@@ -398,16 +465,23 @@ require_once '../includes/header.php';
 
             <div class="upload-tab-content" id="single-upload" style="display: block;">
                 <form method="POST" enctype="multipart/form-data" class="upload-form">
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
-                        <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
-                        <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
-                    </div>
+                    <?php
+                    // Render the image upload component
+                    renderImageUploadComponent(
+                        'media_file',
+                        '',
+                        'Upload Media',
+                        'media',
+                        null
+                    );
+                    ?>
+
                     <div class="form-group mb-3">
                         <label class="form-label" for="alt_text">Alt Text</label>
                         <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
                         <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
                     </div>
+
                     <div class="form-group">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-upload" aria-hidden="true"></i> Upload

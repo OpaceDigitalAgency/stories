@@ -485,18 +485,63 @@ require_once '../includes/header.php';
                 <button type="button" class="upload-tab" data-tab="bulk">Bulk Upload</button>
             </div>
 
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle tab switching
+                const tabs = document.querySelectorAll('.upload-tab');
+                const tabContents = document.querySelectorAll('.upload-tab-content');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        // Remove active class from all tabs
+                        tabs.forEach(t => t.classList.remove('active'));
+
+                        // Add active class to clicked tab
+                        this.classList.add('active');
+
+                        // Hide all tab contents
+                        tabContents.forEach(content => {
+                            content.style.display = 'none';
+                        });
+
+                        // Show the selected tab content
+                        const tabId = this.getAttribute('data-tab');
+                        const selectedContent = document.getElementById(tabId + '-upload');
+                        if (selectedContent) {
+                            selectedContent.style.display = 'block';
+                        }
+                    });
+                });
+            });
+            </script>
+
             <div class="upload-tab-content" id="single-upload" style="display: block;">
                 <form method="POST" enctype="multipart/form-data" class="upload-form">
-                    <?php
-                    // Render the image upload component
-                    renderImageUploadComponent(
-                        'media_file',
-                        '',
-                        'Upload Media',
-                        'media',
-                        null
-                    );
-                    ?>
+                    <div class="form-group">
+                        <label class="form-label" for="media_file">Upload Media</label>
+                        <div class="custom-file-upload" style="border: 2px dashed #ccc; padding: 20px; text-align: center; background-color: #f9f9f9; margin-bottom: 20px; cursor: pointer;">
+                            <div class="dropzone-message">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #4361ee; margin-bottom: 10px;"></i>
+                                <p>Drag & drop an image here or</p>
+                                <label for="media_file" class="btn btn-primary" id="single-browse-btn">
+                                    Browse Files
+                                </label>
+                                <input type="file" name="media_file" id="media_file" accept="image/*" style="display: none;">
+                                <div class="dropzone-info" style="margin-top: 10px;">
+                                    <small>Supported formats: JPG, PNG, GIF, WebP. Max size: 10MB</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="file-preview" style="display: none; margin-top: 15px; text-align: center;">
+                            <img id="preview-image" src="#" alt="Preview" style="max-width: 100%; max-height: 300px; border-radius: 4px;">
+                            <div style="margin-top: 10px;">
+                                <button type="button" id="remove-file" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-times"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="alt_text">Alt Text</label>
@@ -510,6 +555,73 @@ require_once '../includes/header.php';
                         </button>
                     </div>
                 </form>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const fileInput = document.getElementById('media_file');
+                    const previewContainer = document.getElementById('file-preview');
+                    const previewImage = document.getElementById('preview-image');
+                    const removeButton = document.getElementById('remove-file');
+                    const dropzone = document.querySelector('.custom-file-upload');
+                    const browseBtn = document.getElementById('single-browse-btn');
+
+                    // Handle file selection
+                    fileInput.addEventListener('change', function() {
+                        if (this.files && this.files[0]) {
+                            const file = this.files[0];
+                            const reader = new FileReader();
+
+                            reader.onload = function(e) {
+                                previewImage.src = e.target.result;
+                                previewContainer.style.display = 'block';
+                                dropzone.style.borderColor = '#4361ee';
+                            };
+
+                            reader.readAsDataURL(file);
+                        }
+                    });
+
+                    // Handle remove button
+                    if (removeButton) {
+                        removeButton.addEventListener('click', function() {
+                            fileInput.value = '';
+                            previewContainer.style.display = 'none';
+                            dropzone.style.borderColor = '#ccc';
+                        });
+                    }
+
+                    // Handle drag and drop
+                    dropzone.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '#e6f7ff';
+                        this.style.borderColor = '#4361ee';
+                    });
+
+                    dropzone.addEventListener('dragleave', function() {
+                        this.style.backgroundColor = '#f9f9f9';
+                        if (!fileInput.files || !fileInput.files[0]) {
+                            this.style.borderColor = '#ccc';
+                        }
+                    });
+
+                    dropzone.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        this.style.backgroundColor = '#f9f9f9';
+
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            fileInput.files = e.dataTransfer.files;
+                            fileInput.dispatchEvent(new Event('change'));
+                        }
+                    });
+
+                    // Make dropzone clickable
+                    dropzone.addEventListener('click', function(e) {
+                        if (e.target !== browseBtn && !browseBtn.contains(e.target)) {
+                            fileInput.click();
+                        }
+                    });
+                });
+                </script>
             </div>
 
             <div class="upload-tab-content" id="bulk-upload" style="display: none;">
@@ -536,66 +648,110 @@ require_once '../includes/header.php';
                     </div>
                 </form>
 
+                <div class="bulk-upload-progress" style="display: none;">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <div class="upload-status">
+                        <span class="current-file"></span>
+                        <span class="upload-count"></span>
+                    </div>
+                </div>
+
+                <div class="bulk-upload-results" style="display: none;">
+                    <h4>Upload Results</h4>
+                    <div class="results-list"></div>
+                </div>
+
                 <script>
-                // Direct event handler for the browse files button
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Bulk upload functionality
+                    const bulkForm = document.getElementById('bulk-upload-form');
+                    const bulkFileInput = document.getElementById('bulk-file-input');
+                    const bulkDropzone = document.getElementById('bulk-dropzone');
                     const browseBtn = document.getElementById('browse-files-btn');
-                    const fileInput = document.getElementById('bulk-file-input');
-                    const uploadForm = document.getElementById('bulk-upload-form');
+                    const submitBtn = document.getElementById('bulk-upload-submit');
                     const progressContainer = document.querySelector('.bulk-upload-progress');
                     const progressBar = document.querySelector('.bulk-upload-progress .progress-bar');
+                    const resultsContainer = document.querySelector('.bulk-upload-results');
+                    const resultsList = document.querySelector('.results-list');
 
-                    if (browseBtn && fileInput) {
-                        browseBtn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            fileInput.click();
-                        });
-                    }
-
-                    // Also make the entire dropzone clickable
-                    const dropzone = document.getElementById('bulk-dropzone');
-                    if (dropzone && fileInput) {
-                        dropzone.addEventListener('click', function(e) {
-                            // Don't trigger if they clicked the button directly
-                            if (e.target !== browseBtn && !browseBtn.contains(e.target)) {
-                                fileInput.click();
-                            }
-                        });
-                    }
-
-                    // Show selected files count
-                    if (fileInput) {
-                        fileInput.addEventListener('change', function() {
+                    // Handle file selection
+                    if (bulkFileInput) {
+                        bulkFileInput.addEventListener('change', function() {
                             const fileCount = this.files ? this.files.length : 0;
-                            const submitBtn = document.getElementById('bulk-upload-submit');
 
                             if (submitBtn && fileCount > 0) {
-                                submitBtn.textContent = `Upload ${fileCount} Files`;
+                                submitBtn.innerHTML = `<i class="fas fa-upload"></i> Upload ${fileCount} Files`;
                                 submitBtn.disabled = false;
                             } else if (submitBtn) {
-                                submitBtn.textContent = 'Upload Files';
+                                submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
                                 submitBtn.disabled = true;
                             }
                         });
                     }
 
-                    // Handle form submission with progress
-                    if (uploadForm && progressContainer && progressBar) {
-                        uploadForm.addEventListener('submit', function(e) {
+                    // Handle browse button click
+                    if (browseBtn && bulkFileInput) {
+                        browseBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            bulkFileInput.click();
+                        });
+                    }
+
+                    // Handle dropzone click
+                    if (bulkDropzone && bulkFileInput) {
+                        bulkDropzone.addEventListener('click', function(e) {
+                            if (e.target !== browseBtn && !browseBtn.contains(e.target)) {
+                                bulkFileInput.click();
+                            }
+                        });
+                    }
+
+                    // Handle drag and drop
+                    if (bulkDropzone) {
+                        bulkDropzone.addEventListener('dragover', function(e) {
+                            e.preventDefault();
+                            this.style.backgroundColor = '#e6f7ff';
+                            this.style.borderColor = '#4361ee';
+                        });
+
+                        bulkDropzone.addEventListener('dragleave', function() {
+                            this.style.backgroundColor = '#f9f9f9';
+                            if (!bulkFileInput.files || bulkFileInput.files.length === 0) {
+                                this.style.borderColor = '#ccc';
+                            }
+                        });
+
+                        bulkDropzone.addEventListener('drop', function(e) {
+                            e.preventDefault();
+                            this.style.backgroundColor = '#f9f9f9';
+
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                bulkFileInput.files = e.dataTransfer.files;
+                                bulkFileInput.dispatchEvent(new Event('change'));
+                            }
+                        });
+                    }
+
+                    // Handle form submission
+                    if (bulkForm) {
+                        bulkForm.addEventListener('submit', function(e) {
                             e.preventDefault();
 
-                            const files = fileInput.files;
-                            if (!files || files.length === 0) {
+                            if (!bulkFileInput || !bulkFileInput.files || bulkFileInput.files.length === 0) {
                                 alert('Please select at least one file to upload.');
                                 return;
                             }
 
                             // Show progress
-                            progressContainer.style.display = 'block';
-                            progressBar.style.width = '0%';
-                            progressBar.textContent = '0%';
+                            if (progressContainer && progressBar) {
+                                progressContainer.style.display = 'block';
+                                progressBar.style.width = '0%';
+                                progressBar.textContent = '0%';
+                            }
 
-                            // Create FormData from the form
+                            // Create FormData
                             const formData = new FormData(this);
 
                             // Send AJAX request
@@ -604,28 +760,60 @@ require_once '../includes/header.php';
 
                             // Track progress
                             xhr.upload.addEventListener('progress', function(e) {
-                                if (e.lengthComputable) {
+                                if (e.lengthComputable && progressBar) {
                                     const percent = Math.round((e.loaded / e.total) * 100);
                                     progressBar.style.width = percent + '%';
                                     progressBar.textContent = percent + '%';
                                 }
                             });
 
-                            // Handle completion
+                            // Handle response
                             xhr.addEventListener('load', function() {
                                 if (xhr.status === 200) {
                                     try {
                                         const response = JSON.parse(xhr.responseText);
+
+                                        // Show results
+                                        if (resultsContainer) {
+                                            resultsContainer.style.display = 'block';
+                                        }
+
+                                        // Process each file result
+                                        if (resultsList && response.files && response.files.length) {
+                                            resultsList.innerHTML = '';
+
+                                            response.files.forEach(file => {
+                                                const resultItem = document.createElement('div');
+                                                resultItem.className = `upload-result-item ${file.success ? 'success' : 'error'}`;
+                                                resultItem.style.padding = '10px';
+                                                resultItem.style.marginBottom = '5px';
+                                                resultItem.style.backgroundColor = file.success ? '#e6ffed' : '#ffebe9';
+                                                resultItem.style.borderRadius = '4px';
+
+                                                resultItem.innerHTML = `
+                                                    <div style="display: flex; align-items: center;">
+                                                        <div style="margin-right: 10px; color: ${file.success ? 'green' : 'red'}">
+                                                            <i class="fas fa-${file.success ? 'check-circle' : 'times-circle'}"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div style="font-weight: bold;">${file.name}</div>
+                                                            <div>${file.success ? 'Uploaded successfully' : file.message}</div>
+                                                        </div>
+                                                    </div>
+                                                `;
+
+                                                resultsList.appendChild(resultItem);
+                                            });
+                                        }
+
+                                        // If any files were uploaded successfully, reload the page after a delay
                                         if (response.success) {
-                                            alert('Files uploaded successfully!');
-                                            // Reload the page after a delay
-                                            setTimeout(function() {
+                                            setTimeout(() => {
                                                 window.location.reload();
-                                            }, 1000);
-                                        } else {
-                                            alert('Upload failed: ' + response.message);
+                                            }, 3000);
                                         }
                                     } catch (e) {
+                                        console.error('Error parsing response:', e);
                                         alert('Error processing server response.');
                                     }
                                 } else {
@@ -644,21 +832,6 @@ require_once '../includes/header.php';
                     }
                 });
                 </script>
-
-                <div class="bulk-upload-progress" style="display: none;">
-                    <div class="progress mb-3">
-                        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                    </div>
-                    <div class="upload-status">
-                        <span class="current-file"></span>
-                        <span class="upload-count"></span>
-                    </div>
-                </div>
-
-                <div class="bulk-upload-results" style="display: none;">
-                    <h4>Upload Results</h4>
-                    <div class="results-list"></div>
-                </div>
             </div>
         </div>
     </div>

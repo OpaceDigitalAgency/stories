@@ -105,8 +105,27 @@ class SimpleAuth {
         unset($_SESSION['auth_time']);
         unset($_SESSION['auth_token']);
 
-        // Clear cookie - set secure to false for HTTP
+        // Delete the session cookie
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+
+        // Clear auth_token cookie - set secure to false for HTTP
         setcookie('auth_token', '', time() - 3600, '/', '', false, true);
+
+        // Remove token from database if it exists
+        if (isset($_COOKIE['auth_token']) && self::$db) {
+            try {
+                $stmt = self::$db->prepare("DELETE FROM auth_tokens WHERE token = ?");
+                $stmt->execute([$_COOKIE['auth_token']]);
+            } catch (Exception $e) {
+                error_log("Error removing token from database: " . $e->getMessage());
+            }
+        }
     }
 
     /**

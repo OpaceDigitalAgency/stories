@@ -93,6 +93,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
             </div>
             <div class="user-info">
                 <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
+                <a href="<?php echo $isContentDir ? '../clear_session.php' : 'clear_session.php'; ?>" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
+                    <i class="fas fa-broom"></i> Clear Session
+                </a>
                 <form method="POST" action="<?php echo $isContentDir ? '../logout.php' : 'logout.php'; ?>" style="display: inline;">
                     <button type="submit" class="btn btn-danger btn-sm">Logout</button>
                 </form>

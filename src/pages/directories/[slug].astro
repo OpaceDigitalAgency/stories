@@ -24,7 +24,7 @@ let apiErrorDetails: Error | null = null;
 try {
   // Fetch directory item by slug
   item = await fetchDirectoryItem(slug);
-  
+
   if (!item) {
     apiError = true;
     apiErrorDetails = new Error('Directory item not found');
@@ -223,16 +223,20 @@ const description = item ? item.description : `We couldn't find the directory it
             </p>
           </div>
 
-          <form class="max-w-xl mx-auto">
+          <form id="directory-newsletter-form" class="max-w-xl mx-auto">
             <div class="flex flex-col sm:flex-row gap-4">
               <input
                 type="email"
+                name="email"
+                id="directory-newsletter-email"
                 placeholder="Your email address"
                 class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
                 required
               />
+              <input type="hidden" name="feature" value="directory-updates" />
               <button
                 type="submit"
+                id="directory-newsletter-submit"
                 class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
               >
                 Subscribe
@@ -241,6 +245,14 @@ const description = item ? item.description : `We couldn't find the directory it
             <p class="text-xs text-text-secondary/70 text-center mt-4">
               By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
             </p>
+            <!-- Success message (hidden by default) -->
+            <div id="directory-newsletter-success" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
+              Thank you for subscribing! We'll keep you updated with new directory listings and resources.
+            </div>
+            <!-- Error message (hidden by default) -->
+            <div id="directory-newsletter-error" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
+              There was an error processing your subscription. Please try again.
+            </div>
           </form>
         </div>
       </div>
@@ -313,4 +325,103 @@ const description = item ? item.description : `We couldn't find the directory it
       }
     }
   </style>
+
+  <script slot="scripts">
+    // Directory newsletter form submission
+    document.addEventListener('DOMContentLoaded', function() {
+      const newsletterForm = document.getElementById('directory-newsletter-form');
+      if (newsletterForm) {
+        newsletterForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          // Get form data
+          const emailInput = document.getElementById('directory-newsletter-email');
+          if (!emailInput || !(emailInput instanceof HTMLInputElement) || !emailInput.value) {
+            showNewsletterMessage('error', 'Please enter your email address.');
+            return;
+          }
+
+          const email = emailInput.value;
+          const feature = 'directory-updates';
+
+          // Show loading state
+          const submitButton = document.getElementById('directory-newsletter-submit');
+          if (submitButton) {
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subscribing...';
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('feature', feature);
+
+            // Submit using fetch API
+            fetch('https://api.storiesfromtheweb.org/public/save-subscriber.php', {
+              method: 'POST',
+              body: formData
+            })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data.success) {
+                // Show success message
+                showNewsletterMessage('success', 'Thank you for subscribing! We\'ll keep you updated with new directory listings and resources.');
+                // Reset form
+                newsletterForm.reset();
+              } else {
+                showNewsletterMessage('error', data.error || 'An error occurred while subscribing. Please try again.');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              showNewsletterMessage('error', 'An error occurred while subscribing. Please try again.');
+
+              // Try a direct AJAX request as fallback
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', 'https://api.storiesfromtheweb.org/public/save-subscriber.php', true);
+              xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+              xhr.send('email=' + encodeURIComponent(email) + '&feature=' + encodeURIComponent(feature));
+            })
+            .finally(() => {
+              // Re-enable form elements
+              submitButton.disabled = false;
+              submitButton.innerHTML = originalButtonText;
+            });
+          }
+        });
+      }
+
+      // Helper function to show success or error messages
+      function showNewsletterMessage(type, message) {
+        const successDiv = document.getElementById('directory-newsletter-success');
+        const errorDiv = document.getElementById('directory-newsletter-error');
+
+        if (successDiv && errorDiv) {
+          if (type === 'success') {
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+          } else {
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            successDiv.classList.add('hidden');
+          }
+
+          // Hide the message after 5 seconds
+          setTimeout(() => {
+            if (type === 'success') {
+              successDiv.classList.add('hidden');
+            } else {
+              errorDiv.classList.add('hidden');
+            }
+          }, 5000);
+        }
+      }
+    });
+  </script>
 </Layout>

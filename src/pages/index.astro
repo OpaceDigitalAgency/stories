@@ -170,7 +170,7 @@ try {
       <ApiErrorMessage endpoint={apiErrorEndpoint} error={apiErrorDetails} />
     </div>
   )}
-  
+
   <!-- Hero Section -->
   <section class="relative py-16 md:py-24 overflow-hidden">
     <!-- Decorative blobs -->
@@ -397,16 +397,20 @@ try {
           Subscribe to our newsletter to receive new stories, author spotlights, and creative writing tips.
         </p>
       </div>
-      <form class="max-w-2xl mx-auto">
+      <form id="newsletter-form" class="max-w-2xl mx-auto">
         <div class="flex flex-col sm:flex-row gap-3">
           <input
             type="email"
+            name="email"
+            id="newsletter-email"
             placeholder="Your email address"
             class="flex-grow px-4 py-3 rounded-xl border-2 border-neutral-dark focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-300"
             required
           />
+          <input type="hidden" name="feature" value="newsletter" />
           <button
             type="submit"
+            id="newsletter-submit"
             class="btn btn-secondary px-6 py-3 shadow-playful btn-playful whitespace-nowrap"
           >
             <span class="flex items-center">
@@ -417,6 +421,14 @@ try {
         <p class="text-sm text-gray-500 mt-3">
           We respect your privacy. Unsubscribe at any time.
         </p>
+        <!-- Success message (hidden by default) -->
+        <div id="newsletter-success" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
+          Thank you for subscribing! We'll keep you updated with the latest stories and news.
+        </div>
+        <!-- Error message (hidden by default) -->
+        <div id="newsletter-error" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
+          There was an error processing your subscription. Please try again.
+        </div>
       </form>
     </div>
   </section>
@@ -532,6 +544,103 @@ try {
           blob.style.transform = `translate(${x}px, ${y}px)`;
         }
       });
+    });
+
+    // Newsletter form submission
+    document.addEventListener('DOMContentLoaded', function() {
+      const newsletterForm = document.getElementById('newsletter-form');
+      if (newsletterForm) {
+        newsletterForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          // Get form data
+          const emailInput = document.getElementById('newsletter-email');
+          if (!emailInput || !(emailInput instanceof HTMLInputElement) || !emailInput.value) {
+            showNewsletterMessage('error', 'Please enter your email address.');
+            return;
+          }
+
+          const email = emailInput.value;
+          const feature = 'newsletter';
+
+          // Show loading state
+          const submitButton = document.getElementById('newsletter-submit');
+          if (submitButton) {
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subscribing...';
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('feature', feature);
+
+            // Submit using fetch API
+            fetch('https://api.storiesfromtheweb.org/public/save-subscriber.php', {
+              method: 'POST',
+              body: formData
+            })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data.success) {
+                // Show success message
+                showNewsletterMessage('success', 'Thank you for subscribing! We\'ll keep you updated with the latest stories and news.');
+                // Reset form
+                newsletterForm.reset();
+              } else {
+                showNewsletterMessage('error', data.error || 'An error occurred while subscribing. Please try again.');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              showNewsletterMessage('error', 'An error occurred while subscribing. Please try again.');
+
+              // Try a direct AJAX request as fallback
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', 'https://api.storiesfromtheweb.org/public/save-subscriber.php', true);
+              xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+              xhr.send('email=' + encodeURIComponent(email) + '&feature=' + encodeURIComponent(feature));
+            })
+            .finally(() => {
+              // Re-enable form elements
+              submitButton.disabled = false;
+              submitButton.innerHTML = originalButtonText;
+            });
+          }
+        });
+      }
+
+      // Helper function to show success or error messages
+      function showNewsletterMessage(type, message) {
+        const successDiv = document.getElementById('newsletter-success');
+        const errorDiv = document.getElementById('newsletter-error');
+
+        if (successDiv && errorDiv) {
+          if (type === 'success') {
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+          } else {
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            successDiv.classList.add('hidden');
+          }
+
+          // Hide the message after 5 seconds
+          setTimeout(() => {
+            if (type === 'success') {
+              successDiv.classList.add('hidden');
+            } else {
+              errorDiv.classList.add('hidden');
+            }
+          }, 5000);
+        }
+      }
     });
   </script>
 </Layout>

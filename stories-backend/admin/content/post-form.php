@@ -13,6 +13,9 @@ require_once '../includes/db-connect.php';
 // Include header
 require_once '../includes/header.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
 // Initialize variables
 $post = null;
 $authors = [];
@@ -46,13 +49,13 @@ try {
             error_log("Database connection error in post-form.php: " . $e->getMessage());
         }
     }
-    
+
     // Get table columns
     $stmt = $db->query("SHOW TABLES LIKE '$blogTableName'");
     if ($stmt->rowCount() > 0) {
         $stmt = $db->query("SHOW COLUMNS FROM $blogTableName");
         $columns = array_column($stmt->fetchAll(), 'Field');
-        
+
         // Get column information for validation
         $stmt = $db->query("SHOW COLUMNS FROM $blogTableName");
         $columnInfo = [];
@@ -62,18 +65,18 @@ try {
     } else {
         $error = "Blog posts table not found. Please check your database setup.";
     }
-    
+
     // Check for specific columns
     $hasSlugColumn = in_array('slug', $columns);
     $hasAuthorIdColumn = in_array('author_id', $columns);
     $hasExcerptColumn = in_array('excerpt', $columns);
-    
+
     // Get post if editing
     if (isset($_GET['id'])) {
         $stmt = $db->prepare("SELECT * FROM $blogTableName WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $post = $stmt->fetch();
-        
+
         if (!$post) {
             header("Location: blog-posts.php");
             exit;
@@ -93,7 +96,7 @@ try {
         $stmt->execute([$post['id']]);
         $postTags = array_column($stmt->fetchAll(), 'tag_id');
     }
-    
+
     // Get additional fields from the database
     $additionalFields = [];
     foreach ($columns as $column) {
@@ -174,16 +177,16 @@ if (isset($_SESSION['error'])) {
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="content">Content <span class="required">*</span></label>
-                        <textarea id="content" name="content" class="form-control" rows="10" required><?php 
-                            echo htmlspecialchars($post['content'] ?? ''); 
+                        <textarea id="content" name="content" class="form-control" rows="10" required><?php
+                            echo htmlspecialchars($post['content'] ?? '');
                         ?></textarea>
                     </div>
 
                     <?php if ($hasExcerptColumn): ?>
                     <div class="form-group mb-3">
                         <label class="form-label" for="excerpt">Excerpt</label>
-                        <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php 
-                            echo htmlspecialchars($post['excerpt'] ?? ''); 
+                        <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php
+                            echo htmlspecialchars($post['excerpt'] ?? '');
                         ?></textarea>
                         <small>A short summary of the post. If left empty, it will be auto-generated from the content.</small>
                     </div>
@@ -196,19 +199,19 @@ if (isset($_SESSION['error'])) {
                             <label class="form-check-label" for="is_published">Published</label>
                         </div>
                     </div>
-                    
+
                     <?php foreach ($additionalFields as $field): ?>
-                        <?php 
+                        <?php
                         $isRequired = isset($columnInfo[$field]) && $columnInfo[$field]['Null'] === 'NO' && $columnInfo[$field]['Default'] === null;
                         $isDateTime = isset($columnInfo[$field]) && strpos($columnInfo[$field]['Type'], 'datetime') !== false;
                         $isBooleanField = isset($columnInfo[$field]) && (
-                            (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) || 
-                            (strpos($field, 'is_') === 0) || 
-                            (strpos($field, 'has_') === 0) || 
+                            (strpos($columnInfo[$field]['Type'], 'tinyint(1)') !== false) ||
+                            (strpos($field, 'is_') === 0) ||
+                            (strpos($field, 'has_') === 0) ||
                             (strpos($field, 'needs_') === 0)
                         );
                         ?>
-                        
+
                         <?php if ($isBooleanField): ?>
                         <div class="form-group mb-3">
                             <div class="form-check">
@@ -226,12 +229,23 @@ if (isset($_SESSION['error'])) {
                                 <?php echo ucfirst(str_replace('_', ' ', $field)); ?>
                                 <?php if ($isRequired): ?><span class="required">*</span><?php endif; ?>
                             </label>
-                            
+
                             <?php if ($isDateTime): ?>
                                 <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
                                        value="<?php echo isset($post[$field]) ? date('Y-m-d\TH:i', strtotime($post[$field])) : date('Y-m-d\TH:i'); ?>"
                                        <?php echo $isRequired ? 'required' : ''; ?>>
                                 <small>Format: YYYY-MM-DD HH:MM (pre-filled with current date/time)</small>
+                            <?php elseif ($field === 'featured_image' || $field === 'cover_image' || $field === 'image_url' || strpos($field, 'image') !== false): ?>
+                                <?php
+                                // Render the image upload component for image fields
+                                renderImageUploadComponent(
+                                    $field,
+                                    $post[$field] ?? '',
+                                    ucfirst(str_replace('_', ' ', $field)),
+                                    'post',
+                                    $post['id'] ?? null
+                                );
+                                ?>
                             <?php else: ?>
                                 <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
                                        value="<?php echo htmlspecialchars($post[$field] ?? ''); ?>"
@@ -263,7 +277,7 @@ if (isset($_SESSION['error'])) {
                 </form>
             </div>
         </div>
-        
+
         <?php if ($post): ?>
             <div class="content-section mb-4">
                 <div class="section-header">
@@ -293,34 +307,34 @@ if (isset($_SESSION['error'])) {
             border-radius: var(--radius-md);
             padding: 1rem;
         }
-        
+
         .metadata-item {
             margin-bottom: 0.5rem;
             padding-bottom: 0.5rem;
             border-bottom: 1px solid var(--gray-200);
         }
-        
+
         .metadata-item:last-child {
             margin-bottom: 0;
             padding-bottom: 0;
             border-bottom: none;
         }
-        
+
         .form-check {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         .form-check-input {
             margin-top: 0;
         }
-        
+
         .text-muted {
             color: var(--gray-600);
             font-size: 0.875rem;
         }
-        
+
         .tag-checkboxes {
             display: flex;
             flex-wrap: wrap;
@@ -328,7 +342,7 @@ if (isset($_SESSION['error'])) {
             margin-top: 0.5rem;
         }
     </style>
-    
+
     <script>
         function generateSlug(title) {
             const slugInput = document.getElementById('slug');
@@ -341,5 +355,8 @@ if (isset($_SESSION['error'])) {
             }
         }
     </script>
+
+    <!-- Include image upload script -->
+    <script src="../assets/js/image-upload.js"></script>
 
 <?php require_once '../includes/footer.php'; ?>

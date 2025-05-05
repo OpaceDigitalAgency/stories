@@ -11,8 +11,29 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include image optimizer
-require_once '../../includes/image_optimizer.php';
+// Include image optimizer with error handling
+try {
+    if (file_exists('../../includes/image_optimizer.php')) {
+        require_once '../../includes/image_optimizer.php';
+    } else {
+        error_log("image_optimizer.php file not found");
+        // Define fallback functions to prevent errors
+        if (!function_exists('createImageVariants')) {
+            function createImageVariants($sourcePath, $destinationDir, $options = []) {
+                error_log("createImageVariants function not available");
+                return false;
+            }
+        }
+        if (!function_exists('updateMediaRecord')) {
+            function updateMediaRecord($db, $mediaId, $variants) {
+                error_log("updateMediaRecord function not available");
+                return false;
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Error including image_optimizer.php: " . $e->getMessage());
+}
 
 // Function to handle file paths for display and access
 function getDisplayUrl($filePath) {

@@ -14,6 +14,9 @@ require_once '../includes/db-connect.php';
 // Include header
 require_once '../includes/header.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
 // Initialize variables
 $tool = null;
 $categories = [];
@@ -133,6 +136,17 @@ if (isset($_SESSION['error'])) {
                         <input type="url" id="tool_url" name="tool_url" class="form-control"
                                value="<?php echo htmlspecialchars($tool['tool_url'] ?? ''); ?>">
                     </div>
+
+                    <?php
+                    // Render the image upload component for tool image
+                    renderImageUploadComponent(
+                        'image_url',
+                        $tool['image_url'] ?? '',
+                        'Tool Image',
+                        'ai_tool',
+                        $tool['id'] ?? null
+                    );
+                    ?>
 
                     <div class="form-group mb-3">
                         <label class="form-label" for="pricing_type">Pricing Type</label>
@@ -282,5 +296,8 @@ if (isset($_SESSION['error'])) {
         }
     });
 </script>
+
+<!-- Include image upload script -->
+<script src="../assets/js/image-upload.js"></script>
 
 <?php require_once '../includes/footer.php'; ?>

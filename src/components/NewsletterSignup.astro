@@ -42,11 +42,12 @@ const {
             required
           />
           <input type="hidden" name="feature" value={feature} />
-          <button
-            type="submit"
+          <a
+            href="#"
             id="global-newsletter-submit"
-            class="bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105 cursor-pointer active:scale-95 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            onclick="document.getElementById('global-newsletter-form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true})); return false;"
+            class="inline-block bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105 cursor-pointer active:scale-95 active:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            onclick="event.preventDefault(); document.getElementById('global-newsletter-form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));"
+            style="cursor: pointer; pointer-events: auto; position: relative; z-index: 10;"
           >
             <span class="flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
@@ -54,7 +55,7 @@ const {
               </svg>
               {buttonText}
             </span>
-          </button>
+          </a>
         </div>
         <p class="text-sm text-gray-500 mt-3">
           We respect your privacy. Unsubscribe at any time.
@@ -86,6 +87,7 @@ const {
       console.log('Submit button found, adding click event');
       submitButton.addEventListener('click', function(e) {
         console.log('Button clicked');
+        e.preventDefault();
         if (newsletterForm) {
           console.log('Triggering form submission');
           const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -114,7 +116,7 @@ const {
         const submitButton = document.getElementById('global-newsletter-submit');
         if (submitButton) {
           const originalButtonText = submitButton.innerHTML;
-          submitButton.disabled = true;
+          submitButton.style.pointerEvents = 'none';
           submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subscribing...';
 
           // Create form data
@@ -155,7 +157,7 @@ const {
           })
           .finally(() => {
             // Re-enable form elements
-            submitButton.disabled = false;
+            submitButton.style.pointerEvents = 'auto';
             submitButton.innerHTML = originalButtonText;
           });
         }

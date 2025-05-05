@@ -39,8 +39,36 @@ const description = item ? item.description : `We couldn't find the AI tool you'
 ---
 
 <Layout title={title} description={description}>
-  <main class="flex-grow w-full pt-24 pb-16">
-    <div class="container mx-auto px-4 max-w-4xl">
+  <main class="flex-grow w-full">
+    <!-- Hero Section with Decorative Elements -->
+    <section class="relative py-16 overflow-hidden">
+      <!-- Enhanced decorative blobs -->
+      <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
+      <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+
+      <div class="container relative z-10">
+        <div class="max-w-4xl mx-auto">
+          <!-- Breadcrumbs -->
+          <nav class="flex items-center text-sm text-text-secondary mb-8" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-2">
+              <li>
+                <a href="/" class="hover:text-primary transition-colors duration-300">Home</a>
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mx-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+                <a href="/ai-tools" class="hover:text-primary transition-colors duration-300">AI Tools</a>
+              </li>
+              <li class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mx-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+                <span class="text-text-secondary/70 truncate max-w-[200px]">{item?.name}</span>
+              </li>
+            </ol>
+          </nav>
       {apiError ? (
         <section class="py-8">
           <div class="container mx-auto px-4">
@@ -49,78 +77,244 @@ const description = item ? item.description : `We couldn't find the AI tool you'
         </section>
       ) : item && (
         <>
-          <header class="mb-8">
-            <div class="flex items-center gap-6 mb-6">
-              <img
-                src={item.logo || '/images/default-cover.svg'}
-                alt={item.name}
-                class="w-24 h-24 rounded-xl object-cover shadow-md"
-              />
-              <div>
-                <h1 class="text-4xl font-bold text-text-primary mb-2">{item.name}</h1>
-                <p class="text-xl text-text-secondary">{item.category}</p>
+          <header class="mb-12">
+            <div class="flex flex-col md:flex-row gap-8 items-start">
+              <!-- Tool Logo -->
+              <div class="w-32 h-32 rounded-2xl overflow-hidden shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+                <img
+                  src={item.logo || '/images/default-cover.svg'}
+                  alt={item.name}
+                  class="w-full h-full object-cover"
+                />
+              </div>
+
+              <div class="flex-1">
+                <!-- Category Badge -->
+                <div class="mb-4">
+                  <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                    {item.category || 'General'}
+                  </span>
+                  {item.featured && (
+                    <span class="ml-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Featured Tool
+                    </span>
+                  )}
+                </div>
+
+                <!-- Title and Description -->
+                <h1 class="text-4xl font-display font-bold mb-4 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+                  {item.name}
+                </h1>
+                <p class="text-lg text-text-secondary mb-6">{item.description}</p>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-4">
+                  {item.url && (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary-600 transition-colors transform-style-3d hover:translate-z-4 hover:scale-105"
+                    >
+                      Try Now
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                      </svg>
+                    </a>
+                  )}
+                  {item.rating && (
+                    <span class="inline-flex items-center bg-green-100 text-green-800 px-4 py-3 rounded-xl text-sm font-medium">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="w-5 h-5 mr-1">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                      {item.rating} / 5
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            {item.url && (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary-600 transition-colors"
-              >
-                Visit Tool
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 ml-2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                </svg>
-              </a>
-            )}
           </header>
 
-          <div class="prose prose-lg max-w-none">
-            <div class="mb-8">
-              <h2 class="text-2xl font-bold mb-4">About this Tool</h2>
-              <p class="text-text-secondary">{item.description}</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <!-- Tool Details -->
+          <div class="bg-white rounded-xl shadow-md p-8 mb-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h3 class="text-xl font-bold mb-2">Pricing</h3>
-                <p class="text-text-secondary">
+                <h3 class="text-xl font-bold mb-4">Pricing</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
                   <span class="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium mb-2">
                     {item.pricingType}
                   </span>
                   {item.priceInfo && (
-                    <span class="block mt-2">{item.priceInfo}</span>
+                    <p class="text-text-secondary mt-2">{item.priceInfo}</p>
                   )}
-                </p>
+                </div>
               </div>
 
               {item.features && (
                 <div>
-                  <h3 class="text-xl font-bold mb-2">Features</h3>
-                  <p class="text-text-secondary">{item.features}</p>
+                  <h3 class="text-xl font-bold mb-4">Features</h3>
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-text-secondary whitespace-pre-line">{item.features}</p>
+                  </div>
                 </div>
               )}
             </div>
+          </div>
 
-            <div class="flex flex-wrap gap-3">
-              {item.featured && (
-                <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                  Featured Tool
-                </span>
-              )}
-              {item.rating && (
-                <span class="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="w-4 h-4 mr-1">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                  {item.rating} / 5
-                </span>
-              )}
-            </div>
+          <!-- Share Section -->
+          <div class="flex flex-wrap items-center justify-center gap-4 mb-12 p-6 bg-white rounded-xl shadow-md">
+            <span class="text-text-secondary font-bold">Share this tool:</span>
+            <a
+              href={`https://twitter.com/intent/tweet?url=https://storiesfromtheweb.org/ai-tools/${slug}&text=${encodeURIComponent(item.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-blue-400 text-white p-3 rounded-full hover:bg-blue-500 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110"
+              aria-label="Share on Twitter"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+              </svg>
+            </a>
+            <a
+              href={`https://www.linkedin.com/shareArticle?mini=true&url=https://storiesfromtheweb.org/ai-tools/${slug}&title=${encodeURIComponent(item.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-blue-700 text-white p-3 rounded-full hover:bg-blue-800 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110"
+              aria-label="Share on LinkedIn"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z"/>
+              </svg>
+            </a>
+            <a
+              href={`mailto:?subject=${encodeURIComponent(item.name)}&body=Check out this AI tool: https://storiesfromtheweb.org/ai-tools/${slug}`}
+              class="bg-gray-700 text-white p-3 rounded-full hover:bg-gray-800 transition-colors duration-300 transform-style-3d hover:translate-z-4 hover:scale-110"
+              aria-label="Share via Email"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </a>
           </div>
         </>
       )}
     </div>
+
+    <!-- Related Tools -->
+    <section class="py-16 bg-white">
+      <div class="container">
+        <h2 class="text-3xl font-display font-bold mb-12 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          Similar Tools
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 perspective-1000">
+          {/* We'll add related tools here in a future update */}
+          <div class="text-center py-8 col-span-full">
+            <p class="text-text-secondary">More AI tools coming soon!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Newsletter Signup -->
+    <section class="py-16">
+      <div class="container">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-display font-bold mb-4 text-text-primary">Stay Updated</h2>
+            <p class="text-lg text-text-secondary">
+              Subscribe to our newsletter to receive updates about new AI tools and features.
+            </p>
+          </div>
+
+          <form class="max-w-xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-4">
+              <input
+                type="email"
+                placeholder="Your email address"
+                class="flex-1 px-6 py-4 rounded-xl border border-neutral-200 shadow-playful focus:shadow-xl focus:border-primary-300 transition-all duration-300 outline-none"
+                required
+              />
+              <button
+                type="submit"
+                class="bg-primary text-white font-bold py-4 px-8 rounded-xl shadow-playful hover:shadow-xl hover:bg-primary-600 transition-all duration-300 transform-style-3d hover:translate-z-4 hover:scale-105"
+              >
+                Subscribe
+              </button>
+            </div>
+            <p class="text-xs text-text-secondary/70 text-center mt-4">
+              By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <style slot="scripts">
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      50% {
+        opacity: 0.5;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .fancy-underline {
+      position: relative;
+      display: inline-block;
+    }
+
+    .fancy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
+      border-radius: 3px;
+      transform: scaleX(0.7);
+      transform-origin: center;
+      transition: transform 0.5s ease;
+    }
+
+    .fancy-underline:hover::after {
+      transform: scaleX(1);
+    }
+
+    .animate-blob {
+      animation: blob 7s infinite;
+    }
+
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
+
+    .animation-delay-4000 {
+      animation-delay: 4s;
+    }
+
+    @keyframes blob {
+      0% {
+        transform: translate(0px, 0px) scale(1);
+      }
+      33% {
+        transform: translate(30px, -50px) scale(1.1);
+      }
+      66% {
+        transform: translate(-20px, 20px) scale(0.9);
+      }
+      100% {
+        transform: translate(0px, 0px) scale(1);
+      }
+    }
+  </style>
 </Layout>

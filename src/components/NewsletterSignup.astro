@@ -66,37 +66,40 @@ const {
   </div>
 </section>
 
-<script>
+<script is:inline>
   // Newsletter form submission
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('Newsletter form script loaded');
     const newsletterForm = document.getElementById('global-newsletter-form');
+    console.log('Newsletter form found:', !!newsletterForm);
     if (newsletterForm) {
       newsletterForm.addEventListener('submit', function(e) {
+        console.log('Form submitted');
         e.preventDefault();
-        
+
         // Get form data
         const emailInput = document.getElementById('global-newsletter-email');
         if (!emailInput || !(emailInput instanceof HTMLInputElement) || !emailInput.value) {
           showNewsletterMessage('error', 'Please enter your email address.');
           return;
         }
-        
+
         const email = emailInput.value;
         const featureInput = newsletterForm.querySelector('input[name="feature"]');
         const feature = featureInput && featureInput instanceof HTMLInputElement ? featureInput.value : 'newsletter';
-        
+
         // Show loading state
         const submitButton = document.getElementById('global-newsletter-submit');
         if (submitButton) {
           const originalButtonText = submitButton.innerHTML;
           submitButton.disabled = true;
           submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subscribing...';
-        
+
           // Create form data
           const formData = new FormData();
           formData.append('email', email);
           formData.append('feature', feature);
-          
+
           // Submit using fetch API
           fetch('https://api.storiesfromtheweb.org/public/save-subscriber.php', {
             method: 'POST',
@@ -121,7 +124,7 @@ const {
           .catch(error => {
             console.error('Error:', error);
             showNewsletterMessage('error', 'An error occurred while subscribing. Please try again.');
-            
+
             // Try a direct AJAX request as fallback
             const xhr = new XMLHttpRequest();
             xhr.open('POST', 'https://api.storiesfromtheweb.org/public/save-subscriber.php', true);
@@ -136,12 +139,12 @@ const {
         }
       });
     }
-    
+
     // Helper function to show success or error messages
     function showNewsletterMessage(type, message) {
       const successDiv = document.getElementById('global-newsletter-success');
       const errorDiv = document.getElementById('global-newsletter-error');
-      
+
       if (successDiv && errorDiv) {
         if (type === 'success') {
           successDiv.textContent = message;
@@ -152,7 +155,7 @@ const {
           errorDiv.classList.remove('hidden');
           successDiv.classList.add('hidden');
         }
-        
+
         // Hide the message after 5 seconds
         setTimeout(() => {
           if (type === 'success') {

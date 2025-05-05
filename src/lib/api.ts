@@ -332,26 +332,29 @@ export async function fetchGames(): Promise<Game[]> {
 
 export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | null> {
   try {
-    const raw = await fetchApi<any>(`/directory-items/by-slug/${slug}`);
-
-    if (!raw) {
+    const raw = await fetchApi<any[]>('/directory-items');
+    
+    // Find directory item with matching slug
+    const item = raw.find(dir => dir.slug === slug);
+    
+    if (!item) {
       console.error(`No directory item found with slug: ${slug}`);
       return null;
     }
     return {
-      name: raw.name,
-      description: raw.description || '',
-      logo: raw.logo || '',
-      url: raw.url,
-      slug: raw.slug,
-      category: raw.category || '',
-      rating: Number(raw.rating) || 0,
-      priceRange: raw.priceRange || '',
-      contactEmail: raw.contactEmail,
-      contactPhone: raw.contactPhone,
-      address: raw.address,
-      featured: Boolean(raw.featured),
-      isPublished: Boolean(raw.isPublished)
+      name: item.name,
+      description: item.description || '',
+      logo: item.logo || '',
+      url: item.url,
+      slug: item.slug,
+      category: item.category || '',
+      rating: Number(item.rating) || 0,
+      priceRange: item.priceRange || '',
+      contactEmail: item.contactEmail,
+      contactPhone: item.contactPhone,
+      address: item.address,
+      featured: Boolean(item.featured),
+      isPublished: Boolean(item.isPublished)
     };
   } catch (error) {
     console.error(`Error fetching directory item with slug ${slug}:`, error);
@@ -361,25 +364,28 @@ export async function fetchDirectoryItem(slug: string): Promise<DirectoryItem | 
 
 export async function fetchAiTool(slug: string): Promise<AiTool | null> {
   try {
-    const raw = await fetchApi<any>(`/ai-tools/by-slug/${slug}`);
-
-    if (!raw) {
+    const raw = await fetchApi<any[]>('/ai-tools');
+    
+    // Find AI tool with matching slug
+    const item = raw.find(tool => tool.slug === slug);
+    
+    if (!item) {
       console.error(`No AI tool found with slug: ${slug}`);
       return null;
     }
     return {
-      name: raw.name,
-      description: raw.description || '',
-      logo: raw.logo || '',
-      url: raw.url,
-      slug: raw.slug,
-      category: raw.category || '',
-      pricingType: raw.pricingType || '',
-      priceInfo: raw.priceInfo,
-      features: raw.features,
-      rating: raw.rating,
-      featured: Boolean(raw.featured),
-      isPublished: Boolean(raw.isPublished)
+      name: item.name,
+      description: item.description || '',
+      logo: item.logo || '',
+      url: item.url,
+      slug: item.slug,
+      category: item.category || '',
+      pricingType: item.pricingType || '',
+      priceInfo: item.priceInfo,
+      features: item.features,
+      rating: item.rating,
+      featured: Boolean(item.featured),
+      isPublished: Boolean(item.isPublished)
     };
   } catch (error) {
     console.error(`Error fetching AI tool with slug ${slug}:`, error);
@@ -427,19 +433,19 @@ export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
-    name: item.name,
+    name: item.title || item.name,  // Try title first, fallback to name
     description: item.description || '',
-    logo: item.logo || '',
+    logo: item.logo || item.cover_url || '',  // Try logo first, fallback to cover_url
     url: item.url,
     slug: item.slug,
     category: item.category || '',
     rating: Number(item.rating) || 0,
-    priceRange: item.priceRange || '',
-    contactEmail: item.contactEmail,
-    contactPhone: item.contactPhone,
+    priceRange: item.price_range || item.priceRange || '',  // Try both field names
+    contactEmail: item.contactEmail || item.contact_email,
+    contactPhone: item.contactPhone || item.contact_phone,
     address: item.address,
     featured: Boolean(item.featured),
-    isPublished: Boolean(item.isPublished)
+    isPublished: Boolean(item.is_published || item.isPublished)
   }));
 }
 
@@ -448,18 +454,18 @@ export async function fetchAiTools(): Promise<AiTool[]> {
     'sort': 'created_at:desc'
   });
   return raw.map(item => ({
-    name: item.name,
+    name: item.title || item.name,  // Try title first, fallback to name
     description: item.description || '',
-    logo: item.logo || '',
+    logo: item.logo || item.cover_url || '',  // Try logo first, fallback to cover_url
     url: item.url,
     slug: item.slug,
     category: item.category || '',
-    pricingType: item.pricingType || '',
-    priceInfo: item.priceInfo,
+    pricingType: item.pricing_type || item.pricingType || '',  // Try both field names
+    priceInfo: item.price_info || item.priceInfo,
     features: item.features,
     rating: item.rating,
     featured: Boolean(item.featured),
-    isPublished: Boolean(item.isPublished)
+    isPublished: Boolean(item.is_published || item.isPublished)
   }));
 }
 

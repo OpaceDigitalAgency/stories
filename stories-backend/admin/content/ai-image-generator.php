@@ -1,8 +1,8 @@
 <?php
 /**
- * AI Image Generator Admin Page
+ * AI Image Generator Test Page
  * 
- * This page provides an interface for generating AI images using the OpenAI integration.
+ * This page provides a testing interface for the AI image generation functionality.
  */
 
 // Include necessary files
@@ -12,168 +12,297 @@ require_once '../includes/db-connect.php';
 
 // Set page variables
 $pageTitle = 'AI Image Generator';
-$currentPage = 'ai-image-generator';
-$pageDescription = 'Generate AI-powered images using OpenAI\'s DALL-E 3';
+$currentPage = 'ai-settings';
+$pageDescription = 'Test AI image generation with different prompts and settings';
+
+// Add page actions
+$pageActions = '
+<a href="ai-settings.php" class="btn btn-primary">
+    <i class="fas fa-cog"></i> Back to AI Settings
+</a>';
 
 // Check if OpenAI is configured
-$config = \Stories\Lib\AI\Core\Config::getInstance();
-$openaiConfig = $config->getProviderConfig('openai');
-$isConfigured = !empty($openaiConfig['api_key']);
+try {
+    $stmt = $db->prepare("SELECT config FROM ai_providers WHERE name = 'openai'");
+    $stmt->execute();
+    $config = $stmt->fetch();
+    
+    if (!$config) {
+        $_SESSION['error'] = 'OpenAI provider not found. Please configure it in AI Settings.';
+    } else {
+        $openaiConfig = json_decode($config['config'], true);
+        if (empty($openaiConfig['api_key'])) {
+            $_SESSION['error'] = 'OpenAI API key not configured. Please set it in AI Settings.';
+        }
+    }
+} catch (Exception $e) {
+    $_SESSION['error'] = 'Error checking OpenAI configuration: ' . $e->getMessage();
+}
 
+// Handle image generation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
+    try {
+        // Make API request
+        $data = [
+            'prompt' => $_POST['prompt'],
+            'size' => $_POST['size'],
+            'style' => $_POST['style'],
+            'variations' => (int)$_POST['variations']
+        ];
+
+        $response = file_get_contents('https://api.storiesfromtheweb.org/api/v1/ai/image.php', false, stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/json',
+                'content' => json_encode($data)
+            ]
+        ]));
+
+        $result = json_decode($response, true);
+
+        if ($result['success']) {
+            $_SESSION['success'] = 'Image generated successfully!';
+            $_SESSION['generated_images'] = $result['data'];
+        } else {
+            $_SESSION['error'] = 'Failed to generate image: ' . ($result['error'] ?? 'Unknown error');
+        }
+    } catch (Exception $e) {
+        $_SESSION['error'] = 'Error generating image: ' . $e->getMessage();
+    }
+    
+    // Redirect to prevent form resubmission
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
 ?>
 
 <div class="content-section">
     <div class="section-header">
         <h2 class="section-title">
-            <i class="fas fa-robot" aria-hidden="true"></i> 
+            <i class="fas fa-magic" aria-hidden="true"></i> 
             AI Image Generator
         </h2>
         <p class="section-description">
-            Generate high-quality images using AI. Images will be automatically optimized and saved to your media library.
+            Test the AI image generation system with different prompts and settings
         </p>
     </div>
 
-    <?php if (!$isConfigured): ?>
-    <div class="alert alert-warning">
-        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-        <strong>OpenAI API not configured!</strong>
-        <p>Please set up your OpenAI API key in the configuration to use this feature.</p>
-    </div>
-    <?php else: ?>
-    <div class="section-body">
-        <div id="imageGenerator"></div>
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success">
+            <?php 
+            echo $_SESSION['success'];
+            unset($_SESSION['success']);
+            ?>
+        </div>
+    <?php endif; ?>
 
-        <div class="usage-info mt-4">
-            <h3>Usage Information</h3>
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger">
+            <?php 
+            echo $_SESSION['error'];
+            unset($_SESSION['error']);
+            ?>
+        </div>
+    <?php endif; ?>
+
+    <div class="section-body">
+        <!-- Generation Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Generate Image</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" class="generation-form">
+                    <div class="form-group">
+                        <label for="prompt">Image Description</label>
+                        <textarea 
+                            id="prompt" 
+                            name="prompt" 
+                            class="form-control" 
+                            rows="3" 
+                            placeholder="Describe the image you want to generate..."
+                            required
+                        ></textarea>
+                        <small class="form-text text-muted">
+                            Be specific and detailed in your description for better results
+                        </small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="size">Image Size</label>
+                            <select id="size" name="size" class="form-control">
+                                <option value="1024x1024" selected>Square (1024x1024)</option>
+                                <option value="1024x1792">Portrait (1024x1792)</option>
+                                <option value="1792x1024">Landscape (1792x1024)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group col-md-4">
+                            <label for="style">Style</label>
+                            <select id="style" name="style" class="form-control">
+                                <option value="natural" selected>Natural</option>
+                                <option value="vivid">Vivid</option>
+                                <option value="artistic">Artistic</option>
+                                <option value="professional">Professional</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group col-md-4">
+                            <label for="variations">Variations</label>
+                            <select id="variations" name="variations" class="form-control">
+                                <option value="1" selected>1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" name="generate" class="btn btn-primary">
+                            <i class="fas fa-magic"></i> Generate Image
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Generated Images -->
+        <?php if (isset($_SESSION['generated_images'])): ?>
             <div class="card">
+                <div class="card-header">
+                    <h3>Generated Images</h3>
+                </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col">
-                            <h4>Today's Usage</h4>
-                            <p id="todayUsage">Loading...</p>
+                    <div class="generated-images">
+                        <?php 
+                        $images = $_SESSION['generated_images'];
+                        unset($_SESSION['generated_images']);
+                        ?>
+                        
+                        <!-- Main Image -->
+                        <div class="image-item">
+                            <img src="<?php echo htmlspecialchars($images['url']); ?>" 
+                                 alt="Generated image" 
+                                 class="generated-image">
+                            <div class="image-actions">
+                                <a href="<?php echo htmlspecialchars($images['url']); ?>" 
+                                   class="btn btn-sm btn-primary" 
+                                   target="_blank">
+                                    <i class="fas fa-external-link-alt"></i> View Full Size
+                                </a>
+                            </div>
                         </div>
-                        <div class="col">
-                            <h4>Monthly Usage</h4>
-                            <p id="monthlyUsage">Loading...</p>
-                        </div>
-                        <div class="col">
-                            <h4>Cost</h4>
-                            <p id="totalCost">Loading...</p>
-                        </div>
+
+                        <!-- Variations -->
+                        <?php if (isset($images['variations'])): ?>
+                            <?php foreach ($images['variations'] as $url): ?>
+                                <div class="image-item">
+                                    <img src="<?php echo htmlspecialchars($url); ?>" 
+                                         alt="Image variation" 
+                                         class="generated-image">
+                                    <div class="image-actions">
+                                        <a href="<?php echo htmlspecialchars($url); ?>" 
+                                           class="btn btn-sm btn-primary" 
+                                           target="_blank">
+                                            <i class="fas fa-external-link-alt"></i> View Full Size
+                                        </a>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="generation-history mt-4">
-            <h3>Recent Generations</h3>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Prompt</th>
-                            <th>Image</th>
-                            <th>Size</th>
-                            <th>Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody id="generationHistory">
-                        <tr>
-                            <td colspan="5" class="text-center">Loading history...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
-
-    <script type="module">
-        // Import and initialize the ImageGenerator component
-        import ImageGenerator from '../../../src/components/ai/ImageGenerator.astro';
-
-        // Mount the component
-        const container = document.getElementById('imageGenerator');
-        if (container) {
-            new ImageGenerator({
-                target: container,
-                props: {
-                    onGenerate: (result) => {
-                        // Refresh usage info and history after successful generation
-                        loadUsageInfo();
-                        loadGenerationHistory();
-                    }
-                }
-            });
-        }
-
-        // Load usage information
-        async function loadUsageInfo() {
-            try {
-                const response = await fetch('/api/ai/usage.php');
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('todayUsage').textContent = `${data.today} generations`;
-                    document.getElementById('monthlyUsage').textContent = `${data.monthly} generations`;
-                    document.getElementById('totalCost').textContent = `$${data.cost.toFixed(2)}`;
-                }
-            } catch (error) {
-                console.error('Failed to load usage info:', error);
-            }
-        }
-
-        // Load generation history
-        async function loadGenerationHistory() {
-            try {
-                const response = await fetch('/api/ai/history.php');
-                const data = await response.json();
-
-                if (data.success) {
-                    const tbody = document.getElementById('generationHistory');
-                    tbody.innerHTML = data.generations.map(gen => `
-                        <tr>
-                            <td>${new Date(gen.created_at).toLocaleString()}</td>
-                            <td>${gen.prompt}</td>
-                            <td>
-                                <img src="${gen.result_url}" alt="${gen.prompt}" 
-                                     style="max-width: 100px; height: auto;">
-                            </td>
-                            <td>${gen.metadata.size}</td>
-                            <td>$${gen.metadata.cost.toFixed(2)}</td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Failed to load generation history:', error);
-            }
-        }
-
-        // Initial load
-        loadUsageInfo();
-        loadGenerationHistory();
-    </script>
-
-    <style>
-        .usage-info .card {
-            background: var(--surface-2);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-2);
-        }
-
-        .usage-info h4 {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .generation-history img {
-            border-radius: var(--radius-1);
-        }
-    </style>
-    <?php endif; ?>
 </div>
 
+<style>
+.generation-form {
+    max-width: 800px;
+}
+
+.generated-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.image-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.generated-image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.image-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2);
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-3);
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--radius-1);
+}
+
+.alert-success {
+    background: var(--success-bg);
+    color: var(--success-text);
+}
+
+.alert-danger {
+    background: var(--error-bg);
+    color: var(--error-text);
+}
+</style>
+
 <?php
-// Include footer
 require_once '../includes/footer.php';
 ?>

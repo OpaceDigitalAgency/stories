@@ -114,40 +114,9 @@ document.addEventListener("DOMContentLoaded", function() {
         if (selectFromMediaButton) {
             selectFromMediaButton.addEventListener('click', function() {
                 // Open media library in a popup
-                const mediaUrl = '../content/media.php?select_mode=true';
-                // Use a modal dialog instead of a new window
-                const modalContent = `
-                <div class="modal fade" id="mediaLibraryModal" tabindex="-1" role="dialog" aria-labelledby="mediaLibraryModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-xl" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="mediaLibraryModalLabel">Select from Media Library</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <iframe src="${mediaUrl}" style="width: 100%; height: 500px; border: none;"></iframe>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                `;
+                const mediaUrl = '../content/media-select.php';
 
-                // Add the modal to the page
-                const modalContainer = document.createElement('div');
-                modalContainer.innerHTML = modalContent;
-                document.body.appendChild(modalContainer);
-
-                // Show the modal
-                $('#mediaLibraryModal').modal('show');
-
-                // Remove the modal when it's closed
-                $('#mediaLibraryModal').on('hidden.bs.modal', function() {
-                    document.body.removeChild(modalContainer);
-                });
-
-                // For browsers that don't support the above
+                // Open in a popup window
                 const mediaWindow = window.open(mediaUrl, 'MediaLibrary', 'width=1000,height=600');
 
                 // Listen for message from the popup or iframe
@@ -201,9 +170,13 @@ document.addEventListener("DOMContentLoaded", function() {
                             mediaWindow.close();
                         }
 
-                        // Close the modal if it exists
-                        if ($('#mediaLibraryModal').length) {
-                            $('#mediaLibraryModal').modal('hide');
+                        // Close any modal if it exists (using vanilla JS)
+                        const modal = document.getElementById('mediaLibraryModal');
+                        if (modal) {
+                            // If we have a modal element, remove it from the DOM
+                            if (modal.parentNode) {
+                                modal.parentNode.removeChild(modal);
+                            }
                         }
                     }
                 };
@@ -369,6 +342,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Function to handle bulk upload
     function handleBulkUpload(files) {
+        // Check if we have the necessary elements
+        if (!progressBar || !progressContainer || !resultsContainer || !resultsList || !uploadCountSpan) {
+            console.error("Missing UI elements for bulk upload");
+            alert("Bulk upload functionality is not fully initialized. Please refresh the page and try again.");
+            return;
+        }
+
         // Reset UI
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';

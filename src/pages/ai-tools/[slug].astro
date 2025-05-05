@@ -3,7 +3,6 @@ import Layout from '../../layouts/Layout.astro';
 import { getConfig } from '../../lib/config';
 import { fetchAiTool, type AiTool } from '../../lib/api';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PageHero from '../../components/PageHero.astro';
 
 // Dynamic route for AI tool details
@@ -50,12 +49,6 @@ const description = item ? item.description : `We couldn't find the AI tool you'
 
     <div class="container relative z-10">
       <div class="max-w-4xl mx-auto">
-        <Breadcrumbs
-          crumbs={[
-            { text: 'AI Tools', href: '/ai-tools' },
-            { text: item?.name || '' }
-          ]}
-        />
       {apiError ? (
         <section class="py-8">
           <div class="container mx-auto px-4">

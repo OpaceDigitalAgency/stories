@@ -3,7 +3,6 @@ import Layout from '../../layouts/Layout.astro';
 import { getConfig } from '../../lib/config';
 import { fetchGame, type Game } from '../../lib/api';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PageHero from '../../components/PageHero.astro';
 
 export const prerender = false;
@@ -47,10 +46,6 @@ const description = item ? item.description : `We couldn't find the game you're 
       title={item?.title || 'Game'}
       description={item?.description}
       type="games"
-      crumbs={[
-        { text: 'Games', href: '/games' },
-        { text: item?.title || '' }
-      ]}
     />
 
     <div class="container relative z-10">

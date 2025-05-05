@@ -3,7 +3,6 @@ import Layout from '../../layouts/Layout.astro';
 import { getConfig } from '../../lib/config';
 import { fetchDirectoryItem, type DirectoryItem } from '../../lib/api';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PageHero from '../../components/PageHero.astro';
 
 // Dynamic route for directory details
@@ -47,10 +46,6 @@ const description = item ? item.description : `We couldn't find the directory it
       title={item?.name || 'Directory Item'}
       description={item?.description}
       type="directories"
-      crumbs={[
-        { text: 'Directories', href: '/directories' },
-        { text: item?.name || '' }
-      ]}
     />
 
     <div class="container relative z-10">

@@ -317,7 +317,7 @@ export async function fetchGames(): Promise<Game[]> {
     return raw.map(item => ({
       title: item.title,
       description: item.description || '',
-      coverImage: item.cover_url || '',
+      coverImage: item.cover_url || '/images/default-cover.svg',
       slug: item.slug,
       price: Number(item.price) || 0,
       rating: Number(item.rating) || 0,
@@ -435,7 +435,7 @@ export async function fetchDirectoryItems(): Promise<DirectoryItem[]> {
   return raw.map(item => ({
     name: item.title || item.name,  // Try title first, fallback to name
     description: item.description || '',
-    logo: item.logo || item.cover_url || '',  // Try logo first, fallback to cover_url
+    logo: item.logo || item.cover_url || '/images/default-cover.svg',  // Try logo first, fallback to cover_url, then default
     url: item.url,
     slug: item.slug,
     category: item.category || '',
@@ -619,49 +619,55 @@ export async function fetchAuthor(slug: string): Promise<Author | null> {
 }
 
 // Fetch blog posts
-export async function fetchBlogPosts(page = 1, limit = 10, filters: Record<string, any> = {}): Promise<any[]> {
-  // Default parameters
-  const params: Record<string, string | number | boolean> = {
-    'pagination[limit]': limit,
-    'pagination[page]': page
+interface BlogPost {
+  id: number;
+  title: string;
+  excerpt?: string;
+  content?: string;
+  coverImage?: string;
+  slug: string;
+  publishDate?: string;
+  author?: {
+    id: number;
+    name: string;
+    slug: string;
+    avatar?: string;
   };
+}
 
-  // Set default sort if not specified in filters
-  if (!filters.sort) {
-    params['sort'] = 'created_at:desc';
-  } else {
-    params['sort'] = filters.sort;
-  }
-
-  // Add any additional filters
-  Object.entries(filters).forEach(([key, value]) => {
-    if (key !== 'sort') {
-      params[key] = value;
-    }
-  });
-
-  console.log("Fetching blog posts with params:", JSON.stringify(params));
-
+export async function fetchBlogPosts(): Promise<BlogPost[]> {
   try {
-    const raw = await fetchApi<any[]>('/blog-posts', params);
+    const raw = await fetchApi<any[]>('/blog-posts', {
+      'sort': 'created_at:desc'
+    });
     return raw.map(item => ({
       id: item.id,
       title: item.title,
       excerpt: item.excerpt || '',
       content: item.content || '',
-      coverImage: item.cover_url || '',
+      coverImage: item.cover_url || '/images/default-cover.svg',
       slug: item.slug,
       publishDate: item.created_at || '',
       author: item.author_id ? {
         id: item.author_id,
-        name: 'Author ' + item.author_id, // This will be replaced with actual author data
-        slug: 'author-' + item.author_id,
-        avatar: '/images/default-avatar.svg'
+        name: item.author_name || 'Author ' + item.author_id,
+        slug: item.author_slug || 'author-' + item.author_id,
+        avatar: item.author_avatar || '/images/default-avatar.svg'
       } : undefined
     }));
   } catch (error) {
     console.error("Error fetching blog posts:", error);
     return [];
+  }
+}
+
+export async function fetchBlogPost(slug: string): Promise<BlogPost | null> {
+  try {
+    const posts = await fetchBlogPosts();
+    return posts.find(post => post.slug === slug) || null;
+  } catch (error) {
+    console.error(`Error fetching blog post with slug ${slug}:`, error);
+    return null;
   }
 }
 

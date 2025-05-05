@@ -178,6 +178,9 @@ $extraHeadContent = '
 // Include header
 require_once '../includes/header.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
 // Display error message if any
 if (isset($error)): ?>
     <div class="error"><?php echo htmlspecialchars($error); ?></div>
@@ -261,13 +264,16 @@ if (isset($error)): ?>
                                       (in_array('cover_url', $additionalFields) ? 'cover_url' : '');
 
                     if ($coverImageField):
+                        // Render the image upload component for cover image
+                        renderImageUploadComponent(
+                            $coverImageField,
+                            $story[$coverImageField] ?? '',
+                            'Cover Image',
+                            'story',
+                            $story['id'] ?? null
+                        );
+                    endif;
                     ?>
-                    <div class="form-group">
-                        <label class="form-label" for="<?php echo $coverImageField; ?>">Cover Image URL</label>
-                        <input type="text" id="<?php echo $coverImageField; ?>" name="<?php echo $coverImageField; ?>" class="form-control"
-                               value="<?php echo htmlspecialchars($story[$coverImageField] ?? ''); ?>">
-                    </div>
-                    <?php endif; ?>
 
                     <div class="form-group">
                         <label class="form-label" for="published_at">Publish Date</label>
@@ -794,6 +800,9 @@ if (isset($error)): ?>
             }
         });
     </script>
+
+    <!-- Include image upload script -->
+    <script src="../assets/js/image-upload.js"></script>
 
 <?php
 // Include footer

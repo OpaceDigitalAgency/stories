@@ -13,6 +13,9 @@ require_once '../includes/db-connect.php';
 // Include header
 require_once '../includes/header.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
 try {
     // Ensure we have a database connection
     if (!isset($db) || !$db) {
@@ -39,7 +42,7 @@ try {
         $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $author = $stmt->fetch();
-        
+
         if (!$author) {
             header("Location: authors.php");
             exit;
@@ -55,7 +58,7 @@ try {
 
     // Check if slug column exists
     $hasSlugColumn = in_array('slug', $columns);
-    
+
     // Check if email column exists
     $hasEmailColumn = in_array('email', $columns);
 
@@ -117,18 +120,21 @@ if (isset($_SESSION['error'])) {
 
                     <div class="form-group">
                         <label class="form-label" for="bio">Bio</label>
-                        <textarea id="bio" name="bio" class="form-control" rows="5"><?php 
-                            echo htmlspecialchars($author['bio'] ?? ''); 
+                        <textarea id="bio" name="bio" class="form-control" rows="5"><?php
+                            echo htmlspecialchars($author['bio'] ?? '');
                         ?></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="avatar_url">Avatar URL</label>
-                        <input type="text" id="avatar_url" name="avatar_url" class="form-control"
-                               value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>"
-                               placeholder="https://example.com/avatar.jpg">
-                        <small class="form-text text-muted">Enter a URL to the author's avatar image. Leave empty to use the default avatar.</small>
-                    </div>
+                    <?php
+                    // Render the image upload component for avatar
+                    renderImageUploadComponent(
+                        'avatar_url',
+                        $author['avatar_url'] ?? '',
+                        'Author Avatar',
+                        'author',
+                        $author['id'] ?? null
+                    );
+                    ?>
 
                     <div class="form-group">
                         <label class="form-label" for="author_type">Author Type <span class="text-danger">*</span></label>
@@ -163,7 +169,7 @@ if (isset($_SESSION['error'])) {
                             <option value="Scotland">Scotland</option>
                             <option value="Wales">Wales</option>
                             <option value="Northern Ireland">Northern Ireland</option>
-                            
+
                             <!-- Major Cities -->
                             <option value="London">London</option>
                             <option value="Birmingham">Birmingham</option>
@@ -196,7 +202,7 @@ if (isset($_SESSION['error'])) {
             const authorType = document.getElementById('author_type').value;
             const ageField = document.getElementById('age-field');
             const ageInput = document.getElementById('age');
-            
+
             if (authorType === 'child') {
                 ageField.style.display = 'block';
                 ageInput.required = true;
@@ -243,5 +249,8 @@ if (isset($_SESSION['error'])) {
         // Initialize form state
         handleAuthorTypeChange();
     </script>
+
+    <!-- Include image upload script -->
+    <script src="../assets/js/image-upload.js"></script>
 
 <?php require_once '../includes/footer.php'; ?>

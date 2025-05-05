@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { fetchGames, type Game } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 import ApiErrorMessage from '../../components/ApiErrorMessage.astro';
+import PageHero from '../../components/PageHero.astro';
 
 // Get site name from config
 const siteName = getConfig('site.name', 'Stories From The Web');
@@ -50,33 +51,12 @@ try {
 
 <Layout title={title} description={description}>
   <main class="flex-grow w-full">
-    <!-- Hero Section -->
-      <section class="bg-gradient-to-r from-tertiary/90 to-accent/90 text-white py-16">
-        <div class="container mx-auto px-4">
-          <h1 class="text-3xl md:text-4xl font-display font-bold mb-4">
-            Educational Games
-          </h1>
-          <p class="text-lg md:text-xl max-w-3xl mb-6">
-            Explore fun and educational games for children of all ages. Develop skills while having fun!
-          </p>
-
-          <!-- Search Bar -->
-          <div class="max-w-2xl">
-            <div class="relative">
-              <input
-                type="text"
-                placeholder="Search games..."
-                class="w-full px-4 py-3 pl-12 rounded-md border-none focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-800"
-              />
-              <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <PageHero
+      title="Educational Games"
+      description="Explore fun and educational games for children of all ages. Develop skills while having fun!"
+      type="games"
+      showSearch={true}
+    />
 
       {apiError && (
         <section class="py-8 bg-white border-b">
@@ -87,7 +67,7 @@ try {
       )}
 
       <!-- Categories Section -->
-      <section class="py-8 bg-white border-b">
+      <section class="py-8 bg-white/50 backdrop-blur-sm border-b">
         <div class="container mx-auto px-4">
           <div class="flex flex-wrap gap-2 justify-center">
             <a href="/games" class="px-4 py-2 bg-tertiary text-white rounded-full text-sm font-medium">
@@ -108,7 +88,7 @@ try {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {games.length > 0 ? (
               games.map(game => (
-                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <div class="bg-white/50 backdrop-blur-sm rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                   <a href={`/games/${game.slug}`} class="block">
                     <div class="h-48 bg-gray-200">
                       <img
@@ -166,8 +146,9 @@ try {
       </section>
 
       <!-- Newsletter Section -->
-      <section class="py-16 bg-gradient-to-r from-tertiary/10 to-accent/10">
-        <div class="container mx-auto px-4 max-w-4xl text-center">
+      <section class="py-16">
+        <div class="container mx-auto px-4">
+          <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl p-12 shadow-xl transform-style-3d hover:translate-z-8 transition-transform duration-500 text-center">
           <h2 class="text-3xl font-display font-bold text-text-primary mb-4">Stay Updated</h2>
           <p class="text-text-secondary text-lg mb-8">
             Subscribe to our newsletter to receive updates about new games and educational resources.
@@ -197,6 +178,7 @@ try {
               We respect your privacy. Unsubscribe at any time.
             </p>
           </form>
+          </div>
         </div>
       </section>
   </main>

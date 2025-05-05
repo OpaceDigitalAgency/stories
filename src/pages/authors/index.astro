@@ -1,7 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import CardAuthor from '../../components/CardAuthor.astro';
-import NewsletterSignup from '../../components/NewsletterSignup.astro';
 import { fetchAuthors } from '../../lib/api';
 import { getConfig } from '../../lib/config';
 
@@ -196,13 +195,6 @@ const description = `Discover amazing storytellers on ${siteName}. Browse our co
         </div>
       </div>
     </section>
-
-    <!-- Newsletter Section -->
-    <NewsletterSignup
-      title="Stay Updated"
-      description="Subscribe to our newsletter to receive updates about new authors and stories."
-      feature="authors-updates"
-    />
   </main>
 
   <style slot="scripts">

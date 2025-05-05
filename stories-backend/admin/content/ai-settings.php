@@ -1,7 +1,7 @@
 <?php
 /**
  * AI Settings Admin Page
- * 
+ *
  * This page provides an interface for managing AI configuration,
  * including API keys, models, and provider settings.
  */
@@ -15,6 +15,51 @@ require_once '../includes/db-connect.php';
 $pageTitle = 'AI Settings';
 $currentPage = 'ai-settings';
 $pageDescription = 'Configure AI providers, models, and view usage statistics';
+
+// Add page actions
+$pageActions = '
+<a href="ai-image-generator.php" class="btn btn-success">
+    <i class="fas fa-image"></i> Test Image Generator
+</a>';
+
+// Get current settings
+try {
+    // Check if OpenAI provider exists, create if not
+    $stmt = $db->prepare("SELECT COUNT(*) FROM ai_providers WHERE name = 'openai'");
+    $stmt->execute();
+    if ($stmt->fetchColumn() === 0) {
+        $stmt = $db->prepare("
+            INSERT INTO ai_providers (name, type, config, is_active) 
+            VALUES ('openai', 'image', ?, true)
+        ");
+        $defaultConfig = [
+            'model' => 'dall-e-3',
+            'max_tokens' => 2000,
+            'temperature' => 0.7
+        ];
+        $stmt->execute([json_encode($defaultConfig)]);
+    }
+
+    // Get OpenAI settings
+    $stmt = $db->prepare("SELECT * FROM ai_providers WHERE name = 'openai'");
+    $stmt->execute();
+    $openai = $stmt->fetch();
+    $openaiConfig = json_decode($openai['config'], true) ?? [];
+    
+    // Get usage statistics
+    $stmt = $db->prepare("
+        SELECT 
+            COUNT(*) as total_generations,
+            COALESCE(SUM(cost), 0) as total_cost
+        FROM ai_usage 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute();
+    $usage = $stmt->fetch();
+    
+} catch (Exception $e) {
+    $_SESSION['error'] = 'Error loading settings: ' . $e->getMessage();
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,29 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
-
-// Get current settings
-try {
-    $stmt = $db->prepare("SELECT * FROM ai_providers WHERE name = 'openai'");
-    $stmt->execute();
-    $openai = $stmt->fetch();
-    $openaiConfig = json_decode($openai['config'], true) ?? [];
-    
-    // Get usage statistics
-    $stmt = $db->prepare("
-        SELECT 
-            COUNT(*) as total_generations,
-            COALESCE(SUM(cost), 0) as total_cost
-        FROM ai_usage 
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    ");
-    $stmt->execute();
-    $usage = $stmt->fetch();
-    
-} catch (Exception $e) {
-    $_SESSION['error'] = 'Error loading settings: ' . $e->getMessage();
-}
-
 ?>
 
 <div class="content-section">

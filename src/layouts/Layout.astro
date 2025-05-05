@@ -1,5 +1,5 @@
 ---
-import NavHeader from '../components/NavHeader.astro';
+import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getConfig } from '../lib/config';
 import '../styles/base.css';
@@ -34,7 +34,7 @@ const {
     <slot name="head" />
   </head>
   <body class="min-h-screen flex flex-col bg-neutral-50 text-text-primary font-sans">
-    <NavHeader />
+    <Header currentPath={Astro.url.pathname} />
     <main class="flex-grow w-full">
       <slot />
     </main>

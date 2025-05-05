@@ -8,32 +8,27 @@ interface Props {
 
 const { title, description, type, showSearch = false } = Astro.props;
 
-// Define gradient colors based on page type
-const gradients = {
-  'ai-tools': 'from-primary/90 to-tertiary/90',
-  'games': 'from-secondary/90 to-accent/90',
-  'directories': 'from-accent/90 to-primary/90',
-  'stories': 'from-primary/90 to-secondary/90',
-  'authors': 'from-tertiary/90 to-primary/90',
-  'blog': 'from-secondary/90 to-tertiary/90'
+// Define background colors based on page type
+const backgrounds = {
+  'ai-tools': 'bg-gradient-to-br from-primary-50 via-white to-tertiary-50',
+  'games': 'bg-gradient-to-br from-secondary-50 via-white to-accent-50',
+  'directories': 'bg-gradient-to-br from-accent-50 via-white to-primary-50',
+  'stories': 'bg-gradient-to-br from-primary-50 via-white to-secondary-50',
+  'authors': 'bg-gradient-to-br from-tertiary-50 via-white to-primary-50',
+  'blog': 'bg-gradient-to-br from-secondary-50 via-white to-tertiary-50'
 };
 
-const gradient = gradients[type];
+const background = backgrounds[type];
 ---
 
-<section class={`relative py-16 overflow-hidden bg-gradient-to-r ${gradient}`}>
-  <!-- Enhanced decorative blobs -->
-  <div class="absolute -top-32 -right-32 w-[32rem] h-[32rem] bg-primary-200/30 rounded-full blur-3xl animate-blob"></div>
-  <div class="absolute -bottom-32 -left-32 w-[32rem] h-[32rem] bg-secondary-200/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-accent-200/20 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
-
-  <div class="container relative z-10">
-    <div class="max-w-4xl mx-auto text-white">
-      <h1 class="text-4xl md:text-5xl font-display font-bold mb-4 fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
+<section class={`relative py-16 overflow-hidden ${background}`}>
+  <div class="container">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-4xl md:text-5xl font-display font-bold mb-4 text-text-primary fancy-underline transform-style-3d hover:translate-z-8 transition-transform duration-500">
         {title}
       </h1>
       {description && (
-        <p class="text-lg md:text-xl max-w-3xl mb-6">
+        <p class="text-lg md:text-xl max-w-3xl mb-6 text-text-secondary">
           {description}
         </p>
       )}
@@ -44,7 +39,7 @@ const gradient = gradients[type];
             <input
               type="text"
               placeholder="Search..."
-              class="w-full px-4 py-3 pl-12 rounded-md border-none focus:outline-none focus:ring-2 focus:ring-white/50 text-gray-800"
+              class="w-full px-4 py-3 pl-12 rounded-md border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-gray-800"
             />
             <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -59,33 +54,6 @@ const gradient = gradients[type];
 </section>
 
 <style>
-  .animate-blob {
-    animation: blob 7s infinite;
-  }
-
-  .animation-delay-2000 {
-    animation-delay: 2s;
-  }
-
-  .animation-delay-4000 {
-    animation-delay: 4s;
-  }
-
-  @keyframes blob {
-    0% {
-      transform: translate(0px, 0px) scale(1);
-    }
-    33% {
-      transform: translate(30px, -50px) scale(1.1);
-    }
-    66% {
-      transform: translate(-20px, 20px) scale(0.9);
-    }
-    100% {
-      transform: translate(0px, 0px) scale(1);
-    }
-  }
-
   .fancy-underline {
     position: relative;
     display: inline-block;

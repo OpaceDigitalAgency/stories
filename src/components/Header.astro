@@ -1,0 +1,70 @@
+---
+import { getConfig } from '../lib/config';
+import Breadcrumbs from './Breadcrumbs.astro';
+
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+// Get site name from config
+const siteName = getConfig('site.name', 'Stories From The Web');
+
+interface Crumb {
+  text: string;
+  href?: string;
+}
+
+// Generate breadcrumbs based on current path
+function generateBreadcrumbs(path: string): Crumb[] {
+  const parts = path.split('/').filter(Boolean);
+  const crumbs: Crumb[] = [];
+  
+  for (let i = 0; i < parts.length; i++) {
+    const href = `/${parts.slice(0, i + 1).join('/')}`;
+    const text = parts[i]
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    if (i === parts.length - 1) {
+      crumbs.push({ text });
+    } else {
+      crumbs.push({ text, href });
+    }
+  }
+  
+  return crumbs;
+}
+
+const crumbs = generateBreadcrumbs(currentPath);
+---
+
+<header class="bg-white border-b border-neutral-100">
+  <div class="container mx-auto px-4">
+    <nav class="flex items-center justify-between h-16">
+      <a href="/" class="flex items-center">
+        <img src="/images/logo.svg" alt={siteName} class="h-8 w-auto" />
+      </a>
+
+      <div class="flex items-center gap-4">
+        <a href="/login" class="text-text-secondary hover:text-primary transition-colors">
+          Login
+        </a>
+        <a
+          href="/share-your-story"
+          class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          Share Your Story
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  {crumbs.length > 0 && (
+    <div class="container mx-auto px-4 py-4">
+      <Breadcrumbs crumbs={crumbs} />
+    </div>
+  )}
+</header>

@@ -205,10 +205,8 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include enhanced table component
-include_once '../includes/enhanced-table-component.php';
-if (function_exists('renderEnhancedTable')) {
-    // Prepare data for the enhanced table
+// Prepare data for the enhanced table
+if (!empty($ai_tools)) {
     $tableData = [];
     foreach ($ai_tools as $tool) {
         // Format the status
@@ -221,7 +219,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $tool['id'],
-            'image_url' => $tool['image_url'] ?? 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg',
+            'image' => $tool['cover_url'] ?? 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg',
             'title' => $tool['title'],
             'category' => $tool['category_name'] ?? 'None',
             'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),
@@ -258,7 +256,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
-            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
+            'thumbnailField' => 'image', // Use the image field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

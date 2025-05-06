@@ -97,8 +97,9 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
     // Merge options with defaults
     $options = array_merge($defaultOptions, $options);
 
-    // Start output buffering to capture any errors
+    // Start output buffering and wrap everything in a try-catch
     ob_start();
+    try {
     ?>
 
     <div class="premium-table-container">

@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Media';
+$pageTitle = 'Media Details';
 $currentPage = 'view-media';
 
 // Include auth check
@@ -140,24 +140,26 @@ try {
 
 <div class="content-wrapper">
     <div class="container-fluid">
-        <?php
-        // Set page description and actions for the header
-        $pageDescription = '<a href="media.php" class="text-primary">← Back to Media Library</a>';
-        $pageActions = '
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo htmlspecialchars($media['filename']); ?></h1>
+                <p class="page-description">
+                    <a href="media.php" class="text-primary">← Back to Media Library</a>
+                </p>
+            </div>
             <div class="d-flex gap-2">
-                <a href="' . htmlspecialchars($displayUrl) . '" target="_blank" class="btn btn-primary">
+                <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-primary">
                     <span class="icon-download"></span> Download
                 </a>
                 <form method="GET" style="display: inline;">
-                    <input type="hidden" name="delete" value="' . $media['id'] . '">
+                    <input type="hidden" name="delete" value="<?php echo $media['id']; ?>">
                     <button type="submit" formaction="media.php" class="btn btn-danger"
-                            onclick="return confirm(\'Are you sure you want to delete this file?\')">
+                            onclick="return confirm('Are you sure you want to delete this file?')">
                         <span class="icon-delete"></span> Delete
                     </button>
                 </form>
             </div>
-        ';
-        ?>
+        </div>
 
         <div class="content-section mb-4">
             <div class="section-header">

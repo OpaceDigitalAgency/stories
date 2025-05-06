@@ -35,7 +35,7 @@ if (!$data || !isset($data['image_data']) || !isset($data['filename'])) {
 }
 
 // Include database connection
-require_once '../../includes/db-connect.php';
+require_once '../../../admin/includes/db-connect.php';
 
 /**
  * Create a thumbnail version of an image
@@ -101,22 +101,8 @@ function createThumbnail($sourcePath, $destPath, $width, $height) {
         $originalWidth, $originalHeight
     );
 
-    // Save thumbnail
-    $result = false;
-    switch ($imageType) {
-        case IMAGETYPE_JPEG:
-            $result = imagejpeg($thumbnailImage, $destPath, 85);
-            break;
-        case IMAGETYPE_PNG:
-            $result = imagepng($thumbnailImage, $destPath, 9);
-            break;
-        case IMAGETYPE_GIF:
-            $result = imagegif($thumbnailImage, $destPath);
-            break;
-        case IMAGETYPE_WEBP:
-            $result = imagewebp($thumbnailImage, $destPath, 85);
-            break;
-    }
+    // Save thumbnail as WebP regardless of source format
+    $result = imagewebp($thumbnailImage, $destPath, 85);
 
     // Free memory
     imagedestroy($sourceImage);
@@ -139,11 +125,10 @@ try {
     }
 
     // Create upload directories if they don't exist
-    $uploadDir = __DIR__ . '/../../../public/uploads/ai-generated/';
-    $thumbnailDir = $uploadDir . 'thumbnail/';
-    $smallDir = $uploadDir . 'small/';
+    $uploadDir = __DIR__ . '/../../../uploads/ai-generated/';
+    $optimizedDir = __DIR__ . '/../../../uploads/optimized/';
 
-    foreach ([$uploadDir, $thumbnailDir, $smallDir] as $dir) {
+    foreach ([$uploadDir, $optimizedDir] as $dir) {
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
@@ -166,34 +151,60 @@ try {
     $width = $imageSize[0] ?? 0;
     $height = $imageSize[1] ?? 0;
 
-    // Create thumbnail version (50x50)
-    $thumbnailPath = $thumbnailDir . $filename;
-    createThumbnail($filepath, $thumbnailPath, 50, 50);
+    // Create thumbnail version (150x150)
+    $thumbnailFilename = pathinfo($filename, PATHINFO_FILENAME) . '-thumbnail.webp';
+    $thumbnailPath = $optimizedDir . $thumbnailFilename;
+    createThumbnail($filepath, $thumbnailPath, 150, 150);
 
     // Create small version (300x300)
-    $smallPath = $smallDir . $filename;
+    $smallFilename = pathinfo($filename, PATHINFO_FILENAME) . '-small.webp';
+    $smallPath = $optimizedDir . $smallFilename;
     createThumbnail($filepath, $smallPath, 300, 300);
 
     // Prepare the URLs (relative to the site root)
     $url = '/uploads/ai-generated/' . $filename;
-    $thumbnailUrl = '/uploads/ai-generated/thumbnail/' . $filename;
-    $smallUrl = '/uploads/ai-generated/small/' . $filename;
+    $thumbnailUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-thumbnail.webp';
+    $smallUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-small.webp';
 
     // Insert into media table
     $altText = $data['alt_text'] ?? 'AI generated image';
-    $stmt = $db->prepare("INSERT INTO media (filename, file_path, thumbnail_url, small_url, file_type, file_size, alt_text, width, height, created_at, updated_at)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
-    $stmt->execute([
-        $filename,
-        $url,
-        $thumbnailUrl,
-        $smallUrl,
-        'image/png',
-        strlen($imageData),
-        $altText,
-        $width,
-        $height
-    ]);
+
+    // Check if the medium_url and large_url columns exist
+    try {
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, thumbnail_url, small_url, medium_url, large_url, file_type, file_size, alt_text, width, height, created_at, updated_at)
+                              VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt->execute([
+            $filename,
+            $url,
+            $thumbnailUrl,
+            $smallUrl,
+            'image/png',
+            strlen($imageData),
+            $altText,
+            $width,
+            $height
+        ]);
+    } catch (PDOException $e) {
+        // If the insert fails, try with fewer columns
+        if (strpos($e->getMessage(), 'Unknown column') !== false) {
+            $stmt = $db->prepare("INSERT INTO media (filename, file_path, thumbnail_url, small_url, file_type, file_size, alt_text, width, height, created_at, updated_at)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+            $stmt->execute([
+                $filename,
+                $url,
+                $thumbnailUrl,
+                $smallUrl,
+                'image/png',
+                strlen($imageData),
+                $altText,
+                $width,
+                $height
+            ]);
+        } else {
+            // Re-throw the exception if it's not a column issue
+            throw $e;
+        }
+    }
 
     $mediaId = $db->lastInsertId();
 

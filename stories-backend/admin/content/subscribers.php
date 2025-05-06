@@ -18,7 +18,22 @@ if (isset($_GET['id'])) {
     $subscriber = $stmt->fetch();
 
     if ($subscriber) {
-        $pageTitle = $subscriber['email'];
+        // Handle form submission
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = $_POST['email'] ?? '';
+            $status = $_POST['status'] ?? 'active';
+            
+            try {
+                $stmt = $db->prepare("UPDATE subscribers SET email = ?, status = ? WHERE id = ?");
+                $stmt->execute([$email, $status, $subscriberId]);
+                header("Location: subscribers.php");
+                exit;
+            } catch (PDOException $e) {
+                $error = "Error updating subscriber: " . $e->getMessage();
+            }
+        }
+
+        $pageTitle = 'Edit Subscriber';
         $currentPage = 'subscribers';
         
         // Include header
@@ -28,19 +43,22 @@ if (isset($_GET['id'])) {
             <div class="container-fluid">
                 <div class="page-header d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h1 class="page-title"><?php echo htmlspecialchars($subscriber['email']); ?></h1>
+                        <h1 class="page-title">Edit Subscriber</h1>
                         <p class="page-description">
                             <a href="subscribers.php" class="text-primary">← Back to Subscribers</a>
                         </p>
                     </div>
                 </div>
 
+                <?php if (isset($error)): ?>
+                <div class="alert alert-danger">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+
                 <div class="content-section mb-4">
-                    <div class="section-header">
-                        <h2 class="section-title">Details</h2>
-                    </div>
                     <div class="section-body">
-                        <form method="POST" action="subscribers.php">
+                        <form method="POST">
                             <input type="hidden" name="id" value="<?php echo $subscriber['id']; ?>">
                             <div class="form-group mb-3">
                                 <label>Email</label>
@@ -48,6 +66,15 @@ if (isset($_GET['id'])) {
                             </div>
                             <div class="form-group mb-3">
                                 <label>Status</label>
+                                <select name="status" class="form-control">
+                                    <option value="active" <?php echo ($subscriber['status'] ?? 'active') === 'active' ? 'selected' : ''; ?>>Active</option>
+                                    <option value="inactive" <?php echo ($subscriber['status'] ?? 'active') === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
                                 <select name="status" class="form-control">
                                     <option value="active" <?php echo $subscriber['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
                                     <option value="inactive" <?php echo $subscriber['status'] === 'inactive' ? 'selected' : ''; ?>>Inactive</option>

@@ -262,30 +262,8 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                         <div class="premium-table-actions">
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
-                                                // Map item types to their correct view file names
-                                                $viewFiles = [
-                                                    'ai_tool' => 'view-ai-tool.php',
-                                                    'directory_item' => 'view-directory-item.php',
-                                                    'game' => 'view-game.php',
-                                                    'media' => 'media.php',
-                                                    'contact' => 'contacts.php',
-                                                    'subscriber' => 'subscribers.php',
-                                                    'post' => 'post-form.php',
-                                                    'story' => 'stories.php',
-                                                    'tag' => 'tag-form.php',
-                                                    'author' => 'author-form.php'
-                                                ];
-                                                $viewFile = $viewFiles[$itemType] ?? "{$itemType}s.php";
-                                                echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
-                                                echo '<i class="fas fa-eye"></i>';
-                                                echo '</a>';
-                                                ?>
-                                            <?php endif; ?>
-
-                                            <?php if (in_array('edit', $options['actions'])): ?>
-                                                <?php
-                                                // Get the form file path based on item type
-                                                $formFile = match($itemType) {
+                                                // Get the file path based on item type
+                                                $actionFile = match($itemType) {
                                                     'ai_tool' => 'ai-tool-form.php',
                                                     'directory_item' => 'directory-item-form.php',
                                                     'game' => 'game-form.php',
@@ -298,22 +276,29 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     'author' => 'author-form.php',
                                                     default => "{$itemType}s.php"
                                                 };
+                                                echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
+                                                echo '<i class="fas fa-eye"></i>';
+                                                echo '</a>';
+                                                ?>
+                                            <?php endif; ?>
 
-                                                // Get the view file path based on item type
-                                                $viewFile = match($itemType) {
-                                                    'ai_tool' => 'view-ai-tool.php',
-                                                    'directory_item' => 'view-directory-item.php',
-                                                    'game' => 'view-game.php',
+                                            <?php if (in_array('edit', $options['actions'])): ?>
+                                                <?php
+                                                // Get the file path based on item type
+                                                $actionFile = match($itemType) {
+                                                    'ai_tool' => 'ai-tool-form.php',
+                                                    'directory_item' => 'directory-item-form.php',
+                                                    'game' => 'game-form.php',
                                                     'story' => 'stories.php',
                                                     'media' => 'media.php',
                                                     'contact' => 'contacts.php',
                                                     'subscriber' => 'subscribers.php',
-                                                    'post' => 'view-post.php',
-                                                    'tag' => 'view-tag.php',
-                                                    'author' => 'view-author.php',
-                                                    default => "view-{$itemType}.php"
+                                                    'post' => 'post-form.php',
+                                                    'tag' => 'tag-form.php',
+                                                    'author' => 'author-form.php',
+                                                    default => "{$itemType}s.php"
                                                 };
-                                                echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
+                                                echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                 echo '<i class="fas fa-edit"></i>';
                                                 echo '</a>';
                                                 ?>

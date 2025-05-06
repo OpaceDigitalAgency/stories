@@ -1,21 +1,21 @@
 <?php
 /**
  * AI Image Generation API Endpoint
- * 
+ *
  * This endpoint handles image generation requests using the configured AI provider.
- * 
+ *
  * Request method: POST
  * Request format: JSON
- * 
+ *
  * Required parameters:
  * - prompt: The text description of the image to generate
- * 
+ *
  * Optional parameters:
  * - size: Image size (default: 1024x1024)
  * - style: Image style (default: natural)
  * - variations: Number of variations to generate (default: 1)
  * - quality: Image quality (default: standard)
- * 
+ *
  * Response format: JSON
  * {
  *   "success": true|false,
@@ -73,29 +73,38 @@ try {
     $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
     $stmt->execute();
     $provider = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$provider) {
-        throw new Exception('OpenAI provider not configured or not active.');
+        error_log("OpenAI provider not found or not active");
+        throw new Exception('OpenAI provider not configured or not active. Please go to AI Settings to configure it.');
     }
-    
+
     $providerId = $provider['id'];
     $config = json_decode($provider['config'], true);
-    
-    if (empty($config['api_key'])) {
-        throw new Exception('OpenAI API key not configured.');
+
+    // Log provider config for debugging (without API key)
+    $logConfig = $config;
+    if (isset($logConfig['api_key'])) {
+        $logConfig['api_key'] = substr($logConfig['api_key'], 0, 3) . '...' . substr($logConfig['api_key'], -3);
     }
-    
+    error_log("OpenAI provider config: " . json_encode($logConfig));
+
+    if (empty($config['api_key'])) {
+        error_log("OpenAI API key not configured");
+        throw new Exception('OpenAI API key not configured. Please go to AI Settings to add your API key.');
+    }
+
     // Prepare request to OpenAI API
     $apiKey = $config['api_key'];
     $organization = $config['organization'] ?? null;
     $model = $config['model'] ?? 'gpt-image-1';
-    
+
     // Set up request parameters
     $size = $data['size'] ?? '1024x1024';
     $style = $data['style'] ?? 'natural';
     $variations = min(max((int)($data['variations'] ?? 1), 1), 4); // Limit to 1-4 variations
     $quality = $data['quality'] ?? 'standard';
-    
+
     // Prepare OpenAI API request
     $openaiData = [
         'model' => $model,
@@ -106,7 +115,7 @@ try {
         'style' => $style,
         'response_format' => 'url'
     ];
-    
+
     // Set up cURL request
     $ch = curl_init('https://api.openai.com/v1/images/generations');
     curl_setopt_array($ch, [
@@ -117,47 +126,68 @@ try {
             'Content-Type: application/json',
             'Authorization: Bearer ' . $apiKey,
             $organization ? 'OpenAI-Organization: ' . $organization : null
-        ]
+        ],
+        CURLOPT_SSL_VERIFYPEER => false, // For development only
+        CURLOPT_VERBOSE => true // Enable verbose output
     ]);
-    
+
+    // Create a file handle for the verbose output
+    $verbose = fopen('php://temp', 'w+');
+    curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
     // Execute request
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    curl_close($ch);
-    
+
+    // Get verbose information
+    rewind($verbose);
+    $verboseLog = stream_get_contents($verbose);
+    fclose($verbose);
+
+    // Log the request and response for debugging
+    error_log("OpenAI API Request: " . json_encode($openaiData));
+    error_log("OpenAI API Response Status: " . $statusCode);
+    error_log("OpenAI API Response: " . $response);
     if ($error) {
-        throw new Exception('API request failed: ' . $error);
+        error_log("cURL Error: " . $error);
     }
-    
+    error_log("Verbose Log: " . $verboseLog);
+
+    curl_close($ch);
+
+    if ($error) {
+        throw new Exception('API request failed: ' . $error . ' - ' . $verboseLog);
+    }
+
     if ($statusCode !== 200) {
         $errorData = json_decode($response, true);
         $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
-        throw new Exception('API error: ' . $errorMessage);
+        throw new Exception('API error: ' . $errorMessage . ' - ' . $verboseLog);
     }
-    
+
     // Parse response
     $result = json_decode($response, true);
-    
+
     if (!isset($result['data']) || !is_array($result['data'])) {
         throw new Exception('Invalid response from OpenAI API');
     }
-    
+
     // Extract image URLs
     $urls = array_map(function($image) {
         return $image['url'];
     }, $result['data']);
-    
+
     if (empty($urls)) {
         throw new Exception('No images generated');
     }
-    
+
     // Record generation in database
     $stmt = $db->prepare("
         INSERT INTO ai_generations (provider_id, type, prompt, result_url, metadata, status)
         VALUES (?, 'image', ?, ?, ?, 'completed')
     ");
-    
+
     $metadata = json_encode([
         'model' => $model,
         'size' => $size,
@@ -165,10 +195,10 @@ try {
         'variations' => $variations,
         'quality' => $quality
     ]);
-    
+
     $stmt->execute([$providerId, $data['prompt'], $urls[0], $metadata]);
     $generationId = $db->lastInsertId();
-    
+
     // Record usage
     $cost = calculateImageGenerationCost($model, $size, $quality, $variations);
     $stmt = $db->prepare("
@@ -176,7 +206,7 @@ try {
         VALUES (?, 'image', ?)
     ");
     $stmt->execute([$providerId, $cost]);
-    
+
     // Prepare response
     $responseData = [
         'success' => true,
@@ -184,19 +214,19 @@ try {
             'url' => $urls[0]
         ]
     ];
-    
+
     // Add variations if more than one image was generated
     if (count($urls) > 1) {
         $responseData['data']['variations'] = array_slice($urls, 1);
     }
-    
+
     // Return success response
     echo json_encode($responseData);
-    
+
 } catch (Exception $e) {
     // Log error
     error_log('AI Image Generation Error: ' . $e->getMessage());
-    
+
     // Return error response
     http_response_code(500);
     echo json_encode([
@@ -207,7 +237,7 @@ try {
 
 /**
  * Calculate the cost of image generation based on model, size, quality, and variations
- * 
+ *
  * @param string $model The model used for generation
  * @param string $size The size of the generated image
  * @param string $quality The quality of the generated image
@@ -233,13 +263,13 @@ function calculateImageGenerationCost($model, $size, $quality, $variations) {
             '256x256' => 0.016
         ]
     ];
-    
+
     // Quality multiplier (HD costs more)
     $qualityMultiplier = ($quality === 'hd') ? 2 : 1;
-    
+
     // Get base cost for model and size
     $baseCost = $baseCosts[$model][$size] ?? 0.04;
-    
+
     // Calculate total cost
     return $baseCost * $qualityMultiplier * $variations;
 }

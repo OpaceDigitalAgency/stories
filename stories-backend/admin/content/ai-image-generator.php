@@ -1,7 +1,7 @@
 <?php
 /**
  * AI Image Generator Test Page
- * 
+ *
  * This page provides a testing interface for the AI image generation functionality.
  */
 
@@ -26,7 +26,7 @@ try {
     $stmt = $db->prepare("SELECT config FROM ai_providers WHERE name = 'openai'");
     $stmt->execute();
     $config = $stmt->fetch();
-    
+
     if (!$config) {
         $_SESSION['error'] = 'OpenAI provider not found. Please configure it in AI Settings.';
     } else {
@@ -50,13 +50,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
             'variations' => (int)$_POST['variations']
         ];
 
-        $response = file_get_contents('https://api.storiesfromtheweb.org/api/v1/ai/image.php', false, stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Content-Type: application/json',
-                'content' => json_encode($data)
-            ]
-        ]));
+        // Use cURL instead of file_get_contents for better error handling
+        $ch = curl_init('https://api.storiesfromtheweb.org/api/v1/ai/image.php');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json'
+            ],
+            CURLOPT_SSL_VERIFYPEER => false, // For development only
+            CURLOPT_TIMEOUT => 30
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($error) {
+            throw new Exception('API request failed: ' . $error);
+        }
+
+        if ($httpCode !== 200) {
+            throw new Exception('API returned error code: ' . $httpCode . '. Response: ' . $response);
+        }
 
         $result = json_decode($response, true);
 
@@ -69,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
     } catch (Exception $e) {
         $_SESSION['error'] = 'Error generating image: ' . $e->getMessage();
     }
-    
+
     // Redirect to prevent form resubmission
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
@@ -79,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
 <div class="content-section">
     <div class="section-header">
         <h2 class="section-title">
-            <i class="fas fa-magic" aria-hidden="true"></i> 
+            <i class="fas fa-magic" aria-hidden="true"></i>
             AI Image Generator
         </h2>
         <p class="section-description">
@@ -89,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
 
     <?php if (isset($_SESSION['success'])): ?>
         <div class="alert alert-success">
-            <?php 
+            <?php
             echo $_SESSION['success'];
             unset($_SESSION['success']);
             ?>
@@ -98,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
 
     <?php if (isset($_SESSION['error'])): ?>
         <div class="alert alert-danger">
-            <?php 
+            <?php
             echo $_SESSION['error'];
             unset($_SESSION['error']);
             ?>
@@ -115,11 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
                 <form method="post" class="generation-form">
                     <div class="form-group">
                         <label for="prompt">Image Description</label>
-                        <textarea 
-                            id="prompt" 
-                            name="prompt" 
-                            class="form-control" 
-                            rows="3" 
+                        <textarea
+                            id="prompt"
+                            name="prompt"
+                            class="form-control"
+                            rows="3"
                             placeholder="Describe the image you want to generate..."
                             required
                         ></textarea>
@@ -176,19 +194,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
                 </div>
                 <div class="card-body">
                     <div class="generated-images">
-                        <?php 
+                        <?php
                         $images = $_SESSION['generated_images'];
                         unset($_SESSION['generated_images']);
                         ?>
-                        
+
                         <!-- Main Image -->
                         <div class="image-item">
-                            <img src="<?php echo htmlspecialchars($images['url']); ?>" 
-                                 alt="Generated image" 
+                            <img src="<?php echo htmlspecialchars($images['url']); ?>"
+                                 alt="Generated image"
                                  class="generated-image">
                             <div class="image-actions">
-                                <a href="<?php echo htmlspecialchars($images['url']); ?>" 
-                                   class="btn btn-sm btn-primary" 
+                                <a href="<?php echo htmlspecialchars($images['url']); ?>"
+                                   class="btn btn-sm btn-primary"
                                    target="_blank">
                                     <i class="fas fa-external-link-alt"></i> View Full Size
                                 </a>
@@ -199,12 +217,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
                         <?php if (isset($images['variations'])): ?>
                             <?php foreach ($images['variations'] as $url): ?>
                                 <div class="image-item">
-                                    <img src="<?php echo htmlspecialchars($url); ?>" 
-                                         alt="Image variation" 
+                                    <img src="<?php echo htmlspecialchars($url); ?>"
+                                         alt="Image variation"
                                          class="generated-image">
                                     <div class="image-actions">
-                                        <a href="<?php echo htmlspecialchars($url); ?>" 
-                                           class="btn btn-sm btn-primary" 
+                                        <a href="<?php echo htmlspecialchars($url); ?>"
+                                           class="btn btn-sm btn-primary"
                                            target="_blank">
                                             <i class="fas fa-external-link-alt"></i> View Full Size
                                         </a>

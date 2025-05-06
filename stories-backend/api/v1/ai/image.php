@@ -344,17 +344,70 @@ try {
         error_log("Skipping database recording - database not connected or provider ID not available");
     }
 
-    // Generate a meaningful filename based on the prompt
-    $cleanPrompt = preg_replace('/[^a-zA-Z0-9]+/', '-', $data['prompt']);
-    $cleanPrompt = substr($cleanPrompt, 0, 40); // Limit to 40 chars
-    $cleanPrompt = trim($cleanPrompt, '-');
-    $timestamp = date('YmdHis');
-    $filename = "ai-image-{$cleanPrompt}-{$timestamp}";
+    // Extract story title and author information from the prompt
+    $storyTitle = '';
+    $author = '';
+    $age = '';
+    $location = '';
 
-    // Create an ALT description based on the prompt
-    $altDescription = "AI generated image: " . substr($data['prompt'], 0, 200);
-    if (strlen($data['prompt']) > 200) {
-        $altDescription .= "...";
+    // Try to extract story title from "Base this on: [Title]"
+    if (preg_match('/Base this on:\s*([^\.]+)/', $data['prompt'], $matches)) {
+        $storyInfo = trim($matches[1]);
+
+        // Check if it includes author information
+        if (preg_match('/(.*?)\s+by\s+(.*?)(?:,\s*aged\s*(\d+))?(?:,\s*from\s*(.*?))?/i', $storyInfo, $authorMatches)) {
+            $storyTitle = trim($authorMatches[1]);
+            $author = trim($authorMatches[2]);
+            $age = isset($authorMatches[3]) ? trim($authorMatches[3]) : '';
+            $location = isset($authorMatches[4]) ? trim($authorMatches[4]) : '';
+        } else {
+            // Just use the whole string as the title
+            $storyTitle = $storyInfo;
+        }
+    }
+
+    // Generate a meaningful filename based on the story title
+    if (!empty($storyTitle)) {
+        // Convert to URL-friendly format
+        $baseFilename = strtolower(trim($storyTitle));
+        $baseFilename = preg_replace('/[^a-z0-9]+/', '-', $baseFilename);
+        $baseFilename = trim($baseFilename, '-');
+
+        if (!empty($author)) {
+            $authorSlug = strtolower(trim($author));
+            $authorSlug = preg_replace('/[^a-z0-9]+/', '-', $authorSlug);
+            $authorSlug = trim($authorSlug, '-');
+            $baseFilename .= "-by-" . $authorSlug;
+        }
+
+        $baseFilename .= "-story-written-by-children";
+        $filename = $baseFilename;
+    } else {
+        // Fallback to using the prompt
+        $cleanPrompt = preg_replace('/[^a-zA-Z0-9]+/', '-', $data['prompt']);
+        $cleanPrompt = substr($cleanPrompt, 0, 40); // Limit to 40 chars
+        $cleanPrompt = trim($cleanPrompt, '-');
+        $filename = "ai-image-{$cleanPrompt}";
+    }
+
+    // Create an SEO-friendly ALT description
+    if (!empty($storyTitle)) {
+        $altDescription = "Story written by children: $storyTitle";
+        if (!empty($author)) {
+            $altDescription .= " by $author";
+            if (!empty($age)) {
+                $altDescription .= ", aged $age";
+            }
+            if (!empty($location)) {
+                $altDescription .= ", from $location";
+            }
+        }
+    } else {
+        // Fallback to using the prompt
+        $altDescription = "AI generated image: " . substr($data['prompt'], 0, 200);
+        if (strlen($data['prompt']) > 200) {
+            $altDescription .= "...";
+        }
     }
 
     // Prepare response

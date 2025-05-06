@@ -28,6 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $requestBody = file_get_contents('php://input');
 $data = json_decode($requestBody, true);
 
+// Log the request data for debugging
+error_log("save-base64-image.php received data: " . json_encode([
+    'filename' => $data['filename'] ?? 'not set',
+    'alt_text' => $data['alt_text'] ?? 'not set',
+    'prompt' => substr($data['prompt'] ?? 'not set', 0, 100) . '...'
+]));
+
 if (!$data || !isset($data['image_data']) || !isset($data['filename'])) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid request data. Required fields: image_data, filename']);

@@ -368,12 +368,30 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                         $('.ai-images-container').empty();
 
                         // Add main image
-                        addImageToResults(response.data.url, true);
+                        if (response.data.type === 'base64') {
+                            // Handle base64 image
+                            addImageToResults('data:image/png;base64,' + response.data.data, true, response.data.data);
+                        } else if (response.data.type === 'url') {
+                            // Handle URL image
+                            addImageToResults(response.data.data, true);
+                        } else if (response.data.url) {
+                            // Legacy format
+                            addImageToResults(response.data.url, true);
+                        }
 
                         // Add variations if any
                         if (response.data.variations) {
-                            response.data.variations.forEach(function(url) {
-                                addImageToResults(url, false);
+                            response.data.variations.forEach(function(variation) {
+                                if (typeof variation === 'string') {
+                                    // Legacy format - just a URL
+                                    addImageToResults(variation, false);
+                                } else if (variation.type === 'base64') {
+                                    // Base64 image
+                                    addImageToResults('data:image/png;base64,' + variation.data, false, variation.data);
+                                } else if (variation.type === 'url') {
+                                    // URL image
+                                    addImageToResults(variation.data, false);
+                                }
                             });
                         }
                     } else {
@@ -441,7 +459,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         });
 
         // Function to add an image to the results
-        function addImageToResults(url, isMain) {
+        function addImageToResults(url, isMain, rawBase64) {
             const col = $('<div class="col-md-6 mb-3"></div>');
             const card = $('<div class="card h-100"></div>');
             const img = $('<img class="card-img-top" src="' + url + '" alt="Generated image">');
@@ -450,12 +468,29 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
 
             // Handle use button click
             useBtn.click(function() {
+                // Determine what to store in the target field
+                let valueToStore = url;
+
+                // If this is a base64 image and we're in the admin interface,
+                // we should convert it to a file and upload it to the server
+                if (rawBase64 && url.startsWith('data:image/png;base64,')) {
+                    // Show a message that we're processing the image
+                    alert('Base64 images need to be saved to the server before they can be used. This feature is coming soon.');
+
+                    // For now, just store the data URL
+                    valueToStore = url;
+
+                    // TODO: Implement server-side storage of base64 images
+                    // This would involve making an AJAX request to a PHP endpoint
+                    // that saves the base64 data as a file and returns the URL
+                }
+
                 // Set the image URL in the target field
-                $('#' + currentTargetField).val(url);
+                $('#' + currentTargetField).val(valueToStore);
 
                 // Update the preview if available
                 if (currentPreviewElement) {
-                    $('#' + currentPreviewElement).attr('src', url);
+                    $('#' + currentPreviewElement).attr('src', valueToStore);
                     $('#' + currentPreviewElement).removeClass('d-none');
                 }
 

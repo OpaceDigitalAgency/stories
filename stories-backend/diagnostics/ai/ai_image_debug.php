@@ -459,17 +459,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         <?php
                         $responseData = json_decode($testResult['response'], true);
                         $imageUrl = null;
+                        $imageBase64 = null;
+                        $imageType = null;
 
-                        if (isset($responseData['data']['url'])) {
+                        // Check for different response formats
+                        if (isset($responseData['data']['type']) && $responseData['data']['type'] === 'base64') {
+                            $imageBase64 = $responseData['data']['data'];
+                            $imageType = 'base64';
+                        } elseif (isset($responseData['data']['type']) && $responseData['data']['type'] === 'url') {
+                            $imageUrl = $responseData['data']['data'];
+                            $imageType = 'url';
+                        } elseif (isset($responseData['data']['url'])) {
                             $imageUrl = $responseData['data']['url'];
+                            $imageType = 'url';
                         } elseif (isset($responseData['url'])) {
                             $imageUrl = $responseData['url'];
+                            $imageType = 'url';
+                        } elseif (isset($responseData['data']['data'])) {
+                            // Assume it's base64 if we can't determine the type
+                            $imageBase64 = $responseData['data']['data'];
+                            $imageType = 'base64';
                         }
 
-                        if ($imageUrl):
+                        if ($imageUrl || $imageBase64):
                         ?>
                             <div class="test-image-container">
-                                <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="Generated test image" class="test-image">
+                                <?php if ($imageType === 'url'): ?>
+                                    <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="Generated test image" class="test-image">
+                                <?php elseif ($imageType === 'base64'): ?>
+                                    <img src="data:image/png;base64,<?php echo $imageBase64; ?>" alt="Generated test image" class="test-image">
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 

@@ -175,9 +175,9 @@ try {
         'prompt' => $data['prompt'],
         'n' => $variations,
         'size' => $size,
-        'quality' => $quality
+        'quality' => $quality,
+        'response_format' => 'b64_json' // Request base64 encoded image
         // 'style' parameter removed as it's no longer supported
-        // 'response_format' parameter removed as it's no longer supported
     ];
 
     // Set up cURL request
@@ -237,30 +237,47 @@ try {
     error_log("Parsed OpenAI API Response: " . json_encode($result));
 
     // Handle different response formats from OpenAI API
+    $images = [];
+    $isBase64 = false;
+
     if (isset($result['data']) && is_array($result['data'])) {
         // Standard format
-        $urls = array_map(function($image) {
-            return $image['url'] ?? $image['b64_json'] ?? null;
-        }, $result['data']);
+        foreach ($result['data'] as $image) {
+            if (isset($image['url'])) {
+                $images[] = ['type' => 'url', 'data' => $image['url']];
+            } elseif (isset($image['b64_json'])) {
+                $isBase64 = true;
+                $images[] = ['type' => 'base64', 'data' => $image['b64_json']];
+            }
+        }
     } elseif (isset($result['url'])) {
         // Single URL format
-        $urls = [$result['url']];
+        $images[] = ['type' => 'url', 'data' => $result['url']];
     } elseif (isset($result['urls']) && is_array($result['urls'])) {
         // Array of URLs format
-        $urls = $result['urls'];
+        foreach ($result['urls'] as $url) {
+            $images[] = ['type' => 'url', 'data' => $url];
+        }
     } elseif (isset($result['images']) && is_array($result['images'])) {
         // Array of images format
-        $urls = array_map(function($image) {
-            return $image['url'] ?? $image['b64_json'] ?? null;
-        }, $result['images']);
+        foreach ($result['images'] as $image) {
+            if (isset($image['url'])) {
+                $images[] = ['type' => 'url', 'data' => $image['url']];
+            } elseif (isset($image['b64_json'])) {
+                $isBase64 = true;
+                $images[] = ['type' => 'base64', 'data' => $image['b64_json']];
+            }
+        }
     } else {
         error_log("Unexpected OpenAI API response format: " . json_encode($result));
         throw new Exception('Invalid response format from OpenAI API');
     }
 
-    if (empty($urls)) {
+    if (empty($images)) {
         throw new Exception('No images generated');
     }
+
+    error_log("Processed " . count($images) . " images, isBase64: " . ($isBase64 ? 'true' : 'false'));
 
     // Record generation in database if database is connected
     if ($dbConnected && isset($db) && $providerId) {
@@ -269,15 +286,20 @@ try {
                 'model' => $model,
                 'size' => $size,
                 'variations' => $variations,
-                'quality' => $quality
+                'quality' => $quality,
+                'is_base64' => $isBase64
                 // 'style' parameter removed as it's no longer supported
             ]);
+
+            // Use the first image for the database record
+            $imageData = $images[0]['data'];
+            $imageType = $images[0]['type'];
 
             $stmt = $db->prepare("
                 INSERT INTO ai_generations (provider_id, type, prompt, result_url, metadata, status)
                 VALUES (?, 'image', ?, ?, ?, 'completed')
             ");
-            $stmt->execute([$providerId, $data['prompt'], $urls[0], $metadata]);
+            $stmt->execute([$providerId, $data['prompt'], $imageData, $metadata]);
             $generationId = $db->lastInsertId();
 
             // Record usage
@@ -299,13 +321,14 @@ try {
     $responseData = [
         'success' => true,
         'data' => [
-            'url' => $urls[0]
+            'type' => $images[0]['type'],
+            'data' => $images[0]['data']
         ]
     ];
 
     // Add variations if more than one image was generated
-    if (count($urls) > 1) {
-        $responseData['data']['variations'] = array_slice($urls, 1);
+    if (count($images) > 1) {
+        $responseData['data']['variations'] = array_slice($images, 1);
     }
 
     // Return success response

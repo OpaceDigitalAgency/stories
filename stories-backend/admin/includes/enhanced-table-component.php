@@ -263,7 +263,16 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Check if the view file exists
-                                                $viewFile = "view-{$itemType}.php";
+                                                // Map item types to their correct view file names
+                                                $viewFiles = [
+                                                    'ai_tool' => 'view-ai-tool.php',
+                                                    'directory_item' => 'view-directory-item.php',
+                                                    'game' => 'view-game.php',
+                                                    'media' => 'view-media.php',
+                                                    'contact' => 'view-contact.php',
+                                                    'subscriber' => 'view-subscriber.php'
+                                                ];
+                                                $viewFile = $viewFiles[$itemType] ?? "view-{$itemType}.php";
                                                 $viewFileExists = true; // Files exist in the same directory
 
                                                 if ($viewFileExists) {
@@ -277,7 +286,16 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('edit', $options['actions'])): ?>
                                                 <?php
                                                 // Check if the edit form file exists
-                                                $formFile = "{$itemType}-form.php";
+                                                // Map item types to their correct form file names
+                                                $formFiles = [
+                                                    'ai_tool' => 'ai-tool-form.php',
+                                                    'directory_item' => 'directory-item-form.php',
+                                                    'game' => 'game-form.php',
+                                                    'media' => 'media-form.php',
+                                                    'contact' => 'contact-form.php',
+                                                    'subscriber' => 'subscriber-form.php'
+                                                ];
+                                                $formFile = $formFiles[$itemType] ?? "{$itemType}-form.php";
                                                 $formFileExists = true; // Files exist in the same directory
 
                                                 if ($formFileExists) {

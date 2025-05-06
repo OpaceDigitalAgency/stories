@@ -5,11 +5,6 @@
  * This page provides a testing interface for the AI image generation functionality.
  */
 
-// Include necessary files
-require_once '../includes/header.php';
-require_once '../includes/auth-check.php';
-require_once '../includes/db-connect.php';
-
 // Set page variables
 $pageTitle = 'AI Image Generator';
 $currentPage = 'ai-settings';
@@ -20,6 +15,10 @@ $pageActions = '
 <a href="ai-settings.php" class="btn btn-primary">
     <i class="fas fa-cog"></i> Back to AI Settings
 </a>';
+
+// Include necessary files
+require_once '../includes/auth-check.php';
+require_once '../includes/db-connect.php';
 
 // Check if OpenAI is configured
 try {
@@ -88,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
         $_SESSION['error'] = 'Error generating image: ' . $e->getMessage();
     }
 
-    // Redirect to prevent form resubmission
+    // Store the result in session and redirect to prevent form resubmission
+    $_SESSION['redirect_from_post'] = true;
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
@@ -322,5 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate'])) {
 </style>
 
 <?php
+// Include header after all potential redirects
+require_once '../includes/header.php';
 require_once '../includes/footer.php';
 ?>

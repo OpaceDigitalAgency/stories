@@ -161,14 +161,30 @@ try {
     // Parse response
     $result = json_decode($response, true);
 
-    if (!isset($result['data']) || !is_array($result['data'])) {
-        throw new Exception('Invalid response from OpenAI API');
-    }
+    // Log the full response for debugging
+    error_log("Parsed OpenAI API Response: " . json_encode($result));
 
-    // Extract image URLs
-    $urls = array_map(function($image) {
-        return $image['url'];
-    }, $result['data']);
+    // Handle different response formats from OpenAI API
+    if (isset($result['data']) && is_array($result['data'])) {
+        // Standard format
+        $urls = array_map(function($image) {
+            return $image['url'] ?? $image['b64_json'] ?? null;
+        }, $result['data']);
+    } elseif (isset($result['url'])) {
+        // Single URL format
+        $urls = [$result['url']];
+    } elseif (isset($result['urls']) && is_array($result['urls'])) {
+        // Array of URLs format
+        $urls = $result['urls'];
+    } elseif (isset($result['images']) && is_array($result['images'])) {
+        // Array of images format
+        $urls = array_map(function($image) {
+            return $image['url'] ?? $image['b64_json'] ?? null;
+        }, $result['images']);
+    } else {
+        error_log("Unexpected OpenAI API response format: " . json_encode($result));
+        throw new Exception('Invalid response format from OpenAI API');
+    }
 
     if (empty($urls)) {
         throw new Exception('No images generated');

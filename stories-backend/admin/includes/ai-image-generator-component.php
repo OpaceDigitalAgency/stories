@@ -290,7 +290,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
 
             // Make API request
             $.ajax({
-                url: 'https://api.storiesfromtheweb.org/api/v1/ai/image.php',
+                url: '/api/v1/ai/image.php', // Use relative URL to avoid CORS issues
                 type: 'POST',
                 contentType: 'application/json',
                 crossDomain: true,

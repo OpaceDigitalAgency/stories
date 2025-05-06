@@ -543,7 +543,8 @@ The Stories From The Web Team</textarea>
                     'editableFields' => $editableFields,
                     'bulkActions' => ['delete', 'mark_contacted', 'mark_not_contacted', 'notify'],
                     'itemsPerPage' => $perPage,
-                    'currentPage' => $page
+                    'currentPage' => $page,
+                    'thumbnailField' => false // Disable image column for subscribers
                 ]
             );
         } else {

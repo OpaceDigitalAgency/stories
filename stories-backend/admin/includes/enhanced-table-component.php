@@ -19,7 +19,18 @@
 function getTableDisplayUrl($filePath) {
     // If it's null or empty, return default image
     if (empty($filePath)) {
-        return '../assets/images/default-cover.jpg';
+        return '../assets/images/default-cover.svg';
+    }
+
+    // Check if there's a thumbnail version available
+    if (strpos($filePath, '/uploads/') !== false && strpos($filePath, '-thumbnail') === false) {
+        // Try to use the thumbnail version if it exists
+        $pathInfo = pathinfo($filePath);
+        $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $pathInfo['filename'] . '-thumbnail.' . ($pathInfo['extension'] ?? 'jpg');
+
+        // For now, we'll just construct the path - in a production environment
+        // you might want to check if the file exists first
+        return $thumbnailPath;
     }
 
     // If it's already an absolute URL
@@ -65,7 +76,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
         'showCheckboxes' => true,
         'showActions' => true,
         'actions' => ['view', 'edit', 'delete'],
-        'thumbnailField' => 'image',
+        'thumbnailField' => 'image', // Set to false to disable thumbnail column
         'thumbnailAltField' => 'title',
         'editableFields' => [],
         'htmlFields' => [], // Fields that should render HTML instead of escaping it
@@ -86,6 +97,19 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
     // Render the table
     ?>
+    <style>
+        .thumbnail-column {
+            width: 80px;
+            text-align: center;
+        }
+        .thumbnail-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
     <div class="premium-table-container">
         <?php if ($options['showCheckboxes'] && !empty($options['bulkActions'])): ?>
             <div class="premium-bulk-actions" style="padding: 1rem; border-bottom: 1px solid var(--premium-gray-200); display: flex; align-items: center; gap: 0.75rem;">
@@ -118,7 +142,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                         </th>
                     <?php endif; ?>
 
-                    <?php if (isset($options['thumbnailField'])): ?>
+                    <?php if (isset($options['thumbnailField']) && $options['thumbnailField'] !== false): ?>
                         <th class="thumbnail-column">Image</th>
                     <?php endif; ?>
 
@@ -149,13 +173,13 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                 </td>
                             <?php endif; ?>
 
-                            <?php if (isset($options['thumbnailField']) && isset($item[$options['thumbnailField']])): ?>
+                            <?php if (isset($options['thumbnailField']) && $options['thumbnailField'] !== false): ?>
                                 <td class="thumbnail-column">
                                     <?php
-                                    $thumbnailUrl = $item[$options['thumbnailField']];
+                                    $thumbnailUrl = isset($item[$options['thumbnailField']]) ? $item[$options['thumbnailField']] : '';
                                     $thumbnailAlt = isset($item[$options['thumbnailAltField']]) ? $item[$options['thumbnailAltField']] : '';
 
-                                    // Get the proper display URL
+                                    // Get the proper display URL (will return default image if empty)
                                     $thumbnailUrl = getTableDisplayUrl($thumbnailUrl);
                                     ?>
                                     <img src="<?php echo htmlspecialchars($thumbnailUrl); ?>" alt="<?php echo htmlspecialchars($thumbnailAlt); ?>" class="thumbnail-image">

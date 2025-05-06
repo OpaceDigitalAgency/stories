@@ -25,6 +25,7 @@ try {
             pricing_type ENUM('free', 'freemium', 'paid', 'subscription') DEFAULT 'free',
             price_info VARCHAR(255),
             features TEXT,
+            image VARCHAR(255),
             rating DECIMAL(3,1) DEFAULT 0,
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
@@ -75,6 +76,7 @@ try {
                a.pricing_type,
                a.price_info,
                a.features,
+               a.image,
                a.rating,
                a.featured,
                a.is_published,
@@ -194,6 +196,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $tool['id'],
+            'image' => $tool['image'] ?? '',
             'title' => $tool['title'],
             'category' => $tool['category_name'] ?? 'None',
             'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),

@@ -25,6 +25,7 @@ try {
             contact_email VARCHAR(255),
             contact_phone VARCHAR(50),
             address TEXT,
+            image VARCHAR(255),
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
             slug VARCHAR(255) NOT NULL,
@@ -72,6 +73,7 @@ try {
                d.contact_email,
                d.contact_phone,
                d.address,
+               d.image,
                d.featured,
                d.is_published,
                d.slug,
@@ -194,6 +196,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
+            'image' => $item['image'] ?? '',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',

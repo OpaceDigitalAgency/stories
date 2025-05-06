@@ -154,7 +154,8 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'thumbnailField' => false // Disable image column for tags
         ]
     );
 } else {

@@ -21,6 +21,7 @@ try {
             title VARCHAR(255) NOT NULL,
             description TEXT,
             slug VARCHAR(255) NOT NULL,
+            image VARCHAR(255),
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
             published_at DATETIME,
@@ -43,6 +44,7 @@ try {
                title,
                description,
                slug,
+               image,
                featured,
                is_published,
                published_at,
@@ -158,6 +160,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $game['id'],
+            'image' => $game['image'] ?? '',
             'title' => $game['title'],
             'slug' => $game['slug'] ?? '',
             'featured' => $featured,

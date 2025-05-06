@@ -530,20 +530,43 @@ The Stories From The Web Team</textarea>
 
         // Render the table using the appropriate function
         if (function_exists('renderEnhancedTable')) {
-            renderEnhancedTable($contacts, $columns, [
-                'content_type' => 'contacts',
-                'name_field' => 'name',
-                'empty_message' => 'No contact submissions found.',
-                'custom_formatters' => $customFormatters,
-                'custom_actions' => $customActions,
-                'actions' => [
-                    'view' => false,
-                    'edit' => false,
-                    'delete' => false
+            // Prepare data for the enhanced table
+            $tableData = [];
+            foreach ($contacts as $contact) {
+                // Format the status
+                $status = $contact['is_responded'] ? 'Responded' : 'Not Responded';
+
+                // Add the item to the table data
+                $tableData[] = [
+                    'id' => $contact['id'],
+                    'name' => $contact['name'],
+                    'email' => $contact['email'],
+                    'subject' => $contact['subject'],
+                    'message' => substr($contact['message'], 0, 100) . (strlen($contact['message']) > 100 ? '...' : ''),
+                    'created_at' => date('M d, Y', strtotime($contact['created_at'])),
+                    'is_responded' => $status
+                ];
+            }
+
+            // Render the enhanced table
+            renderEnhancedTable(
+                $tableData,
+                $columns,
+                'contact', // This must match a key in the $tableMap array in update-field.php
+                'contacts-table',
+                [
+                    'showCheckboxes' => true,
+                    'showActions' => true,
+                    'actions' => ['view', 'edit', 'delete'],
+                    'bulkActions' => ['delete', 'mark_responded', 'mark_not_responded', 'notify'],
+                    'itemsPerPage' => $perPage,
+                    'currentPage' => $page,
+                    'thumbnailField' => false, // Disable image column for contacts
+                    'htmlFields' => ['is_responded'] // Fields that should render HTML instead of escaping it
                 ]
-            ]);
-        } else if (function_exists('renderEnhancedTable')) {
-            renderEnhancedTable($contacts, $columns, [
+            );
+        } else if (function_exists('renderTable')) {
+            renderTable($contacts, $columns, [
                 'content_type' => 'contacts',
                 'name_field' => 'name',
                 'empty_message' => 'No contact submissions found.',

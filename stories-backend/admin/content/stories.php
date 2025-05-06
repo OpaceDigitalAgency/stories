@@ -200,17 +200,26 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Stories';
 $currentPage = 'stories';
 $pageDescription = 'Manage all your stories from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="story-form.php">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
-        </button>
-    </form>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+<div class="premium-flex premium-gap-2">
+    <a href="story-form.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-    <button onclick="window.location.href=\'?debug=1\'" class="btn btn-info">
+    <button onclick="window.location.href=\'?debug=1\'" class="premium-btn premium-btn-info">
         <i class="fas fa-bug" aria-hidden="true"></i> Debug Mode
     </button>
 </div>
@@ -237,98 +246,149 @@ if (isset($error)) {
     echo '</div>';
 }
 
-// Include predictive search component
-include_once '../includes/predictive-search-component.php';
-if (function_exists('renderPredictiveSearchComponent')) {
-    renderPredictiveSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+// Include live search component
+include_once '../includes/live-search-component.php';
+if (function_exists('renderLiveSearchComponent')) {
+    renderLiveSearchComponent('stories', ['title', 'content', 'author', 'tags'], 'stories-table');
 } else {
-    // Fallback to regular search component
-    include_once '../includes/search-component.php';
-    if (function_exists('renderSearchComponent')) {
-        renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+    // Fallback to predictive search component
+    include_once '../includes/predictive-search-component.php';
+    if (function_exists('renderPredictiveSearchComponent')) {
+        renderPredictiveSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+    } else {
+        // Fallback to regular search component
+        include_once '../includes/search-component.php';
+        if (function_exists('renderSearchComponent')) {
+            renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+        }
     }
-}
-
-// Include bulk actions component
-include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderEnhancedBulkActionsComponent')) {
-    renderEnhancedBulkActionsComponent('stories', [
-        'delete' => 'Delete Selected',
-        'publish' => 'Publish Selected',
-        'unpublish' => 'Unpublish Selected',
-        'feature' => 'Feature Selected',
-        'unfeature' => 'Unfeature Selected'
-    ]);
-} else if (function_exists('renderBulkActionsComponent')) {
-    renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
 }
 
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
-    // Define columns
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($stories as $story) {
+        // Format the status
+        $status = isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
+        if (isset($story['needs_moderation']) && $story['needs_moderation']) {
+            $status .= ' (Needs Moderation)';
+        }
+
+        // Format the created date
+        $createdDate = date('M j, Y', strtotime($story['created_at']));
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $story['id'],
+            'image' => $story['cover_url'] ?? '../assets/images/default-cover.jpg',
+            'title' => $story['title'],
+            'author' => $story['author_name'] ?? 'Unknown',
+            'status' => $status,
+            'tags' => $story['tags'] ?? '',
+            'created' => $createdDate
+        ];
+    }
+
+    // Define columns for the table
     $columns = [
-        'id' => 'ID',
         'title' => 'Title',
-        'author_name' => 'Author',
+        'author' => 'Author',
         'status' => 'Status',
         'tags' => 'Tags',
-        'created_at' => 'Created'
+        'created' => 'Created'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'title' => function($story, $key) {
-            $output = '<div class="item-title">';
-            $output .= htmlspecialchars($story['title']);
+    // Define which fields are editable inline
+    $editableFields = ['title', 'tags'];
 
-            if (isset($story['featured']) && $story['featured']) {
-                $output .= ' <span class="featured-badge" title="Featured story" aria-label="Featured story">';
-                $output .= '<i class="fas fa-star" aria-hidden="true"></i>';
-                $output .= '</span>';
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'story',
+        'stories-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'thumbnailField' => 'image',
+            'thumbnailAltField' => 'title',
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
+} else {
+    // Fallback to the original table component
+    include_once '../includes/table-component.php';
+    if (function_exists('renderTable')) {
+        // Define columns
+        $columns = [
+            'id' => 'ID',
+            'title' => 'Title',
+            'author_name' => 'Author',
+            'status' => 'Status',
+            'tags' => 'Tags',
+            'created_at' => 'Created'
+        ];
+
+        // Define custom formatters
+        $customFormatters = [
+            'title' => function($story, $key) {
+                $output = '<div class="item-title">';
+                $output .= htmlspecialchars($story['title']);
+
+                if (isset($story['featured']) && $story['featured']) {
+                    $output .= ' <span class="featured-badge" title="Featured story" aria-label="Featured story">';
+                    $output .= '<i class="fas fa-star" aria-hidden="true"></i>';
+                    $output .= '</span>';
+                }
+
+                $output .= '</div>';
+
+                return $output;
+            },
+            'author_name' => function($story, $key) {
+                return htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown');
+            },
+            'status' => function($story, $key) {
+                $output = '';
+                if (function_exists('getPublishedStatusIndicator')) {
+                    $output .= getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
+                } else {
+                    $output .= isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
+                }
+
+                if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
+                    $output .= '<br>' . getModerationStatusIndicator(true);
+                }
+
+                return $output;
+            },
+            'created_at' => function($story, $key) {
+                $output = '<div>' . date('M j, Y', strtotime($story['created_at'])) . '</div>';
+                $output .= '<div class="text-muted">Updated: ' . date('M j, Y', strtotime($story['updated_at'])) . '</div>';
+                return $output;
             }
+        ];
 
-            $output .= '</div>';
-
-            return $output;
-        },
-        'author_name' => function($story, $key) {
-            return htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown');
-        },
-        'status' => function($story, $key) {
-            $output = '';
-            if (function_exists('getPublishedStatusIndicator')) {
-                $output .= getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
-            } else {
-                $output .= isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
-            }
-
-            if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
-                $output .= '<br>' . getModerationStatusIndicator(true);
-            }
-
-            return $output;
-        },
-        'created_at' => function($story, $key) {
-            $output = '<div>' . date('M j, Y', strtotime($story['created_at'])) . '</div>';
-            $output .= '<div class="text-muted">Updated: ' . date('M j, Y', strtotime($story['updated_at'])) . '</div>';
-            return $output;
-        }
-    ];
-
-    // Render the table
-    renderEnhancedTable($stories, $columns, [
-        'content_type' => 'stories',
-        'name_field' => 'title',
-        'empty_message' => 'No stories found. Add your first story!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-story.php?id={id}',
-        'edit_url' => 'story-form.php?id={id}',
-        'delete_url' => 'delete-story.php'
-    ]);
+        // Render the table
+        renderTable($stories, $columns, [
+            'content_type' => 'stories',
+            'name_field' => 'title',
+            'empty_message' => 'No stories found. Add your first story!',
+            'custom_formatters' => $customFormatters,
+            'view_url' => 'view-story.php?id={id}',
+            'edit_url' => 'story-form.php?id={id}',
+            'delete_url' => 'delete-story.php'
+        ]);
+    }
 }
 
 // Include pagination component if needed

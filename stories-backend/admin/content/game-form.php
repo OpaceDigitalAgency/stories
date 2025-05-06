@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'Game Form';
+$pageTitle = isset($_GET['id']) ? 'Edit Game' : 'Add Game';
 $currentPage = 'game-form';
 
 // Include auth check
@@ -71,7 +71,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $game ? 'Edit' : 'Add'; ?> Game</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($game['title'] ?? 'New Game'); ?></h1>
                 <p class="page-description">
                     <a href="games.php" class="text-primary">← Back to Games</a>
                 </p>
@@ -84,7 +84,7 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Game Information</h2>
+                <h2 class="section-title">Details</h2>
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">

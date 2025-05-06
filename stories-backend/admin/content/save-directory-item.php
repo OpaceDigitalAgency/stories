@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Directory Item';
-$currentPage = 'save-directory-item';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -87,63 +85,63 @@ try {
 
     if ($id) {
         // Update existing directory item
-        $stmt = $db->prepare("UPDATE directory_items SET 
-            title = ?, 
-            description = ?, 
-            category_id = ?, 
-            website_url = ?, 
-            contact_email = ?, 
-            contact_phone = ?, 
-            address = ?, 
-            featured = ?, 
-            is_published = ?, 
-            slug = ?, 
-            published_at = ?, 
-            updated_at = NOW() 
+        $stmt = $db->prepare("UPDATE directory_items SET
+            title = ?,
+            description = ?,
+            category_id = ?,
+            website_url = ?,
+            contact_email = ?,
+            contact_phone = ?,
+            address = ?,
+            featured = ?,
+            is_published = ?,
+            slug = ?,
+            published_at = ?,
+            updated_at = NOW()
             WHERE id = ?");
         $stmt->execute([
-            $title, 
-            $description, 
-            $category_id, 
-            $website_url, 
-            $contact_email, 
-            $contact_phone, 
-            $address, 
-            $featured, 
-            $is_published, 
-            $slug, 
-            $published_at, 
+            $title,
+            $description,
+            $category_id,
+            $website_url,
+            $contact_email,
+            $contact_phone,
+            $address,
+            $featured,
+            $is_published,
+            $slug,
+            $published_at,
             $id
         ]);
         $success = "Directory item updated successfully";
     } else {
         // Create new directory item
         $stmt = $db->prepare("INSERT INTO directory_items (
-            title, 
-            description, 
-            category_id, 
-            website_url, 
-            contact_email, 
-            contact_phone, 
-            address, 
-            featured, 
-            is_published, 
-            slug, 
-            published_at, 
-            created_at, 
+            title,
+            description,
+            category_id,
+            website_url,
+            contact_email,
+            contact_phone,
+            address,
+            featured,
+            is_published,
+            slug,
+            published_at,
+            created_at,
             updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
-            $title, 
-            $description, 
-            $category_id, 
-            $website_url, 
-            $contact_email, 
-            $contact_phone, 
-            $address, 
-            $featured, 
-            $is_published, 
-            $slug, 
+            $title,
+            $description,
+            $category_id,
+            $website_url,
+            $contact_email,
+            $contact_phone,
+            $address,
+            $featured,
+            $is_published,
+            $slug,
             $published_at
         ]);
         $success = "Directory item created successfully";
@@ -153,9 +151,8 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $success;
-    
+
     header("Location: directory-items.php");
     exit;
 
@@ -166,15 +163,13 @@ try {
     }
 
     error_log("Save directory item error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "directory-item-form.php?id=$id" : "directory-item-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

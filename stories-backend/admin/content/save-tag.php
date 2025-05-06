@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Tag';
-$currentPage = 'save-tag';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -117,9 +115,8 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $message;
-    
+
     header("Location: tags.php");
     exit;
 
@@ -130,15 +127,13 @@ try {
     }
 
     error_log("Save tag error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "tag-form.php?id=$id" : "tag-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

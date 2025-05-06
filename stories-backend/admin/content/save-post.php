@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Post';
-$currentPage = 'save-post';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -118,13 +116,13 @@ try {
 
     // Check if author_id column exists
     $hasAuthorIdColumn = in_array('author_id', $columns);
-    
+
     // Check if excerpt column exists
     $hasExcerptColumn = in_array('excerpt', $columns);
-    
+
     // Check if status column exists
     $hasStatusColumn = in_array('status', $columns);
-    
+
     // Check if slug column exists
     $hasSlugColumn = in_array('slug', $columns);
 
@@ -133,7 +131,7 @@ try {
         if (empty($author_id)) {
             throw new Exception("Please select an author");
         }
-        
+
         $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
         $stmt->execute([$author_id]);
         $author = $stmt->fetch();
@@ -172,18 +170,18 @@ try {
         'title' => $title,
         'content' => $content
     ];
-    
+
     if ($hasAuthorIdColumn) {
         $data['author_id'] = $author_id;
     }
-    
+
     if ($hasExcerptColumn) {
         $data['excerpt'] = $excerpt;
     }
-    
+
     // Add is_published field
     $data['is_published'] = $is_published;
-    
+
     if ($hasSlugColumn) {
         $data['slug'] = $slug;
     }
@@ -218,19 +216,19 @@ try {
         // Update existing post
         $setClause = [];
         $params = [];
-        
+
         foreach ($data as $key => $value) {
             $setClause[] = "$key = ?";
             $params[] = $value;
         }
-        
+
         $setClause[] = "updated_at = NOW()";
         $params[] = $id; // Add ID for WHERE clause
-        
+
         $sql = "UPDATE $blogTableName SET " . implode(', ', $setClause) . " WHERE id = ?";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
-        
+
         // Delete existing tags
         $stmt = $db->prepare("DELETE FROM $postTagsTableName WHERE post_id = ?");
         $stmt->execute([$id]);
@@ -240,13 +238,13 @@ try {
         // Create new post
         $columns = array_keys($data);
         $placeholders = array_fill(0, count($columns), '?');
-        
+
         // Add created_at and updated_at
         $columns[] = 'created_at';
         $columns[] = 'updated_at';
         $placeholders[] = 'NOW()';
         $placeholders[] = 'NOW()';
-        
+
         $sql = "INSERT INTO $blogTableName (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $db->prepare($sql);
         $stmt->execute(array_values($data));
@@ -260,7 +258,7 @@ try {
         $values = array_fill(0, count($tags), "($id, ?)");
         $sql = "INSERT INTO $postTagsTableName (post_id, tag_id) VALUES " . implode(', ', $values);
         $stmt = $db->prepare($sql);
-        
+
         $i = 1;
         foreach ($tags as $tag_id) {
             $stmt->bindValue($i++, $tag_id);
@@ -272,9 +270,8 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $message;
-    
+
     header("Location: blog-posts.php");
     exit;
 
@@ -285,15 +282,13 @@ try {
     }
 
     error_log("Save blog post error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "post-form.php?id=$id" : "post-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

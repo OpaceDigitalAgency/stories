@@ -84,6 +84,34 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <!-- Add Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+    <!-- Fix for dropdown issues -->
+    <script>
+        $(document).ready(function() {
+            // Ensure all dropdowns are properly initialized
+            $('.dropdown-toggle').dropdown();
+
+            // Fix for Bootstrap select elements
+            $('select.form-control').each(function() {
+                $(this).addClass('custom-select');
+            });
+
+            // Prevent errors from non-existent selectors
+            $.fn.oldSelect = $.fn.select;
+            $.fn.select = function() {
+                if (this.length === 0) {
+                    console.warn('Attempted to select an element that does not exist');
+                    return this;
+                }
+                return $.fn.oldSelect.apply(this, arguments);
+            };
+
+            // Fix for modals not showing
+            $(document).on('click', '[data-toggle="modal"]', function() {
+                var target = $(this).data('target');
+                $(target).modal('show');
+            });
+        });
+    </script>
     <!-- Meta tags for better accessibility -->
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
     <meta name="theme-color" content="#4361ee">

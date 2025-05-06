@@ -353,7 +353,6 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $message;
 
     header("Location: stories.php");
@@ -368,7 +367,6 @@ try {
     error_log("Save story error: " . $e->getMessage());
 
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
 
     $redirect = $id ? "story-form.php?id=$id" : "story-form.php";

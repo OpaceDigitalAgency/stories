@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Game';
-$currentPage = 'save-game';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -82,43 +80,43 @@ try {
 
     if ($id) {
         // Update existing game
-        $stmt = $db->prepare("UPDATE games SET 
-            title = ?, 
-            description = ?, 
-            slug = ?, 
-            featured = ?, 
-            is_published = ?, 
-            published_at = ?, 
-            updated_at = NOW() 
+        $stmt = $db->prepare("UPDATE games SET
+            title = ?,
+            description = ?,
+            slug = ?,
+            featured = ?,
+            is_published = ?,
+            published_at = ?,
+            updated_at = NOW()
             WHERE id = ?");
         $stmt->execute([
-            $title, 
-            $description, 
-            $slug, 
-            $featured, 
-            $is_published, 
-            $published_at, 
+            $title,
+            $description,
+            $slug,
+            $featured,
+            $is_published,
+            $published_at,
             $id
         ]);
         $success = "Game updated successfully";
     } else {
         // Create new game
         $stmt = $db->prepare("INSERT INTO games (
-            title, 
-            description, 
-            slug, 
-            featured, 
-            is_published, 
-            published_at, 
-            created_at, 
+            title,
+            description,
+            slug,
+            featured,
+            is_published,
+            published_at,
+            created_at,
             updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
-            $title, 
-            $description, 
-            $slug, 
-            $featured, 
-            $is_published, 
+            $title,
+            $description,
+            $slug,
+            $featured,
+            $is_published,
             $published_at
         ]);
         $success = "Game created successfully";
@@ -128,9 +126,8 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $success;
-    
+
     header("Location: games.php");
     exit;
 
@@ -141,15 +138,13 @@ try {
     }
 
     error_log("Save game error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "game-form.php?id=$id" : "game-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Ai Tool';
-$currentPage = 'save-ai-tool';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -88,67 +86,67 @@ try {
 
     if ($id) {
         // Update existing AI tool
-        $stmt = $db->prepare("UPDATE ai_tools SET 
-            title = ?, 
-            description = ?, 
-            category_id = ?, 
-            tool_url = ?, 
-            pricing_type = ?, 
-            price_info = ?, 
-            features = ?, 
-            rating = ?, 
-            featured = ?, 
-            is_published = ?, 
-            slug = ?, 
-            published_at = ?, 
-            updated_at = NOW() 
+        $stmt = $db->prepare("UPDATE ai_tools SET
+            title = ?,
+            description = ?,
+            category_id = ?,
+            tool_url = ?,
+            pricing_type = ?,
+            price_info = ?,
+            features = ?,
+            rating = ?,
+            featured = ?,
+            is_published = ?,
+            slug = ?,
+            published_at = ?,
+            updated_at = NOW()
             WHERE id = ?");
         $stmt->execute([
-            $title, 
-            $description, 
-            $category_id, 
-            $tool_url, 
-            $pricing_type, 
-            $price_info, 
-            $features, 
-            $rating, 
-            $featured, 
-            $is_published, 
-            $slug, 
-            $published_at, 
+            $title,
+            $description,
+            $category_id,
+            $tool_url,
+            $pricing_type,
+            $price_info,
+            $features,
+            $rating,
+            $featured,
+            $is_published,
+            $slug,
+            $published_at,
             $id
         ]);
         $success = "AI tool updated successfully";
     } else {
         // Create new AI tool
         $stmt = $db->prepare("INSERT INTO ai_tools (
-            title, 
-            description, 
-            category_id, 
-            tool_url, 
-            pricing_type, 
-            price_info, 
-            features, 
-            rating, 
-            featured, 
-            is_published, 
-            slug, 
-            published_at, 
-            created_at, 
+            title,
+            description,
+            category_id,
+            tool_url,
+            pricing_type,
+            price_info,
+            features,
+            rating,
+            featured,
+            is_published,
+            slug,
+            published_at,
+            created_at,
             updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
-            $title, 
-            $description, 
-            $category_id, 
-            $tool_url, 
-            $pricing_type, 
-            $price_info, 
-            $features, 
-            $rating, 
-            $featured, 
-            $is_published, 
-            $slug, 
+            $title,
+            $description,
+            $category_id,
+            $tool_url,
+            $pricing_type,
+            $price_info,
+            $features,
+            $rating,
+            $featured,
+            $is_published,
+            $slug,
             $published_at
         ]);
         $success = "AI tool created successfully";
@@ -158,9 +156,8 @@ try {
     $db->commit();
 
     // Store success message and redirect
-    session_start();
     $_SESSION['success'] = $success;
-    
+
     header("Location: ai-tools.php");
     exit;
 
@@ -171,15 +168,13 @@ try {
     }
 
     error_log("Save AI tool error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
-    session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "ai-tool-form.php?id=$id" : "ai-tool-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

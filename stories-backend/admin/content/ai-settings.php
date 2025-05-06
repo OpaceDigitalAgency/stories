@@ -68,43 +68,22 @@ function fetchAvailableModels($apiKey) {
     }
 
     // If no models found, use default list
-    if (empty($availableModels['image']) && empty($availableModels['text'])) {
-        $availableModels = [
-            'image' => [
-                'gpt-image-1' => 'GPT Image 1 (Latest)',
-                'dall-e-3' => 'DALL·E 3 (Legacy)',
-                'dall-e-2' => 'DALL·E 2 (Legacy)'
-            ],
-            'text' => [
-                'gpt-4.1' => 'GPT-4.1 (Latest)',
-                'gpt-4o' => 'GPT-4o',
-                'o4-mini' => 'o4-mini (Fast)',
-                'o3' => 'o3 (Powerful)',
-                'o3-mini' => 'o3-mini (Balanced)'
-            ]
-        ];
-    } else {
-        // Add friendly names to models
-        $modelNames = [
+    // Always use our default list - API model fetching is unreliable
+    $availableModels = [
+        'image' => [
             'gpt-image-1' => 'GPT Image 1 (Latest)',
             'dall-e-3' => 'DALL·E 3 (Legacy)',
-            'dall-e-2' => 'DALL·E 2 (Legacy)',
+            'dall-e-2' => 'DALL·E 2 (Legacy)'
+        ],
+        'text' => [
             'gpt-4.1' => 'GPT-4.1 (Latest)',
             'gpt-4o' => 'GPT-4o (Balanced)',
             'o4-mini' => 'o4-mini (Fast)',
             'o3' => 'o3 (Powerful)',
             'o3-mini' => 'o3-mini (Balanced)',
             'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Economical)'
-        ];
-
-        foreach ($availableModels as $type => $models) {
-            foreach ($models as $id => $name) {
-                if (isset($modelNames[$id])) {
-                    $availableModels[$type][$id] = $modelNames[$id];
-                }
-            }
-        }
-    }
+        ]
+    ];
 
     return $availableModels;
 }
@@ -153,30 +132,22 @@ try {
         $openaiConfig['text_model'] = 'gpt-4o';
     }
 
-    // Fetch available models if we have an API key
-    if (!empty($openaiConfig['api_key'])) {
-        try {
-            $availableModels = fetchAvailableModels($openaiConfig['api_key']);
-        } catch (Exception $e) {
-            error_log("Error fetching models: " . $e->getMessage());
-            // Don't throw - we'll use hardcoded model list
-            $availableModels = [
-                'image' => [
-                    'gpt-image-1' => 'GPT Image 1 (Latest)',
-                    'dall-e-3' => 'DALL·E 3 (Legacy)',
-                    'dall-e-2' => 'DALL·E 2 (Legacy)'
-                ],
-                'text' => [
-                    'gpt-4.1' => 'GPT-4.1 (Latest)',
-                    'gpt-4o' => 'GPT-4o (Balanced)',
-                    'o4-mini' => 'o4-mini (Fast)',
-                    'o3' => 'o3 (Powerful)',
-                    'o3-mini' => 'o3-mini (Balanced)',
-                    'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Economical)'
-                ]
-            ];
-        }
-    }
+    // Use hardcoded model list instead of fetching from API
+    $availableModels = [
+        'image' => [
+            'gpt-image-1' => 'GPT Image 1 (Latest)',
+            'dall-e-3' => 'DALL·E 3 (Legacy)',
+            'dall-e-2' => 'DALL·E 2 (Legacy)'
+        ],
+        'text' => [
+            'gpt-4.1' => 'GPT-4.1 (Latest)',
+            'gpt-4o' => 'GPT-4o (Balanced)',
+            'o4-mini' => 'o4-mini (Fast)',
+            'o3' => 'o3 (Powerful)',
+            'o3-mini' => 'o3-mini (Balanced)',
+            'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Economical)'
+        ]
+    ];
 
     // Get usage statistics
     $stmt = $db->prepare("
@@ -884,6 +855,24 @@ function toggleVariableTypes() {
 }
 
 $(document).ready(function() {
+    // Fix for select elements
+    $('#openai_model, #openai_text_model').each(function() {
+        // Make sure the select has at least one option
+        if ($(this).find('option').length === 0) {
+            if ($(this).attr('id') === 'openai_model') {
+                $(this).append('<option value="gpt-image-1">GPT Image 1 (Latest)</option>');
+            } else {
+                $(this).append('<option value="gpt-4o">GPT-4o (Balanced)</option>');
+            }
+        }
+
+        // Make sure the selected option exists
+        const selectedValue = $(this).val();
+        if (selectedValue && $(this).find(`option[value="${selectedValue}"]`).length === 0) {
+            $(this).append(`<option value="${selectedValue}" selected>${selectedValue}</option>`);
+        }
+    });
+
     // Initialize variable types visibility
     $('#template_content_type').change(toggleVariableTypes).trigger('change');
     $('#edit_template_content_type').change(toggleVariableTypes);

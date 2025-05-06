@@ -50,6 +50,9 @@ $tableMap = [
     'tag' => 'tags',
     'subscriber' => 'subscribers',
     'contact' => 'contacts',
+    'directory_item' => 'directory_items',
+    'ai_tool' => 'ai_tools',
+    'ai_setting' => 'ai_settings',
     'test' => 'test_table' // For debugging purposes
 ];
 
@@ -73,7 +76,18 @@ $fieldMap = [
     'website_url' => 'website_url',
     'contact_email' => 'contact_email',
     'pricing_type' => 'pricing_type',
-    'category_name' => 'category_name'
+    'category_name' => 'category_name',
+    'url' => 'url',
+    'icon' => 'icon',
+    'address' => 'address',
+    'phone' => 'phone',
+    'model' => 'model',
+    'api_key' => 'api_key',
+    'prompt_template' => 'prompt_template',
+    'is_contacted' => 'is_contacted',
+    'admin_notes' => 'admin_notes',
+    'feature' => 'feature',
+    'message' => 'message'
 ];
 
 // Get the table name

@@ -89,35 +89,45 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Tags';
 $currentPage = 'tags';
 $pageDescription = 'Manage all your tags from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<form method="GET" action="tag-form.php">
-    <button type="submit" class="btn btn-success">
+<div class="premium-flex premium-gap-2">
+    <a href="tag-form.php" class="premium-btn premium-btn-success">
         <i class="fas fa-plus" aria-hidden="true"></i> Add New Tag
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
+        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-</form>
+</div>
 ';
 
 // Include header
 require_once '../includes/header.php';
 
-// Include search component
-include_once '../includes/search-component.php';
-if (function_exists('renderSearchComponent')) {
-    renderSearchComponent('tags', ['name', 'slug', 'description']);
+// Include live search component
+include_once '../includes/live-search-component.php';
+if (function_exists('renderLiveSearchComponent')) {
+    renderLiveSearchComponent('tags', ['name', 'slug', 'description'], 'tags-table');
+} else {
+    // Fallback to regular search component
+    include_once '../includes/search-component.php';
+    if (function_exists('renderSearchComponent')) {
+        renderSearchComponent('tags', ['name', 'slug', 'description']);
+    }
 }
 
-// Include bulk actions component
-include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderEnhancedBulkActionsComponent')) {
-    renderEnhancedBulkActionsComponent('tags', [
-        'delete' => 'Delete Selected'
-    ]);
-} else if (function_exists('renderBulkActionsComponent')) {
-    renderBulkActionsComponent('tags', ['delete']);
-}
-
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
     // Define columns
     $columns = [
@@ -128,23 +138,47 @@ if (function_exists('renderEnhancedTable')) {
         'post_count' => 'Blog Posts'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'description' => function($tag, $key) {
-            return htmlspecialchars(substr($tag[$key] ?? '', 0, 100) . (strlen($tag[$key] ?? '') > 100 ? '...' : ''));
-        }
-    ];
+    // Define which fields are editable inline
+    $editableFields = ['name', 'description'];
 
-    // Render the table
-    renderEnhancedTable($tags, $columns, [
-        'content_type' => 'tags',
-        'name_field' => 'name',
-        'empty_message' => 'No tags found. Add your first tag!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-tag.php?id={id}',
-        'edit_url' => 'tag-form.php?id={id}',
-        'delete_url' => 'delete-tag.php'
-    ]);
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tags,
+        $columns,
+        'tag', // This must match a key in the $tableMap array in update-field.php
+        'tags-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
+} else {
+    // Fallback to the original table component
+    include_once '../includes/table-component.php';
+    if (function_exists('renderTable')) {
+        // Define custom formatters
+        $customFormatters = [
+            'description' => function($tag, $key) {
+                return htmlspecialchars(substr($tag[$key] ?? '', 0, 100) . (strlen($tag[$key] ?? '') > 100 ? '...' : ''));
+            }
+        ];
+
+        // Render the table
+        renderTable($tags, $columns, [
+            'content_type' => 'tags',
+            'name_field' => 'name',
+            'empty_message' => 'No tags found. Add your first tag!',
+            'custom_formatters' => $customFormatters,
+            'view_url' => 'view-tag.php?id={id}',
+            'edit_url' => 'tag-form.php?id={id}',
+            'delete_url' => 'delete-tag.php'
+        ]);
+    }
 }
 
 // Include pagination component if needed

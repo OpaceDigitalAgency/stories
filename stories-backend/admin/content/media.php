@@ -61,6 +61,19 @@ function getDisplayUrl($filePath) {
     return $filePath;
 }
 
+// Helper function to format file sizes
+function formatFileSize($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2) . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } else {
+        return $bytes . ' bytes';
+    }
+}
+
 // Initialize variables
 $media = [];
 $error = null;
@@ -321,10 +334,25 @@ $pageTitle = $selectMode ? 'Select from Media Library' : 'Media';
 $currentPage = 'media';
 $pageDescription = $selectMode ? 'Select a media file to use in your content' : 'Manage all your media files from here.';
 $pageActions = $selectMode ? '' : '
-<a href="../../public/optimize_image.php" class="btn btn-success">
-    <i class="fas fa-image" aria-hidden="true"></i> Optimize All Media
-</a>
+<div class="premium-flex premium-gap-2">
+    <a href="../../public/optimize_image.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-image" aria-hidden="true"></i> Optimize All Media
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
+        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
+    </button>
+</div>
 ';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+' . ($extraHeadContent ?? '');
 
 // Add custom CSS for media page
 $extraHeadContent = '
@@ -878,158 +906,215 @@ require_once '../includes/header.php';
     }
     ?>
     <div class="section-body">
-        <?php if (empty($media)): ?>
-            <p class="no-items">No media files found.</p>
-        <?php else: ?>
-            <div class="media-grid">
-                <?php foreach ($media as $item): ?>
-                    <div class="media-card">
-                        <input type="checkbox" class="bulk-checkbox" name="selected_ids[]" value="<?php echo $item['id']; ?>">
-                        <?php
-                        $isImage = strpos($item['file_type'], 'image/') === 0;
-                        $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
-                        ?>
-                        <div class="media-thumbnail">
-                            <?php if ($isImage): ?>
-                                <img src="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
-                            <?php else: ?>
-                                <div class="file-icon"><?php echo pathinfo($item['filename'], PATHINFO_EXTENSION); ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="media-info">
-                            <h3 class="media-filename"><?php echo htmlspecialchars($item['filename']); ?></h3>
-                            <p class="media-date"><?php echo date('M j, Y', strtotime($item['created_at'])); ?></p>
-                            <div class="media-actions">
-                                <?php if ($selectMode): ?>
-                                <button type="button" class="btn btn-success btn-sm select-media-item"
-                                        data-url="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>"
-                                        data-dimensions="<?php echo isset($item['width']) && isset($item['height']) ? $item['width'] . 'x' . $item['height'] : ''; ?>"
-                                        aria-label="Select <?php echo htmlspecialchars($item['filename']); ?>">
-                                    <i class="fas fa-check" aria-hidden="true"></i> Select
-                                </button>
+        <?php
+        // Include live search component
+        include_once '../includes/live-search-component.php';
+        if (function_exists('renderLiveSearchComponent')) {
+            renderLiveSearchComponent('media', ['filename', 'alt_text', 'file_type'], 'media-table');
+        }
+
+        // Include enhanced table component
+        include_once '../includes/enhanced-table-component.php';
+        if (function_exists('renderEnhancedTable') && !$selectMode) {
+            // Prepare data for the enhanced table
+            $tableData = [];
+            foreach ($media as $item) {
+                $isImage = strpos($item['file_type'], 'image/') === 0;
+                $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
+
+                // Add the item to the table data
+                $tableData[] = [
+                    'id' => $item['id'],
+                    'image' => $thumbnailPath,
+                    'filename' => $item['filename'],
+                    'alt_text' => $item['alt_text'] ?? '',
+                    'file_type' => $item['file_type'],
+                    'file_size' => formatFileSize($item['file_size']),
+                    'created_at' => date('M j, Y', strtotime($item['created_at']))
+                ];
+            }
+
+            // Define columns for the table
+            $columns = [
+                'filename' => 'Filename',
+                'alt_text' => 'Alt Text',
+                'file_type' => 'Type',
+                'file_size' => 'Size',
+                'created_at' => 'Uploaded'
+            ];
+
+            // Define which fields are editable inline
+            $editableFields = ['filename', 'alt_text'];
+
+            // Render the enhanced table
+            renderEnhancedTable(
+                $tableData,
+                $columns,
+                'media', // This must match a key in the $tableMap array in update-field.php
+                'media-table',
+                [
+                    'showCheckboxes' => true,
+                    'showActions' => true,
+                    'actions' => ['view', 'edit', 'delete'],
+                    'thumbnailField' => 'image',
+                    'thumbnailAltField' => 'filename',
+                    'editableFields' => $editableFields,
+                    'bulkActions' => ['delete', 'optimize'],
+                    'itemsPerPage' => $perPage,
+                    'currentPage' => $page
+                ]
+            );
+        } else {
+            // Fallback to the original grid view
+            if (empty($media)): ?>
+                <p class="no-items">No media files found.</p>
+            <?php else: ?>
+                <div class="media-grid">
+                    <?php foreach ($media as $item): ?>
+                        <div class="media-card">
+                            <input type="checkbox" class="bulk-checkbox" name="selected_ids[]" value="<?php echo $item['id']; ?>">
+                            <?php
+                            $isImage = strpos($item['file_type'], 'image/') === 0;
+                            $thumbnailPath = $isImage ? $item['file_path'] : '../assets/images/file-icon.png';
+                            ?>
+                            <div class="media-thumbnail">
+                                <?php if ($isImage): ?>
+                                    <img src="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" alt="<?php echo htmlspecialchars($item['alt_text'] ?? $item['filename']); ?>">
                                 <?php else: ?>
-                                <a href="view-media.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm" aria-label="View <?php echo htmlspecialchars($item['filename']); ?>">
-                                    <i class="fas fa-eye" aria-hidden="true"></i> View
-                                </a>
-                                <a href="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" target="_blank" class="btn btn-primary btn-sm" aria-label="Download <?php echo htmlspecialchars($item['filename']); ?>">
-                                    <i class="fas fa-download" aria-hidden="true"></i> Download
-                                </a>
-                                <form method="GET" style="display: inline;">
-                                    <input type="hidden" name="delete" value="<?php echo $item['id']; ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Are you sure you want to delete this file?')"
-                                            aria-label="Delete <?php echo htmlspecialchars($item['filename']); ?>">
-                                        <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
-                                    </button>
-                                </form>
+                                    <div class="file-icon"><?php echo pathinfo($item['filename'], PATHINFO_EXTENSION); ?></div>
                                 <?php endif; ?>
                             </div>
+                            <div class="media-info">
+                                <h3 class="media-filename"><?php echo htmlspecialchars($item['filename']); ?></h3>
+                                <p class="media-date"><?php echo date('M j, Y', strtotime($item['created_at'])); ?></p>
+                                <div class="media-actions">
+                                    <?php if ($selectMode): ?>
+                                    <button type="button" class="btn btn-success btn-sm select-media-item"
+                                            data-url="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>"
+                                            data-dimensions="<?php echo isset($item['width']) && isset($item['height']) ? $item['width'] . 'x' . $item['height'] : ''; ?>"
+                                            aria-label="Select <?php echo htmlspecialchars($item['filename']); ?>">
+                                        <i class="fas fa-check" aria-hidden="true"></i> Select
+                                    </button>
+                                    <?php else: ?>
+                                    <a href="view-media.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm" aria-label="View <?php echo htmlspecialchars($item['filename']); ?>">
+                                        <i class="fas fa-eye" aria-hidden="true"></i> View
+                                    </a>
+                                    <a href="<?php echo htmlspecialchars(getDisplayUrl($item['file_path'])); ?>" target="_blank" class="btn btn-primary btn-sm" aria-label="Download <?php echo htmlspecialchars($item['filename']); ?>">
+                                        <i class="fas fa-download" aria-hidden="true"></i> Download
+                                    </a>
+                                    <form method="GET" style="display: inline;">
+                                        <input type="hidden" name="delete" value="<?php echo $item['id']; ?>">
+                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Are you sure you want to delete this file?')"
+                                                aria-label="Delete <?php echo htmlspecialchars($item['filename']); ?>">
+                                            <i class="fas fa-trash-alt" aria-hidden="true"></i> Delete
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Pagination -->
-            <?php
-            // Include pagination component
-            include_once '../includes/pagination-component.php';
-            if (function_exists('renderPagination')) {
-                renderPagination($totalItems, $perPage, $page);
-            } else {
-                // Fallback to original pagination if component not available
-                if ($totalPages > 1):
-                ?>
-                <div class="pagination-container">
-                    <div class="pagination">
-                        <?php if ($page > 1): ?>
-                            <a href="?page=1<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="First page">First</a>
-                            <a href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Previous page">Previous</a>
-                        <?php endif; ?>
-
-                        <?php
-                        $startPage = max(1, $page - 2);
-                        $endPage = min($totalPages, $page + 2);
-
-                        for ($i = $startPage; $i <= $endPage; $i++): ?>
-                            <a href="?page=<?php echo $i; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>"
-                               class="pagination-link <?php echo $i === $page ? 'active' : ''; ?>"
-                               <?php echo $i === $page ? 'aria-current="page"' : ''; ?>>
-                                <?php echo $i; ?>
-                            </a>
-                        <?php endfor; ?>
-
-                        <?php if ($page < $totalPages): ?>
-                            <a href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Next page">Next</a>
-                            <a href="?page=<?php echo $totalPages; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Last page">Last</a>
-                        <?php endif; ?>
-                    </div>
-                    <div class="pagination-info">
-                        Showing <?php echo ($offset + 1); ?>-<?php echo min($offset + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php
-                endif;
-            }
+            <?php endif;
+        }
+
+        // Pagination
+        include_once '../includes/pagination-component.php';
+        if (function_exists('renderPagination') && $totalItems > $perPage) {
+            renderPagination($totalItems, $perPage, $page);
+        } else if ($totalPages > 1) {
+            // Fallback to original pagination if component not available
             ?>
-        <?php endif; ?>
+            <div class="pagination-container">
+                <div class="pagination">
+                    <?php if ($page > 1): ?>
+                        <a href="?page=1<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="First page">First</a>
+                        <a href="?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Previous page">Previous</a>
+                    <?php endif; ?>
+
+                    <?php
+                    $startPage = max(1, $page - 2);
+                    $endPage = min($totalPages, $page + 2);
+
+                    for ($i = $startPage; $i <= $endPage; $i++): ?>
+                        <a href="?page=<?php echo $i; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>"
+                           class="pagination-link <?php echo $i === $page ? 'active' : ''; ?>"
+                           <?php echo $i === $page ? 'aria-current="page"' : ''; ?>>
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $totalPages): ?>
+                        <a href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Next page">Next</a>
+                        <a href="?page=<?php echo $totalPages; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="pagination-link" aria-label="Last page">Last</a>
+                    <?php endif; ?>
+                </div>
+                <div class="pagination-info">
+                    Showing <?php echo ($offset + 1); ?>-<?php echo min($offset + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
+                </div>
+            </div>
+            <?php
+        }
+    ?>
     </div>
 </div>
 
-<!-- Progress Indicator -->
-<div id="progressOverlay" class="progress-overlay">
+<?php
+// Progress Indicator
+echo '<div id="progressOverlay" class="progress-overlay">
     <div class="progress-container">
         <div class="progress-spinner"></div>
         <h3 id="progressTitle">Processing...</h3>
         <p id="progressMessage">Please wait while we optimize your images.</p>
     </div>
-</div>
+</div>';
 
-<?php if ($selectMode): ?>
-<script>
 // Add script for select mode
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle selection
-    const selectButtons = document.querySelectorAll('.select-media-item');
-    selectButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const url = this.getAttribute('data-url');
-            const dimensions = this.getAttribute('data-dimensions');
+if ($selectMode) {
+    echo '<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Handle selection
+        const selectButtons = document.querySelectorAll(".select-media-item");
+        selectButtons.forEach(button => {
+            button.addEventListener("click", function() {
+                const url = this.getAttribute("data-url");
+                const dimensions = this.getAttribute("data-dimensions");
 
-            // Send message to parent window
-            window.parent.postMessage({
-                type: 'media-selected',
-                url: url,
-                dimensions: dimensions
-            }, '*');
-
-            // Also send to opener in case we're in a popup
-            if (window.opener) {
-                window.opener.postMessage({
-                    type: 'media-selected',
+                // Send message to parent window
+                window.parent.postMessage({
+                    type: "media-selected",
                     url: url,
                     dimensions: dimensions
-                }, '*');
-            }
+                }, "*");
+
+                // Also send to opener in case we\'re in a popup
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: "media-selected",
+                        url: url,
+                        dimensions: dimensions
+                    }, "*");
+                }
+            });
+        });
+
+        // Make thumbnails clickable
+        const thumbnails = document.querySelectorAll(".media-thumbnail");
+        thumbnails.forEach(thumbnail => {
+            thumbnail.style.cursor = "pointer";
+            thumbnail.addEventListener("click", function() {
+                const card = this.closest(".media-card");
+                const selectButton = card.querySelector(".select-media-item");
+                if (selectButton) {
+                    selectButton.click();
+                }
+            });
         });
     });
+    </script>';
+}
 
-    // Make thumbnails clickable
-    const thumbnails = document.querySelectorAll('.media-thumbnail');
-    thumbnails.forEach(thumbnail => {
-        thumbnail.style.cursor = 'pointer';
-        thumbnail.addEventListener('click', function() {
-            const card = this.closest('.media-card');
-            const selectButton = card.querySelector('.select-media-item');
-            if (selectButton) {
-                selectButton.click();
-            }
-        });
-    });
-});
-</script>
-<?php endif; ?>
-
-<?php
 // Include footer
 include_once '../includes/footer.php';
 ?>

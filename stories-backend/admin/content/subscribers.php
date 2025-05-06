@@ -9,6 +9,16 @@ $pageTitle = 'Premium Subscribers';
 $currentPage = 'subscribers';
 $pageDescription = 'Manage users who have subscribed to premium feature notifications';
 
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 // Include auth check
 require_once '../includes/auth-check.php';
 
@@ -436,25 +446,13 @@ The Stories From The Web Team</textarea>
 
         <!-- Table component -->
         <?php
-        // Try multiple paths for the table component
-        $tableComponentPaths = [
-            '../includes/table-component.php',
-            dirname(dirname(__FILE__)) . '/includes/table-component.php',
-            'includes/table-component.php'
-        ];
-
-        $tableComponentIncluded = false;
-        foreach ($tableComponentPaths as $path) {
-            if (file_exists($path)) {
-                require_once $path;
-                $tableComponentIncluded = true;
-                break;
-            }
-        }
+        // Include enhanced table component
+        include_once '../includes/enhanced-table-component.php';
 
         // Define columns
         $columns = [
             'email' => 'Email',
+            'name' => 'Name',
             'feature' => 'Feature',
             'created_at' => 'Date',
             'is_contacted' => 'Status'
@@ -508,33 +506,46 @@ The Stories From The Web Team</textarea>
             return $output;
         };
 
+        // Define which fields are editable inline
+        $editableFields = ['email', 'name'];
+
         // Render the table using the appropriate function
         if (function_exists('renderEnhancedTable')) {
-            renderEnhancedTable($subscribers, $columns, [
-                'content_type' => 'subscribers',
-                'name_field' => 'email',
-                'empty_message' => 'No subscribers found.',
-                'custom_formatters' => $customFormatters,
-                'custom_actions' => $customActions,
-                'actions' => [
-                    'view' => false,
-                    'edit' => false,
-                    'delete' => false
+            // Prepare data for the enhanced table
+            $tableData = [];
+            foreach ($subscribers as $subscriber) {
+                // Format the status
+                $status = $subscriber['is_contacted'] ? 'Contacted' : 'Not Contacted';
+
+                // Add the item to the table data
+                $tableData[] = [
+                    'id' => $subscriber['id'],
+                    'email' => $subscriber['email'],
+                    'name' => $subscriber['name'] ?? '',
+                    'feature' => ucfirst($subscriber['feature']),
+                    'created_at' => date('M d, Y', strtotime($subscriber['created_at'])),
+                    'is_contacted' => $status,
+                    'message' => $subscriber['message'] ?? '',
+                    'admin_notes' => $subscriber['admin_notes'] ?? ''
+                ];
+            }
+
+            // Render the enhanced table
+            renderEnhancedTable(
+                $tableData,
+                $columns,
+                'subscriber', // This must match a key in the $tableMap array in update-field.php
+                'subscribers-table',
+                [
+                    'showCheckboxes' => true,
+                    'showActions' => true,
+                    'actions' => ['view', 'edit', 'delete'],
+                    'editableFields' => $editableFields,
+                    'bulkActions' => ['delete', 'mark_contacted', 'mark_not_contacted', 'notify'],
+                    'itemsPerPage' => $perPage,
+                    'currentPage' => $page
                 ]
-            ]);
-        } else if (function_exists('renderEnhancedTable')) {
-            renderEnhancedTable($subscribers, $columns, [
-                'content_type' => 'subscribers',
-                'name_field' => 'email',
-                'empty_message' => 'No subscribers found.',
-                'custom_formatters' => $customFormatters,
-                'custom_actions' => $customActions,
-                'actions' => [
-                    'view' => false,
-                    'edit' => false,
-                    'delete' => false
-                ]
-            ]);
+            );
         } else {
             // Fallback if no table rendering function is available
             echo '<div class="alert alert-warning">Table component not available. Please check your installation.</div>';

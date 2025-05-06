@@ -171,9 +171,13 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
 
                     <div class="ai-generation-status d-none">
                         <div class="progress mb-3">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                         </div>
-                        <p class="text-center text-muted">Generating image... This may take a few seconds.</p>
+                        <div class="d-flex justify-content-between">
+                            <p class="text-muted mb-0"><span class="ai-generation-step">Initializing...</span></p>
+                            <p class="text-muted mb-0">Time: <span class="ai-generation-time">0s</span></p>
+                        </div>
+                        <p class="text-center text-muted mt-2">Generating image with AI... This may take up to 30 seconds.</p>
                     </div>
 
                     <div class="ai-generation-results d-none">
@@ -279,6 +283,51 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             $('.ai-generation-error').addClass('d-none');
             $('.ai-generate-image-btn').prop('disabled', true);
 
+            // Reset progress bar
+            const progressBar = $('.ai-generation-status .progress-bar');
+            progressBar.css('width', '0%').attr('aria-valuenow', 0).text('0%');
+            $('.ai-generation-step').text('Initializing...');
+            $('.ai-generation-time').text('0s');
+
+            // Start progress simulation
+            let startTime = Date.now();
+            let progressInterval = setInterval(function() {
+                // Calculate elapsed time
+                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                $('.ai-generation-time').text(elapsedSeconds + 's');
+
+                // Simulate progress - goes up to 95% then waits for actual completion
+                let currentProgress = parseInt(progressBar.attr('aria-valuenow'));
+                if (currentProgress < 95) {
+                    // Different phases of generation
+                    if (currentProgress < 20) {
+                        $('.ai-generation-step').text('Processing prompt...');
+                        currentProgress += 1;
+                    } else if (currentProgress < 50) {
+                        $('.ai-generation-step').text('Creating image...');
+                        currentProgress += 0.7;
+                    } else if (currentProgress < 80) {
+                        $('.ai-generation-step').text('Refining details...');
+                        currentProgress += 0.5;
+                    } else {
+                        $('.ai-generation-step').text('Finalizing image...');
+                        currentProgress += 0.3;
+                    }
+
+                    // Update progress bar
+                    const newProgress = Math.min(Math.round(currentProgress), 95);
+                    progressBar.css('width', newProgress + '%')
+                               .attr('aria-valuenow', newProgress)
+                               .text(newProgress + '%');
+                }
+
+                // Safety timeout after 60 seconds
+                if (elapsedSeconds > 60) {
+                    clearInterval(progressInterval);
+                    $('.ai-generation-step').text('Taking longer than expected...');
+                }
+            }, 200);
+
             // Prepare request data
             const data = {
                 prompt: prompt,
@@ -299,9 +348,17 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 },
                 data: JSON.stringify(data),
                 success: function(response) {
-                    // Hide loading state
-                    $('.ai-generation-status').addClass('d-none');
-                    $('.ai-generate-image-btn').prop('disabled', false);
+                    // Complete the progress bar
+                    clearInterval(progressInterval);
+                    const progressBar = $('.ai-generation-status .progress-bar');
+                    progressBar.css('width', '100%').attr('aria-valuenow', 100).text('100%');
+                    $('.ai-generation-step').text('Complete!');
+
+                    // Hide loading state after a short delay to show completion
+                    setTimeout(function() {
+                        $('.ai-generation-status').addClass('d-none');
+                        $('.ai-generate-image-btn').prop('disabled', false);
+                    }, 500);
 
                     if (response.success) {
                         // Show results
@@ -324,9 +381,27 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     }
                 },
                 error: function(xhr, status, error) {
-                    // Hide loading state
-                    $('.ai-generation-status').addClass('d-none');
-                    $('.ai-generate-image-btn').prop('disabled', false);
+                    // Stop progress simulation
+                    clearInterval(progressInterval);
+
+                    // Show error state in progress bar
+                    const progressBar = $('.ai-generation-status .progress-bar');
+                    progressBar.removeClass('progress-bar-striped progress-bar-animated')
+                               .addClass('bg-danger')
+                               .css('width', '100%')
+                               .attr('aria-valuenow', 100)
+                               .text('Error');
+                    $('.ai-generation-step').text('Generation failed');
+
+                    // Hide loading state after a short delay
+                    setTimeout(function() {
+                        $('.ai-generation-status').addClass('d-none');
+                        $('.ai-generate-image-btn').prop('disabled', false);
+
+                        // Reset progress bar style for next attempt
+                        progressBar.removeClass('bg-danger')
+                                   .addClass('progress-bar-striped progress-bar-animated');
+                    }, 1000);
 
                     // Show error with more details
                     $('.ai-generation-error').removeClass('d-none');
@@ -415,6 +490,33 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         }
     });
     </script>
+    <style>
+        /* Enhanced progress bar styles */
+        .ai-generation-status .progress {
+            height: 20px;
+            border-radius: 10px;
+            background-color: #f0f0f0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .ai-generation-status .progress-bar {
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            line-height: 20px;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+            transition: width 0.3s ease;
+        }
+
+        .ai-generation-step {
+            font-weight: 500;
+        }
+
+        .ai-generation-time {
+            font-family: monospace;
+            font-weight: 500;
+        }
+    </style>
     <?php endif; // End of modal rendering
 }
 ?>

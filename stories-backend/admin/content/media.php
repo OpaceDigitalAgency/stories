@@ -14,6 +14,12 @@ require_once '../includes/db-connect.php';
 // Include image optimizer
 require_once '../../includes/image_optimizer.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 // Function to handle file paths for display and access
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
@@ -216,6 +222,115 @@ $extraHeadContent = '
     .upload-form {
         max-width: 600px;
     }
+    
+    .upload-tabs {
+        display: flex;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .upload-tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        font-weight: 500;
+    }
+    
+    .upload-tab.active {
+        border-bottom-color: var(--primary);
+        color: var(--primary);
+    }
+    
+    .upload-tab-content {
+        display: none;
+    }
+    
+    .upload-tab-content.active {
+        display: block;
+    }
+    
+    /* Bulk upload styles */
+    .bulk-dropzone {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 30px;
+        text-align: center;
+        margin: 20px 0;
+        background-color: var(--gray-50);
+        transition: all 0.3s ease;
+    }
+    
+    .bulk-dropzone.dragover {
+        background-color: var(--primary-light);
+        border-color: var(--primary);
+    }
+    
+    .bulk-dropzone-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        color: var(--gray-600);
+    }
+    
+    .bulk-dropzone-message i {
+        font-size: 3rem;
+    }
+    
+    .bulk-upload-progress {
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .bulk-upload-results {
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .results-list {
+        margin-top: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+    }
+    
+    .upload-result-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .upload-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .upload-result-icon {
+        margin-right: 15px;
+        font-size: 1.2rem;
+    }
+    
+    .upload-result-icon.success {
+        color: var(--success);
+    }
+    
+    .upload-result-icon.error {
+        color: var(--danger);
+    }
+    
+    .upload-result-info {
+        flex-grow: 1;
+    }
+    
+    .upload-result-name {
+        font-weight: 500;
+    }
+    
+    .upload-result-message {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+    }
 
     .media-grid {
         display: grid;
@@ -352,6 +467,183 @@ $extraHeadContent = '
 <script>
     // Show progress indicator when optimizing images
     document.addEventListener("DOMContentLoaded", function() {
+        // Handle upload tabs
+        const uploadTabs = document.querySelectorAll('.upload-tab');
+        const tabContents = document.querySelectorAll('.upload-tab-content');
+        
+        uploadTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                uploadTabs.forEach(t => t.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Hide all tab contents
+                tabContents.forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Show the selected tab content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId + '-upload').style.display = 'block';
+            });
+        });
+        
+        // Handle bulk upload
+        const bulkDropzone = document.getElementById('bulk-dropzone');
+        const bulkFileInput = document.getElementById('bulk-file-input');
+        const progressBar = document.querySelector('.bulk-upload-progress .progress-bar');
+        const progressContainer = document.querySelector('.bulk-upload-progress');
+        const resultsContainer = document.querySelector('.bulk-upload-results');
+        const resultsList = document.querySelector('.results-list');
+        const currentFileSpan = document.querySelector('.current-file');
+        const uploadCountSpan = document.querySelector('.upload-count');
+        
+        // Handle drag and drop
+        if (bulkDropzone) {
+            bulkDropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                bulkDropzone.classList.add('dragover');
+            });
+            
+            bulkDropzone.addEventListener('dragleave', () => {
+                bulkDropzone.classList.remove('dragover');
+            });
+            
+            bulkDropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                bulkDropzone.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleBulkUpload(e.dataTransfer.files);
+                }
+            });
+        }
+        
+        // Handle file input change
+        if (bulkFileInput) {
+            bulkFileInput.addEventListener('change', function(e) {
+                if (this.files && this.files.length) {
+                    handleBulkUpload(this.files);
+                }
+            });
+            
+            // Also add a direct click handler to ensure it's working
+            const browseBtn = document.getElementById('browse-files-btn');
+            if (browseBtn) {
+                browseBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    bulkFileInput.click();
+                });
+            }
+        }
+        
+        // Function to handle bulk upload
+        function handleBulkUpload(files) {
+            // Check if we have the necessary elements
+            if (!progressBar || !progressContainer || !resultsContainer || !resultsList) {
+                alert("Bulk upload functionality is not fully initialized. Please refresh the page and try again.");
+                return;
+            }
+            
+            // Reset UI
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressContainer.style.display = 'block';
+            resultsContainer.style.display = 'none';
+            resultsList.innerHTML = '';
+            
+            // Create FormData
+            const formData = new FormData();
+            
+            // Add each file to FormData
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i]);
+            }
+            
+            // Add entity type
+            formData.append('entity_type', 'media');
+            
+            // Update status
+            if (uploadCountSpan) {
+                uploadCountSpan.textContent = `0/${files.length} files uploaded`;
+            }
+            
+            // Create AJAX request
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '../handlers/bulk-upload.php', true);
+            
+            // Add error handling
+            xhr.onerror = function(e) {
+                alert('Network error occurred. Please check your connection and try again.');
+            };
+            
+            // Track upload progress
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressBar.textContent = percent + '%';
+                    progressBar.setAttribute('aria-valuenow', percent);
+                }
+            });
+            
+            // Handle response
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        
+                        // Show results
+                        resultsContainer.style.display = 'block';
+                        
+                        // Process each file result
+                        if (response.files && response.files.length) {
+                            response.files.forEach(file => {
+                                const resultItem = document.createElement('div');
+                                resultItem.className = `upload-result-item ${file.success ? 'success' : 'error'}`;
+                                
+                                const iconClass = file.success ? 'success' : 'error';
+                                const iconName = file.success ? 'check-circle' : 'times-circle';
+                                
+                                resultItem.innerHTML = `
+                                    <div class="upload-result-icon ${iconClass}">
+                                        <i class="fas fa-${iconName}"></i>
+                                    </div>
+                                    <div class="upload-result-info">
+                                        <div class="upload-result-name">${file.name}</div>
+                                        <div class="upload-result-message">${file.success ? 'Uploaded successfully' : file.message}</div>
+                                    </div>
+                                `;
+                                
+                                resultsList.appendChild(resultItem);
+                            });
+                            
+                            // Update count
+                            if (uploadCountSpan) {
+                                const successCount = response.files.filter(f => f.success).length;
+                                uploadCountSpan.textContent = `${successCount}/${response.files.length} files uploaded`;
+                            }
+                        }
+                        
+                        // If any files were uploaded successfully, refresh the page after a delay
+                        if (response.success) {
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 3000);
+                        }
+                    } catch (e) {
+                        alert('Error parsing server response.');
+                    }
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            });
+            
+            // Send the request
+            xhr.send(formData);
+        }
         // Get all buttons that trigger optimization
         const optimizeButtons = document.querySelectorAll("a[href*=\"optimize_image.php\"]");
 
@@ -407,27 +699,81 @@ require_once '../includes/header.php';
 
 <div class="content-section mb-4">
     <div class="section-header">
-        <h2 class="section-title"><i class="fas fa-upload" aria-hidden="true"></i> Upload New Media</h2>
+        <h2 class="section-title"><i class="fas fa-upload" aria-hidden="true"></i> Upload Media</h2>
         <p class="section-description">Upload images and other media files to use in your content</p>
     </div>
     <div class="section-body">
-        <form method="POST" enctype="multipart/form-data" class="upload-form">
-            <div class="form-group mb-3">
-                <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
-                <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
-                <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
+        <div class="upload-tabs">
+            <div class="upload-tab active" data-tab="single">Single File Upload</div>
+            <div class="upload-tab" data-tab="bulk">Bulk Upload</div>
+            <div class="upload-tab" data-tab="ai">Generate with AI</div>
+        </div>
+        
+        <div id="single-upload" class="upload-tab-content active">
+            <form method="POST" enctype="multipart/form-data" class="upload-form">
+                <div class="form-group mb-3">
+                    <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
+                    <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
+                    <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="alt_text">Alt Text</label>
+                    <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
+                    <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload" aria-hidden="true"></i> Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div id="bulk-upload" class="upload-tab-content">
+            <div class="bulk-dropzone" id="bulk-dropzone">
+                <div class="bulk-dropzone-message">
+                    <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                    <h3>Drag & Drop Multiple Files</h3>
+                    <p>Or click the button below to select files from your computer</p>
+                    <button type="button" class="btn btn-primary" id="browse-files-btn">
+                        Browse Files
+                    </button>
+                    <input type="file" id="bulk-file-input" multiple style="display: none;">
+                </div>
             </div>
-            <div class="form-group mb-3">
-                <label class="form-label" for="alt_text">Alt Text</label>
-                <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
-                <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
+            
+            <div class="bulk-upload-progress">
+                <h4>Uploading Files <span class="upload-count">0/0 files uploaded</span></h4>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <p class="current-file"></p>
             </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-upload" aria-hidden="true"></i> Upload
-                </button>
+            
+            <div class="bulk-upload-results">
+                <h4>Upload Results</h4>
+                <div class="results-list"></div>
             </div>
-        </form>
+        </div>
+        
+        <div id="ai-upload" class="upload-tab-content">
+            <?php
+            // Render AI image generator
+            if (function_exists('renderAiImageGenerator')) {
+                renderAiImageGenerator(
+                    'media',
+                    [
+                        'title' => 'New Media Image',
+                        'description' => 'Generate an image for your content'
+                    ],
+                    'ai_generated_image',
+                    'ai_generated_image_preview'
+                );
+            } else {
+                echo '<div class="alert alert-warning">AI image generation is not available. Please contact your administrator.</div>';
+            }
+            ?>
+        </div>
     </div>
 </div>
 

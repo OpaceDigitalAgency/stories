@@ -66,9 +66,12 @@ $response = [
 
 try {
     // Check if files were uploaded
-    if (!isset($_FILES['files'])) {
+    if (!isset($_FILES['files']) && !isset($_FILES['files[]'])) {
         throw new Exception('No files uploaded.');
     }
+    
+    // Handle different naming conventions
+    $filesKey = isset($_FILES['files[]']) ? 'files[]' : 'files';
 
     // Get entity info
     $entityType = $_POST['entity_type'] ?? 'general';
@@ -95,16 +98,16 @@ try {
     }
 
     // Process each file
-    $fileCount = count($_FILES['files']['name']);
+    $fileCount = count($_FILES[$filesKey]['name']);
     $successCount = 0;
 
     for ($i = 0; $i < $fileCount; $i++) {
         // Get file info
-        $fileName = $_FILES['files']['name'][$i];
-        $fileTmpName = $_FILES['files']['tmp_name'][$i];
-        $fileSize = $_FILES['files']['size'][$i];
-        $fileError = $_FILES['files']['error'][$i];
-        $fileType = $_FILES['files']['type'][$i];
+        $fileName = $_FILES[$filesKey]['name'][$i];
+        $fileTmpName = $_FILES[$filesKey]['tmp_name'][$i];
+        $fileSize = $_FILES[$filesKey]['size'][$i];
+        $fileError = $_FILES[$filesKey]['error'][$i];
+        $fileType = $_FILES[$filesKey]['type'][$i];
 
         // Skip if there was an error
         if ($fileError !== UPLOAD_ERR_OK) {

@@ -44,6 +44,10 @@ function renderEnhancedTable($items, $columns, $options = []) {
     ];
 
     // Merge options with defaults
+    // Make sure $options is an array before merging
+    if (!is_array($options)) {
+        $options = [];
+    }
     $options = array_merge($defaults, $options);
 
     // Replace placeholders in URLs
@@ -203,8 +207,16 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                             <?php endif; ?>
                                         <?php endif; ?>
 
-                                        <?php if (isset($options['custom_actions']) && is_callable($options['custom_actions'])): ?>
-                                            <?php echo $options['custom_actions']($item); ?>
+                                        <?php if (isset($options['custom_actions'])): ?>
+                                            <?php if (is_callable($options['custom_actions'])): ?>
+                                                <?php echo $options['custom_actions']($item); ?>
+                                            <?php elseif (is_array($options['custom_actions'])): ?>
+                                                <?php foreach ($options['custom_actions'] as $action): ?>
+                                                    <?php if (is_callable($action)): ?>
+                                                        <?php echo $action($item); ?>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
                                 </td>

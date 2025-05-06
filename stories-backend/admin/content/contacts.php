@@ -574,7 +574,7 @@ The Stories From The Web Team</textarea>
                 'name_field' => 'name',
                 'empty_message' => 'No contact submissions found.',
                 'custom_formatters' => $customFormatters,
-                'custom_actions' => $customActions,
+                'custom_actions' => is_array($customActions) ? $customActions : null,
                 'actions' => [
                     'view' => false,
                     'edit' => false,

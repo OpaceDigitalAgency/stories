@@ -267,13 +267,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                 $viewFileExists = true; // Files exist in the same directory
 
                                                 if ($viewFileExists) {
-                                                    // If the view file exists, create a normal link
-                                                    echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm" title="View">';
-                                                    echo '<i class="fas fa-eye"></i>';
-                                                    echo '</a>';
-                                                } else {
-                                                    // If the view file doesn't exist, create a disabled link
-                                                    echo '<a class="premium-btn premium-btn-info premium-btn-sm" style="opacity: 0.5; pointer-events: none;" title="View not available">';
+                                                    echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</a>';
                                                 }
@@ -287,13 +281,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                 $formFileExists = true; // Files exist in the same directory
 
                                                 if ($formFileExists) {
-                                                    // If the form file exists, create a normal link
-                                                    echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">';
-                                                    echo '<i class="fas fa-edit"></i>';
-                                                    echo '</a>';
-                                                } else {
-                                                    // If the form file doesn't exist, create a disabled link
-                                                    echo '<a class="premium-btn premium-btn-primary premium-btn-sm" style="opacity: 0.5; pointer-events: none;" title="Edit not available">';
+                                                    echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                     echo '<i class="fas fa-edit"></i>';
                                                     echo '</a>';
                                                 }

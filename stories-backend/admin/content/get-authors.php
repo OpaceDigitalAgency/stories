@@ -1,34 +1,11 @@
 <?php
 
-// Include header
-require_once '../includes/header.php';
-
+// Include auth check
+require_once '../includes/auth-check.php';
 
 // Page variables
 $pageTitle = 'Get Authors';
 $currentPage = 'get-authors';
-
-require_once '../../simple_auth.php';
-
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
-
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
 
 try {
     // Connect to database

@@ -1,8 +1,7 @@
 <?php
 
-// Include header
-require_once '../includes/header.php';
-
+// Include auth check
+require_once '../includes/auth-check.php';
 
 // Page variables
 $pageTitle = 'Get Tags';
@@ -10,31 +9,9 @@ $currentPage = 'get-tags';
 
 /**
  * Get Tags API
- * 
+ *
  * Returns a JSON array of all tags for use in the bulk actions dropdown.
  */
-
-require_once '../../simple_auth.php';
-
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3*sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
-
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-if (!$user = SimpleAuth::check()) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
 
 // Initialize response
 $tags = [];
@@ -51,7 +28,7 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-    
+
     // Check if tags table exists
     $stmt = $db->query("SHOW TABLES LIKE 'tags'");
     if ($stmt->rowCount() > 0) {

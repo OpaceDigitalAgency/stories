@@ -3,22 +3,16 @@
  * Admin page for managing contact form submissions
  */
 
-// Start output buffering to capture any premature output
-ob_start();
-
-// Set page variables for header
-$pageTitle = 'Contact Form Submissions';
-$currentPage = 'contacts';
-$pageDescription = 'Manage and respond to contact form submissions from website visitors.';
-
-// Include auth check
+// Include auth check first
 require_once '../includes/auth-check.php';
 
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Define flag to track if header has been included
-$GLOBALS['header_included'] = true;
+// Set page variables for header
+$pageTitle = 'Contact Form Submissions';
+$currentPage = 'contacts';
+$pageDescription = 'Manage and respond to contact form submissions from website visitors.';
 
 // Include header
 require_once '../includes/header.php';

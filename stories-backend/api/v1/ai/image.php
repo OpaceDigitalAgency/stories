@@ -57,39 +57,91 @@ if (!$data || !isset($data['prompt']) || empty($data['prompt'])) {
     exit;
 }
 
-// Include database connection
-require_once '../../includes/db-connect.php';
+// Try to include database connection
+$dbConnected = false;
+
+// Check multiple possible paths for db-connect.php
+$possiblePaths = [
+    '../../includes/db-connect.php',
+    '../../../includes/db-connect.php',
+    '../../../../includes/db-connect.php',
+    '../includes/db-connect.php'
+];
+
+$dbConnectPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $dbConnectPath = $path;
+        break;
+    }
+}
+
+if ($dbConnectPath) {
+    require_once $dbConnectPath;
+    $dbConnected = true;
+} else {
+    // Try a direct include to the known location
+    try {
+        require_once '../../../includes/db-connect.php';
+        $dbConnected = true;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database connection file not found. Please check server configuration.'
+        ]);
+        exit;
+    }
+}
 
 try {
-    // Get OpenAI provider configuration
-    $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
-    $stmt->execute();
-    $provider = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Initialize variables
+    $providerId = null;
+    $apiKey = null;
+    $organization = null;
+    $model = 'gpt-image-1';
 
-    if (!$provider) {
-        error_log("OpenAI provider not found or not active");
-        throw new Exception('OpenAI provider not configured or not active. Please go to AI Settings to configure it.');
+    // Try to get OpenAI provider configuration from database
+    if ($dbConnected && isset($db)) {
+        try {
+            $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
+            $stmt->execute();
+            $provider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($provider) {
+                $providerId = $provider['id'];
+                $config = json_decode($provider['config'], true);
+
+                // Log provider config for debugging (without API key)
+                $logConfig = $config;
+                if (isset($logConfig['api_key'])) {
+                    $logConfig['api_key'] = substr($logConfig['api_key'], 0, 3) . '...' . substr($logConfig['api_key'], -3);
+                }
+                error_log("OpenAI provider config from DB: " . json_encode($logConfig));
+
+                if (!empty($config['api_key'])) {
+                    $apiKey = $config['api_key'];
+                    $organization = $config['organization'] ?? null;
+                    $model = $config['model'] ?? 'gpt-image-1';
+                }
+            }
+        } catch (Exception $dbEx) {
+            error_log("Error fetching OpenAI provider from database: " . $dbEx->getMessage());
+            // Continue with fallback
+        }
     }
 
-    $providerId = $provider['id'];
-    $config = json_decode($provider['config'], true);
-
-    // Log provider config for debugging (without API key)
-    $logConfig = $config;
-    if (isset($logConfig['api_key'])) {
-        $logConfig['api_key'] = substr($logConfig['api_key'], 0, 3) . '...' . substr($logConfig['api_key'], -3);
+    // If we couldn't get the API key from the database, check for environment variable
+    if (empty($apiKey)) {
+        $apiKey = getenv('OPENAI_API_KEY');
+        error_log("Using OPENAI_API_KEY from environment: " . (empty($apiKey) ? 'Not found' : 'Found'));
     }
-    error_log("OpenAI provider config: " . json_encode($logConfig));
 
-    if (empty($config['api_key'])) {
+    // If we still don't have an API key, throw an exception
+    if (empty($apiKey)) {
         error_log("OpenAI API key not configured");
-        throw new Exception('OpenAI API key not configured. Please go to AI Settings to add your API key.');
+        throw new Exception('OpenAI API key not configured. Please go to AI Settings to add your API key or set the OPENAI_API_KEY environment variable.');
     }
-
-    // Prepare request to OpenAI API
-    $apiKey = $config['api_key'];
-    $organization = $config['organization'] ?? null;
-    $model = $config['model'] ?? 'gpt-image-1';
 
     // Set up request parameters
     $size = $data['size'] ?? '1024x1024';
@@ -190,30 +242,38 @@ try {
         throw new Exception('No images generated');
     }
 
-    // Record generation in database
-    $stmt = $db->prepare("
-        INSERT INTO ai_generations (provider_id, type, prompt, result_url, metadata, status)
-        VALUES (?, 'image', ?, ?, ?, 'completed')
-    ");
+    // Record generation in database if database is connected
+    if ($dbConnected && isset($db) && $providerId) {
+        try {
+            $metadata = json_encode([
+                'model' => $model,
+                'size' => $size,
+                'style' => $style,
+                'variations' => $variations,
+                'quality' => $quality
+            ]);
 
-    $metadata = json_encode([
-        'model' => $model,
-        'size' => $size,
-        'style' => $style,
-        'variations' => $variations,
-        'quality' => $quality
-    ]);
+            $stmt = $db->prepare("
+                INSERT INTO ai_generations (provider_id, type, prompt, result_url, metadata, status)
+                VALUES (?, 'image', ?, ?, ?, 'completed')
+            ");
+            $stmt->execute([$providerId, $data['prompt'], $urls[0], $metadata]);
+            $generationId = $db->lastInsertId();
 
-    $stmt->execute([$providerId, $data['prompt'], $urls[0], $metadata]);
-    $generationId = $db->lastInsertId();
-
-    // Record usage
-    $cost = calculateImageGenerationCost($model, $size, $quality, $variations);
-    $stmt = $db->prepare("
-        INSERT INTO ai_usage (provider_id, type, cost)
-        VALUES (?, 'image', ?)
-    ");
-    $stmt->execute([$providerId, $cost]);
+            // Record usage
+            $cost = calculateImageGenerationCost($model, $size, $quality, $variations);
+            $stmt = $db->prepare("
+                INSERT INTO ai_usage (provider_id, type, cost)
+                VALUES (?, 'image', ?)
+            ");
+            $stmt->execute([$providerId, $cost]);
+        } catch (Exception $dbEx) {
+            // Log error but continue with response
+            error_log("Error recording generation in database: " . $dbEx->getMessage());
+        }
+    } else {
+        error_log("Skipping database recording - database not connected or provider ID not available");
+    }
 
     // Prepare response
     $responseData = [

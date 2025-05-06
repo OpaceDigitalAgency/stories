@@ -32,10 +32,35 @@ if (file_exists('cors-fix.php')) {
 // Try to include database connection
 $db = null;
 $dbConnected = false;
+
+// Check multiple possible paths for db-connect.php
+$possiblePaths = [
+    '../../includes/db-connect.php',
+    '../../../includes/db-connect.php',
+    '../../../../includes/db-connect.php',
+    '../includes/db-connect.php'
+];
+
+$dbConnectPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $dbConnectPath = $path;
+        break;
+    }
+}
+
 try {
-    if (file_exists('../../includes/db-connect.php')) {
-        require_once '../../includes/db-connect.php';
+    if ($dbConnectPath) {
+        require_once $dbConnectPath;
         $dbConnected = true;
+    } else {
+        // Try a direct include to the known location
+        try {
+            require_once '../../../includes/db-connect.php';
+            $dbConnected = true;
+        } catch (Exception $e2) {
+            // Silently fail and continue with diagnostics
+        }
     }
 } catch (Exception $e) {
     // Silently fail and continue with diagnostics
@@ -73,7 +98,8 @@ try {
             'connected' => $dbConnected && $db !== null,
             'driver' => ($dbConnected && $db) ? $db->getAttribute(PDO::ATTR_DRIVER_NAME) : 'Unknown',
             'version' => ($dbConnected && $db) ? $db->getAttribute(PDO::ATTR_SERVER_VERSION) : 'Unknown',
-            'db_connect_file_exists' => file_exists('../../includes/db-connect.php')
+            'db_connect_path' => $dbConnectPath,
+            'db_connect_paths_checked' => $possiblePaths
         ],
         'cors' => [
             'headers_set' => true,

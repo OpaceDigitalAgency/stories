@@ -175,10 +175,13 @@ try {
         'prompt' => $data['prompt'],
         'n' => $variations,
         'size' => $size,
-        'quality' => $quality,
-        'response_format' => 'b64_json' // Request base64 encoded image
+        'quality' => $quality
+        // 'response_format' parameter removed as it's not supported by GPT-Image-1
         // 'style' parameter removed as it's no longer supported
     ];
+
+    // Log the request data for debugging
+    error_log("OpenAI API request data: " . json_encode($openaiData));
 
     // Set up cURL request
     $ch = curl_init('https://api.openai.com/v1/images/generations');
@@ -240,40 +243,64 @@ try {
     $images = [];
     $isBase64 = false;
 
+    // Log the full response for debugging
+    error_log("Full OpenAI API response: " . json_encode($result));
+
     if (isset($result['data']) && is_array($result['data'])) {
-        // Standard format
+        // Standard format for GPT-Image-1 and DALL-E models
         foreach ($result['data'] as $image) {
             if (isset($image['url'])) {
                 $images[] = ['type' => 'url', 'data' => $image['url']];
+                error_log("Found URL image: " . $image['url']);
             } elseif (isset($image['b64_json'])) {
                 $isBase64 = true;
                 $images[] = ['type' => 'base64', 'data' => $image['b64_json']];
+                error_log("Found base64 image (length: " . strlen($image['b64_json']) . ")");
+            } elseif (isset($image['revised_prompt'])) {
+                // Some responses include a revised_prompt but no image data yet
+                error_log("Found revised prompt but no image data: " . $image['revised_prompt']);
             }
         }
     } elseif (isset($result['url'])) {
-        // Single URL format
+        // Single URL format (legacy)
         $images[] = ['type' => 'url', 'data' => $result['url']];
+        error_log("Found single URL image: " . $result['url']);
     } elseif (isset($result['urls']) && is_array($result['urls'])) {
-        // Array of URLs format
+        // Array of URLs format (legacy)
         foreach ($result['urls'] as $url) {
             $images[] = ['type' => 'url', 'data' => $url];
+            error_log("Found URL in array: " . $url);
         }
     } elseif (isset($result['images']) && is_array($result['images'])) {
-        // Array of images format
+        // Array of images format (some other API versions)
         foreach ($result['images'] as $image) {
             if (isset($image['url'])) {
                 $images[] = ['type' => 'url', 'data' => $image['url']];
+                error_log("Found URL in images array: " . $image['url']);
             } elseif (isset($image['b64_json'])) {
                 $isBase64 = true;
                 $images[] = ['type' => 'base64', 'data' => $image['b64_json']];
+                error_log("Found base64 in images array (length: " . strlen($image['b64_json']) . ")");
             }
         }
     } else {
-        error_log("Unexpected OpenAI API response format: " . json_encode($result));
-        throw new Exception('Invalid response format from OpenAI API');
+        // Try to extract any URL or base64 data from the response
+        $json = json_encode($result);
+        if (preg_match('/"url":\s*"([^"]+)"/', $json, $matches)) {
+            $images[] = ['type' => 'url', 'data' => $matches[1]];
+            error_log("Extracted URL from JSON: " . $matches[1]);
+        } elseif (preg_match('/"b64_json":\s*"([^"]+)"/', $json, $matches)) {
+            $isBase64 = true;
+            $images[] = ['type' => 'base64', 'data' => $matches[1]];
+            error_log("Extracted base64 from JSON (length: " . strlen($matches[1]) . ")");
+        } else {
+            error_log("Unexpected OpenAI API response format: " . $json);
+            throw new Exception('Invalid response format from OpenAI API');
+        }
     }
 
     if (empty($images)) {
+        error_log("No images found in response: " . json_encode($result));
         throw new Exception('No images generated');
     }
 

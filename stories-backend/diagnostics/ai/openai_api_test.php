@@ -108,7 +108,7 @@ if (!empty($apiKey)) {
             'size' => '1024x1024',
             'quality' => 'medium' // Valid values: 'low', 'medium', 'high', 'auto'
             // 'style' parameter removed as it's no longer supported
-            // 'response_format' parameter removed as it's no longer supported
+            // 'response_format' parameter removed as it's not supported by GPT-Image-1
         ];
 
         $ch = curl_init('https://api.openai.com/v1/images/generations');

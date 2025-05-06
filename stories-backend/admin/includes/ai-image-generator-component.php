@@ -349,6 +349,8 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     withCredentials: false
                 },
                 data: JSON.stringify(data),
+                // Add timeout to prevent hanging requests
+                timeout: 60000, // 60 seconds
                 success: function(response) {
                     // Complete the progress bar
                     clearInterval(progressInterval);

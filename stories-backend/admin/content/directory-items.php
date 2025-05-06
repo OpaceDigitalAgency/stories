@@ -88,7 +88,7 @@ try {
     ";
     $stmt = $db->prepare($query);
     $stmt->execute();
-    $directory_items = $stmt->fetchAll();
+    $directory_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Directory items page error: " . $e->getMessage());
     $error = "Error loading directory data. Please try again.";

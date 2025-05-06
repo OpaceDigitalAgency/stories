@@ -56,7 +56,7 @@ try {
     ";
     $stmt = $db->prepare($query);
     $stmt->execute();
-    $games = $stmt->fetchAll();
+    $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Games page error: " . $e->getMessage());
     $error = "Error loading games data. Please try again.";

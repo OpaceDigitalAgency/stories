@@ -75,7 +75,7 @@ try {
               $postCountQuery as post_count
               FROM authors a
               ORDER BY a.name ASC";
-    $authors = $db->query($query)->fetchAll();
+    $authors = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     error_log("Authors page error: " . $e->getMessage());

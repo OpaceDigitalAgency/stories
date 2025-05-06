@@ -92,7 +92,7 @@ try {
     ";
     $stmt = $db->prepare($query);
     $stmt->execute();
-    $ai_tools = $stmt->fetchAll();
+    $ai_tools = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("AI tools page error: " . $e->getMessage());
     $error = "Error loading AI tools data. Please try again.";

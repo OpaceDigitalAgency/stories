@@ -19,7 +19,13 @@
 function getTableDisplayUrl($filePath) {
     // If it's null or empty, return default image
     if (empty($filePath)) {
-        return '../assets/images/default-cover.svg';
+        // Check if the default image exists
+        if (file_exists('../assets/images/default-cover.svg')) {
+            return '../assets/images/default-cover.svg';
+        } else {
+            // Fallback to a data URI for a simple placeholder
+            return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZmlsbD0iIzk5OSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+        }
     }
 
     // Check if there's a thumbnail version available
@@ -37,7 +43,25 @@ function getTableDisplayUrl($filePath) {
         // Use .webp extension for thumbnails as that's what the system is using
         $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.webp';
 
-        return $thumbnailPath;
+        // Check if the thumbnail exists
+        if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPath)) {
+            return $thumbnailPath;
+        } else {
+            // Try with jpg extension as fallback
+            $thumbnailPathJpg = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.jpg';
+            if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathJpg)) {
+                return $thumbnailPathJpg;
+            }
+
+            // Try with png extension as another fallback
+            $thumbnailPathPng = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.png';
+            if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathPng)) {
+                return $thumbnailPathPng;
+            }
+
+            // If no thumbnail exists, return the original image
+            return $filePath;
+        }
     }
 
     // If it's already an absolute URL

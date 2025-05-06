@@ -93,7 +93,6 @@ try {
                a.pricing_type,
                a.price_info,
                a.features,
-               a.image,
                a.rating,
                a.featured,
                a.is_published,
@@ -221,7 +220,6 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $tool['id'],
-            'image' => $tool['image'] ?? '',
             'title' => $tool['title'],
             'category' => $tool['category_name'] ?? 'None',
             'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),
@@ -257,9 +255,7 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page,
-            'thumbnailField' => 'image', // Use the image field for thumbnails
-            'thumbnailAltField' => 'title' // Use the title as alt text
+            'currentPage' => $page
         ]
     );
 }

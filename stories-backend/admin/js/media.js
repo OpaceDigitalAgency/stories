@@ -1,5 +1,49 @@
 // Show progress indicator when optimizing images
+// Global function to update cover_url field when any image URL input changes
+function updateCoverUrlField(inputField) {
+    console.log('updateCoverUrlField called for:', inputField.name, 'with value:', inputField.value);
+    
+    // Only proceed if this is not already the cover_url field
+    if (inputField.name !== 'cover_url') {
+        const coverUrlField = document.querySelector('input[name="cover_url"]');
+        console.log('Found cover_url field:', coverUrlField ? 'Yes' : 'No');
+        
+        if (coverUrlField) {
+            coverUrlField.value = inputField.value;
+            console.log('Global handler: Updated cover_url field with:', inputField.value);
+        }
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function() {
+    // Add a global event listener for changes to any image URL input
+    document.addEventListener('change', function(event) {
+        // Check if the changed element is an image URL input
+        if (event.target.classList.contains('image-url-input')) {
+            updateCoverUrlField(event.target);
+        }
+    });
+    
+    // Add a MutationObserver to catch programmatic changes to image URL inputs
+    // This is needed for the AI image generator which updates the input value programmatically
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                const target = mutation.target;
+                if (target.classList.contains('image-url-input')) {
+                    console.log('MutationObserver detected value change:', target.value);
+                    updateCoverUrlField(target);
+                }
+            }
+        });
+    });
+    
+    // Observe all image URL inputs
+    const imageUrlInputs = document.querySelectorAll('.image-url-input');
+    imageUrlInputs.forEach(function(input) {
+        observer.observe(input, { attributes: true });
+        console.log('Observing input:', input.name);
+    });
     // Handle image upload component
     const imageUploadComponents = document.querySelectorAll('.image-upload-component');
 
@@ -34,8 +78,72 @@ document.addEventListener("DOMContentLoaded", function() {
                     const file = this.files[0];
                     const reader = new FileReader();
 
+                    // Upload the file to the server
+                    const uploadFile = function(file) {
+                        // Create FormData
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('entity_type', entityType);
+                        formData.append('entity_id', entityId);
+                        formData.append('field_name', urlInput.getAttribute('name'));
+
+                        // Create AJAX request
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '../handlers/upload-image.php', true);
+
+                        // Handle response
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    console.log('Upload response:', response);
+
+                                    if (response.success) {
+                                        // Update the input value
+                                        urlInput.value = response.url;
+                                        urlInput.setAttribute('readonly', 'readonly');
+
+                                        // Also update any other fields with the same name
+                                        const fieldName = urlInput.getAttribute('name');
+                                        const allFields = document.querySelectorAll(`input[name="${fieldName}"]`);
+                                        allFields.forEach(field => {
+                                            if (field !== urlInput) {
+                                                field.value = response.url;
+                                                console.log(`Updated additional field with name ${fieldName}:`, response.url);
+                                            }
+                                        });
+
+                                        // Update any hidden cover_url field regardless of the current field name
+                                        // This handles the case where the field might be named something else but we still need to update cover_url
+                                        const coverUrlField = document.querySelector('input[name="cover_url"]');
+                                        if (coverUrlField && coverUrlField !== urlInput) {
+                                            coverUrlField.value = response.url;
+                                            console.log('Updated cover_url field with:', response.url);
+                                        }
+                                    } else {
+                                        alert('Upload failed: ' + response.message);
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing upload response:', e);
+                                    alert('Error processing upload response');
+                                }
+                            } else {
+                                alert('Upload failed with status: ' + xhr.status);
+                            }
+                        };
+
+                        // Handle errors
+                        xhr.onerror = function() {
+                            alert('Upload failed. Please try again.');
+                        };
+
+                        // Send the request
+                        xhr.send(formData);
+                    };
+
+                    // Show preview
                     reader.onload = function(e) {
-                        // Update preview
+                        // Show preview and then upload the file
                         if (!previewContainer.querySelector('.image-preview')) {
                             previewContainer.innerHTML = `
                                 <div class="image-preview">
@@ -77,6 +185,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     };
 
                     reader.readAsDataURL(file);
+                    
+                    // Upload the file after showing the preview
+                    uploadFile(file);
                 }
             });
         }
@@ -126,6 +237,24 @@ document.addEventListener("DOMContentLoaded", function() {
                         if (urlInput) {
                             urlInput.value = event.data.url;
                             urlInput.setAttribute('readonly', 'readonly');
+                            
+                            // Also update any other fields with the same name
+                            // This handles the case where we have both a visible field and a hidden field with the same name
+                            const fieldName = urlInput.getAttribute('name');
+                            const allFields = document.querySelectorAll(`input[name="${fieldName}"]`);
+                            allFields.forEach(field => {
+                                if (field !== urlInput) {
+                                    field.value = event.data.url;
+                                    console.log(`Updated additional field with name ${fieldName}:`, event.data.url);
+                                }
+                            });
+                            
+                            // Update any hidden cover_url field regardless of the current field name
+                            const coverUrlField = document.querySelector('input[name="cover_url"]');
+                            if (coverUrlField && coverUrlField !== urlInput) {
+                                coverUrlField.value = event.data.url;
+                                console.log('Updated cover_url field with:', event.data.url);
+                            }
                         }
 
                         // Update preview
@@ -200,8 +329,29 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             if (urlInput) {
+                const fieldName = urlInput.getAttribute('name');
+                
+                // Reset this input
                 urlInput.value = '';
                 urlInput.removeAttribute('readonly');
+                
+                // Also reset any other fields with the same name
+                const allFields = document.querySelectorAll(`input[name="${fieldName}"]`);
+                allFields.forEach(field => {
+                    if (field !== urlInput) {
+                        field.value = '';
+                        field.removeAttribute('readonly');
+                        console.log(`Reset additional field with name ${fieldName}`);
+                    }
+                });
+                
+                // Reset any hidden cover_url field regardless of the current field name
+                const coverUrlField = document.querySelector('input[name="cover_url"]');
+                if (coverUrlField && coverUrlField !== urlInput) {
+                    coverUrlField.value = '';
+                    coverUrlField.removeAttribute('readonly');
+                    console.log('Reset cover_url field');
+                }
             }
 
             if (previewContainer) {
@@ -470,8 +620,20 @@ document.addEventListener("DOMContentLoaded", function() {
                         uploadCountSpan.textContent = `${successCount}/${response.files.length} files uploaded`;
                     }
 
-                    // If any files were uploaded successfully, refresh the page after a delay
-                    if (response.success) {
+                    // If any files were uploaded successfully, update the cover_url field if it exists
+                    if (response.success && response.files && response.files.length > 0) {
+                        // Find the first successful upload
+                        const successfulUpload = response.files.find(f => f.success);
+                        if (successfulUpload && successfulUpload.url) {
+                            // Update the cover_url field if it exists
+                            const coverUrlField = document.querySelector('input[name="cover_url"]');
+                            if (coverUrlField) {
+                                coverUrlField.value = successfulUpload.url;
+                                console.log('Bulk upload: Updated cover_url field with:', successfulUpload.url);
+                            }
+                        }
+                        
+                        // Refresh the page after a delay
                         setTimeout(() => {
                             window.location.reload();
                         }, 3000);

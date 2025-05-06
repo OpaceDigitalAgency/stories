@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Delete Tag';
-$currentPage = 'delete-tag';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -95,14 +93,13 @@ try {
     }
 
     error_log("Delete tag error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back
     session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     header("Location: tags.php");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

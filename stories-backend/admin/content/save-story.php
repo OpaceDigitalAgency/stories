@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Save Story';
-$currentPage = 'save-story';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -64,10 +62,10 @@ try {
     $review_count = isset($_POST['review_count']) ? (int)$_POST['review_count'] : 0;
     $average_rating = isset($_POST['average_rating']) ? (float)$_POST['average_rating'] : 0;
     $tags = $_POST['tags'] ?? [];
-    
+
     // Always set reading time to 1 minute
     $_POST['estimated_reading_time'] = '1 minute';
-    
+
     // Validate age group
     $age_group = $_POST['age_group'] ?? '7-12';
     if (!in_array($age_group, ['0-3', '4-6', '7-12', '13+'])) {
@@ -84,7 +82,7 @@ try {
     $stmt = $db->prepare("SELECT name FROM authors WHERE id = ?");
     $stmt->execute([$author_id]);
     $author = $stmt->fetch();
-    
+
     if (!$author) {
         throw new Exception("Selected author does not exist");
     }
@@ -129,37 +127,37 @@ try {
     $stmt = $db->prepare("SELECT id, name FROM authors WHERE id = ?");
     $stmt->execute([$author_id]);
     $authorData = $stmt->fetch();
-    
+
     if (!$authorData) {
         throw new Exception("Selected author does not exist or could not be verified");
     }
-    
+
     error_log("Verified author: ID=" . $authorData['id'] . ", Name=" . $authorData['name']);
-    
+
     // Include author name for backward compatibility
     if (in_array('author', $columns)) {
         $data['author'] = $author['name'];
     }
-    
+
     // Add slug if the column exists
     if (in_array('slug', $columns)) {
         $data['slug'] = $slug;
     }
-    
+
     // Add featured and is_published if the columns exist
     if (in_array('featured', $columns)) {
         $data['featured'] = $featured;
     }
-    
+
     if (in_array('is_published', $columns)) {
         $data['is_published'] = $is_published;
     }
-    
+
     // Add is_sponsored if the column exists
     if (in_array('is_sponsored', $columns)) {
         $data['is_sponsored'] = $is_sponsored;
     }
-    
+
     // Add published_at if the column exists
     if (in_array('published_at', $columns)) {
         if (!empty($published_at)) {
@@ -171,12 +169,12 @@ try {
             $data['published_at'] = date('Y-m-d H:i:s');
         }
     }
-    
+
     // Add review_count if the column exists
     if (in_array('review_count', $columns)) {
         $data['review_count'] = $review_count;
     }
-    
+
     // Add average_rating if the column exists
     if (in_array('average_rating', $columns)) {
         $data['average_rating'] = $average_rating;
@@ -189,18 +187,18 @@ try {
             $data[$field] = isset($_POST[$field]) ? 1 : 0;
         }
     }
-    
+
     // Enforce business rules for source_type and allow_reviews
     if (in_array('source_type', $columns) && in_array('allow_reviews', $columns)) {
         $source_type = $_POST['source_type'] ?? 'child';
-        
+
         // Validate source_type
         if (!in_array($source_type, ['child', 'parent', 'classic'])) {
             $source_type = 'child';
         }
-        
+
         $data['source_type'] = $source_type;
-        
+
         // Apply business rules
         if ($source_type === 'child') {
             // Children's stories NEVER get reviews
@@ -211,7 +209,7 @@ try {
             $data['allow_reviews'] = 1;
             error_log("ENFORCING RULE: Classic work - allow_reviews set to 1");
         }
-        
+
         error_log("Final values - source_type: {$data['source_type']}, allow_reviews: {$data['allow_reviews']}");
     }
 
@@ -253,47 +251,47 @@ try {
         // Update existing story
         $setClause = [];
         $updateData = [];
-        
+
         foreach ($data as $key => $value) {
             $setClause[] = "$key = ?";
             $updateData[] = $value;
         }
-        
+
         // Add updated_at
         $setClause[] = "updated_at = NOW()";
-        
+
         // Add ID at the end
         $updateData[] = $id;
-        
+
         $sql = "UPDATE stories SET " . implode(', ', $setClause) . " WHERE id = ?";
         $stmt = $db->prepare($sql);
         $stmt->execute($updateData);
-        
+
         // Delete existing tags
         $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
         if ($stmt->rowCount() > 0) {
             $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
             $stmt->execute([$id]);
         }
-        
+
         // Delete existing author relationships for THIS STORY ONLY
         $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
         if ($stmt->rowCount() > 0) {
             // First delete only this story's author relationships
             $stmt = $db->prepare("DELETE FROM story_authors WHERE story_id = ?");
             $stmt->execute([$id]);
-            
+
             // Then add the new author relationship for this story
             $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
             $stmt->execute([$id, $author_id]);
             error_log("Updated story_authors relationship: story_id=$id, author_id=$author_id");
-            
+
             // Debug log all story_authors relationships
             $allRelationships = $db->query("SELECT sa.story_id, s.title, sa.author_id, a.name
                                            FROM story_authors sa
                                            JOIN stories s ON sa.story_id = s.id
                                            JOIN authors a ON sa.author_id = a.id")->fetchAll();
-            
+
             foreach ($allRelationships as $rel) {
                 error_log("Story-Author relationship: Story ID: " . $rel['story_id'] .
                          ", Title: " . $rel['title'] .
@@ -307,18 +305,18 @@ try {
         // Create new story
         $columns = array_keys($data);
         $placeholders = array_fill(0, count($columns), '?');
-        
+
         // Add created_at and updated_at
         $columns[] = 'created_at';
         $columns[] = 'updated_at';
         $placeholders[] = 'NOW()';
         $placeholders[] = 'NOW()';
-        
+
         $sql = "INSERT INTO stories (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $db->prepare($sql);
         $stmt->execute(array_values($data));
         $id = $db->lastInsertId();
-        
+
         // Add author relationship for new story
         $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
         if ($stmt->rowCount() > 0) {
@@ -338,7 +336,7 @@ try {
                 $values = array_fill(0, count($tags), "($id, ?)");
                 $sql = "INSERT INTO story_tags (story_id, tag_id) VALUES " . implode(', ', $values);
                 $stmt = $db->prepare($sql);
-                
+
                 $i = 1;
                 foreach ($tags as $tag_id) {
                     $stmt->bindValue($i++, $tag_id);
@@ -357,7 +355,7 @@ try {
     // Store success message and redirect
     session_start();
     $_SESSION['success'] = $message;
-    
+
     header("Location: stories.php");
     exit;
 
@@ -368,15 +366,14 @@ try {
     }
 
     error_log("Save story error: " . $e->getMessage());
-    
+
     // Store error in session and redirect back to form
     session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     $redirect = $id ? "story-form.php?id=$id" : "story-form.php";
     header("Location: $redirect");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

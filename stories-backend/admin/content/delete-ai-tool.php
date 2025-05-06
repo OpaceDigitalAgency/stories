@@ -1,12 +1,10 @@
 <?php
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include header
-require_once '../includes/header.php';
-
-
-// Page variables
-$pageTitle = 'Delete Ai Tool';
-$currentPage = 'delete-ai-tool';
+// This is a processing script, no UI needed
 
 require_once '../../simple_auth.php';
 
@@ -70,7 +68,7 @@ try {
     // Store success message and redirect
     session_start();
     $_SESSION['success'] = "AI tool deleted successfully";
-    
+
     header("Location: ai-tools.php");
     exit;
 
@@ -81,14 +79,13 @@ try {
     }
 
     error_log("Delete AI tool error: " . $e->getMessage());
-    
+
     // Store error in session and redirect
     session_start();
     $_SESSION['error'] = $e->getMessage();
-    
+
     header("Location: ai-tools.php");
     exit;
 }
 
-// Include footer
-require_once '../includes/footer.php';
+// No footer needed for processing script

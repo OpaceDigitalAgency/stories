@@ -112,14 +112,23 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'AI Tools';
 $currentPage = 'ai-tools';
 $pageDescription = 'Manage all your AI tools from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="ai-tool-form.php">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-plus" aria-hidden="true"></i> Add New AI Tool
-        </button>
-    </form>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+<div class="premium-flex premium-gap-2">
+    <a href="ai-tool-form.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New AI Tool
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
 </div>
@@ -169,61 +178,60 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
-    // Define columns
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($ai_tools as $tool) {
+        // Format the status
+        $status = isset($tool['is_published']) && $tool['is_published'] ? 'Published' : 'Draft';
+        $featured = isset($tool['featured']) && $tool['featured'] ? 'Yes' : 'No';
+
+        // Format the rating
+        $rating = number_format($tool['rating'] ?? 0, 1);
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $tool['id'],
+            'title' => $tool['title'],
+            'category' => $tool['category_name'] ?? 'None',
+            'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),
+            'rating' => $rating,
+            'featured' => $featured,
+            'status' => $status
+        ];
+    }
+
+    // Define columns for the table
     $columns = [
-        'id' => 'ID',
         'title' => 'Title',
-        'category_name' => 'Category',
-        'pricing_type' => 'Pricing',
+        'category' => 'Category',
+        'pricing' => 'Pricing',
         'rating' => 'Rating',
         'featured' => 'Featured',
-        'is_published' => 'Published'
+        'status' => 'Status'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'title' => function($tool, $key) {
-            $output = '<div class="item-title">';
-            $output .= htmlspecialchars($tool[$key]);
-            $output .= '</div>';
-            return $output;
-        },
-        'category_name' => function($tool, $key) {
-            return htmlspecialchars($tool[$key] ?? 'None');
-        },
-        'pricing_type' => function($tool, $key) {
-            return ucfirst($tool[$key]);
-        },
-        'rating' => function($tool, $key) {
-            return number_format($tool[$key], 1);
-        },
-        'featured' => function($tool, $key) {
-            return $tool[$key] ? 'Yes' : 'No';
-        },
-        'is_published' => function($tool, $key) {
-            return $tool[$key] ? 'Yes' : 'No';
-        }
-    ];
+    // Define which fields are editable inline
+    $editableFields = ['title'];
 
-    // Add debug output before rendering
-    error_log("Rendering table with " . count($ai_tools) . " tools");
-    error_log("Tools data: " . json_encode(array_slice($ai_tools, 0, 2)));
-    error_log("Columns: " . json_encode($columns));
-    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
-
-    // Render the table
-    renderEnhancedTable($ai_tools, $columns, [
-        'content_type' => 'ai_tools',
-        'name_field' => 'title',
-        'empty_message' => 'No AI tools found. Add your first AI tool!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-ai-tool.php?id={id}',
-        'edit_url' => 'ai-tool-form.php?id={id}',
-        'delete_url' => 'delete-ai-tool.php'
-    ]);
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'ai_tool', // This must match a key in the $tableMap array in update-field.php
+        'ai-tools-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
 }
 
 // Include pagination component if needed

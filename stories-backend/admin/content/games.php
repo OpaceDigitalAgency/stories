@@ -76,14 +76,23 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Games';
 $currentPage = 'games';
 $pageDescription = 'Manage all your games from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="game-form.php">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-plus" aria-hidden="true"></i> Add New Game
-        </button>
-    </form>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+<div class="premium-flex premium-gap-2">
+    <a href="game-form.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Game
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
 </div>
@@ -133,54 +142,58 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
-    // Define columns
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($games as $game) {
+        // Format the status
+        $status = isset($game['is_published']) && $game['is_published'] ? 'Published' : 'Draft';
+        $featured = isset($game['featured']) && $game['featured'] ? 'Yes' : 'No';
+
+        // Format the created date
+        $createdDate = date('M j, Y', strtotime($game['created_at']));
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $game['id'],
+            'title' => $game['title'],
+            'slug' => $game['slug'] ?? '',
+            'featured' => $featured,
+            'status' => $status,
+            'created' => $createdDate
+        ];
+    }
+
+    // Define columns for the table
     $columns = [
-        'id' => 'ID',
         'title' => 'Title',
         'slug' => 'Slug',
         'featured' => 'Featured',
-        'is_published' => 'Published',
-        'created_at' => 'Created'
+        'status' => 'Status',
+        'created' => 'Created'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'title' => function($game, $key) {
-            $output = '<div class="item-title">';
-            $output .= htmlspecialchars($game[$key]);
-            $output .= '</div>';
-            return $output;
-        },
-        'featured' => function($game, $key) {
-            return $game[$key] ? 'Yes' : 'No';
-        },
-        'is_published' => function($game, $key) {
-            return $game[$key] ? 'Yes' : 'No';
-        },
-        'created_at' => function($game, $key) {
-            return date('M j, Y', strtotime($game[$key]));
-        }
-    ];
+    // Define which fields are editable inline
+    $editableFields = ['title', 'slug'];
 
-    // Add debug output before rendering
-    error_log("Rendering table with " . count($games) . " games");
-    error_log("Games data: " . json_encode(array_slice($games, 0, 2)));
-    error_log("Columns: " . json_encode($columns));
-    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
-
-    // Render the table
-    renderEnhancedTable($games, $columns, [
-        'content_type' => 'games',
-        'name_field' => 'title',
-        'empty_message' => 'No games found. Add your first game!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-game.php?id={id}',
-        'edit_url' => 'game-form.php?id={id}',
-        'delete_url' => 'delete-game.php'
-    ]);
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'game', // This must match a key in the $tableMap array in update-field.php
+        'games-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
 }
 
 // Include pagination component if needed

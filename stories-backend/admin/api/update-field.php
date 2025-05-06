@@ -58,6 +58,8 @@ $tableMap = [
 
 // Debug: Log the request data
 error_log("Update Field Request: " . json_encode($_POST));
+error_log("Session data: " . json_encode($_SESSION));
+error_log("Database connection: " . ($db ? 'Connected' : 'Not connected'));
 
 // Map field names to database columns
 $fieldMap = [
@@ -122,7 +124,7 @@ try {
 
     // Check if the table exists
     $tableExistsQuery = "SHOW TABLES LIKE '$table'";
-    $tableExists = $pdo->query($tableExistsQuery)->rowCount() > 0;
+    $tableExists = $db->query($tableExistsQuery)->rowCount() > 0;
 
     if (!$tableExists) {
         // Log the error
@@ -136,7 +138,7 @@ try {
 
     // Check if the column exists
     $columnExistsQuery = "SHOW COLUMNS FROM `$table` LIKE '$column'";
-    $columnExists = $pdo->query($columnExistsQuery)->rowCount() > 0;
+    $columnExists = $db->query($columnExistsQuery)->rowCount() > 0;
 
     if (!$columnExists) {
         // Log the error
@@ -153,7 +155,7 @@ try {
 
     // Add updated_at if it exists
     $updatedAtQuery = "SHOW COLUMNS FROM `$table` LIKE 'updated_at'";
-    $hasUpdatedAt = $pdo->query($updatedAtQuery)->rowCount() > 0;
+    $hasUpdatedAt = $db->query($updatedAtQuery)->rowCount() > 0;
 
     if ($hasUpdatedAt) {
         $sql .= ", updated_at = NOW()";
@@ -161,7 +163,7 @@ try {
 
     $sql .= " WHERE id = :id";
 
-    $stmt = $pdo->prepare($sql);
+    $stmt = $db->prepare($sql);
 
     // Bind the parameters
     $stmt->bindParam(':value', $value);
@@ -172,6 +174,9 @@ try {
 
     // Check if the update was successful
     if ($result) {
+        // Log the success
+        error_log("Field update successful: Table: $table, ID: $id, Column: $column, Value: $value");
+
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
@@ -185,6 +190,9 @@ try {
             ]
         ]);
     } else {
+        // Log the error
+        error_log("Field update failed: Table: $table, ID: $id, Column: $column, Value: $value");
+
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'error' => 'Failed to update field']);
     }

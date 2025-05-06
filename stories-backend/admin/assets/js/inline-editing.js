@@ -246,7 +246,8 @@ function saveFieldValue(itemId, itemType, fieldName, fieldValue) {
     // Send the request
     return fetch('../api/update-field.php', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'same-origin'
     })
     .then(response => {
         if (!response.ok) {
@@ -256,8 +257,8 @@ function saveFieldValue(itemId, itemType, fieldName, fieldValue) {
     })
     .catch(error => {
         console.error('Error:', error);
-        // For now, simulate a successful response to avoid breaking the UI
-        return { success: true };
+        // Don't simulate success - show the actual error
+        return { success: false, error: error.message };
     });
 }
 

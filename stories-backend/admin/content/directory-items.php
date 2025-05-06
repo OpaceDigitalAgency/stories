@@ -108,14 +108,23 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Directory Items';
 $currentPage = 'directory';
 $pageDescription = 'Manage all your directory items from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="directory-item-form.php">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-plus" aria-hidden="true"></i> Add New Directory Item
-        </button>
-    </form>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+<div class="premium-flex premium-gap-2">
+    <a href="directory-item-form.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Directory Item
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
 </div>
@@ -165,65 +174,64 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
-    // Define columns
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($directory_items as $item) {
+        // Format the status
+        $status = isset($item['is_published']) && $item['is_published'] ? 'Published' : 'Draft';
+        $featured = isset($item['featured']) && $item['featured'] ? 'Yes' : 'No';
+
+        // Format the created date
+        $createdDate = date('M j, Y', strtotime($item['created_at']));
+
+        // Format the website URL
+        $websiteUrl = !empty($item['website_url']) ?
+            '<a href="' . htmlspecialchars($item['website_url']) . '" target="_blank">Visit</a>' : '-';
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $item['id'],
+            'title' => $item['title'],
+            'category' => $item['category_name'] ?? 'None',
+            'website' => $websiteUrl,
+            'featured' => $featured,
+            'status' => $status,
+            'created' => $createdDate
+        ];
+    }
+
+    // Define columns for the table
     $columns = [
-        'id' => 'ID',
         'title' => 'Title',
-        'category_name' => 'Category',
-        'website_url' => 'Website',
+        'category' => 'Category',
+        'website' => 'Website',
         'featured' => 'Featured',
-        'is_published' => 'Published',
-        'created_at' => 'Created'
+        'status' => 'Status',
+        'created' => 'Created'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'title' => function($item, $key) {
-            $output = '<div class="item-title">';
-            $output .= htmlspecialchars($item[$key]);
-            $output .= '</div>';
-            return $output;
-        },
-        'category_name' => function($item, $key) {
-            return htmlspecialchars($item[$key] ?? 'None');
-        },
-        'website_url' => function($item, $key) {
-            if (!empty($item[$key])) {
-                return '<a href="' . htmlspecialchars($item[$key]) . '" target="_blank">Visit</a>';
-            } else {
-                return '-';
-            }
-        },
-        'featured' => function($item, $key) {
-            return $item[$key] ? 'Yes' : 'No';
-        },
-        'is_published' => function($item, $key) {
-            return $item[$key] ? 'Yes' : 'No';
-        },
-        'created_at' => function($item, $key) {
-            return date('M j, Y', strtotime($item[$key]));
-        }
-    ];
+    // Define which fields are editable inline
+    $editableFields = ['title'];
 
-    // Add debug output before rendering
-    error_log("Rendering table with " . count($directory_items) . " items");
-    error_log("Items data: " . json_encode(array_slice($directory_items, 0, 2)));
-    error_log("Columns: " . json_encode($columns));
-    error_log("Custom formatters: " . json_encode(array_keys($customFormatters)));
-
-    // Render the table
-    renderEnhancedTable($directory_items, $columns, [
-        'content_type' => 'directory_items',
-        'name_field' => 'title',
-        'empty_message' => 'No directory items found. Add your first directory item!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-directory-item.php?id={id}',
-        'edit_url' => 'directory-item-form.php?id={id}',
-        'delete_url' => 'delete-directory-item.php'
-    ]);
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'directory_item', // This must match a key in the $tableMap array in update-field.php
+        'directory-items-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
 }
 
 // Include pagination component if needed

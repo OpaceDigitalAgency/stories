@@ -146,7 +146,22 @@ try {
     // Set up request parameters
     $size = $data['size'] ?? '1024x1024';
     $variations = min(max((int)($data['variations'] ?? 1), 1), 4); // Limit to 1-4 variations
-    $quality = $data['quality'] ?? 'standard';
+
+    // Map quality values to those supported by the API
+    $qualityMap = [
+        'standard' => 'medium',
+        'hd' => 'high',
+        'high' => 'high',
+        'medium' => 'medium',
+        'low' => 'low',
+        'auto' => 'auto'
+    ];
+    $requestedQuality = $data['quality'] ?? 'medium';
+    $quality = $qualityMap[$requestedQuality] ?? 'medium';
+
+    // Log quality mapping for debugging
+    error_log("Requested quality: $requestedQuality, Mapped to: $quality");
+
     // 'style' parameter removed as it's no longer supported by the API
 
     // Log any style parameter for debugging

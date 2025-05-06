@@ -422,10 +422,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         <div class="col-md-4 mb-3">
                             <label for="quality" class="form-label">Quality</label>
                             <select class="form-select" id="quality" name="quality">
-                                <option value="standard" selected>Standard</option>
-                                <option value="hd">HD</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                                <option value="auto">Auto</option>
                             </select>
-                            <small class="form-text text-muted">Note: 'style' parameter is no longer supported by OpenAI API</small>
+                            <small class="form-text text-muted">Valid values: 'low', 'medium', 'high', 'auto'</small>
                         </div>
 
                         <div class="col-md-4 mb-3">

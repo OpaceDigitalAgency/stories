@@ -106,7 +106,7 @@ if (!empty($apiKey)) {
             'prompt' => 'A simple test image of a blue circle on a white background',
             'n' => 1,
             'size' => '1024x1024',
-            'quality' => 'standard'
+            'quality' => 'medium' // Valid values: 'low', 'medium', 'high', 'auto'
             // 'style' parameter removed as it's no longer supported
             // 'response_format' parameter removed as it's no longer supported
         ];

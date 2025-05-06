@@ -152,10 +152,12 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                         <div class="form-group col-md-4">
                             <label for="ai-quality">Quality</label>
                             <select id="ai-quality" class="form-control">
-                                <option value="standard">Standard</option>
-                                <option value="hd">HD</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                                <option value="auto">Auto</option>
                             </select>
-                            <small class="form-text text-muted">Note: 'style' parameter is no longer supported</small>
+                            <small class="form-text text-muted">Higher quality = better results but slower</small>
                         </div>
 
                         <div class="form-group col-md-4">

@@ -43,6 +43,12 @@ graph TD
 **Problem**: All sections (AI-Enhanced, Self-Published, Sponsored) were showing the same stories.
 **Solution**: Modified the API calls in `index.astro` to properly filter stories by type using query parameters.
 
+### Issue 8: Enhanced table breaking story edit/view functionality
+**Problem**: The enhanced table feature was breaking the story edit/view functionality, causing incorrect navigation when clicking view or edit buttons.
+**Solution**: Fixed the match statement in enhanced-table-component.php to use the correct file paths for story view and edit actions:
+- Changed 'story' => 'stories.php' to 'story' => 'view-story.php' for view actions
+- Changed 'story' => 'stories.php' to 'story' => 'story-form.php' for edit actions
+
 ### Issue 2: Form saving issues
 **Problem**: Certain fields like "Is Self Published" and author selection weren't saving properly.
 **Solution**:

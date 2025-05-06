@@ -1,5 +1,14 @@
 # Stories From The Web - Progress Log
 
+## 2025-05-06
+- Fixed enhanced table component for stories:
+  - Identified issue in enhanced-table-component.php where the match statement for story actions was incorrectly configured
+  - For view actions, it was using 'stories.php' instead of 'view-story.php'
+  - For edit actions, it was also using 'stories.php' instead of 'story-form.php'
+  - Updated both match statements to use the correct file paths
+  - This fix ensures that the enhanced table feature works correctly with stories, allowing proper navigation to view and edit pages
+  - The issue was causing the stories page to not properly handle edit and view actions, breaking the functionality that used to work before the enhanced table feature was implemented
+
 ## 2025-05-04
 - Fixed admin interface issues:
   - Fixed favicon in admin dashboard by using absolute URL path

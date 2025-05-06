@@ -49,6 +49,13 @@
   - Updated database to point to appropriately sized images
   - Documented the solution for future reference
 
+### Admin Interface
+- Fixed enhanced table component for stories ✅
+  - Identified issue with incorrect file paths in match statement
+  - Updated view action to use view-story.php instead of stories.php
+  - Updated edit action to use story-form.php instead of stories.php
+  - Ensured proper navigation when clicking view or edit buttons
+
 ## Pending Tasks 🔄
 
 ### Testing

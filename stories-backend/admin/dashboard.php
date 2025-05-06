@@ -120,6 +120,14 @@ $pageActions = '
 </div>
 ';
 
+// Add extra head content for charts
+$extraHeadContent = '
+<!-- Add Chart.js for dashboard visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Add dashboard charts JS -->
+<script src="assets/js/dashboard-charts.js"></script>
+';
+
 // Include header
 require_once 'includes/header.php';
 
@@ -284,6 +292,57 @@ if (isset($error)): ?>
                     <a href="content/contacts.php?filter=not_responded" class="btn btn-warning btn-sm" aria-label="View Unresponded">
                         <i class="fas fa-reply" aria-hidden="true"></i> Unresponded
                     </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Charts -->
+        <div class="row">
+            <!-- Content Statistics Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2 class="chart-title"><i class="fas fa-chart-bar"></i> Content Statistics</h2>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="content-stats-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Timeline Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2 class="chart-title"><i class="fas fa-chart-line"></i> Activity Timeline</h2>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="activity-timeline-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Distribution Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2 class="chart-title"><i class="fas fa-chart-pie"></i> Content Distribution</h2>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="content-distribution-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Activity Chart -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2 class="chart-title"><i class="fas fa-users"></i> User Activity</h2>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="user-activity-chart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

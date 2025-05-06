@@ -237,10 +237,16 @@ if (isset($error)) {
     echo '</div>';
 }
 
-// Include search component
-include_once '../includes/search-component.php';
-if (function_exists('renderSearchComponent')) {
-    renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+// Include predictive search component
+include_once '../includes/predictive-search-component.php';
+if (function_exists('renderPredictiveSearchComponent')) {
+    renderPredictiveSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+} else {
+    // Fallback to regular search component
+    include_once '../includes/search-component.php';
+    if (function_exists('renderSearchComponent')) {
+        renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
+    }
 }
 
 // Include bulk actions component

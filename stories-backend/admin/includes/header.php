@@ -73,22 +73,42 @@ $siteName = get_config('site.name', 'Stories From The Web');
     ?>
     <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
-    <link rel="stylesheet" href="<?php echo $assetsPath; ?>">
+
+    <!-- Meta tags for better accessibility -->
+    <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
+    <meta name="theme-color" content="#4361ee">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- CSS Files -->
     <!-- Add Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Add Thumbnails CSS -->
+
+    <!-- Admin CSS Files -->
     <?php
+    $modernDashboardCssPath = $isContentDir ? '../assets/css/modern-dashboard.css' : 'assets/css/modern-dashboard.css';
     $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
     ?>
+    <link rel="stylesheet" href="<?php echo $modernDashboardCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
+
+    <!-- JavaScript Libraries -->
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Add Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <!-- Add Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+
+    <!-- Admin JavaScript Files -->
+    <?php
+    $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
+    ?>
+    <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
+
     <!-- Fix for dropdown issues -->
     <script>
         $(document).ready(function() {
@@ -117,9 +137,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
             });
         });
     </script>
-    <!-- Meta tags for better accessibility -->
-    <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
-    <meta name="theme-color" content="#4361ee">
+
     <?php if (isset($extraHeadContent)) echo $extraHeadContent; ?>
 </head>
 <body>

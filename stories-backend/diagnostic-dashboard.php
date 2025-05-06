@@ -27,6 +27,26 @@ function fileExists($path) {
 
 // Define diagnostic tools
 $diagnosticTools = [
+    'AI Tests' => [
+        [
+            'name' => 'OpenAI API Test',
+            'description' => 'Test the connection to the OpenAI API and diagnose any issues with AI image generation',
+            'path' => 'diagnostics/ai/openai_api_test.php',
+            'icon' => 'fa-robot'
+        ],
+        [
+            'name' => 'AI Image Debug',
+            'description' => 'Debug issues with AI image generation by testing the API endpoint, CORS settings, and providing detailed error information',
+            'path' => 'diagnostics/ai/ai_image_debug.php',
+            'icon' => 'fa-image'
+        ],
+        [
+            'name' => 'AI Debug Endpoint',
+            'description' => 'Direct access to the AI debug API endpoint for diagnostic information',
+            'path' => 'api/v1/ai/debug.php',
+            'icon' => 'fa-code'
+        ]
+    ],
     'API Tests' => [
         [
             'name' => 'API Test Suite',
@@ -217,6 +237,7 @@ $diagnosticTools = [
             font-size: 2rem;
             margin-bottom: 15px;
         }
+        .ai-tests .tool-icon { color: #6610f2; }
         .api-tests .tool-icon { color: #28a745; }
         .auth-tests .tool-icon { color: #007bff; }
         .admin-tests .tool-icon { color: #6f42c1; }

@@ -39,7 +39,7 @@ try {
             contact_email VARCHAR(255),
             contact_phone VARCHAR(50),
             address TEXT,
-            image VARCHAR(255),
+            cover_url VARCHAR(255),
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
             slug VARCHAR(255) NOT NULL,
@@ -90,7 +90,7 @@ try {
                d.contact_email,
                d.contact_phone,
                d.address,
-               COALESCE(d.cover_url, d.image) as image_url,
+               d.cover_url as image_url,
                d.featured,
                d.is_published,
                d.slug,
@@ -221,7 +221,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'image_url' => $item['image_url'] ?? $item['image'] ?? '../assets/images/default-cover.jpg',
+            'image_url' => $item['image_url'] ?? '../assets/images/default-cover.jpg',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',

@@ -35,7 +35,7 @@ try {
             title VARCHAR(255) NOT NULL,
             description TEXT,
             slug VARCHAR(255) NOT NULL,
-            image VARCHAR(255),
+            cover_url VARCHAR(255),
             featured TINYINT(1) DEFAULT 0,
             is_published TINYINT(1) DEFAULT 0,
             published_at DATETIME,
@@ -61,7 +61,7 @@ try {
                title,
                description,
                slug,
-               COALESCE(cover_url, image) as image_url,
+               cover_url as image_url,
                featured,
                is_published,
                published_at,
@@ -185,7 +185,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $game['id'],
-            'image_url' => $game['image_url'] ?? $game['image'] ?? '../assets/images/default-cover.jpg',
+            'image_url' => $game['image_url'] ?? '../assets/images/default-cover.jpg',
             'title' => $game['title'],
             'slug' => $game['slug'] ?? '',
             'featured' => $featured,

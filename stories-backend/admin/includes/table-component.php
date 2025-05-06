@@ -352,26 +352,17 @@ function getOptimizedImageUrl($originalUrl, $size = 'thumbnail') {
         // Extract the filename without the path
         $filename = basename($originalUrl);
 
-        // Check if the filename has a unique ID prefix (like 6819c755d18d7-)
-        if (preg_match('/^([a-f0-9]+)-(.+)$/i', $filename, $matches)) {
-            // Use the existing ID prefix
-            $uniqueId = $matches[1];
-            $baseFilename = $matches[2];
-            $thumbnailUrl = '/uploads/optimized/' . $uniqueId . '-' . $baseFilename;
+        // Extract the base filename without any unique ID prefix
+        $pathInfo = pathinfo($filename);
+        $baseFilename = $pathInfo['filename'];
 
-            // Replace extension with webp if needed
-            $thumbnailUrl = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $thumbnailUrl);
-
-            // Add thumbnail suffix if not present
-            if (strpos($thumbnailUrl, '-thumbnail.') === false) {
-                $thumbnailUrl = preg_replace('/\.(webp|jpe?g|png|gif)$/i', '-thumbnail.$1', $thumbnailUrl);
-            }
-        } else {
-            // No unique ID, use the filename directly
-            $pathInfo = pathinfo($filename);
-            $baseFilename = $pathInfo['filename'];
-            $thumbnailUrl = '/uploads/optimized/' . $baseFilename . '-thumbnail.webp';
+        // Remove any unique ID prefix (like 6819c755d18d7-) from the filename
+        if (preg_match('/^[a-f0-9]+-(.+)$/i', $baseFilename, $matches)) {
+            $baseFilename = $matches[1];
         }
+
+        // Create the thumbnail URL without the unique ID prefix
+        $thumbnailUrl = '/uploads/optimized/' . $baseFilename . '-thumbnail.webp';
 
         return $thumbnailUrl;
     }

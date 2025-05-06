@@ -24,6 +24,7 @@ function renderEnhancedTable($items, $columns, $options = []) {
         'class' => 'table',
         'empty_message' => 'No items found.',
         'checkbox_column' => true,
+        'thumbnail_column' => true, // New option for thumbnail column
         'actions_column' => true,
         'actions' => [
             'view' => true,
@@ -39,6 +40,7 @@ function renderEnhancedTable($items, $columns, $options = []) {
         'delete_type' => 'simple', // Default to simple delete, override for special cases
         'custom_formatters' => [], // Custom formatters for specific columns
         'row_classes' => [], // Custom classes for specific rows
+        'thumbnail_field' => null, // Field containing the thumbnail URL
     ];
 
     // Merge options with defaults
@@ -75,6 +77,10 @@ function renderEnhancedTable($items, $columns, $options = []) {
                         <th class="checkbox-column">
                             <input type="checkbox" id="select-all" aria-label="Select all <?php echo htmlspecialchars($options['content_type']); ?>">
                         </th>
+                    <?php endif; ?>
+
+                    <?php if ($options['thumbnail_column']): ?>
+                        <th class="thumbnail-column">Image</th>
                     <?php endif; ?>
 
                     <?php foreach ($columns as $key => $label): ?>
@@ -114,6 +120,26 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                         value="<?php echo $item[$options['id_field']]; ?>"
                                         aria-label="Select <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
                                     >
+                                </td>
+                            <?php endif; ?>
+
+                            <?php if ($options['thumbnail_column']): ?>
+                                <td class="thumbnail-column">
+                                    <?php
+                                    // Get thumbnail URL based on content type
+                                    $thumbnailUrl = getThumbnailUrl($item, $options['content_type'], $options['thumbnail_field']);
+                                    if ($thumbnailUrl): ?>
+                                        <img
+                                            src="<?php echo htmlspecialchars($thumbnailUrl); ?>"
+                                            alt="<?php echo htmlspecialchars($item[$options['name_field']] ?? 'Thumbnail'); ?>"
+                                            class="admin-thumbnail"
+                                            loading="lazy"
+                                        >
+                                    <?php else: ?>
+                                        <div class="no-thumbnail">
+                                            <i class="fas fa-image" aria-hidden="true"></i>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                             <?php endif; ?>
 
@@ -192,4 +218,75 @@ function renderEnhancedTable($items, $columns, $options = []) {
     <?php
 }
 
+/**
+ * Gets the thumbnail URL for an item based on content type
+ *
+ * @param array $item The item data
+ * @param string $contentType The content type (stories, posts, games, etc.)
+ * @param string|null $thumbnailField Optional specific field containing the thumbnail URL
+ * @return string|null The thumbnail URL or null if not found
+ */
+function getThumbnailUrl($item, $contentType, $thumbnailField = null) {
+    // If a specific thumbnail field is provided and exists in the item, use it
+    if ($thumbnailField && isset($item[$thumbnailField]) && !empty($item[$thumbnailField])) {
+        return $item[$thumbnailField];
+    }
 
+    // Check for common image fields based on content type
+    switch ($contentType) {
+        case 'stories':
+            // Check for cover_url field
+            if (isset($item['cover_url']) && !empty($item['cover_url'])) {
+                return $item['cover_url'];
+            }
+            break;
+
+        case 'posts':
+        case 'blog_posts':
+            // Check for cover_url field
+            if (isset($item['cover_url']) && !empty($item['cover_url'])) {
+                return $item['cover_url'];
+            }
+            break;
+
+        case 'games':
+            // Check for cover_url field
+            if (isset($item['cover_url']) && !empty($item['cover_url'])) {
+                return $item['cover_url'];
+            }
+            break;
+
+        case 'authors':
+            // Check for avatar field
+            if (isset($item['avatar']) && !empty($item['avatar'])) {
+                return $item['avatar'];
+            }
+            break;
+
+        case 'directory_items':
+            // Check for image_url field
+            if (isset($item['image_url']) && !empty($item['image_url'])) {
+                return $item['image_url'];
+            }
+            break;
+
+        case 'ai_tools':
+            // Check for image_url field
+            if (isset($item['image_url']) && !empty($item['image_url'])) {
+                return $item['image_url'];
+            }
+            break;
+    }
+
+    // Check for any field that might contain an image URL
+    $possibleImageFields = ['thumbnail', 'thumbnail_url', 'image', 'image_url', 'photo', 'photo_url', 'picture', 'picture_url'];
+
+    foreach ($possibleImageFields as $field) {
+        if (isset($item[$field]) && !empty($item[$field])) {
+            return $item[$field];
+        }
+    }
+
+    // No thumbnail found
+    return null;
+}

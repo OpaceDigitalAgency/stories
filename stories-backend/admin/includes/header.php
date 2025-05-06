@@ -78,6 +78,11 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add Thumbnails CSS -->
+    <?php
+    $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
+    ?>
+    <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Add Popper.js -->

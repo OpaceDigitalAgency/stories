@@ -646,7 +646,7 @@ if ($refreshModels) {
                                 <div class="variables-list">
                                     <div class="variable-type" data-type="story">
                                         <strong>Story Variables:</strong>
-                                        <code>{{title}}</code>, <code>{{excerpt}}</code>, <code>{{content}}</code>, <code>{{age_group}}</code>
+                                        <code>{{title}}</code>, <code>{{summary}}</code>, <code>{{story}}</code>, <code>{{age_group}}</code>
                                     </div>
                                     <div class="variable-type" data-type="blog_post">
                                         <strong>Blog Post Variables:</strong>
@@ -742,7 +742,7 @@ if ($refreshModels) {
                                 <div class="variables-list">
                                     <div class="variable-type" data-type="story">
                                         <strong>Story Variables:</strong>
-                                        <code>{{title}}</code>, <code>{{excerpt}}</code>, <code>{{content}}</code>, <code>{{age_group}}</code>
+                                        <code>{{title}}</code>, <code>{{summary}}</code>, <code>{{story}}</code>, <code>{{age_group}}</code>
                                     </div>
                                     <div class="variable-type" data-type="blog_post">
                                         <strong>Blog Post Variables:</strong>

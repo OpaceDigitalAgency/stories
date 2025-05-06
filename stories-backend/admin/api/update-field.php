@@ -1,7 +1,7 @@
 <?php
 /**
  * API Endpoint for Updating Fields
- * 
+ *
  * This file handles AJAX requests to update fields in the database.
  * It's used by the inline editing functionality.
  */
@@ -49,8 +49,12 @@ $tableMap = [
     'media' => 'media',
     'tag' => 'tags',
     'subscriber' => 'subscribers',
-    'contact' => 'contacts'
+    'contact' => 'contacts',
+    'test' => 'test_table' // For debugging purposes
 ];
+
+// Debug: Log the request data
+error_log("Update Field Request: " . json_encode($_POST));
 
 // Map field names to database columns
 $fieldMap = [
@@ -86,21 +90,86 @@ if (empty($table) || empty($column)) {
 }
 
 try {
+    // For debugging purposes, if the table is 'test_table', just return success
+    if ($table === 'test_table') {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'debug' => [
+                'id' => $id,
+                'type' => $type,
+                'field' => $field,
+                'column' => $column,
+                'value' => $value
+            ]
+        ]);
+        exit;
+    }
+
+    // Check if the table exists
+    $tableExistsQuery = "SHOW TABLES LIKE '$table'";
+    $tableExists = $pdo->query($tableExistsQuery)->rowCount() > 0;
+
+    if (!$tableExists) {
+        // Log the error
+        error_log("Table '$table' does not exist");
+
+        // Return an error response
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => "Table '$table' does not exist"]);
+        exit;
+    }
+
+    // Check if the column exists
+    $columnExistsQuery = "SHOW COLUMNS FROM `$table` LIKE '$column'";
+    $columnExists = $pdo->query($columnExistsQuery)->rowCount() > 0;
+
+    if (!$columnExists) {
+        // Log the error
+        error_log("Column '$column' does not exist in table '$table'");
+
+        // Return an error response
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => "Column '$column' does not exist in table '$table'"]);
+        exit;
+    }
+
     // Prepare the SQL statement
-    $sql = "UPDATE $table SET $column = :value, updated_at = NOW() WHERE id = :id";
+    $sql = "UPDATE `$table` SET `$column` = :value";
+
+    // Add updated_at if it exists
+    $updatedAtQuery = "SHOW COLUMNS FROM `$table` LIKE 'updated_at'";
+    $hasUpdatedAt = $pdo->query($updatedAtQuery)->rowCount() > 0;
+
+    if ($hasUpdatedAt) {
+        $sql .= ", updated_at = NOW()";
+    }
+
+    $sql .= " WHERE id = :id";
+
     $stmt = $pdo->prepare($sql);
-    
+
     // Bind the parameters
     $stmt->bindParam(':value', $value);
     $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-    
+
     // Execute the statement
     $result = $stmt->execute();
-    
+
     // Check if the update was successful
     if ($result) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
+        echo json_encode([
+            'success' => true,
+            'debug' => [
+                'id' => $id,
+                'type' => $type,
+                'field' => $field,
+                'column' => $column,
+                'value' => $value,
+                'table' => $table
+            ]
+        ]);
     } else {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'error' => 'Failed to update field']);
@@ -108,8 +177,19 @@ try {
 } catch (PDOException $e) {
     // Log the error
     error_log('Database error: ' . $e->getMessage());
-    
+
     // Return an error response
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Database error']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Database error: ' . $e->getMessage(),
+        'debug' => [
+            'id' => $id,
+            'type' => $type,
+            'field' => $field,
+            'column' => $column,
+            'value' => $value,
+            'table' => $table ?? 'unknown'
+        ]
+    ]);
 }

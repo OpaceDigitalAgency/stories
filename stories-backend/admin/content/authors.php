@@ -177,7 +177,7 @@ if (function_exists('renderEnhancedTable')) {
     renderEnhancedTable(
         $tableData,
         $columns,
-        'author',
+        'author', // This must match a key in the $tableMap array in update-field.php
         'authors-table',
         [
             'showCheckboxes' => true,

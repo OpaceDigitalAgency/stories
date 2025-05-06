@@ -242,7 +242,7 @@ if (function_exists('renderEnhancedTable')) {
     renderEnhancedTable(
         $tableData,
         $columns,
-        'post',
+        'post', // This must match a key in the $tableMap array in update-field.php
         'posts-table',
         [
             'showCheckboxes' => true,

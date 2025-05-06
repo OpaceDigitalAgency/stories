@@ -9,6 +9,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Inline Editing JS loaded');
 
+    // Debug: Log all editable fields
+    const editableFields = document.querySelectorAll('.premium-editable');
+    console.log(`Found ${editableFields.length} editable fields`);
+
+    // Debug: Log all tables with data-item-type
+    const tables = document.querySelectorAll('table[data-item-type]');
+    tables.forEach(table => {
+        console.log(`Table with ID ${table.id} has item type: ${table.getAttribute('data-item-type')}`);
+    });
+
     // Initialize inline editing
     initInlineEditing();
 });
@@ -22,17 +32,37 @@ function initInlineEditing() {
         // Check if the clicked element is an editable field or inside one
         const field = e.target.closest('.premium-editable');
 
-        if (field && !field.classList.contains('premium-editable-active')) {
-            // If already in edit mode, return
-            if (field.classList.contains('premium-editable-active')) {
-                return;
-            }
+        if (field) {
+            console.log('Clicked on editable field:', field);
+            console.log('Field name:', field.getAttribute('data-field-name'));
+            console.log('Item ID:', field.closest('tr')?.getAttribute('data-id'));
+            console.log('Item type:', field.closest('table')?.getAttribute('data-item-type'));
+
+            if (!field.classList.contains('premium-editable-active')) {
+                // If already in edit mode, return
+                if (field.classList.contains('premium-editable-active')) {
+                    return;
+                }
 
             // Get the field data
             const fieldType = field.getAttribute('data-field-type') || 'text';
             const fieldName = field.getAttribute('data-field-name');
-            const itemId = field.closest('tr').getAttribute('data-id');
-            const itemType = field.closest('table').getAttribute('data-item-type');
+            const itemId = field.closest('tr')?.getAttribute('data-id');
+            const table = field.closest('table');
+            const itemType = table?.getAttribute('data-item-type');
+
+            // Check if we have all the required data
+            if (!fieldName || !itemId || !itemType) {
+                console.error('Missing required data for inline editing:');
+                console.error('Field name:', fieldName);
+                console.error('Item ID:', itemId);
+                console.error('Item type:', itemType);
+                console.error('Table:', table);
+
+                // Show an error message
+                showNotification('Cannot edit this field: Missing required data', 'error');
+                return;
+            }
             const originalValue = field.textContent.trim();
 
             // Store the original value
@@ -167,6 +197,7 @@ function initInlineEditing() {
                     document.removeEventListener('click', handleOutsideClick);
                 }
             });
+            }
         }
     });
 }
@@ -204,6 +235,13 @@ function saveFieldValue(itemId, itemType, fieldName, fieldValue) {
     formData.append('field', fieldName);
     formData.append('value', fieldValue);
     formData.append('action', 'update_field');
+
+    // Debug: Log the form data
+    console.log('Saving field value:');
+    console.log('Item ID:', itemId);
+    console.log('Item type:', itemType);
+    console.log('Field name:', fieldName);
+    console.log('Field value:', fieldValue);
 
     // Send the request
     return fetch('../api/update-field.php', {

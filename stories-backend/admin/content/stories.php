@@ -310,7 +310,7 @@ if (function_exists('renderEnhancedTable')) {
     renderEnhancedTable(
         $tableData,
         $columns,
-        'story',
+        'story', // This must match a key in the $tableMap array in update-field.php
         'stories-table',
         [
             'showCheckboxes' => true,

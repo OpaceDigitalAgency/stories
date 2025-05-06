@@ -532,6 +532,46 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                     $('#' + currentPreviewElement).removeClass('d-none');
                                 }
 
+                                // Find the image upload component and update it
+                                const component = $('#' + currentTargetField).closest('.image-upload-component');
+                                if (component.length) {
+                                    // Update the preview container
+                                    component.find('.image-preview-container').addClass('has-image');
+                                    
+                                    // Update the preview
+                                    const preview = component.find('.image-preview');
+                                    preview.removeClass('empty');
+                                    
+                                    // If the preview doesn't have an image, create one
+                                    if (preview.find('img').length === 0) {
+                                        preview.empty();
+                                        preview.append('<img src="' + valueToStore + '" alt="Preview">');
+                                        
+                                        // Add info div with remove button
+                                        const infoDiv = $('<div class="image-info"></div>');
+                                        const removeBtn = $('<button type="button" class="btn btn-sm btn-danger remove-image"><i class="fas fa-times"></i> Remove</button>');
+                                        infoDiv.append(removeBtn);
+                                        preview.append(infoDiv);
+                                        
+                                        // Add event listener to remove button
+                                        removeBtn.on('click', function() {
+                                            // Clear the URL input
+                                            $('#' + currentTargetField).val('');
+                                            
+                                            // Remove has-image class from container
+                                            component.find('.image-preview-container').removeClass('has-image');
+                                            
+                                            // Reset preview
+                                            preview.empty();
+                                            preview.addClass('empty');
+                                            preview.append('<div class="placeholder"><i class="fas fa-image"></i><span>No image selected</span></div>');
+                                        });
+                                    } else {
+                                        // Just update the existing image
+                                        preview.find('img').attr('src', valueToStore);
+                                    }
+                                }
+
                                 // Store the filename and alt text in hidden fields if they exist
                                 const filenameField = currentTargetField + '_filename';
                                 const altTextField = currentTargetField + '_alt';
@@ -573,6 +613,46 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     $('#' + currentPreviewElement).attr('src', valueToStore);
                     $('#' + currentPreviewElement).attr('alt', altText || 'AI generated image');
                     $('#' + currentPreviewElement).removeClass('d-none');
+                }
+
+                // Find the image upload component and update it
+                const component = $('#' + currentTargetField).closest('.image-upload-component');
+                if (component.length) {
+                    // Update the preview container
+                    component.find('.image-preview-container').addClass('has-image');
+                    
+                    // Update the preview
+                    const preview = component.find('.image-preview');
+                    preview.removeClass('empty');
+                    
+                    // If the preview doesn't have an image, create one
+                    if (preview.find('img').length === 0) {
+                        preview.empty();
+                        preview.append('<img src="' + valueToStore + '" alt="Preview">');
+                        
+                        // Add info div with remove button
+                        const infoDiv = $('<div class="image-info"></div>');
+                        const removeBtn = $('<button type="button" class="btn btn-sm btn-danger remove-image"><i class="fas fa-times"></i> Remove</button>');
+                        infoDiv.append(removeBtn);
+                        preview.append(infoDiv);
+                        
+                        // Add event listener to remove button
+                        removeBtn.on('click', function() {
+                            // Clear the URL input
+                            $('#' + currentTargetField).val('');
+                            
+                            // Remove has-image class from container
+                            component.find('.image-preview-container').removeClass('has-image');
+                            
+                            // Reset preview
+                            preview.empty();
+                            preview.addClass('empty');
+                            preview.append('<div class="placeholder"><i class="fas fa-image"></i><span>No image selected</span></div>');
+                        });
+                    } else {
+                        // Just update the existing image
+                        preview.find('img').attr('src', valueToStore);
+                    }
                 }
 
                 // Store the filename and alt text in hidden fields if they exist

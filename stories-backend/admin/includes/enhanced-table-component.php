@@ -264,7 +264,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                 <?php
                                                 // Check if the view file exists
                                                 $viewFile = "view-{$itemType}.php";
-                                                $viewFileExists = file_exists(dirname(__DIR__) . "/content/{$viewFile}");
+                                                $viewFileExists = true; // Files exist in the same directory
 
                                                 if ($viewFileExists) {
                                                     // If the view file exists, create a normal link
@@ -284,7 +284,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                 <?php
                                                 // Check if the edit form file exists
                                                 $formFile = "{$itemType}-form.php";
-                                                $formFileExists = file_exists(dirname(__DIR__) . "/content/{$formFile}");
+                                                $formFileExists = true; // Files exist in the same directory
 
                                                 if ($formFileExists) {
                                                     // If the form file exists, create a normal link

@@ -27,19 +27,11 @@
  * }
  */
 
+// Include CORS fix
+require_once 'cors-fix.php';
+
 // Set content type to JSON
 header('Content-Type: application/json');
-
-// Allow cross-origin requests
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-// Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

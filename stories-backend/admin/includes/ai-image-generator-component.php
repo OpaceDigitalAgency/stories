@@ -293,6 +293,10 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 url: 'https://api.storiesfromtheweb.org/api/v1/ai/image.php',
                 type: 'POST',
                 contentType: 'application/json',
+                crossDomain: true,
+                xhrFields: {
+                    withCredentials: false
+                },
                 data: JSON.stringify(data),
                 success: function(response) {
                     // Hide loading state
@@ -324,9 +328,37 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     $('.ai-generation-status').addClass('d-none');
                     $('.ai-generate-image-btn').prop('disabled', false);
 
-                    // Show error
+                    // Show error with more details
                     $('.ai-generation-error').removeClass('d-none');
-                    $('.ai-error-message').text('Request failed: ' + (error || 'Unknown error'));
+                    let errorMsg = 'Request failed: ' + (error || 'Unknown error');
+
+                    // Try to get more detailed error from response
+                    if (xhr.responseText) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.error) {
+                                errorMsg += ' - ' + response.error;
+                            }
+                        } catch (e) {
+                            // If parsing fails, use the raw response text
+                            errorMsg += ' - ' + xhr.responseText;
+                        }
+                    }
+
+                    // Add status code if available
+                    if (xhr.status) {
+                        errorMsg += ' (Status: ' + xhr.status + ')';
+                    }
+
+                    $('.ai-error-message').text(errorMsg);
+
+                    // Log error to console for debugging
+                    console.error('AI Image Generation Error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
                 }
             });
         });

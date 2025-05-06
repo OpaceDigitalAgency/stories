@@ -150,13 +150,12 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                         </div>
 
                         <div class="form-group col-md-4">
-                            <label for="ai-style">Style</label>
-                            <select id="ai-style" class="form-control">
-                                <option value="natural">Natural</option>
-                                <option value="vivid">Vivid</option>
-                                <option value="artistic">Artistic</option>
-                                <option value="professional">Professional</option>
+                            <label for="ai-quality">Quality</label>
+                            <select id="ai-quality" class="form-control">
+                                <option value="standard">Standard</option>
+                                <option value="hd">HD</option>
                             </select>
+                            <small class="form-text text-muted">Note: 'style' parameter is no longer supported</small>
                         </div>
 
                         <div class="form-group col-md-4">
@@ -284,8 +283,9 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             const data = {
                 prompt: prompt,
                 size: $('#ai-size').val(),
-                style: $('#ai-style').val(),
+                quality: $('#ai-quality').val(),
                 variations: parseInt($('#ai-variations').val())
+                // 'style' parameter removed as it's no longer supported by the OpenAI API
             };
 
             // Make API request

@@ -145,9 +145,14 @@ try {
 
     // Set up request parameters
     $size = $data['size'] ?? '1024x1024';
-    $style = $data['style'] ?? 'natural';
     $variations = min(max((int)($data['variations'] ?? 1), 1), 4); // Limit to 1-4 variations
     $quality = $data['quality'] ?? 'standard';
+    // 'style' parameter removed as it's no longer supported by the API
+
+    // Log any style parameter for debugging
+    if (isset($data['style'])) {
+        error_log("Style parameter '" . $data['style'] . "' was provided but will be ignored as it's no longer supported by the OpenAI API");
+    }
 
     // Prepare OpenAI API request
     $openaiData = [
@@ -155,8 +160,8 @@ try {
         'prompt' => $data['prompt'],
         'n' => $variations,
         'size' => $size,
-        'quality' => $quality,
-        'style' => $style
+        'quality' => $quality
+        // 'style' parameter removed as it's no longer supported
         // 'response_format' parameter removed as it's no longer supported
     ];
 
@@ -248,9 +253,9 @@ try {
             $metadata = json_encode([
                 'model' => $model,
                 'size' => $size,
-                'style' => $style,
                 'variations' => $variations,
                 'quality' => $quality
+                // 'style' parameter removed as it's no longer supported
             ]);
 
             $stmt = $db->prepare("

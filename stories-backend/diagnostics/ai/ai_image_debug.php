@@ -1,7 +1,7 @@
 <?php
 /**
  * AI Image Generation Debug Tool
- * 
+ *
  * This diagnostic tool helps debug issues with AI image generation.
  * It tests the API endpoint, CORS settings, and provides detailed error information.
  */
@@ -30,7 +30,7 @@ try {
     $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
     $stmt->execute();
     $provider = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($provider) {
         $config = json_decode($provider['config'], true);
         $apiKey = $config['api_key'] ?? '';
@@ -48,12 +48,12 @@ try {
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false // For development only
     ]);
-    
+
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     curl_close($ch);
-    
+
     $endpointTest = [
         'success' => $statusCode === 200,
         'status_code' => $statusCode,
@@ -79,12 +79,12 @@ try {
         CURLOPT_NOBODY => true,
         CURLOPT_SSL_VERIFYPEER => false // For development only
     ]);
-    
+
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     curl_close($ch);
-    
+
     $corsTest = [
         'success' => $statusCode === 200,
         'status_code' => $statusCode,
@@ -121,10 +121,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
         $data = [
             'prompt' => $_POST['prompt'],
             'size' => $_POST['size'],
-            'style' => $_POST['style'],
+            'quality' => $_POST['quality'] ?? 'standard',
             'variations' => (int)$_POST['variations']
+            // 'style' parameter removed as it's no longer supported by the OpenAI API
         ];
-        
+
         $ch = curl_init($_POST['endpoint_url']);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -137,22 +138,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
             CURLOPT_VERBOSE => true,
             CURLOPT_SSL_VERIFYPEER => false // For development only
         ]);
-        
+
         // Create a file handle for the verbose output
         $verbose = fopen('php://temp', 'w+');
         curl_setopt($ch, CURLOPT_STDERR, $verbose);
-        
+
         $response = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        
+
         // Get verbose information
         rewind($verbose);
         $verboseLog = stream_get_contents($verbose);
         fclose($verbose);
-        
+
         curl_close($ch);
-        
+
         $testResult = [
             'success' => $statusCode === 200,
             'status_code' => $statusCode,
@@ -248,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                 <i class="fas fa-arrow-left"></i> Back to Diagnostic Dashboard
             </a>
         </div>
-        
+
         <h1><?php echo $pageTitle; ?></h1>
         <p class="lead">This tool helps debug issues with AI image generation by testing the API endpoint, CORS settings, and providing detailed error information.</p>
 
@@ -270,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         OpenAI provider is not configured or not active
                     </div>
                 <?php endif; ?>
-                
+
                 <h4>API Key</h4>
                 <?php if (!empty($apiKey)): ?>
                     <div class="alert alert-success">
@@ -283,23 +284,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         API key is not set
                     </div>
                 <?php endif; ?>
-                
+
                 <h4>Required Files</h4>
                 <div class="file-status <?php echo $htaccessExists ? 'file-exists' : 'file-missing'; ?>">
                     <i class="fas <?php echo $htaccessExists ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i>
                     .htaccess file in api/v1/ai directory: <?php echo $htaccessExists ? 'Exists' : 'Missing'; ?>
                 </div>
-                
+
                 <div class="file-status <?php echo $corsFixExists ? 'file-exists' : 'file-missing'; ?>">
                     <i class="fas <?php echo $corsFixExists ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i>
                     cors-fix.php file in api/v1/ai directory: <?php echo $corsFixExists ? 'Exists' : 'Missing'; ?>
                 </div>
-                
+
                 <div class="file-status <?php echo $imagePhpExists ? 'file-exists' : 'file-missing'; ?>">
                     <i class="fas <?php echo $imagePhpExists ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i>
                     image.php file in api/v1/ai directory: <?php echo $imagePhpExists ? 'Exists' : 'Missing'; ?>
                 </div>
-                
+
                 <?php if ($imagePhpExists): ?>
                 <div class="file-status <?php echo $imagePhpIncludesCors ? 'file-exists' : 'file-missing'; ?>">
                     <i class="fas <?php echo $imagePhpIncludesCors ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i>
@@ -321,9 +322,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             <i class="fas fa-check-circle"></i>
                             API endpoint is accessible
                         </div>
-                        
+
                         <h4>Response</h4>
-                        <pre class="code-block"><?php 
+                        <pre class="code-block"><?php
                             $responseData = json_decode($endpointTest['response'], true);
                             echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                         ?></pre>
@@ -332,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             <i class="fas fa-exclamation-circle"></i>
                             API endpoint is not accessible
                         </div>
-                        
+
                         <h4>Error Details</h4>
                         <table class="table">
                             <tr>
@@ -361,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             <i class="fas fa-check-circle"></i>
                             CORS is properly configured
                         </div>
-                        
+
                         <h4>Response Headers</h4>
                         <pre class="code-block"><?php echo htmlspecialchars($corsTest['response']); ?></pre>
                     <?php else: ?>
@@ -369,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             <i class="fas fa-exclamation-circle"></i>
                             CORS is not properly configured
                         </div>
-                        
+
                         <h4>Error Details</h4>
                         <table class="table">
                             <tr>
@@ -381,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                                 <td><?php echo htmlspecialchars($corsTest['error'] ?? 'None'); ?></td>
                             </tr>
                         </table>
-                        
+
                         <?php if (!empty($corsTest['response'])): ?>
                             <h4>Response</h4>
                             <pre class="code-block"><?php echo htmlspecialchars($corsTest['response']); ?></pre>
@@ -402,12 +403,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         <label for="endpoint_url" class="form-label">API Endpoint URL</label>
                         <input type="text" class="form-control" id="endpoint_url" name="endpoint_url" value="https://api.storiesfromtheweb.org/api/v1/ai/image.php" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="prompt" class="form-label">Image Prompt</label>
                         <textarea class="form-control" id="prompt" name="prompt" rows="3" required>A simple test image of a blue circle on a white background</textarea>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="size" class="form-label">Image Size</label>
@@ -417,17 +418,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                                 <option value="1792x1024">Landscape (1792x1024)</option>
                             </select>
                         </div>
-                        
+
                         <div class="col-md-4 mb-3">
-                            <label for="style" class="form-label">Style</label>
-                            <select class="form-select" id="style" name="style">
-                                <option value="natural" selected>Natural</option>
-                                <option value="vivid">Vivid</option>
-                                <option value="artistic">Artistic</option>
-                                <option value="professional">Professional</option>
+                            <label for="quality" class="form-label">Quality</label>
+                            <select class="form-select" id="quality" name="quality">
+                                <option value="standard" selected>Standard</option>
+                                <option value="hd">HD</option>
                             </select>
+                            <small class="form-text text-muted">Note: 'style' parameter is no longer supported by OpenAI API</small>
                         </div>
-                        
+
                         <div class="col-md-4 mb-3">
                             <label for="variations" class="form-label">Variations</label>
                             <select class="form-select" id="variations" name="variations">
@@ -438,41 +438,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             </select>
                         </div>
                     </div>
-                    
+
                     <button type="submit" name="test_image_generation" class="btn btn-primary">
                         <i class="fas fa-vial"></i> Test Image Generation
                     </button>
                 </form>
-                
+
                 <?php if ($testResult): ?>
                     <hr>
                     <h4>Test Results</h4>
-                    
+
                     <?php if ($testResult['success']): ?>
                         <div class="alert alert-success mt-3">
                             <i class="fas fa-check-circle"></i>
                             Image generation test successful!
                         </div>
-                        
-                        <?php 
+
+                        <?php
                         $responseData = json_decode($testResult['response'], true);
                         $imageUrl = null;
-                        
+
                         if (isset($responseData['data']['url'])) {
                             $imageUrl = $responseData['data']['url'];
                         } elseif (isset($responseData['url'])) {
                             $imageUrl = $responseData['url'];
                         }
-                        
-                        if ($imageUrl): 
+
+                        if ($imageUrl):
                         ?>
                             <div class="test-image-container">
                                 <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="Generated test image" class="test-image">
                             </div>
                         <?php endif; ?>
-                        
+
                         <h5>Response</h5>
-                        <pre class="code-block"><?php 
+                        <pre class="code-block"><?php
                             echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                         ?></pre>
                     <?php else: ?>
@@ -480,7 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             <i class="fas fa-exclamation-circle"></i>
                             Image generation test failed!
                         </div>
-                        
+
                         <h5>Error Details</h5>
                         <table class="table">
                             <tr>
@@ -492,10 +492,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                                 <td><?php echo htmlspecialchars($testResult['error'] ?? 'None'); ?></td>
                             </tr>
                         </table>
-                        
+
                         <?php if (!empty($testResult['response'])): ?>
                             <h5>Response</h5>
-                            <pre class="code-block"><?php 
+                            <pre class="code-block"><?php
                                 $responseData = json_decode($testResult['response'], true);
                                 if ($responseData) {
                                     echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                                 }
                             ?></pre>
                         <?php endif; ?>
-                        
+
                         <h5>Verbose Log</h5>
                         <pre class="code-block"><?php echo htmlspecialchars($testResult['verbose_log'] ?? 'No log available'); ?></pre>
                     <?php endif; ?>
@@ -533,7 +533,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                             </div>
                         </div>
                     <?php endif; ?>
-                    
+
                     <?php if ($corsFixExists): ?>
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="corsFixHeading">

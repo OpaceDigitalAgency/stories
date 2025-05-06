@@ -21,18 +21,10 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     if (empty($filePath)) {
         // Check if this is an author avatar
         if ($itemType === 'author') {
-            if (file_exists('../assets/images/default-avatar.svg')) {
-                return '../assets/images/default-avatar.svg';
-            }
+            return 'https://api.storiesfromtheweb.org/admin/assets/images/default-avatar.svg';
         }
-
         // For other content types, use the default cover
-        if (file_exists('../assets/images/default-cover.svg')) {
-            return '../assets/images/default-cover.svg';
-        } else {
-            // Fallback to a data URI for a simple placeholder
-            return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZmlsbD0iIzk5OSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
-        }
+        return 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg';
     }
 
     // Check if there's a thumbnail version available

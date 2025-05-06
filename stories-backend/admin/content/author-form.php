@@ -10,37 +10,21 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Include header
-require_once '../includes/header.php';
-
 // Include image upload component
 require_once '../includes/image-upload-component.php';
 
 // Include AI image generator component
 require_once '../includes/ai-image-generator-component.php';
 
-try {
-    // Ensure we have a database connection
-    if (!isset($db) || !$db) {
-        // Try to connect to the database directly
-        try {
-            $db = new PDO(
-                'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-                'stories_user',
-                '$tw1cac3*sOt',
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                ]
-            );
-        } catch (PDOException $e) {
-            $errorMessage = "Database connection error: " . $e->getMessage();
-            error_log("Database connection error in author-form.php: " . $e->getMessage());
-        }
-    }
+// Include header
+require_once '../includes/header.php';
 
+// Initialize variables
+$author = null;
+$error = null;
+
+try {
     // Get author if editing
-    $author = null;
     if (isset($_GET['id'])) {
         $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -52,233 +36,177 @@ try {
         }
     }
 
-    // Get all columns from authors table
-    $columns = [];
-    $stmt = $db->query("DESCRIBE authors");
-    while ($row = $stmt->fetch()) {
-        $columns[] = $row['Field'];
-    }
-
-    // Check if slug column exists
-    $hasSlugColumn = in_array('slug', $columns);
-
-    // Check if email column exists
-    $hasEmailColumn = in_array('email', $columns);
-
 } catch (PDOException $e) {
     error_log("Author form error: " . $e->getMessage());
     $error = "Error loading form data. Please try again.";
 }
 
-// Check for error messages
-if (isset($_SESSION['error'])) {
-    $error = $_SESSION['error'];
-    unset($_SESSION['error']);
-}
 ?>
 
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title"><?php echo htmlspecialchars($author['name'] ?? 'New Author'); ?></h1>
-                <p class="page-description">
-                    <a href="authors.php" class="text-primary">← Back to Authors</a>
-                </p>
+<div class="content-section mb-4">
+    <div class="section-header">
+        <h2 class="section-title"><?php echo $pageTitle; ?></h2>
+    </div>
+    <div class="section-body">
+        <form method="POST" action="save-author.php" class="content-form">
+            <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
+
+            <!-- Basic Information -->
+            <div class="form-section-title">Basic Information</div>
+
+            <div class="form-group">
+                <label class="form-label" for="name">Name <span class="required">*</span></label>
+                <input type="text" id="name" name="name" class="form-control" required
+                       value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
             </div>
-        </div>
 
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-
-        <div class="content-section mb-4">
-            <div class="section-body">
-                <form method="POST" action="save-author.php" class="content-form">
-                    <?php if ($author): ?>
-                        <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
-                    <?php endif; ?>
-
-                    <div class="form-group">
-                        <label class="form-label" for="name">Name</label>
-                        <input type="text" id="name" name="name" class="form-control" required
-                               value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
-                    </div>
-
-                    <?php if ($hasSlugColumn): ?>
-                    <div class="form-group">
-                        <label class="form-label" for="slug">Slug</label>
-                        <input type="text" id="slug" name="slug" class="form-control" required
-                               value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>"
-                               placeholder="author-name-in-lowercase">
-                        <small class="form-text text-muted">Use lowercase letters, numbers, and hyphens only. No spaces.</small>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="form-group">
-                        <label class="form-label" for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control"
-                               value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
-                        <small class="form-text text-muted">Optional</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="bio">Bio</label>
-                        <textarea id="bio" name="bio" class="form-control" rows="5"><?php
-                            echo htmlspecialchars($author['bio'] ?? '');
-                        ?></textarea>
-                    </div>
-
-                    <?php
-                    // Render the image upload component for avatar
-                    renderImageUploadComponent(
-                        'avatar_url',
-                        $author['avatar_url'] ?? '',
-                        'Author Avatar',
-                        'author',
-                        $author['id'] ?? null
-                    );
-
-                    // Add AI image generator button
-                    echo '<div class="mt-2">';
-                    renderAiImageGenerator(
-                        'author',
-                        [
-                            'name' => $author['name'] ?? '',
-                            'bio' => $author['bio'] ?? '',
-                            'author_type' => $author['type'] ?? '',
-                            'age' => $author['age'] ?? '',
-                            'location' => $author['location'] ?? ''
-                        ],
-                        'avatar_url',
-                        'avatar_url-preview'
-                    );
-                    echo '</div>';
-                    ?>
-
-                    <div class="form-group">
-                        <label class="form-label" for="author_type">Author Type <span class="text-danger">*</span></label>
-                        <select id="author_type" name="author_type" class="form-control" required onchange="handleAuthorTypeChange()">
-                            <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail (Book Author)</option>
-                            <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
-                            <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
-                            <option value="educator" <?php echo (isset($author['author_type']) && $author['author_type'] === 'educator') ? 'selected' : ''; ?>>Educator</option>
-                        </select>
-                    </div>
-
-                    <div id="age-field" class="form-group" style="display: <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'block' : 'none'; ?>;">
-                        <label class="form-label" for="age">Age <span class="text-danger">*</span></label>
-                        <input type="number" id="age" name="age" class="form-control" min="1" max="21"
-                               value="<?php echo htmlspecialchars($author['age'] ?? ''); ?>"
-                               <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'required' : ''; ?>>
-                        <small class="form-text text-muted">Age must be between 1 and 21 years old</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="location">Location <span class="text-danger">*</span></label>
-                        <input type="text" id="location" name="location" class="form-control" required
-                               value="<?php echo htmlspecialchars($author['location'] ?? ''); ?>"
-                               list="uk-locations" autocomplete="off"
-                               maxlength="100"
-                               pattern="[A-Za-z\s,.-]{2,100}"
-                               title="Location must be between 2 and 100 characters, and can only contain letters, spaces, commas, periods, and hyphens">
-                        <small class="form-text text-muted">Enter city, county, or country (max 100 characters)</small>
-                        <datalist id="uk-locations">
-                            <!-- Countries -->
-                            <option value="England">England</option>
-                            <option value="Scotland">Scotland</option>
-                            <option value="Wales">Wales</option>
-                            <option value="Northern Ireland">Northern Ireland</option>
-
-                            <!-- Major Cities -->
-                            <option value="London">London</option>
-                            <option value="Birmingham">Birmingham</option>
-                            <option value="Manchester">Manchester</option>
-                            <option value="Leeds">Leeds</option>
-                            <option value="Liverpool">Liverpool</option>
-                            <option value="Newcastle">Newcastle</option>
-                            <option value="Sheffield">Sheffield</option>
-                            <option value="Bristol">Bristol</option>
-                            <option value="Edinburgh">Edinburgh</option>
-                            <option value="Glasgow">Glasgow</option>
-                            <option value="Cardiff">Cardiff</option>
-                            <option value="Belfast">Belfast</option>
-                        </datalist>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Save Author</button>
-                        <a href="authors.php" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+            <div class="form-group">
+                <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                <input type="text" id="slug" name="slug" class="form-control" required
+                       value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>">
+                <small class="form-text text-muted">URL-friendly version of the name (auto-generated if left empty)</small>
             </div>
-        </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control"
+                       value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="age">Age</label>
+                <input type="number" id="age" name="age" class="form-control" min="0" max="120"
+                       value="<?php echo htmlspecialchars($author['age'] ?? ''); ?>">
+            </div>
+
+            <!-- Author Type -->
+            <div class="form-section-title">Author Type</div>
+
+            <div class="form-group">
+                <label class="form-label" for="author_type">Author Type <span class="required">*</span></label>
+                <select id="author_type" name="author_type" class="form-control" required>
+                    <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
+                    <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
+                    <option value="educator" <?php echo (isset($author['author_type']) && $author['author_type'] === 'educator') ? 'selected' : ''; ?>>Educator</option>
+                    <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail</option>
+                </select>
+            </div>
+
+            <!-- Bio -->
+            <div class="form-section-title">Biography</div>
+
+            <div class="form-group">
+                <label class="form-label" for="bio">Biography</label>
+                <textarea id="bio" name="bio" class="form-control" rows="5"><?php echo htmlspecialchars($author['bio'] ?? ''); ?></textarea>
+            </div>
+
+            <!-- Profile Picture -->
+            <div class="form-section-title">Profile Picture</div>
+
+            <?php
+            // Render image upload component
+            renderImageUploadComponent(
+                'avatar_url',
+                $author['avatar_url'] ?? '',
+                'Profile Picture',
+                'author',
+                $author['id'] ?? null
+            );
+
+            // Render AI image generator
+            if (function_exists('renderAiImageGenerator')) {
+                renderAiImageGenerator(
+                    'author',
+                    [
+                        'name' => $author['name'] ?? '',
+                        'bio' => $author['bio'] ?? '',
+                        'author_type' => $author['author_type'] ?? '',
+                        'age' => $author['age'] ?? ''
+                    ],
+                    'avatar_url',
+                    'avatar_url_preview'
+                );
+            }
+            ?>
+
+            <!-- Social Media -->
+            <div class="form-section-title">Social Media</div>
+
+            <div class="form-group">
+                <label class="form-label" for="website">Website</label>
+                <input type="url" id="website" name="website" class="form-control"
+                       value="<?php echo htmlspecialchars($author['website'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="twitter">Twitter</label>
+                <input type="text" id="twitter" name="twitter" class="form-control"
+                       value="<?php echo htmlspecialchars($author['twitter'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="facebook">Facebook</label>
+                <input type="text" id="facebook" name="facebook" class="form-control"
+                       value="<?php echo htmlspecialchars($author['facebook'] ?? ''); ?>">
+            </div>
+
+            <!-- Additional Fields -->
+            <div class="form-section-title">Additional Information</div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" id="featured" name="featured" class="form-check-input" value="1"
+                           <?php echo (!empty($author['featured'])) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="featured">Featured Author</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" id="is_published" name="is_published" class="form-check-input" value="1"
+                           <?php echo (!empty($author['is_published'])) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="is_published">Published</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Save Author</button>
+                <a href="authors.php" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-        // Handle author type change
-        function handleAuthorTypeChange() {
-            const authorType = document.getElementById('author_type').value;
-            const ageField = document.getElementById('age-field');
-            const ageInput = document.getElementById('age');
+    // Auto-generate slug from name
+    document.addEventListener('DOMContentLoaded', function() {
+        const nameInput = document.getElementById('name');
+        const slugInput = document.getElementById('slug');
 
-            if (authorType === 'child') {
-                ageField.style.display = 'block';
-                ageInput.required = true;
-                if (!ageInput.value) {
-                    ageInput.value = '7'; // Default age for child authors
+        if (nameInput && slugInput) {
+            nameInput.addEventListener('input', function() {
+                // Only auto-generate if slug is empty or hasn't been manually edited
+                if (!slugInput.value || slugInput._autoGenerated) {
+                    const slug = nameInput.value
+                        .toLowerCase()
+                        .replace(/[^\w\s-]/g, '') // Remove special characters
+                        .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                        .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+
+                    slugInput.value = slug;
+                    slugInput._autoGenerated = true;
                 }
-            } else {
-                ageField.style.display = 'none';
-                ageInput.required = false;
-                ageInput.value = '';
-            }
+            });
+
+            // Mark when user manually edits the slug
+            slugInput.addEventListener('input', function() {
+                slugInput._autoGenerated = false;
+            });
         }
+    });
+</script>
 
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const authorType = document.getElementById('author_type').value;
-            const age = document.getElementById('age').value;
-            const location = document.getElementById('location').value;
-            const email = document.getElementById('email').value;
-
-            // Validate age for child authors
-            if (authorType === 'child') {
-                if (!age || age < 1 || age > 21) {
-                    e.preventDefault();
-                    alert('Age must be between 1 and 21 for child authors');
-                    return;
-                }
-            }
-
-            // Validate location
-            if (!location || location.length < 2 || location.length > 100) {
-                e.preventDefault();
-                alert('Location must be between 2 and 100 characters');
-                return;
-            }
-
-            // Validate location characters
-            if (!/^[A-Za-z\s,.-]+$/.test(location)) {
-                e.preventDefault();
-                alert('Location can only contain letters, spaces, commas, periods, and hyphens');
-                return;
-            }
-
-            // Validate email format if provided
-            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                e.preventDefault();
-                alert('Please enter a valid email address or leave it blank');
-                return;
-            }
-        });
-
-        // Initialize form state
-        handleAuthorTypeChange();
-    </script>
-
-    <!-- Include image upload script -->
-    <script src="../assets/js/image-upload.js"></script>
-
-<?php require_once '../includes/footer.php'; ?>
+<?php
+// Include footer
+require_once '../includes/footer.php';
+?>

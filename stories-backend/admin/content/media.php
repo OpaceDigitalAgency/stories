@@ -14,6 +14,9 @@ require_once '../includes/db-connect.php';
 // Include image optimizer
 require_once '../../includes/image_optimizer.php';
 
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 // Function to handle file paths for display and access
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
@@ -312,6 +315,55 @@ $extraHeadContent = '
         text-decoration: underline;
     }
 
+    /* Upload tabs */
+    .upload-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .upload-tab {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        color: var(--gray-600);
+    }
+
+    .upload-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    /* Bulk upload */
+    .bulk-dropzone {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        text-align: center;
+        background: var(--gray-50);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .bulk-dropzone:hover {
+        border-color: var(--primary);
+        background: var(--gray-100);
+    }
+
+    .dropzone-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .dropzone-message i {
+        font-size: 3rem;
+        color: var(--gray-400);
+    }
+
     /* Progress indicator styles */
     .progress-overlay {
         position: fixed;
@@ -382,23 +434,95 @@ $extraHeadContent = '
             });
         });
 
-        // Also add progress indicator to file upload
-        const uploadForm = document.querySelector("form.upload-form");
-        if (uploadForm) {
-            uploadForm.addEventListener("submit", function(e) {
-                // Only show progress if a file is selected
-                const fileInput = document.getElementById("media_file");
-                if (fileInput && fileInput.files.length > 0) {
-                    const overlay = document.getElementById("progressOverlay");
-                    overlay.style.visibility = "visible";
-                    overlay.style.opacity = "1";
+        // Handle upload tabs
+        const tabs = document.querySelectorAll(".upload-tab");
+        const tabContents = document.querySelectorAll(".upload-tab-content");
 
-                    const title = document.getElementById("progressTitle");
-                    const message = document.getElementById("progressMessage");
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function() {
+                const tabId = this.getAttribute("data-tab");
 
-                    title.textContent = "Uploading and Optimizing";
-                    message.textContent = "Please wait while we upload and optimize your image.";
+                // Update active tab
+                tabs.forEach(t => t.classList.remove("active"));
+                this.classList.add("active");
+
+                // Show corresponding content
+                tabContents.forEach(content => {
+                    if (content.id === tabId + "-upload") {
+                        content.style.display = "block";
+                    } else {
+                        content.style.display = "none";
+                    }
+                });
+            });
+        });
+
+        // Handle bulk upload
+        const dropzone = document.getElementById("bulk-dropzone");
+        const fileInput = document.getElementById("bulk-file-input");
+
+        if (dropzone && fileInput) {
+            dropzone.addEventListener("dragover", function(e) {
+                e.preventDefault();
+                this.style.borderColor = "var(--primary)";
+                this.style.background = "var(--gray-100)";
+            });
+
+            dropzone.addEventListener("dragleave", function(e) {
+                e.preventDefault();
+                this.style.borderColor = "var(--border-color)";
+                this.style.background = "var(--gray-50)";
+            });
+
+            dropzone.addEventListener("drop", function(e) {
+                e.preventDefault();
+                this.style.borderColor = "var(--border-color)";
+                this.style.background = "var(--gray-50)";
+
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+
+            fileInput.addEventListener("change", function() {
+                handleFiles(this.files);
+            });
+        }
+
+        function handleFiles(files) {
+            const overlay = document.getElementById("progressOverlay");
+            const title = document.getElementById("progressTitle");
+            const message = document.getElementById("progressMessage");
+
+            overlay.style.visibility = "visible";
+            overlay.style.opacity = "1";
+            title.textContent = "Uploading Files";
+            message.textContent = `Uploading ${files.length} file${files.length !== 1 ? 's' : ''}...`;
+
+            // Create FormData and append files
+            const formData = new FormData();
+            Array.from(files).forEach(file => {
+                formData.append("files[]", file);
+            });
+
+            // Upload files
+            fetch("upload-bulk.php", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Error uploading files: " + data.error);
+                    overlay.style.visibility = "hidden";
+                    overlay.style.opacity = "0";
                 }
+            })
+            .catch(error => {
+                alert("Error uploading files: " + error);
+                overlay.style.visibility = "hidden";
+                overlay.style.opacity = "0";
             });
         }
     });
@@ -415,23 +539,67 @@ require_once '../includes/header.php';
         <p class="section-description">Upload images and other media files to use in your content</p>
     </div>
     <div class="section-body">
-        <form method="POST" enctype="multipart/form-data" class="upload-form">
-            <div class="form-group mb-3">
-                <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
-                <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
-                <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
+        <div class="upload-section">
+            <div class="upload-tabs">
+                <button type="button" class="upload-tab active" data-tab="single">Single File Upload</button>
+                <button type="button" class="upload-tab" data-tab="bulk">Bulk Upload</button>
             </div>
-            <div class="form-group mb-3">
-                <label class="form-label" for="alt_text">Alt Text</label>
-                <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
-                <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
+
+            <div class="upload-tab-content" id="single-upload" style="display: block;">
+                <form method="POST" enctype="multipart/form-data" class="upload-form">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="media_file">File <span class="required" aria-hidden="true">*</span><span class="visually-hidden">required</span></label>
+                        <input type="file" id="media_file" name="media_file" class="form-control" required aria-required="true">
+                        <div class="form-text">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX, etc. Max size: 10MB</div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="alt_text">Alt Text</label>
+                        <input type="text" id="alt_text" name="alt_text" class="form-control" placeholder="Describe the image for accessibility">
+                        <div class="form-text">Providing alt text improves accessibility for screen reader users</div>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload" aria-hidden="true"></i> Upload
+                        </button>
+                        <?php
+                        // Add AI image generator
+                        renderAiImageGenerator('media', [], 'media_file', 'media_file_preview');
+                        ?>
+                    </div>
+                </form>
             </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-upload" aria-hidden="true"></i> Upload
-                </button>
+
+            <div class="upload-tab-content" id="bulk-upload" style="display: none;">
+                <div class="bulk-dropzone" id="bulk-dropzone">
+                    <div class="dropzone-message">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Drag & drop multiple images here or</span>
+                        <label for="bulk-file-input" class="btn btn-primary">
+                            Browse Files
+                        </label>
+                        <input type="file" id="bulk-file-input" multiple accept="image/*" style="display: none;">
+                        <div class="dropzone-info">
+                            <small>Supported formats: JPG, PNG, GIF, WebP. Max size per file: 10MB</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bulk-upload-progress" style="display: none;">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    <div class="upload-status">
+                        <span class="current-file"></span>
+                        <span class="upload-count"></span>
+                    </div>
+                </div>
+
+                <div class="bulk-upload-results" style="display: none;">
+                    <h4>Upload Results</h4>
+                    <div class="results-list"></div>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 

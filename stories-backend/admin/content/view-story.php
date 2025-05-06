@@ -21,7 +21,6 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $storyId = (int)$_GET['id'];
 
 try {
-
     // Get story details
     $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
     $stmt->execute([$storyId]);
@@ -82,36 +81,27 @@ try {
     header("Location: stories.php");
     exit;
 }
-// Page variables
-$pageTitle = isset($_GET['id']) ? 'Edit Story' : 'Add Story';
+
+// Set page variables for header
+$pageTitle = 'View Story';
 $currentPage = 'stories';
-
-// Include header
-require_once '../includes/header.php';
-
-?>
-
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <div class="page-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="page-title"><?php echo htmlspecialchars($story['title']); ?></h1>
-                <p class="page-description">
-                    <a href="stories.php" class="text-primary">← Back to Stories</a>
-                </p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="story-form.php?id=<?php echo $story['id']; ?>" class="btn btn-primary">
-                    <span class="icon-edit"></span> Edit
-                </a>
-                <form method="POST" action="delete-story.php" onsubmit="return confirm('Are you sure you want to delete this story?');">
-                    <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                    <button type="submit" class="btn btn-danger">
-                        <span class="icon-delete"></span> Delete
-                    </button>
-                </form>
-            </div>
-        </div>
+$pageDescription = '<a href="stories.php" class="text-primary">← Back to Stories</a>';
+$pageActions = '
+<div class="d-flex gap-2">
+    <form method="GET" action="story-form.php">
+        <input type="hidden" name="id" value="' . $story['id'] . '">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit
+        </button>
+    </form>
+    <form method="POST" action="delete-story.php" onsubmit="return confirm(\'Are you sure you want to delete this story?\');">
+        <input type="hidden" name="id" value="' . $story['id'] . '">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt"></i> Delete
+        </button>
+    </form>
+</div>
+';
 
 // Add custom CSS for content preview
 $extraHeadContent = '
@@ -144,75 +134,75 @@ $extraHeadContent = '
 require_once '../includes/header.php';
 ?>
 
-        <div class="content-section mb-4">
-            <div class="section-header">
-                <h2 class="section-title"><?php echo htmlspecialchars($story['title']); ?></h2>
-            </div>
-            <div class="section-body">
-                <div class="mb-4">
-                    <div class="d-flex gap-3 mb-3">
-                        <div>
-                            <strong>Author:</strong>
-                            <?php echo htmlspecialchars($story['author_name']); ?>
-                        </div>
-                        <div>
-                            <strong>Created:</strong>
-                            <?php echo date('M j, Y', strtotime($story['created_at'])); ?>
-                        </div>
-                        <div>
-                            <strong>Updated:</strong>
-                            <?php echo date('M j, Y', strtotime($story['updated_at'])); ?>
-                        </div>
-                    </div>
-
-                    <?php if (!empty($story['tags'])): ?>
-                    <div class="mb-3">
-                        <strong>Tags:</strong>
-                        <?php echo htmlspecialchars($story['tags']); ?>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php
-                    // Check if any additional fields exist and display them
-                    $skipFields = ['id', 'title', 'content', 'created_at', 'updated_at', 'author_id', 'author_name', 'tags'];
-                    foreach ($story as $key => $value) {
-                        if (!in_array($key, $skipFields) && !is_null($value) && $value !== '') {
-                            echo '<div class="mb-2"><strong>' . htmlspecialchars(ucfirst(str_replace('_', ' ', $key))) . ':</strong> ' .
-                                 htmlspecialchars($value) . '</div>';
-                        }
-                    }
-                    ?>
+<div class="content-section mb-4">
+    <div class="section-header">
+        <h2 class="section-title"><?php echo htmlspecialchars($story['title']); ?></h2>
+    </div>
+    <div class="section-body">
+        <div class="mb-4">
+            <div class="d-flex gap-3 mb-3">
+                <div>
+                    <strong>Author:</strong>
+                    <?php echo htmlspecialchars($story['author_name']); ?>
                 </div>
-
-                <div class="content-preview">
-                    <h3 class="mb-3">Content</h3>
-                    <div class="content-body p-4 bg-light border rounded">
-                        <?php
-                        // Check if content might be HTML
-                        if (strpos($story['content'], '<') !== false && strpos($story['content'], '>') !== false) {
-                            // It might be HTML, so display it as is
-                            echo $story['content'];
-                        } else {
-                            // It's plain text, so preserve line breaks
-                            echo nl2br(htmlspecialchars($story['content']));
-                        }
-                        ?>
-                    </div>
+                <div>
+                    <strong>Created:</strong>
+                    <?php echo date('M j, Y', strtotime($story['created_at'])); ?>
+                </div>
+                <div>
+                    <strong>Updated:</strong>
+                    <?php echo date('M j, Y', strtotime($story['updated_at'])); ?>
                 </div>
             </div>
+
+            <?php if (!empty($story['tags'])): ?>
+            <div class="mb-3">
+                <strong>Tags:</strong>
+                <?php echo htmlspecialchars($story['tags']); ?>
+            </div>
+            <?php endif; ?>
+
+            <?php
+            // Check if any additional fields exist and display them
+            $skipFields = ['id', 'title', 'content', 'created_at', 'updated_at', 'author_id', 'author_name', 'tags'];
+            foreach ($story as $key => $value) {
+                if (!in_array($key, $skipFields) && !is_null($value) && $value !== '') {
+                    echo '<div class="mb-2"><strong>' . htmlspecialchars(ucfirst(str_replace('_', ' ', $key))) . ':</strong> ' .
+                         htmlspecialchars($value) . '</div>';
+                }
+            }
+            ?>
         </div>
 
-        <div class="d-flex justify-content-between mt-4">
-            <a href="stories.php" class="btn btn-secondary">
-                Back to Stories
-            </a>
-            <form method="GET" action="story-form.php">
-                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Edit Story
-                </button>
-            </form>
+        <div class="content-preview">
+            <h3 class="mb-3">Content</h3>
+            <div class="content-body p-4 bg-light border rounded">
+                <?php
+                // Check if content might be HTML
+                if (strpos($story['content'], '<') !== false && strpos($story['content'], '>') !== false) {
+                    // It might be HTML, so display it as is
+                    echo $story['content'];
+                } else {
+                    // It's plain text, so preserve line breaks
+                    echo nl2br(htmlspecialchars($story['content']));
+                }
+                ?>
+            </div>
         </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-4">
+    <a href="stories.php" class="btn btn-secondary">
+        Back to Stories
+    </a>
+    <form method="GET" action="story-form.php">
+        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit Story
+        </button>
+    </form>
+</div>
 
 <?php
 // Include footer

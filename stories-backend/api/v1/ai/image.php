@@ -344,18 +344,41 @@ try {
         error_log("Skipping database recording - database not connected or provider ID not available");
     }
 
+    // Generate a meaningful filename based on the prompt
+    $cleanPrompt = preg_replace('/[^a-zA-Z0-9]+/', '-', $data['prompt']);
+    $cleanPrompt = substr($cleanPrompt, 0, 40); // Limit to 40 chars
+    $cleanPrompt = trim($cleanPrompt, '-');
+    $timestamp = date('YmdHis');
+    $filename = "ai-image-{$cleanPrompt}-{$timestamp}";
+
+    // Create an ALT description based on the prompt
+    $altDescription = "AI generated image: " . substr($data['prompt'], 0, 200);
+    if (strlen($data['prompt']) > 200) {
+        $altDescription .= "...";
+    }
+
     // Prepare response
     $responseData = [
         'success' => true,
         'data' => [
             'type' => $images[0]['type'],
-            'data' => $images[0]['data']
+            'data' => $images[0]['data'],
+            'filename' => $filename,
+            'alt' => $altDescription,
+            'prompt' => $data['prompt']
         ]
     ];
 
     // Add variations if more than one image was generated
     if (count($images) > 1) {
         $responseData['data']['variations'] = array_slice($images, 1);
+
+        // Add filenames and alt descriptions for variations
+        foreach ($responseData['data']['variations'] as $key => $variation) {
+            $variationFilename = "{$filename}-variation-" . ($key + 1);
+            $responseData['data']['variations'][$key]['filename'] = $variationFilename;
+            $responseData['data']['variations'][$key]['alt'] = $altDescription . " (variation " . ($key + 1) . ")";
+        }
     }
 
     // Return success response

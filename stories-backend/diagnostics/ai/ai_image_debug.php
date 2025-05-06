@@ -484,11 +484,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_image_generation
                         if ($imageUrl || $imageBase64):
                         ?>
                             <div class="test-image-container">
+                                <?php
+                                // Get alt text and filename if available
+                                $altText = isset($responseData['data']['alt']) ? $responseData['data']['alt'] : "Generated test image";
+                                $filename = isset($responseData['data']['filename']) ? $responseData['data']['filename'] : "ai-generated-image";
+                                ?>
                                 <?php if ($imageType === 'url'): ?>
-                                    <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="Generated test image" class="test-image">
+                                    <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="<?php echo htmlspecialchars($altText); ?>" class="test-image">
                                 <?php elseif ($imageType === 'base64'): ?>
-                                    <img src="data:image/png;base64,<?php echo $imageBase64; ?>" alt="Generated test image" class="test-image">
+                                    <img src="data:image/png;base64,<?php echo $imageBase64; ?>" alt="<?php echo htmlspecialchars($altText); ?>" class="test-image">
                                 <?php endif; ?>
+
+                                <div class="mt-3">
+                                    <strong>Filename:</strong> <?php echo htmlspecialchars($filename); ?>.png<br>
+                                    <strong>Alt Text:</strong> <?php echo htmlspecialchars($altText); ?>
+                                </div>
                             </div>
                         <?php endif; ?>
 

@@ -370,29 +370,37 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                         $('.ai-images-container').empty();
 
                         // Add main image
+                        const filename = response.data.filename || 'ai-generated-image';
+                        const altText = response.data.alt || 'AI generated image';
+                        const prompt = response.data.prompt || '';
+
                         if (response.data.type === 'base64') {
                             // Handle base64 image
-                            addImageToResults('data:image/png;base64,' + response.data.data, true, response.data.data);
+                            addImageToResults('data:image/png;base64,' + response.data.data, true, response.data.data, filename, altText, prompt);
                         } else if (response.data.type === 'url') {
                             // Handle URL image
-                            addImageToResults(response.data.data, true);
+                            addImageToResults(response.data.data, true, null, filename, altText, prompt);
                         } else if (response.data.url) {
                             // Legacy format
-                            addImageToResults(response.data.url, true);
+                            addImageToResults(response.data.url, true, null, filename, altText, prompt);
                         }
 
                         // Add variations if any
                         if (response.data.variations) {
-                            response.data.variations.forEach(function(variation) {
+                            response.data.variations.forEach(function(variation, index) {
+                                // Get variation filename and alt text
+                                const variationFilename = variation.filename || `${filename}-variation-${index+1}`;
+                                const variationAltText = variation.alt || `${altText} (variation ${index+1})`;
+
                                 if (typeof variation === 'string') {
                                     // Legacy format - just a URL
-                                    addImageToResults(variation, false);
+                                    addImageToResults(variation, false, null, variationFilename, variationAltText, prompt);
                                 } else if (variation.type === 'base64') {
                                     // Base64 image
-                                    addImageToResults('data:image/png;base64,' + variation.data, false, variation.data);
+                                    addImageToResults('data:image/png;base64,' + variation.data, false, variation.data, variationFilename, variationAltText, prompt);
                                 } else if (variation.type === 'url') {
                                     // URL image
-                                    addImageToResults(variation.data, false);
+                                    addImageToResults(variation.data, false, null, variationFilename, variationAltText, prompt);
                                 }
                             });
                         }
@@ -461,11 +469,25 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         });
 
         // Function to add an image to the results
-        function addImageToResults(url, isMain, rawBase64) {
+        function addImageToResults(url, isMain, rawBase64, filename, altText, prompt) {
             const col = $('<div class="col-md-6 mb-3"></div>');
             const card = $('<div class="card h-100"></div>');
-            const img = $('<img class="card-img-top" src="' + url + '" alt="Generated image">');
+            const img = $('<img class="card-img-top" src="' + url + '" alt="' + (altText || 'Generated image') + '">');
             const cardBody = $('<div class="card-body"></div>');
+
+            // Add filename and alt text info
+            const imageInfo = $('<div class="image-info mb-2"></div>');
+            imageInfo.append('<small class="d-block text-muted"><strong>Filename:</strong> ' + (filename || 'ai-generated-image') + '.png</small>');
+            imageInfo.append('<small class="d-block text-muted"><strong>Alt Text:</strong> ' + (altText || 'AI generated image') + '</small>');
+
+            // Add prompt if available
+            if (prompt) {
+                imageInfo.append('<small class="d-block text-muted mt-1"><strong>Prompt:</strong> ' +
+                    (prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt) + '</small>');
+            }
+
+            cardBody.append(imageInfo);
+
             const useBtn = $('<button type="button" class="btn btn-primary btn-sm mr-2 use-image-btn">Use this image</button>');
 
             // Handle use button click
@@ -493,7 +515,34 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 // Update the preview if available
                 if (currentPreviewElement) {
                     $('#' + currentPreviewElement).attr('src', valueToStore);
+                    $('#' + currentPreviewElement).attr('alt', altText || 'AI generated image');
                     $('#' + currentPreviewElement).removeClass('d-none');
+                }
+
+                // Store the filename and alt text in hidden fields if they exist
+                const filenameField = currentTargetField + '_filename';
+                const altTextField = currentTargetField + '_alt';
+
+                if ($('#' + filenameField).length) {
+                    $('#' + filenameField).val(filename || 'ai-generated-image');
+                }
+
+                if ($('#' + altTextField).length) {
+                    $('#' + altTextField).val(altText || 'AI generated image');
+                }
+
+                // If there's a title field nearby, suggest using the alt text as the title
+                const titleField = currentTargetField.replace('_image', '_title').replace('image', 'title');
+                if ($('#' + titleField).length && $('#' + titleField).val() === '') {
+                    // Only suggest if the title field is empty
+                    if (confirm('Would you like to use a shortened version of the image description as the title?')) {
+                        // Create a shorter version of the alt text for the title
+                        let shortTitle = altText;
+                        if (shortTitle.length > 60) {
+                            shortTitle = shortTitle.substring(0, 57) + '...';
+                        }
+                        $('#' + titleField).val(shortTitle);
+                    }
                 }
 
                 // Close the modal
@@ -508,7 +557,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 // Create a temporary link to download the image
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'generated-image.png';
+                a.download = (filename || 'ai-generated-image') + '.png';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

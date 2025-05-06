@@ -73,7 +73,6 @@ function getAiTools() {
                    a.pricing_type,
                    a.price_info,
                    a.features,
-                   a.image,
                    a.rating,
                    a.featured,
                    a.is_published as isPublished,
@@ -118,7 +117,6 @@ function getDirectoryItems() {
                    d.contact_email,
                    d.contact_phone,
                    d.address,
-                   d.image,
                    d.featured,
                    d.is_published as isPublished,
                    d.slug,
@@ -159,7 +157,6 @@ function getGames() {
                    title as name,
                    description,
                    slug,
-                   image,
                    featured,
                    is_published as isPublished
             FROM games

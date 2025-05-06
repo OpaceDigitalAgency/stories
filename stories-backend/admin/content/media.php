@@ -17,11 +17,29 @@ require_once '../includes/enhanced-table-component.php';
 // Include image upload component
 require_once '../includes/image-upload-component.php';
 
+// Include image optimizer library
+require_once '../../includes/image_optimizer.php';
+
 // Function to handle file paths for display and access
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
     if (strpos($filePath, 'http') === 0) {
         return $filePath;
+    }
+
+    // Check for optimized versions
+    if (isset($GLOBALS['media']) && isset($GLOBALS['media']['id'])) {
+        $mediaId = $GLOBALS['media']['id'];
+        $db = $GLOBALS['db'];
+
+        // Check if we have optimized versions
+        if (!empty($GLOBALS['media']['medium_url'])) {
+            return $GLOBALS['media']['medium_url'];
+        }
+
+        if (!empty($GLOBALS['media']['large_url'])) {
+            return $GLOBALS['media']['large_url'];
+        }
     }
 
     // If it's a relative URL starting with /
@@ -61,30 +79,17 @@ if (isset($_GET['id'])) {
     $media = $stmt->fetch();
 
     if ($media) {
-        // Handle form submission
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $altText = $_POST['alt_text'] ?? '';
-            
-            try {
-                $stmt = $db->prepare("UPDATE media SET alt_text = ? WHERE id = ?");
-                $stmt->execute([$altText, $mediaId]);
-                header("Location: media.php");
-                exit;
-            } catch (PDOException $e) {
-                $error = "Error updating media: " . $e->getMessage();
-            }
-        }
-
-        $pageTitle = 'Edit Media';
+        $pageTitle = $media['filename'];
         $currentPage = 'media';
         
         // Include header
         require_once '../includes/header.php';
         
-        // Get display URL
+        // Get display URL and file info
         $displayUrl = getDisplayUrl($media['file_path']);
         $isImage = strpos($media['file_type'], 'image/') === 0;
         $fileExtension = pathinfo($media['filename'], PATHINFO_EXTENSION);
+        $fileExists = file_exists($media['file_path']);
         ?>
         <div class="content-wrapper">
             <div class="container-fluid">
@@ -95,20 +100,29 @@ if (isset($_GET['id'])) {
                             <a href="media.php" class="text-primary">← Back to Media Library</a>
                         </p>
                     </div>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-primary">
+                            <span class="icon-download"></span> Download
+                        </a>
+                        <form method="GET" style="display: inline;">
+                            <input type="hidden" name="delete" value="<?php echo $media['id']; ?>">
+                            <button type="submit" formaction="media.php" class="btn btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete this file?')">
+                                <span class="icon-delete"></span> Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
-
-                <?php if (isset($error)): ?>
-                <div class="alert alert-danger">
-                    <?php echo htmlspecialchars($error); ?>
-                </div>
-                <?php endif; ?>
 
                 <div class="content-section mb-4">
+                    <div class="section-header">
+                        <h2 class="section-title">File Details</h2>
+                    </div>
                     <div class="section-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="media-preview mb-4">
-                                    <?php if ($isImage): ?>
+                                    <?php if ($isImage && $fileExists): ?>
                                         <img src="<?php echo htmlspecialchars($displayUrl); ?>"
                                              alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"
                                              class="img-preview">
@@ -118,34 +132,54 @@ if (isset($_GET['id'])) {
                                         </div>
                                     <?php endif; ?>
                                 </div>
+
+                                <?php if ($isImage): ?>
+                                <div class="optimize-actions mb-4">
+                                    <a href="../../public/optimize_image.php?id=<?php echo $media['id']; ?>" class="btn btn-success">
+                                        <span class="icon-image"></span> Optimize This Image
+                                    </a>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <div class="col-md-6">
-                                <form method="POST">
-                                    <div class="form-group mb-3">
-                                        <label>Filename</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($media['filename']); ?>" readonly>
+                                <div class="file-details">
+                                    <div class="mb-3">
+                                        <strong>Filename:</strong><br>
+                                        <?php echo htmlspecialchars($media['filename']); ?>
                                     </div>
-                                    <div class="form-group mb-3">
-                                        <label>File Type</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($media['file_type']); ?>" readonly>
+                                    <div class="mb-3">
+                                        <strong>File Type:</strong><br>
+                                        <?php echo htmlspecialchars($media['file_type']); ?>
                                     </div>
-                                    <div class="form-group mb-3">
-                                        <label>File Size</label>
-                                        <input type="text" class="form-control" value="<?php echo formatFileSize($media['file_size']); ?>" readonly>
+                                    <div class="mb-3">
+                                        <strong>File Size:</strong><br>
+                                        <?php echo formatFileSize($media['file_size']); ?>
                                     </div>
-                                    <div class="form-group mb-3">
-                                        <label>Alt Text</label>
-                                        <input type="text" name="alt_text" class="form-control" value="<?php echo htmlspecialchars($media['alt_text'] ?? ''); ?>">
+                                    <div class="mb-3">
+                                        <strong>Uploaded:</strong><br>
+                                        <?php echo date('M d, Y H:i', strtotime($media['created_at'])); ?>
                                     </div>
-                                    <div class="form-group mb-3">
-                                        <label>URL</label>
-                                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($displayUrl); ?>" readonly>
+                                    <div class="mb-3">
+                                        <strong>File Path:</strong><br>
+                                        <code><?php echo htmlspecialchars($media['file_path']); ?></code>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                    <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-secondary">
-                                        <span class="icon-download"></span> Download
-                                    </a>
-                                </form>
+                                    <div class="mb-3">
+                                        <strong>URL:</strong><br>
+                                        <code><?php echo htmlspecialchars($displayUrl); ?></code>
+                                    </div>
+                                    <?php if ($isImage): ?>
+                                    <div class="mb-3">
+                                        <strong>Alt Text:</strong><br>
+                                        <form method="POST" class="mt-2">
+                                            <div class="input-group">
+                                                <input type="text" name="alt_text" class="form-control" 
+                                                       value="<?php echo htmlspecialchars($media['alt_text'] ?? ''); ?>">
+                                                <button type="submit" class="btn btn-primary">Update</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -108,20 +108,6 @@ if (isset($_GET['id'])) {
     
     // Include header
     require_once '../includes/header.php';
-    
-    // Add custom CSS
-    echo '<style>
-        .message-preview {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .badge {
-            font-size: 0.85rem;
-            padding: 0.35em 0.65em;
-        }
-    </style>';
     ?>
     <div class="content-wrapper">
         <div class="container-fluid">

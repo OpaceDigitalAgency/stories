@@ -269,15 +269,47 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     <?php else: ?>
                                         <div class="premium-table-actions">
                                             <?php if (in_array('view', $options['actions'])): ?>
-                                                <a href="view-<?php echo $itemType; ?>.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-info premium-btn-sm" title="View">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
+                                                <?php
+                                                // Check if the view file exists
+                                                $viewFile = "view-{$itemType}.php";
+                                                $viewFileExists = file_exists(__DIR__ . "/../content/{$viewFile}");
+
+                                                if ($viewFileExists) {
+                                                    // If the view file exists, create a normal link
+                                                    echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm" title="View">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</a>';
+                                                } else {
+                                                    // If the view file doesn't exist, create a button that opens a modal
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm view-item-btn" ';
+                                                    echo 'data-id="' . htmlspecialchars($item['id']) . '" ';
+                                                    echo 'data-bs-toggle="modal" ';
+                                                    echo 'data-bs-target="#viewModal' . htmlspecialchars($item['id']) . '" ';
+                                                    echo 'title="View">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                }
+                                                ?>
                                             <?php endif; ?>
 
                                             <?php if (in_array('edit', $options['actions'])): ?>
-                                                <a href="<?php echo $itemType; ?>-form.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
+                                                <?php
+                                                // Check if the edit form file exists
+                                                $formFile = "{$itemType}-form.php";
+                                                $formFileExists = file_exists(__DIR__ . "/../content/{$formFile}");
+
+                                                if ($formFileExists) {
+                                                    // If the form file exists, create a normal link
+                                                    echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">';
+                                                    echo '<i class="fas fa-edit"></i>';
+                                                    echo '</a>';
+                                                } else {
+                                                    // If the form file doesn't exist, create a disabled button
+                                                    echo '<button type="button" class="premium-btn premium-btn-primary premium-btn-sm" disabled title="Edit not available">';
+                                                    echo '<i class="fas fa-edit"></i>';
+                                                    echo '</button>';
+                                                }
+                                                ?>
                                             <?php endif; ?>
 
                                             <?php if (in_array('delete', $options['actions'])): ?>

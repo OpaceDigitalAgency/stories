@@ -12,12 +12,16 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Include OpenAI models helper
+require_once '../../includes/openai-models.php';
+
 // Initialize variables
 $openai = null;
 $openaiConfig = [];
 $usage = ['total_generations' => 0, 'total_cost' => 0];
 $availableModels = [];
 $promptTemplates = [];
+$refreshModels = isset($_GET['refresh_models']) && $_GET['refresh_models'] === '1';
 
 // Function to fetch available models from OpenAI
 function fetchAvailableModels($apiKey) {
@@ -132,22 +136,8 @@ try {
         $openaiConfig['text_model'] = 'gpt-4o';
     }
 
-    // Use hardcoded model list instead of fetching from API
-    $availableModels = [
-        'image' => [
-            'gpt-image-1' => 'GPT Image 1 (Latest)',
-            'dall-e-3' => 'DALL·E 3 (Legacy)',
-            'dall-e-2' => 'DALL·E 2 (Legacy)'
-        ],
-        'text' => [
-            'gpt-4.1' => 'GPT-4.1 (Latest)',
-            'gpt-4o' => 'GPT-4o (Balanced)',
-            'o4-mini' => 'o4-mini (Fast)',
-            'o3' => 'o3 (Powerful)',
-            'o3-mini' => 'o3-mini (Balanced)',
-            'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Economical)'
-        ]
-    ];
+    // Fetch models from OpenAI API or use cached models
+    $availableModels = fetchOpenAIModels($openaiConfig['api_key'] ?? '', $refreshModels);
 
     // Get usage statistics
     $stmt = $db->prepare("
@@ -254,9 +244,9 @@ $pageActions = '
     <a href="ai-text-generator.php" class="btn btn-info">
         <i class="fas fa-font"></i> Test Text Generator
     </a>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+    <a href="ai-settings.php?refresh_models=1" class="btn btn-secondary">
         <i class="fas fa-sync"></i> Refresh Models
-    </button>
+    </a>
 </div>';
 
 // Include header
@@ -277,6 +267,13 @@ if (isset($_SESSION['success'])) {
     echo '<i class="fas fa-check-circle"></i> ' . htmlspecialchars($_SESSION['success']);
     echo '</div>';
     unset($_SESSION['success']);
+}
+
+// Display model refresh notification
+if ($refreshModels) {
+    echo '<div class="alert alert-info" role="alert">';
+    echo '<i class="fas fa-sync-alt"></i> OpenAI models have been refreshed from the API.';
+    echo '</div>';
 }
 ?>
 
@@ -307,6 +304,14 @@ if (isset($_SESSION['success'])) {
                 <h3>OpenAI Settings</h3>
             </div>
             <div class="card-body">
+                <?php
+                // Display last refresh time
+                $cachedModels = getCachedModels();
+                if ($cachedModels) {
+                    $lastRefresh = date('F j, Y, g:i a', $cachedModels['timestamp']);
+                    echo '<div class="mb-3 text-muted"><small><i class="fas fa-clock"></i> Models last refreshed: ' . $lastRefresh . '</small></div>';
+                }
+                ?>
                 <form method="post" class="settings-form">
                     <div class="form-group">
                         <label for="openai_api_key">API Key</label>

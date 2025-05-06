@@ -331,6 +331,11 @@ function getOptimizedImageUrl($originalUrl, $size = 'thumbnail') {
 
     // Check if it's an optimized image URL
     if (strpos($originalUrl, '/uploads/optimized/') !== false) {
+        // If it already contains "thumbnail", return it as is
+        if (strpos($originalUrl, '-thumbnail.') !== false) {
+            return $originalUrl;
+        }
+
         // Replace the size suffix with thumbnail
         $thumbnailUrl = preg_replace('/-(?:medium|large|small)\.(webp|jpg|png|jpeg)$/', '-thumbnail.$1', $originalUrl);
 
@@ -344,11 +349,29 @@ function getOptimizedImageUrl($originalUrl, $size = 'thumbnail') {
 
     // For regular uploads, try to find the optimized version
     if (strpos($originalUrl, '/uploads/') !== false) {
-        $pathInfo = pathinfo($originalUrl);
-        $filename = $pathInfo['filename'];
+        // Extract the filename without the path
+        $filename = basename($originalUrl);
 
-        // Create the optimized thumbnail URL
-        $thumbnailUrl = '/uploads/optimized/' . $filename . '-thumbnail.webp';
+        // Check if the filename has a unique ID prefix (like 6819c755d18d7-)
+        if (preg_match('/^([a-f0-9]+)-(.+)$/i', $filename, $matches)) {
+            // Use the existing ID prefix
+            $uniqueId = $matches[1];
+            $baseFilename = $matches[2];
+            $thumbnailUrl = '/uploads/optimized/' . $uniqueId . '-' . $baseFilename;
+
+            // Replace extension with webp if needed
+            $thumbnailUrl = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $thumbnailUrl);
+
+            // Add thumbnail suffix if not present
+            if (strpos($thumbnailUrl, '-thumbnail.') === false) {
+                $thumbnailUrl = preg_replace('/\.(webp|jpe?g|png|gif)$/i', '-thumbnail.$1', $thumbnailUrl);
+            }
+        } else {
+            // No unique ID, use the filename directly
+            $pathInfo = pathinfo($filename);
+            $baseFilename = $pathInfo['filename'];
+            $thumbnailUrl = '/uploads/optimized/' . $baseFilename . '-thumbnail.webp';
+        }
 
         return $thumbnailUrl;
     }

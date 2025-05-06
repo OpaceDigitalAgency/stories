@@ -139,8 +139,8 @@ if (isset($_SESSION['error'])) {
                     <?php
                     // Render the image upload component for directory item image
                     renderImageUploadComponent(
-                        'image_url',
-                        $item['image_url'] ?? '',
+                        'cover_url',
+                        $item['cover_url'] ?? '',
                         'Directory Item Image',
                         'directory_item',
                         $item['id'] ?? null

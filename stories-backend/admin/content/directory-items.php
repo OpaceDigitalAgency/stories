@@ -90,7 +90,7 @@ try {
                d.contact_email,
                d.contact_phone,
                d.address,
-               COALESCE(d.image_url, d.image) as image_url,
+               COALESCE(d.cover_url, d.image) as image_url,
                d.featured,
                d.is_published,
                d.slug,

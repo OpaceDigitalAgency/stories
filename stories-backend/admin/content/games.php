@@ -61,7 +61,7 @@ try {
                title,
                description,
                slug,
-               COALESCE(image_url, image) as image_url,
+               COALESCE(cover_url, image) as image_url,
                featured,
                is_published,
                published_at,

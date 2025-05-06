@@ -100,7 +100,7 @@ try {
                a.published_at,
                a.created_at,
                a.updated_at,
-               COALESCE(a.image_url, a.image) as image_url,
+               COALESCE(a.cover_url, a.image) as image_url,
                c.name as category_name
         FROM ai_tools a
         LEFT JOIN ai_tool_categories c ON a.category_id = c.id

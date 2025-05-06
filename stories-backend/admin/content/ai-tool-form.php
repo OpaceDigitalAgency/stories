@@ -143,8 +143,8 @@ if (isset($_SESSION['error'])) {
                     <?php
                     // Render the image upload component for tool image
                     renderImageUploadComponent(
-                        'image_url',
-                        $tool['image_url'] ?? '',
+                        'cover_url',
+                        $tool['cover_url'] ?? '',
                         'Tool Image',
                         'ai_tool',
                         $tool['id'] ?? null
@@ -159,8 +159,8 @@ if (isset($_SESSION['error'])) {
                             'description' => $tool['description'] ?? '',
                             'features' => $tool['features'] ?? ''
                         ],
-                        'image_url',
-                        'image_url-preview'
+                        'cover_url',
+                        'cover_url-preview'
                     );
                     echo '</div>';
                     ?>

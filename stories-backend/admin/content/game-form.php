@@ -116,8 +116,8 @@ if (isset($_SESSION['error'])) {
                     <?php
                     // Render the image upload component for game image
                     renderImageUploadComponent(
-                        'image_url',
-                        $game['image_url'] ?? '',
+                        'cover_url',
+                        $game['cover_url'] ?? '',
                         'Game Image',
                         'game',
                         $game['id'] ?? null
@@ -133,8 +133,8 @@ if (isset($_SESSION['error'])) {
                             'genre' => $game['genre'] ?? '',
                             'platform' => $game['platform'] ?? ''
                         ],
-                        'image_url',
-                        'image_url-preview'
+                        'cover_url',
+                        'cover_url-preview'
                     );
                     echo '</div>';
                     ?>

@@ -61,7 +61,7 @@ try {
                title,
                description,
                slug,
-               image,
+               COALESCE(image_url, image) as image_url,
                featured,
                is_published,
                published_at,
@@ -185,7 +185,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $game['id'],
-            'image' => $game['image'] ?? '',
+            'image_url' => $game['image_url'] ?? $game['image'] ?? '../assets/images/default-cover.jpg',
             'title' => $game['title'],
             'slug' => $game['slug'] ?? '',
             'featured' => $featured,
@@ -220,7 +220,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
-            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

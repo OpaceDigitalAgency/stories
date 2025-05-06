@@ -90,7 +90,7 @@ try {
                d.contact_email,
                d.contact_phone,
                d.address,
-               d.image,
+               COALESCE(d.image_url, d.image) as image_url,
                d.featured,
                d.is_published,
                d.slug,
@@ -221,7 +221,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'image' => $item['image'] ?? '',
+            'image_url' => $item['image_url'] ?? $item['image'] ?? '../assets/images/default-cover.jpg',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
@@ -261,7 +261,7 @@ if (function_exists('renderEnhancedTable')) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
-            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

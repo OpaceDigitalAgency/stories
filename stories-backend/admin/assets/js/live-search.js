@@ -206,22 +206,9 @@ function initClickableImages() {
                         formFile = `${itemType}-form.php`;
                 }
 
-                // Check if the form file exists
-                fetch(formFile, { method: 'HEAD' })
-                    .then(response => {
-                        if (response.ok) {
-                            // If the file exists, redirect to it
-                            window.location.href = `${formFile}?id=${itemId}`;
-                        } else {
-                            // If the file doesn't exist, show an alert
-                            console.error(`Form file ${formFile} not found`);
-                            alert(`The edit form for this ${itemType} is not available.`);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error checking form file:', error);
-                        alert(`The edit form for this ${itemType} is not available.`);
-                    });
+                // Directly redirect to the form file without checking if it exists
+                // This avoids CORS issues with the fetch API
+                window.location.href = `${formFile}?id=${itemId}`;
             }
         });
     });

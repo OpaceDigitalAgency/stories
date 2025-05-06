@@ -100,6 +100,7 @@ try {
                a.published_at,
                a.created_at,
                a.updated_at,
+               COALESCE(a.image_url, a.image) as image_url,
                c.name as category_name
         FROM ai_tools a
         LEFT JOIN ai_tool_categories c ON a.category_id = c.id
@@ -220,6 +221,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $tool['id'],
+            'image_url' => $tool['image_url'] ?? '../assets/images/default-cover.jpg',
             'title' => $tool['title'],
             'category' => $tool['category_name'] ?? 'None',
             'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),
@@ -255,7 +257,9 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
+            'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );
 }

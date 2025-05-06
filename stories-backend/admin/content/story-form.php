@@ -11,6 +11,12 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
 try {
     // Get story if editing
     $story = null;
@@ -197,6 +203,34 @@ require_once '../includes/header.php';
                 <label class="form-label" for="content">Story Content <span class="required">*</span></label>
                 <textarea id="content" name="content" class="form-control" rows="10" required><?php echo htmlspecialchars($story['content'] ?? ''); ?></textarea>
             </div>
+
+            <!-- Image Upload -->
+            <div class="form-section-title">Featured Image</div>
+
+            <?php
+            // Render image upload component
+            renderImageUploadComponent(
+                'cover_url',
+                $story['cover_url'] ?? '',
+                'Featured Image',
+                'story',
+                $story['id'] ?? null
+            );
+
+            // Render AI image generator
+            if (function_exists('renderAiImageGenerator')) {
+                renderAiImageGenerator(
+                    'story',
+                    [
+                        'title' => $story['title'] ?? '',
+                        'excerpt' => $story['excerpt'] ?? '',
+                        'content' => $story['content'] ?? ''
+                    ],
+                    'cover_url',
+                    'cover_url_preview'
+                );
+            }
+            ?>
 
             <!-- Additional Fields -->
             <div class="form-section-title">Additional Information</div>

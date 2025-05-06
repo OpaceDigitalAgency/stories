@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Game';
+$pageTitle = 'Game Details';
 $currentPage = 'view-game';
 
 // Include auth check
@@ -88,7 +88,7 @@ try {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title">View Game</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($game['title']); ?></h1>
                 <p class="page-description">
                     <a href="games.php" class="text-primary">← Back to Games</a>
                 </p>
@@ -227,7 +227,7 @@ try {
             <form method="GET" action="game-form.php">
                 <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
                 <button type="submit" class="btn btn-primary">
-                    <span class="icon-edit"></span> Edit Game
+                    <span class="icon-edit"></span> Edit
                 </button>
             </form>
         </div>

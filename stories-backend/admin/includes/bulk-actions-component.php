@@ -36,18 +36,20 @@ function renderEnhancedBulkActionsComponent($contentType, $actions = []) {
     ?>
     <div class="bulk-actions">
         <form method="POST" action="<?php echo htmlspecialchars($formAction); ?>" id="bulk-actions-form">
-            <div class="d-flex gap-2 align-items-center">
-                <label for="bulk-action" class="form-label mb-0">Bulk Actions:</label>
-                <select name="action" id="bulk-action" class="form-control" style="width: auto;">
-                    <option value="">-- Select Action --</option>
-                    <?php foreach ($actions as $action => $label): ?>
-                        <option value="<?php echo htmlspecialchars($action); ?>">
-                            <?php echo htmlspecialchars($label); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="d-flex align-items-center mb-3">
+                <div class="d-flex align-items-center me-3">
+                    <label for="bulk-action" class="form-label mb-0 me-2">Bulk Actions:</label>
+                    <select name="action" id="bulk-action" class="form-select" style="width: auto; min-width: 200px;">
+                        <option value="">Select Action</option>
+                        <?php foreach ($actions as $action => $label): ?>
+                            <option value="<?php echo htmlspecialchars($action); ?>">
+                                <?php echo htmlspecialchars($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                <button type="submit" class="btn btn-primary" id="apply-bulk-action" disabled>
+                <button type="submit" class="btn btn-primary me-3" id="apply-bulk-action" disabled>
                     <i class="fas fa-check" aria-hidden="true"></i> Apply
                 </button>
 

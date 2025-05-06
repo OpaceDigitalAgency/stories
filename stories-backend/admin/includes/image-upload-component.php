@@ -90,9 +90,7 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
                 <button type="button" class="btn btn-sm btn-secondary select-from-media">
                     <i class="fas fa-photo-video"></i> Select from Media Library
                 </button>
-                <button type="button" class="btn btn-sm btn-info generate-ai">
-                    <i class="fas fa-robot"></i> Generate with AI
-                </button>
+                <!-- AI generation button is now added separately via renderAiImageGenerator -->
             </div>
         </div>
 

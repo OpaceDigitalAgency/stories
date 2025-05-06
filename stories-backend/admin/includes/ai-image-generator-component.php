@@ -1,10 +1,10 @@
 <?php
 /**
  * AI Image Generator Component
- * 
+ *
  * This component provides a "Generate with AI" button that can be included in any admin page
  * with image uploads. It uses the AI prompt templates to generate images based on content.
- * 
+ *
  * Usage:
  * 1. Include this file in your admin page
  * 2. Call the renderAiImageGenerator() function with the following parameters:
@@ -12,9 +12,9 @@
  *    - $contentData: An array of data about the content (title, description, etc.)
  *    - $targetField: The ID of the input field where the generated image URL should be placed
  *    - $previewElement: The ID of the image element where the preview should be shown
- * 
+ *
  * Example:
- * <?php 
+ * <?php
  * require_once '../includes/ai-image-generator-component.php';
  * renderAiImageGenerator('story', [
  *     'title' => $story['title'],
@@ -26,7 +26,7 @@
 
 /**
  * Render the AI Image Generator component
- * 
+ *
  * @param string $contentType The type of content (story, blog_post, author, game, ai_tool, directory, general)
  * @param array $contentData An array of data about the content (title, description, etc.)
  * @param string $targetField The ID of the input field where the generated image URL should be placed
@@ -35,7 +35,7 @@
  */
 function renderAiImageGenerator($contentType, $contentData, $targetField, $previewElement) {
     global $db;
-    
+
     // Get available prompt templates for this content type
     $promptTemplates = [];
     try {
@@ -45,7 +45,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
     } catch (Exception $e) {
         error_log("Error fetching prompt templates: " . $e->getMessage());
     }
-    
+
     // If no templates found, include general templates
     if (empty($promptTemplates)) {
         try {
@@ -56,7 +56,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             error_log("Error fetching general prompt templates: " . $e->getMessage());
         }
     }
-    
+
     // Get OpenAI settings
     $openaiConfig = [];
     try {
@@ -69,18 +69,18 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
     } catch (Exception $e) {
         error_log("Error fetching OpenAI config: " . $e->getMessage());
     }
-    
+
     // Check if OpenAI is configured
     $isConfigured = !empty($openaiConfig['api_key']);
-    
+
     // Encode content data for JavaScript
     $contentDataJson = json_encode($contentData);
-    
+
     // Render the component
     ?>
-    <div class="ai-image-generator-component">
-        <button type="button" class="btn btn-primary ai-generate-btn" 
-                data-toggle="modal" 
+    <div class="ai-image-generator-component text-center">
+        <button type="button" class="btn btn-primary ai-generate-btn"
+                data-toggle="modal"
                 data-target="#aiImageGeneratorModal"
                 data-content-type="<?php echo htmlspecialchars($contentType); ?>"
                 data-content-data='<?php echo htmlspecialchars($contentDataJson); ?>'
@@ -91,13 +91,13 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         </button>
         <?php if (!$isConfigured): ?>
             <small class="text-muted d-block mt-1">
-                <i class="fas fa-info-circle"></i> 
-                AI image generation is not configured. Please set up your OpenAI API key in 
+                <i class="fas fa-info-circle"></i>
+                AI image generation is not configured. Please set up your OpenAI API key in
                 <a href="ai-settings.php" target="_blank">AI Settings</a>.
             </small>
         <?php endif; ?>
     </div>
-    
+
     <?php
     // Only render the modal once per page
     static $modalRendered = false;
@@ -120,7 +120,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                         <select id="ai-prompt-template" class="form-control">
                             <option value="">-- Select a template --</option>
                             <?php foreach ($promptTemplates as $template): ?>
-                                <option value="<?php echo htmlspecialchars($template['id']); ?>" 
+                                <option value="<?php echo htmlspecialchars($template['id']); ?>"
                                         data-template="<?php echo htmlspecialchars($template['prompt_template']); ?>">
                                     <?php echo htmlspecialchars($template['name']); ?>
                                 </option>
@@ -130,7 +130,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             Select a template to use as a starting point
                         </small>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="ai-prompt">Prompt</label>
                         <textarea id="ai-prompt" class="form-control" rows="4" placeholder="Enter your prompt here..."></textarea>
@@ -138,7 +138,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             Be specific and detailed in your prompt for better results
                         </small>
                     </div>
-                    
+
                     <div class="form-row">
                         <div class="form-group col-md-4">
                             <label for="ai-size">Image Size</label>
@@ -148,7 +148,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                 <option value="1792x1024">Landscape (1792x1024)</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group col-md-4">
                             <label for="ai-style">Style</label>
                             <select id="ai-style" class="form-control">
@@ -158,7 +158,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                 <option value="professional">Professional</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group col-md-4">
                             <label for="ai-variations">Variations</label>
                             <select id="ai-variations" class="form-control">
@@ -169,22 +169,22 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="ai-generation-status d-none">
                         <div class="progress mb-3">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
                         </div>
                         <p class="text-center text-muted">Generating image... This may take a few seconds.</p>
                     </div>
-                    
+
                     <div class="ai-generation-results d-none">
                         <h5 class="mb-3">Generated Images</h5>
                         <div class="row ai-images-container"></div>
                     </div>
-                    
+
                     <div class="ai-generation-error d-none">
                         <div class="alert alert-danger" role="alert">
-                            <i class="fas fa-exclamation-triangle"></i> 
+                            <i class="fas fa-exclamation-triangle"></i>
                             <span class="ai-error-message"></span>
                         </div>
                     </div>
@@ -198,7 +198,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             </div>
         </div>
     </div>
-    
+
     <script>
     $(document).ready(function() {
         // Store current content data and target fields
@@ -206,7 +206,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         let currentContentData = {};
         let currentTargetField = '';
         let currentPreviewElement = '';
-        
+
         // Handle opening the modal
         $('.ai-generate-btn').click(function() {
             // Get data from button
@@ -214,34 +214,45 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             currentContentData = $(this).data('content-data');
             currentTargetField = $(this).data('target-field');
             currentPreviewElement = $(this).data('preview-element');
-            
+
             // Reset the modal
-            $('#ai-prompt').val('');
-            $('#ai-prompt-template').val('');
             $('.ai-generation-status').addClass('d-none');
             $('.ai-generation-results').addClass('d-none');
             $('.ai-generation-error').addClass('d-none');
             $('.ai-images-container').empty();
-            
+
+            // Set default prompt for story content type
+            if (currentContentType === 'story') {
+                const defaultPrompt = "Generate an image for a children's story book in a typical hand-drawn or cartoon illustration form that you would find in traditional story books. Base this on: " +
+                    (currentContentData.title || "") +
+                    (currentContentData.excerpt ? ". Summary: " + currentContentData.excerpt : "") +
+                    (currentContentData.age_group ? ". Target age: " + currentContentData.age_group : "");
+                $('#ai-prompt').val(defaultPrompt);
+            } else {
+                $('#ai-prompt').val('');
+            }
+
+            $('#ai-prompt-template').val('');
+
             // Filter templates based on content type
             $('#ai-prompt-template option').each(function() {
                 $(this).show();
             });
         });
-        
+
         // Handle template selection
         $('#ai-prompt-template').change(function() {
             const templateText = $(this).find('option:selected').data('template');
             if (templateText) {
                 // Process template with content data
                 let processedTemplate = templateText;
-                
+
                 // Replace simple variables {{variable}}
                 processedTemplate = processedTemplate.replace(/\{\{([^}]+)\}\}/g, function(match, key) {
                     key = key.trim();
                     return currentContentData[key] || '';
                 });
-                
+
                 // Process conditional blocks {{#if variable}}content{{/if}}
                 processedTemplate = processedTemplate.replace(/\{\{#if ([^}]+)\}\}(.*?)\{\{\/if\}\}/g, function(match, key, content) {
                     key = key.trim();
@@ -250,11 +261,11 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     }
                     return '';
                 });
-                
+
                 $('#ai-prompt').val(processedTemplate);
             }
         });
-        
+
         // Handle generate button click
         $('.ai-generate-image-btn').click(function() {
             const prompt = $('#ai-prompt').val();
@@ -262,13 +273,13 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 alert('Please enter a prompt');
                 return;
             }
-            
+
             // Show loading state
             $('.ai-generation-status').removeClass('d-none');
             $('.ai-generation-results').addClass('d-none');
             $('.ai-generation-error').addClass('d-none');
             $('.ai-generate-image-btn').prop('disabled', true);
-            
+
             // Prepare request data
             const data = {
                 prompt: prompt,
@@ -276,7 +287,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 style: $('#ai-style').val(),
                 variations: parseInt($('#ai-variations').val())
             };
-            
+
             // Make API request
             $.ajax({
                 url: 'https://api.storiesfromtheweb.org/api/v1/ai/image.php',
@@ -287,15 +298,15 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     // Hide loading state
                     $('.ai-generation-status').addClass('d-none');
                     $('.ai-generate-image-btn').prop('disabled', false);
-                    
+
                     if (response.success) {
                         // Show results
                         $('.ai-generation-results').removeClass('d-none');
                         $('.ai-images-container').empty();
-                        
+
                         // Add main image
                         addImageToResults(response.data.url, true);
-                        
+
                         // Add variations if any
                         if (response.data.variations) {
                             response.data.variations.forEach(function(url) {
@@ -312,14 +323,14 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     // Hide loading state
                     $('.ai-generation-status').addClass('d-none');
                     $('.ai-generate-image-btn').prop('disabled', false);
-                    
+
                     // Show error
                     $('.ai-generation-error').removeClass('d-none');
                     $('.ai-error-message').text('Request failed: ' + (error || 'Unknown error'));
                 }
             });
         });
-        
+
         // Function to add an image to the results
         function addImageToResults(url, isMain) {
             const col = $('<div class="col-md-6 mb-3"></div>');
@@ -327,24 +338,24 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             const img = $('<img class="card-img-top" src="' + url + '" alt="Generated image">');
             const cardBody = $('<div class="card-body"></div>');
             const useBtn = $('<button type="button" class="btn btn-primary btn-sm mr-2 use-image-btn">Use this image</button>');
-            
+
             // Handle use button click
             useBtn.click(function() {
                 // Set the image URL in the target field
                 $('#' + currentTargetField).val(url);
-                
+
                 // Update the preview if available
                 if (currentPreviewElement) {
                     $('#' + currentPreviewElement).attr('src', url);
                     $('#' + currentPreviewElement).removeClass('d-none');
                 }
-                
+
                 // Close the modal
                 $('#aiImageGeneratorModal').modal('hide');
             });
-            
+
             cardBody.append(useBtn);
-            
+
             // Add download button
             const downloadBtn = $('<button type="button" class="btn btn-secondary btn-sm download-image-btn">Download</button>');
             downloadBtn.click(function() {
@@ -356,15 +367,15 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 a.click();
                 document.body.removeChild(a);
             });
-            
+
             cardBody.append(downloadBtn);
-            
+
             // If this is the main image, add a badge
             if (isMain) {
                 const badge = $('<span class="badge badge-success position-absolute" style="top: 10px; right: 10px;">Primary</span>');
                 card.append(badge);
             }
-            
+
             card.append(img);
             card.append(cardBody);
             col.append(card);

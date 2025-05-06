@@ -220,7 +220,7 @@ if (isset($error)): ?>
                                         <?php echo isset($story['author_id']) && $story['author_id'] == $author['id'] ? 'selected' : ''; ?>>
                                     <?php
                                         echo htmlspecialchars($author['name']);
-                                        if ($author['age']) echo " (Age: {$author['age']})";
+                                        if (isset($author['age']) && $author['age']) echo " (Age: {$author['age']})";
                                         echo " - " . ucfirst($author['author_type'] ?? 'retail');
                                     ?>
                                 </option>
@@ -276,8 +276,8 @@ if (isset($error)): ?>
                             $story['id'] ?? null
                         );
 
-                        // Add AI image generator button
-                        echo '<div class="mt-2">';
+                        // Add AI image generator button in a styled container
+                        echo '<div class="form-group d-flex justify-content-center">';
                         renderAiImageGenerator(
                             'story',
                             [
@@ -636,6 +636,10 @@ if (isset($error)): ?>
             align-items: center;
         }
 
+        .justify-content-center {
+            justify-content: center;
+        }
+
         .text-center {
             text-align: center;
         }
@@ -650,6 +654,29 @@ if (isset($error)): ?>
 
         .font-bold {
             font-weight: 700;
+        }
+
+        /* Button styling */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm, 0.25rem);
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 0.25rem;
+        }
+
+        .btn i {
+            margin-right: 0.25rem;
+        }
+
+        .ai-image-generator-component {
+            margin: 0.5rem 0;
         }
     </style>
 

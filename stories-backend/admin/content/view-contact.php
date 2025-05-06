@@ -1,38 +1,17 @@
 <?php
-/**
- * View Contact Page
- *
- * This page displays the details of a contact submission.
- */
 
-// Start session if not already started
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+// Page variables
+$pageTitle = 'Contact Details';
+$currentPage = 'contacts';
 
-// Include simple_auth.php directly
-require_once '../../simple_auth.php';
+// Include auth check
+require_once '../includes/auth-check.php';
 
-// Database configuration
-$config = [
-    'host' => 'localhost',
-    'name' => 'stories_db',
-    'user' => 'stories_user',
-    'password' => '$tw1cac3+sOt',
-    'charset' => 'utf8mb4',
-    'port' => 3306
-];
+// Include database connection
+require_once '../includes/db-connect.php';
 
-// Initialize SimpleAuth
-SimpleAuth::initDB($config);
-
-// Check if user is logged in
-$user = SimpleAuth::check();
-if (!$user) {
-    // Redirect to login
-    header("Location: ../login.php");
-    exit;
-}
+// Include header
+require_once '../includes/header.php';
 
 // Include database connection
 require_once '../includes/db-connect.php';
@@ -105,13 +84,23 @@ try {
     $error = "Database error: " . $e->getMessage();
 }
 
-// Set page variables for header
-$pageTitle = 'View Contact';
-$currentPage = 'contacts';
-$pageDescription = '<a href="contacts.php" class="text-primary">← Back to Contacts</a>';
+?>
 
-// Include header
-require_once '../includes/header.php';
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo htmlspecialchars($contact['name']); ?></h1>
+                <p class="page-description">
+                    <a href="contacts.php" class="text-primary">← Back to Contacts</a>
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="contacts.php?id=<?php echo $contact['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
+            </div>
+        </div>
 
 // Display any errors
 if ($error) {

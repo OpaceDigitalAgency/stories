@@ -165,23 +165,62 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                 <td>
                                     <div class="table-actions">
                                         <?php if ($options['actions']['view']): ?>
-                                            <a
-                                                href="<?php echo str_replace('{id}', $item[$options['id_field']], $options['view_url']); ?>"
-                                                class="btn btn-info btn-sm"
-                                                aria-label="View <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
-                                            >
-                                                <i class="fas fa-eye" aria-hidden="true"></i> View
-                                            </a>
+                                            <?php
+                                            // Get the view URL
+                                            $viewUrl = str_replace('{id}', $item[$options['id_field']], $options['view_url']);
+
+                                            // Extract the filename from the URL
+                                            $viewFile = basename($viewUrl);
+                                            $viewFilePath = __DIR__ . "/../content/" . $viewFile;
+
+                                            // Check if the view file exists
+                                            $viewFileExists = file_exists($viewFilePath);
+
+                                            if ($viewFileExists) {
+                                                // If the view file exists, create a normal link
+                                                echo '<a href="' . htmlspecialchars($viewUrl) . '" class="btn btn-info btn-sm" ';
+                                                echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
+                                                echo '</a>';
+                                            } else {
+                                                // If the view file doesn't exist, create a button that opens a modal
+                                                echo '<button type="button" class="btn btn-info btn-sm view-item-btn" ';
+                                                echo 'data-id="' . htmlspecialchars($item[$options['id_field']]) . '" ';
+                                                echo 'data-bs-toggle="modal" ';
+                                                echo 'data-bs-target="#viewModal' . htmlspecialchars($item[$options['id_field']]) . '" ';
+                                                echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
+                                                echo '</button>';
+                                            }
+                                            ?>
                                         <?php endif; ?>
 
                                         <?php if ($options['actions']['edit']): ?>
-                                            <a
-                                                href="<?php echo str_replace('{id}', $item[$options['id_field']], $options['edit_url']); ?>"
-                                                class="btn btn-primary btn-sm"
-                                                aria-label="Edit <?php echo htmlspecialchars($content_type_singular); ?>: <?php echo htmlspecialchars($item[$options['name_field']] ?? ''); ?>"
-                                            >
-                                                <i class="fas fa-edit" aria-hidden="true"></i> Edit
-                                            </a>
+                                            <?php
+                                            // Get the edit URL
+                                            $editUrl = str_replace('{id}', $item[$options['id_field']], $options['edit_url']);
+
+                                            // Extract the filename from the URL
+                                            $editFile = basename($editUrl);
+                                            $editFilePath = __DIR__ . "/../content/" . $editFile;
+
+                                            // Check if the edit file exists
+                                            $editFileExists = file_exists($editFilePath);
+
+                                            if ($editFileExists) {
+                                                // If the edit file exists, create a normal link
+                                                echo '<a href="' . htmlspecialchars($editUrl) . '" class="btn btn-primary btn-sm" ';
+                                                echo 'aria-label="Edit ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                echo '<i class="fas fa-edit" aria-hidden="true"></i> Edit';
+                                                echo '</a>';
+                                            } else {
+                                                // If the edit file doesn't exist, create a disabled button
+                                                echo '<button type="button" class="btn btn-primary btn-sm" disabled ';
+                                                echo 'aria-label="Edit not available for ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                echo '<i class="fas fa-edit" aria-hidden="true"></i> Edit';
+                                                echo '</button>';
+                                            }
+                                            ?>
                                         <?php endif; ?>
 
                                         <?php if ($options['actions']['delete']): ?>

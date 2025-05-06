@@ -267,8 +267,10 @@ if (function_exists('renderLiveSearchComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Prepare data for the enhanced table
-if (!empty($stories)) {
+// Include enhanced table component
+require_once __DIR__ . '/../includes/enhanced-table-component.php';
+if (function_exists('renderEnhancedTable')) {
+    // Prepare data for the enhanced table
     $tableData = [];
     foreach ($stories as $story) {
         // Format the status

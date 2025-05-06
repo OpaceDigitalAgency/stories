@@ -205,8 +205,10 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Prepare data for the enhanced table
-if (!empty($ai_tools)) {
+// Include enhanced table component
+require_once __DIR__ . '/../includes/enhanced-table-component.php';
+if (function_exists('renderEnhancedTable')) {
+    // Prepare data for the enhanced table
     $tableData = [];
     foreach ($ai_tools as $tool) {
         // Format the status
@@ -256,7 +258,7 @@ if (!empty($ai_tools)) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
-            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

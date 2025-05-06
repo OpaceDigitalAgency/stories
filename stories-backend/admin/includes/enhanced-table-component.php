@@ -51,6 +51,15 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
             if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathJpg)) {
                 return $thumbnailPathJpg;
             }
+
+            // Try with png extension as another fallback
+            $thumbnailPathPng = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.png';
+            if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathPng)) {
+                return $thumbnailPathPng;
+            }
+
+            // If no thumbnail exists, return the original image
+            return $filePath;
         }
     }
 
@@ -61,99 +70,136 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
 
     // If it's a relative URL starting with /
     if (strpos($filePath, '/') === 0) {
+        // Check if we're in a development environment
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'localhost') {
+            return $filePath;
+        }
         return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
+    }
+
+    // If it's a relative path without leading slash
+    if (strpos($filePath, '../') === 0 || strpos($filePath, './') === 0) {
+        return $filePath;
+    }
+
+    // If it's just a filename, assume it's in the uploads directory
+    if (strpos($filePath, '/') === false) {
+        return '../uploads/' . $filePath;
     }
 
     return $filePath;
 }
 
 /**
- * Render an enhanced table with modern features
+ * Renders an enhanced table for the specified items
  *
- * @param array $items The data items to display
- * @param array $columns The columns to show
- * @param string $itemType The type of items (e.g., 'story', 'author')
- * @param string $tableId A unique ID for the table
+ * @param array $items The items to display in the table
+ * @param array $columns The columns to display (format: ['field' => 'Label', ...])
+ * @param string $itemType The type of items (e.g., 'stories', 'authors')
+ * @param string $tableId The ID for the table element
  * @param array $options Additional options for the table
+ * @return void
  */
 function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = []) {
     // Default options
     $defaultOptions = [
-        'showCheckboxes' => false,
+        'showCheckboxes' => true,
         'showActions' => true,
         'actions' => ['view', 'edit', 'delete'],
-        'thumbnailField' => false,
+        'thumbnailField' => 'image', // Set to false to disable thumbnail column
         'thumbnailAltField' => 'title',
-        'thumbnailClickable' => true,
-        'thumbnailClickAction' => 'view',
         'editableFields' => [],
-        'htmlFields' => [],
-        'bulkActions' => [],
-        'customActionRenderer' => null,
-        'itemsPerPage' => 25,
+        'htmlFields' => [], // Fields that should render HTML instead of escaping it
+        'bulkActions' => ['delete'],
+        'itemsPerPage' => 10,
         'currentPage' => 1
     ];
 
-    // Merge options with defaults
+    // Merge options
     $options = array_merge($defaultOptions, $options);
 
-    // Start output buffering and wrap everything in a try-catch
-    ob_start();
-    try {
-    ?>
+    // Check if we have items to display
+    if (empty($items)) {
+        echo '<div class="alert alert-info">No items found.</div>';
+        return;
+    }
 
+    // Calculate pagination
+    $totalItems = count($items);
+    $totalPages = ceil($totalItems / $options['itemsPerPage']);
+    $startIndex = ($options['currentPage'] - 1) * $options['itemsPerPage'];
+    $endIndex = min($startIndex + $options['itemsPerPage'], $totalItems);
+    $paginatedItems = array_slice($items, $startIndex, $options['itemsPerPage']);
+
+    // Render the table
+    ?>
+    <style>
+        .thumbnail-column {
+            width: 80px;
+            text-align: center;
+        }
+        .thumbnail-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
     <div class="premium-table-container">
-        <?php if (!empty($options['bulkActions'])): ?>
-            <div class="premium-bulk-actions">
-                <div class="premium-bulk-actions-select">
-                    <select class="premium-select bulk-action-select">
-                        <option value="">Bulk Actions</option>
-                        <?php foreach ($options['bulkActions'] as $action => $label): ?>
-                            <?php
-                            if (is_numeric($action)) {
-                                $action = $label;
-                            }
-                            ?>
-                            <option value="<?php echo htmlspecialchars($action); ?>">
-                                <?php echo htmlspecialchars(ucfirst($label)); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button class="premium-btn premium-btn-secondary apply-bulk-action">Apply</button>
+        <?php if ($options['showCheckboxes'] && !empty($options['bulkActions'])): ?>
+            <div class="premium-bulk-actions" style="padding: 1rem; border-bottom: 1px solid var(--premium-gray-200); display: flex; align-items: center; gap: 0.75rem;">
+                <div class="premium-checkbox-container">
+                    <input type="checkbox" id="select-all" class="premium-checkbox">
+                    <label for="select-all" class="premium-checkbox-label"></label>
                 </div>
-                <div class="premium-selected-count" style="display: none;">
-                    <span class="count">0</span> items selected
-                </div>
+
+                <select class="form-control" id="bulk-action-select" style="width: auto;">
+                    <option value="">Bulk Actions</option>
+                    <?php foreach ($options['bulkActions'] as $action): ?>
+                        <option value="<?php echo htmlspecialchars($action); ?>"><?php echo ucfirst($action); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <button type="button" class="premium-btn premium-btn-secondary" id="apply-bulk-action">Apply</button>
+
+                <span class="premium-selected-count" style="margin-left: auto; font-size: 0.875rem; color: var(--premium-gray-600);">0 items selected</span>
             </div>
         <?php endif; ?>
 
-        <div class="premium-table-wrapper">
-            <table class="premium-table <?php echo htmlspecialchars($tableId); ?>" id="<?php echo htmlspecialchars($tableId); ?>">
-                <thead>
+        <table class="premium-table" id="<?php echo htmlspecialchars($tableId); ?>" data-item-type="<?php echo htmlspecialchars($itemType); ?>">
+            <thead>
+                <tr>
+                    <?php if ($options['showCheckboxes']): ?>
+                        <th class="checkbox-column">
+                            <div class="premium-checkbox-container">
+                                <input type="checkbox" class="premium-checkbox select-all-checkbox">
+                            </div>
+                        </th>
+                    <?php endif; ?>
+
+                    <?php if (isset($options['thumbnailField']) && $options['thumbnailField'] !== false): ?>
+                        <th class="thumbnail-column">Image</th>
+                    <?php endif; ?>
+
+                    <?php foreach ($columns as $field => $label): ?>
+                        <th data-field="<?php echo htmlspecialchars($field); ?>"><?php echo htmlspecialchars($label); ?></th>
+                    <?php endforeach; ?>
+
+                    <?php if ($options['showActions']): ?>
+                        <th class="actions-column">Actions</th>
+                    <?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($paginatedItems)): ?>
                     <tr>
-                        <?php if ($options['showCheckboxes']): ?>
-                            <th class="checkbox-column">
-                                <div class="premium-checkbox-container">
-                                    <input type="checkbox" class="premium-checkbox select-all">
-                                </div>
-                            </th>
-                        <?php endif; ?>
-
-                        <?php if ($options['thumbnailField']): ?>
-                            <th class="thumbnail-column"></th>
-                        <?php endif; ?>
-
-                        <?php foreach ($columns as $field => $label): ?>
-                            <th><?php echo htmlspecialchars($label); ?></th>
-                        <?php endforeach; ?>
-
-                        <?php if ($options['showActions']): ?>
-                            <th class="actions-column">Actions</th>
-                        <?php endif; ?>
+                        <td colspan="<?php echo count($columns) + ($options['showCheckboxes'] ? 1 : 0) + ($options['showActions'] ? 1 : 0) + (isset($options['thumbnailField']) ? 1 : 0); ?>" class="premium-text-center" style="padding: 2rem;">
+                            No items found.
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($items as $item): ?>
+                <?php else: ?>
+                    <?php foreach ($paginatedItems as $item): ?>
                         <tr data-id="<?php echo htmlspecialchars($item['id']); ?>">
                             <?php if ($options['showCheckboxes']): ?>
                                 <td class="checkbox-column">
@@ -179,9 +225,9 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                                     if ($isClickable) {
                                         if ($clickAction === 'view') {
-                                            $clickUrl = $itemType === 'story' ? 'view-story.php?id=' . $item['id'] : $itemType . '.php?id=' . $item['id'];
+                                            $clickUrl = 'view-' . $itemType . '.php?id=' . $item['id'];
                                         } else if ($clickAction === 'edit') {
-                                            $clickUrl = $itemType === 'story' ? 'story-form.php?id=' . $item['id'] : $itemType . '.php?id=' . $item['id'];
+                                            $clickUrl = $itemType . '-form.php?id=' . $item['id'];
                                         }
                                     }
 
@@ -222,12 +268,21 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                         <div class="premium-table-actions">
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
-                                                // Only use view-story.php for stories, keep original paths for others
-                                                $viewUrl = $itemType . '.php?id=' . $item['id'];
-                                                if ($itemType === 'story') {
-                                                    $viewUrl = 'view-story.php?id=' . $item['id'];
-                                                }
-                                                echo '<a href="' . htmlspecialchars($viewUrl) . '" class="premium-btn premium-btn-info premium-btn-sm">';
+                                                // Get the file path based on item type
+                                                $actionFile = match($itemType) {
+                                                    'ai_tool' => 'ai-tool-form.php',
+                                                    'directory_item' => 'directory-item-form.php',
+                                                    'game' => 'game-form.php',
+                                                    'story' => 'stories.php',
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
+                                                    'subscriber' => 'subscribers.php',
+                                                    'post' => 'post-form.php',
+                                                    'tag' => 'tag-form.php',
+                                                    'author' => 'author-form.php',
+                                                    default => "{$itemType}s.php"
+                                                };
+                                                echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
                                                 echo '<i class="fas fa-eye"></i>';
                                                 echo '</a>';
                                                 ?>
@@ -235,24 +290,30 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                                             <?php if (in_array('edit', $options['actions'])): ?>
                                                 <?php
-                                                // Only use story-form.php for stories, keep original paths for others
-                                                $editUrl = $itemType . '.php?id=' . $item['id'];
-                                                if ($itemType === 'story') {
-                                                    $editUrl = 'story-form.php?id=' . $item['id'];
-                                                }
-                                                echo '<a href="' . htmlspecialchars($editUrl) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
+                                                // Get the file path based on item type
+                                                $actionFile = match($itemType) {
+                                                    'ai_tool' => 'ai-tool-form.php',
+                                                    'directory_item' => 'directory-item-form.php',
+                                                    'game' => 'game-form.php',
+                                                    'story' => 'stories.php',
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
+                                                    'subscriber' => 'subscribers.php',
+                                                    'post' => 'post-form.php',
+                                                    'tag' => 'tag-form.php',
+                                                    'author' => 'author-form.php',
+                                                    default => "{$itemType}s.php"
+                                                };
+                                                echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                 echo '<i class="fas fa-edit"></i>';
                                                 echo '</a>';
                                                 ?>
                                             <?php endif; ?>
 
                                             <?php if (in_array('delete', $options['actions'])): ?>
-                                                <form method="POST" action="delete-<?php echo $itemType; ?>.php" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this item?');">
-                                                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($item['id']); ?>">
-                                                    <button type="submit" class="premium-btn premium-btn-danger premium-btn-sm">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="<?php echo htmlspecialchars($item['id']); ?>" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
@@ -260,16 +321,138 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                             <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <?php if ($totalPages > 1): ?>
+            <div class="premium-pagination" style="padding: 1rem; border-top: 1px solid var(--premium-gray-200);">
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <a href="?page=<?php echo $i; ?>" class="premium-pagination-item <?php echo $i === $options['currentPage'] ? 'active' : ''; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize select all functionality
+            const selectAllCheckboxes = document.querySelectorAll('.select-all-checkbox');
+            const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+            const selectedCountElement = document.querySelector('.premium-selected-count');
+
+            selectAllCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
+
+                    itemCheckboxes.forEach(itemCheckbox => {
+                        itemCheckbox.checked = isChecked;
+                    });
+
+                    updateSelectedCount();
+                });
+            });
+
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateSelectedCount();
+
+                    // Update select all checkbox
+                    const allChecked = Array.from(itemCheckboxes).every(cb => cb.checked);
+                    selectAllCheckboxes.forEach(selectAll => {
+                        selectAll.checked = allChecked;
+                    });
+                });
+            });
+
+            // Initialize bulk actions
+            const applyBulkActionButton = document.getElementById('apply-bulk-action');
+            const bulkActionSelect = document.getElementById('bulk-action-select');
+
+            if (applyBulkActionButton && bulkActionSelect) {
+                applyBulkActionButton.addEventListener('click', function() {
+                    const selectedAction = bulkActionSelect.value;
+
+                    if (!selectedAction) {
+                        alert('Please select an action');
+                        return;
+                    }
+
+                    const selectedItems = Array.from(itemCheckboxes)
+                        .filter(checkbox => checkbox.checked)
+                        .map(checkbox => checkbox.value);
+
+                    if (selectedItems.length === 0) {
+                        alert('Please select at least one item');
+                        return;
+                    }
+
+                    // Confirm the action
+                    if (confirm(`Are you sure you want to ${selectedAction} the selected items?`)) {
+                        // Perform the action
+                        console.log(`Performing ${selectedAction} on items:`, selectedItems);
+
+                        // In a real implementation, this would make an AJAX request to the server
+                        // For now, we'll just reload the page
+                        window.location.reload();
+                    }
+                });
+            }
+
+            // Initialize delete buttons
+            const deleteButtons = document.querySelectorAll('.delete-item-btn');
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const itemId = this.getAttribute('data-id');
+
+                    if (confirm('Are you sure you want to delete this item?')) {
+                        // Perform the delete action
+                        console.log(`Deleting item ${itemId}`);
+
+                        // In a real implementation, this would make an AJAX request to the server
+                        // For now, we'll just reload the page
+                        window.location.reload();
+                    }
+                });
+            });
+
+            // Helper function to update the selected count
+            function updateSelectedCount() {
+                if (selectedCountElement) {
+                    const selectedCount = Array.from(itemCheckboxes).filter(cb => cb.checked).length;
+                    selectedCountElement.textContent = `${selectedCount} item${selectedCount !== 1 ? 's' : ''} selected`;
+                }
+            }
+        });
+    </script>
     <?php
-    // Output any errors
-    if ($error = ob_get_clean()) {
-        error_log("Enhanced table error: " . $error);
-        echo '<div class="alert alert-danger">Error rendering table. Please check the error logs.</div>';
+}
+
+/**
+ * Converts an array of items to the format expected by the enhanced table component
+ *
+ * @param array $items The items to convert
+ * @param array $mapping The mapping of database fields to table fields
+ * @return array The converted items
+ */
+function convertItemsForEnhancedTable($items, $mapping) {
+    $convertedItems = [];
+
+    foreach ($items as $item) {
+        $convertedItem = [];
+
+        foreach ($mapping as $dbField => $tableField) {
+            if (isset($item[$dbField])) {
+                $convertedItem[$tableField] = $item[$dbField];
+            }
+        }
+
+        $convertedItems[] = $convertedItem;
     }
+
+    return $convertedItems;
 }
 ?>

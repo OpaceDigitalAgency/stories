@@ -201,8 +201,10 @@ if (function_exists('renderEnhancedBulkActionsComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Prepare data for the enhanced table
-if (!empty($directory_items)) {
+// Include enhanced table component
+require_once __DIR__ . '/../includes/enhanced-table-component.php';
+if (function_exists('renderEnhancedTable')) {
+    // Prepare data for the enhanced table
     $tableData = [];
     foreach ($directory_items as $item) {
         // Format the status
@@ -259,7 +261,7 @@ if (!empty($directory_items)) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
-            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

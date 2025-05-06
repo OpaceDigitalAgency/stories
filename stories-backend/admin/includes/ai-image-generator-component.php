@@ -533,6 +533,9 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                 }
 
                                 // Store the filename and alt text in hidden fields if they exist
+                                const filenameField = currentTargetField + '_filename';
+                                const altTextField = currentTargetField + '_alt';
+
                                 if ($('#' + filenameField).length) {
                                     $('#' + filenameField).val(response.data.filename);
                                 }
@@ -573,6 +576,8 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 }
 
                 // Store the filename and alt text in hidden fields if they exist
+                // These variables are already defined in the AJAX success handler above
+                // for consistency, we'll define them here too
                 const filenameField = currentTargetField + '_filename';
                 const altTextField = currentTargetField + '_alt';
 

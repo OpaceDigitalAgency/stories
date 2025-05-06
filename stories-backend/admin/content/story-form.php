@@ -95,10 +95,34 @@ try {
     error_log("Story form error: " . $e->getMessage());
     $error = "Error loading form data. Please try again.";
 }
-// Set page variables for header
-$pageTitle = ($story ? 'Edit' : 'Add') . ' Story';
+// Page variables
+$pageTitle = isset($_GET['id']) ? 'Edit Story' : 'Add Story';
 $currentPage = 'stories';
-$pageDescription = '<a href="stories.php" class="text-primary">← Back to Stories</a>';
+
+// Include header
+require_once '../includes/header.php';
+
+// Include image upload component
+require_once '../includes/image-upload-component.php';
+
+// Include AI image generator component
+require_once '../includes/ai-image-generator-component.php';
+
+// Display error message if any
+if (isset($error)): ?>
+    <div class="error"><?php echo htmlspecialchars($error); ?></div>
+<?php endif; ?>
+
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo htmlspecialchars($story['title'] ?? 'New Story'); ?></h1>
+                <p class="page-description">
+                    <a href="stories.php" class="text-primary">← Back to Stories</a>
+                </p>
+            </div>
+        </div>
 
 // Add custom CSS for form styling
 $extraHeadContent = '
@@ -164,6 +188,10 @@ if (isset($error)): ?>
 <?php endif; ?>
 
         <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Details</h2>
+                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
+            </div>
             <div class="section-body">
                 <form method="POST" action="save-story.php" class="content-form">
                     <?php if ($story): ?>

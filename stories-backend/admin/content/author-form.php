@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'Author Form';
+$pageTitle = isset($_GET['id']) ? 'Edit Author' : 'Add Author';
 $currentPage = 'author-form';
 
 // Include auth check
@@ -81,7 +81,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $author ? 'Edit' : 'Add'; ?> Author</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($author['name'] ?? 'New Author'); ?></h1>
                 <p class="page-description">
                     <a href="authors.php" class="text-primary">← Back to Authors</a>
                 </p>

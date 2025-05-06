@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'Post Form';
+$pageTitle = isset($_GET['id']) ? 'Edit Blog Post' : 'Add Blog Post';
 $currentPage = 'post-form';
 
 // Include auth check
@@ -136,7 +136,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $post ? 'Edit' : 'Add'; ?> Blog Post</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($post['title'] ?? 'New Blog Post'); ?></h1>
                 <p class="page-description">
                     <a href="blog-posts.php" class="text-primary">← Back to Blog Posts</a>
                 </p>
@@ -149,7 +149,7 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Post Information</h2>
+                <h2 class="section-title">Details</h2>
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">

@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'Tag Form';
+$pageTitle = isset($_GET['id']) ? 'Edit Tag' : 'Add Tag';
 $currentPage = 'tag-form';
 
 // Include auth check
@@ -62,7 +62,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $tag ? 'Edit' : 'Add'; ?> Tag</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($tag['name'] ?? 'New Tag'); ?></h1>
                 <p class="page-description">
                     <a href="tags.php" class="text-primary">← Back to Tags</a>
                 </p>
@@ -75,7 +75,7 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Tag Information</h2>
+                <h2 class="section-title">Details</h2>
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">

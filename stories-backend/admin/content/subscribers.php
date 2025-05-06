@@ -59,7 +59,6 @@ if (isset($_GET['id'])) {
                 <div class="content-section mb-4">
                     <div class="section-body">
                         <form method="POST">
-                            <input type="hidden" name="id" value="<?php echo $subscriber['id']; ?>">
                             <div class="form-group mb-3">
                                 <label>Email</label>
                                 <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($subscriber['email']); ?>" required>
@@ -69,15 +68,6 @@ if (isset($_GET['id'])) {
                                 <select name="status" class="form-control">
                                     <option value="active" <?php echo ($subscriber['status'] ?? 'active') === 'active' ? 'selected' : ''; ?>>Active</option>
                                     <option value="inactive" <?php echo ($subscriber['status'] ?? 'active') === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </form>
-                    </div>
-                </div>
-                                <select name="status" class="form-control">
-                                    <option value="active" <?php echo $subscriber['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
-                                    <option value="inactive" <?php echo $subscriber['status'] === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -101,26 +91,10 @@ if (isset($_GET['id'])) {
     
     // Add custom CSS
     echo '<style>
-    .subscriber-details {
-        margin-bottom: 1rem;
-    }
-    .detail-item {
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #eee;
-    }
-    .detail-item:last-child {
-        border-bottom: none;
-    }
-    .detail-item strong {
-        display: block;
-        margin-bottom: 0.25rem;
-        color: #495057;
-    }
-    .badge {
-        font-size: 0.85rem;
-        padding: 0.35em 0.65em;
-    }
+        .badge {
+            font-size: 0.85rem;
+            padding: 0.35em 0.65em;
+        }
     </style>';
     ?>
     <div class="content-wrapper">
@@ -139,6 +113,22 @@ if (isset($_GET['id'])) {
                     'updated_at' => 'Updated'
                 ];
 
+                // Custom formatters
+                $formatters = [
+                    'status' => function($value) {
+                        $status = $value ?? 'active';
+                        return $status === 'active' ? 
+                            '<span class="badge bg-success">Active</span>' : 
+                            '<span class="badge bg-warning">Inactive</span>';
+                    },
+                    'created_at' => function($value) {
+                        return date('M d, Y H:i', strtotime($value));
+                    },
+                    'updated_at' => function($value) {
+                        return date('M d, Y H:i', strtotime($value));
+                    }
+                ];
+
                 // Render enhanced table
                 renderEnhancedTable(
                     $subscribers,
@@ -150,6 +140,7 @@ if (isset($_GET['id'])) {
                         'showActions' => true,
                         'actions' => ['view', 'edit', 'delete'],
                         'htmlFields' => ['status'],
+                        'formatters' => $formatters,
                         'bulkActions' => ['delete', 'activate', 'deactivate']
                     ]
                 );

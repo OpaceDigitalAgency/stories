@@ -15,89 +15,170 @@ require_once '../includes/enhanced-table-component.php';
 // Include email functions
 require_once '../includes/email-functions.php';
 
-// Set page variables
-$pageTitle = 'Contact Form Submissions';
-$currentPage = 'contacts';
+// Check if viewing/editing a specific contact
+if (isset($_GET['id'])) {
+    $contactId = (int)$_GET['id'];
+    
+    // Get contact details
+    $stmt = $db->prepare("SELECT * FROM contacts WHERE id = ?");
+    $stmt->execute([$contactId]);
+    $contact = $stmt->fetch();
 
-// Include header
-require_once '../includes/header.php';
-
-// Add custom CSS
-echo '<style>
-    .message-preview {
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .message-content, .notes-content {
-        background-color: #f8f9fa;
-        padding: 0.75rem;
-        border-radius: 0.25rem;
-        margin-top: 0.25rem;
-    }
-    .badge {
-        font-size: 0.85rem;
-        padding: 0.35em 0.65em;
-    }
-</style>';
-?>
-
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <?php
-        try {
-            // Get all contacts
-            $stmt = $db->query("SELECT * FROM contacts ORDER BY created_at DESC");
-            $contacts = $stmt->fetchAll();
-
-            // Define columns for enhanced table
-            $columns = [
-                'name' => 'Name',
-                'email' => 'Email',
-                'subject' => 'Subject',
-                'message' => 'Message',
-                'created_at' => 'Date',
-                'is_responded' => 'Status'
-            ];
-
-            // Custom formatters
-            $formatters = [
-                'message' => function($value) {
-                    return '<div class="message-preview">' . htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '') . '</div>';
-                },
-                'is_responded' => function($value) {
-                    return $value ? '<span class="badge bg-success">Responded</span>' : '<span class="badge bg-warning">Not Responded</span>';
-                },
-                'created_at' => function($value) {
-                    return date('M d, Y H:i', strtotime($value));
-                }
-            ];
-
-            // Render enhanced table
-            renderEnhancedTable(
-                $contacts,
-                $columns,
-                'contact',
-                'contacts-table',
-                [
-                    'showCheckboxes' => true,
-                    'showActions' => true,
-                    'actions' => ['view', 'edit', 'delete'],
-                    'htmlFields' => ['message', 'is_responded'],
-                    'formatters' => $formatters,
-                    'bulkActions' => ['delete', 'mark_responded']
-                ]
-            );
-
-        } catch (PDOException $e) {
-            echo '<div class="alert alert-danger">Error loading contacts: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    if ($contact) {
+        // Handle form submission
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $isResponded = isset($_POST['is_responded']) ? 1 : 0;
+            $adminNotes = $_POST['admin_notes'] ?? '';
+            
+            try {
+                $stmt = $db->prepare("UPDATE contacts SET is_responded = ?, admin_notes = ? WHERE id = ?");
+                $stmt->execute([$isResponded, $adminNotes, $contactId]);
+                header("Location: contacts.php");
+                exit;
+            } catch (PDOException $e) {
+                $error = "Error updating contact: " . $e->getMessage();
+            }
         }
-        ?>
-    </div>
-</div>
 
-<?php
+        $pageTitle = 'View Contact';
+        $currentPage = 'contacts';
+        
+        // Include header
+        require_once '../includes/header.php';
+        ?>
+        <div class="content-wrapper">
+            <div class="container-fluid">
+                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="page-title"><?php echo htmlspecialchars($contact['name']); ?></h1>
+                        <p class="page-description">
+                            <a href="contacts.php" class="text-primary">← Back to Contacts</a>
+                        </p>
+                    </div>
+                </div>
+
+                <?php if (isset($error)): ?>
+                <div class="alert alert-danger">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="content-section mb-4">
+                    <div class="section-body">
+                        <form method="POST">
+                            <div class="form-group mb-3">
+                                <label>Name</label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($contact['name']); ?>" readonly>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label>Email</label>
+                                <input type="email" class="form-control" value="<?php echo htmlspecialchars($contact['email']); ?>" readonly>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label>Subject</label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($contact['subject']); ?>" readonly>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label>Message</label>
+                                <textarea class="form-control" rows="5" readonly><?php echo htmlspecialchars($contact['message']); ?></textarea>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label>Admin Notes</label>
+                                <textarea name="admin_notes" class="form-control" rows="3"><?php echo htmlspecialchars($contact['admin_notes'] ?? ''); ?></textarea>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input type="checkbox" name="is_responded" class="form-check-input" id="is_responded" <?php echo $contact['is_responded'] ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="is_responded">Mark as Responded</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    } else {
+        header("Location: contacts.php");
+        exit;
+    }
+} else {
+    // List view
+    $pageTitle = 'Contact Form Submissions';
+    $currentPage = 'contacts';
+    
+    // Include header
+    require_once '../includes/header.php';
+    
+    // Add custom CSS
+    echo '<style>
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .badge {
+            font-size: 0.85rem;
+            padding: 0.35em 0.65em;
+        }
+    </style>';
+    ?>
+    <div class="content-wrapper">
+        <div class="container-fluid">
+            <?php
+            try {
+                // Get all contacts
+                $stmt = $db->query("SELECT * FROM contacts ORDER BY created_at DESC");
+                $contacts = $stmt->fetchAll();
+
+                // Define columns for enhanced table
+                $columns = [
+                    'name' => 'Name',
+                    'email' => 'Email',
+                    'subject' => 'Subject',
+                    'message' => 'Message',
+                    'created_at' => 'Date',
+                    'is_responded' => 'Status'
+                ];
+
+                // Custom formatters
+                $formatters = [
+                    'message' => function($value) {
+                        return '<div class="message-preview">' . htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '') . '</div>';
+                    },
+                    'is_responded' => function($value) {
+                        return $value ? '<span class="badge bg-success">Responded</span>' : '<span class="badge bg-warning">Not Responded</span>';
+                    },
+                    'created_at' => function($value) {
+                        return date('M d, Y H:i', strtotime($value));
+                    }
+                ];
+
+                // Render enhanced table
+                renderEnhancedTable(
+                    $contacts,
+                    $columns,
+                    'contact',
+                    'contacts-table',
+                    [
+                        'showCheckboxes' => true,
+                        'showActions' => true,
+                        'actions' => ['view', 'edit', 'delete'],
+                        'htmlFields' => ['message', 'is_responded'],
+                        'formatters' => $formatters,
+                        'bulkActions' => ['delete', 'mark_responded']
+                    ]
+                );
+
+            } catch (PDOException $e) {
+                echo '<div class="alert alert-danger">Error loading contacts: ' . htmlspecialchars($e->getMessage()) . '</div>';
+            }
+            ?>
+        </div>
+    </div>
+    <?php
+}
+
 // Include footer
 require_once '../includes/footer.php';
 ?>

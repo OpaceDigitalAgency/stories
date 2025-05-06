@@ -117,8 +117,9 @@ if (isset($_SESSION['error'])) {
 
                     <div class="form-group">
                         <label class="form-label" for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" required
+                        <input type="email" id="email" name="email" class="form-control"
                                value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+                        <small class="form-text text-muted">Optional</small>
                     </div>
 
                     <div class="form-group">
@@ -240,6 +241,7 @@ if (isset($_SESSION['error'])) {
             const authorType = document.getElementById('author_type').value;
             const age = document.getElementById('age').value;
             const location = document.getElementById('location').value;
+            const email = document.getElementById('email').value;
 
             // Validate age for child authors
             if (authorType === 'child') {
@@ -261,6 +263,13 @@ if (isset($_SESSION['error'])) {
             if (!/^[A-Za-z\s,.-]+$/.test(location)) {
                 e.preventDefault();
                 alert('Location can only contain letters, spaces, commas, periods, and hyphens');
+                return;
+            }
+
+            // Validate email format if provided
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                e.preventDefault();
+                alert('Please enter a valid email address or leave it blank');
                 return;
             }
         });

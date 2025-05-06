@@ -74,8 +74,14 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="shortcut icon" type="image/png" href="<?php echo $faviconPath; ?>">
     <link rel="stylesheet" href="<?php echo $assetsPath; ?>">
+    <!-- Add Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
     <!-- Add Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Add Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Meta tags for better accessibility -->
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
     <meta name="theme-color" content="#4361ee">

@@ -231,7 +231,8 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'htmlFields' => ['website'] // Fields that should render HTML instead of escaping it
         ]
     );
 }

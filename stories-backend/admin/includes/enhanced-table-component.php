@@ -68,6 +68,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
         'thumbnailField' => 'image',
         'thumbnailAltField' => 'title',
         'editableFields' => [],
+        'htmlFields' => [], // Fields that should render HTML instead of escaping it
         'bulkActions' => ['delete'],
         'itemsPerPage' => 10,
         'currentPage' => 1
@@ -168,7 +169,11 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php echo htmlspecialchars($item[$field] ?? ''); ?>
                                         </div>
                                     <?php else: ?>
-                                        <?php echo htmlspecialchars($item[$field] ?? ''); ?>
+                                        <?php if (in_array($field, $options['htmlFields'])): ?>
+                                            <?php echo $item[$field] ?? ''; ?>
+                                        <?php else: ?>
+                                            <?php echo htmlspecialchars($item[$field] ?? ''); ?>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>

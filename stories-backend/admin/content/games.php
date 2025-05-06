@@ -185,7 +185,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $game['id'],
-            'image_url' => $game['image_url'] ?? '../assets/images/default-cover.jpg',
+            'image_url' => $game['image_url'] ?? 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg',
             'title' => $game['title'],
             'slug' => $game['slug'] ?? '',
             'featured' => $featured,

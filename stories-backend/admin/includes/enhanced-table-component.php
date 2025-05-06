@@ -222,7 +222,10 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Only use view-story.php for stories, keep original paths for others
-                                                $viewUrl = $itemType === 'story' ? 'view-story.php?id=' . $item['id'] : $itemType . '.php?id=' . $item['id'];
+                                                $viewUrl = $itemType . '.php?id=' . $item['id'];
+                                                if ($itemType === 'story') {
+                                                    $viewUrl = 'view-story.php?id=' . $item['id'];
+                                                }
                                                 echo '<a href="' . htmlspecialchars($viewUrl) . '" class="premium-btn premium-btn-info premium-btn-sm">';
                                                 echo '<i class="fas fa-eye"></i>';
                                                 echo '</a>';
@@ -232,7 +235,10 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('edit', $options['actions'])): ?>
                                                 <?php
                                                 // Only use story-form.php for stories, keep original paths for others
-                                                $editUrl = $itemType === 'story' ? 'story-form.php?id=' . $item['id'] : $itemType . '.php?id=' . $item['id'];
+                                                $editUrl = $itemType . '.php?id=' . $item['id'];
+                                                if ($itemType === 'story') {
+                                                    $editUrl = 'story-form.php?id=' . $item['id'];
+                                                }
                                                 echo '<a href="' . htmlspecialchars($editUrl) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                 echo '<i class="fas fa-edit"></i>';
                                                 echo '</a>';

@@ -141,8 +141,8 @@ if (function_exists('renderEnhancedTable')) {
     $tableData = [];
     foreach ($authors as $author) {
         // Get avatar image if available
-        $avatarImage = isset($author['avatar_url']) ? $author['avatar_url'] :
-                     (isset($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.jpg');
+        $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
+                     (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.svg');
 
         // Format the bio
         $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
@@ -193,8 +193,8 @@ if (function_exists('renderEnhancedTable')) {
     );
 } else {
     // Fallback to the original table component
-    include_once '../includes/table-component.php';
-    if (function_exists('renderTable')) {
+    include_once '../includes/enhanced-table-component.php';
+    if (function_exists('renderEnhancedTable')) {
         // Define columns
         $columns = [
             'name' => 'Name',
@@ -205,26 +205,53 @@ if (function_exists('renderEnhancedTable')) {
             'post_count' => 'Blog Posts'
         ];
 
-        // Define custom formatters
-        $customFormatters = [
-            'author_type' => function($author, $key) {
-                return ucfirst(htmlspecialchars($author[$key] ?? 'retail'));
-            },
-            'bio' => function($author, $key) {
-                return htmlspecialchars(substr($author[$key] ?? '', 0, 100) . (strlen($author[$key] ?? '') > 100 ? '...' : ''));
-            }
-        ];
+        // Prepare table data
+        $tableData = [];
+        foreach ($authors as $author) {
+            // Format the bio
+            $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
 
-        // Render the table
-        renderTable($authors, $columns, [
-            'content_type' => 'authors',
-            'name_field' => 'name',
-            'empty_message' => 'No authors found. Add your first author!',
-            'custom_formatters' => $customFormatters,
-            'view_url' => 'view-author.php?id={id}',
-            'edit_url' => 'author-form.php?id={id}',
-            'delete_url' => 'author-delete-process.php'
-        ]);
+            // Format the author type
+            $authorType = isset($author['author_type']) ? ucfirst($author['author_type']) : 'Retail';
+
+            // Get avatar image
+            $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
+                         (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '');
+
+            // Add to table data
+            $tableData[] = [
+                'id' => $author['id'],
+                'name' => $author['name'] ?? '',
+                'email' => $author['email'] ?? '',
+                'author_type' => $authorType,
+                'bio' => $bio,
+                'story_count' => $author['story_count'] ?? 0,
+                'post_count' => $author['post_count'] ?? 0,
+                'avatar' => $avatarImage
+            ];
+        }
+
+        // Define editable fields
+        $editableFields = ['name', 'email'];
+
+        // Render the enhanced table
+        renderEnhancedTable(
+            $tableData,
+            $columns,
+            'author', // This must match a key in the $tableMap array in update-field.php
+            'authors-table',
+            [
+                'showCheckboxes' => true,
+                'showActions' => true,
+                'actions' => ['view', 'edit', 'delete'],
+                'thumbnailField' => 'avatar',
+                'thumbnailAltField' => 'name',
+                'editableFields' => $editableFields,
+                'bulkActions' => ['delete', 'notify'],
+                'itemsPerPage' => 10,
+                'currentPage' => 1
+            ]
+        );
     } else {
         // Manual fallback if no table component is available
         echo '<div class="table-container">';

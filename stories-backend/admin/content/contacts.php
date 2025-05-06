@@ -546,7 +546,7 @@ The Stories From The Web Team</textarea>
                     'subject' => $contact['subject'],
                     'message' => substr($contact['message'], 0, 100) . (strlen($contact['message']) > 100 ? '...' : ''),
                     'created_at' => date('M d, Y', strtotime($contact['created_at'])),
-                    'is_responded' => $status
+                    'is_responded' => $contact['is_responded'] ? 'Responded' : 'Not Responded'
                 ];
             }
 
@@ -559,13 +559,34 @@ The Stories From The Web Team</textarea>
                 [
                     'showCheckboxes' => true,
                     'showActions' => true,
-                    'actions' => ['view', 'edit', 'delete'],
+                    'actions' => ['view'],
+                    'customActions' => true,
                     'editableFields' => [],
                     'bulkActions' => ['delete', 'mark_responded', 'mark_not_responded', 'notify'],
                     'itemsPerPage' => $perPage,
                     'currentPage' => $page,
                     'thumbnailField' => false, // Disable image column for contacts
-                    'htmlFields' => ['is_responded'] // Fields that should render HTML instead of escaping it
+                    'htmlFields' => [], // Don't use HTML in table cells
+                    'customActionRenderer' => function($item) {
+                        $output = '';
+
+                        // View button that opens the modal
+                        $output .= '<button type="button" class="premium-btn premium-btn-info premium-btn-sm" ' .
+                                'data-bs-toggle="modal" ' .
+                                'data-bs-target="#viewModal' . $item['id'] . '">' .
+                                '<i class="fas fa-eye"></i> View' .
+                                '</button> ';
+
+                        // Respond button
+                        $output .= '<button type="button" class="premium-btn premium-btn-success premium-btn-sm notify-single-btn" ' .
+                                'data-id="' . $item['id'] . '" ' .
+                                'data-email="' . htmlspecialchars($item['email']) . '" ' .
+                                'data-subject="' . htmlspecialchars($item['subject']) . '">' .
+                                '<i class="fas fa-reply"></i> Respond' .
+                                '</button>';
+
+                        return $output;
+                    }
                 ]
             );
         } else if (function_exists('renderTable')) {

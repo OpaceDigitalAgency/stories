@@ -16,10 +16,17 @@
  * @param string $filePath The file path or URL
  * @return string The properly formatted URL
  */
-function getTableDisplayUrl($filePath) {
+function getTableDisplayUrl($filePath, $itemType = 'general') {
     // If it's null or empty, return default image
     if (empty($filePath)) {
-        // Check if the default image exists
+        // Check if this is an author avatar
+        if ($itemType === 'author') {
+            if (file_exists('../assets/images/default-avatar.svg')) {
+                return '../assets/images/default-avatar.svg';
+            }
+        }
+
+        // For other content types, use the default cover
         if (file_exists('../assets/images/default-cover.svg')) {
             return '../assets/images/default-cover.svg';
         } else {
@@ -211,9 +218,31 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     $thumbnailAlt = isset($item[$options['thumbnailAltField']]) ? $item[$options['thumbnailAltField']] : '';
 
                                     // Get the proper display URL (will return default image if empty)
-                                    $thumbnailUrl = getTableDisplayUrl($thumbnailUrl);
+                                    $thumbnailUrl = getTableDisplayUrl($thumbnailUrl, $itemType);
+
+                                    // Check if thumbnails should be clickable
+                                    $isClickable = isset($options['thumbnailClickable']) && $options['thumbnailClickable'];
+                                    $clickAction = isset($options['thumbnailClickAction']) ? $options['thumbnailClickAction'] : 'view';
+                                    $clickUrl = '';
+
+                                    if ($isClickable) {
+                                        if ($clickAction === 'view') {
+                                            $clickUrl = 'view-' . $itemType . '.php?id=' . $item['id'];
+                                        } else if ($clickAction === 'edit') {
+                                            $clickUrl = $itemType . '-form.php?id=' . $item['id'];
+                                        }
+                                    }
+
+                                    if ($isClickable && !empty($clickUrl)) {
+                                        echo '<a href="' . htmlspecialchars($clickUrl) . '" class="thumbnail-link">';
+                                    }
                                     ?>
                                     <img src="<?php echo htmlspecialchars($thumbnailUrl); ?>" alt="<?php echo htmlspecialchars($thumbnailAlt); ?>" class="thumbnail-image">
+                                    <?php
+                                    if ($isClickable && !empty($clickUrl)) {
+                                        echo '</a>';
+                                    }
+                                    ?>
                                 </td>
                             <?php endif; ?>
 
@@ -235,25 +264,29 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                             <?php if ($options['showActions']): ?>
                                 <td class="actions-column">
-                                    <div class="premium-table-actions">
-                                        <?php if (in_array('view', $options['actions'])): ?>
-                                            <a href="view-<?php echo $itemType; ?>.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-info premium-btn-sm" title="View">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        <?php endif; ?>
+                                    <?php if (isset($options['customActionRenderer']) && is_callable($options['customActionRenderer'])): ?>
+                                        <?php echo $options['customActionRenderer']($item); ?>
+                                    <?php else: ?>
+                                        <div class="premium-table-actions">
+                                            <?php if (in_array('view', $options['actions'])): ?>
+                                                <a href="view-<?php echo $itemType; ?>.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-info premium-btn-sm" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            <?php endif; ?>
 
-                                        <?php if (in_array('edit', $options['actions'])): ?>
-                                            <a href="<?php echo $itemType; ?>-form.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        <?php endif; ?>
+                                            <?php if (in_array('edit', $options['actions'])): ?>
+                                                <a href="<?php echo $itemType; ?>-form.php?id=<?php echo htmlspecialchars($item['id']); ?>" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            <?php endif; ?>
 
-                                        <?php if (in_array('delete', $options['actions'])): ?>
-                                            <button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="<?php echo htmlspecialchars($item['id']); ?>" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
+                                            <?php if (in_array('delete', $options['actions'])): ?>
+                                                <button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="<?php echo htmlspecialchars($item['id']); ?>" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                             <?php endif; ?>
                         </tr>

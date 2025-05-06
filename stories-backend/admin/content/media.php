@@ -907,11 +907,11 @@ require_once '../includes/header.php';
     ?>
     <div class="section-body">
         <?php
-        // Include live search component
-        include_once '../includes/live-search-component.php';
-        if (function_exists('renderLiveSearchComponent')) {
-            renderLiveSearchComponent('media', ['filename', 'alt_text', 'file_type'], 'media-table');
-        }
+        // We're not using the live search component to avoid duplicate search boxes
+        // include_once '../includes/live-search-component.php';
+        // if (function_exists('renderLiveSearchComponent')) {
+        //     renderLiveSearchComponent('media', ['filename', 'alt_text', 'file_type'], 'media-table');
+        // }
 
         // Include enhanced table component
         include_once '../includes/enhanced-table-component.php';
@@ -955,13 +955,35 @@ require_once '../includes/header.php';
                 [
                     'showCheckboxes' => true,
                     'showActions' => true,
-                    'actions' => ['view', 'edit', 'delete'],
+                    'actions' => ['view', 'delete'],
                     'thumbnailField' => 'image',
                     'thumbnailAltField' => 'filename',
+                    'thumbnailClickable' => true,
+                    'thumbnailClickAction' => 'view',
                     'editableFields' => $editableFields,
                     'bulkActions' => ['delete', 'optimize'],
                     'itemsPerPage' => $perPage,
-                    'currentPage' => $page
+                    'currentPage' => $page,
+                    'customActionRenderer' => function($item) {
+                        $output = '';
+
+                        // View button
+                        $output .= '<a href="view-media.php?id=' . $item['id'] . '" class="premium-btn premium-btn-info premium-btn-sm" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a> ';
+
+                        // Edit button
+                        $output .= '<a href="media-form.php?id=' . $item['id'] . '" class="premium-btn premium-btn-primary premium-btn-sm" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a> ';
+
+                        // Delete button
+                        $output .= '<a href="delete-media.php?id=' . $item['id'] . '" class="premium-btn premium-btn-danger premium-btn-sm delete-confirm" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </a>';
+
+                        return $output;
+                    }
                 ]
             );
         } else {

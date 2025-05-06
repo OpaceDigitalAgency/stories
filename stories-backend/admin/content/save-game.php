@@ -57,6 +57,7 @@ try {
     $featured = isset($_POST['featured']) ? 1 : 0;
     $is_published = isset($_POST['is_published']) ? 1 : 0;
     $published_at = $_POST['published_at'] ?? null;
+    $cover_url = trim($_POST['cover_url'] ?? '');
 
     // Validate required fields
     if (empty($title)) {
@@ -87,6 +88,7 @@ try {
             featured = ?,
             is_published = ?,
             published_at = ?,
+            cover_url = ?,
             updated_at = NOW()
             WHERE id = ?");
         $stmt->execute([
@@ -96,6 +98,7 @@ try {
             $featured,
             $is_published,
             $published_at,
+            $cover_url,
             $id
         ]);
         $success = "Game updated successfully";
@@ -108,16 +111,18 @@ try {
             featured,
             is_published,
             published_at,
+            cover_url,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
             $title,
             $description,
             $slug,
             $featured,
             $is_published,
-            $published_at
+            $published_at,
+            $cover_url
         ]);
         $success = "Game created successfully";
     }

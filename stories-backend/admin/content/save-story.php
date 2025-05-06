@@ -213,9 +213,14 @@ try {
         error_log("Final values - source_type: {$data['source_type']}, allow_reviews: {$data['allow_reviews']}");
     }
 
+    // Add cover_url field if it exists in the table
+    if (in_array('cover_url', $columns) && isset($_POST['cover_url'])) {
+        $data['cover_url'] = $_POST['cover_url'];
+    }
+
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation', 'published_at', 'review_count', 'average_rating', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'slug', 'featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation', 'published_at', 'review_count', 'average_rating', 'tags', 'cover_url']) && in_array($key, $columns)) {
             // Handle integer fields
             if (isset($columnInfo[$key]) && (strpos($columnInfo[$key]['Type'], 'int') !== false || strpos($columnInfo[$key]['Type'], 'tinyint') !== false)) {
                 $data[$key] = (int)$value;

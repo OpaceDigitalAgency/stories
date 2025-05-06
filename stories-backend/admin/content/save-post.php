@@ -186,9 +186,14 @@ try {
         $data['slug'] = $slug;
     }
 
+    // Add cover_url field if it exists in the table
+    if (in_array('cover_url', $columns) && isset($_POST['cover_url'])) {
+        $data['cover_url'] = $_POST['cover_url'];
+    }
+
     // Add any additional fields from the form
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'excerpt', 'is_published', 'slug', 'tags']) && in_array($key, $columns)) {
+        if (!in_array($key, ['id', 'title', 'author_id', 'content', 'excerpt', 'is_published', 'slug', 'tags', 'cover_url']) && in_array($key, $columns)) {
             // Handle datetime fields
             if (isset($columnInfo[$key]) && strpos($columnInfo[$key]['Type'], 'datetime') !== false) {
                 if (!empty($value)) {

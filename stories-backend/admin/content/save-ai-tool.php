@@ -63,6 +63,7 @@ try {
     $is_published = isset($_POST['is_published']) ? 1 : 0;
     $slug = trim($_POST['slug'] ?? '');
     $published_at = $_POST['published_at'] ?? null;
+    $cover_url = trim($_POST['cover_url'] ?? '');
 
     // Validate required fields
     if (empty($title)) {
@@ -99,6 +100,7 @@ try {
             is_published = ?,
             slug = ?,
             published_at = ?,
+            cover_url = ?,
             updated_at = NOW()
             WHERE id = ?");
         $stmt->execute([
@@ -114,6 +116,7 @@ try {
             $is_published,
             $slug,
             $published_at,
+            $cover_url,
             $id
         ]);
         $success = "AI tool updated successfully";
@@ -132,9 +135,10 @@ try {
             is_published,
             slug,
             published_at,
+            cover_url,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
             $title,
             $description,
@@ -147,7 +151,8 @@ try {
             $featured,
             $is_published,
             $slug,
-            $published_at
+            $published_at,
+            $cover_url
         ]);
         $success = "AI tool created successfully";
     }

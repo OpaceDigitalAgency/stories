@@ -269,8 +269,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     'directory_item' => 'view-directory-item.php',
                                                     'game' => 'view-game.php',
                                                     'media' => 'view-media.php',
-                                                    'contact' => 'view-contact.php',
-                                                    'subscriber' => 'view-subscriber.php'
+                                                    'contact' => 'view-contact.php'
                                                 ];
                                                 $viewFile = $viewFiles[$itemType] ?? "view-{$itemType}.php";
                                                 $viewFileExists = true; // Files exist in the same directory
@@ -291,9 +290,9 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     'ai_tool' => 'ai-tool-form.php',
                                                     'directory_item' => 'directory-item-form.php',
                                                     'game' => 'game-form.php',
-                                                    'media' => 'media-form.php',
-                                                    'contact' => 'contact-form.php',
-                                                    'subscriber' => 'subscriber-form.php'
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
+                                                    'subscriber' => 'subscribers.php'
                                                 ];
                                                 $formFile = $formFiles[$itemType] ?? "{$itemType}-form.php";
                                                 $formFileExists = true; // Files exist in the same directory

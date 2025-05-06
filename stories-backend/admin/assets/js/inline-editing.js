@@ -243,17 +243,31 @@ function saveFieldValue(itemId, itemType, fieldName, fieldValue) {
     console.log('Field name:', fieldName);
     console.log('Field value:', fieldValue);
 
+    // Debug: Log the URL
+    // Try both API and AJAX endpoints
+    const apiUrl = window.location.pathname.includes('/content/') ?
+        '../ajax/update-field.php' :
+        'ajax/update-field.php';
+    console.log('Sending request to:', apiUrl);
+
     // Send the request
-    return fetch('../api/update-field.php', {
+    return fetch(apiUrl, {
         method: 'POST',
         body: formData,
         credentials: 'same-origin'
     })
     .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error('Network response was not ok: ' + response.status);
         }
-        return response.json();
+
+        return response.json().then(data => {
+            console.log('Response data:', data);
+            return data;
+        });
     })
     .catch(error => {
         console.error('Error:', error);

@@ -70,7 +70,7 @@ $fieldMap = [
     'content' => 'content',
     'summary' => 'summary',
     'tags' => 'tags',
-    'status' => 'status',
+    'status' => 'is_published',
     'description' => 'description',
     'alt_text' => 'alt_text',
     'filename' => 'filename',
@@ -89,7 +89,13 @@ $fieldMap = [
     'is_contacted' => 'is_contacted',
     'admin_notes' => 'admin_notes',
     'feature' => 'feature',
-    'message' => 'message'
+    'message' => 'message',
+    'slug' => 'slug',
+    'category' => 'category_id',
+    'website' => 'website_url',
+    'featured' => 'featured',
+    'pricing' => 'pricing_type',
+    'rating' => 'rating'
 ];
 
 // Get the table name

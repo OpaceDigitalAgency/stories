@@ -195,6 +195,7 @@ if (function_exists('renderEnhancedTable')) {
         $tableData[] = [
             'id' => $item['id'],
             'title' => $item['title'],
+            'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
             'website' => $websiteUrl,
             'featured' => $featured,
@@ -206,6 +207,7 @@ if (function_exists('renderEnhancedTable')) {
     // Define columns for the table
     $columns = [
         'title' => 'Title',
+        'slug' => 'Slug',
         'category' => 'Category',
         'website' => 'Website',
         'featured' => 'Featured',
@@ -214,7 +216,7 @@ if (function_exists('renderEnhancedTable')) {
     ];
 
     // Define which fields are editable inline
-    $editableFields = ['title'];
+    $editableFields = ['title', 'slug'];
 
     // Render the enhanced table
     renderEnhancedTable(

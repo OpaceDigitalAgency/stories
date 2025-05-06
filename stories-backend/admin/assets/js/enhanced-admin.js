@@ -626,7 +626,7 @@ function validateInput(input) {
         isValid = false;
         errorMessage = `Please enter at least ${input.minLength} characters`;
     }
-    else if (input.maxLength && input.value.length > input.maxLength) {
+    else if (input.maxLength && input.maxLength > 0 && input.value.length > input.maxLength) {
         isValid = false;
         errorMessage = `Please enter no more than ${input.maxLength} characters`;
     }

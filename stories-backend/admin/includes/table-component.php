@@ -232,12 +232,23 @@ function getThumbnailUrl($item, $contentType, $thumbnailField = null) {
         return $item[$thumbnailField];
     }
 
+    // First check for optimized thumbnail versions
+    if (isset($item['thumbnail_url']) && !empty($item['thumbnail_url'])) {
+        return $item['thumbnail_url'];
+    }
+
+    if (isset($item['small_url']) && !empty($item['small_url'])) {
+        return $item['small_url'];
+    }
+
     // Check for common image fields based on content type
+    $imageUrl = null;
+
     switch ($contentType) {
         case 'stories':
             // Check for cover_url field
             if (isset($item['cover_url']) && !empty($item['cover_url'])) {
-                return $item['cover_url'];
+                $imageUrl = $item['cover_url'];
             }
             break;
 
@@ -245,37 +256,49 @@ function getThumbnailUrl($item, $contentType, $thumbnailField = null) {
         case 'blog_posts':
             // Check for cover_url field
             if (isset($item['cover_url']) && !empty($item['cover_url'])) {
-                return $item['cover_url'];
+                $imageUrl = $item['cover_url'];
             }
             break;
 
         case 'games':
             // Check for cover_url field
             if (isset($item['cover_url']) && !empty($item['cover_url'])) {
-                return $item['cover_url'];
+                $imageUrl = $item['cover_url'];
             }
             break;
 
         case 'authors':
             // Check for avatar field
             if (isset($item['avatar']) && !empty($item['avatar'])) {
-                return $item['avatar'];
+                $imageUrl = $item['avatar'];
             }
             break;
 
         case 'directory_items':
             // Check for image_url field
             if (isset($item['image_url']) && !empty($item['image_url'])) {
-                return $item['image_url'];
+                $imageUrl = $item['image_url'];
             }
             break;
 
         case 'ai_tools':
             // Check for image_url field
             if (isset($item['image_url']) && !empty($item['image_url'])) {
-                return $item['image_url'];
+                $imageUrl = $item['image_url'];
             }
             break;
+    }
+
+    // If we found an image URL, try to get its thumbnail version
+    if ($imageUrl) {
+        // Try to find a thumbnail version in the media table
+        $thumbnailUrl = getOptimizedImageUrl($imageUrl);
+        if ($thumbnailUrl) {
+            return $thumbnailUrl;
+        }
+
+        // If no thumbnail found, return the original URL
+        return $imageUrl;
     }
 
     // Check for any field that might contain an image URL
@@ -289,4 +312,80 @@ function getThumbnailUrl($item, $contentType, $thumbnailField = null) {
 
     // No thumbnail found
     return null;
+}
+
+/**
+ * Get optimized image URL for a specific size
+ *
+ * @param string $originalUrl Original image URL
+ * @param string $size Size identifier (thumbnail, small)
+ * @return string|null URL for the requested size or null if not available
+ */
+function getOptimizedImageUrl($originalUrl, $size = 'thumbnail') {
+    // Check if this is already a thumbnail URL
+    if (strpos($originalUrl, '/thumbnail/') !== false ||
+        strpos($originalUrl, '_thumbnail.') !== false ||
+        strpos($originalUrl, '-thumbnail.') !== false) {
+        return $originalUrl;
+    }
+
+    // Check if it's an optimized image URL
+    if (strpos($originalUrl, '/uploads/optimized/') !== false) {
+        // Replace the size suffix with thumbnail
+        $thumbnailUrl = preg_replace('/-(?:medium|large|small)\.(webp|jpg|png|jpeg)$/', '-thumbnail.$1', $originalUrl);
+
+        // If no size suffix was found, insert thumbnail before the extension
+        if (strpos($thumbnailUrl, '-thumbnail.') === false) {
+            $thumbnailUrl = preg_replace('/\.(webp|jpg|png|jpeg)$/', '-thumbnail.$1', $originalUrl);
+        }
+
+        return $thumbnailUrl;
+    }
+
+    // For regular uploads, try to find the optimized version
+    if (strpos($originalUrl, '/uploads/') !== false) {
+        $pathInfo = pathinfo($originalUrl);
+        $filename = $pathInfo['filename'];
+
+        // Create the optimized thumbnail URL
+        $thumbnailUrl = '/uploads/optimized/' . $filename . '-thumbnail.webp';
+
+        return $thumbnailUrl;
+    }
+
+    // For other images, try to find the thumbnail in the database
+    try {
+        // Get database connection
+        global $db;
+        if (!$db) {
+            return null;
+        }
+
+        // Extract filename from URL
+        $filename = basename($originalUrl);
+
+        // Query the media table for thumbnail versions
+        $stmt = $db->prepare("
+            SELECT thumbnail_url, small_url
+            FROM media
+            WHERE file_path = ? OR filename = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$originalUrl, $filename]);
+        $media = $stmt->fetch();
+
+        if ($media) {
+            // Return the requested size or fall back to the next available size
+            if ($size === 'thumbnail' && !empty($media['thumbnail_url'])) {
+                return $media['thumbnail_url'];
+            } else if (!empty($media['small_url'])) {
+                return $media['small_url'];
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error getting optimized image URL: " . $e->getMessage());
+    }
+
+    // If we couldn't find a thumbnail, return the original URL
+    return $originalUrl;
 }

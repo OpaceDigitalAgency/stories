@@ -22,33 +22,33 @@ function getDisplayUrl($filePath) {
     if (strpos($filePath, 'http') === 0) {
         return $filePath;
     }
-    
+
     // Check for optimized versions
     if (isset($GLOBALS['media']) && isset($GLOBALS['media']['id'])) {
         $mediaId = $GLOBALS['media']['id'];
         $db = $GLOBALS['db'];
-        
+
         // Check if we have optimized versions
         if (!empty($GLOBALS['media']['medium_url'])) {
             return $GLOBALS['media']['medium_url'];
         }
-        
+
         if (!empty($GLOBALS['media']['large_url'])) {
             return $GLOBALS['media']['large_url'];
         }
     }
-    
+
     // If it's a relative URL starting with /
     if (strpos($filePath, '/') === 0) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
     }
-    
+
     // If it's a server path
     if (file_exists($filePath)) {
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $filePath);
         return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
-    
+
     return $filePath;
 }
 
@@ -56,9 +56,14 @@ function getDisplayUrl($filePath) {
 function fileExistsCheck($filePath) {
     // If it's a local path
     if (strpos($filePath, 'http') !== 0) {
+        // If it starts with a slash, it's a relative path from the web root
+        if (strpos($filePath, '/') === 0) {
+            $serverPath = $_SERVER['DOCUMENT_ROOT'] . $filePath;
+            return file_exists($serverPath);
+        }
         return file_exists($filePath);
     }
-    
+
     // If it's a URL, try to fetch headers
     $headers = @get_headers($filePath);
     return $headers && strpos($headers[0], '200') !== false;
@@ -121,7 +126,7 @@ try {
 
     // Check if file exists (handling both local paths and URLs)
     $fileExists = fileExistsCheck($media['file_path']);
-    
+
     // Get display URL for the file
     $displayUrl = getDisplayUrl($media['file_path']);
 
@@ -148,7 +153,7 @@ try {
                 </a>
                 <form method="GET" style="display: inline;">
                     <input type="hidden" name="delete" value="<?php echo $media['id']; ?>">
-                    <button type="submit" formaction="media.php" class="btn btn-danger" 
+                    <button type="submit" formaction="media.php" class="btn btn-danger"
                             onclick="return confirm('Are you sure you want to delete this file?')">
                         <span class="icon-delete"></span> Delete
                     </button>
@@ -174,7 +179,7 @@ try {
                                 </div>
                             <?php endif; ?>
                         </div>
-                        
+
                         <?php if ($isImage): ?>
                         <div class="optimize-actions mb-4">
                             <a href="../../public/optimize_image.php?id=<?php echo $media['id']; ?>" class="btn btn-success">
@@ -186,20 +191,20 @@ try {
                     <div class="col-md-6">
                         <div class="media-details">
                             <div class="detail-item">
-                                <strong>Filename:</strong> 
+                                <strong>Filename:</strong>
                                 <?php echo htmlspecialchars($media['filename']); ?>
                             </div>
-                            
+
                             <div class="detail-item">
-                                <strong>File Type:</strong> 
+                                <strong>File Type:</strong>
                                 <?php echo htmlspecialchars($media['file_type']); ?>
                             </div>
-                            
+
                             <div class="detail-item">
-                                <strong>File Size:</strong> 
+                                <strong>File Size:</strong>
                                 <?php echo $fileSize; ?>
                             </div>
-                            
+
                             <div class="detail-item">
                                 <strong>File Path:</strong>
                                 <?php echo htmlspecialchars($media['file_path']); ?>
@@ -207,12 +212,12 @@ try {
                                     <span class="text-danger">(File not found on server)</span>
                                 <?php endif; ?>
                             </div>
-                            
+
                             <div class="detail-item">
                                 <strong>Display URL:</strong>
                                 <?php echo htmlspecialchars($displayUrl); ?>
                             </div>
-                            
+
                             <?php if ($isImage): ?>
                             <div class="detail-item">
                                 <strong>Available Sizes:</strong>
@@ -222,25 +227,25 @@ try {
                                         <a href="<?php echo htmlspecialchars($media['thumbnail_url']); ?>" target="_blank">Thumbnail</a>
                                     </li>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (!empty($media['small_url'])): ?>
                                     <li>
                                         <a href="<?php echo htmlspecialchars($media['small_url']); ?>" target="_blank">Small</a>
                                     </li>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (!empty($media['medium_url'])): ?>
                                     <li>
                                         <a href="<?php echo htmlspecialchars($media['medium_url']); ?>" target="_blank">Medium</a>
                                     </li>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (!empty($media['large_url'])): ?>
                                     <li>
                                         <a href="<?php echo htmlspecialchars($media['large_url']); ?>" target="_blank">Large</a>
                                     </li>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (empty($media['thumbnail_url']) && empty($media['small_url']) &&
                                              empty($media['medium_url']) && empty($media['large_url'])): ?>
                                     <li>No optimized sizes available</li>
@@ -248,24 +253,24 @@ try {
                                 </ul>
                             </div>
                             <?php endif; ?>
-                            
+
                             <?php if (!empty($media['alt_text'])): ?>
                             <div class="detail-item">
-                                <strong>Alt Text:</strong> 
+                                <strong>Alt Text:</strong>
                                 <?php echo htmlspecialchars($media['alt_text']); ?>
                             </div>
                             <?php endif; ?>
-                            
+
                             <div class="detail-item">
-                                <strong>Uploaded:</strong> 
+                                <strong>Uploaded:</strong>
                                 <?php echo date('F j, Y, g:i a', strtotime($media['created_at'])); ?>
                             </div>
-                            
+
                             <div class="detail-item">
-                                <strong>Last Updated:</strong> 
+                                <strong>Last Updated:</strong>
                                 <?php echo date('F j, Y, g:i a', strtotime($media['updated_at'])); ?>
                             </div>
-                            
+
                             <div class="detail-item mt-4">
                                 <strong>Usage in HTML:</strong>
                                 <?php if ($isImage): ?>
@@ -279,7 +284,7 @@ try {
                 </div>
             </div>
         </div>
-        
+
         <div class="d-flex justify-content-between mt-4">
             <a href="media.php" class="btn btn-secondary">
                 Back to Media Library
@@ -304,13 +309,13 @@ try {
             padding: 20px;
             min-height: 300px;
         }
-        
+
         .img-preview {
             max-width: 100%;
             max-height: 400px;
             object-fit: contain;
         }
-        
+
         .file-icon-large {
             width: 150px;
             height: 150px;
@@ -323,26 +328,26 @@ try {
             color: var(--gray-700);
             border-radius: var(--radius-md);
         }
-        
+
         .media-details {
             background-color: white;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             padding: 20px;
         }
-        
+
         .detail-item {
             margin-bottom: 15px;
             padding-bottom: 15px;
             border-bottom: 1px solid var(--gray-100);
         }
-        
+
         .detail-item:last-child {
             border-bottom: none;
             margin-bottom: 0;
             padding-bottom: 0;
         }
-        
+
         .code-block {
             background-color: var(--gray-100);
             padding: 15px;
@@ -351,38 +356,38 @@ try {
             font-family: monospace;
             margin-top: 10px;
         }
-        
+
         .row {
             display: flex;
             flex-wrap: wrap;
             margin: -10px;
         }
-        
+
         .col-md-6 {
             flex: 0 0 calc(50% - 20px);
             padding: 10px;
         }
-        
+
         @media (max-width: 768px) {
             .col-md-6 {
                 flex: 0 0 calc(100% - 20px);
             }
         }
-        
+
         .mt-4 {
             margin-top: 1.5rem;
         }
-        
+
         .icon-download:before {
             content: "↓";
         }
-        
+
         .image-sizes-list {
             list-style: none;
             padding-left: 0;
             margin-top: 10px;
         }
-        
+
         .image-sizes-list li {
             margin-bottom: 5px;
             padding: 5px 10px;
@@ -391,16 +396,16 @@ try {
             display: inline-block;
             margin-right: 5px;
         }
-        
+
         .image-sizes-list li a {
             color: var(--primary);
             text-decoration: none;
         }
-        
+
         .image-sizes-list li a:hover {
             text-decoration: underline;
         }
-        
+
         .icon-image:before {
             content: "🖼️";
         }

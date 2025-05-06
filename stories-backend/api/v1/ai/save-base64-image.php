@@ -134,10 +134,47 @@ try {
         }
     }
 
-    // Sanitize filename and ensure it has .png extension
-    $filename = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($data['filename'], PATHINFO_FILENAME));
-    $filename = $filename ?: 'ai-generated-image';
-    $filename .= '-' . uniqid();
+    // Create a meaningful filename from the alt text or prompt
+    $baseFilename = '';
+
+    // If we have alt text, use that for the filename
+    if (!empty($data['alt_text'])) {
+        // Extract story title if it's in the format "Story written by children: [Title]"
+        if (preg_match('/Story written by children: ([^,]+)/', $data['alt_text'], $matches)) {
+            $baseFilename = $matches[1];
+        } else {
+            // Otherwise use the first part of the alt text
+            $baseFilename = substr($data['alt_text'], 0, 50);
+        }
+    }
+    // If no alt text, try to extract a title from the prompt
+    else if (!empty($data['prompt'])) {
+        // Try to extract a title from the prompt
+        if (preg_match('/Base this on: ([^,\.]+)/', $data['prompt'], $matches)) {
+            $baseFilename = $matches[1];
+        } else {
+            // Use the first part of the prompt
+            $baseFilename = substr($data['prompt'], 0, 50);
+        }
+    }
+
+    // If we still don't have a filename, use the provided filename or default
+    if (empty($baseFilename)) {
+        $baseFilename = !empty($data['filename']) ? $data['filename'] : 'ai-generated-image';
+    }
+
+    // Convert to URL-friendly format
+    $baseFilename = strtolower(trim($baseFilename));
+    $baseFilename = preg_replace('/[^a-z0-9]+/', '-', $baseFilename);
+    $baseFilename = trim($baseFilename, '-');
+
+    // Add story-written-by-children suffix if it's a children's story
+    if (strpos(strtolower($data['alt_text'] ?? ''), 'story written by children') !== false) {
+        $baseFilename .= '-story-written-by-children';
+    }
+
+    // Add date and unique ID
+    $filename = $baseFilename . '-' . date('Ymd') . '-' . uniqid();
     $filename .= '.png';
 
     // Save the original image
@@ -166,8 +203,38 @@ try {
     $thumbnailUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-thumbnail.webp';
     $smallUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-small.webp';
 
-    // Insert into media table
+    // Create a meaningful alt text for SEO
     $altText = $data['alt_text'] ?? 'AI generated image';
+
+    // If the alt text starts with "AI generated image:", extract the story title
+    if (preg_match('/AI generated image: (.+)/', $altText, $matches)) {
+        $promptText = $matches[1];
+
+        // Extract story title if it's in the format "Base this on: [Title]"
+        if (preg_match('/Base this on: ([^,\.]+)/', $promptText, $titleMatches)) {
+            $storyTitle = trim($titleMatches[1]);
+
+            // Check if it includes author information
+            if (preg_match('/(.*?)\s+by\s+(.*?)(?:,\s+aged\s+(\d+))?(?:,\s+from\s+(.*?))?(?:,\s+(.*?))?/i', $storyTitle, $authorMatches)) {
+                $title = trim($authorMatches[1]);
+                $author = trim($authorMatches[2]);
+                $age = isset($authorMatches[3]) ? trim($authorMatches[3]) : '';
+                $location = isset($authorMatches[4]) ? trim($authorMatches[4]) : '';
+
+                // Create a more SEO-friendly alt text
+                $altText = "Story written by children: $title by $author";
+                if (!empty($age)) {
+                    $altText .= ", aged $age";
+                }
+                if (!empty($location)) {
+                    $altText .= ", from $location";
+                }
+            } else {
+                // Just use the title if no author info
+                $altText = "Story written by children: $storyTitle";
+            }
+        }
+    }
 
     // Check if the medium_url and large_url columns exist
     try {

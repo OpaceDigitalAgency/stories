@@ -262,11 +262,20 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                         <div class="premium-table-actions">
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
-                                                // Get the view file path
-                                                $viewFile = "view-{$itemType}.php";
-                                                if ($itemType === 'subscriber') {
-                                                    $viewFile = 'subscribers.php';
-                                                }
+                                                // Map item types to their correct view file names
+                                                $viewFiles = [
+                                                    'ai_tool' => 'view-ai-tool.php',
+                                                    'directory_item' => 'view-directory-item.php',
+                                                    'game' => 'view-game.php',
+                                                    'media' => 'view-media.php',
+                                                    'contact' => 'view-contact.php',
+                                                    'subscriber' => 'subscribers.php',
+                                                    'post' => 'view-post.php',
+                                                    'story' => 'view-story.php',
+                                                    'tag' => 'view-tag.php',
+                                                    'author' => 'view-author.php'
+                                                ];
+                                                $viewFile = $viewFiles[$itemType] ?? "view-{$itemType}.php";
                                                 echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
                                                 echo '<i class="fas fa-eye"></i>';
                                                 echo '</a>';
@@ -275,11 +284,20 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                                             <?php if (in_array('edit', $options['actions'])): ?>
                                                 <?php
-                                                // Get the form file path
-                                                $formFile = "{$itemType}-form.php";
-                                                if ($itemType === 'subscriber' || $itemType === 'media' || $itemType === 'contact') {
-                                                    $formFile = $itemType . 's.php';
-                                                }
+                                                // Map item types to their correct form file names
+                                                $formFiles = [
+                                                    'ai_tool' => 'ai-tool-form.php',
+                                                    'directory_item' => 'directory-item-form.php',
+                                                    'game' => 'game-form.php',
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
+                                                    'subscriber' => 'subscribers.php',
+                                                    'post' => 'post-form.php',
+                                                    'story' => 'story-form.php',
+                                                    'tag' => 'tag-form.php',
+                                                    'author' => 'author-form.php'
+                                                ];
+                                                $formFile = $formFiles[$itemType] ?? "{$itemType}-form.php";
                                                 echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                 echo '<i class="fas fa-edit"></i>';
                                                 echo '</a>';

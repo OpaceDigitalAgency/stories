@@ -76,12 +76,9 @@ try {
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <form method="GET" action="ai-tool-form.php">
-                    <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="icon-edit"></span> Edit
-                    </button>
-                </form>
+                <a href="ai-tool-form.php?id=<?php echo $tool['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <form method="POST" action="delete-ai-tool.php" onsubmit="return confirm('Are you sure you want to delete this AI tool?');">
                     <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
                     <button type="submit" class="btn btn-danger">

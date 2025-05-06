@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Tag';
+$pageTitle = isset($_GET['id']) ? 'Edit Tag' : 'Add Tag';
 $currentPage = 'view-tag';
 
 // Include auth check
@@ -103,18 +103,15 @@ try {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title">View Tag</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($tag['name']); ?></h1>
                 <p class="page-description">
                     <a href="tags.php" class="text-primary">← Back to Tags</a>
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <form method="GET" action="tag-form.php">
-                    <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="icon-edit"></span> Edit
-                    </button>
-                </form>
+                <a href="tag-form.php?id=<?php echo $tag['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <form method="POST" action="delete-tag.php" onsubmit="return confirm('Are you sure you want to delete this tag?');">
                     <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
                     <button type="submit" class="btn btn-danger">
@@ -126,7 +123,7 @@ try {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title"><?php echo htmlspecialchars($tag['name']); ?></h2>
+                <h2 class="section-title">Details</h2>
             </div>
             <div class="section-body">
                 <div class="mb-4">

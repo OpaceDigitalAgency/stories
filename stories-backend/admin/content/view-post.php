@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Post';
+$pageTitle = isset($_GET['id']) ? 'Edit Blog Post' : 'Add Blog Post';
 $currentPage = 'view-post';
 
 // Include auth check
@@ -119,18 +119,15 @@ try {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title">View Blog Post</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($post['title']); ?></h1>
                 <p class="page-description">
                     <a href="blog-posts.php" class="text-primary">← Back to Blog Posts</a>
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <form method="GET" action="post-form.php">
-                    <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="icon-edit"></span> Edit
-                    </button>
-                </form>
+                <a href="post-form.php?id=<?php echo $post['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <form method="POST" action="delete-post.php" onsubmit="return confirm('Are you sure you want to delete this post?');">
                     <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
                     <button type="submit" class="btn btn-danger">

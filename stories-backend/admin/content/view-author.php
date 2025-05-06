@@ -55,26 +55,36 @@ try {
     header("Location: authors.php");
     exit;
 }
-// Set page variables for header
-$pageTitle = 'View Author';
+// Page variables
+$pageTitle = isset($_GET['id']) ? 'Edit Author' : 'Add Author';
 $currentPage = 'authors';
-$pageDescription = '<a href="authors.php" class="text-primary">← Back to Authors</a>';
-$pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="author-form.php">
-        <input type="hidden" name="id" value="' . $author['id'] . '">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-edit"></i> Edit
-        </button>
-    </form>
-    <form method="POST" action="delete-author.php" onsubmit="return confirm(\'Are you sure you want to delete this author?\');">
-        <input type="hidden" name="id" value="' . $author['id'] . '">
-        <button type="submit" class="btn btn-danger">
-            <i class="fas fa-trash-alt"></i> Delete
-        </button>
-    </form>
-</div>
-';
+
+// Include header
+require_once '../includes/header.php';
+
+?>
+
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="page-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title"><?php echo htmlspecialchars($author['name']); ?></h1>
+                <p class="page-description">
+                    <a href="authors.php" class="text-primary">← Back to Authors</a>
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="author-form.php?id=<?php echo $author['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
+                <form method="POST" action="delete-author.php" onsubmit="return confirm('Are you sure you want to delete this author?');">
+                    <input type="hidden" name="id" value="<?php echo $author['id']; ?>">
+                    <button type="submit" class="btn btn-danger">
+                        <span class="icon-delete"></span> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
 
 // Add custom CSS for content preview
 $extraHeadContent = '

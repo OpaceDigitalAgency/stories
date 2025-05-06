@@ -148,6 +148,9 @@ try {
                 </p>
             </div>
             <div class="d-flex gap-2">
+                <a href="media.php?id=<?php echo $media['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <a href="<?php echo htmlspecialchars($displayUrl); ?>" target="_blank" class="btn btn-primary">
                     <span class="icon-download"></span> Download
                 </a>

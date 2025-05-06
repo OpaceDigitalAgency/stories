@@ -94,12 +94,9 @@ try {
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <form method="GET" action="game-form.php">
-                    <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="icon-edit"></span> Edit
-                    </button>
-                </form>
+                <a href="game-form.php?id=<?php echo $game['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <form method="POST" action="delete-game.php" onsubmit="return confirm('Are you sure you want to delete this game?');">
                     <input type="hidden" name="id" value="<?php echo $game['id']; ?>">
                     <button type="submit" class="btn btn-danger">

@@ -76,12 +76,9 @@ try {
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <form method="GET" action="directory-item-form.php">
-                    <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="icon-edit"></span> Edit
-                    </button>
-                </form>
+                <a href="directory-item-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary">
+                    <span class="icon-edit"></span> Edit
+                </a>
                 <form method="POST" action="delete-directory-item.php" onsubmit="return confirm('Are you sure you want to delete this directory item?');">
                     <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                     <button type="submit" class="btn btn-danger">

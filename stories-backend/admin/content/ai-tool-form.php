@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'AI Tool Form';
+$pageTitle = isset($_GET['id']) ? 'Edit AI Tool' : 'Add AI Tool';
 $currentPage = 'ai-tools';
 $pageDescription = 'Add or edit AI tool information';
 
@@ -79,7 +79,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $tool ? 'Edit' : 'Add'; ?> AI Tool</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($tool['title'] ?? 'New AI Tool'); ?></h1>
                 <p class="page-description">
                     <a href="ai-tools.php" class="text-primary">← Back to AI Tools</a>
                 </p>
@@ -92,7 +92,7 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Tool Information</h2>
+                <h2 class="section-title">Details</h2>
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">

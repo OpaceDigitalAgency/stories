@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'Directory Item Form';
+$pageTitle = isset($_GET['id']) ? 'Edit Directory Item' : 'Add Directory Item';
 $currentPage = 'directory-item-form';
 
 // Include auth check
@@ -75,7 +75,7 @@ if (isset($_SESSION['error'])) {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title"><?php echo $item ? 'Edit' : 'Add'; ?> Directory Item</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($item['title'] ?? 'New Directory Item'); ?></h1>
                 <p class="page-description">
                     <a href="directory-items.php" class="text-primary">← Back to Directory Items</a>
                 </p>
@@ -88,7 +88,7 @@ if (isset($_SESSION['error'])) {
 
         <div class="content-section mb-4">
             <div class="section-header">
-                <h2 class="section-title">Directory Item Information</h2>
+                <h2 class="section-title">Details</h2>
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">

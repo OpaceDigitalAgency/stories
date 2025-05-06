@@ -133,14 +133,23 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Blog Posts';
 $currentPage = 'blog-posts';
 $pageDescription = 'Manage all your blog posts from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<div class="d-flex gap-2">
-    <form method="GET" action="post-form.php">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-plus" aria-hidden="true"></i> Add New Post
-        </button>
-    </form>
-    <button onclick="window.location.reload()" class="btn btn-secondary">
+<div class="premium-flex premium-gap-2">
+    <a href="post-form.php" class="premium-btn premium-btn-success">
+        <i class="fas fa-plus" aria-hidden="true"></i> Add New Post
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
 </div>
@@ -171,79 +180,136 @@ if (isset($error)) {
     echo '</div>';
 }
 
-// Include search component
-include_once '../includes/search-component.php';
-if (function_exists('renderSearchComponent')) {
-    renderSearchComponent('posts', ['title', 'content', 'author', 'tags']);
-}
-
-// Include bulk actions component
-include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderEnhancedBulkActionsComponent')) {
-    renderEnhancedBulkActionsComponent('posts', [
-        'delete' => 'Delete Selected',
-        'publish' => 'Publish Selected',
-        'unpublish' => 'Unpublish Selected'
-    ]);
-} else if (function_exists('renderBulkActionsComponent')) {
-    renderBulkActionsComponent('posts', ['delete', 'publish', 'unpublish']);
+// Include live search component
+include_once '../includes/live-search-component.php';
+if (function_exists('renderLiveSearchComponent')) {
+    renderLiveSearchComponent('posts', ['title', 'content', 'author', 'tags'], 'posts-table');
+} else {
+    // Fallback to regular search component
+    include_once '../includes/search-component.php';
+    if (function_exists('renderSearchComponent')) {
+        renderSearchComponent('posts', ['title', 'content', 'author', 'tags']);
+    }
 }
 
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include table component
-include_once '../includes/table-component.php';
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {
-    // Define columns
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($posts as $post) {
+        // Format the status
+        $status = isset($post['status']) ? ucfirst($post['status']) : 'Draft';
+        if (isset($post['is_published'])) {
+            $status = $post['is_published'] ? 'Published' : 'Draft';
+        }
+
+        // Format the created date
+        $createdDate = date('M j, Y', strtotime($post['created_at']));
+
+        // Get cover image if available
+        $coverImage = isset($post['cover_url']) ? $post['cover_url'] :
+                     (isset($post['cover']) ? $post['cover'] : '../assets/images/default-cover.jpg');
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $post['id'],
+            'image' => $coverImage,
+            'title' => $post['title'],
+            'author' => $post['author_name'] ?? 'Unknown',
+            'status' => $status,
+            'tags' => $post['tags'] ?? '',
+            'created' => $createdDate
+        ];
+    }
+
+    // Define columns for the table
     $columns = [
         'title' => 'Title',
-        'author_name' => 'Author',
-        'tags' => 'Tags',
+        'author' => 'Author',
         'status' => 'Status',
-        'created_at' => 'Created',
-        'updated_at' => 'Updated'
+        'tags' => 'Tags',
+        'created' => 'Created'
     ];
 
-    // Define custom formatters
-    $customFormatters = [
-        'title' => function($post, $key) {
-            $output = '<div class="item-title">';
-            $output .= htmlspecialchars($post[$key]);
-            $output .= '</div>';
-            return $output;
-        },
-        'author_name' => function($post, $key) {
-            return htmlspecialchars($post[$key] ?? 'Unknown');
-        },
-        'tags' => function($post, $key) {
-            return htmlspecialchars($post['tag_list'] ?? '');
-        },
-        'status' => function($post, $key) {
-            $status = $post[$key] ?? 'draft';
-            if (function_exists('getStatusIndicator')) {
-                return getStatusIndicator($status);
+    // Define which fields are editable inline
+    $editableFields = ['title', 'tags'];
+
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'post',
+        'posts-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'thumbnailField' => 'image',
+            'thumbnailAltField' => 'title',
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete', 'publish', 'unpublish'],
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
+        ]
+    );
+} else {
+    // Fallback to the original table component
+    include_once '../includes/table-component.php';
+    if (function_exists('renderTable')) {
+        // Define columns
+        $columns = [
+            'title' => 'Title',
+            'author_name' => 'Author',
+            'tags' => 'Tags',
+            'status' => 'Status',
+            'created_at' => 'Created',
+            'updated_at' => 'Updated'
+        ];
+
+        // Define custom formatters
+        $customFormatters = [
+            'title' => function($post, $key) {
+                $output = '<div class="item-title">';
+                $output .= htmlspecialchars($post[$key]);
+                $output .= '</div>';
+                return $output;
+            },
+            'author_name' => function($post, $key) {
+                return htmlspecialchars($post[$key] ?? 'Unknown');
+            },
+            'tags' => function($post, $key) {
+                return htmlspecialchars($post['tag_list'] ?? '');
+            },
+            'status' => function($post, $key) {
+                $status = $post[$key] ?? 'draft';
+                if (function_exists('getStatusIndicator')) {
+                    return getStatusIndicator($status);
+                }
+                return ucfirst(htmlspecialchars($status));
+            },
+            'created_at' => function($post, $key) {
+                return date('M j, Y', strtotime($post[$key]));
+            },
+            'updated_at' => function($post, $key) {
+                return date('M j, Y', strtotime($post[$key]));
             }
-            return ucfirst(htmlspecialchars($status));
-        },
-        'created_at' => function($post, $key) {
-            return date('M j, Y', strtotime($post[$key]));
-        },
-        'updated_at' => function($post, $key) {
-            return date('M j, Y', strtotime($post[$key]));
-        }
-    ];
+        ];
 
-    // Render the table
-    renderEnhancedTable($posts, $columns, [
-        'content_type' => 'posts',
-        'name_field' => 'title',
-        'empty_message' => 'No blog posts found. Add your first post!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-post.php?id={id}',
-        'edit_url' => 'post-form.php?id={id}',
-        'delete_url' => 'delete-post.php'
-    ]);
+        // Render the table
+        renderTable($posts, $columns, [
+            'content_type' => 'posts',
+            'name_field' => 'title',
+            'empty_message' => 'No blog posts found. Add your first post!',
+            'custom_formatters' => $customFormatters,
+            'view_url' => 'view-post.php?id={id}',
+            'edit_url' => 'post-form.php?id={id}',
+            'delete_url' => 'delete-post.php'
+        ]);
+    }
 }
 
 // Include pagination component if needed

@@ -91,9 +91,11 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <?php
     $modernDashboardCssPath = $isContentDir ? '../assets/css/modern-dashboard.css' : 'assets/css/modern-dashboard.css';
     $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
+    $premiumAdminCssPath = $isContentDir ? '../assets/css/premium-admin.css' : 'assets/css/premium-admin.css';
     ?>
     <link rel="stylesheet" href="<?php echo $modernDashboardCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
+    <link rel="stylesheet" href="<?php echo $premiumAdminCssPath; ?>">
 
     <!-- JavaScript Libraries -->
     <!-- Add jQuery -->
@@ -106,8 +108,12 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <!-- Admin JavaScript Files -->
     <?php
     $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
+    $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
+    $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
     ?>
     <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
+    <script src="<?php echo $liveSearchJsPath; ?>"></script>
+    <script src="<?php echo $inlineEditingJsPath; ?>"></script>
 
     <!-- Fix for dropdown issues -->
     <script>

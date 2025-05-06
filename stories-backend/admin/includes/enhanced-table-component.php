@@ -11,6 +11,45 @@
  */
 
 /**
+ * Helper function to get display URL for images
+ *
+ * @param string $filePath The file path or URL
+ * @return string The properly formatted URL
+ */
+function getTableDisplayUrl($filePath) {
+    // If it's null or empty, return default image
+    if (empty($filePath)) {
+        return '../assets/images/default-cover.jpg';
+    }
+
+    // If it's already an absolute URL
+    if (strpos($filePath, 'http') === 0) {
+        return $filePath;
+    }
+
+    // If it's a relative URL starting with /
+    if (strpos($filePath, '/') === 0) {
+        // Check if we're in a development environment
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'localhost') {
+            return $filePath;
+        }
+        return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
+    }
+
+    // If it's a relative path without leading slash
+    if (strpos($filePath, '../') === 0 || strpos($filePath, './') === 0) {
+        return $filePath;
+    }
+
+    // If it's just a filename, assume it's in the uploads directory
+    if (strpos($filePath, '/') === false) {
+        return '../uploads/' . $filePath;
+    }
+
+    return $filePath;
+}
+
+/**
  * Renders an enhanced table for the specified items
  *
  * @param array $items The items to display in the table
@@ -115,23 +154,8 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     $thumbnailUrl = $item[$options['thumbnailField']];
                                     $thumbnailAlt = isset($item[$options['thumbnailAltField']]) ? $item[$options['thumbnailAltField']] : '';
 
-                                    // Function to get display URL
-                                    function getDisplayUrl($filePath) {
-                                        // If it's already an absolute URL
-                                        if (strpos($filePath, 'http') === 0) {
-                                            return $filePath;
-                                        }
-
-                                        // If it's a relative URL starting with /
-                                        if (strpos($filePath, '/') === 0) {
-                                            return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
-                                        }
-
-                                        return $filePath;
-                                    }
-
                                     // Get the proper display URL
-                                    $thumbnailUrl = getDisplayUrl($thumbnailUrl);
+                                    $thumbnailUrl = getTableDisplayUrl($thumbnailUrl);
                                     ?>
                                     <img src="<?php echo htmlspecialchars($thumbnailUrl); ?>" alt="<?php echo htmlspecialchars($thumbnailAlt); ?>" class="thumbnail-image">
                                 </td>

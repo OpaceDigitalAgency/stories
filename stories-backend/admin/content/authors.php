@@ -56,7 +56,7 @@ try {
 
     // Default story count query
     $storyCountQuery = "0";
-    
+
     if ($hasStoryAuthorsTable) {
         // Use the junction table if it exists
         $storyCountQuery = "(SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id)";
@@ -97,108 +97,173 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Authors';
 $currentPage = 'authors';
 $pageDescription = 'Manage all your authors from here.';
+
+// Add extra head content for premium features
+$extraHeadContent = '
+<!-- Add Premium Admin CSS -->
+<link rel="stylesheet" href="../assets/css/premium-admin.css">
+<!-- Add Live Search JS -->
+<script src="../assets/js/live-search.js"></script>
+<!-- Add Inline Editing JS -->
+<script src="../assets/js/inline-editing.js"></script>
+';
+
 $pageActions = '
-<form method="GET" action="author-form.php">
-    <button type="submit" class="btn btn-success">
+<div class="premium-flex premium-gap-2">
+    <a href="author-form.php" class="premium-btn premium-btn-success">
         <i class="fas fa-plus" aria-hidden="true"></i> Add New Author
+    </a>
+    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
+        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-</form>
+</div>
 ';
 
 // Include header
 require_once '../includes/header.php';
 
-// Include search component
-include_once '../includes/search-component.php';
-if (function_exists('renderSearchComponent')) {
-    renderSearchComponent('authors', ['name', 'email', 'bio']);
-}
-
-// Include bulk actions component
-include_once '../includes/bulk-actions-component.php';
-if (function_exists('renderEnhancedBulkActionsComponent')) {
-    renderEnhancedBulkActionsComponent('authors', [
-        'delete' => 'Delete Selected'
-    ]);
-} else if (function_exists('renderBulkActionsComponent')) {
-    renderBulkActionsComponent('authors', ['delete']);
-}
-
-// Include table component
-include_once '../includes/table-component.php';
-
-// Define columns
-$columns = [
-    'name' => 'Name',
-    'email' => 'Email',
-    'author_type' => 'Type',
-    'bio' => 'Bio',
-    'story_count' => 'Stories',
-    'post_count' => 'Blog Posts'
-];
-
-// Define custom formatters
-$customFormatters = [
-    'author_type' => function($author, $key) {
-        return ucfirst(htmlspecialchars($author[$key] ?? 'retail'));
-    },
-    'bio' => function($author, $key) {
-        return htmlspecialchars(substr($author[$key] ?? '', 0, 100) . (strlen($author[$key] ?? '') > 100 ? '...' : ''));
-    }
-];
-
-// If the table component is not available, render the table manually
-if (!function_exists('renderEnhancedTable')) {
-    // Render table
-    echo '<div class="table-container">';
-    echo '<table id="data-table" class="table">';
-    echo '<thead>';
-    echo '<tr>';
-    foreach ($columns as $label) {
-        echo '<th>' . htmlspecialchars($label) . '</th>';
-    }
-    echo '<th>Actions</th>';
-    echo '</tr>';
-    echo '</thead>';
-    echo '<tbody>';
-    
-    if ($authors) {
-        foreach ($authors as $author) {
-            echo '<tr>';
-            foreach ($columns as $key => $label) {
-                echo '<td>';
-                if (isset($customFormatters[$key])) {
-                    echo $customFormatters[$key]($author, $key);
-                } else {
-                    echo isset($author[$key]) ? htmlspecialchars($author[$key]) : '';
-                }
-                echo '</td>';
-            }
-            echo '<td>';
-            echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
-            echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
-            echo '<a href="author-delete-process.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
-            echo '</td>';
-            echo '</tr>';
-        }
-    }
-    
-    echo '</tbody>';
-    echo '</table>';
-    echo '</div>';
+// Include live search component
+include_once '../includes/live-search-component.php';
+if (function_exists('renderLiveSearchComponent')) {
+    renderLiveSearchComponent('authors', ['name', 'email', 'bio'], 'authors-table');
 } else {
-    // Use the table component
-    renderEnhancedTable($authors, $columns, [
-        'content_type' => 'authors',
-        'name_field' => 'name',
-        'empty_message' => 'No authors found. Add your first author!',
-        'custom_formatters' => $customFormatters,
-        'view_url' => 'view-author.php?id={id}',
-        'edit_url' => 'author-form.php?id={id}',
-        'delete_url' => 'author-delete-process.php',
-        'delete_type' => 'confirm',
-        'delete_dependencies' => ['stories']
-    ]);
+    // Fallback to regular search component
+    include_once '../includes/search-component.php';
+    if (function_exists('renderSearchComponent')) {
+        renderSearchComponent('authors', ['name', 'email', 'bio']);
+    }
+}
+
+// Include enhanced table component
+include_once '../includes/enhanced-table-component.php';
+if (function_exists('renderEnhancedTable')) {
+    // Prepare data for the enhanced table
+    $tableData = [];
+    foreach ($authors as $author) {
+        // Get avatar image if available
+        $avatarImage = isset($author['avatar_url']) ? $author['avatar_url'] :
+                     (isset($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.jpg');
+
+        // Format the bio
+        $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
+
+        // Add the item to the table data
+        $tableData[] = [
+            'id' => $author['id'],
+            'image' => $avatarImage,
+            'name' => $author['name'],
+            'email' => $author['email'] ?? '',
+            'type' => ucfirst($author['author_type'] ?? 'retail'),
+            'bio' => $bio,
+            'stories' => $author['story_count'] ?? 0,
+            'posts' => $author['post_count'] ?? 0
+        ];
+    }
+
+    // Define columns for the table
+    $columns = [
+        'name' => 'Name',
+        'email' => 'Email',
+        'type' => 'Type',
+        'bio' => 'Bio',
+        'stories' => 'Stories',
+        'posts' => 'Blog Posts'
+    ];
+
+    // Define which fields are editable inline
+    $editableFields = ['name', 'email', 'bio'];
+
+    // Render the enhanced table
+    renderEnhancedTable(
+        $tableData,
+        $columns,
+        'author',
+        'authors-table',
+        [
+            'showCheckboxes' => true,
+            'showActions' => true,
+            'actions' => ['view', 'edit', 'delete'],
+            'thumbnailField' => 'image',
+            'thumbnailAltField' => 'name',
+            'editableFields' => $editableFields,
+            'bulkActions' => ['delete'],
+            'itemsPerPage' => 10,
+            'currentPage' => 1
+        ]
+    );
+} else {
+    // Fallback to the original table component
+    include_once '../includes/table-component.php';
+    if (function_exists('renderTable')) {
+        // Define columns
+        $columns = [
+            'name' => 'Name',
+            'email' => 'Email',
+            'author_type' => 'Type',
+            'bio' => 'Bio',
+            'story_count' => 'Stories',
+            'post_count' => 'Blog Posts'
+        ];
+
+        // Define custom formatters
+        $customFormatters = [
+            'author_type' => function($author, $key) {
+                return ucfirst(htmlspecialchars($author[$key] ?? 'retail'));
+            },
+            'bio' => function($author, $key) {
+                return htmlspecialchars(substr($author[$key] ?? '', 0, 100) . (strlen($author[$key] ?? '') > 100 ? '...' : ''));
+            }
+        ];
+
+        // Render the table
+        renderTable($authors, $columns, [
+            'content_type' => 'authors',
+            'name_field' => 'name',
+            'empty_message' => 'No authors found. Add your first author!',
+            'custom_formatters' => $customFormatters,
+            'view_url' => 'view-author.php?id={id}',
+            'edit_url' => 'author-form.php?id={id}',
+            'delete_url' => 'author-delete-process.php'
+        ]);
+    } else {
+        // Manual fallback if no table component is available
+        echo '<div class="table-container">';
+        echo '<table id="data-table" class="table">';
+        echo '<thead>';
+        echo '<tr>';
+        foreach ($columns as $label) {
+            echo '<th>' . htmlspecialchars($label) . '</th>';
+        }
+        echo '<th>Actions</th>';
+        echo '</tr>';
+        echo '</thead>';
+        echo '<tbody>';
+
+        if ($authors) {
+            foreach ($authors as $author) {
+                echo '<tr>';
+                foreach ($columns as $key => $label) {
+                    echo '<td>';
+                    if (isset($customFormatters[$key])) {
+                        echo $customFormatters[$key]($author, $key);
+                    } else {
+                        echo isset($author[$key]) ? htmlspecialchars($author[$key]) : '';
+                    }
+                    echo '</td>';
+                }
+                echo '<td>';
+                echo '<a href="view-author.php?id=' . $author['id'] . '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a> ';
+                echo '<a href="author-form.php?id=' . $author['id'] . '" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a> ';
+                echo '<a href="author-delete-process.php?id=' . $author['id'] . '" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>';
+                echo '</td>';
+                echo '</tr>';
+            }
+        }
+
+        echo '</tbody>';
+        echo '</table>';
+        echo '</div>';
+    }
 }
 
 // No need for JavaScript includes

@@ -9,34 +9,26 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Set page variables for header
-$pageTitle = 'Contact Form Submissions';
-$currentPage = 'contacts';
-$pageDescription = 'Manage and respond to contact form submissions from website visitors.';
-
-// Include header
-require_once '../includes/header.php';
+// Include enhanced table component
+require_once '../includes/enhanced-table-component.php';
 
 // Include email functions
 require_once '../includes/email-functions.php';
 
-// Add custom CSS for contact details
+// Set page variables
+$pageTitle = 'Contact Form Submissions';
+$currentPage = 'contacts';
+
+// Include header
+require_once '../includes/header.php';
+
+// Add custom CSS
 echo '<style>
-    .contact-details {
-        margin-bottom: 1rem;
-    }
-    .detail-item {
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #eee;
-    }
-    .detail-item:last-child {
-        border-bottom: none;
-    }
-    .detail-item strong {
-        display: block;
-        margin-bottom: 0.25rem;
-        color: #495057;
+    .message-preview {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .message-content, .notes-content {
         background-color: #f8f9fa;
@@ -297,37 +289,34 @@ try {
         $offset = ($page - 1) * $perPage;
 
         // Get total count for pagination
-        $countQuery = str_replace("SELECT *", "SELECT COUNT(*)", $query);
-        $countStmt = $db->prepare($countQuery);
-        $countStmt->execute($params);
-        $totalItems = $countStmt->fetchColumn();
-        $totalPages = ceil($totalItems / $perPage);
-
-        // Add limit to the main query
-        $query .= " LIMIT " . intval($offset) . ", " . intval($perPage);
-
-        error_log("Executing contacts query: {$query} with params: " . print_r($params, true));
-        $stmt = $db->prepare($query);
-        $stmt->execute($params);
+        // Get contacts
+        $stmt = $db->query("SELECT * FROM contacts ORDER BY created_at DESC");
         $contacts = $stmt->fetchAll();
-        error_log("Found " . count($contacts) . " contacts");
-    }
-} catch (PDOException $e) {
-    $errorMessage = "Database error: " . $e->getMessage();
-}
 
-// Custom formatters for the table
-$customFormatters = [
-    'is_responded' => function($value) {
-        return $value ? '<span class="badge bg-success">Responded</span>' : '<span class="badge bg-warning">Not Responded</span>';
-    },
-    'created_at' => function($value) {
-        return date('M d, Y H:i', strtotime($value));
-    },
-    'message' => function($value) {
-        return '<div class="message-preview">' . htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '') . '</div>';
-    }
-];
+        // Define columns for enhanced table
+        $columns = [
+            'name' => 'Name',
+            'email' => 'Email',
+            'subject' => 'Subject',
+            'message' => 'Message',
+            'created_at' => 'Date',
+            'is_responded' => 'Status'
+        ];
+
+        // Render enhanced table
+        renderEnhancedTable(
+            $contacts,
+            $columns,
+            'contact',
+            'contacts-table',
+            [
+                'showCheckboxes' => true,
+                'showActions' => true,
+                'actions' => ['view', 'edit', 'delete'],
+                'htmlFields' => ['is_responded'],
+                'bulkActions' => ['delete', 'mark_responded']
+            ]
+        );
 ?>
 
 <div class="content-wrapper">

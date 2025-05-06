@@ -284,20 +284,35 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                                             <?php if (in_array('edit', $options['actions'])): ?>
                                                 <?php
-                                                // Map item types to their correct form file names
-                                                $formFiles = [
+                                                // Get the form file path based on item type
+                                                $formFile = match($itemType) {
                                                     'ai_tool' => 'ai-tool-form.php',
                                                     'directory_item' => 'directory-item-form.php',
                                                     'game' => 'game-form.php',
+                                                    'story' => 'stories.php',
                                                     'media' => 'media.php',
                                                     'contact' => 'contacts.php',
                                                     'subscriber' => 'subscribers.php',
                                                     'post' => 'post-form.php',
-                                                    'story' => 'story-form.php',
                                                     'tag' => 'tag-form.php',
-                                                    'author' => 'author-form.php'
-                                                ];
-                                                $formFile = $formFiles[$itemType] ?? "{$itemType}-form.php";
+                                                    'author' => 'author-form.php',
+                                                    default => "{$itemType}s.php"
+                                                };
+
+                                                // Get the view file path based on item type
+                                                $viewFile = match($itemType) {
+                                                    'ai_tool' => 'view-ai-tool.php',
+                                                    'directory_item' => 'view-directory-item.php',
+                                                    'game' => 'view-game.php',
+                                                    'story' => 'stories.php',
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
+                                                    'subscriber' => 'subscribers.php',
+                                                    'post' => 'view-post.php',
+                                                    'tag' => 'view-tag.php',
+                                                    'author' => 'view-author.php',
+                                                    default => "view-{$itemType}.php"
+                                                };
                                                 echo '<a href="' . $formFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
                                                 echo '<i class="fas fa-edit"></i>';
                                                 echo '</a>';

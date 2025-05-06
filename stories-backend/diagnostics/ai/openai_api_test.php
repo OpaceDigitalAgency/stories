@@ -1,7 +1,7 @@
 <?php
 /**
  * OpenAI API Test Tool
- * 
+ *
  * This diagnostic tool tests the connection to the OpenAI API and displays detailed results.
  * It helps diagnose issues with AI image generation and other OpenAI API features.
  */
@@ -40,7 +40,7 @@ try {
     $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
     $stmt->execute();
     $provider = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($provider) {
         $config = json_decode($provider['config'], true);
         $apiKey = $config['api_key'] ?? '';
@@ -69,22 +69,22 @@ if (!empty($apiKey)) {
             CURLOPT_VERBOSE => true,
             CURLOPT_SSL_VERIFYPEER => false // For development only
         ]);
-        
+
         // Create a file handle for the verbose output
         $verbose = fopen('php://temp', 'w+');
         curl_setopt($ch, CURLOPT_STDERR, $verbose);
-        
+
         $response = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        
+
         // Get verbose information
         rewind($verbose);
         $verboseLog = stream_get_contents($verbose);
         fclose($verbose);
-        
+
         curl_close($ch);
-        
+
         $apiTestResult = [
             'success' => $statusCode === 200,
             'status_code' => $statusCode,
@@ -98,17 +98,17 @@ if (!empty($apiKey)) {
             'error' => $e->getMessage()
         ];
     }
-    
+
     // Test image generation endpoint
     try {
         $data = [
             'model' => $model,
             'prompt' => 'A simple test image of a blue circle on a white background',
             'n' => 1,
-            'size' => '1024x1024',
-            'response_format' => 'url'
+            'size' => '1024x1024'
+            // 'response_format' parameter removed as it's no longer supported
         ];
-        
+
         $ch = curl_init('https://api.openai.com/v1/images/generations');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -123,22 +123,22 @@ if (!empty($apiKey)) {
             CURLOPT_VERBOSE => true,
             CURLOPT_SSL_VERIFYPEER => false // For development only
         ]);
-        
+
         // Create a file handle for the verbose output
         $verbose = fopen('php://temp', 'w+');
         curl_setopt($ch, CURLOPT_STDERR, $verbose);
-        
+
         $response = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        
+
         // Get verbose information
         rewind($verbose);
         $verboseLog = stream_get_contents($verbose);
         fclose($verbose);
-        
+
         curl_close($ch);
-        
+
         $imageTestResult = [
             'success' => $statusCode === 200,
             'status_code' => $statusCode,
@@ -219,7 +219,7 @@ if (!empty($apiKey)) {
                 <i class="fas fa-arrow-left"></i> Back to Diagnostic Dashboard
             </a>
         </div>
-        
+
         <h1><?php echo $pageTitle; ?></h1>
         <p class="lead">This tool tests the connection to the OpenAI API and diagnoses any issues with AI image generation.</p>
 
@@ -251,7 +251,7 @@ if (!empty($apiKey)) {
                 <?php else: ?>
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
-                        OpenAI provider not found or not active. Please configure it in 
+                        OpenAI provider not found or not active. Please configure it in
                         <a href="../../admin/content/ai-settings.php">AI Settings</a>.
                     </div>
                 <?php endif; ?>
@@ -270,9 +270,9 @@ if (!empty($apiKey)) {
                             <i class="fas fa-check-circle"></i>
                             Connection to OpenAI Models API successful!
                         </div>
-                        
+
                         <h4>Response Preview</h4>
-                        <pre class="code-block"><?php 
+                        <pre class="code-block"><?php
                             $responseData = json_decode($apiTestResult['response'], true);
                             echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                         ?></pre>
@@ -281,7 +281,7 @@ if (!empty($apiKey)) {
                             <i class="fas fa-exclamation-circle"></i>
                             Connection to OpenAI Models API failed!
                         </div>
-                        
+
                         <h4>Error Details</h4>
                         <table class="table">
                             <tr>
@@ -293,15 +293,15 @@ if (!empty($apiKey)) {
                                 <td><?php echo htmlspecialchars($apiTestResult['error'] ?? 'None'); ?></td>
                             </tr>
                         </table>
-                        
+
                         <?php if (!empty($apiTestResult['response'])): ?>
                             <h4>Response</h4>
-                            <pre class="code-block"><?php 
+                            <pre class="code-block"><?php
                                 $responseData = json_decode($apiTestResult['response'], true);
                                 echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                             ?></pre>
                         <?php endif; ?>
-                        
+
                         <h4>Verbose Log</h4>
                         <pre class="code-block"><?php echo htmlspecialchars($apiTestResult['verbose_log'] ?? 'No log available'); ?></pre>
                     <?php endif; ?>
@@ -321,27 +321,27 @@ if (!empty($apiKey)) {
                             <i class="fas fa-check-circle"></i>
                             Connection to OpenAI Image Generation API successful!
                         </div>
-                        
-                        <?php 
+
+                        <?php
                         $responseData = json_decode($imageTestResult['response'], true);
                         $imageUrl = null;
-                        
+
                         if (isset($responseData['data'][0]['url'])) {
                             $imageUrl = $responseData['data'][0]['url'];
                         } elseif (isset($responseData['url'])) {
                             $imageUrl = $responseData['url'];
                         }
-                        
-                        if ($imageUrl): 
+
+                        if ($imageUrl):
                         ?>
                             <h4>Generated Test Image</h4>
                             <div class="test-image-container">
                                 <img src="<?php echo htmlspecialchars($imageUrl); ?>" alt="Test image" class="test-image">
                             </div>
                         <?php endif; ?>
-                        
+
                         <h4>Response Preview</h4>
-                        <pre class="code-block"><?php 
+                        <pre class="code-block"><?php
                             echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                         ?></pre>
                     <?php else: ?>
@@ -349,7 +349,7 @@ if (!empty($apiKey)) {
                             <i class="fas fa-exclamation-circle"></i>
                             Connection to OpenAI Image Generation API failed!
                         </div>
-                        
+
                         <h4>Error Details</h4>
                         <table class="table">
                             <tr>
@@ -361,15 +361,15 @@ if (!empty($apiKey)) {
                                 <td><?php echo htmlspecialchars($imageTestResult['error'] ?? 'None'); ?></td>
                             </tr>
                         </table>
-                        
+
                         <?php if (!empty($imageTestResult['response'])): ?>
                             <h4>Response</h4>
-                            <pre class="code-block"><?php 
+                            <pre class="code-block"><?php
                                 $responseData = json_decode($imageTestResult['response'], true);
                                 echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                             ?></pre>
                         <?php endif; ?>
-                        
+
                         <h4>Verbose Log</h4>
                         <pre class="code-block"><?php echo htmlspecialchars($imageTestResult['verbose_log'] ?? 'No log available'); ?></pre>
                     <?php endif; ?>

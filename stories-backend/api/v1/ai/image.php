@@ -104,8 +104,8 @@ try {
         'n' => $variations,
         'size' => $size,
         'quality' => $quality,
-        'style' => $style,
-        'response_format' => 'url'
+        'style' => $style
+        // 'response_format' parameter removed as it's no longer supported
     ];
 
     // Set up cURL request

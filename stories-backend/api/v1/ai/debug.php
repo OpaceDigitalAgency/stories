@@ -1,25 +1,60 @@
 <?php
 /**
  * AI API Debug Endpoint
- * 
+ *
  * This endpoint provides debugging information for the AI API.
  * It tests the connection to the OpenAI API and returns diagnostic information.
  */
 
-// Include CORS fix
-require_once 'cors-fix.php';
+// Set error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
 
 // Set content type to JSON
 header('Content-Type: application/json');
 
-// Include database connection
-require_once '../../includes/db-connect.php';
+// Handle CORS manually in case the cors-fix.php file is missing
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// Try to include CORS fix
+if (file_exists('cors-fix.php')) {
+    require_once 'cors-fix.php';
+}
+
+// Try to include database connection
+$db = null;
+$dbConnected = false;
+try {
+    if (file_exists('../../includes/db-connect.php')) {
+        require_once '../../includes/db-connect.php';
+        $dbConnected = true;
+    }
+} catch (Exception $e) {
+    // Silently fail and continue with diagnostics
+}
 
 try {
-    // Get OpenAI provider configuration
-    $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
-    $stmt->execute();
-    $provider = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Initialize variables
+    $provider = false;
+
+    // Get OpenAI provider configuration if database is connected
+    if ($dbConnected && $db) {
+        try {
+            $stmt = $db->prepare("SELECT id, config FROM ai_providers WHERE name = 'openai' AND is_active = 1");
+            $stmt->execute();
+            $provider = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $dbEx) {
+            // Continue with diagnostics even if database query fails
+        }
+    }
 
     $diagnostics = [
         'success' => true,
@@ -35,9 +70,10 @@ try {
             'active' => $provider !== false && $provider['id'] > 0,
         ],
         'database' => [
-            'connected' => $db !== null,
-            'driver' => $db ? $db->getAttribute(PDO::ATTR_DRIVER_NAME) : 'Unknown',
-            'version' => $db ? $db->getAttribute(PDO::ATTR_SERVER_VERSION) : 'Unknown'
+            'connected' => $dbConnected && $db !== null,
+            'driver' => ($dbConnected && $db) ? $db->getAttribute(PDO::ATTR_DRIVER_NAME) : 'Unknown',
+            'version' => ($dbConnected && $db) ? $db->getAttribute(PDO::ATTR_SERVER_VERSION) : 'Unknown',
+            'db_connect_file_exists' => file_exists('../../includes/db-connect.php')
         ],
         'cors' => [
             'headers_set' => true,
@@ -51,26 +87,26 @@ try {
 
     if ($provider) {
         $config = json_decode($provider['config'], true);
-        
+
         // Mask API key for security
         $apiKeyStatus = 'Not set';
         if (!empty($config['api_key'])) {
             $apiKeyLength = strlen($config['api_key']);
             $apiKeyStatus = 'Set (' . $apiKeyLength . ' characters)';
-            
+
             // Add first and last few characters
             if ($apiKeyLength > 8) {
                 $apiKeyStatus .= ' - ' . substr($config['api_key'], 0, 3) . '...' . substr($config['api_key'], -3);
             }
         }
-        
+
         $diagnostics['openai_provider']['details'] = [
             'id' => $provider['id'],
             'api_key_status' => $apiKeyStatus,
             'model' => $config['model'] ?? 'Not set',
             'organization' => !empty($config['organization']) ? 'Set' : 'Not set'
         ];
-        
+
         // Test connection to OpenAI API
         if (!empty($config['api_key'])) {
             $ch = curl_init('https://api.openai.com/v1/models');
@@ -83,12 +119,12 @@ try {
                 CURLOPT_TIMEOUT => 10,
                 CURLOPT_SSL_VERIFYPEER => false // For development only
             ]);
-            
+
             $response = curl_exec($ch);
             $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             $diagnostics['openai_api_test'] = [
                 'success' => $statusCode === 200,
                 'status_code' => $statusCode,
@@ -102,30 +138,44 @@ try {
             ];
         }
     }
-    
+
+    // Add file existence checks
+    $diagnostics['files'] = [
+        'cors_fix_exists' => file_exists('cors-fix.php'),
+        'image_php_exists' => file_exists('image.php'),
+        'debug_php_exists' => file_exists('debug.php')
+    ];
+
     // Check if the image.php endpoint is accessible
-    $ch = curl_init('https://api.storiesfromtheweb.org/api/v1/ai/image.php');
+    // Use relative path to avoid CORS issues
+    $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    $baseUrl = "$protocol://$host";
+
+    $ch = curl_init("$baseUrl/api/v1/ai/image.php");
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CUSTOMREQUEST => 'OPTIONS',
         CURLOPT_TIMEOUT => 5,
-        CURLOPT_SSL_VERIFYPEER => false // For development only
+        CURLOPT_SSL_VERIFYPEER => false, // For development only
+        CURLOPT_HEADER => true,
+        CURLOPT_NOBODY => true
     ]);
-    
+
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     curl_close($ch);
-    
+
     $diagnostics['image_endpoint_test'] = [
         'success' => $statusCode === 200,
         'status_code' => $statusCode,
         'error' => $error ?: null
     ];
-    
+
     // Return diagnostics
     echo json_encode($diagnostics, JSON_PRETTY_PRINT);
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

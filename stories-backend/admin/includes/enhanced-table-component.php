@@ -267,15 +267,15 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     'ai_tool' => 'view-ai-tool.php',
                                                     'directory_item' => 'view-directory-item.php',
                                                     'game' => 'view-game.php',
-                                                    'media' => 'view-media.php',
-                                                    'contact' => 'view-contact.php',
+                                                    'media' => 'media.php',
+                                                    'contact' => 'contacts.php',
                                                     'subscriber' => 'subscribers.php',
-                                                    'post' => 'view-post.php',
-                                                    'story' => 'view-story.php',
-                                                    'tag' => 'view-tag.php',
-                                                    'author' => 'view-author.php'
+                                                    'post' => 'post-form.php',
+                                                    'story' => 'stories.php',
+                                                    'tag' => 'tag-form.php',
+                                                    'author' => 'author-form.php'
                                                 ];
-                                                $viewFile = $viewFiles[$itemType] ?? "view-{$itemType}.php";
+                                                $viewFile = $viewFiles[$itemType] ?? "{$itemType}s.php";
                                                 echo '<a href="' . $viewFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
                                                 echo '<i class="fas fa-eye"></i>';
                                                 echo '</a>';

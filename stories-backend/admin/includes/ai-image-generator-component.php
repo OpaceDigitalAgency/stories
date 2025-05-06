@@ -498,15 +498,68 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 // If this is a base64 image and we're in the admin interface,
                 // we should convert it to a file and upload it to the server
                 if (rawBase64 && url.startsWith('data:image/png;base64,')) {
-                    // Show a message that we're processing the image
-                    alert('Base64 images need to be saved to the server before they can be used. This feature is coming soon.');
+                    // Show a loading message
+                    const originalButtonText = $(this).html();
+                    $(this).html('<i class="fas fa-spinner fa-spin"></i> Saving image...');
+                    $(this).prop('disabled', true);
 
-                    // For now, just store the data URL
-                    valueToStore = url;
+                    // Save the button reference for later
+                    const button = $(this);
 
-                    // TODO: Implement server-side storage of base64 images
-                    // This would involve making an AJAX request to a PHP endpoint
-                    // that saves the base64 data as a file and returns the URL
+                    // Make an AJAX request to save the base64 image
+                    $.ajax({
+                        url: '/api/v1/ai/save-base64-image.php',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            image_data: url,
+                            filename: filename || 'ai-generated-image',
+                            alt_text: altText || 'AI generated image',
+                            prompt: prompt || ''
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                // Use the returned URL
+                                valueToStore = response.data.url;
+
+                                // Update the target field
+                                $('#' + currentTargetField).val(valueToStore);
+
+                                // Update the preview if available
+                                if (currentPreviewElement) {
+                                    $('#' + currentPreviewElement).attr('src', valueToStore);
+                                    $('#' + currentPreviewElement).attr('alt', response.data.alt_text);
+                                    $('#' + currentPreviewElement).removeClass('d-none');
+                                }
+
+                                // Store the filename and alt text in hidden fields if they exist
+                                if ($('#' + filenameField).length) {
+                                    $('#' + filenameField).val(response.data.filename);
+                                }
+
+                                if ($('#' + altTextField).length) {
+                                    $('#' + altTextField).val(response.data.alt_text);
+                                }
+
+                                // Close the modal
+                                $('#aiImageGeneratorModal').modal('hide');
+                            } else {
+                                alert('Error saving image: ' + (response.error || 'Unknown error'));
+                                // Reset button
+                                button.html(originalButtonText);
+                                button.prop('disabled', false);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Error saving image: ' + error);
+                            // Reset button
+                            button.html(originalButtonText);
+                            button.prop('disabled', false);
+                        }
+                    });
+
+                    // Return early to prevent the default behavior
+                    return;
                 }
 
                 // Set the image URL in the target field

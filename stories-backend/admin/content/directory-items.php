@@ -181,6 +181,12 @@ if (function_exists('renderEnhancedTable')) {
 
     // Define custom formatters
     $customFormatters = [
+        'title' => function($item, $key) {
+            $output = '<div class="item-title">';
+            $output .= htmlspecialchars($item[$key]);
+            $output .= '</div>';
+            return $output;
+        },
         'category_name' => function($item, $key) {
             return htmlspecialchars($item[$key] ?? 'None');
         },

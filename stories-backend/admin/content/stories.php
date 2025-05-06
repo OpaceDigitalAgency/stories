@@ -139,15 +139,15 @@ try {
             // Split author names and IDs into arrays
             $authorNames = $story['author_names'] ? explode(',', $story['author_names']) : [];
             $authorIds = $story['author_ids'] ? explode(',', $story['author_ids']) : [];
-            
+
             // Format author name for display
             $story['author_name'] = $authorNames ? implode(', ', $authorNames) : 'Unknown';
             $story['author_id'] = $authorIds ? $authorIds[0] : null; // Keep first author ID for compatibility
-            
+
             // Remove the concatenated fields from display
             unset($story['author_names']);
             unset($story['author_ids']);
-            
+
             $stories[] = $story;
         }
 
@@ -285,9 +285,6 @@ if (function_exists('renderEnhancedTable')) {
                 $output .= '</span>';
             }
 
-            $output .= '</div>';
-            $output .= '<div class="item-excerpt">';
-            $output .= htmlspecialchars(substr($story['content'], 0, 100) . '...');
             $output .= '</div>';
 
             return $output;

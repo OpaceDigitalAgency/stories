@@ -47,7 +47,7 @@ try {
                 throw new Exception("Failed to create blog_posts table");
             }
             error_log("blog_posts table created successfully");
-            
+
             $blogTableName = 'blog_posts';
         }
     }
@@ -207,6 +207,12 @@ if (function_exists('renderEnhancedTable')) {
 
     // Define custom formatters
     $customFormatters = [
+        'title' => function($post, $key) {
+            $output = '<div class="item-title">';
+            $output .= htmlspecialchars($post[$key]);
+            $output .= '</div>';
+            return $output;
+        },
         'author_name' => function($post, $key) {
             return htmlspecialchars($post[$key] ?? 'Unknown');
         },

@@ -148,6 +148,12 @@ if (function_exists('renderEnhancedTable')) {
 
     // Define custom formatters
     $customFormatters = [
+        'title' => function($game, $key) {
+            $output = '<div class="item-title">';
+            $output .= htmlspecialchars($game[$key]);
+            $output .= '</div>';
+            return $output;
+        },
         'featured' => function($game, $key) {
             return $game[$key] ? 'Yes' : 'No';
         },

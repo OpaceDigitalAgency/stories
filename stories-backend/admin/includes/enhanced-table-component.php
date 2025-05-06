@@ -26,10 +26,17 @@ function getTableDisplayUrl($filePath) {
     if (strpos($filePath, '/uploads/') !== false && strpos($filePath, '-thumbnail') === false) {
         // Try to use the thumbnail version if it exists
         $pathInfo = pathinfo($filePath);
-        $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $pathInfo['filename'] . '-thumbnail.' . ($pathInfo['extension'] ?? 'jpg');
 
-        // For now, we'll just construct the path - in a production environment
-        // you might want to check if the file exists first
+        // Use the correct path format without any unique ID prefix
+        // First, remove any unique ID prefix if it exists (like '6819c7559130f-')
+        $filename = $pathInfo['filename'];
+        if (preg_match('/^[a-f0-9]+-(.+)$/', $filename, $matches)) {
+            $filename = $matches[1];
+        }
+
+        // Use .webp extension for thumbnails as that's what the system is using
+        $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.webp';
+
         return $thumbnailPath;
     }
 

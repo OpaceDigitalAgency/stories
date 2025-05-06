@@ -235,7 +235,9 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
-            'htmlFields' => ['website'] // Fields that should render HTML instead of escaping it
+            'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
+            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );
 }

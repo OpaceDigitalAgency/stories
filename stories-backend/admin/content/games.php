@@ -194,7 +194,9 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'thumbnailField' => 'image', // Use the image field for thumbnails
+            'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );
 }

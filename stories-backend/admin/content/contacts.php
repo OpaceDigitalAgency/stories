@@ -530,11 +530,13 @@ The Stories From The Web Team</textarea>
 
         // Render the table using the appropriate function
         if (function_exists('renderEnhancedTable')) {
-            // Prepare data for the enhanced table
+            // Format the contacts data for the table
             $tableData = [];
             foreach ($contacts as $contact) {
                 // Format the status
-                $status = $contact['is_responded'] ? 'Responded' : 'Not Responded';
+                $status = $contact['is_responded'] ?
+                    '<span class="badge bg-success">Responded</span>' :
+                    '<span class="badge bg-warning text-dark">Not Responded</span>';
 
                 // Add the item to the table data
                 $tableData[] = [
@@ -552,12 +554,13 @@ The Stories From The Web Team</textarea>
             renderEnhancedTable(
                 $tableData,
                 $columns,
-                'contact', // This must match a key in the $tableMap array in update-field.php
+                'contact',
                 'contacts-table',
                 [
                     'showCheckboxes' => true,
                     'showActions' => true,
                     'actions' => ['view', 'edit', 'delete'],
+                    'editableFields' => [],
                     'bulkActions' => ['delete', 'mark_responded', 'mark_not_responded', 'notify'],
                     'itemsPerPage' => $perPage,
                     'currentPage' => $page,

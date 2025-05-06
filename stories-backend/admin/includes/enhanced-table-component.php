@@ -272,14 +272,10 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</a>';
                                                 } else {
-                                                    // If the view file doesn't exist, create a button that opens a modal
-                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm view-item-btn" ';
-                                                    echo 'data-id="' . htmlspecialchars($item['id']) . '" ';
-                                                    echo 'data-bs-toggle="modal" ';
-                                                    echo 'data-bs-target="#viewModal' . htmlspecialchars($item['id']) . '" ';
-                                                    echo 'title="View">';
+                                                    // If the view file doesn't exist, create a disabled link
+                                                    echo '<a class="premium-btn premium-btn-info premium-btn-sm" style="opacity: 0.5; pointer-events: none;" title="View not available">';
                                                     echo '<i class="fas fa-eye"></i>';
-                                                    echo '</button>';
+                                                    echo '</a>';
                                                 }
                                                 ?>
                                             <?php endif; ?>
@@ -296,10 +292,10 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     echo '<i class="fas fa-edit"></i>';
                                                     echo '</a>';
                                                 } else {
-                                                    // If the form file doesn't exist, create a disabled button
-                                                    echo '<button type="button" class="premium-btn premium-btn-primary premium-btn-sm" disabled title="Edit not available">';
+                                                    // If the form file doesn't exist, create a disabled link
+                                                    echo '<a class="premium-btn premium-btn-primary premium-btn-sm" style="opacity: 0.5; pointer-events: none;" title="Edit not available">';
                                                     echo '<i class="fas fa-edit"></i>';
-                                                    echo '</button>';
+                                                    echo '</a>';
                                                 }
                                                 ?>
                                             <?php endif; ?>

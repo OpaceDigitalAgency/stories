@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Ai Tool';
+$pageTitle = 'AI Tool Details';
 $currentPage = 'view-ai-tool';
 
 // Include auth check
@@ -70,7 +70,7 @@ try {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title">View AI Tool</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($tool['title']); ?></h1>
                 <p class="page-description">
                     <a href="ai-tools.php" class="text-primary">← Back to AI Tools</a>
                 </p>
@@ -217,7 +217,7 @@ try {
             <form method="GET" action="ai-tool-form.php">
                 <input type="hidden" name="id" value="<?php echo $tool['id']; ?>">
                 <button type="submit" class="btn btn-primary">
-                    <span class="icon-edit"></span> Edit AI Tool
+                    <span class="icon-edit"></span> Edit
                 </button>
             </form>
         </div>

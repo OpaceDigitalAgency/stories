@@ -1,7 +1,7 @@
 <?php
 
 // Page variables
-$pageTitle = 'View Directory Item';
+$pageTitle = 'Directory Item Details';
 $currentPage = 'view-directory-item';
 
 // Include auth check
@@ -70,7 +70,7 @@ try {
     <div class="container-fluid">
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="page-title">View Directory Item</h1>
+                <h1 class="page-title"><?php echo htmlspecialchars($item['title']); ?></h1>
                 <p class="page-description">
                     <a href="directory-items.php" class="text-primary">← Back to Directory Items</a>
                 </p>
@@ -206,7 +206,7 @@ try {
             <form method="GET" action="directory-item-form.php">
                 <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                 <button type="submit" class="btn btn-primary">
-                    <span class="icon-edit"></span> Edit Directory Item
+                    <span class="icon-edit"></span> Edit
                 </button>
             </form>
         </div>

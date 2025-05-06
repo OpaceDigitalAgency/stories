@@ -1,6 +1,6 @@
 /**
  * Admin Direct Data Loader
- * 
+ *
  * This script directly loads data from the API endpoints and injects it into the admin interface.
  * It's a temporary solution until the underlying issue with the admin interface is fixed.
  */
@@ -9,37 +9,45 @@
     // Wait for the DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log('[DIRECT DATA] Script loaded');
-        
-        // Check if we're on the AI Tools or Directory Items page
+
+        // Check if we're on one of the affected pages
         const isAiToolsPage = window.location.href.includes('ai-tools.php');
         const isDirectoryItemsPage = window.location.href.includes('directory-items.php');
-        
-        if (!isAiToolsPage && !isDirectoryItemsPage) {
-            console.log('[DIRECT DATA] Not on AI Tools or Directory Items page, exiting');
+        const isGamesPage = window.location.href.includes('games.php');
+
+        if (!isAiToolsPage && !isDirectoryItemsPage && !isGamesPage) {
+            console.log('[DIRECT DATA] Not on a supported page, exiting');
             return;
         }
-        
+
         // Get the endpoint based on the page
-        const endpoint = isAiToolsPage ? 'ai-tools' : 'directory-items';
+        let endpoint = '';
+        if (isAiToolsPage) {
+            endpoint = 'ai-tools';
+        } else if (isDirectoryItemsPage) {
+            endpoint = 'directory-items';
+        } else if (isGamesPage) {
+            endpoint = 'games';
+        }
         console.log('[DIRECT DATA] Detected page:', endpoint);
-        
+
         // Find the error message and list container
         const errorMessage = document.querySelector('.alert-danger');
         const listContainer = document.querySelector('.list-container') || document.querySelector('table').parentNode;
-        
+
         if (!errorMessage || !listContainer) {
             console.log('[DIRECT DATA] Could not find error message or list container, exiting');
             return;
         }
-        
+
         console.log('[DIRECT DATA] Found error message and list container, loading data');
-        
+
         // Show loading message
         errorMessage.textContent = 'Loading data directly from API...';
         errorMessage.className = 'alert alert-info';
-        
+
         // Fetch data from API
-        fetch(`/api/v1/${endpoint}`)
+        fetch(`/api/v1/admin-data.php?endpoint=${endpoint}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -48,15 +56,15 @@
             })
             .then(data => {
                 console.log('[DIRECT DATA] Data loaded:', data);
-                
+
                 if (!Array.isArray(data) || data.length === 0) {
                     errorMessage.textContent = 'No data found.';
                     return;
                 }
-                
+
                 // Create table HTML
                 let tableHtml = '<table class="table table-striped">';
-                
+
                 // Add table header based on endpoint
                 if (endpoint === 'directory-items') {
                     tableHtml += `
@@ -85,21 +93,34 @@
                             </tr>
                         </thead>
                     `;
+                } else if (endpoint === 'games') {
+                    tableHtml += `
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Slug</th>
+                                <th>Featured</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                    `;
                 }
-                
+
                 // Add table body
                 tableHtml += '<tbody>';
-                
+
                 // Add rows for each item
                 data.forEach(item => {
                     if (endpoint === 'directory-items') {
                         tableHtml += `
                             <tr>
                                 <td>${item.id}</td>
-                                <td>${item.name || ''}</td>
+                                <td>${item.name || item.title || ''}</td>
                                 <td>${item.category || ''}</td>
-                                <td><a href="${item.url || '#'}" target="_blank">${item.url || ''}</a></td>
-                                <td>${item.isPublished ? 'Yes' : 'No'}</td>
+                                <td><a href="${item.url || item.website_url || '#'}" target="_blank">${item.url || item.website_url || ''}</a></td>
+                                <td>${item.isPublished || item.is_published ? 'Yes' : 'No'}</td>
                                 <td>
                                     <a href="?action=edit&id=${item.id}" class="btn btn-sm btn-primary">Edit</a>
                                     <a href="?action=delete&id=${item.id}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
@@ -110,11 +131,25 @@
                         tableHtml += `
                             <tr>
                                 <td>${item.id}</td>
-                                <td>${item.name || ''}</td>
+                                <td>${item.name || item.title || ''}</td>
                                 <td>${item.category || ''}</td>
-                                <td>${item.pricingType || ''}</td>
+                                <td>${item.pricingType || item.pricing_type || ''}</td>
                                 <td>${item.featured ? 'Yes' : 'No'}</td>
-                                <td>${item.isPublished ? 'Yes' : 'No'}</td>
+                                <td>${item.isPublished || item.is_published ? 'Yes' : 'No'}</td>
+                                <td>
+                                    <a href="?action=edit&id=${item.id}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="?action=delete&id=${item.id}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    } else if (endpoint === 'games') {
+                        tableHtml += `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${item.name || item.title || ''}</td>
+                                <td>${item.slug || ''}</td>
+                                <td>${item.featured ? 'Yes' : 'No'}</td>
+                                <td>${item.isPublished || item.is_published ? 'Yes' : 'No'}</td>
                                 <td>
                                     <a href="?action=edit&id=${item.id}" class="btn btn-sm btn-primary">Edit</a>
                                     <a href="?action=delete&id=${item.id}" class="btn btn-sm btn-danger delete-confirm">Delete</a>
@@ -123,20 +158,20 @@
                         `;
                     }
                 });
-                
+
                 tableHtml += '</tbody></table>';
-                
+
                 // Replace the list container with the new table
                 listContainer.innerHTML = tableHtml;
-                
+
                 // Hide the error message
                 errorMessage.style.display = 'none';
-                
+
                 // Re-initialize delete confirmations
                 if (typeof initDeleteConfirmations === 'function') {
                     initDeleteConfirmations();
                 }
-                
+
                 console.log('[DIRECT DATA] Data injected into the page');
             })
             .catch(error => {

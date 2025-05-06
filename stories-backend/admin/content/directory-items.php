@@ -11,7 +11,21 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Initialize variables to avoid undefined variable errors
+$directory_items = [];
+$totalItems = 0;
+
 try {
+    // Check if database connection is valid
+    if (!$db) {
+        throw new Exception("Database connection is not available");
+    }
+
     // Check if directory_items table exists
     $stmt = $db->query("SHOW TABLES LIKE 'directory_items'");
     if ($stmt->rowCount() === 0) {
@@ -33,6 +47,9 @@ try {
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         )");
+
+        // Log table creation
+        error_log("Created directory_items table");
     }
 
     // Check if directory_categories table exists
@@ -90,9 +107,15 @@ try {
     $stmt->execute();
     $directory_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    error_log("Directory items page error: " . $e->getMessage());
-    $error = "Error loading directory data. Please try again.";
+    error_log("Directory items page PDO error: " . $e->getMessage());
+    $error = "Database error loading directory data: " . $e->getMessage();
+
+    // Check if the error is related to a missing table
+    if (strpos($e->getMessage(), "doesn't exist") !== false) {
+        $error .= ". The required table may be missing. Please check the database structure.";
+    }
 } catch (Exception $e) {
+    error_log("Directory items page general error: " . $e->getMessage());
     $error = $e->getMessage();
 }
 
@@ -119,6 +142,8 @@ $extraHeadContent = '
 <script src="../assets/js/live-search.js"></script>
 <!-- Add Inline Editing JS -->
 <script src="../assets/js/inline-editing.js"></script>
+<!-- Add Direct Data Loader JS -->
+<script src="../assets/js/admin-direct-data.js"></script>
 ';
 
 $pageActions = '

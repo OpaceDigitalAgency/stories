@@ -48,7 +48,10 @@ DirectoryIndex index.php
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-Content-Type-Options "nosniff"
     Header set X-XSS-Protection "1; mode=block"
-    
+
+    # Allow JavaScript from various sources
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://api.openai.com https://api.storiesfromtheweb.org;"
+
     <FilesMatch "\.(php)$">
         Header set Cache-Control "private, no-cache, no-store, must-revalidate"
         Header set Pragma "no-cache"

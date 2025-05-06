@@ -80,8 +80,10 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Add Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <!-- Add Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
     <!-- Meta tags for better accessibility -->
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?: $pageTitle . ' - ' . $siteName . ' Admin'); ?>">
     <meta name="theme-color" content="#4361ee">

@@ -55,5 +55,30 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             </div>
         </div>
     </footer>
+
+    <!-- Bootstrap initialization script -->
+    <script>
+        $(document).ready(function() {
+            // Initialize all dropdowns
+            $('.dropdown-toggle').dropdown();
+
+            // Initialize all tooltips
+            $('[data-toggle="tooltip"]').tooltip();
+
+            // Initialize all popovers
+            $('[data-toggle="popover"]').popover();
+
+            // Initialize all modals
+            $('.modal').modal({
+                show: false
+            });
+
+            // Fix for modals not showing
+            $(document).on('click', '[data-toggle="modal"]', function() {
+                var target = $(this).data('target');
+                $(target).modal('show');
+            });
+        });
+    </script>
 </body>
 </html>

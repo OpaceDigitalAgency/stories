@@ -65,7 +65,7 @@ class StoryPreview {
     }
 
     /**
-     * Load story preview by fetching the slug and opening the lightbox
+     * Load story preview directly from our backend
      * @param {string} storyId - The ID of the story to preview
      */
     async loadStoryPreview(storyId) {
@@ -73,51 +73,22 @@ class StoryPreview {
             // Show loading indicator
             this.showLoading();
 
-            // Fetch the story slug from the server
-            const response = await fetch(`../handlers/get-story-slug.php?id=${storyId}`);
-            const data = await response.json();
+            // Use our direct preview handler instead of trying to load from the frontend
+            const previewUrl = `../handlers/direct-story-preview.php?id=${storyId}`;
 
-            if (data.success && data.slug) {
-                // Construct the frontend URL
-                const frontendUrl = `${this.frontendBaseUrl}/stories/${data.slug}`;
+            console.log('Loading story preview directly:', previewUrl);
 
-                console.log('Loading story preview from URL:', frontendUrl);
+            // Open the lightbox with the direct preview URL
+            this.openLightbox(previewUrl);
 
-                // Open the lightbox with the frontend URL
-                this.openLightbox(frontendUrl);
+            // Add a small delay to hide the loading indicator
+            setTimeout(() => {
+                this.hideLoading();
+            }, 1000);
 
-                // Add a small delay to check if the iframe loaded correctly
-                setTimeout(() => {
-                    const iframe = document.querySelector('#story-preview-lightbox iframe');
-                    if (iframe) {
-                        // Check if the iframe has loaded content
-                        if (iframe.contentWindow) {
-                            console.log('Iframe content window exists');
-
-                            // Add a message listener to receive messages from the iframe
-                            window.addEventListener('message', (event) => {
-                                // Verify the origin of the message
-                                if (event.data && event.data.type === 'preview-loaded') {
-                                    console.log('Preview loaded successfully');
-                                }
-
-                                if (event.data && event.data.type === 'preview-error') {
-                                    console.error('Preview error:', event.data.message);
-                                    this.showError(event.data.message || 'Failed to load preview');
-                                }
-                            });
-                        } else {
-                            console.error('Iframe content window does not exist');
-                        }
-                    }
-                }, 2000);
-            } else {
-                throw new Error(data.message || 'Failed to get story slug');
-            }
         } catch (error) {
             console.error('Error loading story preview:', error);
             this.showError('Failed to load story preview. Please try again.');
-        } finally {
             this.hideLoading();
         }
     }
@@ -147,7 +118,7 @@ class StoryPreview {
                             </a>
                         </div>
                         <div class="preview-iframe-container">
-                            <iframe src="about:blank" frameborder="0" allowfullscreen allow="fullscreen" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"></iframe>
+                            <iframe src="about:blank" frameborder="0" allowfullscreen></iframe>
                         </div>
                     </div>
                 </div>
@@ -170,18 +141,12 @@ class StoryPreview {
             }
         }
 
-        // Use our proxy handler to load the content with proper headers
+        // Get the iframe and set its source directly to our preview URL
         const iframe = lightbox.querySelector('iframe');
-
-        // Create a proxy URL that will load the content through our backend
-        // This ensures proper headers are set for cross-origin iframe loading
-        const proxyUrl = `../handlers/story-preview-proxy.php?url=${encodeURIComponent(url)}`;
-
-        // Set the iframe source to our proxy URL
-        iframe.src = proxyUrl;
+        iframe.src = url;
 
         // Log the URL for debugging
-        console.log('Loading preview via proxy:', proxyUrl);
+        console.log('Loading preview directly:', url);
 
         // Show the lightbox
         lightbox.style.display = 'flex';

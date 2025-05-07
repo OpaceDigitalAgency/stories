@@ -289,15 +289,20 @@ function initializeEditor() {
                             '|',
                             'toggleImageCaption',
                             'imageTextAlternative'
-                        ],
-                        // Ensure images always have alt text, even if empty
-                        insert: {
-                            integrations: ['upload'],
-                            allowedTypes: ['jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'svg+xml']
-                        }
+                        ]
                     },
-                    // Register the custom upload adapter plugin
-                    extraPlugins: [MediaLibraryUploadAdapterPlugin]
+                    // Register the custom upload adapter plugin - this is defined in ckeditor-upload-adapter.js
+                    extraPlugins: [window.MediaLibraryUploadAdapterPlugin || function(editor) {
+                        console.log('Using fallback upload adapter plugin');
+                        editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+                            return {
+                                upload: function() {
+                                    return Promise.reject('Upload adapter not properly initialized');
+                                },
+                                abort: function() {}
+                            };
+                        };
+                    }]
                 })
                 .then(editor => {
                     console.log('CKEditor initialized successfully');

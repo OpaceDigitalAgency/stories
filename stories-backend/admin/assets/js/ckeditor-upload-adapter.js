@@ -123,3 +123,6 @@ function MediaLibraryUploadAdapterPlugin(editor) {
         return new MediaLibraryUploadAdapter(loader);
     };
 }
+
+// Make the plugin globally available for other scripts
+window.MediaLibraryUploadAdapterPlugin = MediaLibraryUploadAdapterPlugin;

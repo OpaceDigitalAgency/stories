@@ -500,6 +500,32 @@ require_once '../includes/header.php';
                         </div>
                     </div>
 
+                    <?php
+                    // Check if there are any non-boolean additional fields to display
+                    $hasAdditionalFields = false;
+                    foreach ($additionalFields as $field) {
+                        // Skip author_id and is_published as we've already handled them
+                        if (in_array($field, ['author_id', 'is_published'])) continue;
+
+                        $columnData = $columnInfo[$field];
+                        $isIntField = strpos($columnData['Type'], 'int') === 0;
+
+                        // Check if this is a boolean field (tinyint(1))
+                        $isBooleanField = $isIntField && (
+                            strpos($columnData['Type'], 'tinyint(1)') !== false ||
+                            in_array($field, ['is_featured', 'is_sponsored'])
+                        );
+
+                        // Skip boolean fields as they're already displayed
+                        if (!$isBooleanField) {
+                            $hasAdditionalFields = true;
+                            break;
+                        }
+                    }
+
+                    // Only display the Additional Information section if there are fields to show
+                    if ($hasAdditionalFields):
+                    ?>
                     <!-- Additional Fields -->
                     <div class="wp-card">
                         <div class="wp-card-header">
@@ -541,6 +567,7 @@ require_once '../includes/header.php';
                             <?php endforeach; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

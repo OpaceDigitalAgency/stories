@@ -64,8 +64,16 @@ class MediaLibraryUploadAdapter {
 
             console.log('CKEditor image upload successful, URL:', imageUrl);
 
+            // Get alt text from response or use filename as fallback
+            const altText = response.alt || file.name.replace(/\.[^/.]+$/, "");
+
             resolve({
                 default: imageUrl,
+                // Include alt text for the image
+                alt: altText,
+                // Include width and height if available
+                width: response.width || null,
+                height: response.height || null
                 // You can include additional URLs if your server provides different image sizes
                 // For example:
                 // 500: response.urls.medium,
@@ -91,6 +99,18 @@ class MediaLibraryUploadAdapter {
         data.append('upload', file);
         data.append('entity_type', 'story');
         data.append('for_editor', 'true');
+
+        // Try to get the story ID from the form if available
+        const storyIdInput = document.querySelector('input[name="id"]');
+        if (storyIdInput && storyIdInput.value) {
+            data.append('entity_id', storyIdInput.value);
+        } else {
+            // Use a temporary ID if we don't have a story ID yet
+            data.append('entity_id', 'temp-' + Date.now());
+        }
+
+        // Add alt text (can be updated later)
+        data.append('alt_text', file.name.replace(/\.[^/.]+$/, "")); // Use filename without extension as alt text
 
         // Send the request
         this.xhr.send(data);

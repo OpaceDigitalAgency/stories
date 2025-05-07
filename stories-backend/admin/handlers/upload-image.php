@@ -89,6 +89,16 @@ try {
     $entityType = $_POST['entity_type'] ?? 'general';
     $entityId = $_POST['entity_id'] ?? '0';
     $fieldName = $_POST['field_name'] ?? '';
+    $altText = $_POST['alt_text'] ?? '';
+
+    // If no alt text provided, generate one from the filename
+    if (empty($altText)) {
+        $altText = pathinfo($fileName, PATHINFO_FILENAME);
+        // Clean up the alt text - replace hyphens and underscores with spaces
+        $altText = str_replace(['-', '_'], ' ', $altText);
+        // Capitalize first letter of each word
+        $altText = ucwords($altText);
+    }
 
     // Validate file type
     if (strpos($fileType, 'image/') !== 0) {
@@ -150,7 +160,7 @@ try {
             $fileDestination,
             $fileType,
             $fileSize,
-            ''
+            $altText
         ]);
 
         $mediaId = $db->lastInsertId();
@@ -165,7 +175,7 @@ try {
             $url,
             'image/webp', // Assuming WebP conversion
             $variants['medium']['size'] ?? $fileSize,
-            ''
+            $altText
         ]);
 
         $mediaId = $db->lastInsertId();
@@ -191,7 +201,8 @@ try {
             'url' => $url,
             'mediaId' => $mediaId,
             'width' => $dimensions ? $dimensions['width'] : 0,
-            'height' => $dimensions ? $dimensions['height'] : 0
+            'height' => $dimensions ? $dimensions['height'] : 0,
+            'alt' => $altText
         ]);
         exit; // Exit early to avoid the standard response
     } else {

@@ -92,7 +92,38 @@ if ($story && !empty($story['content'])) {
 function renderStoryContent($content) {
     // Check if the content is HTML
     if (strpos($content, '<') !== false && strpos($content, '>') !== false) {
-        // It's HTML, return as is
+        // It's HTML, process it to ensure images have absolute URLs
+        $dom = new DOMDocument();
+
+        // Use error suppression to avoid warnings about HTML5 tags
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $content);
+
+        // Process all images
+        $images = $dom->getElementsByTagName('img');
+        foreach ($images as $img) {
+            $src = $img->getAttribute('src');
+
+            // If the src is not an absolute URL, make it absolute
+            if ($src && strpos($src, 'http') !== 0) {
+                $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'api.storiesfromtheweb.org';
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                $newSrc = "$protocol://$host" . (strpos($src, '/') === 0 ? $src : "/$src");
+                $img->setAttribute('src', $newSrc);
+            }
+        }
+
+        // Extract the body content
+        $body = $dom->getElementsByTagName('body')->item(0);
+        if ($body) {
+            // Convert back to HTML string
+            $html = '';
+            foreach ($body->childNodes as $child) {
+                $html .= $dom->saveHTML($child);
+            }
+            return $html;
+        }
+
+        // Fallback if DOM processing fails
         return $content;
     } else {
         // It's plain text, convert newlines to <br> tags

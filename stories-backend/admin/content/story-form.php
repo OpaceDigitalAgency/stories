@@ -634,7 +634,7 @@ require_once '../includes/header.php';
                             <?php if (in_array('allow_reviews', $additionalFields)): ?>
                             <div class="form-group">
                                 <div class="form-check">
-                                    <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input"
+                                    <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input" value="1"
                                         <?php echo (!empty($story['allow_reviews'])) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="allow_reviews">Allow Reviews</label>
                                 </div>
@@ -991,8 +991,50 @@ require_once '../includes/header.php';
 <!-- Initialize CKEditor for rich text editing -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize CKEditor for the story content
-        if (typeof ClassicEditor !== 'undefined') {
+        console.log('DOM loaded, checking for CKEditor...');
+
+        // Check if CKEditor script is loaded
+        if (typeof ClassicEditor === 'undefined') {
+            console.error('CKEditor is not loaded. Adding fallback editor...');
+
+            // Create a fallback basic editor
+            const storyContentTextarea = document.getElementById('story_content');
+            const htmlContentTextarea = document.getElementById('html_content');
+            const toggleHtmlButton = document.getElementById('toggle-html-view');
+
+            if (storyContentTextarea) {
+                // Make the textarea visible and styled
+                storyContentTextarea.style.display = 'block';
+                storyContentTextarea.style.minHeight = '300px';
+                storyContentTextarea.style.width = '100%';
+                storyContentTextarea.style.padding = '10px';
+                storyContentTextarea.style.fontFamily = 'inherit';
+                storyContentTextarea.style.fontSize = 'inherit';
+                storyContentTextarea.style.lineHeight = '1.5';
+
+                // Set up the HTML toggle button for the fallback
+                if (toggleHtmlButton && htmlContentTextarea) {
+                    let isHtmlMode = false;
+                    toggleHtmlButton.addEventListener('click', () => {
+                        if (!isHtmlMode) {
+                            // Switch to HTML mode
+                            htmlContentTextarea.value = storyContentTextarea.value;
+                            htmlContentTextarea.style.display = 'block';
+                            storyContentTextarea.style.display = 'none';
+                        } else {
+                            // Switch back to normal mode
+                            storyContentTextarea.value = htmlContentTextarea.value;
+                            htmlContentTextarea.style.display = 'none';
+                            storyContentTextarea.style.display = 'block';
+                        }
+                        isHtmlMode = !isHtmlMode;
+                    });
+                }
+            }
+        } else {
+            console.log('CKEditor found, initializing...');
+
+            // Initialize CKEditor for the story content
             ClassicEditor
                 .create(document.querySelector('#story_content'), {
                     toolbar: [
@@ -1025,31 +1067,38 @@ require_once '../includes/header.php';
                     extraPlugins: [MediaLibraryUploadAdapterPlugin]
                 })
                 .then(editor => {
+                    console.log('CKEditor initialized successfully');
+
                     // Store editor instance
                     window.storyEditor = editor;
 
                     // Set up the HTML toggle button
                     const toggleHtmlButton = document.getElementById('toggle-html-view');
                     const htmlContentTextarea = document.getElementById('html_content');
-                    const editorContainer = document.querySelector('.ck-editor');
                     let isHtmlMode = false;
 
-                    if (toggleHtmlButton && htmlContentTextarea && editorContainer) {
+                    if (toggleHtmlButton && htmlContentTextarea) {
                         toggleHtmlButton.addEventListener('click', () => {
                             if (!isHtmlMode) {
                                 // Switch to HTML mode
                                 htmlContentTextarea.value = editor.getData();
                                 htmlContentTextarea.style.display = 'block';
 
-                                // Hide the CKEditor UI completely but safely
-                                editorContainer.style.display = 'none';
+                                // Get the CKEditor root element and hide it
+                                const editorRoot = editor.ui.getEditableElement().parentElement;
+                                if (editorRoot) {
+                                    editorRoot.style.display = 'none';
+                                }
                             } else {
                                 // Switch back to WYSIWYG mode
                                 editor.setData(htmlContentTextarea.value);
                                 htmlContentTextarea.style.display = 'none';
 
-                                // Show the CKEditor UI again
-                                editorContainer.style.display = '';
+                                // Show the CKEditor root element again
+                                const editorRoot = editor.ui.getEditableElement().parentElement;
+                                if (editorRoot) {
+                                    editorRoot.style.display = '';
+                                }
                             }
                             isHtmlMode = !isHtmlMode;
                         });
@@ -1057,6 +1106,14 @@ require_once '../includes/header.php';
                 })
                 .catch(error => {
                     console.error('Error initializing CKEditor:', error);
+
+                    // Fallback to basic textarea if CKEditor fails to initialize
+                    const storyContentTextarea = document.getElementById('story_content');
+                    if (storyContentTextarea) {
+                        storyContentTextarea.style.display = 'block';
+                        storyContentTextarea.style.minHeight = '300px';
+                        storyContentTextarea.style.width = '100%';
+                    }
                 });
         }
 
@@ -1112,6 +1169,7 @@ require_once '../includes/header.php';
             // Get the story content - check if we're in HTML mode or WYSIWYG mode
             let storyContent = '';
             const htmlContentTextarea = document.getElementById('html_content');
+            const storyContentTextarea = document.getElementById('story_content');
 
             if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
                 // We're in HTML mode, get content from the HTML textarea
@@ -1119,13 +1177,85 @@ require_once '../includes/header.php';
             } else if (window.storyEditor) {
                 // We're in WYSIWYG mode, get content from CKEditor
                 storyContent = window.storyEditor.getData();
+            } else if (storyContentTextarea && storyContentTextarea.style.display !== 'none') {
+                // We're using the fallback textarea
+                storyContent = storyContentTextarea.value;
             }
 
             // Process images in the content to ensure they have proper URLs
-            storyContent = processImagesInContent(storyContent);
+            storyContent = processContentImages(storyContent);
 
-            // Log the content for debugging
-            console.log("Processed content length:", storyContent.length);
+            // Combine the summary and story content into the final content format
+            let finalContent = '';
+
+            if (summary) {
+                finalContent += '## Summary\n\n' + summary + '\n\n';
+            }
+
+            finalContent += '## Story\n\n' + storyContent;
+
+            // Set the hidden content field with the final formatted content
+            document.getElementById('content').value = finalContent;
+        });
+
+        // Function to process images in content to ensure they have absolute URLs
+        function processContentImages(content) {
+            // If the content is empty, return as is
+            if (!content) return content;
+
+            // Check if the content contains HTML
+            if (content.indexOf('<img') === -1) return content;
+
+            // Create a temporary div to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+
+            // Find all images in the content
+            const images = tempDiv.querySelectorAll('img');
+
+            // Process each image
+            images.forEach(img => {
+                let src = img.getAttribute('src');
+
+                // If the src is not an absolute URL, make it absolute
+                if (src && src.indexOf('http') !== 0) {
+                    const host = window.location.host || 'api.storiesfromtheweb.org';
+                    const protocol = window.location.protocol || 'https:';
+                    src = `${protocol}//${host}${src.startsWith('/') ? '' : '/'}${src}`;
+                    img.setAttribute('src', src);
+                }
+            });
+
+            // Return the processed content
+            return tempDiv.innerHTML;
+        }
+
+        // Handle form submission to format content properly
+        document.querySelector('form.content-form').addEventListener('submit', function(e) {
+            // Show loading overlay
+            showLoadingOverlay('Saving story and processing images...');
+
+            // Get the summary
+            const summary = document.querySelector('#summary').value;
+
+            // Get the story content - check if we're in HTML mode or WYSIWYG mode
+            let storyContent = '';
+            const htmlContentTextarea = document.getElementById('html_content');
+            const storyContentTextarea = document.getElementById('story_content');
+
+            if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                // We're in HTML mode, get content from the HTML textarea
+                storyContent = htmlContentTextarea.value;
+            } else if (window.storyEditor) {
+                // We're in WYSIWYG mode, get content from CKEditor
+                storyContent = window.storyEditor.getData();
+            } else if (storyContentTextarea && storyContentTextarea.style.display !== 'none') {
+                // We're using the fallback textarea
+                storyContent = storyContentTextarea.value;
+            }
+
+            // Process images in the content
+            storyContent = processImagesInContent(storyContent);
 
             // Get author info if available
             const authorSelect = document.querySelector('#author_id');
@@ -1138,9 +1268,17 @@ require_once '../includes/header.php';
                 const selectedOption = authorSelect.options[authorSelect.selectedIndex];
                 authorName = selectedOption.text || '<?php echo addslashes($authorName); ?>';
 
-                // We'll use the extracted age and location if available
-                authorAge = '<?php echo addslashes($authorAge); ?>';
-                authorLocation = '<?php echo addslashes($authorLocation); ?>';
+                // Try to get author age and location from the displayed info
+                const authorAgeSpan = document.getElementById('author-age');
+                const authorLocationSpan = document.getElementById('author-location');
+
+                if (authorAgeSpan) {
+                    authorAge = authorAgeSpan.textContent;
+                }
+
+                if (authorLocationSpan) {
+                    authorLocation = authorLocationSpan.textContent;
+                }
             }
 
             // Format the content in markdown format
@@ -1192,6 +1330,7 @@ require_once '../includes/header.php';
                 // Get the story content - check if we're in HTML mode or WYSIWYG mode
                 let storyContent = '';
                 const htmlContentTextarea = document.getElementById('html_content');
+                const storyContentTextarea = document.getElementById('story_content');
 
                 if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
                     // We're in HTML mode, get content from the HTML textarea
@@ -1199,6 +1338,9 @@ require_once '../includes/header.php';
                 } else if (window.storyEditor) {
                     // We're in WYSIWYG mode, get content from CKEditor
                     storyContent = window.storyEditor.getData();
+                } else if (storyContentTextarea && storyContentTextarea.style.display !== 'none') {
+                    // We're using the fallback textarea
+                    storyContent = storyContentTextarea.value;
                 }
 
                 // Process images in the content to ensure they have proper URLs
@@ -1211,7 +1353,19 @@ require_once '../includes/header.php';
                 const summary = document.getElementById('summary').value || '';
 
                 // Get the cover image
-                const coverUrl = document.querySelector('.image-url-input').value || '';
+                const coverUrlInput = document.querySelector('.image-url-input');
+                let coverUrl = '';
+
+                if (coverUrlInput) {
+                    coverUrl = coverUrlInput.value || '';
+
+                    // Make sure the cover URL is absolute
+                    if (coverUrl && coverUrl.indexOf('http') !== 0) {
+                        const host = window.location.host || 'api.storiesfromtheweb.org';
+                        const protocol = window.location.protocol || 'https:';
+                        coverUrl = `${protocol}//${host}${coverUrl.startsWith('/') ? '' : '/'}${coverUrl}`;
+                    }
+                }
 
                 // Create a form to post the data
                 const form = document.createElement('form');

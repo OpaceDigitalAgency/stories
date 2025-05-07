@@ -10,14 +10,19 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Story Form Fix loaded');
 
-    // Fix 1: Convert numeric boolean fields to checkboxes
-    fixBooleanFields();
+    // Add a small delay to ensure the DOM is fully loaded
+    setTimeout(function() {
+        // Fix 1: Convert numeric boolean fields to checkboxes
+        fixBooleanFields();
 
-    // Fix 2: Initialize WYSIWYG editor properly
-    initializeEditor();
+        // Fix 2: Initialize WYSIWYG editor properly
+        initializeEditor();
 
-    // Fix 3: Fix preview button
-    setupPreviewButton();
+        // Fix 3: Fix preview button
+        setupPreviewButton();
+
+        console.log('All fixes applied');
+    }, 100);
 });
 
 /**
@@ -26,22 +31,36 @@ document.addEventListener('DOMContentLoaded', function() {
 function fixBooleanFields() {
     // List of known boolean fields
     const booleanFields = [
-        'is_published', 'is_featured', 'is_sponsored', 'allow_reviews'
+        'is_published', 'is_featured', 'is_sponsored', 'allow_reviews',
+        'is_self_published', 'is_ai_enhanced', 'needs_moderation'
     ];
 
     // Find all number inputs with values 0 or 1
     const numericInputs = document.querySelectorAll('input[type="number"]');
 
+    console.log('Found numeric inputs:', numericInputs.length);
+
     numericInputs.forEach(input => {
         const fieldName = input.getAttribute('name');
         const fieldId = input.getAttribute('id');
+
+        console.log('Checking field:', fieldName, 'with value:', input.value);
 
         // Check if this is a boolean field (either by name or by having values limited to 0/1)
         const isBooleanByName = booleanFields.includes(fieldName);
         const isBooleanByValue = (input.min === '0' && input.max === '1') ||
                                 (input.value === '0' || input.value === '1');
 
-        if (isBooleanByName || isBooleanByValue) {
+        // Additional check for fields that start with "is_" or have "published" in the name
+        const isBooleanByPattern = fieldName && (
+            fieldName.startsWith('is_') ||
+            fieldName.includes('published') ||
+            fieldName.includes('featured') ||
+            fieldName.includes('sponsored') ||
+            fieldName.includes('moderation')
+        );
+
+        if (isBooleanByName || isBooleanByValue || isBooleanByPattern) {
             console.log('Converting boolean field:', fieldName);
 
             // Create a checkbox to replace the numeric input
@@ -68,7 +87,14 @@ function fixBooleanFields() {
             const originalLabel = document.querySelector(`label[for="${fieldId}"]`);
             if (originalLabel) {
                 label.textContent = originalLabel.textContent;
-                originalLabel.remove();
+
+                // Don't remove the original label if it's in a different layout
+                // Just update the text to indicate it's now a checkbox
+                if (originalLabel.parentElement !== input.parentElement) {
+                    originalLabel.innerHTML = '<span style="color: #666;">(Checkbox)</span> ' + originalLabel.textContent;
+                } else {
+                    originalLabel.remove();
+                }
             } else {
                 // Create a label from the field name if no label exists
                 label.textContent = fieldName.replace(/_/g, ' ')
@@ -86,7 +112,139 @@ function fixBooleanFields() {
 
             // Replace the numeric input with the checkbox
             const parentElement = input.parentElement;
-            parentElement.replaceChild(wrapper, input);
+
+            // If the parent is a form-group, we need to modify the layout
+            if (parentElement.classList.contains('form-group') ||
+                parentElement.parentElement.classList.contains('form-group')) {
+
+                // Get the form-group element
+                const formGroup = parentElement.classList.contains('form-group') ?
+                    parentElement : parentElement.parentElement;
+
+                // Create a new layout with the label and checkbox side by side
+                const newLayout = document.createElement('div');
+                newLayout.className = 'form-check form-switch d-flex align-items-center';
+                newLayout.style.marginTop = '0.5rem';
+
+                // Add the checkbox and label to the new layout
+                newLayout.appendChild(checkbox);
+                newLayout.appendChild(label);
+                newLayout.appendChild(hiddenInput);
+
+                // Replace the input with the new layout
+                parentElement.replaceChild(newLayout, input);
+
+                // Add some styling to make it look better
+                formGroup.style.marginBottom = '1rem';
+            } else {
+                // Standard replacement
+                parentElement.replaceChild(wrapper, input);
+            }
+        }
+    });
+
+    // Also look for any fields that might be boolean but are not number inputs
+    // This is for fields that are already rendered as text inputs but should be checkboxes
+    const textInputs = document.querySelectorAll('input[type="text"]');
+
+    textInputs.forEach(input => {
+        const fieldName = input.getAttribute('name');
+
+        // Skip if no name attribute
+        if (!fieldName) return;
+
+        // Check if this is a boolean field by name pattern
+        const isBooleanByPattern =
+            fieldName.startsWith('is_') ||
+            fieldName.includes('published') ||
+            fieldName.includes('featured') ||
+            fieldName.includes('sponsored') ||
+            fieldName.includes('moderation');
+
+        // Also check if the value is 0 or 1
+        const isBooleanByValue = input.value === '0' || input.value === '1';
+
+        if ((isBooleanByPattern && isBooleanByValue) || booleanFields.includes(fieldName)) {
+            console.log('Converting text boolean field:', fieldName);
+
+            // Similar conversion logic as above
+            // [Code similar to the above block]
+            // Create a checkbox to replace the text input
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = fieldName;
+            checkbox.id = input.id;
+            checkbox.className = 'form-check-input';
+            checkbox.value = '1';
+            checkbox.checked = input.value === '1';
+
+            // Create a hidden input to ensure the field is submitted even when unchecked
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = fieldName + '_submitted';
+            hiddenInput.value = '1';
+
+            // Create a label for the checkbox
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = input.id;
+
+            // Get the original label text
+            const originalLabel = document.querySelector(`label[for="${input.id}"]`);
+            if (originalLabel) {
+                label.textContent = originalLabel.textContent;
+
+                // Don't remove the original label if it's in a different layout
+                if (originalLabel.parentElement !== input.parentElement) {
+                    originalLabel.innerHTML = '<span style="color: #666;">(Checkbox)</span> ' + originalLabel.textContent;
+                } else {
+                    originalLabel.remove();
+                }
+            } else {
+                // Create a label from the field name if no label exists
+                label.textContent = fieldName.replace(/_/g, ' ')
+                    .replace(/\b\w/g, l => l.toUpperCase());
+            }
+
+            // Create a wrapper div with Bootstrap form-check class
+            const wrapper = document.createElement('div');
+            wrapper.className = 'form-check form-switch';
+
+            // Add the elements to the wrapper
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            wrapper.appendChild(hiddenInput);
+
+            // Replace the text input with the checkbox
+            const parentElement = input.parentElement;
+
+            // If the parent is a form-group, we need to modify the layout
+            if (parentElement.classList.contains('form-group') ||
+                parentElement.parentElement.classList.contains('form-group')) {
+
+                // Get the form-group element
+                const formGroup = parentElement.classList.contains('form-group') ?
+                    parentElement : parentElement.parentElement;
+
+                // Create a new layout with the label and checkbox side by side
+                const newLayout = document.createElement('div');
+                newLayout.className = 'form-check form-switch d-flex align-items-center';
+                newLayout.style.marginTop = '0.5rem';
+
+                // Add the checkbox and label to the new layout
+                newLayout.appendChild(checkbox);
+                newLayout.appendChild(label);
+                newLayout.appendChild(hiddenInput);
+
+                // Replace the input with the new layout
+                parentElement.replaceChild(newLayout, input);
+
+                // Add some styling to make it look better
+                formGroup.style.marginBottom = '1rem';
+            } else {
+                // Standard replacement
+                parentElement.replaceChild(wrapper, input);
+            }
         }
     });
 }

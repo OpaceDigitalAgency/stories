@@ -43,7 +43,7 @@ if (isset($_GET['id'])) {
             <div class="container-fluid">
                 <div class="page-header d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h1 class="page-title">Edit Subscriber</h1>
+                        <h1 class="page-title">Subscriber Details</h1>
                         <p class="page-description">
                             <a href="subscribers.php" class="text-primary">← Back to Subscribers</a>
                         </p>

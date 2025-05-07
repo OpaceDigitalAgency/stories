@@ -30,7 +30,88 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     // Log the file path for debugging
     error_log("Thumbnail lookup for: " . $filePath . " (Item type: " . $itemType . ")");
 
-    // Check if there's a thumbnail version available
+    // First, try to look up the thumbnail in the database based on the item type and ID
+    if (isset($GLOBALS['db']) && $GLOBALS['db']) {
+        $db = $GLOBALS['db'];
+        $itemId = null;
+
+        // Try to get the item ID from the URL or path
+        if (preg_match('/\/(\d+)\//', $filePath, $matches)) {
+            $itemId = $matches[1];
+        } else if (is_numeric($filePath)) {
+            $itemId = $filePath;
+        }
+
+        if ($itemId) {
+            try {
+                $tableName = '';
+                $idField = 'id';
+                $thumbnailField = 'thumbnail_url';
+
+                // Determine the table and fields based on item type
+                switch ($itemType) {
+                    case 'media':
+                        $tableName = 'media';
+                        break;
+                    case 'author':
+                        $tableName = 'authors';
+                        $thumbnailField = 'avatar_url';
+                        break;
+                    case 'directory_item':
+                        $tableName = 'directory_items';
+                        $thumbnailField = 'image_url';
+                        break;
+                    case 'game':
+                        $tableName = 'games';
+                        $thumbnailField = 'cover_image';
+                        break;
+                    case 'ai_tool':
+                        $tableName = 'ai_tools';
+                        $thumbnailField = 'image_url';
+                        break;
+                    case 'story':
+                        $tableName = 'stories';
+                        $thumbnailField = 'cover_image';
+                        break;
+                    case 'post':
+                        $tableName = 'posts';
+                        $thumbnailField = 'featured_image';
+                        break;
+                }
+
+                if (!empty($tableName)) {
+                    // Query for the thumbnail URL
+                    $stmt = $db->prepare("SELECT {$thumbnailField} FROM {$tableName} WHERE {$idField} = ?");
+                    $stmt->execute([$itemId]);
+                    $result = $stmt->fetch();
+
+                    if ($result && !empty($result[$thumbnailField])) {
+                        $dbThumbnail = $result[$thumbnailField];
+                        error_log("Found item in database with thumbnail: " . $dbThumbnail);
+
+                        // If this is a media item, check if it has a specific thumbnail URL
+                        if ($itemType === 'media') {
+                            $mediaStmt = $db->prepare("SELECT thumbnail_url FROM media WHERE id = ?");
+                            $mediaStmt->execute([$itemId]);
+                            $mediaResult = $mediaStmt->fetch();
+
+                            if ($mediaResult && !empty($mediaResult['thumbnail_url'])) {
+                                error_log("Found media thumbnail in database: " . $mediaResult['thumbnail_url']);
+                                return $mediaResult['thumbnail_url'];
+                            }
+                        }
+
+                        // Use the thumbnail from the database
+                        return $dbThumbnail;
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error looking up thumbnail in database: " . $e->getMessage());
+            }
+        }
+    }
+
+    // Check if there's a thumbnail version available in the filesystem
     if (strpos($filePath, '/uploads/') !== false && strpos($filePath, '-thumbnail') === false) {
         // Try to use the thumbnail version if it exists
         $pathInfo = pathinfo($filePath);
@@ -74,33 +155,35 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
                 error_log("Found PNG thumbnail: " . $thumbnailPathPng);
                 return $thumbnailPathPng;
             }
-
-            // If no thumbnail exists, return the original image
-            error_log("No thumbnail found, using original: " . $filePath);
-            return $filePath;
         }
     }
 
     // For media library items, check if we have a thumbnail URL in the database
-    if ($itemType === 'media' || $itemType === 'author' || $itemType === 'directory_item' || $itemType === 'game' || $itemType === 'ai_tool') {
+    if ($itemType === 'media') {
         // Try to extract ID from URL if it's a full URL
         $id = null;
         if (preg_match('/\/(\d+)\//', $filePath, $matches)) {
             $id = $matches[1];
+        } else if (is_numeric($filePath)) {
+            $id = $filePath;
         }
 
         if ($id) {
             try {
-                // Connect to database
-                $db = new PDO(
-                    'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-                    'stories_user',
-                    '$tw1cac3*sOt',
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    ]
-                );
+                // Connect to database if not already connected
+                if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
+                    $db = new PDO(
+                        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                        'stories_user',
+                        '$tw1cac3*sOt',
+                        [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        ]
+                    );
+                } else {
+                    $db = $GLOBALS['db'];
+                }
 
                 // Query for thumbnail URL
                 $stmt = $db->prepare("SELECT thumbnail_url FROM media WHERE id = ?");
@@ -210,6 +293,94 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
             justify-content: center;
             align-items: center;
             z-index: 9999;
+        }
+
+        /* Preview Modal Styles */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .preview-modal-content {
+            background-color: #fff;
+            border-radius: 5px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .preview-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .preview-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .preview-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .preview-loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+
+        #contact-preview .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #contact-preview .card-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #contact-preview .card-body {
+            padding: 20px;
+        }
+
+        #contact-preview .card-footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #contact-preview .message-content {
+            white-space: pre-wrap;
+            margin-top: 15px;
+            line-height: 1.5;
         }
     </style>
     <div class="premium-table-container">
@@ -335,8 +506,11 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Get the file path based on item type
-                                                // Special handling for stories, posts, games, directory items, and AI tools to use the lightbox
-                                                if ($itemType === 'story') {
+                                                // Special handling for stories, posts, games, directory items, AI tools, authors, and contacts to use the lightbox
+                                                // Skip preview for tags and subscribers
+                                                if ($itemType === 'tag' || $itemType === 'subscriber') {
+                                                    // No preview button for tags and subscribers
+                                                } else if ($itemType === 'story') {
                                                     echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</button>';
@@ -354,6 +528,14 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     echo '</button>';
                                                 } else if ($itemType === 'ai_tool') {
                                                     echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm ai-tool-preview-btn" data-ai-tool-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                } else if ($itemType === 'author') {
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm author-preview-btn" data-author-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                } else if ($itemType === 'contact') {
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm contact-preview-btn" data-contact-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</button>';
                                                 } else {
@@ -610,6 +792,181 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                     selectedCountElement.textContent = `${selectedCount} item${selectedCount !== 1 ? 's' : ''} selected`;
                 }
             }
+
+            // Initialize author preview buttons
+            const authorPreviewButtons = document.querySelectorAll('.author-preview-btn');
+            authorPreviewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const authorId = this.getAttribute('data-author-id');
+
+                    // Create modal container
+                    const modal = document.createElement('div');
+                    modal.className = 'preview-modal';
+                    modal.innerHTML = `
+                        <div class="preview-modal-content">
+                            <div class="preview-modal-header">
+                                <h2>Author Preview</h2>
+                                <button class="preview-modal-close">&times;</button>
+                            </div>
+                            <div class="preview-modal-body">
+                                <div class="preview-loading">Loading author details...</div>
+                                <iframe id="author-preview-frame" style="display:none; width:100%; height:600px; border:none;"></iframe>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+
+                    // Add event listener to close button
+                    modal.querySelector('.preview-modal-close').addEventListener('click', function() {
+                        modal.remove();
+                    });
+
+                    // Load author details
+                    fetch(`../handlers/get-author.php?id=${authorId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const iframe = modal.querySelector('#author-preview-frame');
+                                const loading = modal.querySelector('.preview-loading');
+
+                                // Create HTML content for the iframe
+                                const html = `
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                        <title>${data.author.name}</title>
+                                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+                                        <style>
+                                            body { padding: 20px; font-family: Arial, sans-serif; }
+                                            .author-header { display: flex; align-items: center; margin-bottom: 20px; }
+                                            .author-avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-right: 20px; }
+                                            .author-name { margin: 0; }
+                                            .author-meta { color: #666; margin-top: 5px; }
+                                            .author-bio { line-height: 1.6; }
+                                            .author-stories { margin-top: 30px; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="container">
+                                            <div class="author-header">
+                                                <img src="${data.author.avatar_url || '../assets/images/default-avatar.svg'}" alt="${data.author.name}" class="author-avatar">
+                                                <div>
+                                                    <h1 class="author-name">${data.author.name}</h1>
+                                                    <div class="author-meta">
+                                                        ${data.author.author_type ? `<div>Type: ${data.author.author_type}</div>` : ''}
+                                                        ${data.author.age ? `<div>Age: ${data.author.age}</div>` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="author-bio">
+                                                ${data.author.bio || '<p>No biography available.</p>'}
+                                            </div>
+
+                                            <div class="author-stories">
+                                                <h3>Stories by this author</h3>
+                                                ${data.stories && data.stories.length > 0 ?
+                                                    `<ul>${data.stories.map(story => `<li>${story.title}</li>`).join('')}</ul>` :
+                                                    '<p>No stories found.</p>'}
+                                            </div>
+                                        </div>
+                                    </body>
+                                    </html>
+                                `;
+
+                                // Set iframe content
+                                iframe.onload = function() {
+                                    loading.style.display = 'none';
+                                    iframe.style.display = 'block';
+                                };
+
+                                iframe.srcdoc = html;
+                            } else {
+                                modal.querySelector('.preview-loading').innerHTML = 'Error loading author details.';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            modal.querySelector('.preview-loading').innerHTML = 'Error loading author details.';
+                        });
+                });
+            });
+
+            // Initialize contact preview buttons
+            const contactPreviewButtons = document.querySelectorAll('.contact-preview-btn');
+            contactPreviewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const contactId = this.getAttribute('data-contact-id');
+
+                    // Create modal container
+                    const modal = document.createElement('div');
+                    modal.className = 'preview-modal';
+                    modal.innerHTML = `
+                        <div class="preview-modal-content">
+                            <div class="preview-modal-header">
+                                <h2>Contact Preview</h2>
+                                <button class="preview-modal-close">&times;</button>
+                            </div>
+                            <div class="preview-modal-body">
+                                <div class="preview-loading">Loading contact details...</div>
+                                <div id="contact-preview" style="display:none;"></div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+
+                    // Add event listener to close button
+                    modal.querySelector('.preview-modal-close').addEventListener('click', function() {
+                        modal.remove();
+                    });
+
+                    // Load contact details
+                    fetch(`../handlers/get-contact.php?id=${contactId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const previewDiv = modal.querySelector('#contact-preview');
+                                const loading = modal.querySelector('.preview-loading');
+
+                                // Create HTML content
+                                previewDiv.innerHTML = `
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3>${data.contact.name}</h3>
+                                            <div>${data.contact.email}</div>
+                                        </div>
+                                        <div class="card-body">
+                                            <h4>${data.contact.subject}</h4>
+                                            <div class="message-content">${data.contact.message}</div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <div class="status">
+                                                Status: <span class="badge ${data.contact.is_responded ? 'bg-success' : 'bg-warning'}">
+                                                    ${data.contact.is_responded ? 'Responded' : 'Not Responded'}
+                                                </span>
+                                            </div>
+                                            <div class="date">
+                                                Received: ${new Date(data.contact.created_at).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+
+                                // Show the preview
+                                loading.style.display = 'none';
+                                previewDiv.style.display = 'block';
+                            } else {
+                                modal.querySelector('.preview-loading').innerHTML = 'Error loading contact details.';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            modal.querySelector('.preview-loading').innerHTML = 'Error loading contact details.';
+                        });
+                });
+            });
         });
     </script>
     <?php

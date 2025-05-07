@@ -92,10 +92,12 @@ $siteName = get_config('site.name', 'Stories From The Web');
     $modernDashboardCssPath = $isContentDir ? '../assets/css/modern-dashboard.css' : 'assets/css/modern-dashboard.css';
     $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
     $premiumAdminCssPath = $isContentDir ? '../assets/css/premium-admin.css' : 'assets/css/premium-admin.css';
+    $adminStylesCssPath = $isContentDir ? '../assets/css/admin-styles.css' : 'assets/css/admin-styles.css';
     ?>
     <link rel="stylesheet" href="<?php echo $modernDashboardCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $premiumAdminCssPath; ?>">
+    <link rel="stylesheet" href="<?php echo $adminStylesCssPath; ?>">
 
     <!-- JavaScript Libraries -->
     <!-- Add jQuery -->

@@ -49,6 +49,22 @@ graph TD
 - Changed 'story' => 'stories.php' to 'story' => 'view-story.php' for view actions
 - Changed 'story' => 'stories.php' to 'story' => 'story-form.php' for edit actions
 
+### Issue 9: Media page layout not suitable for image management
+**Problem**: The enhanced table component was applied to the media page, replacing the previous gallery view that was more appropriate for visual media management.
+**Solution**: Restored the previous version of media.php that used a grid layout with thumbnails instead of the enhanced table:
+- Reverted to the version with a visual gallery layout
+- Maintained the bulk upload functionality with drag-and-drop support
+- Preserved the image optimization features
+- Kept the enhanced table component for other content types
+
+### Issue 10: Story form missing image upload and AI generation features
+**Problem**: The story form page was missing the image upload component and AI image generator that were available on other content forms.
+**Solution**: Added the image upload and AI image generator components to the story form:
+- Added the image upload component to allow uploading images or selecting from the media library
+- Added the AI image generator component to allow generating images with AI
+- Matched the functionality available in other content forms like blog posts
+- Improved the user experience for story creation and editing
+
 ### Issue 2: Form saving issues
 **Problem**: Certain fields like "Is Self Published" and author selection weren't saving properly.
 **Solution**:

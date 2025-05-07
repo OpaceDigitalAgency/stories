@@ -1,6 +1,39 @@
 # Stories From The Web - Progress Log
 
 ## 2025-05-06
+- Fixed image upload to update both featured image and cover_url fields:
+  - Identified issue where image uploads were only updating the featured image field but not the hidden cover_url field
+  - Modified media.js to update the cover_url field whenever any image URL input changes
+  - Added global event listener to catch all image URL input changes
+  - Added MutationObserver to catch programmatic changes (like from AI image generator)
+  - Updated bulk upload handler to update cover_url field with the first successful upload
+  - This fix ensures that the cover_url field is always updated regardless of how the image is selected or uploaded
+  - Fixed issue affecting all content types (stories, blog posts, authors, games, directory items, AI tools)
+
+- Fixed form validation for negative maxLength values:
+  - Identified issue in enhanced-admin.js where form validation was checking for maxLength without verifying if it was a positive number
+  - Updated validation to only check maxLength if it's greater than 0
+  - Fixed error message "Please enter no more than -1 characters" appearing on various form fields
+  - This fix ensures proper validation across all admin forms
+
+- Fixed bulk upload handler to support files[] array format:
+  - Updated bulk-upload.php to handle both 'files' and 'files[]' array formats
+  - Added support for different naming conventions in file upload arrays
+  - Fixed 500 error when using bulk upload in media library
+  - Ensured compatibility with the JavaScript FormData implementation
+
+- Added image upload and AI image generator components to story form:
+  - Added the image upload component to the story form page
+  - Added the AI image generator component to the story form page
+  - This allows users to upload images, select from the media library, or generate images with AI
+  - Matches the functionality available in other content forms like blog posts
+
+- Restored media gallery view with bulk upload functionality:
+  - Reverted media.php to previous version that used a grid layout instead of the enhanced table
+  - Maintained the bulk upload functionality with drag-and-drop support
+  - Preserved the image optimization features
+  - This change restores the visual gallery layout that's more appropriate for media files while keeping the enhanced table for other content types
+
 - Fixed enhanced table component for stories:
   - Identified issue in enhanced-table-component.php where the match statement for story actions was incorrectly configured
   - For view actions, it was using 'stories.php' instead of 'view-story.php'

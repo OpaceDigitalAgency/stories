@@ -108,6 +108,7 @@ $currentPage = 'stories';
 // Add custom CSS for form styling
 $extraHeadContent = '
 <style>
+    /* Base form styles */
     .checkbox-group {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -151,6 +152,94 @@ $extraHeadContent = '
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
     }
+
+    /* WordPress-like layout */
+    .wp-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    @media (min-width: 992px) {
+        .wp-layout {
+            grid-template-columns: 2fr 1fr;
+        }
+    }
+
+    .wp-layout-top {
+        grid-column: 1 / -1;
+        margin-bottom: 20px;
+    }
+
+    .wp-layout-main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .wp-layout-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .wp-card {
+        background: white;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .wp-card-header {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+        background-color: var(--gray-50);
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    .wp-card-body {
+        padding: 15px;
+    }
+
+    /* Sticky save bar */
+    .sticky-save-bar {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 15px 20px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .sticky-save-bar .btn-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .sticky-save-bar {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sticky-save-bar .btn-group {
+            width: 100%;
+        }
+
+        .sticky-save-bar .btn {
+            flex: 1;
+        }
+    }
 </style>
 ';
 
@@ -163,187 +252,283 @@ require_once '../includes/header.php';
         <form method="POST" action="save-story.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $story['id'] ?? ''; ?>">
 
-            <!-- Basic Information -->
-
-            <div class="form-group">
-                <label class="form-label" for="title">Title <span class="required">*</span></label>
-                <input type="text" id="title" name="title" class="form-control" required
-                       value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug <span class="required">*</span></label>
-                <input type="text" id="slug" name="slug" class="form-control" required
-                       value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
-                <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="author_id">Author <span class="required">*</span></label>
-                <select id="author_id" name="author_id" class="form-control" required>
-                    <option value="">Select Author</option>
-                    <?php foreach ($authors as $author): ?>
-                        <option value="<?php echo $author['id']; ?>"
-                                data-author-type="<?php echo htmlspecialchars($author['author_type']); ?>"
-                                <?php echo (isset($story['author_id']) && $story['author_id'] == $author['id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($author['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Content -->
-
-            <div class="form-group">
-                <label class="form-label" for="content">Story Content <span class="required">*</span></label>
-                <textarea id="content" name="content" class="form-control" rows="10" required><?php echo htmlspecialchars($story['content'] ?? ''); ?></textarea>
-            </div>
-
-            <!-- Image Upload -->
-
-            <?php
-            // Render image upload component
-            renderImageUploadComponent(
-                'cover_url',
-                $story['cover_url'] ?? '',
-                'Cover URL',
-                'story',
-                $story['id'] ?? null
-            );
-
-            // Render AI image generator
-            if (function_exists('renderAiImageGenerator')) {
-                renderAiImageGenerator(
-                    'story',
-                    [
-                        'title' => $story['title'] ?? '',
-                        'excerpt' => $story['excerpt'] ?? '',
-                        'content' => $story['content'] ?? ''
-                    ],
-                    'cover_url',
-                    'cover_url_preview'
-                );
-            }
-            ?>
-
-            <!-- Additional Fields -->
-
-            <?php
-            foreach ($additionalFields as $field):
-                // Skip fields we handle specially
-                if (in_array($field, ['id', 'title', 'content', 'author_id', 'created_at', 'updated_at', 'slug'])) {
-                    continue;
-                }
-
-                $columnData = $columnInfo[$field];
-                $isRequired = strpos($columnData['Type'], 'NOT NULL') !== false;
-                $isIntField = strpos($columnData['Type'], 'int') === 0;
-                $isDecimalField = strpos($columnData['Type'], 'decimal') === 0;
-                $label = ucwords(str_replace('_', ' ', $field));
-
-                // Special handling for certain fields
-                if ($field === 'source_type'):
-            ?>
-                    <div class="form-group">
-                        <label class="form-label" for="source_type">Source Type</label>
-                        <select id="source_type" name="source_type" class="form-control">
-                            <option value="child" <?php echo (($story['source_type'] ?? '') === 'child') ? 'selected' : ''; ?>>Child's Story</option>
-                            <option value="parent" <?php echo (($story['source_type'] ?? '') === 'parent') ? 'selected' : ''; ?>>Parent's Story</option>
-                            <option value="classic" <?php echo (($story['source_type'] ?? '') === 'classic') ? 'selected' : ''; ?>>Classic Story</option>
-                        </select>
+            <!-- WordPress-like Layout -->
+            <div class="wp-layout">
+                <!-- Top Section (Title & Slug) -->
+                <div class="wp-layout-top wp-card">
+                    <div class="wp-card-header">
+                        Basic Information
                     </div>
-                <?php elseif ($field === 'allow_reviews'): ?>
-                    <div class="form-group">
-                        <div class="form-check">
-                            <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input"
-                                   <?php echo (!empty($story['allow_reviews'])) ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="allow_reviews">Allow Reviews</label>
+                    <div class="wp-card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="title">Title <span class="required">*</span></label>
+                            <input type="text" id="title" name="title" class="form-control" required
+                                value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                            <input type="text" id="slug" name="slug" class="form-control" required
+                                value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
+                            <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
                         </div>
                     </div>
-                <?php elseif ($field === 'average_rating'): ?>
-                    <div class="form-group">
-                        <label class="form-label" for="average_rating">Average Rating</label>
-                        <input type="number" id="average_rating" name="average_rating" class="form-control"
-                               min="0" max="5" step="0.1"
-                               value="<?php echo htmlspecialchars($story['average_rating'] ?? '0'); ?>">
-                    </div>
-                <?php elseif ($field === 'estimated_reading_time'): ?>
-                    <?php
-                    // Calculate reading time based on content
-                    $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
-                    $readingTime = max(1, ceil($wordCount / 200)); // At least 1 minute
-                    ?>
-                    <div class="form-group">
-                        <label class="form-label">Reading Time</label>
-                        <div class="form-control-static">
-                            <?php echo $readingTime; ?> minute<?php echo $readingTime !== 1 ? 's' : ''; ?>
-                            <input type="hidden" name="estimated_reading_time" value="<?php echo $readingTime; ?>">
+                </div>
+
+                <!-- Main Content Column -->
+                <div class="wp-layout-main">
+                    <!-- Story Content -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Story Content
                         </div>
-                        <small class="form-text text-muted">Automatically calculated based on content length (minimum 1 minute)</small>
+                        <div class="wp-card-body">
+                            <div class="form-group mb-0">
+                                <textarea id="content" name="content" class="form-control" rows="15" required><?php echo htmlspecialchars($story['content'] ?? ''); ?></textarea>
+                            </div>
+                        </div>
                     </div>
-                <?php elseif ($field === 'age_group'): ?>
-                    <?php
-                    // Get author's age if available
-                    $authorAge = null;
-                    if (isset($story['author_id'])) {
-                        $stmt = $db->prepare("SELECT age FROM authors WHERE id = ?");
-                        $stmt->execute([$story['author_id']]);
-                        $authorAge = $stmt->fetchColumn();
-                    }
 
-                    // Determine age group based on author's age
-                    $ageGroup = '7-12'; // default
-                    if ($authorAge !== null) {
-                        if ($authorAge <= 5) $ageGroup = '0-3';
-                        else if ($authorAge <= 8) $ageGroup = '4-6';
-                        else if ($authorAge <= 12) $ageGroup = '7-12';
-                        else $ageGroup = '13+';
-                    }
-                    ?>
-                    <div class="form-group">
-                        <label class="form-label" for="age_group">Age Group</label>
-                        <select id="age_group" name="age_group" class="form-control" required>
-                            <option value="0-3" <?php echo ($ageGroup === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
-                            <option value="4-6" <?php echo ($ageGroup === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
-                            <option value="7-12" <?php echo ($ageGroup === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
-                            <option value="13+" <?php echo ($ageGroup === '13+') ? 'selected' : ''; ?>>13+ years</option>
-                        </select>
-                        <small class="form-text text-muted">Auto-set based on author's age (<?php echo $authorAge ?? 'unknown'; ?> years old)</small>
-                    </div>
-                <?php elseif ($isIntField || $isDecimalField): ?>
-                    <div class="form-group">
-                        <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                        <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                               value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                               <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
-                               <?php echo $isRequired ? 'required' : ''; ?>>
-                    </div>
-                <?php else: ?>
-                    <div class="form-group">
-                        <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
-                        <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                               value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
-                               <?php echo $isRequired ? 'required' : ''; ?>>
-                    </div>
-                <?php endif; endforeach; ?>
+                    <!-- Image Upload -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Cover Image
+                        </div>
+                        <div class="wp-card-body">
+                            <?php
+                            // Render image upload component
+                            renderImageUploadComponent(
+                                'cover_url',
+                                $story['cover_url'] ?? '',
+                                'Cover Image',
+                                'story',
+                                $story['id'] ?? null
+                            );
 
-            <!-- Tags section moved to the bottom -->
-            <div class="form-group">
-                <label class="form-label">Tags</label>
-                <div class="checkbox-group">
-                    <?php foreach ($tags as $tag): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
-                                   <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
-                            <?php echo htmlspecialchars($tag['name']); ?>
-                        </label>
-                    <?php endforeach; ?>
+                            // Render AI image generator
+                            if (function_exists('renderAiImageGenerator')) {
+                                renderAiImageGenerator(
+                                    'story',
+                                    [
+                                        'title' => $story['title'] ?? '',
+                                        'excerpt' => $story['excerpt'] ?? '',
+                                        'content' => $story['content'] ?? ''
+                                    ],
+                                    'cover_url',
+                                    'cover_url_preview'
+                                );
+                            }
+                            ?>
+                        </div>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Tags
+                        </div>
+                        <div class="wp-card-body">
+                            <div class="checkbox-group">
+                                <?php foreach ($tags as $tag): ?>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="tags[]" value="<?php echo $tag['id']; ?>"
+                                            <?php echo in_array($tag['id'], $storyTags) ? 'checked' : ''; ?>>
+                                        <?php echo htmlspecialchars($tag['name']); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Column -->
+                <div class="wp-layout-sidebar">
+                    <!-- Author Information -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Author
+                        </div>
+                        <div class="wp-card-body">
+                            <div class="form-group mb-0">
+                                <select id="author_id" name="author_id" class="form-control" required>
+                                    <option value="">Select Author</option>
+                                    <?php foreach ($authors as $author): ?>
+                                        <option value="<?php echo $author['id']; ?>"
+                                                data-author-type="<?php echo htmlspecialchars($author['author_type']); ?>"
+                                                <?php echo (isset($story['author_id']) && $story['author_id'] == $author['id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($author['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Story Settings -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Story Settings
+                        </div>
+                        <div class="wp-card-body">
+                            <?php
+                            // Source Type
+                            if (in_array('source_type', $additionalFields)):
+                            ?>
+                            <div class="form-group">
+                                <label class="form-label" for="source_type">Source Type</label>
+                                <select id="source_type" name="source_type" class="form-control">
+                                    <option value="child" <?php echo (($story['source_type'] ?? '') === 'child') ? 'selected' : ''; ?>>Child's Story</option>
+                                    <option value="parent" <?php echo (($story['source_type'] ?? '') === 'parent') ? 'selected' : ''; ?>>Parent's Story</option>
+                                    <option value="classic" <?php echo (($story['source_type'] ?? '') === 'classic') ? 'selected' : ''; ?>>Classic Story</option>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php
+                            // Age Group
+                            if (in_array('age_group', $additionalFields)):
+                                // Get author's age if available
+                                $authorAge = null;
+                                if (isset($story['author_id'])) {
+                                    $stmt = $db->prepare("SELECT age FROM authors WHERE id = ?");
+                                    $stmt->execute([$story['author_id']]);
+                                    $authorAge = $stmt->fetchColumn();
+                                }
+
+                                // Determine age group based on author's age
+                                $ageGroup = '7-12'; // default
+                                if ($authorAge !== null) {
+                                    if ($authorAge <= 5) $ageGroup = '0-3';
+                                    else if ($authorAge <= 8) $ageGroup = '4-6';
+                                    else if ($authorAge <= 12) $ageGroup = '7-12';
+                                    else $ageGroup = '13+';
+                                }
+                            ?>
+                            <div class="form-group">
+                                <label class="form-label" for="age_group">Age Group</label>
+                                <select id="age_group" name="age_group" class="form-control" required>
+                                    <option value="0-3" <?php echo ($ageGroup === '0-3') ? 'selected' : ''; ?>>0-3 years</option>
+                                    <option value="4-6" <?php echo ($ageGroup === '4-6') ? 'selected' : ''; ?>>4-6 years</option>
+                                    <option value="7-12" <?php echo ($ageGroup === '7-12') ? 'selected' : ''; ?>>7-12 years</option>
+                                    <option value="13+" <?php echo ($ageGroup === '13+') ? 'selected' : ''; ?>>13+ years</option>
+                                </select>
+                                <small class="form-text text-muted">Auto-set based on author's age (<?php echo $authorAge ?? 'unknown'; ?> years old)</small>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php
+                            // Reading Time
+                            if (in_array('estimated_reading_time', $additionalFields)):
+                                // Calculate reading time based on content
+                                $wordCount = str_word_count(strip_tags($story['content'] ?? ''));
+                                $readingTime = max(1, ceil($wordCount / 200)); // At least 1 minute
+                            ?>
+                            <div class="form-group">
+                                <label class="form-label">Reading Time</label>
+                                <div class="form-control-static">
+                                    <?php echo $readingTime; ?> minute<?php echo $readingTime !== 1 ? 's' : ''; ?>
+                                    <input type="hidden" name="estimated_reading_time" value="<?php echo $readingTime; ?>">
+                                </div>
+                                <small class="form-text text-muted">Automatically calculated based on content length</small>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Review Settings -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Review Settings
+                        </div>
+                        <div class="wp-card-body">
+                            <?php if (in_array('allow_reviews', $additionalFields)): ?>
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input"
+                                        <?php echo (!empty($story['allow_reviews'])) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="allow_reviews">Allow Reviews</label>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (in_array('average_rating', $additionalFields)): ?>
+                            <div class="form-group">
+                                <label class="form-label" for="average_rating">Average Rating</label>
+                                <input type="number" id="average_rating" name="average_rating" class="form-control"
+                                    min="0" max="5" step="0.1"
+                                    value="<?php echo htmlspecialchars($story['average_rating'] ?? '0'); ?>">
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (in_array('review_count', $additionalFields)): ?>
+                            <div class="form-group mb-0">
+                                <label class="form-label" for="review_count">Review Count</label>
+                                <input type="number" id="review_count" name="review_count" class="form-control"
+                                    min="0" step="1"
+                                    value="<?php echo htmlspecialchars($story['review_count'] ?? '0'); ?>">
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Additional Fields -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Additional Information
+                        </div>
+                        <div class="wp-card-body">
+                            <?php
+                            foreach ($additionalFields as $field):
+                                // Skip fields we handle specially or already displayed
+                                if (in_array($field, [
+                                    'id', 'title', 'content', 'author_id', 'created_at', 'updated_at', 'slug',
+                                    'source_type', 'allow_reviews', 'average_rating', 'estimated_reading_time',
+                                    'age_group', 'review_count'
+                                ])) {
+                                    continue;
+                                }
+
+                                $columnData = $columnInfo[$field];
+                                $isRequired = strpos($columnData['Type'], 'NOT NULL') !== false;
+                                $isIntField = strpos($columnData['Type'], 'int') === 0;
+                                $isDecimalField = strpos($columnData['Type'], 'decimal') === 0;
+                                $label = ucwords(str_replace('_', ' ', $field));
+
+                                if ($isIntField || $isDecimalField):
+                            ?>
+                                <div class="form-group">
+                                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                                    <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                        value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                        <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
+                                        <?php echo $isRequired ? 'required' : ''; ?>>
+                                </div>
+                            <?php else: ?>
+                                <div class="form-group">
+                                    <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
+                                        value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                        <?php echo $isRequired ? 'required' : ''; ?>>
+                                </div>
+                            <?php endif; endforeach; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Story</button>
-                <a href="stories.php" class="btn btn-secondary">Cancel</a>
+            <!-- Sticky Save Bar -->
+            <div class="sticky-save-bar">
+                <div class="story-status">
+                    <?php if (isset($story['id'])): ?>
+                    <span class="text-muted">Last updated: <?php echo date('M j, Y g:i a', strtotime($story['updated_at'] ?? 'now')); ?></span>
+                    <?php else: ?>
+                    <span class="text-muted">Creating new story</span>
+                    <?php endif; ?>
+                </div>
+                <div class="btn-group">
+                    <a href="stories.php" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Story</button>
+                </div>
             </div>
         </form>
     </div>

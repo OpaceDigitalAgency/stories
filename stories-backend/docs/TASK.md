@@ -50,6 +50,18 @@
   - Documented the solution for future reference
 
 ### Admin Interface
+- Added image upload and AI image generator components to story form ✅
+  - Added the image upload component to the story form page
+  - Added the AI image generator component to the story form page
+  - Enabled users to upload images, select from media library, or generate with AI
+  - Matched functionality available in other content forms
+
+- Restored media gallery view with bulk upload functionality ✅
+  - Reverted media.php to previous version that used a grid layout
+  - Maintained the bulk upload functionality with drag-and-drop support
+  - Preserved the image optimization features
+  - Ensured a more appropriate visual layout for media files
+
 - Fixed enhanced table component for stories ✅
   - Identified issue with incorrect file paths in match statement
   - Updated view action to use view-story.php instead of stories.php

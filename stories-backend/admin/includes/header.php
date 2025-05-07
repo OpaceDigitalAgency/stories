@@ -115,6 +115,118 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <script src="<?php echo $liveSearchJsPath; ?>"></script>
     <script src="<?php echo $inlineEditingJsPath; ?>"></script>
 
+    <!-- Custom CSS for header navigation -->
+    <style>
+        /* Header and navigation styles */
+        .admin-header {
+            padding: 0;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-right: 1.5rem;
+        }
+
+        .main-nav {
+            flex-grow: 1;
+        }
+
+        .main-nav .nav-link {
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+            color: var(--gray-700);
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-nav .nav-link:hover {
+            background-color: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .main-nav .nav-link.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .dropdown-menu {
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .dropdown-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .main-nav, .user-info {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+
+            #nav-form {
+                flex-wrap: wrap;
+            }
+
+            .main-nav .nav-link, .dropdown {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .user-info {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .user-info .btn {
+                width: 100%;
+            }
+        }
+    </style>
+
     <!-- Fix for dropdown issues -->
     <script>
         $(document).ready(function() {
@@ -150,12 +262,95 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to content</a>
 
+    <?php
+    // Set paths for navigation
+    $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
+    $contentPrefix = $isContentDir ? '' : 'content/';
+    ?>
     <header class="admin-header">
         <div class="header-container">
-            <div class="logo-container">
-                <div class="logo">S</div>
-                <div class="logo-text">Stories Admin</div>
+            <div class="d-flex align-items-center">
+                <!-- Logo (clickable to dashboard) -->
+                <a href="<?php echo $dashboardPath; ?>" class="logo-container" style="text-decoration: none;">
+                    <div class="logo">S</div>
+                    <div class="logo-text">Stories Admin</div>
+                </a>
+
+                <!-- Main Navigation Menu -->
+                <nav class="main-nav" role="navigation" aria-label="Main Navigation">
+                    <form method="GET" id="nav-form" class="d-flex align-items-center">
+                        <!-- Content Management Dropdown -->
+                        <div class="dropdown mx-2">
+                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-alt" aria-hidden="true"></i> Content
+                            </button>
+                            <div class="dropdown-menu">
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
+                                    <i class="fas fa-book" aria-hidden="true"></i> Stories
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
+                                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
+                                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
+                                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Features Dropdown -->
+                        <div class="dropdown mx-2">
+                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-puzzle-piece" aria-hidden="true"></i> Features
+                            </button>
+                            <div class="dropdown-menu">
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
+                                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
+                                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
+                                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Direct Links -->
+                        <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                            <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
+                        </button>
+
+                        <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-2 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
+                            <i class="fas fa-images" aria-hidden="true"></i> Media
+                        </button>
+
+                        <!-- Users Dropdown -->
+                        <div class="dropdown mx-2">
+                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-users" aria-hidden="true"></i> Users
+                            </button>
+                            <div class="dropdown-menu">
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
+                                    <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
+                                </button>
+                                <button type="submit" formaction="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
+                                    <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Settings -->
+                        <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-2 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                            <i class="fas fa-cog" aria-hidden="true"></i> Settings
+                        </button>
+                    </form>
+                </nav>
             </div>
+
+            <!-- User Info and Actions -->
             <div class="user-info">
                 <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
                 <a href="<?php echo $isContentDir ? '../clear_session.php' : 'clear_session.php'; ?>" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
@@ -169,51 +364,6 @@ $siteName = get_config('site.name', 'Stories From The Web');
     </header>
 
     <div class="container" id="main-content">
-        <nav class="nav-menu" role="navigation" aria-label="Main Navigation">
-            <form method="GET" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                <?php
-                // Set paths for navigation
-                $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
-                $contentPrefix = $isContentDir ? '' : 'content/';
-                ?>
-                <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
-                    <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>stories.php" class="nav-link <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
-                    <i class="fas fa-book" aria-hidden="true"></i> Stories
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>blog-posts.php" class="nav-link <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
-                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>authors.php" class="nav-link <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
-                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>tags.php" class="nav-link <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
-                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>games.php" class="nav-link <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
-                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>directory-items.php" class="nav-link <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
-                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-tools.php" class="nav-link <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
-                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
-                    <i class="fas fa-cog" aria-hidden="true"></i> AI Settings
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
-                    <i class="fas fa-images" aria-hidden="true"></i> Media
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>subscribers.php" class="nav-link <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
-                    <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
-                </button>
-                <button type="submit" formaction="<?php echo $contentPrefix; ?>contacts.php" class="nav-link <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
-                    <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
-                </button>
-            </form>
-        </nav>
 
         <div class="page-header d-flex justify-content-between align-items-center mb-4">
             <div>

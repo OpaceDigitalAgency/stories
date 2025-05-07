@@ -306,6 +306,29 @@ if (function_exists('renderEnhancedTable')) {
     // Define which fields are editable inline
     $editableFields = ['title', 'tags'];
 
+    // Custom action renderer for stories
+    $customActionRenderer = function($item) {
+        $html = '<div class="premium-table-actions">';
+        
+        // View button - goes to view-story.php
+        $html .= '<a href="view-story.php?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
+        $html .= '<i class="fas fa-eye"></i>';
+        $html .= '</a>';
+        
+        // Edit button - goes to story-form.php
+        $html .= '<a href="story-form.php?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
+        $html .= '<i class="fas fa-edit"></i>';
+        $html .= '</a>';
+        
+        // Delete button
+        $html .= '<button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="' . htmlspecialchars($item['id']) . '" title="Delete">';
+        $html .= '<i class="fas fa-trash"></i>';
+        $html .= '</button>';
+        
+        $html .= '</div>';
+        return $html;
+    };
+
     // Render the enhanced table
     renderEnhancedTable(
         $tableData,
@@ -321,7 +344,8 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'customActionRenderer' => $customActionRenderer // Add custom action renderer
         ]
     );
 } else {

@@ -205,14 +205,14 @@ require_once '../includes/header.php';
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Featured Image</div>
+            <div class="form-section-title">Cover URL</div>
 
             <?php
             // Render image upload component
             renderImageUploadComponent(
                 'cover_url',
                 $story['cover_url'] ?? '',
-                'Featured Image',
+                'Cover URL',
                 'story',
                 $story['id'] ?? null
             );

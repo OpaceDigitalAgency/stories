@@ -766,90 +766,9 @@ function fixImageUrls(content) {
 }
 
 /**
- * Custom upload adapter for CKEditor to use our media library
+ * Reference to the MediaLibraryUploadAdapterPlugin from ckeditor-upload-adapter.js
+ * We're not redefining it here to avoid conflicts
  */
-function MediaLibraryUploadAdapterPlugin(editor) {
-    editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
-        return new MediaLibraryUploadAdapter(loader);
-    };
-}
-
-/**
- * Media Library Upload Adapter class
- */
-class MediaLibraryUploadAdapter {
-    constructor(loader) {
-        this.loader = loader;
-    }
-
-    upload() {
-        return this.loader.file.then(file => {
-            return new Promise((resolve, reject) => {
-                // Create a FormData to send the file to the server
-                const data = new FormData();
-                data.append('upload', file); // Use 'upload' as the field name to match the handler
-                data.append('entity_type', 'story');
-                data.append('for_editor', 'true');
-
-                // Try to get the story ID from the form if available
-                const storyIdInput = document.querySelector('input[name="id"]');
-                if (storyIdInput && storyIdInput.value) {
-                    data.append('entity_id', storyIdInput.value);
-                } else {
-                    // Use a temporary ID if we don't have a story ID yet
-                    data.append('entity_id', 'temp-' + Date.now());
-                }
-
-                // Add alt text (can be updated later)
-                data.append('alt_text', file.name.replace(/\.[^/.]+$/, "")); // Use filename without extension as alt text
-
-                // Show a loading indicator
-                console.log('Uploading image:', file.name);
-
-                // Send the file to the server
-                fetch('../handlers/upload-image.php', {
-                    method: 'POST',
-                    body: data
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.url) {
-                        console.log('Image uploaded successfully:', result.url);
-
-                        // Make sure the URL is absolute
-                        let imageUrl = result.url;
-                        if (imageUrl && imageUrl.indexOf('http') !== 0) {
-                            // Convert to absolute URL if it's not already
-                            const host = window.location.host || 'api.storiesfromtheweb.org';
-                            const protocol = window.location.protocol || 'https:';
-                            imageUrl = `${protocol}//${host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-                        }
-
-                        // Return the URL and other properties to CKEditor
-                        resolve({
-                            default: imageUrl,
-                            alt: result.alt || file.name.replace(/\.[^/.]+$/, ""),
-                            width: result.width || null,
-                            height: result.height || null
-                        });
-                    } else {
-                        console.error('Upload failed:', result.message || 'Unknown error');
-                        reject(result.message || 'Upload failed');
-                    }
-                })
-                .catch(error => {
-                    console.error('Upload error:', error);
-                    reject('Upload failed: ' + error);
-                });
-            });
-        });
-    }
-
-    abort() {
-        // This method is required but we don't need to do anything
-        console.log('Upload aborted');
-    }
-}
 
 /**
  * Setup form submission handler to ensure content is properly saved

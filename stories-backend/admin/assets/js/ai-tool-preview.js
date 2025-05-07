@@ -43,7 +43,7 @@ class AiToolPreview {
                 event.preventDefault();
 
                 // Get AI tool ID from the button
-                const toolId = target.dataset.aiToolId || target.closest('[data-ai-tool-id]')?.dataset.aiToolId || 
+                const toolId = target.dataset.aiToolId || target.closest('[data-ai-tool-id]')?.dataset.aiToolId ||
                                document.querySelector('input[name="id"]')?.value;
 
                 if (toolId) {
@@ -73,6 +73,18 @@ class AiToolPreview {
         try {
             // Show loading indicator
             this.showLoading();
+
+            // First try to fetch the AI tool data
+            try {
+                const response = await fetch(`../handlers/get-ai-tool.php?id=${toolId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('AI tool data loaded:', data);
+                }
+            } catch (e) {
+                console.warn('Could not fetch AI tool data:', e);
+            }
 
             // Use our direct preview handler
             const previewUrl = `../handlers/direct-ai-tool-preview.php?id=${toolId}`;

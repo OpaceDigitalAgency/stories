@@ -303,6 +303,11 @@ require_once '../includes/header.php';
                                 $tool['id'] ?? null
                             );
 
+                            // Add debugging info
+                            if (isset($tool['cover_url'])) {
+                                echo '<div class="small text-muted mt-2">Current cover URL: ' . htmlspecialchars($tool['cover_url']) . '</div>';
+                            }
+
                             // Render AI image generator
                             if (function_exists('renderAiImageGenerator')) {
                                 renderAiImageGenerator(

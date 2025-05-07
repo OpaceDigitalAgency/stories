@@ -82,33 +82,78 @@ class ContactPreview {
                 modal.style.display = 'flex';
             }
 
-            // Fetch contact data
-            const response = await fetch(`../handlers/get-contact.php?id=${contactId}`);
-            const data = await response.json();
+            try {
+                // Try to fetch contact data via AJAX
+                const response = await fetch(`../handlers/get-contact.php?id=${contactId}`);
+                const data = await response.json();
 
-            if (data.success) {
-                const previewContent = document.getElementById('contact-preview-content');
-                const loading = modal.querySelector('.preview-loading');
+                if (data.success) {
+                    const previewContent = document.getElementById('contact-preview-content');
+                    const loading = modal.querySelector('.preview-loading');
 
-                // Create HTML content for the preview
-                previewContent.innerHTML = this.generateContactHTML(data.contact);
+                    // Create HTML content for the preview
+                    previewContent.innerHTML = this.generateContactHTML(data.contact);
 
-                // Show the preview
-                loading.style.display = 'none';
-                previewContent.style.display = 'block';
-            } else {
-                modal.querySelector('.preview-loading').innerHTML = 'Error loading contact details: ' + (data.message || 'Unknown error');
+                    // Show the preview
+                    loading.style.display = 'none';
+                    previewContent.style.display = 'block';
+                } else {
+                    // If AJAX fails with an error, use the direct preview as fallback
+                    this.loadDirectPreview(contactId);
+                }
+            } catch (ajaxError) {
+                console.error('AJAX error loading contact preview:', ajaxError);
+                // Use direct preview as fallback
+                this.loadDirectPreview(contactId);
             }
 
             this.hideLoading();
 
         } catch (error) {
             console.error('Error loading contact preview:', error);
+            // Try direct preview as a last resort
+            this.loadDirectPreview(contactId);
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Load contact preview directly using an iframe
+     * @param {string} contactId - The ID of the contact to preview
+     */
+    loadDirectPreview(contactId) {
+        try {
+            // Create or get the modal
+            let modal = document.getElementById('contact-preview-modal');
+            if (!modal) {
+                return; // Should not happen, but just in case
+            }
+
+            const loading = modal.querySelector('.preview-loading');
+            const previewContent = document.getElementById('contact-preview-content');
+
+            // Create an iframe to load the direct preview
+            const iframe = document.createElement('iframe');
+            iframe.src = `../handlers/direct-contact-preview.php?id=${contactId}`;
+            iframe.style.width = '100%';
+            iframe.style.height = '500px';
+            iframe.style.border = 'none';
+            iframe.style.overflow = 'auto';
+
+            // Clear previous content and add the iframe
+            previewContent.innerHTML = '';
+            previewContent.appendChild(iframe);
+
+            // Show the preview
+            loading.style.display = 'none';
+            previewContent.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error loading direct contact preview:', error);
             const modal = document.getElementById('contact-preview-modal');
             if (modal) {
                 modal.querySelector('.preview-loading').innerHTML = 'Error loading contact details. Please try again.';
             }
-            this.hideLoading();
         }
     }
 

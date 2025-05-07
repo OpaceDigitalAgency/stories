@@ -82,33 +82,78 @@ class AuthorPreview {
                 modal.style.display = 'flex';
             }
 
-            // Fetch author data
-            const response = await fetch(`../handlers/get-author.php?id=${authorId}`);
-            const data = await response.json();
+            try {
+                // Try to fetch author data via AJAX
+                const response = await fetch(`../handlers/get-author.php?id=${authorId}`);
+                const data = await response.json();
 
-            if (data.success) {
-                const previewContent = document.getElementById('author-preview-content');
-                const loading = modal.querySelector('.preview-loading');
+                if (data.success) {
+                    const previewContent = document.getElementById('author-preview-content');
+                    const loading = modal.querySelector('.preview-loading');
 
-                // Create HTML content for the preview
-                previewContent.innerHTML = this.generateAuthorHTML(data.author, data.stories, data.posts);
+                    // Create HTML content for the preview
+                    previewContent.innerHTML = this.generateAuthorHTML(data.author, data.stories, data.posts);
 
-                // Show the preview
-                loading.style.display = 'none';
-                previewContent.style.display = 'block';
-            } else {
-                modal.querySelector('.preview-loading').innerHTML = 'Error loading author details: ' + (data.message || 'Unknown error');
+                    // Show the preview
+                    loading.style.display = 'none';
+                    previewContent.style.display = 'block';
+                } else {
+                    // If AJAX fails with an error, use the direct preview as fallback
+                    this.loadDirectPreview(authorId);
+                }
+            } catch (ajaxError) {
+                console.error('AJAX error loading author preview:', ajaxError);
+                // Use direct preview as fallback
+                this.loadDirectPreview(authorId);
             }
 
             this.hideLoading();
 
         } catch (error) {
             console.error('Error loading author preview:', error);
+            // Try direct preview as a last resort
+            this.loadDirectPreview(authorId);
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Load author preview directly using an iframe
+     * @param {string} authorId - The ID of the author to preview
+     */
+    loadDirectPreview(authorId) {
+        try {
+            // Create or get the modal
+            let modal = document.getElementById('author-preview-modal');
+            if (!modal) {
+                return; // Should not happen, but just in case
+            }
+
+            const loading = modal.querySelector('.preview-loading');
+            const previewContent = document.getElementById('author-preview-content');
+
+            // Create an iframe to load the direct preview
+            const iframe = document.createElement('iframe');
+            iframe.src = `../handlers/direct-author-preview.php?id=${authorId}`;
+            iframe.style.width = '100%';
+            iframe.style.height = '500px';
+            iframe.style.border = 'none';
+            iframe.style.overflow = 'auto';
+
+            // Clear previous content and add the iframe
+            previewContent.innerHTML = '';
+            previewContent.appendChild(iframe);
+
+            // Show the preview
+            loading.style.display = 'none';
+            previewContent.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error loading direct author preview:', error);
             const modal = document.getElementById('author-preview-modal');
             if (modal) {
                 modal.querySelector('.preview-loading').innerHTML = 'Error loading author details. Please try again.';
             }
-            this.hideLoading();
         }
     }
 

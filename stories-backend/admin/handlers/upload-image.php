@@ -183,13 +183,14 @@ try {
         }
 
         // Save to media table
-        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at, thumbnail_url) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?)");
         $stmt->execute([
             $fileName,
             $url,
             'image/webp', // Assuming WebP conversion
             $variants['medium']['size'] ?? $fileSize,
-            $altText
+            $altText,
+            $variants['thumbnail']['url'] ?? null
         ]);
 
         $mediaId = $db->lastInsertId();

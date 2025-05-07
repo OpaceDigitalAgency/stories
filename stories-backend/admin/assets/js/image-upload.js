@@ -389,6 +389,28 @@ class ImageUploader {
                 // Close the modal
                 document.body.removeChild(backdrop);
                 document.body.removeChild(modal);
+
+                // Update thumbnail in database if we have an item ID
+                const entityType = component.querySelector('.entity-type').value;
+                const entityId = component.querySelector('.entity-id').value;
+
+                if (entityId && entityId !== '0') {
+                    // Make an AJAX request to update the thumbnail
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '../handlers/update-thumbnail.php', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                console.log('Thumbnail update response:', response);
+                            } catch (e) {
+                                console.error('Error parsing thumbnail update response:', e);
+                            }
+                        }
+                    };
+                    xhr.send('item_type=' + encodeURIComponent(entityType) + '&item_id=' + encodeURIComponent(entityId) + '&image_url=' + encodeURIComponent(url));
+                }
             }
         });
     }

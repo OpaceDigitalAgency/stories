@@ -3,11 +3,31 @@
  * Handler for getting author details for preview
  */
 
-// Include database connection
-require_once '../includes/db-config.php';
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 // Set headers for JSON response
 header('Content-Type: application/json');
+
+// Try to include database connection
+try {
+    require_once '../includes/db-connect.php';
+
+    // Check if $db is set
+    if (!isset($db)) {
+        throw new Exception('Database connection not established');
+    }
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database connection error: ' . $e->getMessage()
+    ]);
+    exit;
+}
+
+
 
 // Check if ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -23,7 +43,7 @@ $authorId = intval($_GET['id']);
 try {
     // Get author details
     $stmt = $db->prepare("
-        SELECT a.*, 
+        SELECT a.*,
                COUNT(DISTINCT s.id) as story_count,
                COUNT(DISTINCT p.id) as post_count
         FROM authors a

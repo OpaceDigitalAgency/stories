@@ -31,6 +31,15 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     // Log the file path for debugging
     error_log("Thumbnail lookup for: " . $filePath . " (Item type: " . $itemType . ")");
 
+    // If the file path is empty, return the default image immediately
+    if (empty($filePath)) {
+        error_log("Empty file path provided for " . $itemType . ", returning default image");
+        if ($itemType === 'author') {
+            return '../assets/images/default-avatar.svg';
+        }
+        return '../assets/images/default-cover.svg';
+    }
+
     // First, try to look up the thumbnail in the database based on the item type and ID
     if (isset($GLOBALS['db']) && $GLOBALS['db']) {
         $db = $GLOBALS['db'];
@@ -68,7 +77,7 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
                         break;
                     case 'ai_tool':
                         $tableName = 'ai_tools';
-                        $thumbnailField = 'image_url';
+                        $thumbnailField = 'cover_url';
                         break;
                     case 'story':
                         $tableName = 'stories';
@@ -467,8 +476,14 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     $thumbnailAlt = isset($item[$options['thumbnailAltField']]) ? $item[$options['thumbnailAltField']] : '';
                                     $itemId = isset($item['id']) ? $item['id'] : '';
 
+                                    // Log the original URL for debugging
+                                    error_log("Original thumbnail URL for item ID $itemId ($itemType): " . $thumbnailUrl);
+
                                     // Get the proper display URL (will return default image if empty)
                                     $thumbnailUrl = getTableDisplayUrl($thumbnailUrl, $itemType);
+
+                                    // Log the processed URL for debugging
+                                    error_log("Processed thumbnail URL: " . $thumbnailUrl);
 
                                     // Check if thumbnails should be clickable
                                     $isClickable = isset($options['thumbnailClickable']) && $options['thumbnailClickable'];
@@ -490,8 +505,8 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     // Add data attributes for debugging
                                     $dataAttrs = 'data-item-id="' . htmlspecialchars($itemId) . '" data-item-type="' . htmlspecialchars($itemType) . '"';
 
-                                    // Check if the URL is a default image
-                                    $isDefaultImage = (strpos($thumbnailUrl, 'default-') !== false);
+                                    // Check if the URL is a default image or empty
+                                    $isDefaultImage = (strpos($thumbnailUrl, 'default-') !== false || empty($thumbnailUrl));
 
                                     if ($isDefaultImage) {
                                         // Show "No Image" placeholder

@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Fix 3: Fix preview button
         setupPreviewButton();
 
+        // Fix 4: Setup form submission handler to ensure content is saved
+        setupFormSubmissionHandler();
+
         console.log('All fixes applied');
     }, 100);
 });
@@ -475,9 +478,24 @@ function showPreview() {
     // Clean up the story content to remove markdown headings and any duplicate content
     storyContent = storyContent.replace(/^## .*$/gm, '').trim();
 
-    // Remove any duplicate paragraphs that might be in both summary and content
-    if (summary && storyContent.includes(summary)) {
-        storyContent = storyContent.replace(summary, '').trim();
+    // More aggressively remove any duplicate paragraphs that might be in both summary and content
+    if (summary) {
+        // Try exact match first
+        if (storyContent.includes(summary)) {
+            storyContent = storyContent.replace(summary, '').trim();
+        }
+
+        // Try with HTML tags (in case the editor added them)
+        const summaryWithPTags = '<p>' + summary + '</p>';
+        if (storyContent.includes(summaryWithPTags)) {
+            storyContent = storyContent.replace(summaryWithPTags, '').trim();
+        }
+
+        // Try with line breaks
+        const summaryWithBreaks = summary.replace(/\n/g, '<br>');
+        if (storyContent.includes(summaryWithBreaks)) {
+            storyContent = storyContent.replace(summaryWithBreaks, '').trim();
+        }
     }
 
     // Create a temporary preview using a lightbox similar to the story list page
@@ -532,7 +550,7 @@ function createPreviewLightbox(title, authorName, authorAge, authorLocation, sum
 
                             ${summary ? `
                             <div class="story-summary">
-                                ${summary}
+                                <p>${summary.replace(/\n/g, '<br>')}</p>
                             </div>
                             ` : ''}
 
@@ -610,7 +628,7 @@ function createPreviewLightbox(title, authorName, authorAge, authorLocation, sum
         // Update summary
         const summaryElement = lightbox.querySelector('.story-summary');
         if (summaryElement) {
-            summaryElement.innerHTML = summary;
+            summaryElement.innerHTML = summary ? `<p>${summary.replace(/\n/g, '<br>')}</p>` : '';
         }
 
         // Update content
@@ -634,4 +652,75 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Setup form submission handler to ensure content is properly saved
+ */
+function setupFormSubmissionHandler() {
+    const storyForm = document.querySelector('form[action="save-story.php"]');
+
+    if (storyForm) {
+        console.log('Setting up form submission handler');
+
+        storyForm.addEventListener('submit', function(e) {
+            // Prevent the default form submission temporarily
+            e.preventDefault();
+
+            console.log('Form submission intercepted');
+
+            // Get the content field
+            const contentField = document.getElementById('content');
+            const summaryField = document.getElementById('summary');
+
+            if (!contentField) {
+                console.error('Content field not found!');
+                storyForm.submit();
+                return;
+            }
+
+            // Get the content based on the current editor mode
+            let storyContent = '';
+            const htmlContentTextarea = document.getElementById('html_content');
+            const storyContentTextarea = document.getElementById('story_content');
+
+            if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                // We're in HTML mode, get content from the HTML textarea
+                storyContent = htmlContentTextarea.value;
+                console.log('Getting content from HTML textarea');
+            } else if (window.storyEditor) {
+                // We're in WYSIWYG mode, get content from CKEditor
+                storyContent = window.storyEditor.getData();
+                console.log('Getting content from CKEditor');
+            } else if (storyContentTextarea) {
+                // We're using the fallback textarea
+                storyContent = storyContentTextarea.value;
+                console.log('Getting content from fallback textarea');
+            }
+
+            // Get the summary
+            const summary = summaryField ? summaryField.value : '';
+
+            // Format the content for storage
+            let formattedContent = '';
+
+            // If we have a summary, include it in the content
+            if (summary) {
+                formattedContent += '## Summary\n\n' + summary + '\n\n';
+            }
+
+            // Add the story content
+            formattedContent += '## Story\n\n' + storyContent;
+
+            // Set the content field value
+            contentField.value = formattedContent;
+
+            console.log('Content field updated, submitting form');
+
+            // Submit the form
+            storyForm.submit();
+        });
+    } else {
+        console.error('Story form not found!');
+    }
 }

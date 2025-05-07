@@ -64,7 +64,7 @@ try {
         $columnInfo[$column['Field']] = $column;
 
         // Skip standard fields that are handled explicitly
-        if (!in_array($column['Field'], ['id', 'title', 'content', 'created_at', 'updated_at', 'cover_url'])) {
+        if (!in_array($column['Field'], ['id', 'title', 'content', 'created_at', 'updated_at', 'cover_url', 'featured_image'])) {
             $additionalFields[] = $column['Field'];
         }
     }
@@ -109,7 +109,7 @@ try {
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Cover URL</div>
+            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component

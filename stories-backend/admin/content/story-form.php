@@ -205,7 +205,7 @@ require_once '../includes/header.php';
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Cover URL</div>
+            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component

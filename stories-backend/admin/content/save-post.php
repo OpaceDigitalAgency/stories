@@ -189,6 +189,11 @@ try {
     // Add cover_url field if it exists in the table
     if (in_array('cover_url', $columns) && isset($_POST['cover_url'])) {
         $data['cover_url'] = $_POST['cover_url'];
+        
+        // Also update featured_image field with the same value if it exists
+        if (in_array('featured_image', $columns)) {
+            $data['featured_image'] = $_POST['cover_url'];
+        }
     }
 
     // Add any additional fields from the form

@@ -148,6 +148,9 @@ $extraHeadContent = '
 <script src="../assets/js/inline-editing.js"></script>
 <!-- Add Direct Data Loader JS -->
 <script src="../assets/js/admin-direct-data.js"></script>
+<!-- Add AI Tool Preview CSS and JS -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/ai-tool-preview.js"></script>
 ';
 
 $pageActions = '

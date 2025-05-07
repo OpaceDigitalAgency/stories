@@ -281,7 +281,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Get the file path based on item type
-                                                // Special handling for stories, posts, games, and directory items to use the lightbox
+                                                // Special handling for stories, posts, games, directory items, and AI tools to use the lightbox
                                                 if ($itemType === 'story') {
                                                     echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
                                                     echo '<i class="fas fa-eye"></i>';
@@ -296,6 +296,10 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                     echo '</button>';
                                                 } else if ($itemType === 'directory_item') {
                                                     echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm directory-item-preview-btn" data-directory-item-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                } else if ($itemType === 'ai_tool') {
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm ai-tool-preview-btn" data-ai-tool-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</button>';
                                                 } else {

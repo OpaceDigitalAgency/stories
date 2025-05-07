@@ -144,6 +144,9 @@ $extraHeadContent = '
 <script src="../assets/js/inline-editing.js"></script>
 <!-- Add Direct Data Loader JS -->
 <script src="../assets/js/admin-direct-data.js"></script>
+<!-- Add Directory Item Preview CSS and JS -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/directory-item-preview.js"></script>
 ';
 
 $pageActions = '

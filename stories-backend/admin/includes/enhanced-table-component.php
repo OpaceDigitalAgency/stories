@@ -409,12 +409,56 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                     // Confirm the action
                     if (confirm(`Are you sure you want to ${selectedAction} the selected items?`)) {
-                        // Perform the action
-                        console.log(`Performing ${selectedAction} on items:`, selectedItems);
+                        // Get the item type from the table
+                        const table = document.querySelector('table[data-item-type]');
+                        const itemType = table ? table.getAttribute('data-item-type') : '';
 
-                        // In a real implementation, this would make an AJAX request to the server
-                        // For now, we'll just reload the page
-                        window.location.reload();
+                        if (!itemType) {
+                            console.error('Could not determine item type for bulk action');
+                            alert('Error: Could not determine item type for bulk action');
+                            return;
+                        }
+
+                        console.log(`Performing ${selectedAction} on ${itemType} items:`, selectedItems);
+
+                        // Show loading indicator
+                        const loadingIndicator = document.createElement('div');
+                        loadingIndicator.className = 'loading-indicator';
+                        loadingIndicator.innerHTML = '<div class="spinner-border spinner-border-sm text-light" role="status"><span class="visually-hidden">Loading...</span></div>';
+                        document.body.appendChild(loadingIndicator);
+
+                        // Send the bulk action request
+                        fetch('../handlers/bulk-action.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: `action=${selectedAction}&item_type=${itemType}&selected_ids=${selectedItems.join(',')}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+
+                            if (data.success) {
+                                // Show success message
+                                alert(data.message || 'Bulk action completed successfully');
+
+                                // Reload the page to update the table
+                                window.location.reload();
+                            } else {
+                                // Show error message
+                                alert(data.message || 'Failed to perform bulk action');
+                            }
+                        })
+                        .catch(error => {
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+
+                            console.error('Error:', error);
+                            alert('An error occurred while performing the bulk action');
+                        });
                     }
                 });
             }

@@ -5,6 +5,8 @@
  * by loading the direct preview handler.
  */
 
+// Only define the class if it doesn't already exist
+if (typeof DirectoryItemPreview === 'undefined') {
 class DirectoryItemPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -43,7 +45,7 @@ class DirectoryItemPreview {
                 event.preventDefault();
 
                 // Get directory item ID from the button
-                const itemId = target.dataset.directoryItemId || target.closest('[data-directory-item-id]')?.dataset.directoryItemId || 
+                const itemId = target.dataset.directoryItemId || target.closest('[data-directory-item-id]')?.dataset.directoryItemId ||
                                document.querySelector('input[name="id"]')?.value;
 
                 if (itemId) {
@@ -214,7 +216,11 @@ class DirectoryItemPreview {
     }
 }
 
+} // End of DirectoryItemPreview class
+
 // Initialize the directory item preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.directoryItemPreview = new DirectoryItemPreview();
+    if (!window.directoryItemPreview) {
+        window.directoryItemPreview = new DirectoryItemPreview();
+    }
 });

@@ -5,6 +5,8 @@
  * by loading the frontend Astro URL based on the post's slug.
  */
 
+// Only define the class if it doesn't already exist
+if (typeof PostPreview === 'undefined') {
 class PostPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -43,7 +45,7 @@ class PostPreview {
                 event.preventDefault();
 
                 // Get post ID from the button
-                const postId = target.dataset.postId || target.closest('[data-post-id]')?.dataset.postId || 
+                const postId = target.dataset.postId || target.closest('[data-post-id]')?.dataset.postId ||
                                document.querySelector('input[name="id"]')?.value;
 
                 if (postId) {
@@ -214,7 +216,11 @@ class PostPreview {
     }
 }
 
+} // End of PostPreview class
+
 // Initialize the post preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.postPreview = new PostPreview();
+    if (!window.postPreview) {
+        window.postPreview = new PostPreview();
+    }
 });

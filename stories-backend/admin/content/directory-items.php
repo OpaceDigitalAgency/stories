@@ -224,7 +224,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'image' => $item['cover_url'] ?? 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg',
+            'cover_url' => $item['cover_url'] ?? '../assets/images/default-cover.svg',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
@@ -264,7 +264,7 @@ if (function_exists('renderEnhancedTable')) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
-            'thumbnailField' => 'image_url', // Use the image_url field for thumbnails
+            'thumbnailField' => 'cover_url', // Use the cover_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

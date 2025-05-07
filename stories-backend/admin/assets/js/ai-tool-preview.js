@@ -5,6 +5,8 @@
  * by loading the direct preview handler.
  */
 
+// Only define the class if it doesn't already exist
+if (typeof AiToolPreview === 'undefined') {
 class AiToolPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -226,7 +228,11 @@ class AiToolPreview {
     }
 }
 
+} // End of AiToolPreview class
+
 // Initialize the AI tool preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.aiToolPreview = new AiToolPreview();
+    if (!window.aiToolPreview) {
+        window.aiToolPreview = new AiToolPreview();
+    }
 });

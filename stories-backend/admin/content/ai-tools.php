@@ -224,7 +224,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $tool['id'],
-            'image' => $tool['cover_url'] ?? '../assets/images/default-cover.svg',
+            'cover_url' => $tool['cover_url'] ?? '../assets/images/default-cover.svg',
             'title' => $tool['title'],
             'category' => $tool['category_name'] ?? 'None',
             'pricing' => ucfirst($tool['pricing_type'] ?? 'Free'),
@@ -261,7 +261,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
-            'thumbnailField' => 'image', // Use the image field we set in the tableData
+            'thumbnailField' => 'cover_url', // Use the cover_url field we set in the tableData
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

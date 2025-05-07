@@ -41,17 +41,42 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $authorId = intval($_GET['id']);
 
 try {
+    // Check if tables exist
+    $hasStoriesTable = false;
+    $hasPostsTable = false;
+
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'stories'");
+        $hasStoriesTable = $stmt->rowCount() > 0;
+
+        $stmt = $db->query("SHOW TABLES LIKE 'posts'");
+        $hasPostsTable = $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        error_log("Error checking tables: " . $e->getMessage());
+    }
+
+    // Build the query based on available tables
+    $query = "SELECT a.*";
+    $joins = "";
+
+    if ($hasStoriesTable) {
+        $query .= ", COUNT(DISTINCT s.id) as story_count";
+        $joins .= " LEFT JOIN stories s ON a.id = s.author_id";
+    } else {
+        $query .= ", 0 as story_count";
+    }
+
+    if ($hasPostsTable) {
+        $query .= ", COUNT(DISTINCT p.id) as post_count";
+        $joins .= " LEFT JOIN posts p ON a.id = p.author_id";
+    } else {
+        $query .= ", 0 as post_count";
+    }
+
+    $query .= " FROM authors a" . $joins . " WHERE a.id = ? GROUP BY a.id";
+
     // Get author details
-    $stmt = $db->prepare("
-        SELECT a.*,
-               COUNT(DISTINCT s.id) as story_count,
-               COUNT(DISTINCT p.id) as post_count
-        FROM authors a
-        LEFT JOIN stories s ON a.id = s.author_id
-        LEFT JOIN posts p ON a.id = p.author_id
-        WHERE a.id = ?
-        GROUP BY a.id
-    ");
+    $stmt = $db->prepare($query);
     $stmt->execute([$authorId]);
     $author = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -63,25 +88,33 @@ try {
         exit;
     }
 
-    // Get stories by this author
-    $stmtStories = $db->prepare("
-        SELECT id, title, slug, published_at
-        FROM stories
-        WHERE author_id = ?
-        ORDER BY published_at DESC
-    ");
-    $stmtStories->execute([$authorId]);
-    $stories = $stmtStories->fetchAll(PDO::FETCH_ASSOC);
+    // Initialize arrays
+    $stories = [];
+    $posts = [];
 
-    // Get posts by this author
-    $stmtPosts = $db->prepare("
-        SELECT id, title, slug, published_at
-        FROM posts
-        WHERE author_id = ?
-        ORDER BY published_at DESC
-    ");
-    $stmtPosts->execute([$authorId]);
-    $posts = $stmtPosts->fetchAll(PDO::FETCH_ASSOC);
+    // Get stories by this author if the table exists
+    if ($hasStoriesTable) {
+        $stmtStories = $db->prepare("
+            SELECT id, title, slug, published_at
+            FROM stories
+            WHERE author_id = ?
+            ORDER BY published_at DESC
+        ");
+        $stmtStories->execute([$authorId]);
+        $stories = $stmtStories->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get posts by this author if the table exists
+    if ($hasPostsTable) {
+        $stmtPosts = $db->prepare("
+            SELECT id, title, slug, published_at
+            FROM posts
+            WHERE author_id = ?
+            ORDER BY published_at DESC
+        ");
+        $stmtPosts->execute([$authorId]);
+        $posts = $stmtPosts->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // Format the avatar URL
     if (!empty($author['avatar_url'])) {

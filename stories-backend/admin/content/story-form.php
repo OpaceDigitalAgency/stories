@@ -107,8 +107,9 @@ $currentPage = 'stories';
 
 // Add custom CSS and JS for form styling and rich text editor
 $extraHeadContent = '
-<!-- Include CKEditor -->
+<!-- Include CKEditor and custom upload adapter -->
 <script src="../assets/js/ckeditor.js"></script>
+<script src="../assets/js/ckeditor-upload-adapter.js"></script>
 
 <style>
     /* Base form styles */
@@ -412,7 +413,7 @@ require_once '../includes/header.php';
                             Author
                         </div>
                         <div class="wp-card-body">
-                            <div class="form-group mb-0">
+                            <div class="form-group">
                                 <select id="author_id" name="author_id" class="form-control" required>
                                     <option value="">Select Author</option>
                                     <?php foreach ($authors as $author): ?>
@@ -424,8 +425,48 @@ require_once '../includes/header.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+
+                            <?php
+                            // Get author details if we have an author ID
+                            $authorDetails = null;
+                            if (isset($story['author_id'])) {
+                                $stmt = $db->prepare("SELECT name, age, location FROM authors WHERE id = ?");
+                                $stmt->execute([$story['author_id']]);
+                                $authorDetails = $stmt->fetch();
+                            }
+                            ?>
+
+                            <!-- Author Age and Location Display -->
+                            <div id="author-details" class="mt-3" style="<?php echo $authorDetails ? '' : 'display: none;'; ?>">
+                                <div class="author-info-box">
+                                    <div class="author-info-item">
+                                        <span class="author-info-label">Age:</span>
+                                        <span id="author-age" class="author-info-value"><?php echo $authorDetails ? htmlspecialchars($authorDetails['age']) : ''; ?></span>
+                                    </div>
+                                    <div class="author-info-item">
+                                        <span class="author-info-label">Location:</span>
+                                        <span id="author-location" class="author-info-value"><?php echo $authorDetails ? htmlspecialchars($authorDetails['location']) : ''; ?></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <style>
+                        .author-info-box {
+                            background-color: var(--gray-100);
+                            border-radius: var(--radius-sm);
+                            padding: 10px;
+                            margin-top: 10px;
+                        }
+                        .author-info-item {
+                            margin-bottom: 5px;
+                        }
+                        .author-info-label {
+                            font-weight: 600;
+                            margin-right: 5px;
+                        }
+                    </style>
 
                     <!-- Story Settings -->
                     <div class="wp-card">
@@ -748,6 +789,48 @@ require_once '../includes/header.php';
         }
     }
 
+    // Function to update author details when author selection changes
+    function updateAuthorDetails() {
+        const authorSelect = document.getElementById('author_id');
+        const authorDetailsDiv = document.getElementById('author-details');
+        const authorAgeSpan = document.getElementById('author-age');
+        const authorLocationSpan = document.getElementById('author-location');
+
+        if (!authorSelect || !authorDetailsDiv || !authorAgeSpan || !authorLocationSpan) {
+            console.error('Required author detail elements not found');
+            return;
+        }
+
+        if (authorSelect.selectedIndex > 0) {
+            // Get the selected author ID
+            const authorId = authorSelect.value;
+
+            // Fetch author details via AJAX
+            fetch(`../handlers/get-author-details.php?id=${authorId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the author details
+                        authorAgeSpan.textContent = data.age || 'Not specified';
+                        authorLocationSpan.textContent = data.location || 'Not specified';
+
+                        // Show the author details div
+                        authorDetailsDiv.style.display = 'block';
+                    } else {
+                        console.error('Error fetching author details:', data.message);
+                        authorDetailsDiv.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching author details:', error);
+                    authorDetailsDiv.style.display = 'none';
+                });
+        } else {
+            // Hide the author details div if no author is selected
+            authorDetailsDiv.style.display = 'none';
+        }
+    }
+
     // Run when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         const sourceTypeSelect = document.getElementById('source_type');
@@ -766,7 +849,10 @@ require_once '../includes/header.php';
             updateSourceTypeFromAuthor();
 
             // Add event listener for changes
-            authorSelect.addEventListener('change', updateSourceTypeFromAuthor);
+            authorSelect.addEventListener('change', function() {
+                updateSourceTypeFromAuthor();
+                updateAuthorDetails();
+            });
         }
     });
 </script>
@@ -834,7 +920,9 @@ require_once '../includes/header.php';
                             'toggleImageCaption',
                             'imageTextAlternative'
                         ]
-                    }
+                    },
+                    // Register the custom upload adapter plugin
+                    extraPlugins: [MediaLibraryUploadAdapterPlugin]
                 })
                 .then(editor => {
                     // Store editor instance

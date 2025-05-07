@@ -67,18 +67,23 @@ $response = [
 ];
 
 try {
-    // Check if file was uploaded
-    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+    // Check if file was uploaded (support both 'file' from our component and 'upload' from CKEditor)
+    $fileInputName = isset($_FILES['upload']) ? 'upload' : 'file';
+
+    if (!isset($_FILES[$fileInputName]) || $_FILES[$fileInputName]['error'] !== UPLOAD_ERR_OK) {
         throw new Exception('No file uploaded or upload error occurred.');
     }
 
     // Get file info
-    $file = $_FILES['file'];
+    $file = $_FILES[$fileInputName];
     $fileName = $file['name'];
     $fileTmpName = $file['tmp_name'];
     $fileSize = $file['size'];
     $fileError = $file['error'];
     $fileType = $file['type'];
+
+    // Check if this is a CKEditor upload
+    $isForEditor = isset($_POST['for_editor']) && $_POST['for_editor'] === 'true';
 
     // Get entity info
     $entityType = $_POST['entity_type'] ?? 'general';
@@ -169,12 +174,24 @@ try {
         updateMediaRecord($db, $mediaId, $variants);
     }
 
-    // Set response
-    $response['success'] = true;
-    $response['message'] = 'File uploaded successfully.';
-    $response['url'] = $url;
-    $response['dimensions'] = $dimensionsStr;
-    $response['media_id'] = $mediaId;
+    // Set response based on whether this is a CKEditor upload or not
+    if ($isForEditor) {
+        // CKEditor expects a specific response format
+        echo json_encode([
+            'url' => $url,
+            'mediaId' => $mediaId,
+            'width' => $dimensions ? $dimensions['width'] : 0,
+            'height' => $dimensions ? $dimensions['height'] : 0
+        ]);
+        exit; // Exit early to avoid the standard response
+    } else {
+        // Standard component response
+        $response['success'] = true;
+        $response['message'] = 'File uploaded successfully.';
+        $response['url'] = $url;
+        $response['dimensions'] = $dimensionsStr;
+        $response['media_id'] = $mediaId;
+    }
 
 } catch (Exception $e) {
     $response['message'] = $e->getMessage();

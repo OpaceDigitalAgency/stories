@@ -20,6 +20,7 @@ require_once '../includes/ai-image-generator-component.php';
 try {
     // Initialize variables
     $post = null;
+    $authors = [];
     $tags = [];
     $postTags = [];
     $error = null;
@@ -49,6 +50,9 @@ try {
         }
     }
 
+    // Get authors for dropdown
+    $authors = $db->query("SELECT id, name, author_type FROM authors ORDER BY name")->fetchAll();
+
     // Get tags for dropdown
     $tags = $db->query("SELECT id, name FROM tags ORDER BY name")->fetchAll();
 
@@ -72,9 +76,14 @@ try {
         $columnInfo[$column['Field']] = $column;
 
         // Skip standard fields that are handled explicitly
-        if (!in_array($column['Field'], ['id', 'title', 'content', 'created_at', 'updated_at', 'cover_url', 'featured_image', 'slug', 'excerpt'])) {
+        if (!in_array($column['Field'], ['id', 'title', 'content', 'created_at', 'updated_at', 'cover_url', 'featured_image', 'slug', 'excerpt', 'author_id'])) {
             $additionalFields[] = $column['Field'];
         }
+    }
+
+    // Make sure is_published is treated as a boolean field
+    if (isset($columnInfo['is_published'])) {
+        $columnInfo['is_published']['Type'] = 'tinyint(1)';
     }
 
 } catch (PDOException $e) {
@@ -422,15 +431,49 @@ require_once '../includes/header.php';
 
                 <!-- Sidebar Column -->
                 <div class="wp-layout-sidebar">
+                    <!-- Author Information -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Author
+                        </div>
+                        <div class="wp-card-body">
+                            <div class="form-group">
+                                <select id="author_id" name="author_id" class="form-control">
+                                    <option value="">Select Author</option>
+                                    <?php foreach ($authors as $author): ?>
+                                        <option value="<?php echo $author['id']; ?>"
+                                                data-author-type="<?php echo htmlspecialchars($author['author_type']); ?>"
+                                                <?php echo (isset($post['author_id']) && $post['author_id'] == $author['id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($author['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Post Settings -->
                     <div class="wp-card">
                         <div class="wp-card-header">
                             Post Settings
                         </div>
                         <div class="wp-card-body">
+                            <!-- Published Status -->
+                            <div class="form-group">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" id="is_published" name="is_published" class="form-check-input"
+                                        value="1" <?php echo (isset($post['is_published']) && $post['is_published'] == 1) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="is_published">Is Published</label>
+                                    <input type="hidden" name="is_published_submitted" value="1">
+                                </div>
+                            </div>
+
                             <?php
-                            // Display boolean fields first
+                            // Display other boolean fields
                             foreach ($additionalFields as $field):
+                                // Skip is_published as we've already handled it
+                                if ($field === 'is_published') continue;
+
                                 $columnData = $columnInfo[$field];
                                 $isRequired = strpos($columnData['Type'], 'NOT NULL') !== false;
                                 $isIntField = strpos($columnData['Type'], 'int') === 0;
@@ -440,7 +483,7 @@ require_once '../includes/header.php';
                                 // Check if this is a boolean field (tinyint(1))
                                 $isBooleanField = $isIntField && (
                                     strpos($columnData['Type'], 'tinyint(1)') !== false ||
-                                    in_array($field, ['is_published', 'is_featured', 'is_sponsored'])
+                                    in_array($field, ['is_featured', 'is_sponsored'])
                                 );
 
                                 if ($isBooleanField):
@@ -464,7 +507,12 @@ require_once '../includes/header.php';
                         </div>
                         <div class="wp-card-body">
                             <?php
+                            $hasAdditionalFields = false;
+
                             foreach ($additionalFields as $field):
+                                // Skip author_id and is_published as we've already handled them
+                                if (in_array($field, ['author_id', 'is_published'])) continue;
+
                                 $columnData = $columnInfo[$field];
                                 $isRequired = strpos($columnData['Type'], 'NOT NULL') !== false;
                                 $isIntField = strpos($columnData['Type'], 'int') === 0;
@@ -474,13 +522,15 @@ require_once '../includes/header.php';
                                 // Check if this is a boolean field (tinyint(1))
                                 $isBooleanField = $isIntField && (
                                     strpos($columnData['Type'], 'tinyint(1)') !== false ||
-                                    in_array($field, ['is_published', 'is_featured', 'is_sponsored'])
+                                    in_array($field, ['is_featured', 'is_sponsored'])
                                 );
 
                                 // Skip boolean fields as they're already displayed
                                 if ($isBooleanField) {
                                     continue;
                                 }
+
+                                $hasAdditionalFields = true;
                             ?>
                                 <div class="form-group">
                                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -493,6 +543,10 @@ require_once '../includes/header.php';
                                         <?php echo $isRequired ? 'required' : ''; ?>>
                                 </div>
                             <?php endforeach; ?>
+
+                            <?php if (!$hasAdditionalFields): ?>
+                                <p class="text-muted">No additional fields available.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -598,7 +652,14 @@ require_once '../includes/header.php';
                             'tableRow',
                             'mergeTableCells'
                         ]
-                    }
+                    },
+                    // Add custom upload adapter for images
+                    extraPlugins: [function(editor) {
+                        // This is where we integrate with our custom upload adapter
+                        editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+                            return new MyUploadAdapter(loader);
+                        };
+                    }]
                 })
                 .then(newEditor => {
                     editor = newEditor;

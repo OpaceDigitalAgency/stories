@@ -281,9 +281,13 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Get the file path based on item type
-                                                // Special handling for stories to use the lightbox
+                                                // Special handling for stories and posts to use the lightbox
                                                 if ($itemType === 'story') {
                                                     echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                } else if ($itemType === 'post') {
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm post-preview-btn" data-post-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
                                                     echo '<i class="fas fa-eye"></i>';
                                                     echo '</button>';
                                                 } else {
@@ -294,7 +298,6 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                                         'media' => 'media.php',
                                                         'contact' => 'contacts.php',
                                                         'subscriber' => 'subscribers.php',
-                                                        'post' => 'post-form.php',
                                                         'tag' => 'tag-form.php',
                                                         'author' => 'author-form.php',
                                                         default => "{$itemType}s.php"

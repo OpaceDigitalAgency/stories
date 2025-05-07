@@ -142,6 +142,9 @@ $extraHeadContent = '
 <script src="../assets/js/live-search.js"></script>
 <!-- Add Inline Editing JS -->
 <script src="../assets/js/inline-editing.js"></script>
+<!-- Add Post Preview CSS and JS -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/post-preview.js"></script>
 ';
 
 $pageActions = '

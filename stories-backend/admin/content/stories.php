@@ -209,6 +209,9 @@ $extraHeadContent = '
 <script src="../assets/js/live-search.js"></script>
 <!-- Add Inline Editing JS -->
 <script src="../assets/js/inline-editing.js"></script>
+<!-- Add Story Preview CSS and JS -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/story-preview.js"></script>
 ';
 
 $pageActions = '
@@ -309,22 +312,22 @@ if (function_exists('renderEnhancedTable')) {
     // Custom action renderer for stories
     $customActionRenderer = function($item) {
         $html = '<div class="premium-table-actions">';
-        
-        // View button - goes to view-story.php
-        $html .= '<a href="view-story.php?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
+
+        // View button - uses the story preview lightbox
+        $html .= '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
         $html .= '<i class="fas fa-eye"></i>';
-        $html .= '</a>';
-        
+        $html .= '</button>';
+
         // Edit button - goes to story-form.php
         $html .= '<a href="story-form.php?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
         $html .= '<i class="fas fa-edit"></i>';
         $html .= '</a>';
-        
+
         // Delete button
         $html .= '<button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="' . htmlspecialchars($item['id']) . '" title="Delete">';
         $html .= '<i class="fas fa-trash"></i>';
         $html .= '</button>';
-        
+
         $html .= '</div>';
         return $html;
     };
@@ -408,7 +411,8 @@ if (function_exists('renderEnhancedTable')) {
             'name_field' => 'title',
             'empty_message' => 'No stories found. Add your first story!',
             'custom_formatters' => $customFormatters,
-            'view_url' => 'view-story.php?id={id}',
+            'view_url' => 'javascript:void(0);',
+            'view_onclick' => 'if(window.storyPreview) window.storyPreview.loadStoryPreview("{id}"); return false;',
             'edit_url' => 'story-form.php?id={id}',
             'delete_url' => 'delete-story.php'
         ]);

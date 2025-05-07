@@ -269,22 +269,28 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             <?php if (in_array('view', $options['actions'])): ?>
                                                 <?php
                                                 // Get the file path based on item type
-                                                $actionFile = match($itemType) {
-                                                    'ai_tool' => 'ai-tool-form.php',
-                                                    'directory_item' => 'directory-item-form.php',
-                                                    'game' => 'game-form.php',
-                                                    'story' => 'view-story.php',
-                                                    'media' => 'media.php',
-                                                    'contact' => 'contacts.php',
-                                                    'subscriber' => 'subscribers.php',
-                                                    'post' => 'post-form.php',
-                                                    'tag' => 'tag-form.php',
-                                                    'author' => 'author-form.php',
-                                                    default => "{$itemType}s.php"
-                                                };
-                                                echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
-                                                echo '<i class="fas fa-eye"></i>';
-                                                echo '</a>';
+                                                // Special handling for stories to use the lightbox
+                                                if ($itemType === 'story') {
+                                                    echo '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</button>';
+                                                } else {
+                                                    $actionFile = match($itemType) {
+                                                        'ai_tool' => 'ai-tool-form.php',
+                                                        'directory_item' => 'directory-item-form.php',
+                                                        'game' => 'game-form.php',
+                                                        'media' => 'media.php',
+                                                        'contact' => 'contacts.php',
+                                                        'subscriber' => 'subscribers.php',
+                                                        'post' => 'post-form.php',
+                                                        'tag' => 'tag-form.php',
+                                                        'author' => 'author-form.php',
+                                                        default => "{$itemType}s.php"
+                                                    };
+                                                    echo '<a href="' . $actionFile . '?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-info premium-btn-sm">';
+                                                    echo '<i class="fas fa-eye"></i>';
+                                                    echo '</a>';
+                                                }
                                                 ?>
                                             <?php endif; ?>
 

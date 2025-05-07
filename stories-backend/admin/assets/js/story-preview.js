@@ -81,8 +81,27 @@ class StoryPreview {
                 // Construct the frontend URL
                 const frontendUrl = `${this.frontendBaseUrl}/stories/${data.slug}`;
 
+                console.log('Loading story preview from URL:', frontendUrl);
+
                 // Open the lightbox with the frontend URL
                 this.openLightbox(frontendUrl);
+
+                // Add a small delay to check if the iframe loaded correctly
+                setTimeout(() => {
+                    const iframe = document.querySelector('#story-preview-lightbox iframe');
+                    if (iframe) {
+                        // Try to access the iframe content to see if it loaded
+                        try {
+                            // This will throw an error if the iframe is from a different origin
+                            // which is expected and normal due to CORS
+                            const iframeContent = iframe.contentWindow.document;
+                            console.log('Iframe loaded successfully');
+                        } catch (e) {
+                            // This is normal for cross-origin iframes
+                            console.log('Cross-origin iframe detected, which is expected');
+                        }
+                    }
+                }, 2000);
             } else {
                 throw new Error(data.message || 'Failed to get story slug');
             }

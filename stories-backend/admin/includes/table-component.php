@@ -166,31 +166,48 @@ function renderEnhancedTable($items, $columns, $options = []) {
                                     <div class="table-actions">
                                         <?php if ($options['actions']['view']): ?>
                                             <?php
-                                            // Get the view URL
-                                            $viewUrl = str_replace('{id}', $item[$options['id_field']], $options['view_url']);
-
-                                            // Extract the filename from the URL
-                                            $viewFile = basename($viewUrl);
-                                            $viewFilePath = __DIR__ . "/../content/" . $viewFile;
-
-                                            // Check if the view file exists
-                                            $viewFileExists = file_exists($viewFilePath);
-
-                                            if ($viewFileExists) {
-                                                // If the view file exists, create a normal link
-                                                echo '<a href="' . htmlspecialchars($viewUrl) . '" class="btn btn-info btn-sm" ';
-                                                echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
-                                                echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
-                                                echo '</a>';
-                                            } else {
-                                                // If the view file doesn't exist, create a button that opens a modal
-                                                echo '<button type="button" class="btn btn-info btn-sm view-item-btn" ';
-                                                echo 'data-id="' . htmlspecialchars($item[$options['id_field']]) . '" ';
-                                                echo 'data-bs-toggle="modal" ';
-                                                echo 'data-bs-target="#viewModal' . htmlspecialchars($item[$options['id_field']]) . '" ';
-                                                echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                            // Special handling for stories to use the lightbox
+                                            if ($options['content_type'] === 'stories') {
+                                                // For stories, use the story preview lightbox
+                                                echo '<button type="button" class="btn btn-info btn-sm story-preview-btn" ';
+                                                echo 'data-story-id="' . htmlspecialchars($item[$options['id_field']]) . '" ';
+                                                echo 'aria-label="Preview ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
                                                 echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
                                                 echo '</button>';
+                                            } else {
+                                                // For other content types, use the standard view URL
+                                                $viewUrl = str_replace('{id}', $item[$options['id_field']], $options['view_url']);
+
+                                                // Check if there's an onclick handler
+                                                $onclickAttr = '';
+                                                if (isset($options['view_onclick'])) {
+                                                    $onclick = str_replace('{id}', $item[$options['id_field']], $options['view_onclick']);
+                                                    $onclickAttr = ' onclick="' . htmlspecialchars($onclick) . '"';
+                                                }
+
+                                                // Extract the filename from the URL
+                                                $viewFile = basename($viewUrl);
+                                                $viewFilePath = __DIR__ . "/../content/" . $viewFile;
+
+                                                // Check if the view file exists
+                                                $viewFileExists = file_exists($viewFilePath);
+
+                                                if ($viewFileExists) {
+                                                    // If the view file exists, create a normal link
+                                                    echo '<a href="' . htmlspecialchars($viewUrl) . '" class="btn btn-info btn-sm"' . $onclickAttr . ' ';
+                                                    echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                    echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
+                                                    echo '</a>';
+                                                } else {
+                                                    // If the view file doesn't exist, create a button that opens a modal
+                                                    echo '<button type="button" class="btn btn-info btn-sm view-item-btn" ';
+                                                    echo 'data-id="' . htmlspecialchars($item[$options['id_field']]) . '" ';
+                                                    echo 'data-bs-toggle="modal" ';
+                                                    echo 'data-bs-target="#viewModal' . htmlspecialchars($item[$options['id_field']]) . '" ';
+                                                    echo 'aria-label="View ' . htmlspecialchars($content_type_singular) . ': ' . htmlspecialchars($item[$options['name_field']] ?? '') . '">';
+                                                    echo '<i class="fas fa-eye" aria-hidden="true"></i> View';
+                                                    echo '</button>';
+                                                }
                                             }
                                             ?>
                                         <?php endif; ?>

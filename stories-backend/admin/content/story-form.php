@@ -112,6 +112,25 @@ $extraHeadContent = '
 <script src="../assets/js/ckeditor-upload-adapter.js"></script>
 <script src="../assets/js/simple-source-editing.js"></script>
 
+<!-- Fallback to load CKEditor from CDN if local file fails -->
+<script>
+    // Check if CKEditor is loaded after a short delay
+    setTimeout(function() {
+        if (typeof ClassicEditor === "undefined") {
+            console.log("Loading CKEditor from CDN as fallback...");
+            var script = document.createElement("script");
+            script.src = "https://cdn.ckeditor.com/ckeditor5/36.0.1/classic/ckeditor.js";
+            script.onload = function() {
+                console.log("CKEditor loaded from CDN successfully");
+                // Trigger the initialization
+                var event = new Event("DOMContentLoaded");
+                document.dispatchEvent(event);
+            };
+            document.head.appendChild(script);
+        }
+    }, 500);
+</script>
+
 <!-- Loading overlay styles -->
 <style>
     .loading-overlay {
@@ -635,8 +654,9 @@ require_once '../includes/header.php';
                             <div class="form-group">
                                 <div class="form-check">
                                     <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input" value="1"
-                                        <?php echo (!empty($story['allow_reviews'])) ? 'checked' : ''; ?>>
+                                        <?php echo (isset($story['allow_reviews']) && $story['allow_reviews'] == 1) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="allow_reviews">Allow Reviews</label>
+                                    <input type="hidden" name="allow_reviews_submitted" value="1">
                                 </div>
                             </div>
                             <?php endif; ?>
@@ -692,7 +712,7 @@ require_once '../includes/header.php';
                                 <div class="form-group">
                                     <div class="form-check">
                                         <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-check-input"
-                                            value="1" <?php echo (!empty($story[$field])) ? 'checked' : ''; ?>>
+                                            value="1" <?php echo (isset($story[$field]) && $story[$field] == 1) ? 'checked' : ''; ?>>
                                         <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
                                         <input type="hidden" name="<?php echo $field; ?>_submitted" value="1">
                                     </div>
@@ -1421,8 +1441,8 @@ require_once '../includes/header.php';
             tempDiv.innerHTML = content;
 
             // Process all images to ensure they have absolute URLs
-            const images = tempDiv.querySelectorAll('img');
-            images.forEach(img => {
+            let imgElements = tempDiv.querySelectorAll('img');
+            imgElements.forEach(img => {
                 let src = img.getAttribute('src');
                 if (src && src.indexOf('http') !== 0) {
                     // Convert to absolute URL if it's not already
@@ -1442,11 +1462,11 @@ require_once '../includes/header.php';
             // Remove empty figures
             emptyFigures.forEach(figure => figure.remove());
 
-            // Find all images
-            const images = tempDiv.querySelectorAll('img');
+            // Re-select all images after removing empty figures
+            imgElements = tempDiv.querySelectorAll('img');
 
             // Process each image
-            images.forEach(img => {
+            imgElements.forEach(img => {
                 // Check if the image has a valid src attribute
                 if (!img.src || img.src === 'about:blank' || img.src === 'null' || img.src === 'undefined' || img.src.trim() === '') {
                     // If the image has no valid src, remove it or its parent figure

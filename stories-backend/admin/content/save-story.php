@@ -184,7 +184,12 @@ try {
     $booleanFields = ['featured', 'is_published', 'is_sponsored', 'is_self_published', 'is_ai_enhanced', 'needs_moderation', 'allow_reviews'];
     foreach ($booleanFields as $field) {
         if (in_array($field, $columns)) {
-            $data[$field] = isset($_POST[$field]) ? 1 : 0;
+            // Check if the field was submitted (even if unchecked)
+            if (isset($_POST[$field . '_submitted'])) {
+                $data[$field] = isset($_POST[$field]) ? 1 : 0;
+            } else if (isset($_POST[$field])) {
+                $data[$field] = 1;
+            }
         }
     }
 

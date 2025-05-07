@@ -209,6 +209,9 @@ try {
     });
 </script>
 
+<!-- Include image upload script -->
+<script src="../assets/js/image-upload.js"></script>
+
 <?php
 // Include footer
 require_once '../includes/footer.php';

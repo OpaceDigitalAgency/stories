@@ -270,15 +270,14 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <header class="admin-header">
         <div class="header-container">
             <div class="d-flex align-items-center">
-                <!-- Logo (clickable to dashboard) -->
-                <a href="<?php echo $dashboardPath; ?>" class="logo-container" style="text-decoration: none;">
-                    <div class="logo">S</div>
-                    <div class="logo-text">Stories Admin</div>
-                </a>
-
                 <!-- Main Navigation Menu -->
                 <nav class="main-nav" role="navigation" aria-label="Main Navigation">
                     <form method="GET" id="nav-form" class="d-flex align-items-center">
+                        <!-- Direct Links -->
+                        <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                            <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
+                        </button>
+
                         <!-- Content Management Dropdown -->
                         <div class="dropdown mx-2">
                             <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -317,11 +316,6 @@ $siteName = get_config('site.name', 'Stories From The Web');
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Direct Links -->
-                        <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
-                            <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
-                        </button>
 
                         <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-2 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
                             <i class="fas fa-images" aria-hidden="true"></i> Media

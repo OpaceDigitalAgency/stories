@@ -105,8 +105,11 @@ try {
 $pageTitle = isset($_GET['id']) ? 'Edit Story' : 'Add Story';
 $currentPage = 'stories';
 
-// Add custom CSS for form styling
+// Add custom CSS and JS for form styling and rich text editor
 $extraHeadContent = '
+<!-- Include CKEditor -->
+<script src="../assets/js/ckeditor.js"></script>
+
 <style>
     /* Base form styles */
     .checkbox-group {
@@ -261,34 +264,34 @@ require_once '../includes/header.php';
                     </div>
                     <div class="wp-card-body">
                         <div class="form-group">
-                            <label class="form-label" for="title">Title <span class="required">*</span></label>
-                            <input type="text" id="title" name="title" class="form-control" required
-                                value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <label class="form-label mb-md-0" for="title">Title <span class="required">*</span></label>
+                                </div>
+                                <div class="col-md-10">
+                                    <input type="text" id="title" name="title" class="form-control" required
+                                        value="<?php echo htmlspecialchars($story['title'] ?? ''); ?>">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group mb-0">
-                            <label class="form-label" for="slug">Slug <span class="required">*</span></label>
-                            <input type="text" id="slug" name="slug" class="form-control" required
-                                value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
-                            <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <label class="form-label mb-md-0" for="slug">Slug <span class="required">*</span></label>
+                                </div>
+                                <div class="col-md-10">
+                                    <input type="text" id="slug" name="slug" class="form-control" required
+                                        value="<?php echo htmlspecialchars($story['slug'] ?? ''); ?>">
+                                    <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Main Content Column -->
                 <div class="wp-layout-main">
-                    <!-- Story Content -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">
-                            Story Content
-                        </div>
-                        <div class="wp-card-body">
-                            <div class="form-group mb-0">
-                                <textarea id="content" name="content" class="form-control" rows="15" required><?php echo htmlspecialchars($story['content'] ?? ''); ?></textarea>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Image Upload -->
                     <div class="wp-card">
                         <div class="wp-card-header">
@@ -319,6 +322,66 @@ require_once '../includes/header.php';
                                 );
                             }
                             ?>
+                        </div>
+                    </div>
+
+                    <!-- Story Content -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Story Content
+                        </div>
+                        <div class="wp-card-body">
+                            <?php
+                            // Extract summary/excerpt and story content from markdown
+                            $content = $story['content'] ?? '';
+                            $summary = '';
+                            $storyText = '';
+
+                            // Extract author info
+                            $authorName = '';
+                            $authorAge = '';
+                            $authorLocation = '';
+
+                            if (!empty($content)) {
+                                // Extract author name
+                                if (preg_match('/\*\*Name:\*\*\s*(.*?)(?:\n|$)/i', $content, $nameMatch)) {
+                                    $authorName = trim($nameMatch[1]);
+                                }
+
+                                // Extract author age
+                                if (preg_match('/\*\*Age:\*\*\s*(.*?)(?:\n|$)/i', $content, $ageMatch)) {
+                                    $authorAge = trim($ageMatch[1]);
+                                }
+
+                                // Extract author location
+                                if (preg_match('/\*\*Location:\*\*\s*(.*?)(?:\n|$)/i', $content, $locationMatch)) {
+                                    $authorLocation = trim($locationMatch[1]);
+                                }
+
+                                // Extract summary
+                                if (preg_match('/## Summary\s*\n(.*?)(?:\n##|\n\*\*|\Z)/s', $content, $summaryMatch)) {
+                                    $summary = trim($summaryMatch[1]);
+                                }
+
+                                // Extract story content
+                                if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $content, $storyMatch)) {
+                                    $storyText = trim($storyMatch[1]);
+                                }
+                            }
+                            ?>
+
+                            <!-- Summary/Excerpt Field -->
+                            <div class="form-group">
+                                <label for="summary">Summary/Excerpt</label>
+                                <textarea id="summary" name="summary" class="form-control" rows="3"><?php echo htmlspecialchars($summary); ?></textarea>
+                            </div>
+
+                            <!-- Story Content Field with WYSIWYG -->
+                            <div class="form-group mb-0">
+                                <label for="story_content">Story</label>
+                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo htmlspecialchars($storyText); ?></textarea>
+                                <input type="hidden" id="content" name="content" value="">
+                            </div>
                         </div>
                     </div>
 
@@ -739,6 +802,105 @@ require_once '../includes/header.php';
 
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
+
+<!-- Initialize CKEditor for rich text editing -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize CKEditor for the story content
+        if (typeof ClassicEditor !== 'undefined') {
+            ClassicEditor
+                .create(document.querySelector('#story_content'), {
+                    toolbar: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'insertTable', '|',
+                        'imageUpload', 'mediaEmbed', '|',
+                        'undo', 'redo'
+                    ],
+                    heading: {
+                        options: [
+                            { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                            { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                            { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+                        ]
+                    },
+                    image: {
+                        toolbar: [
+                            'imageStyle:inline',
+                            'imageStyle:block',
+                            'imageStyle:side',
+                            '|',
+                            'toggleImageCaption',
+                            'imageTextAlternative'
+                        ]
+                    }
+                })
+                .then(editor => {
+                    // Store editor instance
+                    window.storyEditor = editor;
+                })
+                .catch(error => {
+                    console.error('Error initializing CKEditor:', error);
+                });
+        }
+
+        // Handle form submission to format content properly
+        document.querySelector('form.content-form').addEventListener('submit', function(e) {
+            // Only if we have the editor instance
+            if (window.storyEditor) {
+                const summary = document.querySelector('#summary').value;
+                const storyContent = window.storyEditor.getData();
+
+                // Get author info if available
+                const authorSelect = document.querySelector('#author_id');
+                let authorName = '';
+                let authorAge = '';
+                let authorLocation = '';
+
+                // Try to get author info from the form or from extracted data
+                if (authorSelect && authorSelect.selectedIndex > 0) {
+                    const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                    authorName = selectedOption.text || '<?php echo addslashes($authorName); ?>';
+
+                    // We'll use the extracted age and location if available
+                    authorAge = '<?php echo addslashes($authorAge); ?>';
+                    authorLocation = '<?php echo addslashes($authorLocation); ?>';
+                }
+
+                // Format the content in markdown format
+                let formattedContent = '';
+
+                // Add author section if we have author info
+                if (authorName) {
+                    formattedContent += '## Author\n\n';
+                    formattedContent += '**Name:** ' + authorName + '\n';
+
+                    if (authorAge) {
+                        formattedContent += '**Age:** ' + authorAge + '\n';
+                    }
+
+                    if (authorLocation) {
+                        formattedContent += '**Location:** ' + authorLocation + '\n';
+                    }
+
+                    formattedContent += '\n';
+                }
+
+                // Add summary section
+                if (summary) {
+                    formattedContent += '## Summary\n\n' + summary + '\n\n';
+                }
+
+                // Add story section
+                formattedContent += '## Story\n\n' + storyContent;
+
+                // Set the hidden content field value
+                document.querySelector('#content').value = formattedContent;
+            }
+        });
+    });
+</script>
 
 <?php
 // Include footer

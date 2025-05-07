@@ -25,36 +25,76 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
 ?>
     <footer class="admin-footer" role="contentinfo">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3 class="footer-heading"><?php echo htmlspecialchars($siteName); ?></h3>
-                    <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteCopyright); ?></p>
-                    <p class="text-muted">Version <?php echo htmlspecialchars($siteVersion); ?> - Enhanced Admin Dashboard</p>
+            <div class="footer-content-compact">
+                <div class="footer-info">
+                    <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteCopyright); ?></span>
+                    <span class="footer-version">v<?php echo htmlspecialchars($siteVersion); ?></span>
                 </div>
 
-                <div class="footer-section">
-                    <h3 class="footer-heading">Quick Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="/docs/comprehensive-system-architecture-new.php" target="_blank">System Documentation</a></li>
-                        <li><a href="/docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues & Fixes</a></li>
-                        <li><a href="/public/optimize_image.php" target="_blank">Image Optimization Tool</a></li>
-                    </ul>
+                <div class="footer-links-compact">
+                    <a href="/docs/comprehensive-system-architecture-new.php" target="_blank">Documentation</a>
+                    <a href="/docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues</a>
+                    <a href="/public/optimize_image.php" target="_blank">Image Optimizer</a>
+                    <a href="mailto:<?php echo htmlspecialchars($contactEmail); ?>">Support</a>
                 </div>
-
-                <div class="footer-section">
-                    <h3 class="footer-heading">Support</h3>
-                    <ul class="footer-links">
-                        <li><a href="mailto:<?php echo htmlspecialchars($contactEmail); ?>">Email Support</a></li>
-                        <li><a href="https://github.com/OpaceDigitalAgency/stories/issues" target="_blank">Report an Issue</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <p>Made with <span aria-hidden="true">❤️</span><span class="visually-hidden">love</span> by the <?php echo htmlspecialchars($siteName); ?> team</p>
             </div>
         </div>
     </footer>
+
+    <style>
+        .footer-content-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .footer-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        .footer-version {
+            background-color: var(--gray-200);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+
+        .footer-links-compact {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .footer-links-compact a {
+            color: var(--primary);
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links-compact a:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .footer-content-compact {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .footer-links-compact {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
 
     <!-- Bootstrap initialization script -->
     <script>

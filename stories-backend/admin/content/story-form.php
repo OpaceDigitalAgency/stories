@@ -413,7 +413,21 @@ require_once '../includes/header.php';
                                     // Check if the content contains HTML tags
                                     if (strpos($storyText, '<') !== false && strpos($storyText, '>') !== false) {
                                         // It's HTML content, we'll store it as is for direct output
-                                        $storyHtml = $storyText;
+                                        // Fix image URLs if they're relative or missing domain
+                                        $storyHtml = preg_replace_callback(
+                                            '/<img[^>]*src=["\']([^"\']+)["\'][^>]*>/i',
+                                            function($matches) {
+                                                $src = $matches[1];
+                                                // If it's not an absolute URL, make it absolute
+                                                if (strpos($src, 'http') !== 0) {
+                                                    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'api.storiesfromtheweb.org';
+                                                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                                                    $src = "$protocol://$host" . (strpos($src, '/') === 0 ? $src : "/$src");
+                                                }
+                                                return str_replace($matches[1], $src, $matches[0]);
+                                            },
+                                            $storyText
+                                        );
                                     } else {
                                         // It's plain text, we'll escape it when displaying
                                         $storyHtml = htmlspecialchars($storyText);

@@ -176,6 +176,16 @@ try {
 
     // Set response based on whether this is a CKEditor upload or not
     if ($isForEditor) {
+        // Make sure the URL is absolute for CKEditor
+        if (strpos($url, 'http') !== 0) {
+            $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'api.storiesfromtheweb.org';
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+            $url = "$protocol://$host" . (strpos($url, '/') === 0 ? $url : "/$url");
+        }
+
+        // Log the URL for debugging
+        error_log("CKEditor image upload URL: " . $url);
+
         // CKEditor expects a specific response format
         echo json_encode([
             'url' => $url,

@@ -1,6 +1,6 @@
 /**
  * CKEditor 5 custom upload adapter for integrating with the Stories media library
- * 
+ *
  * This adapter allows CKEditor to use the existing media library for image uploads
  * and insertions.
  */
@@ -52,10 +52,22 @@ class MediaLibraryUploadAdapter {
 
             // If the upload is successful, resolve the upload promise with an object containing
             // at least the "default" URL, pointing to the image on the server.
+
+            // Make sure we have an absolute URL
+            let imageUrl = response.url;
+            if (imageUrl && imageUrl.indexOf('http') !== 0) {
+                // Convert to absolute URL if it's not already
+                const host = window.location.host || 'api.storiesfromtheweb.org';
+                const protocol = window.location.protocol || 'https:';
+                imageUrl = `${protocol}//${host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+
+            console.log('CKEditor image upload successful, URL:', imageUrl);
+
             resolve({
-                default: response.url,
+                default: imageUrl,
                 // You can include additional URLs if your server provides different image sizes
-                // For example: 
+                // For example:
                 // 500: response.urls.medium,
                 // 1000: response.urls.large
             });

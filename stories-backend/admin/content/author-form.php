@@ -101,7 +101,7 @@ try {
             </div>
 
             <!-- Profile Picture -->
-            <div class="form-section-title">Profile Picture</div>
+            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component
@@ -205,6 +205,9 @@ try {
         }
     });
 </script>
+
+<!-- Include image upload script -->
+<script src="../assets/js/image-upload.js"></script>
 
 <?php
 // Include footer

@@ -112,8 +112,42 @@ class MediaLibraryUploadAdapter {
         // Add alt text (can be updated later)
         data.append('alt_text', file.name.replace(/\.[^/.]+$/, "")); // Use filename without extension as alt text
 
+        // Show loading indicator
+        this._showLoadingIndicator(file.name);
+
         // Send the request
         this.xhr.send(data);
+    }
+
+    // Show a loading indicator while the image is being processed
+    _showLoadingIndicator(filename) {
+        // Check if we already have a loading overlay
+        let loadingOverlay = document.querySelector('.loading-overlay');
+
+        // Create one if it doesn't exist
+        if (!loadingOverlay) {
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'loading-overlay';
+            loadingOverlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="loading-message">Processing image...</div>
+            `;
+            document.body.appendChild(loadingOverlay);
+        }
+
+        // Update the message
+        const loadingMessage = loadingOverlay.querySelector('.loading-message');
+        if (loadingMessage) {
+            loadingMessage.textContent = `Optimizing image: ${filename}`;
+        }
+
+        // Show the overlay
+        loadingOverlay.style.display = 'flex';
+
+        // Set up a listener to hide the overlay when the request completes
+        this.xhr.addEventListener('loadend', () => {
+            loadingOverlay.style.display = 'none';
+        });
     }
 }
 

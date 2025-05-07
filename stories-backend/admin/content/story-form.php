@@ -159,15 +159,11 @@ require_once '../includes/header.php';
 ?>
 
 <div class="content-section mb-4">
-    <div class="section-header">
-        <h2 class="section-title"><?php echo $pageTitle; ?></h2>
-    </div>
     <div class="section-body">
         <form method="POST" action="save-story.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $story['id'] ?? ''; ?>">
 
             <!-- Basic Information -->
-            <div class="form-section-title">Basic Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="title">Title <span class="required">*</span></label>
@@ -197,7 +193,6 @@ require_once '../includes/header.php';
             </div>
 
             <!-- Content -->
-            <div class="form-section-title">Content</div>
 
             <div class="form-group">
                 <label class="form-label" for="content">Story Content <span class="required">*</span></label>
@@ -205,7 +200,6 @@ require_once '../includes/header.php';
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component
@@ -233,7 +227,6 @@ require_once '../includes/header.php';
             ?>
 
             <!-- Additional Fields -->
-            <div class="form-section-title">Additional Information</div>
 
             <?php
             foreach ($additionalFields as $field):

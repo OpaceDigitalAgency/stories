@@ -51,15 +51,11 @@ try {
 ?>
 
 <div class="content-section mb-4">
-    <div class="section-header">
-        <h2 class="section-title"><?php echo $pageTitle; ?></h2>
-    </div>
     <div class="section-body">
         <form method="POST" action="save-directory-item.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $item['id'] ?? ''; ?>">
 
             <!-- Basic Information -->
-            <div class="form-section-title">Basic Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="title">Title <span class="required">*</span></label>
@@ -88,7 +84,6 @@ try {
             </div>
 
             <!-- Description -->
-            <div class="form-section-title">Description</div>
 
             <div class="form-group">
                 <label class="form-label" for="description">Description <span class="required">*</span></label>
@@ -96,7 +91,6 @@ try {
             </div>
 
             <!-- Contact Information -->
-            <div class="form-section-title">Contact Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="website_url">Website URL</label>
@@ -117,7 +111,6 @@ try {
             </div>
 
             <!-- Location -->
-            <div class="form-section-title">Location</div>
 
             <div class="form-group">
                 <label class="form-label" for="address">Address</label>
@@ -125,7 +118,6 @@ try {
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component
@@ -152,7 +144,6 @@ try {
             ?>
 
             <!-- Additional Fields -->
-            <div class="form-section-title">Additional Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="price_range">Price Range</label>

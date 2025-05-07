@@ -44,15 +44,11 @@ try {
 ?>
 
 <div class="content-section mb-4">
-    <div class="section-header">
-        <h2 class="section-title"><?php echo $pageTitle; ?></h2>
-    </div>
     <div class="section-body">
         <form method="POST" action="save-author.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
 
             <!-- Basic Information -->
-            <div class="form-section-title">Basic Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="name">Name <span class="required">*</span></label>
@@ -80,7 +76,6 @@ try {
             </div>
 
             <!-- Author Type -->
-            <div class="form-section-title">Author Type</div>
 
             <div class="form-group">
                 <label class="form-label" for="author_type">Author Type <span class="required">*</span></label>
@@ -93,7 +88,6 @@ try {
             </div>
 
             <!-- Bio -->
-            <div class="form-section-title">Biography</div>
 
             <div class="form-group">
                 <label class="form-label" for="bio">Biography</label>
@@ -101,7 +95,6 @@ try {
             </div>
 
             <!-- Profile Picture -->
-            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component
@@ -130,7 +123,6 @@ try {
             ?>
 
             <!-- Social Media -->
-            <div class="form-section-title">Social Media</div>
 
             <div class="form-group">
                 <label class="form-label" for="website">Website</label>
@@ -151,7 +143,6 @@ try {
             </div>
 
             <!-- Additional Fields -->
-            <div class="form-section-title">Additional Information</div>
 
             <div class="form-group">
                 <div class="form-check">

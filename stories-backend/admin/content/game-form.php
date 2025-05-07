@@ -44,15 +44,11 @@ try {
 ?>
 
 <div class="content-section mb-4">
-    <div class="section-header">
-        <h2 class="section-title"><?php echo $pageTitle; ?></h2>
-    </div>
     <div class="section-body">
         <form method="POST" action="save-game.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $game['id'] ?? ''; ?>">
 
             <!-- Basic Information -->
-            <div class="form-section-title">Basic Information</div>
 
             <div class="form-group">
                 <label class="form-label" for="title">Title <span class="required">*</span></label>
@@ -73,7 +69,6 @@ try {
             </div>
 
             <!-- Game Details -->
-            <div class="form-section-title">Game Details</div>
 
             <div class="form-group">
                 <label class="form-label" for="website_url">Game URL <span class="required">*</span></label>
@@ -119,7 +114,6 @@ try {
             </div>
 
             <!-- Image Upload -->
-            <div class="form-section-title">Image</div>
 
             <?php
             // Render image upload component
@@ -148,7 +142,6 @@ try {
             ?>
 
             <!-- Additional Fields -->
-            <div class="form-section-title">Additional Information</div>
 
             <div class="form-group">
                 <div class="form-check">

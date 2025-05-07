@@ -473,6 +473,35 @@ function showPreview() {
         if (authorLocationSpan) {
             authorLocation = authorLocationSpan.textContent;
         }
+
+        // If we don't have age/location from spans, try to get from form fields
+        if (!authorAge) {
+            const ageField = document.getElementById('author_age');
+            if (ageField) {
+                authorAge = ageField.value;
+            }
+        }
+
+        if (!authorLocation) {
+            const locationField = document.getElementById('author_location');
+            if (locationField) {
+                authorLocation = locationField.value;
+            }
+        }
+    }
+
+    // If we still don't have author details, try to extract from content
+    if ((!authorAge || !authorLocation) && storyContent) {
+        const ageMatch = storyContent.match(/Age:\s*(\d+)/i);
+        const locationMatch = storyContent.match(/From:\s*([^,\n<]+)/i);
+
+        if (ageMatch && ageMatch[1] && !authorAge) {
+            authorAge = ageMatch[1];
+        }
+
+        if (locationMatch && locationMatch[1] && !authorLocation) {
+            authorLocation = locationMatch[1].trim();
+        }
     }
 
     // Clean up the story content to remove markdown headings and any duplicate content
@@ -496,7 +525,28 @@ function showPreview() {
         if (storyContent.includes(summaryWithBreaks)) {
             storyContent = storyContent.replace(summaryWithBreaks, '').trim();
         }
+
+        // Try with different paragraph formatting
+        const summaryWithDifferentPTags = summary.replace(/\n/g, '</p><p>');
+        if (storyContent.includes(summaryWithDifferentPTags)) {
+            storyContent = storyContent.replace(summaryWithDifferentPTags, '').trim();
+        }
+
+        // Try with the summary at the beginning of the content with or without HTML
+        const summaryRegex = new RegExp('^\\s*' + escapeRegExp(summary) + '\\s*', 'i');
+        if (summaryRegex.test(storyContent)) {
+            storyContent = storyContent.replace(summaryRegex, '').trim();
+        }
+
+        // Try with the summary at the beginning with HTML tags
+        const summaryWithPTagsRegex = new RegExp('^\\s*<p[^>]*>\\s*' + escapeRegExp(summary) + '\\s*</p>\\s*', 'i');
+        if (summaryWithPTagsRegex.test(storyContent)) {
+            storyContent = storyContent.replace(summaryWithPTagsRegex, '').trim();
+        }
     }
+
+    // Clean up any empty paragraphs that might be left after removing content
+    storyContent = storyContent.replace(/<p>\s*<\/p>/g, '').trim();
 
     // Create a temporary preview using a lightbox similar to the story list page
     createPreviewLightbox(title, authorName, authorAge, authorLocation, summary, storyContent);
@@ -655,6 +705,66 @@ function escapeHtml(text) {
 }
 
 /**
+ * Helper function to escape special characters in a string for use in a regular expression
+ */
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
+ * Custom upload adapter for CKEditor to use our media library
+ */
+function MediaLibraryUploadAdapterPlugin(editor) {
+    editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+        return new MediaLibraryUploadAdapter(loader);
+    };
+}
+
+/**
+ * Media Library Upload Adapter class
+ */
+class MediaLibraryUploadAdapter {
+    constructor(loader) {
+        this.loader = loader;
+    }
+
+    upload() {
+        return this.loader.file.then(file => {
+            return new Promise((resolve, reject) => {
+                // Create a FormData to send the file to the server
+                const data = new FormData();
+                data.append('file', file);
+                data.append('action', 'upload');
+
+                // Send the file to the server
+                fetch('../media/upload.php', {
+                    method: 'POST',
+                    body: data
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Return the URL to CKEditor
+                        resolve({
+                            default: result.url
+                        });
+                    } else {
+                        reject(result.message || 'Upload failed');
+                    }
+                })
+                .catch(error => {
+                    reject('Upload failed: ' + error);
+                });
+            });
+        });
+    }
+
+    abort() {
+        // This method is required but we don't need to do anything
+    }
+}
+
+/**
  * Setup form submission handler to ensure content is properly saved
  */
 function setupFormSubmissionHandler() {
@@ -704,13 +814,55 @@ function setupFormSubmissionHandler() {
             // Format the content for storage
             let formattedContent = '';
 
-            // If we have a summary, include it in the content
+            // Clean up the story content to ensure summary isn't duplicated
+            let cleanedStoryContent = storyContent;
+
+            // Remove any instances of the summary from the story content
             if (summary) {
+                // Try exact match
+                if (cleanedStoryContent.includes(summary)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summary, '').trim();
+                }
+
+                // Try with HTML tags (in case the editor added them)
+                const summaryWithPTags = '<p>' + summary + '</p>';
+                if (cleanedStoryContent.includes(summaryWithPTags)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summaryWithPTags, '').trim();
+                }
+
+                // Try with line breaks
+                const summaryWithBreaks = summary.replace(/\n/g, '<br>');
+                if (cleanedStoryContent.includes(summaryWithBreaks)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summaryWithBreaks, '').trim();
+                }
+
+                // Try with different paragraph formatting
+                const summaryWithDifferentPTags = summary.replace(/\n/g, '</p><p>');
+                if (cleanedStoryContent.includes(summaryWithDifferentPTags)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summaryWithDifferentPTags, '').trim();
+                }
+
+                // Try with the summary at the beginning of the content with or without HTML
+                const summaryRegex = new RegExp('^\\s*' + escapeRegExp(summary) + '\\s*', 'i');
+                if (summaryRegex.test(cleanedStoryContent)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summaryRegex, '').trim();
+                }
+
+                // Try with the summary at the beginning with HTML tags
+                const summaryWithPTagsRegex = new RegExp('^\\s*<p[^>]*>\\s*' + escapeRegExp(summary) + '\\s*</p>\\s*', 'i');
+                if (summaryWithPTagsRegex.test(cleanedStoryContent)) {
+                    cleanedStoryContent = cleanedStoryContent.replace(summaryWithPTagsRegex, '').trim();
+                }
+
+                // Clean up any empty paragraphs that might be left after removing content
+                cleanedStoryContent = cleanedStoryContent.replace(/<p>\s*<\/p>/g, '').trim();
+
+                // If we have a summary, include it in the content
                 formattedContent += '## Summary\n\n' + summary + '\n\n';
             }
 
             // Add the story content
-            formattedContent += '## Story\n\n' + storyContent;
+            formattedContent += '## Story\n\n' + cleanedStoryContent;
 
             // Set the content field value
             contentField.value = formattedContent;

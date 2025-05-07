@@ -110,7 +110,7 @@ $extraHeadContent = '
 <!-- Include CKEditor and custom upload adapter -->
 <script src="../assets/js/ckeditor.js"></script>
 <script src="../assets/js/ckeditor-upload-adapter.js"></script>
-<script src="../assets/js/ckeditor-plugins/source-editing/source-editing.js"></script>
+<script src="../assets/js/simple-source-editing.js"></script>
 
 <!-- Loading overlay styles -->
 <style>
@@ -992,12 +992,17 @@ require_once '../includes/header.php';
                             'imageTextAlternative'
                         ]
                     },
-                    // Register the custom plugins
-                    extraPlugins: [MediaLibraryUploadAdapterPlugin, SourceEditing]
+                    // Register the custom upload adapter plugin
+                    extraPlugins: [MediaLibraryUploadAdapterPlugin]
                 })
                 .then(editor => {
                     // Store editor instance
                     window.storyEditor = editor;
+
+                    // Initialize the simple source editing plugin
+                    if (window.SimpleSourceEditing) {
+                        window.SimpleSourceEditing.init(editor);
+                    }
                 })
                 .catch(error => {
                     console.error('Error initializing CKEditor:', error);

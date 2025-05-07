@@ -97,6 +97,21 @@ if ($story) {
         // Remove any remaining markdown headings from the story content
         $storyContent = preg_replace('/^## .*$/m', '', $storyContent);
         $storyContent = trim($storyContent);
+
+        // Make sure the summary is not duplicated in the story content
+        if (!empty($summary)) {
+            // Remove the summary from the story content (plain text version)
+            $storyContent = str_replace($summary, '', $storyContent);
+
+            // Remove the summary with paragraph tags
+            $storyContent = str_replace('<p>' . $summary . '</p>', '', $storyContent);
+
+            // Clean up any empty paragraphs that might be left
+            $storyContent = preg_replace('/<p>\s*<\/p>/', '', $storyContent);
+
+            // Trim again to remove any extra whitespace
+            $storyContent = trim($storyContent);
+        }
     }
 }
 

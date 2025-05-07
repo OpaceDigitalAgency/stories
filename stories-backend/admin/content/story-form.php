@@ -407,37 +407,46 @@ require_once '../includes/header.php';
                                     $summary = trim($summaryMatch[1]);
                                 }
 
-                                // Extract story content
+                                // Extract story content - use a more robust pattern
                                 if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $content, $storyMatch)) {
                                     $storyText = trim($storyMatch[1]);
-
-                                    // Check if the content contains HTML tags
-                                    if (strpos($storyText, '<') !== false && strpos($storyText, '>') !== false) {
-                                        // It's HTML content, we'll store it as is for direct output
-                                        // Fix image URLs if they're relative or missing domain
-                                        $storyHtml = preg_replace_callback(
-                                            '/<img[^>]*src=["\']([^"\']+)["\'][^>]*>/i',
-                                            function($matches) {
-                                                $src = $matches[1];
-                                                // If it's not an absolute URL, make it absolute
-                                                if (strpos($src, 'http') !== 0) {
-                                                    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'api.storiesfromtheweb.org';
-                                                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-                                                    $src = "$protocol://$host" . (strpos($src, '/') === 0 ? $src : "/$src");
-                                                }
-                                                return str_replace($matches[1], $src, $matches[0]);
-                                            },
-                                            $storyText
-                                        );
+                                } else {
+                                    // If we can't find the story section with the pattern, use everything after the summary
+                                    // This is a fallback for stories that might not have the exact format
+                                    if (preg_match('/## Summary.*?\n\n(.*)/s', $content, $fallbackMatch)) {
+                                        $storyText = trim($fallbackMatch[1]);
                                     } else {
-                                        // It's plain text, we'll escape it when displaying
-                                        $storyHtml = htmlspecialchars($storyText);
+                                        // Last resort: use the entire content
+                                        $storyText = $content;
                                     }
-
-                                    // Debug log to check what's happening with the content
-                                    error_log("Story content extracted. Length: " . strlen($storyText));
-                                    error_log("HTML content prepared. Length: " . strlen($storyHtml ?? ''));
                                 }
+
+                                // Check if the content contains HTML tags
+                                if (strpos($storyText, '<') !== false && strpos($storyText, '>') !== false) {
+                                    // It's HTML content, we'll store it as is for direct output
+                                    // Fix image URLs if they're relative or missing domain
+                                    $storyHtml = preg_replace_callback(
+                                        '/<img[^>]*src=["\']([^"\']+)["\'][^>]*>/i',
+                                        function($matches) {
+                                            $src = $matches[1];
+                                            // If it's not an absolute URL, make it absolute
+                                            if (strpos($src, 'http') !== 0) {
+                                                $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'api.storiesfromtheweb.org';
+                                                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                                                $src = "$protocol://$host" . (strpos($src, '/') === 0 ? $src : "/$src");
+                                            }
+                                            return str_replace($matches[1], $src, $matches[0]);
+                                        },
+                                        $storyText
+                                    );
+                                } else {
+                                    // It's plain text, we'll escape it when displaying
+                                    $storyHtml = htmlspecialchars($storyText);
+                                }
+
+                                // Debug log to check what's happening with the content
+                                error_log("Story content extracted. Length: " . strlen($storyText));
+                                error_log("HTML content prepared. Length: " . strlen($storyHtml ?? ''));
                             }
                             ?>
 
@@ -1179,46 +1188,52 @@ require_once '../includes/header.php';
 
         // Function to process images in HTML content
         function processImagesInContent(content) {
+            // If content is empty or not a string, return as is
+            if (!content || typeof content !== 'string') {
+                console.warn('Invalid content passed to processImagesInContent:', content);
+                return content || '';
+            }
+
             // Create a temporary div to parse the HTML
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
 
-            // Find all images and figures
-            const images = tempDiv.querySelectorAll('img');
-            const figures = tempDiv.querySelectorAll('figure.image');
-
-            // Remove empty figure elements (those without valid images)
-            figures.forEach(figure => {
-                // Check if it's an empty figure with no valid image
+            // Find all figures with empty images
+            const emptyFigures = Array.from(tempDiv.querySelectorAll('figure.image')).filter(figure => {
                 const img = figure.querySelector('img');
-                if (!img || !img.src || img.src === 'about:blank' || img.src === 'null' || img.src === 'undefined') {
-                    figure.remove();
-                }
+                return !img || !img.src || img.src === 'about:blank' || img.src === 'null' || img.src === 'undefined' || img.src.trim() === '';
             });
+
+            // Remove empty figures
+            emptyFigures.forEach(figure => figure.remove());
+
+            // Find all images
+            const images = tempDiv.querySelectorAll('img');
 
             // Process each image
             images.forEach(img => {
-                // Make sure the image has a valid src attribute
-                if (img.src && img.src !== 'about:blank' && img.src !== 'null' && img.src !== 'undefined') {
-                    // Make sure it's an absolute URL
-                    if (img.src.indexOf('http') !== 0) {
-                        const host = window.location.host || 'api.storiesfromtheweb.org';
-                        const protocol = window.location.protocol || 'https:';
-                        img.src = `${protocol}//${host}${img.src.startsWith('/') ? '' : '/'}${img.src}`;
-                    }
-
-                    // Make sure it has an alt attribute
-                    if (!img.alt) {
-                        img.alt = 'Story image';
-                    }
-                } else {
-                    // If the image has no valid src, remove it
+                // Check if the image has a valid src attribute
+                if (!img.src || img.src === 'about:blank' || img.src === 'null' || img.src === 'undefined' || img.src.trim() === '') {
+                    // If the image has no valid src, remove it or its parent figure
                     const figure = img.closest('figure');
                     if (figure) {
                         figure.remove();
                     } else {
                         img.remove();
                     }
+                    return;
+                }
+
+                // Make sure it's an absolute URL
+                if (img.src.indexOf('http') !== 0) {
+                    const host = window.location.host || 'api.storiesfromtheweb.org';
+                    const protocol = window.location.protocol || 'https:';
+                    img.src = `${protocol}//${host}${img.src.startsWith('/') ? '' : '/'}${img.src}`;
+                }
+
+                // Make sure it has an alt attribute
+                if (!img.alt) {
+                    img.alt = 'Story image';
                 }
             });
 

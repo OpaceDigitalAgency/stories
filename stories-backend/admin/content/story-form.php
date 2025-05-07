@@ -1011,6 +1011,10 @@ require_once '../includes/header.php';
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
 
+<!-- Include story preview script -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/story-preview.js"></script>
+
 <!-- Include story form fix script -->
 <script src="../assets/js/story-form-fix.js"></script>
 

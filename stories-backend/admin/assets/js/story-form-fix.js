@@ -422,7 +422,22 @@ function showPreview() {
     const storyContentTextarea = document.getElementById('story_content');
     const title = document.getElementById('title').value || 'Story Preview';
     const summary = document.getElementById('summary').value || '';
+    const storyId = document.querySelector('input[name="id"]')?.value;
 
+    // If we have a story ID, use the same preview method as the story list page
+    if (storyId) {
+        // Check if the StoryPreview class is available (from story-preview.js)
+        if (window.storyPreview) {
+            // Use the existing preview functionality
+            window.storyPreview.loadStoryPreview(storyId);
+            return;
+        }
+    }
+
+    // If we don't have a story ID or the StoryPreview class isn't available,
+    // we need to create a temporary preview
+
+    // Get the content based on the current editor mode
     if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
         // We're in HTML mode, get content from the HTML textarea
         storyContent = htmlContentTextarea.value;
@@ -434,35 +449,181 @@ function showPreview() {
         storyContent = storyContentTextarea.value;
     }
 
-    // Create a form to post the data
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = 'preview-story.php';
-    form.target = '_blank';
+    // Get author info if available
+    const authorSelect = document.querySelector('#author_id');
+    let authorName = '';
+    let authorAge = '';
+    let authorLocation = '';
 
-    // Add the title
-    const titleInput = document.createElement('input');
-    titleInput.type = 'hidden';
-    titleInput.name = 'title';
-    titleInput.value = title;
-    form.appendChild(titleInput);
+    if (authorSelect && authorSelect.selectedIndex > 0) {
+        const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+        authorName = selectedOption.text || '';
 
-    // Add the summary
-    const summaryInput = document.createElement('input');
-    summaryInput.type = 'hidden';
-    summaryInput.name = 'summary';
-    summaryInput.value = summary;
-    form.appendChild(summaryInput);
+        // Try to get author age and location from the displayed info
+        const authorAgeSpan = document.getElementById('author-age');
+        const authorLocationSpan = document.getElementById('author-location');
 
-    // Add the content
-    const contentInput = document.createElement('input');
-    contentInput.type = 'hidden';
-    contentInput.name = 'content';
-    contentInput.value = storyContent;
-    form.appendChild(contentInput);
+        if (authorAgeSpan) {
+            authorAge = authorAgeSpan.textContent;
+        }
 
-    // Submit the form
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+        if (authorLocationSpan) {
+            authorLocation = authorLocationSpan.textContent;
+        }
+    }
+
+    // Create a temporary preview using a lightbox similar to the story list page
+    createPreviewLightbox(title, authorName, authorAge, authorLocation, summary, storyContent);
+}
+
+/**
+ * Create a preview lightbox for unsaved stories
+ */
+function createPreviewLightbox(title, authorName, authorAge, authorLocation, summary, storyContent) {
+    // Check if we need to load the story-preview.css file
+    if (!document.getElementById('story-preview-css')) {
+        const link = document.createElement('link');
+        link.id = 'story-preview-css';
+        link.rel = 'stylesheet';
+        link.href = '../assets/css/story-preview.css';
+        document.head.appendChild(link);
+    }
+
+    // Create the lightbox container if it doesn't exist
+    let lightbox = document.getElementById('story-preview-lightbox');
+    if (!lightbox) {
+        lightbox = document.createElement('div');
+        lightbox.id = 'story-preview-lightbox';
+        lightbox.className = 'lightbox-overlay';
+
+        lightbox.innerHTML = `
+            <div class="lightbox-container">
+                <div class="lightbox-header">
+                    <h3>Story Preview</h3>
+                    <button class="lightbox-close">&times;</button>
+                </div>
+                <div class="lightbox-content">
+                    <div class="preview-iframe-container">
+                        <div class="preview-content">
+                            <div class="story-header">
+                                <h1 class="story-title">${escapeHtml(title)}</h1>
+                            </div>
+
+                            ${authorName ? `
+                            <div class="story-author">
+                                <div class="story-author-name">By ${escapeHtml(authorName)}</div>
+                                ${(authorAge || authorLocation) ? `
+                                <div class="story-author-details">
+                                    ${authorAge ? `<span>Age: ${escapeHtml(authorAge)}</span>` : ''}
+                                    ${authorAge && authorLocation ? '<span> • </span>' : ''}
+                                    ${authorLocation ? `<span>From: ${escapeHtml(authorLocation)}</span>` : ''}
+                                </div>
+                                ` : ''}
+                            </div>
+                            ` : ''}
+
+                            ${summary ? `
+                            <div class="story-summary">
+                                ${summary}
+                            </div>
+                            ` : ''}
+
+                            <div class="story-content">
+                                ${storyContent}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(lightbox);
+
+        // Add event listeners for closing the lightbox
+        const closeButton = lightbox.querySelector('.lightbox-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                lightbox.style.display = 'none';
+                document.body.style.overflow = '';
+            });
+        }
+
+        // Close on click outside the content
+        lightbox.addEventListener('click', function(e) {
+            if (e.target === lightbox) {
+                lightbox.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Close on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && lightbox.style.display === 'flex') {
+                lightbox.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+    } else {
+        // Update the content of the existing lightbox
+        const titleElement = lightbox.querySelector('.story-title');
+        if (titleElement) {
+            titleElement.textContent = title;
+        }
+
+        // Update author info
+        const authorNameElement = lightbox.querySelector('.story-author-name');
+        if (authorNameElement) {
+            authorNameElement.innerHTML = authorName ? `By ${escapeHtml(authorName)}` : '';
+        }
+
+        // Update author details
+        const authorDetailsElement = lightbox.querySelector('.story-author-details');
+        if (authorDetailsElement) {
+            authorDetailsElement.innerHTML = '';
+            if (authorAge) {
+                const ageSpan = document.createElement('span');
+                ageSpan.textContent = `Age: ${authorAge}`;
+                authorDetailsElement.appendChild(ageSpan);
+            }
+
+            if (authorAge && authorLocation) {
+                const separator = document.createElement('span');
+                separator.textContent = ' • ';
+                authorDetailsElement.appendChild(separator);
+            }
+
+            if (authorLocation) {
+                const locationSpan = document.createElement('span');
+                locationSpan.textContent = `From: ${authorLocation}`;
+                authorDetailsElement.appendChild(locationSpan);
+            }
+        }
+
+        // Update summary
+        const summaryElement = lightbox.querySelector('.story-summary');
+        if (summaryElement) {
+            summaryElement.innerHTML = summary;
+        }
+
+        // Update content
+        const contentElement = lightbox.querySelector('.story-content');
+        if (contentElement) {
+            contentElement.innerHTML = storyContent;
+        }
+    }
+
+    // Show the lightbox
+    lightbox.style.display = 'flex';
+
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Helper function to escape HTML
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

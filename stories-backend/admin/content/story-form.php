@@ -432,6 +432,10 @@ require_once '../includes/header.php';
                                         // It's plain text, we'll escape it when displaying
                                         $storyHtml = htmlspecialchars($storyText);
                                     }
+
+                                    // Debug log to check what's happening with the content
+                                    error_log("Story content extracted. Length: " . strlen($storyText));
+                                    error_log("HTML content prepared. Length: " . strlen($storyHtml ?? ''));
                                 }
                             }
                             ?>
@@ -445,7 +449,7 @@ require_once '../includes/header.php';
                             <!-- Story Content Field with WYSIWYG -->
                             <div class="form-group mb-0">
                                 <label for="story_content">Story</label>
-                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo isset($storyHtml) ? $storyHtml : htmlspecialchars($storyText); ?></textarea>
+                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo isset($storyHtml) ? $storyHtml : (isset($storyText) ? htmlspecialchars($storyText) : ''); ?></textarea>
                                 <input type="hidden" id="content" name="content" value="">
                             </div>
                         </div>

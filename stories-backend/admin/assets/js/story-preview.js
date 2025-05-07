@@ -138,7 +138,7 @@ class StoryPreview {
                             </a>
                         </div>
                         <div class="preview-iframe-container">
-                            <iframe src="about:blank" frameborder="0" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+                            <iframe src="about:blank" frameborder="0" allowfullscreen allow="fullscreen" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"></iframe>
                         </div>
                     </div>
                 </div>

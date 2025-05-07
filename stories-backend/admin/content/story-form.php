@@ -111,6 +111,48 @@ $extraHeadContent = '
 <script src="../assets/js/ckeditor.js"></script>
 <script src="../assets/js/ckeditor-upload-adapter.js"></script>
 
+<!-- Loading overlay styles -->
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: white;
+    }
+
+    .loading-overlay.active {
+        display: flex;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 15px;
+    }
+
+    .loading-message {
+        font-size: 18px;
+        text-align: center;
+        max-width: 80%;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
 <style>
     /* Base form styles */
     .checkbox-group {
@@ -367,6 +409,15 @@ require_once '../includes/header.php';
                                 // Extract story content
                                 if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $content, $storyMatch)) {
                                     $storyText = trim($storyMatch[1]);
+
+                                    // Check if the content contains HTML tags
+                                    if (strpos($storyText, '<') !== false && strpos($storyText, '>') !== false) {
+                                        // It's HTML content, we'll store it as is for direct output
+                                        $storyHtml = $storyText;
+                                    } else {
+                                        // It's plain text, we'll escape it when displaying
+                                        $storyHtml = htmlspecialchars($storyText);
+                                    }
                                 }
                             }
                             ?>
@@ -380,7 +431,7 @@ require_once '../includes/header.php';
                             <!-- Story Content Field with WYSIWYG -->
                             <div class="form-group mb-0">
                                 <label for="story_content">Story</label>
-                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo htmlspecialchars($storyText); ?></textarea>
+                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo isset($storyHtml) ? $storyHtml : htmlspecialchars($storyText); ?></textarea>
                                 <input type="hidden" id="content" name="content" value="">
                             </div>
                         </div>
@@ -933,11 +984,57 @@ require_once '../includes/header.php';
                 });
         }
 
+        // Create loading overlay
+        function createLoadingOverlay() {
+            // Check if overlay already exists
+            if (!document.getElementById('loading-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'loading-overlay';
+                overlay.className = 'loading-overlay';
+
+                const spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+                overlay.appendChild(spinner);
+
+                const message = document.createElement('div');
+                message.className = 'loading-message';
+                message.textContent = 'Saving story...';
+                overlay.appendChild(message);
+
+                document.body.appendChild(overlay);
+            }
+
+            return document.getElementById('loading-overlay');
+        }
+
+        // Show loading overlay
+        function showLoadingOverlay(message = 'Saving story...') {
+            const overlay = createLoadingOverlay();
+            const messageEl = overlay.querySelector('.loading-message');
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            overlay.classList.add('active');
+        }
+
+        // Hide loading overlay
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
         // Handle form submission to format content properly
         document.querySelector('form.content-form').addEventListener('submit', function(e) {
+            // Show loading overlay
+            showLoadingOverlay('Saving story and processing images...');
+
             // Only if we have the editor instance
             if (window.storyEditor) {
                 const summary = document.querySelector('#summary').value;
+
+                // Get the content from CKEditor - this includes any images that were added
                 const storyContent = window.storyEditor.getData();
 
                 // Get author info if available
@@ -980,12 +1077,25 @@ require_once '../includes/header.php';
                     formattedContent += '## Summary\n\n' + summary + '\n\n';
                 }
 
-                // Add story section
+                // Add story section with the HTML content directly
+                // This is the key change - we're storing the HTML content directly
+                // instead of converting it to markdown
                 formattedContent += '## Story\n\n' + storyContent;
 
                 // Set the hidden content field value
                 document.querySelector('#content').value = formattedContent;
+
+                // Add a small delay to ensure the form is submitted with the updated content
+                setTimeout(() => {
+                    // If the form hasn't been submitted yet (due to validation errors), hide the overlay
+                    if (!this.classList.contains('submitted')) {
+                        hideLoadingOverlay();
+                    }
+                }, 500);
             }
+
+            // Mark the form as submitted
+            this.classList.add('submitted');
         });
     });
 </script>

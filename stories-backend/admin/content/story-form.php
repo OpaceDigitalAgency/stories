@@ -652,7 +652,7 @@ require_once '../includes/header.php';
                         <div class="wp-card-body">
                             <?php if (in_array('allow_reviews', $additionalFields)): ?>
                             <div class="form-group">
-                                <div class="form-check">
+                                <div class="form-check form-switch">
                                     <input type="checkbox" id="allow_reviews" name="allow_reviews" class="form-check-input" value="1"
                                         <?php echo (isset($story['allow_reviews']) && $story['allow_reviews'] == 1) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="allow_reviews">Allow Reviews</label>
@@ -705,12 +705,15 @@ require_once '../includes/header.php';
                                 $label = ucwords(str_replace('_', ' ', $field));
 
                                 // Check if this is a boolean field (tinyint(1))
-                                $isBooleanField = $isIntField && strpos($columnData['Type'], 'tinyint(1)') !== false;
+                                $isBooleanField = $isIntField && (
+                                    strpos($columnData['Type'], 'tinyint(1)') !== false ||
+                                    in_array($field, ['is_published', 'is_featured', 'is_sponsored', 'allow_reviews'])
+                                );
 
                                 if ($isBooleanField):
                             ?>
                                 <div class="form-group">
-                                    <div class="form-check">
+                                    <div class="form-check form-switch">
                                         <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-check-input"
                                             value="1" <?php echo (isset($story[$field]) && $story[$field] == 1) ? 'checked' : ''; ?>>
                                         <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -1343,90 +1346,7 @@ require_once '../includes/header.php';
             this.classList.add('submitted');
         });
 
-        // Handle preview button click
-        const previewButton = document.getElementById('preview-story');
-        if (previewButton) {
-            previewButton.addEventListener('click', function() {
-                // Get the story content - check if we're in HTML mode or WYSIWYG mode
-                let storyContent = '';
-                const htmlContentTextarea = document.getElementById('html_content');
-                const storyContentTextarea = document.getElementById('story_content');
-
-                if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
-                    // We're in HTML mode, get content from the HTML textarea
-                    storyContent = htmlContentTextarea.value;
-                } else if (window.storyEditor) {
-                    // We're in WYSIWYG mode, get content from CKEditor
-                    storyContent = window.storyEditor.getData();
-                } else if (storyContentTextarea && storyContentTextarea.style.display !== 'none') {
-                    // We're using the fallback textarea
-                    storyContent = storyContentTextarea.value;
-                }
-
-                // Process images in the content to ensure they have proper URLs
-                storyContent = processImagesInContent(storyContent);
-
-                // Get the title
-                const title = document.getElementById('title').value || 'Preview';
-
-                // Get the summary
-                const summary = document.getElementById('summary').value || '';
-
-                // Get the cover image
-                const coverUrlInput = document.querySelector('.image-url-input');
-                let coverUrl = '';
-
-                if (coverUrlInput) {
-                    coverUrl = coverUrlInput.value || '';
-
-                    // Make sure the cover URL is absolute
-                    if (coverUrl && coverUrl.indexOf('http') !== 0) {
-                        const host = window.location.host || 'api.storiesfromtheweb.org';
-                        const protocol = window.location.protocol || 'https:';
-                        coverUrl = `${protocol}//${host}${coverUrl.startsWith('/') ? '' : '/'}${coverUrl}`;
-                    }
-                }
-
-                // Create a form to post the data
-                const form = document.createElement('form');
-                form.method = 'post';
-                form.action = 'preview-story.php';
-                form.target = '_blank';
-
-                // Add the title
-                const titleInput = document.createElement('input');
-                titleInput.type = 'hidden';
-                titleInput.name = 'title';
-                titleInput.value = title;
-                form.appendChild(titleInput);
-
-                // Add the summary
-                const summaryInput = document.createElement('input');
-                summaryInput.type = 'hidden';
-                summaryInput.name = 'summary';
-                summaryInput.value = summary;
-                form.appendChild(summaryInput);
-
-                // Add the cover image
-                const coverInput = document.createElement('input');
-                coverInput.type = 'hidden';
-                coverInput.name = 'cover_url';
-                coverInput.value = coverUrl;
-                form.appendChild(coverInput);
-
-                // Add the content
-                const contentInput = document.createElement('input');
-                contentInput.type = 'hidden';
-                contentInput.name = 'content';
-                contentInput.value = storyContent;
-                form.appendChild(contentInput);
-
-                // Submit the form
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-            });
-        }
+        // Legacy preview form submission - now handled by the setupPreviewModal function
 
         // Function to process images in HTML content
         function processImagesInContent(content) {
@@ -1496,56 +1416,54 @@ require_once '../includes/header.php';
             return tempDiv.innerHTML;
         }
 
-        // Set up the preview button
-        const previewButton = document.getElementById('preview-story');
-        if (previewButton) {
-            previewButton.addEventListener('click', function() {
-                // Create a preview modal if it doesn't exist
-                let previewModal = document.getElementById('story-preview-modal');
-                if (!previewModal) {
-                    previewModal = document.createElement('div');
-                    previewModal.id = 'story-preview-modal';
-                    previewModal.className = 'modal fade';
-                    previewModal.setAttribute('tabindex', '-1');
-                    previewModal.setAttribute('role', 'dialog');
-                    previewModal.setAttribute('aria-labelledby', 'previewModalLabel');
-                    previewModal.setAttribute('aria-hidden', 'true');
+        // Set up the preview modal functionality
+        function setupPreviewModal() {
+            // Create a preview modal if it doesn't exist
+            let previewModal = document.getElementById('story-preview-modal');
+            if (!previewModal) {
+                previewModal = document.createElement('div');
+                previewModal.id = 'story-preview-modal';
+                previewModal.className = 'modal fade';
+                previewModal.setAttribute('tabindex', '-1');
+                previewModal.setAttribute('role', 'dialog');
+                previewModal.setAttribute('aria-labelledby', 'previewModalLabel');
+                previewModal.setAttribute('aria-hidden', 'true');
 
-                    previewModal.innerHTML = `
-                        <div class="modal-dialog modal-xl" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="previewModalLabel">Story Preview</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <iframe id="preview-iframe" style="width: 100%; height: 600px; border: none;"></iframe>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                </div>
+                previewModal.innerHTML = `
+                    <div class="modal-dialog modal-xl" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="previewModalLabel">Story Preview</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <iframe id="preview-iframe" style="width: 100%; height: 600px; border: none;"></iframe>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                             </div>
                         </div>
-                    `;
+                    </div>
+                `;
 
-                    document.body.appendChild(previewModal);
-                }
+                document.body.appendChild(previewModal);
+            }
 
-                // Get the content for preview
-                let storyContent = '';
-                const htmlContentTextarea = document.getElementById('html_content');
-                const title = document.getElementById('title').value || 'Story Preview';
-                const summary = document.getElementById('summary').value || '';
+            // Get the content for preview
+            let storyContent = '';
+            const htmlContentTextarea = document.getElementById('html_content');
+            const title = document.getElementById('title').value || 'Story Preview';
+            const summary = document.getElementById('summary').value || '';
 
-                if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
-                    // We're in HTML mode, get content from the HTML textarea
-                    storyContent = htmlContentTextarea.value;
-                } else if (window.storyEditor) {
-                    // We're in WYSIWYG mode, get content from CKEditor
-                    storyContent = window.storyEditor.getData();
-                }
+            if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                // We're in HTML mode, get content from the HTML textarea
+                storyContent = htmlContentTextarea.value;
+            } else if (window.storyEditor) {
+                // We're in WYSIWYG mode, get content from CKEditor
+                storyContent = window.storyEditor.getData();
+            }
 
                 // Process images in the content
                 storyContent = processImagesInContent(storyContent);
@@ -1664,7 +1582,15 @@ require_once '../includes/header.php';
                         iframeDoc.close();
                     }, 300);
                 }
-            });
+            }
+
+            // Set up the preview button click handler
+            const previewButton = document.getElementById('preview-story');
+            if (previewButton) {
+                previewButton.addEventListener('click', function() {
+                    setupPreviewModal();
+                });
+            }
         }
     });
 </script>

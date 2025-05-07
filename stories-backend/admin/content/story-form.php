@@ -459,7 +459,15 @@ require_once '../includes/header.php';
                                                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
                                                 $src = "$protocol://$host" . (strpos($src, '/') === 0 ? $src : "/$src");
                                             }
-                                            return str_replace($matches[1], $src, $matches[0]);
+
+                                            // Make sure the image has an alt attribute (even if empty)
+                                            $imgTag = $matches[0];
+                                            if (strpos($imgTag, 'alt=') === false) {
+                                                $imgTag = str_replace('<img', '<img alt=""', $imgTag);
+                                            }
+
+                                            // Replace the src attribute
+                                            return str_replace($matches[1], $src, $imgTag);
                                         },
                                         $storyText
                                     );

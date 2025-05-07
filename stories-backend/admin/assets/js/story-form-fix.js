@@ -289,7 +289,12 @@ function initializeEditor() {
                             '|',
                             'toggleImageCaption',
                             'imageTextAlternative'
-                        ]
+                        ],
+                        // Ensure images always have alt text, even if empty
+                        insert: {
+                            integrations: ['upload'],
+                            allowedTypes: ['jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'svg+xml']
+                        }
                     },
                     // Register the custom upload adapter plugin
                     extraPlugins: [MediaLibraryUploadAdapterPlugin]
@@ -712,6 +717,55 @@ function escapeRegExp(string) {
 }
 
 /**
+ * Fix image URLs in content to ensure they're absolute and properly formatted
+ * This is critical for images to display correctly when the story is reloaded
+ */
+function fixImageUrls(content) {
+    // Skip if content is empty or doesn't contain any images
+    if (!content || content.indexOf('<img') === -1) {
+        return content;
+    }
+
+    console.log('Fixing image URLs in content');
+
+    // Create a temporary div to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+
+    // Find all images
+    const images = tempDiv.querySelectorAll('img');
+
+    // Process each image
+    images.forEach(img => {
+        const src = img.getAttribute('src');
+
+        // Skip if no src attribute
+        if (!src) {
+            console.warn('Image without src attribute found');
+            return;
+        }
+
+        // Make sure the URL is absolute
+        if (src.indexOf('http') !== 0) {
+            const host = window.location.host || 'api.storiesfromtheweb.org';
+            const protocol = window.location.protocol || 'https:';
+            const newSrc = `${protocol}//${host}${src.startsWith('/') ? '' : '/'}${src}`;
+
+            console.log(`Converting relative URL: ${src} to absolute: ${newSrc}`);
+            img.setAttribute('src', newSrc);
+        }
+
+        // Ensure alt attribute exists (even if empty)
+        if (!img.hasAttribute('alt')) {
+            img.setAttribute('alt', '');
+        }
+    });
+
+    // Return the fixed HTML
+    return tempDiv.innerHTML;
+}
+
+/**
  * Custom upload adapter for CKEditor to use our media library
  */
 function MediaLibraryUploadAdapterPlugin(editor) {
@@ -733,26 +787,58 @@ class MediaLibraryUploadAdapter {
             return new Promise((resolve, reject) => {
                 // Create a FormData to send the file to the server
                 const data = new FormData();
-                data.append('file', file);
-                data.append('action', 'upload');
+                data.append('upload', file); // Use 'upload' as the field name to match the handler
+                data.append('entity_type', 'story');
+                data.append('for_editor', 'true');
+
+                // Try to get the story ID from the form if available
+                const storyIdInput = document.querySelector('input[name="id"]');
+                if (storyIdInput && storyIdInput.value) {
+                    data.append('entity_id', storyIdInput.value);
+                } else {
+                    // Use a temporary ID if we don't have a story ID yet
+                    data.append('entity_id', 'temp-' + Date.now());
+                }
+
+                // Add alt text (can be updated later)
+                data.append('alt_text', file.name.replace(/\.[^/.]+$/, "")); // Use filename without extension as alt text
+
+                // Show a loading indicator
+                console.log('Uploading image:', file.name);
 
                 // Send the file to the server
-                fetch('../media/upload.php', {
+                fetch('../handlers/upload-image.php', {
                     method: 'POST',
                     body: data
                 })
                 .then(response => response.json())
                 .then(result => {
-                    if (result.success) {
-                        // Return the URL to CKEditor
+                    if (result.url) {
+                        console.log('Image uploaded successfully:', result.url);
+
+                        // Make sure the URL is absolute
+                        let imageUrl = result.url;
+                        if (imageUrl && imageUrl.indexOf('http') !== 0) {
+                            // Convert to absolute URL if it's not already
+                            const host = window.location.host || 'api.storiesfromtheweb.org';
+                            const protocol = window.location.protocol || 'https:';
+                            imageUrl = `${protocol}//${host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+                        }
+
+                        // Return the URL and other properties to CKEditor
                         resolve({
-                            default: result.url
+                            default: imageUrl,
+                            alt: result.alt || file.name.replace(/\.[^/.]+$/, ""),
+                            width: result.width || null,
+                            height: result.height || null
                         });
                     } else {
+                        console.error('Upload failed:', result.message || 'Unknown error');
                         reject(result.message || 'Upload failed');
                     }
                 })
                 .catch(error => {
+                    console.error('Upload error:', error);
                     reject('Upload failed: ' + error);
                 });
             });
@@ -761,6 +847,7 @@ class MediaLibraryUploadAdapter {
 
     abort() {
         // This method is required but we don't need to do anything
+        console.log('Upload aborted');
     }
 }
 
@@ -816,6 +903,9 @@ function setupFormSubmissionHandler() {
 
             // Clean up the story content to ensure summary isn't duplicated
             let cleanedStoryContent = storyContent;
+
+            // Fix image URLs in the content to ensure they're absolute
+            cleanedStoryContent = fixImageUrls(cleanedStoryContent);
 
             // Remove any instances of the summary from the story content
             if (summary) {

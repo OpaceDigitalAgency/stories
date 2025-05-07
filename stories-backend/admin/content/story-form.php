@@ -110,6 +110,7 @@ $extraHeadContent = '
 <!-- Include CKEditor and custom upload adapter -->
 <script src="../assets/js/ckeditor.js"></script>
 <script src="../assets/js/ckeditor-upload-adapter.js"></script>
+<script src="../assets/js/ckeditor-plugins/source-editing/source-editing.js"></script>
 
 <!-- Loading overlay styles -->
 <style>
@@ -971,6 +972,7 @@ require_once '../includes/header.php';
                         'bulletedList', 'numberedList', '|',
                         'insertTable', '|',
                         'imageUpload', 'mediaEmbed', '|',
+                        'sourceEditing', '|',
                         'undo', 'redo'
                     ],
                     heading: {
@@ -990,8 +992,8 @@ require_once '../includes/header.php';
                             'imageTextAlternative'
                         ]
                     },
-                    // Register the custom upload adapter plugin
-                    extraPlugins: [MediaLibraryUploadAdapterPlugin]
+                    // Register the custom plugins
+                    extraPlugins: [MediaLibraryUploadAdapterPlugin, SourceEditing]
                 })
                 .then(editor => {
                     // Store editor instance

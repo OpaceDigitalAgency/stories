@@ -90,15 +90,24 @@ class StoryPreview {
                 setTimeout(() => {
                     const iframe = document.querySelector('#story-preview-lightbox iframe');
                     if (iframe) {
-                        // Try to access the iframe content to see if it loaded
-                        try {
-                            // This will throw an error if the iframe is from a different origin
-                            // which is expected and normal due to CORS
-                            const iframeContent = iframe.contentWindow.document;
-                            console.log('Iframe loaded successfully');
-                        } catch (e) {
-                            // This is normal for cross-origin iframes
-                            console.log('Cross-origin iframe detected, which is expected');
+                        // Check if the iframe has loaded content
+                        if (iframe.contentWindow) {
+                            console.log('Iframe content window exists');
+
+                            // Add a message listener to receive messages from the iframe
+                            window.addEventListener('message', (event) => {
+                                // Verify the origin of the message
+                                if (event.data && event.data.type === 'preview-loaded') {
+                                    console.log('Preview loaded successfully');
+                                }
+
+                                if (event.data && event.data.type === 'preview-error') {
+                                    console.error('Preview error:', event.data.message);
+                                    this.showError(event.data.message || 'Failed to load preview');
+                                }
+                            });
+                        } else {
+                            console.error('Iframe content window does not exist');
                         }
                     }
                 }, 2000);
@@ -161,13 +170,18 @@ class StoryPreview {
             }
         }
 
-        // Instead of directly loading the external URL in the iframe,
-        // use a proxy approach or load a local preview page
+        // Use our proxy handler to load the content with proper headers
         const iframe = lightbox.querySelector('iframe');
 
         // Create a proxy URL that will load the content through our backend
+        // This ensures proper headers are set for cross-origin iframe loading
         const proxyUrl = `../handlers/story-preview-proxy.php?url=${encodeURIComponent(url)}`;
+
+        // Set the iframe source to our proxy URL
         iframe.src = proxyUrl;
+
+        // Log the URL for debugging
+        console.log('Loading preview via proxy:', proxyUrl);
 
         // Show the lightbox
         lightbox.style.display = 'flex';

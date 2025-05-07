@@ -16,6 +16,9 @@ header('Content-Type: text/html; charset=utf-8');
 // Set headers to allow iframe embedding and disable CSP restrictions
 header('X-Frame-Options: SAMEORIGIN');
 header("Content-Security-Policy: frame-src * 'self' data:; frame-ancestors 'self'; default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 // Get the URL from the query string
 $url = isset($_GET['url']) ? $_GET['url'] : '';
@@ -182,6 +185,7 @@ if (!$allowed) {
             title="Story Preview"
             onload="hideLoading()"
             onerror="showError()"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"
         ></iframe>
     </div>
 
@@ -189,6 +193,13 @@ if (!$allowed) {
         // Hide loading overlay when iframe is loaded
         function hideLoading() {
             document.getElementById('loading-overlay').style.display = 'none';
+
+            // Notify parent window that the preview is loaded
+            try {
+                window.parent.postMessage({ type: 'preview-loaded' }, '*');
+            } catch (e) {
+                console.error('Error sending message to parent window:', e);
+            }
         }
 
         // Show error if iframe fails to load
@@ -217,6 +228,16 @@ if (!$allowed) {
 
             // Add error message
             container.appendChild(errorDiv);
+
+            // Notify parent window of the error
+            try {
+                window.parent.postMessage({
+                    type: 'preview-error',
+                    message: 'Failed to load story preview. Please try opening in a new tab.'
+                }, '*');
+            } catch (e) {
+                console.error('Error sending error message to parent window:', e);
+            }
         }
 
         // Set timeout to check if iframe loaded correctly

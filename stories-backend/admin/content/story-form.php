@@ -496,8 +496,29 @@ require_once '../includes/header.php';
                                         <i class="fas fa-code"></i> Toggle HTML
                                     </button>
                                 </div>
-                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo isset($storyHtml) ? $storyHtml : (isset($storyText) ? htmlspecialchars($storyText) : ''); ?></textarea>
-                                <textarea id="html_content" name="html_content" class="form-control" rows="15" style="display: none; font-family: monospace;"><?php echo isset($storyHtml) ? htmlspecialchars($storyHtml) : (isset($storyText) ? htmlspecialchars($storyText) : ''); ?></textarea>
+                                <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php
+                                    // Make sure we're not including the summary in the story content
+                                    $displayContent = isset($storyHtml) ? $storyHtml : (isset($storyText) ? htmlspecialchars($storyText) : '');
+
+                                    // Remove any instances of the summary from the story content
+                                    if (!empty($summary)) {
+                                        // Try exact match
+                                        $displayContent = str_replace($summary, '', $displayContent);
+
+                                        // Try with HTML tags
+                                        $summaryWithPTags = '<p>' . $summary . '</p>';
+                                        $displayContent = str_replace($summaryWithPTags, '', $displayContent);
+
+                                        // Clean up any empty paragraphs
+                                        $displayContent = preg_replace('/<p>\s*<\/p>/', '', $displayContent);
+                                    }
+
+                                    echo trim($displayContent);
+                                ?></textarea>
+                                <textarea id="html_content" name="html_content" class="form-control" rows="15" style="display: none; font-family: monospace;"><?php
+                                    // Use the same cleaned content for HTML view
+                                    echo isset($displayContent) ? htmlspecialchars($displayContent) : '';
+                                ?></textarea>
                                 <input type="hidden" id="content" name="content" value="">
                             </div>
                         </div>

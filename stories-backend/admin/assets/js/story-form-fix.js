@@ -262,6 +262,20 @@ function initializeEditor() {
 
         const editorElement = document.getElementById('story_content');
         if (editorElement) {
+            // Make sure the summary isn't in the story content
+            const summaryField = document.getElementById('summary');
+            if (summaryField && summaryField.value && editorElement.value.includes(summaryField.value)) {
+                console.log('Removing summary from story content before initializing editor');
+                editorElement.value = editorElement.value.replace(summaryField.value, '').trim();
+
+                // Also remove with paragraph tags
+                const summaryWithPTags = '<p>' + summaryField.value + '</p>';
+                editorElement.value = editorElement.value.replace(summaryWithPTags, '').trim();
+
+                // Clean up empty paragraphs
+                editorElement.value = editorElement.value.replace(/<p>\s*<\/p>/g, '').trim();
+            }
+
             // Initialize CKEditor
             ClassicEditor
                 .create(editorElement, {
@@ -776,6 +790,41 @@ function fixImageUrls(content) {
  */
 
 /**
+ * Setup event listeners to keep summary and story content separate
+ */
+function setupSummaryAndStoryContentSeparation() {
+    const summaryField = document.getElementById('summary');
+
+    if (summaryField) {
+        // When the summary changes, make sure it's not in the story content
+        summaryField.addEventListener('change', function() {
+            if (!window.storyEditor) return;
+
+            const summary = summaryField.value.trim();
+            if (!summary) return;
+
+            // Get current editor content
+            const editorContent = window.storyEditor.getData();
+
+            // Check if the summary is in the editor content
+            if (editorContent.includes(summary)) {
+                console.log('Summary found in editor content, removing it');
+
+                // Remove the summary from the editor content
+                const cleanedContent = editorContent
+                    .replace(summary, '')
+                    .replace('<p>' + summary + '</p>', '')
+                    .replace(/<p>\s*<\/p>/g, '')
+                    .trim();
+
+                // Set the cleaned content back to the editor
+                window.storyEditor.setData(cleanedContent);
+            }
+        });
+    }
+}
+
+/**
  * Setup form submission handler to ensure content is properly saved
  */
 function setupFormSubmissionHandler() {
@@ -783,6 +832,9 @@ function setupFormSubmissionHandler() {
 
     if (storyForm) {
         console.log('Setting up form submission handler');
+
+        // Setup the summary and story content separation
+        setupSummaryAndStoryContentSeparation();
 
         storyForm.addEventListener('submit', function(e) {
             // Prevent the default form submission temporarily

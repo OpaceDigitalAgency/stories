@@ -507,8 +507,6 @@ require_once '../includes/header.php';
                         </div>
                         <div class="wp-card-body">
                             <?php
-                            $hasAdditionalFields = false;
-
                             foreach ($additionalFields as $field):
                                 // Skip author_id and is_published as we've already handled them
                                 if (in_array($field, ['author_id', 'is_published'])) continue;
@@ -529,8 +527,6 @@ require_once '../includes/header.php';
                                 if ($isBooleanField) {
                                     continue;
                                 }
-
-                                $hasAdditionalFields = true;
                             ?>
                                 <div class="form-group">
                                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
@@ -543,10 +539,6 @@ require_once '../includes/header.php';
                                         <?php echo $isRequired ? 'required' : ''; ?>>
                                 </div>
                             <?php endforeach; ?>
-
-                            <?php if (!$hasAdditionalFields): ?>
-                                <p class="text-muted">No additional fields available.</p>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -657,7 +649,7 @@ require_once '../includes/header.php';
                     extraPlugins: [function(editor) {
                         // This is where we integrate with our custom upload adapter
                         editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
-                            return new MyUploadAdapter(loader);
+                            return new MediaLibraryUploadAdapter(loader);
                         };
                     }]
                 })
@@ -706,6 +698,44 @@ require_once '../includes/header.php';
 
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
+
+<!-- Include custom upload adapter for blog posts -->
+<script>
+    /**
+     * Custom upload adapter for blog posts
+     * This extends the MediaLibraryUploadAdapter to set the entity_type to 'post'
+     */
+    class BlogPostUploadAdapter extends MediaLibraryUploadAdapter {
+        _sendRequest(file) {
+            // Create FormData
+            const data = new FormData();
+            data.append('upload', file);
+            data.append('entity_type', 'post'); // Use 'post' instead of 'story'
+            data.append('for_editor', 'true');
+
+            // Try to get the post ID from the form if available
+            const postIdInput = document.querySelector('input[name="id"]');
+            if (postIdInput && postIdInput.value) {
+                data.append('entity_id', postIdInput.value);
+            } else {
+                // Use a temporary ID if we don't have a post ID yet
+                data.append('entity_id', 'temp-' + Date.now());
+            }
+
+            // Add alt text (can be updated later)
+            data.append('alt_text', file.name.replace(/\.[^/.]+$/, "")); // Use filename without extension as alt text
+
+            // Show loading indicator
+            this._showLoadingIndicator(file.name);
+
+            // Send the request
+            this.xhr.send(data);
+        }
+    }
+
+    // Override the MediaLibraryUploadAdapter for this page
+    MediaLibraryUploadAdapter = BlogPostUploadAdapter;
+</script>
 
 <!-- Include post preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">

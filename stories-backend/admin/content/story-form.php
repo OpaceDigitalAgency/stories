@@ -674,8 +674,20 @@ require_once '../includes/header.php';
                                 $isDecimalField = strpos($columnData['Type'], 'decimal') === 0;
                                 $label = ucwords(str_replace('_', ' ', $field));
 
-                                if ($isIntField || $isDecimalField):
+                                // Check if this is a boolean field (tinyint(1))
+                                $isBooleanField = $isIntField && strpos($columnData['Type'], 'tinyint(1)') !== false;
+
+                                if ($isBooleanField):
                             ?>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input type="checkbox" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-check-input"
+                                            value="1" <?php echo (!empty($story[$field])) ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
+                                        <input type="hidden" name="<?php echo $field; ?>_submitted" value="1">
+                                    </div>
+                                </div>
+                            <?php elseif ($isIntField || $isDecimalField): ?>
                                 <div class="form-group">
                                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
                                     <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
@@ -1017,14 +1029,22 @@ require_once '../includes/header.php';
                                 // Switch to HTML mode
                                 htmlContentTextarea.value = editor.getData();
                                 htmlContentTextarea.style.display = 'block';
-                                editor.sourceElement.style.display = 'none';
-                                editor.ui.view.element.style.display = 'none';
+
+                                // Hide the CKEditor UI completely
+                                const editorElement = editor.ui.view.element;
+                                if (editorElement && editorElement.parentNode) {
+                                    editorElement.parentNode.style.display = 'none';
+                                }
                             } else {
                                 // Switch back to WYSIWYG mode
                                 editor.setData(htmlContentTextarea.value);
                                 htmlContentTextarea.style.display = 'none';
-                                editor.sourceElement.style.display = 'block';
-                                editor.ui.view.element.style.display = 'block';
+
+                                // Show the CKEditor UI again
+                                const editorElement = editor.ui.view.element;
+                                if (editorElement && editorElement.parentNode) {
+                                    editorElement.parentNode.style.display = '';
+                                }
                             }
                             isHtmlMode = !isHtmlMode;
                         });
@@ -1163,13 +1183,23 @@ require_once '../includes/header.php';
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
 
-            // Find all images
+            // Find all images and figures
             const images = tempDiv.querySelectorAll('img');
+            const figures = tempDiv.querySelectorAll('figure.image');
+
+            // Remove empty figure elements (those without valid images)
+            figures.forEach(figure => {
+                // Check if it's an empty figure with no valid image
+                const img = figure.querySelector('img');
+                if (!img || !img.src || img.src === 'about:blank' || img.src === 'null' || img.src === 'undefined') {
+                    figure.remove();
+                }
+            });
 
             // Process each image
             images.forEach(img => {
-                // Make sure the image has a src attribute
-                if (img.src) {
+                // Make sure the image has a valid src attribute
+                if (img.src && img.src !== 'about:blank' && img.src !== 'null' && img.src !== 'undefined') {
                     // Make sure it's an absolute URL
                     if (img.src.indexOf('http') !== 0) {
                         const host = window.location.host || 'api.storiesfromtheweb.org';
@@ -1180,6 +1210,14 @@ require_once '../includes/header.php';
                     // Make sure it has an alt attribute
                     if (!img.alt) {
                         img.alt = 'Story image';
+                    }
+                } else {
+                    // If the image has no valid src, remove it
+                    const figure = img.closest('figure');
+                    if (figure) {
+                        figure.remove();
+                    } else {
+                        img.remove();
                     }
                 }
             });
@@ -1242,6 +1280,29 @@ require_once '../includes/header.php';
                 // Process images in the content
                 storyContent = processImagesInContent(storyContent);
 
+                // Get author info if available
+                const authorSelect = document.querySelector('#author_id');
+                let authorName = '';
+                let authorAge = '';
+                let authorLocation = '';
+
+                if (authorSelect && authorSelect.selectedIndex > 0) {
+                    const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                    authorName = selectedOption.text || '';
+
+                    // Try to get author age and location from the displayed info
+                    const authorAgeSpan = document.getElementById('author-age');
+                    const authorLocationSpan = document.getElementById('author-location');
+
+                    if (authorAgeSpan) {
+                        authorAge = authorAgeSpan.textContent;
+                    }
+
+                    if (authorLocationSpan) {
+                        authorLocation = authorLocationSpan.textContent;
+                    }
+                }
+
                 // Create a preview HTML document
                 const previewHtml = `
                     <!DOCTYPE html>
@@ -1264,10 +1325,25 @@ require_once '../includes/header.php';
                                 font-size: 2.2em;
                                 margin-bottom: 0.5em;
                             }
+                            .author-info {
+                                margin-bottom: 1.5em;
+                                padding: 10px;
+                                background-color: #f8f9fa;
+                                border-radius: 5px;
+                            }
+                            .author-info p {
+                                margin: 0.3em 0;
+                            }
                             .summary {
                                 font-style: italic;
                                 margin-bottom: 2em;
                                 color: #555;
+                                padding: 10px;
+                                background-color: #f8f9fa;
+                                border-left: 3px solid #007bff;
+                            }
+                            .story-content {
+                                margin-top: 2em;
                             }
                             .story-content img {
                                 max-width: 100%;
@@ -1286,7 +1362,17 @@ require_once '../includes/header.php';
                     </head>
                     <body>
                         <h1>${title}</h1>
+
+                        ${authorName ? `
+                        <div class="author-info">
+                            <p><strong>Author:</strong> ${authorName}</p>
+                            ${authorAge && authorAge !== 'Not specified' ? `<p><strong>Age:</strong> ${authorAge}</p>` : ''}
+                            ${authorLocation && authorLocation !== 'Not specified' ? `<p><strong>Location:</strong> ${authorLocation}</p>` : ''}
+                        </div>
+                        ` : ''}
+
                         ${summary ? `<div class="summary">${summary}</div>` : ''}
+
                         <div class="story-content">
                             ${storyContent}
                         </div>

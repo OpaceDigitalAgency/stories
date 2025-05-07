@@ -103,31 +103,51 @@ $pageActions = '
 </div>
 ';
 
-// Add custom CSS for content preview
+// Get frontend URL from config or use default
+$frontendBaseUrl = '';
+
+// Try to get from config.php if it exists
+if (file_exists('../includes/config.php')) {
+    include_once '../includes/config.php';
+    if (function_exists('get_config')) {
+        $frontendBaseUrl = get_config('site.url', '');
+    }
+}
+
+// If not found in config, use default based on environment
+if (empty($frontendBaseUrl)) {
+    $host = $_SERVER['HTTP_HOST'];
+    if ($host === 'localhost' || strpos($host, '127.0.0.1') !== false) {
+        $frontendBaseUrl = 'http://localhost:3000';
+    } else if (strpos($host, 'staging') !== false || strpos($host, 'test') !== false) {
+        $frontendBaseUrl = 'https://staging.storiesfromtheweb.org';
+    } else {
+        $frontendBaseUrl = 'https://storiesfromtheweb.netlify.app';
+    }
+}
+
+// Construct the frontend URL
+$frontendUrl = $frontendBaseUrl . '/stories/' . $story['slug'];
+
+// Add custom CSS and JS for preview
 $extraHeadContent = '
-<style>
-    .content-body {
-        max-height: 600px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-    }
+<!-- Add Story Preview CSS and JS -->
+<link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/story-preview.js"></script>
+<script>
+    // Set the frontend base URL
+    window.FRONTEND_BASE_URL = "' . $frontendBaseUrl . '";
 
-    .bg-light {
-        background-color: var(--gray-50);
-    }
-
-    .border {
-        border: 1px solid var(--border-color);
-    }
-
-    .rounded {
-        border-radius: var(--radius-md);
-    }
-
-    .p-4 {
-        padding: 1.5rem;
-    }
-</style>
+    // Auto-open the preview when the page loads
+    document.addEventListener("DOMContentLoaded", function() {
+        // Wait a moment for the StoryPreview class to initialize
+        setTimeout(function() {
+            if (window.storyPreview) {
+                window.storyPreview.loadStoryPreview("' . $storyId . '");
+            }
+        }, 500);
+    });
+</script>
 ';
 
 // Include header
@@ -175,18 +195,25 @@ require_once '../includes/header.php';
         </div>
 
         <div class="content-preview">
-            <h3 class="mb-3">Content</h3>
-            <div class="content-body p-4 bg-light border rounded">
-                <?php
-                // Check if content might be HTML
-                if (strpos($story['content'], '<') !== false && strpos($story['content'], '>') !== false) {
-                    // It might be HTML, so display it as is
-                    echo $story['content'];
-                } else {
-                    // It's plain text, so preserve line breaks
-                    echo nl2br(htmlspecialchars($story['content']));
-                }
-                ?>
+            <h3 class="mb-3">Story Preview</h3>
+            <div class="alert alert-info">
+                <p><i class="fas fa-info-circle"></i> Loading story preview... If the preview doesn't open automatically, click the button below.</p>
+                <button class="btn btn-primary story-preview-btn" data-story-id="<?php echo $storyId; ?>">
+                    <i class="fas fa-external-link-alt"></i> Open Story Preview
+                </button>
+            </div>
+
+            <div class="mt-4">
+                <p>You can view this story on the frontend at:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($frontendUrl); ?>" readonly>
+                    <button class="btn btn-outline-secondary" type="button" onclick="window.open('<?php echo htmlspecialchars($frontendUrl); ?>', '_blank')">
+                        <i class="fas fa-external-link-alt"></i> Open
+                    </button>
+                    <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('<?php echo htmlspecialchars($frontendUrl); ?>').then(() => alert('URL copied to clipboard!'))">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
             </div>
         </div>
     </div>

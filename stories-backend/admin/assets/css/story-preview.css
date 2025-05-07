@@ -1,0 +1,129 @@
+/**
+ * Story Preview Lightbox Styles
+ */
+
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.lightbox-container {
+    background-color: white;
+    border-radius: 5px;
+    width: 90%;
+    height: 90%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+}
+
+.lightbox-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.lightbox-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.lightbox-close:hover {
+    color: #dc3545;
+}
+
+.lightbox-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.lightbox-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.lightbox-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.lightbox-loading p {
+    color: white;
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+.lightbox-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 20px;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .lightbox-container {
+        width: 95%;
+        height: 95%;
+    }
+}
+
+/* Preview button styles */
+.story-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background-color: #17a2b8;
+    border: 1px solid #17a2b8;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.story-preview-btn:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+}
+
+.story-preview-btn i {
+    margin-right: 5px;
+}

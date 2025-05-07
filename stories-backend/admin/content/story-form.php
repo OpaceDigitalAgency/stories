@@ -91,7 +91,7 @@ try {
         $columnInfo[$column['Field']] = $column;
 
         // Skip standard fields that are handled explicitly
-        if (!in_array($column['Field'], ['id', 'title', 'content', 'author_id', 'created_at', 'updated_at'])) {
+        if (!in_array($column['Field'], ['id', 'title', 'content', 'author_id', 'created_at', 'updated_at', 'cover_url'])) {
             $additionalFields[] = $column['Field'];
         }
     }

@@ -14,6 +14,7 @@
  * Helper function to get display URL for images
  *
  * @param string $filePath The file path or URL
+ * @param string $itemType The type of item (e.g., 'author', 'story', 'game', etc.)
  * @return string The properly formatted URL
  */
 function getTableDisplayUrl($filePath, $itemType = 'general') {
@@ -282,6 +283,19 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
             border-radius: 4px;
             border: 1px solid #ddd;
         }
+        .no-image-placeholder {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #999;
+            font-size: 12px;
+            margin: 0 auto;
+        }
         .loading-indicator {
             position: fixed;
             top: 0;
@@ -451,6 +465,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     <?php
                                     $thumbnailUrl = isset($item[$options['thumbnailField']]) ? $item[$options['thumbnailField']] : '';
                                     $thumbnailAlt = isset($item[$options['thumbnailAltField']]) ? $item[$options['thumbnailAltField']] : '';
+                                    $itemId = isset($item['id']) ? $item['id'] : '';
 
                                     // Get the proper display URL (will return default image if empty)
                                     $thumbnailUrl = getTableDisplayUrl($thumbnailUrl, $itemType);
@@ -462,18 +477,32 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
                                     if ($isClickable) {
                                         if ($clickAction === 'view') {
-                                            $clickUrl = 'view-' . $itemType . '.php?id=' . $item['id'];
+                                            $clickUrl = 'view-' . $itemType . '.php?id=' . $itemId;
                                         } else if ($clickAction === 'edit') {
-                                            $clickUrl = $itemType . '-form.php?id=' . $item['id'];
+                                            $clickUrl = $itemType . '-form.php?id=' . $itemId;
                                         }
                                     }
 
                                     if ($isClickable && !empty($clickUrl)) {
                                         echo '<a href="' . htmlspecialchars($clickUrl) . '" class="thumbnail-link">';
                                     }
-                                    ?>
-                                    <img src="<?php echo htmlspecialchars($thumbnailUrl); ?>" alt="<?php echo htmlspecialchars($thumbnailAlt); ?>" class="thumbnail-image">
-                                    <?php
+
+                                    // Add data attributes for debugging
+                                    $dataAttrs = 'data-item-id="' . htmlspecialchars($itemId) . '" data-item-type="' . htmlspecialchars($itemType) . '"';
+
+                                    // Check if the URL is a default image
+                                    $isDefaultImage = (strpos($thumbnailUrl, 'default-') !== false);
+
+                                    if ($isDefaultImage) {
+                                        // Show "No Image" placeholder
+                                        echo '<div class="no-image-placeholder" ' . $dataAttrs . '>';
+                                        echo 'No Image';
+                                        echo '</div>';
+                                    } else {
+                                        // Show the actual image
+                                        echo '<img src="' . htmlspecialchars($thumbnailUrl) . '" alt="' . htmlspecialchars($thumbnailAlt) . '" class="thumbnail-image" ' . $dataAttrs . '>';
+                                    }
+
                                     if ($isClickable && !empty($clickUrl)) {
                                         echo '</a>';
                                     }

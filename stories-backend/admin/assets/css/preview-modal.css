@@ -1,0 +1,215 @@
+/**
+ * Preview Modal Styles
+ * 
+ * Shared styles for all preview modals (author, contact, etc.)
+ */
+
+/* Preview Modal Container */
+.preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.preview-modal-content {
+    background-color: #fff;
+    border-radius: 5px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.preview-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.preview-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.preview-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.preview-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.preview-loading {
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    color: #666;
+}
+
+/* Loading Indicator */
+.lightbox-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+}
+
+.lightbox-loading p {
+    margin-top: 10px;
+}
+
+/* Author Preview Styles */
+.author-card {
+    padding: 20px;
+}
+
+.author-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.author-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 20px;
+    border: 1px solid #ddd;
+}
+
+.author-info {
+    flex: 1;
+}
+
+.author-name {
+    margin: 0 0 10px 0;
+    font-size: 1.8rem;
+}
+
+.author-meta {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.author-bio {
+    margin-bottom: 20px;
+    line-height: 1.6;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.author-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.author-stories, .author-posts {
+    flex: 1;
+    min-width: 250px;
+}
+
+.author-stories h3, .author-posts h3 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.author-stories ul, .author-posts ul {
+    padding-left: 20px;
+}
+
+/* Contact Preview Styles */
+.contact-card {
+    padding: 0;
+}
+
+.contact-card .card {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: none;
+}
+
+.contact-card .card-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.contact-card .card-header h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.5rem;
+}
+
+.contact-card .card-body {
+    padding: 20px;
+}
+
+.contact-card .card-body h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.contact-card .message-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.contact-card .admin-notes {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.contact-card .admin-notes h5 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.contact-card .card-footer {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.contact-card .badge {
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-weight: normal;
+}

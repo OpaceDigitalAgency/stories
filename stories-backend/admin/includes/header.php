@@ -93,11 +93,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
     $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
     $premiumAdminCssPath = $isContentDir ? '../assets/css/premium-admin.css' : 'assets/css/premium-admin.css';
     $adminStylesCssPath = $isContentDir ? '../assets/css/admin-styles.css' : 'assets/css/admin-styles.css';
+    $previewModalCssPath = $isContentDir ? '../assets/css/preview-modal.css' : 'assets/css/preview-modal.css';
     ?>
     <link rel="stylesheet" href="<?php echo $modernDashboardCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $premiumAdminCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $adminStylesCssPath; ?>">
+    <link rel="stylesheet" href="<?php echo $previewModalCssPath; ?>">
 
     <!-- JavaScript Libraries -->
     <!-- Add jQuery -->
@@ -112,10 +114,48 @@ $siteName = get_config('site.name', 'Stories From The Web');
     $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
     $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
     $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
+
+    // Preview JS files
+    $storyPreviewJsPath = $isContentDir ? '../assets/js/story-preview.js' : 'assets/js/story-preview.js';
+    $authorPreviewJsPath = $isContentDir ? '../assets/js/author-preview.js' : 'assets/js/author-preview.js';
+    $contactPreviewJsPath = $isContentDir ? '../assets/js/contact-preview.js' : 'assets/js/contact-preview.js';
+    $gamePreviewJsPath = $isContentDir ? '../assets/js/game-preview.js' : 'assets/js/game-preview.js';
+    $directoryItemPreviewJsPath = $isContentDir ? '../assets/js/directory-item-preview.js' : 'assets/js/directory-item-preview.js';
+    $aiToolPreviewJsPath = $isContentDir ? '../assets/js/ai-tool-preview.js' : 'assets/js/ai-tool-preview.js';
+    $postPreviewJsPath = $isContentDir ? '../assets/js/post-preview.js' : 'assets/js/post-preview.js';
     ?>
     <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
     <script src="<?php echo $liveSearchJsPath; ?>"></script>
     <script src="<?php echo $inlineEditingJsPath; ?>"></script>
+
+    <!-- Load preview scripts based on current page -->
+    <?php if ($currentPage === 'stories'): ?>
+    <script src="<?php echo $storyPreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'authors'): ?>
+    <script src="<?php echo $authorPreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'contacts'): ?>
+    <script src="<?php echo $contactPreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'games'): ?>
+    <script src="<?php echo $gamePreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'directory'): ?>
+    <script src="<?php echo $directoryItemPreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'ai-tools'): ?>
+    <script src="<?php echo $aiToolPreviewJsPath; ?>"></script>
+    <?php endif; ?>
+
+    <?php if ($currentPage === 'blog-posts'): ?>
+    <script src="<?php echo $postPreviewJsPath; ?>"></script>
+    <?php endif; ?>
 
     <!-- Custom CSS for header navigation -->
     <style>

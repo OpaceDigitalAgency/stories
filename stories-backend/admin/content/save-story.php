@@ -54,6 +54,7 @@ try {
     $title = trim($_POST['title'] ?? '');
     $author_id = $_POST['author_id'] ?? '';
     $content = trim($_POST['content'] ?? '');
+    $summary = trim($_POST['summary'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $featured = isset($_POST['featured']) ? 1 : 0;
     $is_published = isset($_POST['is_published']) ? 1 : 0;
@@ -120,7 +121,8 @@ try {
     // Prepare data for insert/update
     $data = [
         'title' => $title,
-        'content' => $content
+        'content' => $content,
+        'excerpt' => $summary
     ];
 
     // Verify author exists

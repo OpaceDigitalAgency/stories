@@ -693,7 +693,7 @@ require_once '../includes/header.php';
                                 if (in_array($field, [
                                     'id', 'title', 'content', 'author_id', 'created_at', 'updated_at', 'slug',
                                     'source_type', 'allow_reviews', 'average_rating', 'estimated_reading_time',
-                                    'age_group', 'review_count'
+                                    'age_group', 'review_count', 'excerpt'
                                 ])) {
                                     continue;
                                 }

@@ -472,6 +472,9 @@ function showPreview() {
         }
     }
 
+    // Clean up the story content to remove markdown headings
+    storyContent = storyContent.replace(/^## .*$/gm, '').trim();
+
     // Create a temporary preview using a lightbox similar to the story list page
     createPreviewLightbox(title, authorName, authorAge, authorLocation, summary, storyContent);
 }

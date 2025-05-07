@@ -86,6 +86,10 @@ if ($story && !empty($story['content'])) {
             $storyContent = preg_replace('/\*\*.*?\*\*/m', '', $storyContent);
         }
     }
+
+    // Remove any remaining markdown headings from the story content
+    $storyContent = preg_replace('/^## .*$/m', '', $storyContent);
+    $storyContent = trim($storyContent);
 }
 
 // Function to render the story content with proper styling

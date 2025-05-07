@@ -1465,123 +1465,123 @@ require_once '../includes/header.php';
                 storyContent = window.storyEditor.getData();
             }
 
-                // Process images in the content
-                storyContent = processImagesInContent(storyContent);
+            // Process images in the content
+            storyContent = processImagesInContent(storyContent);
 
-                // Get author info if available
-                const authorSelect = document.querySelector('#author_id');
-                let authorName = '';
-                let authorAge = '';
-                let authorLocation = '';
+            // Get author info if available
+            const authorSelect = document.querySelector('#author_id');
+            let authorName = '';
+            let authorAge = '';
+            let authorLocation = '';
 
-                if (authorSelect && authorSelect.selectedIndex > 0) {
-                    const selectedOption = authorSelect.options[authorSelect.selectedIndex];
-                    authorName = selectedOption.text || '';
+            if (authorSelect && authorSelect.selectedIndex > 0) {
+                const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                authorName = selectedOption.text || '';
 
-                    // Try to get author age and location from the displayed info
-                    const authorAgeSpan = document.getElementById('author-age');
-                    const authorLocationSpan = document.getElementById('author-location');
+                // Try to get author age and location from the displayed info
+                const authorAgeSpan = document.getElementById('author-age');
+                const authorLocationSpan = document.getElementById('author-location');
 
-                    if (authorAgeSpan) {
-                        authorAge = authorAgeSpan.textContent;
-                    }
-
-                    if (authorLocationSpan) {
-                        authorLocation = authorLocationSpan.textContent;
-                    }
+                if (authorAgeSpan) {
+                    authorAge = authorAgeSpan.textContent;
                 }
 
-                // Create a preview HTML document
-                const previewHtml = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>${title}</title>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
-                        <style>
-                            body {
-                                font-family: Arial, sans-serif;
-                                line-height: 1.6;
-                                color: #333;
-                                max-width: 800px;
-                                margin: 0 auto;
-                                padding: 20px;
-                            }
-                            h1 {
-                                font-size: 2.2em;
-                                margin-bottom: 0.5em;
-                            }
-                            .author-info {
-                                margin-bottom: 1.5em;
-                                padding: 10px;
-                                background-color: #f8f9fa;
-                                border-radius: 5px;
-                            }
-                            .author-info p {
-                                margin: 0.3em 0;
-                            }
-                            .summary {
-                                font-style: italic;
-                                margin-bottom: 2em;
-                                color: #555;
-                                padding: 10px;
-                                background-color: #f8f9fa;
-                                border-left: 3px solid #007bff;
-                            }
-                            .story-content {
-                                margin-top: 2em;
-                            }
-                            .story-content img {
-                                max-width: 100%;
-                                height: auto;
-                                margin: 1em 0;
-                            }
-                            .story-content figure {
-                                margin: 1.5em 0;
-                            }
-                            .story-content figcaption {
-                                font-size: 0.9em;
-                                color: #666;
-                                text-align: center;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>${title}</h1>
-
-                        ${authorName ? `
-                        <div class="author-info">
-                            <p><strong>Author:</strong> ${authorName}</p>
-                            ${authorAge && authorAge !== 'Not specified' ? `<p><strong>Age:</strong> ${authorAge}</p>` : ''}
-                            ${authorLocation && authorLocation !== 'Not specified' ? `<p><strong>Location:</strong> ${authorLocation}</p>` : ''}
-                        </div>
-                        ` : ''}
-
-                        ${summary ? `<div class="summary">${summary}</div>` : ''}
-
-                        <div class="story-content">
-                            ${storyContent}
-                        </div>
-                    </body>
-                    </html>
-                `;
-
-                // Get the iframe and set its content
-                const previewIframe = document.getElementById('preview-iframe');
-                if (previewIframe) {
-                    // Show the modal
-                    $(previewModal).modal('show');
-
-                    // Set the iframe content after the modal is shown
-                    setTimeout(() => {
-                        const iframeDoc = previewIframe.contentDocument || previewIframe.contentWindow.document;
-                        iframeDoc.open();
-                        iframeDoc.write(previewHtml);
-                        iframeDoc.close();
-                    }, 300);
+                if (authorLocationSpan) {
+                    authorLocation = authorLocationSpan.textContent;
                 }
+            }
+
+            // Create a preview HTML document
+            const previewHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${title}</title>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            max-width: 800px;
+                            margin: 0 auto;
+                            padding: 20px;
+                        }
+                        h1 {
+                            font-size: 2.2em;
+                            margin-bottom: 0.5em;
+                        }
+                        .author-info {
+                            margin-bottom: 1.5em;
+                            padding: 10px;
+                            background-color: #f8f9fa;
+                            border-radius: 5px;
+                        }
+                        .author-info p {
+                            margin: 0.3em 0;
+                        }
+                        .summary {
+                            font-style: italic;
+                            margin-bottom: 2em;
+                            color: #555;
+                            padding: 10px;
+                            background-color: #f8f9fa;
+                            border-left: 3px solid #007bff;
+                        }
+                        .story-content {
+                            margin-top: 2em;
+                        }
+                        .story-content img {
+                            max-width: 100%;
+                            height: auto;
+                            margin: 1em 0;
+                        }
+                        .story-content figure {
+                            margin: 1.5em 0;
+                        }
+                        .story-content figcaption {
+                            font-size: 0.9em;
+                            color: #666;
+                            text-align: center;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+
+                    ${authorName ? `
+                    <div class="author-info">
+                        <p><strong>Author:</strong> ${authorName}</p>
+                        ${authorAge && authorAge !== 'Not specified' ? `<p><strong>Age:</strong> ${authorAge}</p>` : ''}
+                        ${authorLocation && authorLocation !== 'Not specified' ? `<p><strong>Location:</strong> ${authorLocation}</p>` : ''}
+                    </div>
+                    ` : ''}
+
+                    ${summary ? `<div class="summary">${summary}</div>` : ''}
+
+                    <div class="story-content">
+                        ${storyContent}
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // Get the iframe and set its content
+            const previewIframe = document.getElementById('preview-iframe');
+            if (previewIframe) {
+                // Show the modal
+                $(previewModal).modal('show');
+
+                // Set the iframe content after the modal is shown
+                setTimeout(() => {
+                    const iframeDoc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(previewHtml);
+                    iframeDoc.close();
+                }, 300);
+            }
             }
 
             // Set up the preview button click handler

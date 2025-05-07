@@ -145,10 +145,15 @@ try {
         mkdir($optimizedDir, 0755, true);
     }
 
+    // Log the optimization attempt
+    error_log("Attempting to optimize image: " . $fileDestination);
+
     // Optimize the image
     $variants = createImageVariants($fileDestination, $optimizedDir);
 
     if (!$variants) {
+        error_log("Image optimization failed for: " . $fileDestination);
+
         // If optimization fails, use the original file
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $fileDestination);
         $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
@@ -164,9 +169,18 @@ try {
         ]);
 
         $mediaId = $db->lastInsertId();
+
+        error_log("Created media record ID: " . $mediaId . " with original file: " . $url);
     } else {
+        error_log("Image optimization successful. Variants created: " . implode(", ", array_keys($variants)));
+
         // Use the optimized medium size as the default
         $url = $variants['medium']['url'] ?? $variants['original']['url'];
+
+        // Log the thumbnail URL
+        if (isset($variants['thumbnail'])) {
+            error_log("Thumbnail URL: " . $variants['thumbnail']['url']);
+        }
 
         // Save to media table
         $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
@@ -179,9 +193,40 @@ try {
         ]);
 
         $mediaId = $db->lastInsertId();
+        error_log("Created media record ID: " . $mediaId . " with optimized file: " . $url);
 
         // Update the media record with optimized URLs
-        updateMediaRecord($db, $mediaId, $variants);
+        $updateResult = updateMediaRecord($db, $mediaId, $variants);
+        error_log("Media record update result: " . ($updateResult ? "Success" : "Failed"));
+
+        // Check if the media table has the necessary columns
+        try {
+            $columnsQuery = $db->query("SHOW COLUMNS FROM media LIKE 'thumbnail_url'");
+            if ($columnsQuery->rowCount() === 0) {
+                error_log("Media table is missing thumbnail_url column. Adding it now.");
+                $db->exec("ALTER TABLE media ADD COLUMN thumbnail_url VARCHAR(255) AFTER file_path");
+            }
+
+            $columnsQuery = $db->query("SHOW COLUMNS FROM media LIKE 'small_url'");
+            if ($columnsQuery->rowCount() === 0) {
+                error_log("Media table is missing small_url column. Adding it now.");
+                $db->exec("ALTER TABLE media ADD COLUMN small_url VARCHAR(255) AFTER thumbnail_url");
+            }
+
+            $columnsQuery = $db->query("SHOW COLUMNS FROM media LIKE 'medium_url'");
+            if ($columnsQuery->rowCount() === 0) {
+                error_log("Media table is missing medium_url column. Adding it now.");
+                $db->exec("ALTER TABLE media ADD COLUMN medium_url VARCHAR(255) AFTER small_url");
+            }
+
+            $columnsQuery = $db->query("SHOW COLUMNS FROM media LIKE 'large_url'");
+            if ($columnsQuery->rowCount() === 0) {
+                error_log("Media table is missing large_url column. Adding it now.");
+                $db->exec("ALTER TABLE media ADD COLUMN large_url VARCHAR(255) AFTER medium_url");
+            }
+        } catch (Exception $e) {
+            error_log("Error checking/adding columns to media table: " . $e->getMessage());
+        }
     }
 
     // Set response based on whether this is a CKEditor upload or not

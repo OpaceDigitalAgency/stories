@@ -39,7 +39,7 @@ try {
         $stmt = $db->prepare("SELECT * FROM tags WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $tag = $stmt->fetch();
-        
+
         if (!$tag) {
             header("Location: tags.php");
             exit;
@@ -73,72 +73,94 @@ if (isset($_SESSION['error'])) {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="content-section mb-4">
-            <div class="section-header">
-                <h2 class="section-title">Details</h2>
-                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
+        <div class="row">
+            <!-- Main content column -->
+            <div class="col-md-8">
+                <div class="content-section mb-4">
+                    <div class="section-header">
+                        <h2 class="section-title">Tag Details</h2>
+                        <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
+                    </div>
+                    <div class="section-body">
+                        <form method="POST" action="save-tag.php" class="content-form">
+                            <?php if ($tag): ?>
+                                <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
+                            <?php endif; ?>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="name">Name <span class="required">*</span></label>
+                                <input type="text" id="name" name="name" class="form-control" required
+                                       value="<?php echo htmlspecialchars($tag['name'] ?? ''); ?>"
+                                       onkeyup="generateSlug(this.value)">
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                                <input type="text" id="slug" name="slug" class="form-control" required
+                                       value="<?php echo htmlspecialchars($tag['slug'] ?? ''); ?>">
+                                <small>Use lowercase letters, numbers, and hyphens only. No spaces. Will be auto-generated from name.</small>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="description">Description</label>
+                                <textarea id="description" name="description" class="form-control" rows="3"><?php
+                                    echo htmlspecialchars($tag['description'] ?? '');
+                                ?></textarea>
+                            </div>
+
+                            <!-- Sticky action bar -->
+                            <div class="sticky-action-bar">
+                                <button type="submit" class="btn btn-primary">Save Tag</button>
+                                <a href="tags.php" class="btn btn-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="section-body">
-                <form method="POST" action="save-tag.php" class="content-form">
-                    <?php if ($tag): ?>
-                        <input type="hidden" name="id" value="<?php echo $tag['id']; ?>">
-                    <?php endif; ?>
 
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="name">Name <span class="required">*</span></label>
-                        <input type="text" id="name" name="name" class="form-control" required
-                               value="<?php echo htmlspecialchars($tag['name'] ?? ''); ?>"
-                               onkeyup="generateSlug(this.value)">
-                    </div>
+            <!-- Sidebar column -->
+            <div class="col-md-4">
+                <?php if ($tag): ?>
+                    <div class="content-section mb-4">
+                        <div class="section-header">
+                            <h2 class="section-title">Metadata</h2>
+                        </div>
+                        <div class="section-body">
+                            <div class="metadata-list">
+                                <?php if (isset($tag['created_at'])): ?>
+                                <div class="metadata-item">
+                                    <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['created_at'])); ?>
+                                </div>
+                                <?php endif; ?>
 
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="slug">Slug <span class="required">*</span></label>
-                        <input type="text" id="slug" name="slug" class="form-control" required
-                               value="<?php echo htmlspecialchars($tag['slug'] ?? ''); ?>">
-                        <small>Use lowercase letters, numbers, and hyphens only. No spaces. Will be auto-generated from name.</small>
-                    </div>
+                                <?php if (isset($tag['updated_at'])): ?>
+                                <div class="metadata-item">
+                                    <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['updated_at'])); ?>
+                                </div>
+                                <?php endif; ?>
 
-                    <div class="form-group mb-3">
-                        <label class="form-label" for="description">Description</label>
-                        <textarea id="description" name="description" class="form-control" rows="3"><?php 
-                            echo htmlspecialchars($tag['description'] ?? ''); 
-                        ?></textarea>
+                                <div class="metadata-item">
+                                    <strong>ID:</strong> <?php echo $tag['id']; ?>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Save Tag</button>
-                        <a href="tags.php" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+                <?php endif; ?>
             </div>
         </div>
 
-        <?php if ($tag): ?>
-            <div class="content-section mb-4">
-                <div class="section-header">
-                    <h2 class="section-title">Metadata</h2>
-                </div>
-                <div class="section-body">
-                    <div class="metadata-list">
-                        <?php if (isset($tag['created_at'])): ?>
-                        <div class="metadata-item">
-                            <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['created_at'])); ?>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if (isset($tag['updated_at'])): ?>
-                        <div class="metadata-item">
-                            <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($tag['updated_at'])); ?>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <div class="metadata-item">
-                            <strong>ID:</strong> <?php echo $tag['id']; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
+        <style>
+            .sticky-action-bar {
+                position: sticky;
+                bottom: 0;
+                background-color: #fff;
+                padding: 15px;
+                margin: 20px -15px -15px;
+                border-top: 1px solid #ddd;
+                text-align: right;
+                z-index: 100;
+            }
+        </style>
     </div>
 </div>
 
@@ -148,25 +170,25 @@ if (isset($_SESSION['error'])) {
             border-radius: var(--radius-md);
             padding: 1rem;
         }
-        
+
         .metadata-item {
             margin-bottom: 0.5rem;
             padding-bottom: 0.5rem;
             border-bottom: 1px solid var(--gray-200);
         }
-        
+
         .metadata-item:last-child {
             margin-bottom: 0;
             padding-bottom: 0;
             border-bottom: none;
         }
-        
+
         .text-muted {
             color: var(--gray-600);
             font-size: 0.875rem;
         }
     </style>
-    
+
     <script>
         function generateSlug(name) {
             const slug = name

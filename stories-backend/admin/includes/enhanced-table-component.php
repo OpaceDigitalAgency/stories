@@ -21,11 +21,14 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     if (empty($filePath)) {
         // Check if this is an author avatar
         if ($itemType === 'author') {
-            return 'https://api.storiesfromtheweb.org/admin/assets/images/default-avatar.svg';
+            return '../assets/images/default-avatar.svg';
         }
         // For other content types, use the default cover
-        return 'https://api.storiesfromtheweb.org/admin/assets/images/default-cover.svg';
+        return '../assets/images/default-cover.svg';
     }
+
+    // Log the file path for debugging
+    error_log("Thumbnail lookup for: " . $filePath . " (Item type: " . $itemType . ")");
 
     // Check if there's a thumbnail version available
     if (strpos($filePath, '/uploads/') !== false && strpos($filePath, '-thumbnail') === false) {
@@ -41,25 +44,76 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
 
         // Use .webp extension for thumbnails as that's what the system is using
         $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.webp';
+        $thumbnailPathAbs = $_SERVER['DOCUMENT_ROOT'] . $thumbnailPath;
+
+        error_log("Looking for thumbnail at: " . $thumbnailPathAbs);
 
         // Check if the thumbnail exists
-        if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPath)) {
+        if (file_exists($thumbnailPathAbs)) {
+            error_log("Found thumbnail: " . $thumbnailPath);
             return $thumbnailPath;
         } else {
             // Try with jpg extension as fallback
             $thumbnailPathJpg = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.jpg';
-            if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathJpg)) {
+            $thumbnailPathJpgAbs = $_SERVER['DOCUMENT_ROOT'] . $thumbnailPathJpg;
+
+            error_log("Looking for JPG thumbnail at: " . $thumbnailPathJpgAbs);
+
+            if (file_exists($thumbnailPathJpgAbs)) {
+                error_log("Found JPG thumbnail: " . $thumbnailPathJpg);
                 return $thumbnailPathJpg;
             }
 
             // Try with png extension as another fallback
             $thumbnailPathPng = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.png';
-            if (file_exists($_SERVER['DOCUMENT_ROOT'] . $thumbnailPathPng)) {
+            $thumbnailPathPngAbs = $_SERVER['DOCUMENT_ROOT'] . $thumbnailPathPng;
+
+            error_log("Looking for PNG thumbnail at: " . $thumbnailPathPngAbs);
+
+            if (file_exists($thumbnailPathPngAbs)) {
+                error_log("Found PNG thumbnail: " . $thumbnailPathPng);
                 return $thumbnailPathPng;
             }
 
             // If no thumbnail exists, return the original image
+            error_log("No thumbnail found, using original: " . $filePath);
             return $filePath;
+        }
+    }
+
+    // For media library items, check if we have a thumbnail URL in the database
+    if ($itemType === 'media' || $itemType === 'author' || $itemType === 'directory_item' || $itemType === 'game' || $itemType === 'ai_tool') {
+        // Try to extract ID from URL if it's a full URL
+        $id = null;
+        if (preg_match('/\/(\d+)\//', $filePath, $matches)) {
+            $id = $matches[1];
+        }
+
+        if ($id) {
+            try {
+                // Connect to database
+                $db = new PDO(
+                    'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                    'stories_user',
+                    '$tw1cac3*sOt',
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    ]
+                );
+
+                // Query for thumbnail URL
+                $stmt = $db->prepare("SELECT thumbnail_url FROM media WHERE id = ?");
+                $stmt->execute([$id]);
+                $result = $stmt->fetch();
+
+                if ($result && !empty($result['thumbnail_url'])) {
+                    error_log("Found thumbnail in database: " . $result['thumbnail_url']);
+                    return $result['thumbnail_url'];
+                }
+            } catch (Exception $e) {
+                error_log("Error looking up thumbnail in database: " . $e->getMessage());
+            }
         }
     }
 

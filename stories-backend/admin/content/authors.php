@@ -144,6 +144,9 @@ if (function_exists('renderEnhancedTable')) {
         $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
                      (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.svg');
 
+        // Log the avatar URL for debugging
+        error_log("Author ID: " . $author['id'] . " - Avatar URL: " . $avatarImage);
+
         // Format the bio
         $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
 

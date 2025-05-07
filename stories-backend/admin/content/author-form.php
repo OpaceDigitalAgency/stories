@@ -43,130 +43,203 @@ try {
 
 ?>
 
-<div class="content-section mb-4">
-    <div class="section-body">
-        <form method="POST" action="save-author.php" class="content-form">
-            <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
-
-            <!-- Basic Information -->
-
-            <div class="form-group">
-                <label class="form-label" for="name">Name <span class="required">*</span></label>
-                <input type="text" id="name" name="name" class="form-control" required
-                       value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
+<div class="row">
+    <!-- Main content column -->
+    <div class="col-md-8">
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Author Details</h2>
+                <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
+            <div class="section-body">
+                <form method="POST" action="save-author.php" class="content-form">
+                    <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
 
-            <div class="form-group">
-                <label class="form-label" for="slug">Slug <span class="required">*</span></label>
-                <input type="text" id="slug" name="slug" class="form-control" required
-                       value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>">
-                <small class="form-text text-muted">URL-friendly version of the name (auto-generated if left empty)</small>
+                    <!-- Basic Information -->
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="name">Name <span class="required">*</span></label>
+                        <input type="text" id="name" name="name" class="form-control" required
+                               value="<?php echo htmlspecialchars($author['name'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                        <input type="text" id="slug" name="slug" class="form-control" required
+                               value="<?php echo htmlspecialchars($author['slug'] ?? ''); ?>">
+                        <small class="form-text text-muted">URL-friendly version of the name (auto-generated if left empty)</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-control"
+                               value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="age">Age</label>
+                        <input type="number" id="age" name="age" class="form-control" min="0" max="120"
+                               value="<?php echo htmlspecialchars($author['age'] ?? ''); ?>">
+                    </div>
+
+                    <!-- Author Type -->
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="author_type">Author Type <span class="required">*</span></label>
+                        <select id="author_type" name="author_type" class="form-control" required>
+                            <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
+                            <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
+                            <option value="educator" <?php echo (isset($author['author_type']) && $author['author_type'] === 'educator') ? 'selected' : ''; ?>>Educator</option>
+                            <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail</option>
+                        </select>
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="bio">Biography</label>
+                        <textarea id="bio" name="bio" class="form-control" rows="5"><?php echo htmlspecialchars($author['bio'] ?? ''); ?></textarea>
+                    </div>
+
+                    <!-- Social Media -->
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="website">Website</label>
+                        <input type="url" id="website" name="website" class="form-control"
+                               value="<?php echo htmlspecialchars($author['website'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="twitter">Twitter</label>
+                        <input type="text" id="twitter" name="twitter" class="form-control"
+                               value="<?php echo htmlspecialchars($author['twitter'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="facebook">Facebook</label>
+                        <input type="text" id="facebook" name="facebook" class="form-control"
+                               value="<?php echo htmlspecialchars($author['facebook'] ?? ''); ?>">
+                    </div>
+
+                    <!-- Additional Fields -->
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="featured" name="featured" class="form-check-input" value="1"
+                                   <?php echo (!empty($author['featured'])) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="featured">Featured Author</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" id="is_published" name="is_published" class="form-check-input" value="1"
+                                   <?php echo (!empty($author['is_published'])) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="is_published">Published</label>
+                        </div>
+                    </div>
+
+                    <!-- Sticky action bar -->
+                    <div class="sticky-action-bar">
+                        <button type="submit" class="btn btn-primary">Save Author</button>
+                        <a href="authors.php" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
             </div>
+        </div>
+    </div>
 
-            <div class="form-group">
-                <label class="form-label" for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-control"
-                       value="<?php echo htmlspecialchars($author['email'] ?? ''); ?>">
+    <!-- Sidebar column -->
+    <div class="col-md-4">
+        <!-- Profile Picture -->
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Profile Picture</h2>
             </div>
-
-            <div class="form-group">
-                <label class="form-label" for="age">Age</label>
-                <input type="number" id="age" name="age" class="form-control" min="0" max="120"
-                       value="<?php echo htmlspecialchars($author['age'] ?? ''); ?>">
-            </div>
-
-            <!-- Author Type -->
-
-            <div class="form-group">
-                <label class="form-label" for="author_type">Author Type <span class="required">*</span></label>
-                <select id="author_type" name="author_type" class="form-control" required>
-                    <option value="child" <?php echo (isset($author['author_type']) && $author['author_type'] === 'child') ? 'selected' : ''; ?>>Child</option>
-                    <option value="parent" <?php echo (isset($author['author_type']) && $author['author_type'] === 'parent') ? 'selected' : ''; ?>>Parent</option>
-                    <option value="educator" <?php echo (isset($author['author_type']) && $author['author_type'] === 'educator') ? 'selected' : ''; ?>>Educator</option>
-                    <option value="retail" <?php echo (isset($author['author_type']) && $author['author_type'] === 'retail') ? 'selected' : ''; ?>>Retail</option>
-                </select>
-            </div>
-
-            <!-- Bio -->
-
-            <div class="form-group">
-                <label class="form-label" for="bio">Biography</label>
-                <textarea id="bio" name="bio" class="form-control" rows="5"><?php echo htmlspecialchars($author['bio'] ?? ''); ?></textarea>
-            </div>
-
-            <!-- Profile Picture -->
-
-            <?php
-            // Render image upload component
-            renderImageUploadComponent(
-                'avatar_url',
-                $author['avatar_url'] ?? '',
-                'Profile Picture',
-                'author',
-                $author['id'] ?? null
-            );
-
-            // Render AI image generator
-            if (function_exists('renderAiImageGenerator')) {
-                renderAiImageGenerator(
-                    'author',
-                    [
-                        'name' => $author['name'] ?? '',
-                        'bio' => $author['bio'] ?? '',
-                        'author_type' => $author['author_type'] ?? '',
-                        'age' => $author['age'] ?? ''
-                    ],
+            <div class="section-body">
+                <?php
+                // Render image upload component
+                renderImageUploadComponent(
                     'avatar_url',
-                    'avatar_url_preview'
+                    $author['avatar_url'] ?? '',
+                    'Profile Picture',
+                    'author',
+                    $author['id'] ?? null
                 );
-            }
-            ?>
 
-            <!-- Social Media -->
-
-            <div class="form-group">
-                <label class="form-label" for="website">Website</label>
-                <input type="url" id="website" name="website" class="form-control"
-                       value="<?php echo htmlspecialchars($author['website'] ?? ''); ?>">
+                // Render AI image generator
+                if (function_exists('renderAiImageGenerator')) {
+                    renderAiImageGenerator(
+                        'author',
+                        [
+                            'name' => $author['name'] ?? '',
+                            'bio' => $author['bio'] ?? '',
+                            'author_type' => $author['author_type'] ?? '',
+                            'age' => $author['age'] ?? ''
+                        ],
+                        'avatar_url',
+                        'avatar_url_preview'
+                    );
+                }
+                ?>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label class="form-label" for="twitter">Twitter</label>
-                <input type="text" id="twitter" name="twitter" class="form-control"
-                       value="<?php echo htmlspecialchars($author['twitter'] ?? ''); ?>">
+        <?php if (isset($author['id'])): ?>
+        <!-- Metadata -->
+        <div class="content-section mb-4">
+            <div class="section-header">
+                <h2 class="section-title">Metadata</h2>
             </div>
+            <div class="section-body">
+                <div class="metadata-list">
+                    <?php if (isset($author['created_at'])): ?>
+                    <div class="metadata-item">
+                        <strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($author['created_at'])); ?>
+                    </div>
+                    <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="facebook">Facebook</label>
-                <input type="text" id="facebook" name="facebook" class="form-control"
-                       value="<?php echo htmlspecialchars($author['facebook'] ?? ''); ?>">
-            </div>
+                    <?php if (isset($author['updated_at'])): ?>
+                    <div class="metadata-item">
+                        <strong>Last Updated:</strong> <?php echo date('M j, Y g:i A', strtotime($author['updated_at'])); ?>
+                    </div>
+                    <?php endif; ?>
 
-            <!-- Additional Fields -->
-
-            <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" id="featured" name="featured" class="form-check-input" value="1"
-                           <?php echo (!empty($author['featured'])) ? 'checked' : ''; ?>>
-                    <label class="form-check-label" for="featured">Featured Author</label>
+                    <div class="metadata-item">
+                        <strong>ID:</strong> <?php echo $author['id']; ?>
+                    </div>
                 </div>
             </div>
-
-            <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" id="is_published" name="is_published" class="form-check-input" value="1"
-                           <?php echo (!empty($author['is_published'])) ? 'checked' : ''; ?>>
-                    <label class="form-check-label" for="is_published">Published</label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">Save Author</button>
-                <a href="authors.php" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
+
+<style>
+    .sticky-action-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #fff;
+        padding: 15px;
+        margin: 20px -15px -15px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+        z-index: 100;
+    }
+
+    .metadata-list {
+        background-color: var(--gray-50, #f8f9fa);
+        border-radius: var(--radius-md, 0.375rem);
+        padding: 1rem;
+    }
+
+    .metadata-item {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--gray-200, #e9ecef);
+    }
+
+    .metadata-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+</style>
 
 <script>
     // Auto-generate slug from name

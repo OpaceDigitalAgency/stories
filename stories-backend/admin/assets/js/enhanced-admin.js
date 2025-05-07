@@ -1,6 +1,6 @@
 /**
  * Enhanced Admin JavaScript
- * 
+ *
  * This file contains enhanced functionality for the admin interface,
  * including predictive search, live data filtering, and dashboard charts.
  */
@@ -8,18 +8,18 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Enhanced Admin JS loaded');
-    
+
     // Initialize predictive search
     initPredictiveSearch();
-    
+
     // Initialize dashboard charts if we're on the dashboard page
     if (document.querySelector('.dashboard-cards')) {
         initDashboardCharts();
     }
-    
+
     // Initialize enhanced form validation
     initEnhancedFormValidation();
-    
+
     // Initialize keyboard accessibility
     initKeyboardAccessibility();
 });
@@ -29,41 +29,41 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initPredictiveSearch() {
     const searchInputs = document.querySelectorAll('.search-input');
-    
+
     if (!searchInputs.length) return;
-    
+
     searchInputs.forEach(input => {
         // Create predictive search results container if it doesn't exist
         let resultsContainer = input.parentElement.querySelector('.predictive-search-results');
-        
+
         if (!resultsContainer) {
             resultsContainer = document.createElement('div');
             resultsContainer.className = 'predictive-search-results';
             input.parentElement.appendChild(resultsContainer);
         }
-        
+
         // Add event listeners for input changes
         input.addEventListener('input', debounce(function() {
             const query = input.value.trim();
-            
+
             if (query.length < 2) {
                 resultsContainer.classList.remove('active');
                 return;
             }
-            
+
             // Get the content type from the form or data attribute
             const form = input.closest('form');
-            const contentType = form.getAttribute('data-content-type') || 
-                                form.querySelector('[name="content_type"]')?.value || 
+            const contentType = form.getAttribute('data-content-type') ||
+                                form.querySelector('[name="content_type"]')?.value ||
                                 window.location.pathname.split('/').pop().split('.')[0];
-            
+
             // Get the search field from the form
             const searchField = form.querySelector('[name="search_field"]')?.value || 'all';
-            
+
             // Show loading state
             resultsContainer.innerHTML = '<div class="predictive-search-empty">Searching...</div>';
             resultsContainer.classList.add('active');
-            
+
             // Fetch search results
             fetchPredictiveSearchResults(query, contentType, searchField)
                 .then(results => {
@@ -74,22 +74,22 @@ function initPredictiveSearch() {
                     resultsContainer.innerHTML = '<div class="predictive-search-empty">Error fetching results. Please try again.</div>';
                 });
         }, 300));
-        
+
         // Hide results when clicking outside
         document.addEventListener('click', function(event) {
             if (!input.contains(event.target) && !resultsContainer.contains(event.target)) {
                 resultsContainer.classList.remove('active');
             }
         });
-        
+
         // Add keyboard navigation
         input.addEventListener('keydown', function(event) {
             if (!resultsContainer.classList.contains('active')) return;
-            
+
             const items = resultsContainer.querySelectorAll('.predictive-search-item');
             const activeItem = resultsContainer.querySelector('.predictive-search-item.active');
             let activeIndex = -1;
-            
+
             // Find the index of the active item
             if (activeItem) {
                 for (let i = 0; i < items.length; i++) {
@@ -99,7 +99,7 @@ function initPredictiveSearch() {
                     }
                 }
             }
-            
+
             switch (event.key) {
                 case 'ArrowDown':
                     event.preventDefault();
@@ -109,7 +109,7 @@ function initPredictiveSearch() {
                         items[activeIndex + 1].scrollIntoView({ block: 'nearest' });
                     }
                     break;
-                    
+
                 case 'ArrowUp':
                     event.preventDefault();
                     if (activeIndex > 0) {
@@ -118,14 +118,14 @@ function initPredictiveSearch() {
                         items[activeIndex - 1].scrollIntoView({ block: 'nearest' });
                     }
                     break;
-                    
+
                 case 'Enter':
                     if (activeItem) {
                         event.preventDefault();
                         activeItem.click();
                     }
                     break;
-                    
+
                 case 'Escape':
                     event.preventDefault();
                     resultsContainer.classList.remove('active');
@@ -137,7 +137,7 @@ function initPredictiveSearch() {
 
 /**
  * Fetch predictive search results from the server
- * 
+ *
  * @param {string} query - The search query
  * @param {string} contentType - The type of content to search
  * @param {string} searchField - The field to search in
@@ -146,15 +146,15 @@ function initPredictiveSearch() {
 function fetchPredictiveSearchResults(query, contentType, searchField) {
     // For demonstration purposes, we'll simulate a server response
     // In a real implementation, this would make an AJAX request to the server
-    
+
     return new Promise((resolve) => {
         // Simulate network delay
         setTimeout(() => {
             // This is where you would normally fetch from the server
             // For now, we'll return mock data based on the content type
-            
+
             let results = [];
-            
+
             switch (contentType) {
                 case 'stories':
                     results = [
@@ -163,7 +163,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         { id: 3, title: 'The Magical Forest', author: 'Alice Johnson', created_at: '2023-07-10', type: 'story' }
                     ].filter(item => {
                         if (searchField === 'all') {
-                            return item.title.toLowerCase().includes(query.toLowerCase()) || 
+                            return item.title.toLowerCase().includes(query.toLowerCase()) ||
                                    item.author.toLowerCase().includes(query.toLowerCase());
                         } else if (searchField === 'title') {
                             return item.title.toLowerCase().includes(query.toLowerCase());
@@ -173,7 +173,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         return true;
                     });
                     break;
-                    
+
                 case 'authors':
                     results = [
                         { id: 1, name: 'John Smith', email: 'john@example.com', type: 'author' },
@@ -181,7 +181,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         { id: 3, name: 'Alice Johnson', email: 'alice@example.com', type: 'author' }
                     ].filter(item => {
                         if (searchField === 'all') {
-                            return item.name.toLowerCase().includes(query.toLowerCase()) || 
+                            return item.name.toLowerCase().includes(query.toLowerCase()) ||
                                    item.email.toLowerCase().includes(query.toLowerCase());
                         } else if (searchField === 'name') {
                             return item.name.toLowerCase().includes(query.toLowerCase());
@@ -191,7 +191,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         return true;
                     });
                     break;
-                    
+
                 case 'blog-posts':
                 case 'posts':
                     results = [
@@ -200,7 +200,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         { id: 3, title: 'The Importance of Reading', author: 'Guest Author', created_at: '2023-07-20', type: 'post' }
                     ].filter(item => {
                         if (searchField === 'all') {
-                            return item.title.toLowerCase().includes(query.toLowerCase()) || 
+                            return item.title.toLowerCase().includes(query.toLowerCase()) ||
                                    item.author.toLowerCase().includes(query.toLowerCase());
                         } else if (searchField === 'title') {
                             return item.title.toLowerCase().includes(query.toLowerCase());
@@ -210,7 +210,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         return true;
                     });
                     break;
-                    
+
                 case 'media':
                     results = [
                         { id: 1, filename: 'hero-image.jpg', alt_text: 'Hero image for homepage', created_at: '2023-05-05', type: 'media' },
@@ -218,7 +218,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         { id: 3, filename: 'story-cover.jpg', alt_text: 'Story cover image', created_at: '2023-07-15', type: 'media' }
                     ].filter(item => {
                         if (searchField === 'all') {
-                            return item.filename.toLowerCase().includes(query.toLowerCase()) || 
+                            return item.filename.toLowerCase().includes(query.toLowerCase()) ||
                                    item.alt_text.toLowerCase().includes(query.toLowerCase());
                         } else if (searchField === 'filename') {
                             return item.filename.toLowerCase().includes(query.toLowerCase());
@@ -228,7 +228,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         return true;
                     });
                     break;
-                    
+
                 default:
                     // Generic results for other content types
                     results = [
@@ -236,11 +236,11 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
                         { id: 2, title: 'Item 2', description: 'Description 2', created_at: '2023-06-01', type: contentType },
                         { id: 3, title: 'Item 3', description: 'Description 3', created_at: '2023-07-01', type: contentType }
                     ].filter(item => {
-                        return item.title.toLowerCase().includes(query.toLowerCase()) || 
+                        return item.title.toLowerCase().includes(query.toLowerCase()) ||
                                item.description.toLowerCase().includes(query.toLowerCase());
                     });
             }
-            
+
             resolve(results);
         }, 300);
     });
@@ -248,7 +248,7 @@ function fetchPredictiveSearchResults(query, contentType, searchField) {
 
 /**
  * Render predictive search results in the results container
- * 
+ *
  * @param {Array} results - The search results to render
  * @param {string} query - The search query
  * @param {HTMLElement} container - The container to render the results in
@@ -258,7 +258,7 @@ function renderPredictiveSearchResults(results, query, container) {
         container.innerHTML = '<div class="predictive-search-empty">No results found. Try a different search term.</div>';
         return;
     }
-    
+
     // Group results by type
     const groupedResults = results.reduce((acc, result) => {
         const type = result.type || 'other';
@@ -266,21 +266,21 @@ function renderPredictiveSearchResults(results, query, container) {
         acc[type].push(result);
         return acc;
     }, {});
-    
+
     let html = '';
-    
+
     // Render each group
     for (const [type, items] of Object.entries(groupedResults)) {
         html += `<div class="predictive-search-category">${formatContentType(type)}</div>`;
-        
+
         items.forEach(item => {
             const title = item.title || item.name || item.filename || 'Untitled';
             const subtitle = item.author || item.email || item.alt_text || formatDate(item.created_at) || '';
-            
+
             // Highlight the matching text
             const highlightedTitle = highlightText(title, query);
             const highlightedSubtitle = highlightText(subtitle, query);
-            
+
             html += `
                 <div class="predictive-search-item" data-id="${item.id}" data-type="${type}">
                     <div class="predictive-search-item-title">${highlightedTitle}</div>
@@ -289,21 +289,21 @@ function renderPredictiveSearchResults(results, query, container) {
             `;
         });
     }
-    
+
     html += `<div class="predictive-search-footer">Press Enter to view all results</div>`;
-    
+
     container.innerHTML = html;
     container.classList.add('active');
-    
+
     // Add click event listeners to items
     container.querySelectorAll('.predictive-search-item').forEach(item => {
         item.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const type = this.getAttribute('data-type');
-            
+
             // Redirect to the appropriate page based on the item type
             let url;
-            
+
             switch (type) {
                 case 'story':
                     url = `view-story.php?id=${id}`;
@@ -321,7 +321,7 @@ function renderPredictiveSearchResults(results, query, container) {
                     // Generic URL for other content types
                     url = `${type}-form.php?id=${id}`;
             }
-            
+
             window.location.href = url;
         });
     });
@@ -329,21 +329,21 @@ function renderPredictiveSearchResults(results, query, container) {
 
 /**
  * Highlight matching text in a string
- * 
+ *
  * @param {string} text - The text to highlight
  * @param {string} query - The query to highlight
  * @returns {string} - The highlighted text
  */
 function highlightText(text, query) {
     if (!text || !query) return text || '';
-    
+
     const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
     return text.replace(regex, '<span class="highlight">$1</span>');
 }
 
 /**
  * Escape special characters in a string for use in a regular expression
- * 
+ *
  * @param {string} string - The string to escape
  * @returns {string} - The escaped string
  */
@@ -353,7 +353,7 @@ function escapeRegExp(string) {
 
 /**
  * Format a content type for display
- * 
+ *
  * @param {string} type - The content type
  * @returns {string} - The formatted content type
  */
@@ -368,22 +368,22 @@ function formatContentType(type) {
         'ai_tool': 'AI Tools',
         'directory_item': 'Directory Items'
     };
-    
+
     return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 /**
  * Format a date for display
- * 
+ *
  * @param {string} dateString - The date string
  * @returns {string} - The formatted date
  */
 function formatDate(dateString) {
     if (!dateString) return '';
-    
+
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    
+
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -393,20 +393,20 @@ function formatDate(dateString) {
 
 /**
  * Debounce a function to prevent it from being called too frequently
- * 
+ *
  * @param {Function} func - The function to debounce
  * @param {number} wait - The debounce wait time in milliseconds
  * @returns {Function} - The debounced function
  */
 function debounce(func, wait) {
     let timeout;
-    
+
     return function executedFunction(...args) {
         const later = () => {
             clearTimeout(timeout);
             func(...args);
         };
-        
+
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
@@ -421,7 +421,7 @@ function initDashboardCharts() {
         console.warn('Chart.js is not loaded. Charts will not be displayed.');
         return;
     }
-    
+
     // Create content statistics chart
     const contentStatsCtx = document.getElementById('content-stats-chart');
     if (contentStatsCtx) {
@@ -429,15 +429,15 @@ function initDashboardCharts() {
         const labels = [];
         const data = [];
         const colors = [];
-        
+
         document.querySelectorAll('.dashboard-card').forEach(card => {
             const title = card.querySelector('h3').textContent.trim();
             const value = parseInt(card.querySelector('.stat-number').textContent.trim(), 10);
-            
+
             if (!isNaN(value)) {
                 labels.push(title);
                 data.push(value);
-                
+
                 // Assign colors based on card type
                 if (card.classList.contains('user-card')) {
                     colors.push('#10b981'); // success color
@@ -450,7 +450,7 @@ function initDashboardCharts() {
                 }
             }
         });
-        
+
         new Chart(contentStatsCtx, {
             type: 'bar',
             data: {
@@ -489,20 +489,20 @@ function initDashboardCharts() {
             }
         });
     }
-    
+
     // Create activity timeline chart
     const activityTimelineCtx = document.getElementById('activity-timeline-chart');
     if (activityTimelineCtx) {
         // Sample data - in a real implementation, this would come from the server
         const dates = [];
         const now = new Date();
-        
+
         for (let i = 6; i >= 0; i--) {
             const date = new Date(now);
             date.setDate(date.getDate() - i);
             dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
-        
+
         new Chart(activityTimelineCtx, {
             type: 'line',
             data: {
@@ -550,16 +550,16 @@ function initDashboardCharts() {
  */
 function initEnhancedFormValidation() {
     const forms = document.querySelectorAll('form:not(.search-form)');
-    
+
     forms.forEach(form => {
         const inputs = form.querySelectorAll('input, textarea, select');
-        
+
         inputs.forEach(input => {
             // Add real-time validation on blur
             input.addEventListener('blur', function() {
                 validateInput(this);
             });
-            
+
             // Add real-time validation on input for certain fields
             if (input.type === 'email' || input.type === 'url' || input.type === 'number') {
                 input.addEventListener('input', debounce(function() {
@@ -567,20 +567,20 @@ function initEnhancedFormValidation() {
                 }, 500));
             }
         });
-        
+
         // Add form submission validation
         form.addEventListener('submit', function(event) {
             let isValid = true;
-            
+
             inputs.forEach(input => {
                 if (!validateInput(input)) {
                     isValid = false;
                 }
             });
-            
+
             if (!isValid) {
                 event.preventDefault();
-                
+
                 // Scroll to the first invalid input
                 const firstInvalid = form.querySelector('.is-invalid');
                 if (firstInvalid) {
@@ -594,23 +594,23 @@ function initEnhancedFormValidation() {
 
 /**
  * Validate a form input
- * 
+ *
  * @param {HTMLElement} input - The input to validate
  * @returns {boolean} - Whether the input is valid
  */
 function validateInput(input) {
     // Skip disabled or readonly inputs
     if (input.disabled || input.readOnly) return true;
-    
+
     // Skip inputs without validation rules
-    if (!input.required && !input.pattern && !input.minLength && !input.maxLength && 
+    if (!input.required && !input.pattern && !input.minLength && !input.maxLength &&
         input.type !== 'email' && input.type !== 'url' && input.type !== 'number') {
         return true;
     }
-    
+
     let isValid = true;
     let errorMessage = '';
-    
+
     // Check if the input is required and empty
     if (input.required && !input.value.trim()) {
         isValid = false;
@@ -649,7 +649,7 @@ function validateInput(input) {
             errorMessage = `Please enter a value less than or equal to ${input.max}`;
         }
     }
-    
+
     // Update the input's validation state
     if (isValid) {
         input.classList.remove('is-invalid');
@@ -658,34 +658,38 @@ function validateInput(input) {
         } else {
             input.classList.remove('is-valid');
         }
-        
+
         // Remove any existing error message
-        const errorElement = input.parentElement.querySelector('.invalid-feedback');
-        if (errorElement) {
-            errorElement.remove();
+        if (input.parentElement) {
+            const errorElement = input.parentElement.querySelector('.invalid-feedback');
+            if (errorElement) {
+                errorElement.remove();
+            }
         }
     } else {
         input.classList.add('is-invalid');
         input.classList.remove('is-valid');
-        
-        // Add or update the error message
-        let errorElement = input.parentElement.querySelector('.invalid-feedback');
-        
-        if (!errorElement) {
-            errorElement = document.createElement('div');
-            errorElement.className = 'invalid-feedback';
-            input.parentElement.appendChild(errorElement);
+
+        // Add or update the error message if parent element exists
+        if (input.parentElement) {
+            let errorElement = input.parentElement.querySelector('.invalid-feedback');
+
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                input.parentElement.appendChild(errorElement);
+            }
+
+            errorElement.textContent = errorMessage;
         }
-        
-        errorElement.textContent = errorMessage;
     }
-    
+
     return isValid;
 }
 
 /**
  * Check if a string is a valid email address
- * 
+ *
  * @param {string} email - The email address to validate
  * @returns {boolean} - Whether the email is valid
  */
@@ -696,7 +700,7 @@ function isValidEmail(email) {
 
 /**
  * Check if a string is a valid URL
- * 
+ *
  * @param {string} url - The URL to validate
  * @returns {boolean} - Whether the URL is valid
  */
@@ -715,7 +719,7 @@ function isValidUrl(url) {
 function initKeyboardAccessibility() {
     // Add keyboard navigation for buttons and links
     const interactiveElements = document.querySelectorAll('a, button, [role="button"], [tabindex="0"]');
-    
+
     interactiveElements.forEach(element => {
         element.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -724,27 +728,27 @@ function initKeyboardAccessibility() {
             }
         });
     });
-    
+
     // Add keyboard navigation for dropdowns
     const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
-    
+
     dropdownToggles.forEach(toggle => {
         toggle.addEventListener('keydown', function(event) {
             if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
                 event.preventDefault();
-                
+
                 // Toggle the dropdown
                 const dropdown = toggle.parentElement;
                 const menu = dropdown.querySelector('.dropdown-menu');
-                
+
                 if (menu) {
                     const isOpen = menu.classList.contains('show');
-                    
+
                     if (!isOpen) {
                         // Open the dropdown
                         menu.classList.add('show');
                         toggle.setAttribute('aria-expanded', 'true');
-                        
+
                         // Focus the first item
                         const firstItem = menu.querySelector('a, button');
                         if (firstItem) {

@@ -397,7 +397,7 @@ require_once '../includes/header.php';
                             <?php
                             // Extract summary/excerpt and story content from markdown
                             $content = $story['content'] ?? '';
-                            $summary = '';
+                            $summary = $story['excerpt'] ?? '';
                             $storyText = '';
 
                             // Extract author info
@@ -421,8 +421,8 @@ require_once '../includes/header.php';
                                     $authorLocation = trim($locationMatch[1]);
                                 }
 
-                                // Extract summary
-                                if (preg_match('/## Summary\s*\n(.*?)(?:\n##|\n\*\*|\Z)/s', $content, $summaryMatch)) {
+                                // Extract summary if not already set from excerpt field
+                                if (empty($summary) && preg_match('/## Summary\s*\n(.*?)(?:\n##|\n\*\*|\Z)/s', $content, $summaryMatch)) {
                                     $summary = trim($summaryMatch[1]);
                                 }
 
@@ -440,6 +440,10 @@ require_once '../includes/header.php';
                                         $storyText = preg_replace('/\*\*.*?\*\*/m', '', $storyText);
                                     }
                                 }
+
+                                // Remove any remaining markdown headings from the story content
+                                $storyText = preg_replace('/^## .*$/m', '', $storyText);
+                                $storyText = trim($storyText);
 
                                 // Check if the content contains HTML tags
                                 if (strpos($storyText, '<') !== false && strpos($storyText, '>') !== false) {

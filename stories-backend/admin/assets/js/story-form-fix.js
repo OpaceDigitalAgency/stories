@@ -472,8 +472,13 @@ function showPreview() {
         }
     }
 
-    // Clean up the story content to remove markdown headings
+    // Clean up the story content to remove markdown headings and any duplicate content
     storyContent = storyContent.replace(/^## .*$/gm, '').trim();
+
+    // Remove any duplicate paragraphs that might be in both summary and content
+    if (summary && storyContent.includes(summary)) {
+        storyContent = storyContent.replace(summary, '').trim();
+    }
 
     // Create a temporary preview using a lightbox similar to the story list page
     createPreviewLightbox(title, authorName, authorAge, authorLocation, summary, storyContent);

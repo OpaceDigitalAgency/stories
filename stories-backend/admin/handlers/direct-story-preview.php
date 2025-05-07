@@ -67,29 +67,37 @@ $authorInfo = [
     'location' => $story['author_location'] ?? ''
 ];
 
-if ($story && !empty($story['content'])) {
-    // Extract summary
-    if (preg_match('/## Summary\s*\n(.*?)(?:\n##|\n\*\*|\Z)/s', $story['content'], $summaryMatch)) {
-        $summary = trim($summaryMatch[1]);
+if ($story) {
+    // First check if we have an excerpt field in the database
+    if (!empty($story['excerpt'])) {
+        $summary = $story['excerpt'];
     }
-
-    // Extract story content
-    if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $story['content'], $storyMatch)) {
-        $storyContent = trim($storyMatch[1]);
-    } else {
-        // If we can't find the story section with the pattern, use everything after the summary
-        if (preg_match('/## Summary.*?\n\n(.*)/s', $story['content'], $fallbackMatch)) {
-            $storyContent = trim($fallbackMatch[1]);
-        } else {
-            // Last resort: use the entire content but strip markdown headers and author info
-            $storyContent = preg_replace('/^##.*?\n/m', '', $story['content']);
-            $storyContent = preg_replace('/\*\*.*?\*\*/m', '', $storyContent);
+    // Otherwise try to extract from content
+    else if (!empty($story['content'])) {
+        if (preg_match('/## Summary\s*\n(.*?)(?:\n##|\n\*\*|\Z)/s', $story['content'], $summaryMatch)) {
+            $summary = trim($summaryMatch[1]);
         }
     }
 
-    // Remove any remaining markdown headings from the story content
-    $storyContent = preg_replace('/^## .*$/m', '', $storyContent);
-    $storyContent = trim($storyContent);
+    // Extract story content if we have content
+    if (!empty($story['content'])) {
+        if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $story['content'], $storyMatch)) {
+            $storyContent = trim($storyMatch[1]);
+        } else {
+            // If we can't find the story section with the pattern, use everything after the summary
+            if (preg_match('/## Summary.*?\n\n(.*)/s', $story['content'], $fallbackMatch)) {
+                $storyContent = trim($fallbackMatch[1]);
+            } else {
+                // Last resort: use the entire content but strip markdown headers and author info
+                $storyContent = preg_replace('/^##.*?\n/m', '', $story['content']);
+                $storyContent = preg_replace('/\*\*.*?\*\*/m', '', $storyContent);
+            }
+        }
+
+        // Remove any remaining markdown headings from the story content
+        $storyContent = preg_replace('/^## .*$/m', '', $storyContent);
+        $storyContent = trim($storyContent);
+    }
 }
 
 // Function to render the story content with proper styling

@@ -271,19 +271,24 @@ $extraHeadContent = '
 
     /* Sticky save bar */
     .sticky-save-bar {
-        position: sticky;
+        position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         background: white;
         padding: 15px 20px;
         box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-        z-index: 100;
+        z-index: 1000;
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-top: 20px;
         border-top: 1px solid var(--border-color);
+    }
+
+    /* Add padding to the bottom of the form to prevent content from being hidden behind the sticky bar */
+    .content-form {
+        padding-bottom: 70px;
     }
 
     .sticky-save-bar .btn-group {

@@ -120,23 +120,29 @@ $siteName = get_config('site.name', 'Stories From The Web');
         /* Header and navigation styles */
         .admin-header {
             padding: 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 0.5rem 1rem;
         }
 
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-right: 1.5rem;
+        .main-nav {
+            flex-grow: 1;
         }
 
-        .main-nav {
+        .dashboard-link {
+            font-weight: 600;
+            margin-right: 1.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+        }
+
+        .nav-items {
             flex-grow: 1;
         }
 
@@ -152,6 +158,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            white-space: nowrap;
         }
 
         .main-nav .nav-link:hover {
@@ -192,37 +199,48 @@ $siteName = get_config('site.name', 'Stories From The Web');
             font-weight: 600;
         }
 
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 1200px) {
-            .header-container {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .main-nav, .user-info {
-                width: 100%;
-                margin-top: 0.5rem;
-            }
-
-            #nav-form {
+            .main-nav {
                 flex-wrap: wrap;
             }
 
-            .main-nav .nav-link, .dropdown {
-                margin-bottom: 0.5rem;
+            .nav-items {
+                order: 3;
+                width: 100%;
+                margin-top: 0.5rem;
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+
+            .user-info {
+                order: 2;
+                margin-left: auto;
             }
         }
 
         @media (max-width: 768px) {
             .user-info {
-                display: flex;
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: flex-end;
                 gap: 0.5rem;
             }
 
             .user-info .btn {
                 width: 100%;
+            }
+
+            .nav-items {
+                justify-content: flex-start;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 0.5rem;
             }
         }
     </style>
@@ -269,91 +287,90 @@ $siteName = get_config('site.name', 'Stories From The Web');
     ?>
     <header class="admin-header">
         <div class="header-container">
-            <div class="d-flex align-items-center">
-                <!-- Main Navigation Menu -->
-                <nav class="main-nav" role="navigation" aria-label="Main Navigation">
-                    <div class="d-flex align-items-center">
-                        <!-- Direct Links -->
-                        <a href="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
-                            <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
-                        </a>
-
-                        <!-- Content Management Dropdown -->
-                        <div class="dropdown mx-2">
-                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-file-alt" aria-hidden="true"></i> Content
-                            </button>
-                            <div class="dropdown-menu">
-                                <a href="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
-                                    <i class="fas fa-book" aria-hidden="true"></i> Stories
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
-                                    <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
-                                    <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
-                                    <i class="fas fa-tags" aria-hidden="true"></i> Tags
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Features Dropdown -->
-                        <div class="dropdown mx-2">
-                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-puzzle-piece" aria-hidden="true"></i> Features
-                            </button>
-                            <div class="dropdown-menu">
-                                <a href="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
-                                    <i class="fas fa-gamepad" aria-hidden="true"></i> Games
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
-                                    <i class="fas fa-folder" aria-hidden="true"></i> Directory
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
-                                    <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
-                                </a>
-                            </div>
-                        </div>
-
-                        <a href="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-2 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
-                            <i class="fas fa-images" aria-hidden="true"></i> Media
-                        </a>
-
-                        <!-- Users Dropdown -->
-                        <div class="dropdown mx-2">
-                            <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-users" aria-hidden="true"></i> Users
-                            </button>
-                            <div class="dropdown-menu">
-                                <a href="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
-                                    <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
-                                </a>
-                                <a href="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
-                                    <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Settings -->
-                        <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-2 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
-                            <i class="fas fa-cog" aria-hidden="true"></i> Settings
-                        </a>
-                    </div>
-                </nav>
-            </div>
-
-            <!-- User Info and Actions -->
-            <div class="user-info">
-                <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
-                <a href="<?php echo $isContentDir ? '../clear_session.php' : 'clear_session.php'; ?>" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
-                    <i class="fas fa-broom"></i> Clear Session
+            <!-- Single-line navigation bar -->
+            <nav class="main-nav d-flex align-items-center w-100" role="navigation" aria-label="Main Navigation">
+                <!-- Dashboard link (replaces logo) -->
+                <a href="<?php echo $dashboardPath; ?>" class="nav-link dashboard-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                    <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
                 </a>
-                <form method="POST" action="<?php echo $isContentDir ? '../logout.php' : 'logout.php'; ?>" style="display: inline;">
-                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
-                </form>
-            </div>
+
+                <!-- Main navigation items -->
+                <div class="nav-items d-flex">
+                    <!-- Content Management Dropdown -->
+                    <div class="dropdown mx-1">
+                        <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-file-alt" aria-hidden="true"></i> Content
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
+                                <i class="fas fa-book" aria-hidden="true"></i> Stories
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
+                                <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
+                                <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
+                                <i class="fas fa-tags" aria-hidden="true"></i> Tags
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Features Dropdown -->
+                    <div class="dropdown mx-1">
+                        <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-puzzle-piece" aria-hidden="true"></i> Features
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
+                                <i class="fas fa-gamepad" aria-hidden="true"></i> Games
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
+                                <i class="fas fa-folder" aria-hidden="true"></i> Directory
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
+                                <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-1 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
+                        <i class="fas fa-images" aria-hidden="true"></i> Media
+                    </a>
+
+                    <!-- Users Dropdown -->
+                    <div class="dropdown mx-1">
+                        <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-users" aria-hidden="true"></i> Users
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
+                                <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
+                            </a>
+                            <a href="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
+                                <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-1 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                        <i class="fas fa-cog" aria-hidden="true"></i> Settings
+                    </a>
+                </div>
+
+                <!-- User Info and Actions (pushed to the right) -->
+                <div class="user-info ml-auto">
+                    <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
+                    <a href="<?php echo $isContentDir ? '../clear_session.php' : 'clear_session.php'; ?>" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
+                        <i class="fas fa-broom"></i> Clear Session
+                    </a>
+                    <form method="POST" action="<?php echo $isContentDir ? '../logout.php' : 'logout.php'; ?>" style="display: inline;">
+                        <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                    </form>
+                </div>
+            </nav>
         </div>
     </header>
 

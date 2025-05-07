@@ -449,8 +449,14 @@ require_once '../includes/header.php';
 
                             <!-- Story Content Field with WYSIWYG -->
                             <div class="form-group mb-0">
-                                <label for="story_content">Story</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label for="story_content">Story</label>
+                                    <button type="button" id="toggle-html-view" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-code"></i> Toggle HTML
+                                    </button>
+                                </div>
                                 <textarea id="story_content" name="story_content" class="form-control rich-text-editor" rows="15"><?php echo isset($storyHtml) ? $storyHtml : (isset($storyText) ? htmlspecialchars($storyText) : ''); ?></textarea>
+                                <textarea id="html_content" name="html_content" class="form-control" rows="15" style="display: none; font-family: monospace;"><?php echo isset($storyHtml) ? htmlspecialchars($storyHtml) : (isset($storyText) ? htmlspecialchars($storyText) : ''); ?></textarea>
                                 <input type="hidden" id="content" name="content" value="">
                             </div>
                         </div>
@@ -701,6 +707,7 @@ require_once '../includes/header.php';
                 </div>
                 <div class="btn-group">
                     <a href="stories.php" class="btn btn-secondary">Cancel</a>
+                    <button type="button" id="preview-story" class="btn btn-info">Preview</button>
                     <button type="submit" class="btn btn-primary">Save Story</button>
                 </div>
             </div>
@@ -999,9 +1006,28 @@ require_once '../includes/header.php';
                     // Store editor instance
                     window.storyEditor = editor;
 
-                    // Initialize the simple source editing plugin
-                    if (window.SimpleSourceEditing) {
-                        window.SimpleSourceEditing.init(editor);
+                    // Set up the HTML toggle button
+                    const toggleHtmlButton = document.getElementById('toggle-html-view');
+                    const htmlContentTextarea = document.getElementById('html_content');
+                    let isHtmlMode = false;
+
+                    if (toggleHtmlButton && htmlContentTextarea) {
+                        toggleHtmlButton.addEventListener('click', () => {
+                            if (!isHtmlMode) {
+                                // Switch to HTML mode
+                                htmlContentTextarea.value = editor.getData();
+                                htmlContentTextarea.style.display = 'block';
+                                editor.sourceElement.style.display = 'none';
+                                editor.ui.view.element.style.display = 'none';
+                            } else {
+                                // Switch back to WYSIWYG mode
+                                editor.setData(htmlContentTextarea.value);
+                                htmlContentTextarea.style.display = 'none';
+                                editor.sourceElement.style.display = 'block';
+                                editor.ui.view.element.style.display = 'block';
+                            }
+                            isHtmlMode = !isHtmlMode;
+                        });
                     }
                 })
                 .catch(error => {
@@ -1055,73 +1081,235 @@ require_once '../includes/header.php';
             // Show loading overlay
             showLoadingOverlay('Saving story and processing images...');
 
-            // Only if we have the editor instance
-            if (window.storyEditor) {
-                const summary = document.querySelector('#summary').value;
+            // Get the summary
+            const summary = document.querySelector('#summary').value;
 
-                // Get the content from CKEditor - this includes any images that were added
-                const storyContent = window.storyEditor.getData();
+            // Get the story content - check if we're in HTML mode or WYSIWYG mode
+            let storyContent = '';
+            const htmlContentTextarea = document.getElementById('html_content');
 
-                // Get author info if available
-                const authorSelect = document.querySelector('#author_id');
-                let authorName = '';
-                let authorAge = '';
-                let authorLocation = '';
-
-                // Try to get author info from the form or from extracted data
-                if (authorSelect && authorSelect.selectedIndex > 0) {
-                    const selectedOption = authorSelect.options[authorSelect.selectedIndex];
-                    authorName = selectedOption.text || '<?php echo addslashes($authorName); ?>';
-
-                    // We'll use the extracted age and location if available
-                    authorAge = '<?php echo addslashes($authorAge); ?>';
-                    authorLocation = '<?php echo addslashes($authorLocation); ?>';
-                }
-
-                // Format the content in markdown format
-                let formattedContent = '';
-
-                // Add author section if we have author info
-                if (authorName) {
-                    formattedContent += '## Author\n\n';
-                    formattedContent += '**Name:** ' + authorName + '\n';
-
-                    if (authorAge) {
-                        formattedContent += '**Age:** ' + authorAge + '\n';
-                    }
-
-                    if (authorLocation) {
-                        formattedContent += '**Location:** ' + authorLocation + '\n';
-                    }
-
-                    formattedContent += '\n';
-                }
-
-                // Add summary section
-                if (summary) {
-                    formattedContent += '## Summary\n\n' + summary + '\n\n';
-                }
-
-                // Add story section with the HTML content directly
-                // This is the key change - we're storing the HTML content directly
-                // instead of converting it to markdown
-                formattedContent += '## Story\n\n' + storyContent;
-
-                // Set the hidden content field value
-                document.querySelector('#content').value = formattedContent;
-
-                // Add a small delay to ensure the form is submitted with the updated content
-                setTimeout(() => {
-                    // If the form hasn't been submitted yet (due to validation errors), hide the overlay
-                    if (!this.classList.contains('submitted')) {
-                        hideLoadingOverlay();
-                    }
-                }, 500);
+            if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                // We're in HTML mode, get content from the HTML textarea
+                storyContent = htmlContentTextarea.value;
+            } else if (window.storyEditor) {
+                // We're in WYSIWYG mode, get content from CKEditor
+                storyContent = window.storyEditor.getData();
             }
+
+            // Process images in the content to ensure they have proper URLs
+            storyContent = processImagesInContent(storyContent);
+
+            // Get author info if available
+            const authorSelect = document.querySelector('#author_id');
+            let authorName = '';
+            let authorAge = '';
+            let authorLocation = '';
+
+            // Try to get author info from the form or from extracted data
+            if (authorSelect && authorSelect.selectedIndex > 0) {
+                const selectedOption = authorSelect.options[authorSelect.selectedIndex];
+                authorName = selectedOption.text || '<?php echo addslashes($authorName); ?>';
+
+                // We'll use the extracted age and location if available
+                authorAge = '<?php echo addslashes($authorAge); ?>';
+                authorLocation = '<?php echo addslashes($authorLocation); ?>';
+            }
+
+            // Format the content in markdown format
+            let formattedContent = '';
+
+            // Add author section if we have author info
+            if (authorName) {
+                formattedContent += '## Author\n\n';
+                formattedContent += '**Name:** ' + authorName + '\n';
+
+                if (authorAge) {
+                    formattedContent += '**Age:** ' + authorAge + '\n';
+                }
+
+                if (authorLocation) {
+                    formattedContent += '**Location:** ' + authorLocation + '\n';
+                }
+
+                formattedContent += '\n';
+            }
+
+            // Add summary section
+            if (summary) {
+                formattedContent += '## Summary\n\n' + summary + '\n\n';
+            }
+
+            // Add story section with the HTML content directly
+            formattedContent += '## Story\n\n' + storyContent;
+
+            // Set the hidden content field value
+            document.querySelector('#content').value = formattedContent;
+
+            // Add a small delay to ensure the form is submitted with the updated content
+            setTimeout(() => {
+                // If the form hasn't been submitted yet (due to validation errors), hide the overlay
+                if (!this.classList.contains('submitted')) {
+                    hideLoadingOverlay();
+                }
+            }, 500);
 
             // Mark the form as submitted
             this.classList.add('submitted');
         });
+
+        // Function to process images in HTML content
+        function processImagesInContent(content) {
+            // Create a temporary div to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+
+            // Find all images
+            const images = tempDiv.querySelectorAll('img');
+
+            // Process each image
+            images.forEach(img => {
+                // Make sure the image has a src attribute
+                if (img.src) {
+                    // Make sure it's an absolute URL
+                    if (img.src.indexOf('http') !== 0) {
+                        const host = window.location.host || 'api.storiesfromtheweb.org';
+                        const protocol = window.location.protocol || 'https:';
+                        img.src = `${protocol}//${host}${img.src.startsWith('/') ? '' : '/'}${img.src}`;
+                    }
+
+                    // Make sure it has an alt attribute
+                    if (!img.alt) {
+                        img.alt = 'Story image';
+                    }
+                }
+            });
+
+            // Return the processed HTML
+            return tempDiv.innerHTML;
+        }
+
+        // Set up the preview button
+        const previewButton = document.getElementById('preview-story');
+        if (previewButton) {
+            previewButton.addEventListener('click', function() {
+                // Create a preview modal if it doesn't exist
+                let previewModal = document.getElementById('story-preview-modal');
+                if (!previewModal) {
+                    previewModal = document.createElement('div');
+                    previewModal.id = 'story-preview-modal';
+                    previewModal.className = 'modal fade';
+                    previewModal.setAttribute('tabindex', '-1');
+                    previewModal.setAttribute('role', 'dialog');
+                    previewModal.setAttribute('aria-labelledby', 'previewModalLabel');
+                    previewModal.setAttribute('aria-hidden', 'true');
+
+                    previewModal.innerHTML = `
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="previewModalLabel">Story Preview</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <iframe id="preview-iframe" style="width: 100%; height: 600px; border: none;"></iframe>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(previewModal);
+                }
+
+                // Get the content for preview
+                let storyContent = '';
+                const htmlContentTextarea = document.getElementById('html_content');
+                const title = document.getElementById('title').value || 'Story Preview';
+                const summary = document.getElementById('summary').value || '';
+
+                if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                    // We're in HTML mode, get content from the HTML textarea
+                    storyContent = htmlContentTextarea.value;
+                } else if (window.storyEditor) {
+                    // We're in WYSIWYG mode, get content from CKEditor
+                    storyContent = window.storyEditor.getData();
+                }
+
+                // Process images in the content
+                storyContent = processImagesInContent(storyContent);
+
+                // Create a preview HTML document
+                const previewHtml = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${title}</title>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                line-height: 1.6;
+                                color: #333;
+                                max-width: 800px;
+                                margin: 0 auto;
+                                padding: 20px;
+                            }
+                            h1 {
+                                font-size: 2.2em;
+                                margin-bottom: 0.5em;
+                            }
+                            .summary {
+                                font-style: italic;
+                                margin-bottom: 2em;
+                                color: #555;
+                            }
+                            .story-content img {
+                                max-width: 100%;
+                                height: auto;
+                                margin: 1em 0;
+                            }
+                            .story-content figure {
+                                margin: 1.5em 0;
+                            }
+                            .story-content figcaption {
+                                font-size: 0.9em;
+                                color: #666;
+                                text-align: center;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${title}</h1>
+                        ${summary ? `<div class="summary">${summary}</div>` : ''}
+                        <div class="story-content">
+                            ${storyContent}
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                // Get the iframe and set its content
+                const previewIframe = document.getElementById('preview-iframe');
+                if (previewIframe) {
+                    // Show the modal
+                    $(previewModal).modal('show');
+
+                    // Set the iframe content after the modal is shown
+                    setTimeout(() => {
+                        const iframeDoc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write(previewHtml);
+                        iframeDoc.close();
+                    }, 300);
+                }
+            });
+        }
     });
 </script>
 

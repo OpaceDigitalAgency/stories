@@ -272,11 +272,11 @@ $siteName = get_config('site.name', 'Stories From The Web');
             <div class="d-flex align-items-center">
                 <!-- Main Navigation Menu -->
                 <nav class="main-nav" role="navigation" aria-label="Main Navigation">
-                    <form method="GET" id="nav-form" class="d-flex align-items-center">
+                    <div class="d-flex align-items-center">
                         <!-- Direct Links -->
-                        <button type="submit" formaction="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                        <a href="<?php echo $dashboardPath; ?>" class="nav-link mx-2 <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
                             <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard
-                        </button>
+                        </a>
 
                         <!-- Content Management Dropdown -->
                         <div class="dropdown mx-2">
@@ -284,18 +284,18 @@ $siteName = get_config('site.name', 'Stories From The Web');
                                 <i class="fas fa-file-alt" aria-hidden="true"></i> Content
                             </button>
                             <div class="dropdown-menu">
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
+                                <a href="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
                                     <i class="fas fa-book" aria-hidden="true"></i> Stories
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
                                     <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
                                     <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
                                     <i class="fas fa-tags" aria-hidden="true"></i> Tags
-                                </button>
+                                </a>
                             </div>
                         </div>
 
@@ -305,21 +305,21 @@ $siteName = get_config('site.name', 'Stories From The Web');
                                 <i class="fas fa-puzzle-piece" aria-hidden="true"></i> Features
                             </button>
                             <div class="dropdown-menu">
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
+                                <a href="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
                                     <i class="fas fa-gamepad" aria-hidden="true"></i> Games
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
                                     <i class="fas fa-folder" aria-hidden="true"></i> Directory
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
                                     <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
-                                </button>
+                                </a>
                             </div>
                         </div>
 
-                        <button type="submit" formaction="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-2 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
+                        <a href="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-2 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
                             <i class="fas fa-images" aria-hidden="true"></i> Media
-                        </button>
+                        </a>
 
                         <!-- Users Dropdown -->
                         <div class="dropdown mx-2">
@@ -327,20 +327,20 @@ $siteName = get_config('site.name', 'Stories From The Web');
                                 <i class="fas fa-users" aria-hidden="true"></i> Users
                             </button>
                             <div class="dropdown-menu">
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
+                                <a href="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
                                     <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
-                                </button>
-                                <button type="submit" formaction="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
+                                </a>
+                                <a href="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
                                     <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
-                                </button>
+                                </a>
                             </div>
                         </div>
 
                         <!-- Settings -->
-                        <button type="submit" formaction="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-2 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                        <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-2 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                             <i class="fas fa-cog" aria-hidden="true"></i> Settings
-                        </button>
-                    </form>
+                        </a>
+                    </div>
                 </nav>
             </div>
 

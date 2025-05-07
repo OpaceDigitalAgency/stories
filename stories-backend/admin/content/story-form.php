@@ -416,8 +416,9 @@ require_once '../includes/header.php';
                                     if (preg_match('/## Summary.*?\n\n(.*)/s', $content, $fallbackMatch)) {
                                         $storyText = trim($fallbackMatch[1]);
                                     } else {
-                                        // Last resort: use the entire content
-                                        $storyText = $content;
+                                        // Last resort: use the entire content but strip markdown headers
+                                        $storyText = preg_replace('/^##.*?\n/m', '', $content);
+                                        $storyText = preg_replace('/\*\*.*?\*\*/m', '', $storyText);
                                     }
                                 }
 
@@ -700,7 +701,7 @@ require_once '../includes/header.php';
                                 <div class="form-group">
                                     <label class="form-label" for="<?php echo $field; ?>"><?php echo $label; ?></label>
                                     <input type="number" id="<?php echo $field; ?>" name="<?php echo $field; ?>" class="form-control"
-                                        value="<?php echo htmlspecialchars($story[$field] ?? ''); ?>"
+                                        value="<?php echo htmlspecialchars($story[$field] ?? '0'); ?>"
                                         <?php echo $isDecimalField ? 'step="0.01"' : ''; ?>
                                         <?php echo $isRequired ? 'required' : ''; ?>>
                                 </div>
@@ -1030,30 +1031,25 @@ require_once '../includes/header.php';
                     // Set up the HTML toggle button
                     const toggleHtmlButton = document.getElementById('toggle-html-view');
                     const htmlContentTextarea = document.getElementById('html_content');
+                    const editorContainer = document.querySelector('.ck-editor');
                     let isHtmlMode = false;
 
-                    if (toggleHtmlButton && htmlContentTextarea) {
+                    if (toggleHtmlButton && htmlContentTextarea && editorContainer) {
                         toggleHtmlButton.addEventListener('click', () => {
                             if (!isHtmlMode) {
                                 // Switch to HTML mode
                                 htmlContentTextarea.value = editor.getData();
                                 htmlContentTextarea.style.display = 'block';
 
-                                // Hide the CKEditor UI completely
-                                const editorElement = editor.ui.view.element;
-                                if (editorElement && editorElement.parentNode) {
-                                    editorElement.parentNode.style.display = 'none';
-                                }
+                                // Hide the CKEditor UI completely but safely
+                                editorContainer.style.display = 'none';
                             } else {
                                 // Switch back to WYSIWYG mode
                                 editor.setData(htmlContentTextarea.value);
                                 htmlContentTextarea.style.display = 'none';
 
                                 // Show the CKEditor UI again
-                                const editorElement = editor.ui.view.element;
-                                if (editorElement && editorElement.parentNode) {
-                                    editorElement.parentNode.style.display = '';
-                                }
+                                editorContainer.style.display = '';
                             }
                             isHtmlMode = !isHtmlMode;
                         });
@@ -1128,6 +1124,9 @@ require_once '../includes/header.php';
             // Process images in the content to ensure they have proper URLs
             storyContent = processImagesInContent(storyContent);
 
+            // Log the content for debugging
+            console.log("Processed content length:", storyContent.length);
+
             // Get author info if available
             const authorSelect = document.querySelector('#author_id');
             let authorName = '';
@@ -1186,6 +1185,75 @@ require_once '../includes/header.php';
             this.classList.add('submitted');
         });
 
+        // Handle preview button click
+        const previewButton = document.getElementById('preview-story');
+        if (previewButton) {
+            previewButton.addEventListener('click', function() {
+                // Get the story content - check if we're in HTML mode or WYSIWYG mode
+                let storyContent = '';
+                const htmlContentTextarea = document.getElementById('html_content');
+
+                if (htmlContentTextarea && htmlContentTextarea.style.display !== 'none') {
+                    // We're in HTML mode, get content from the HTML textarea
+                    storyContent = htmlContentTextarea.value;
+                } else if (window.storyEditor) {
+                    // We're in WYSIWYG mode, get content from CKEditor
+                    storyContent = window.storyEditor.getData();
+                }
+
+                // Process images in the content to ensure they have proper URLs
+                storyContent = processImagesInContent(storyContent);
+
+                // Get the title
+                const title = document.getElementById('title').value || 'Preview';
+
+                // Get the summary
+                const summary = document.getElementById('summary').value || '';
+
+                // Get the cover image
+                const coverUrl = document.querySelector('.image-url-input').value || '';
+
+                // Create a form to post the data
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = 'preview-story.php';
+                form.target = '_blank';
+
+                // Add the title
+                const titleInput = document.createElement('input');
+                titleInput.type = 'hidden';
+                titleInput.name = 'title';
+                titleInput.value = title;
+                form.appendChild(titleInput);
+
+                // Add the summary
+                const summaryInput = document.createElement('input');
+                summaryInput.type = 'hidden';
+                summaryInput.name = 'summary';
+                summaryInput.value = summary;
+                form.appendChild(summaryInput);
+
+                // Add the cover image
+                const coverInput = document.createElement('input');
+                coverInput.type = 'hidden';
+                coverInput.name = 'cover_url';
+                coverInput.value = coverUrl;
+                form.appendChild(coverInput);
+
+                // Add the content
+                const contentInput = document.createElement('input');
+                contentInput.type = 'hidden';
+                contentInput.name = 'content';
+                contentInput.value = storyContent;
+                form.appendChild(contentInput);
+
+                // Submit the form
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            });
+        }
+
         // Function to process images in HTML content
         function processImagesInContent(content) {
             // If content is empty or not a string, return as is
@@ -1197,6 +1265,19 @@ require_once '../includes/header.php';
             // Create a temporary div to parse the HTML
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
+
+            // Process all images to ensure they have absolute URLs
+            const images = tempDiv.querySelectorAll('img');
+            images.forEach(img => {
+                let src = img.getAttribute('src');
+                if (src && src.indexOf('http') !== 0) {
+                    // Convert to absolute URL if it's not already
+                    const host = window.location.host || 'api.storiesfromtheweb.org';
+                    const protocol = window.location.protocol || 'https:';
+                    src = `${protocol}//${host}${src.startsWith('/') ? '' : '/'}${src}`;
+                    img.setAttribute('src', src);
+                }
+            });
 
             // Find all figures with empty images
             const emptyFigures = Array.from(tempDiv.querySelectorAll('figure.image')).filter(figure => {

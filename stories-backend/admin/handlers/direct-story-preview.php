@@ -76,6 +76,15 @@ if ($story && !empty($story['content'])) {
     // Extract story content
     if (preg_match('/## Story\s*\n(.*?)(?:\n##|\Z)/s', $story['content'], $storyMatch)) {
         $storyContent = trim($storyMatch[1]);
+    } else {
+        // If we can't find the story section with the pattern, use everything after the summary
+        if (preg_match('/## Summary.*?\n\n(.*)/s', $story['content'], $fallbackMatch)) {
+            $storyContent = trim($fallbackMatch[1]);
+        } else {
+            // Last resort: use the entire content but strip markdown headers and author info
+            $storyContent = preg_replace('/^##.*?\n/m', '', $story['content']);
+            $storyContent = preg_replace('/\*\*.*?\*\*/m', '', $storyContent);
+        }
     }
 }
 
@@ -201,11 +210,11 @@ function renderStoryContent($content) {
             <h1 class="story-title"><?php echo htmlspecialchars($story['title']); ?></h1>
             <div class="story-meta">
                 <?php if (!empty($story['estimated_reading_time'])): ?>
-                    <span><?php echo $story['estimated_reading_time']; ?> min read</span> • 
+                    <span><?php echo $story['estimated_reading_time']; ?> min read</span> •
                 <?php endif; ?>
                 <span>Posted on <?php echo date('F j, Y', strtotime($story['created_at'])); ?></span>
             </div>
-            
+
             <?php if (!empty($tags)): ?>
                 <div class="story-tags">
                     <?php foreach ($tags as $tag): ?>
@@ -213,12 +222,12 @@ function renderStoryContent($content) {
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-            
+
             <?php if (!empty($story['cover_url'])): ?>
                 <img src="<?php echo htmlspecialchars($story['cover_url']); ?>" alt="<?php echo htmlspecialchars($story['title']); ?>" class="story-cover">
             <?php endif; ?>
         </div>
-        
+
         <?php if (!empty($authorInfo['name'])): ?>
             <div class="story-author">
                 <div class="story-author-name">By <?php echo htmlspecialchars($authorInfo['name']); ?></div>
@@ -227,11 +236,11 @@ function renderStoryContent($content) {
                         <?php if (!empty($authorInfo['age'])): ?>
                             <span>Age: <?php echo htmlspecialchars($authorInfo['age']); ?></span>
                         <?php endif; ?>
-                        
+
                         <?php if (!empty($authorInfo['age']) && !empty($authorInfo['location'])): ?>
                             <span> • </span>
                         <?php endif; ?>
-                        
+
                         <?php if (!empty($authorInfo['location'])): ?>
                             <span>From: <?php echo htmlspecialchars($authorInfo['location']); ?></span>
                         <?php endif; ?>
@@ -239,13 +248,13 @@ function renderStoryContent($content) {
                 <?php endif; ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (!empty($summary)): ?>
             <div class="story-summary">
                 <?php echo renderStoryContent($summary); ?>
             </div>
         <?php endif; ?>
-        
+
         <div class="story-content">
             <?php echo renderStoryContent($storyContent); ?>
         </div>

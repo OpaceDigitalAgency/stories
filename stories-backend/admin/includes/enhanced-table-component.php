@@ -145,6 +145,18 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
             border-radius: 4px;
             border: 1px solid #ddd;
         }
+        .loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
     </style>
     <div class="premium-table-container">
         <?php if ($options['showCheckboxes'] && !empty($options['bulkActions'])): ?>
@@ -415,12 +427,65 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                     const itemId = this.getAttribute('data-id');
 
                     if (confirm('Are you sure you want to delete this item?')) {
-                        // Perform the delete action
-                        console.log(`Deleting item ${itemId}`);
+                        // Get the item type from the table
+                        const table = button.closest('table');
+                        const itemType = table ? table.getAttribute('data-item-type') : '';
 
-                        // In a real implementation, this would make an AJAX request to the server
-                        // For now, we'll just reload the page
-                        window.location.reload();
+                        if (!itemType) {
+                            console.error('Could not determine item type for deletion');
+                            alert('Error: Could not determine item type for deletion');
+                            return;
+                        }
+
+                        // Determine the delete handler URL based on item type
+                        const deleteHandlerUrl = `../handlers/delete-${itemType}.php`;
+
+                        console.log(`Deleting ${itemType} with ID ${itemId} using ${deleteHandlerUrl}`);
+
+                        // Show loading indicator
+                        const loadingIndicator = document.createElement('div');
+                        loadingIndicator.className = 'loading-indicator';
+                        loadingIndicator.innerHTML = '<div class="spinner-border spinner-border-sm text-light" role="status"><span class="visually-hidden">Loading...</span></div>';
+                        document.body.appendChild(loadingIndicator);
+
+                        // Send the delete request
+                        fetch(deleteHandlerUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: `id=${itemId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+
+                            if (data.success) {
+                                // Show success message
+                                alert(data.message || 'Item deleted successfully');
+
+                                // Remove the row from the table
+                                const row = button.closest('tr');
+                                if (row) {
+                                    row.remove();
+                                }
+
+                                // Reload the page to update counts and pagination
+                                window.location.reload();
+                            } else {
+                                // Show error message
+                                alert(data.message || 'Failed to delete item');
+                            }
+                        })
+                        .catch(error => {
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+
+                            console.error('Error:', error);
+                            alert('An error occurred while deleting the item');
+                        });
                     }
                 });
             });

@@ -132,7 +132,14 @@ class StoryPreview {
                         <button class="lightbox-close">&times;</button>
                     </div>
                     <div class="lightbox-content">
-                        <iframe src="about:blank" frameborder="0" allowfullscreen></iframe>
+                        <div class="preview-actions">
+                            <a href="${url}" target="_blank" class="btn btn-primary btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Open in New Tab
+                            </a>
+                        </div>
+                        <div class="preview-iframe-container">
+                            <iframe src="about:blank" frameborder="0" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+                        </div>
                     </div>
                 </div>
             `;
@@ -146,11 +153,21 @@ class StoryPreview {
                 link.href = '../assets/css/story-preview.css';
                 document.head.appendChild(link);
             }
+        } else {
+            // Update the "Open in New Tab" link
+            const openInTabLink = lightbox.querySelector('.preview-actions a');
+            if (openInTabLink) {
+                openInTabLink.href = url;
+            }
         }
 
-        // Set the iframe source
+        // Instead of directly loading the external URL in the iframe,
+        // use a proxy approach or load a local preview page
         const iframe = lightbox.querySelector('iframe');
-        iframe.src = url;
+
+        // Create a proxy URL that will load the content through our backend
+        const proxyUrl = `../handlers/story-preview-proxy.php?url=${encodeURIComponent(url)}`;
+        iframe.src = proxyUrl;
 
         // Show the lightbox
         lightbox.style.display = 'flex';

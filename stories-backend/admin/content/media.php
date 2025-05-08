@@ -574,8 +574,29 @@ require_once '../includes/header.php';
                                         image_url: aiImageUrl,
                                         alt_text: aiImageAlt || "AI-generated image"
                                     },
+                                    dataType: "json",
                                     success: function(response) {
-                                        if (response.success) {
+                                        // Parse the response if it's a string
+                                        if (typeof response === 'string') {
+                                            try {
+                                                response = JSON.parse(response);
+                                            } catch (e) {
+                                                console.error("Failed to parse JSON response:", e);
+                                                console.log("Raw response:", response);
+
+                                                // Hide loading indicator
+                                                $("#progressOverlay").css({
+                                                    "visibility": "hidden",
+                                                    "opacity": "0"
+                                                });
+
+                                                // Show error message
+                                                alert("Error saving image: Invalid response format");
+                                                return;
+                                            }
+                                        }
+
+                                        if (response && response.success) {
                                             // Hide loading indicator
                                             $("#progressOverlay").css({
                                                 "visibility": "hidden",
@@ -595,7 +616,13 @@ require_once '../includes/header.php';
                                             });
 
                                             // Show error message
-                                            alert("Error saving image: " + (response.error || "Unknown error"));
+                                            var errorMsg = "Unknown error";
+                                            if (response && response.error) {
+                                                errorMsg = response.error;
+                                            }
+
+                                            console.error("Error response:", response);
+                                            alert("Error saving image: " + errorMsg);
                                         }
                                     },
                                     error: function(xhr, status, error) {
@@ -605,8 +632,29 @@ require_once '../includes/header.php';
                                             "opacity": "0"
                                         });
 
+                                        // Log detailed error information
+                                        console.error("AJAX Error:", {
+                                            status: status,
+                                            error: error,
+                                            response: xhr.responseText
+                                        });
+
+                                        // Try to parse the response if it's JSON
+                                        var errorMsg = error;
+                                        try {
+                                            var jsonResponse = JSON.parse(xhr.responseText);
+                                            if (jsonResponse && jsonResponse.error) {
+                                                errorMsg = jsonResponse.error;
+                                            }
+                                        } catch (e) {
+                                            // If it's not valid JSON, use the raw response text
+                                            if (xhr.responseText) {
+                                                errorMsg = xhr.responseText;
+                                            }
+                                        }
+
                                         // Show error message
-                                        alert("Error saving image: " + error);
+                                        alert("Error saving image: " + errorMsg);
                                     }
                                 });
                             }

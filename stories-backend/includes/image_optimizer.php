@@ -128,6 +128,24 @@ function getImageType($path) {
 }
 
 /**
+ * Get image format configuration
+ *
+ * @param string $format Format identifier (jpg, png, webp)
+ * @return array Format configuration
+ */
+function getImageFormatConfig($format) {
+    global $IMAGE_FORMATS;
+
+    // Return the format configuration if it exists
+    if (isset($IMAGE_FORMATS[$format])) {
+        return $IMAGE_FORMATS[$format];
+    }
+
+    // Default to WebP if format not found
+    return $IMAGE_FORMATS['webp'];
+}
+
+/**
  * Get image dimensions
  *
  * @param string $path Path to the image file

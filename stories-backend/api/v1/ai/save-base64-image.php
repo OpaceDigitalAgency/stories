@@ -135,9 +135,44 @@ try {
     $uploadDir = __DIR__ . '/../../../uploads/ai-generated/';
     $optimizedDir = __DIR__ . '/../../../uploads/optimized/';
 
+    // Log directory paths for debugging
+    error_log("Upload directory path: $uploadDir");
+    error_log("Optimized directory path: $optimizedDir");
+
     foreach ([$uploadDir, $optimizedDir] as $dir) {
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            error_log("Creating directory: $dir");
+            if (!mkdir($dir, 0755, true)) {
+                $error = error_get_last();
+                error_log("Failed to create directory: $dir - Error: " . ($error['message'] ?? 'Unknown error'));
+
+                // Try with absolute path as fallback
+                $absDir = realpath(dirname(__DIR__ . '/../../../')) . '/uploads/' . basename(dirname($dir)) . '/' . basename($dir);
+                error_log("Trying with absolute path: $absDir");
+
+                if (!is_dir($absDir) && !mkdir($absDir, 0755, true)) {
+                    $error = error_get_last();
+                    error_log("Failed to create directory with absolute path: $absDir - Error: " . ($error['message'] ?? 'Unknown error'));
+                    throw new Exception("Cannot create directory for saving images: $dir");
+                } else {
+                    // Use the absolute path instead
+                    if (basename(dirname($dir)) === 'ai-generated') {
+                        $uploadDir = $absDir;
+                    } else if (basename($dir) === 'optimized') {
+                        $optimizedDir = $absDir;
+                    }
+                }
+            }
+        }
+
+        // Check if directory is writable
+        if (is_dir($dir) && !is_writable($dir)) {
+            error_log("Directory exists but is not writable: $dir");
+            // Try to make it writable
+            chmod($dir, 0755);
+            if (!is_writable($dir)) {
+                throw new Exception("Directory exists but is not writable: $dir");
+            }
         }
     }
 
@@ -186,8 +221,30 @@ try {
 
     // Save the original image
     $filepath = $uploadDir . $filename;
-    if (!file_put_contents($filepath, $imageData)) {
-        throw new Exception('Failed to save image to server');
+    error_log("Saving image to: $filepath");
+
+    // Check if directory is writable
+    if (!is_writable(dirname($filepath))) {
+        error_log("Directory is not writable: " . dirname($filepath));
+        chmod(dirname($filepath), 0755); // Try to make it writable
+    }
+
+    // Try to save the file
+    $bytesWritten = @file_put_contents($filepath, $imageData);
+    if ($bytesWritten === false) {
+        $error = error_get_last();
+        throw new Exception('Failed to save image to server: ' . ($error['message'] ?? 'Unknown error'));
+    }
+
+    error_log("Successfully wrote $bytesWritten bytes to $filepath");
+
+    // Verify the file exists and is readable
+    if (!file_exists($filepath)) {
+        throw new Exception('File was not created at: ' . $filepath);
+    }
+
+    if (!is_readable($filepath)) {
+        throw new Exception('File was created but is not readable: ' . $filepath);
     }
 
     // Get image dimensions
@@ -206,9 +263,34 @@ try {
     createThumbnail($filepath, $smallPath, 300, 300);
 
     // Prepare the URLs (relative to the site root)
+    // Ensure URLs start with a single slash
     $url = '/uploads/ai-generated/' . $filename;
     $thumbnailUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-thumbnail.webp';
     $smallUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-small.webp';
+
+    // Log the URLs for debugging
+    error_log("Generated image URL: $url");
+    error_log("Thumbnail URL: $thumbnailUrl");
+    error_log("Small URL: $smallUrl");
+
+    // Verify the files exist
+    $fullPath = dirname(dirname(dirname(__DIR__))) . $url;
+    $thumbnailPath = dirname(dirname(dirname(__DIR__))) . $thumbnailUrl;
+    $smallPath = dirname(dirname(dirname(__DIR__))) . $smallUrl;
+
+    error_log("Full path to image: $fullPath");
+    error_log("Full path to thumbnail: $thumbnailPath");
+    error_log("Full path to small image: $smallPath");
+
+    if (!file_exists($fullPath)) {
+        error_log("Warning: Generated image file does not exist at: $fullPath");
+    }
+    if (!file_exists($thumbnailPath)) {
+        error_log("Warning: Thumbnail file does not exist at: $thumbnailPath");
+    }
+    if (!file_exists($smallPath)) {
+        error_log("Warning: Small image file does not exist at: $smallPath");
+    }
 
     // Create a meaningful alt text for SEO
     $altText = $data['alt_text'] ?? 'AI generated image';
@@ -298,10 +380,26 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log("Save base64 image error: " . $e->getMessage());
+    $errorMessage = $e->getMessage();
+    $trace = $e->getTraceAsString();
+    error_log("Save base64 image error: " . $errorMessage);
+    error_log("Error trace: " . $trace);
+
+    // Check if we can get more error details
+    $lastError = error_get_last();
+    if ($lastError) {
+        error_log("Last PHP error: " . json_encode($lastError));
+    }
+
+    // Return a detailed error response
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Failed to save image: ' . $e->getMessage()
+        'error' => 'Failed to save image: ' . $errorMessage,
+        'details' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'php_error' => $lastError ? $lastError['message'] : null
+        ]
     ]);
 }

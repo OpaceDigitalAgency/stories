@@ -162,10 +162,41 @@ try {
 
     // Download the image with error context
     error_log("Downloading image from URL: $imageUrl");
-    $imageData = @file_get_contents($imageUrl);
-    if ($imageData === false) {
-        $error = error_get_last();
-        throw new Exception('Failed to download image from URL: ' . $imageUrl . ' - Error: ' . ($error['message'] ?? 'Unknown error'));
+
+    // Check if the URL is a local file path (starting with /uploads/)
+    if (strpos($imageUrl, '/uploads/') === 0) {
+        // For local paths, construct the full server path
+        $localPath = dirname(dirname(dirname(__DIR__))) . $imageUrl;
+        error_log("Local file path: $localPath");
+
+        if (file_exists($localPath)) {
+            $imageData = file_get_contents($localPath);
+            if ($imageData === false) {
+                $error = error_get_last();
+                throw new Exception('Failed to read local image file: ' . $localPath . ' - Error: ' . ($error['message'] ?? 'Unknown error'));
+            }
+        } else {
+            // If local file doesn't exist, try with document root
+            $docRootPath = $_SERVER['DOCUMENT_ROOT'] . $imageUrl;
+            error_log("Trying document root path: $docRootPath");
+
+            if (file_exists($docRootPath)) {
+                $imageData = file_get_contents($docRootPath);
+                if ($imageData === false) {
+                    $error = error_get_last();
+                    throw new Exception('Failed to read local image file with document root: ' . $docRootPath . ' - Error: ' . ($error['message'] ?? 'Unknown error'));
+                }
+            } else {
+                throw new Exception('Local image file not found at: ' . $localPath . ' or ' . $docRootPath);
+            }
+        }
+    } else {
+        // For external URLs, use file_get_contents with proper error handling
+        $imageData = @file_get_contents($imageUrl);
+        if ($imageData === false) {
+            $error = error_get_last();
+            throw new Exception('Failed to download image from URL: ' . $imageUrl . ' - Error: ' . ($error['message'] ?? 'Unknown error'));
+        }
     }
 
     // Check if we got valid image data

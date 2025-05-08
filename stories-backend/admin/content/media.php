@@ -589,7 +589,8 @@ require_once '../includes/header.php';
                                     type: "POST",
                                     data: {
                                         "image_url": aiImageUrl,
-                                        "alt_text": aiImageAlt || "AI-generated image"
+                                        "alt_text": aiImageAlt || "AI-generated image",
+                                        "timestamp": new Date().getTime() // Add timestamp to prevent caching issues
                                     },
                                     dataType: "json",
                                     timeout: 60000, // 60 second timeout
@@ -633,7 +634,8 @@ require_once '../includes/header.php';
                                             alert("Image saved to media library successfully!");
 
                                             // Force reload the page to show the new image
-                                            window.location.href = window.location.href.split('?')[0]; // Remove any query parameters
+                                            // Add a cache-busting parameter to ensure fresh content
+                                            window.location.href = window.location.href.split('?')[0] + "?refresh=" + new Date().getTime();
                                             return; // Exit early to prevent further processing
                                         } else {
                                             // Hide loading indicator

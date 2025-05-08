@@ -515,7 +515,8 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             image_data: url,
                             filename: filename || 'ai-generated-image',
                             alt_text: altText || 'AI generated image',
-                            prompt: prompt || ''
+                            prompt: prompt || '',
+                            timestamp: new Date().getTime() // Add timestamp to prevent caching issues
                         }),
                         success: function(response) {
                             if (response.success) {
@@ -537,30 +538,30 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                 if (component.length) {
                                     // Update the preview container
                                     component.find('.image-preview-container').addClass('has-image');
-                                    
+
                                     // Update the preview
                                     const preview = component.find('.image-preview');
                                     preview.removeClass('empty');
-                                    
+
                                     // If the preview doesn't have an image, create one
                                     if (preview.find('img').length === 0) {
                                         preview.empty();
                                         preview.append('<img src="' + valueToStore + '" alt="Preview">');
-                                        
+
                                         // Add info div with remove button
                                         const infoDiv = $('<div class="image-info"></div>');
                                         const removeBtn = $('<button type="button" class="btn btn-sm btn-danger remove-image"><i class="fas fa-times"></i> Remove</button>');
                                         infoDiv.append(removeBtn);
                                         preview.append(infoDiv);
-                                        
+
                                         // Add event listener to remove button
                                         removeBtn.on('click', function() {
                                             // Clear the URL input
                                             $('#' + currentTargetField).val('');
-                                            
+
                                             // Remove has-image class from container
                                             component.find('.image-preview-container').removeClass('has-image');
-                                            
+
                                             // Reset preview
                                             preview.empty();
                                             preview.addClass('empty');
@@ -587,14 +588,74 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                 // Close the modal
                                 $('#aiImageGeneratorModal').modal('hide');
                             } else {
-                                alert('Error saving image: ' + (response.error || 'Unknown error'));
+                                // Construct a detailed error message
+                                let errorMsg = response.error || 'Unknown error';
+
+                                // Add details if available
+                                if (response.details) {
+                                    console.error("Error details:", response.details);
+                                    if (response.details.php_error) {
+                                        errorMsg += "\n\nPHP Error: " + response.details.php_error;
+                                    }
+                                }
+
+                                alert('Error saving image: ' + errorMsg);
+                                console.error('Error saving image:', response);
+
                                 // Reset button
                                 button.html(originalButtonText);
                                 button.prop('disabled', false);
                             }
                         },
                         error: function(xhr, status, error) {
-                            alert('Error saving image: ' + error);
+                            // Try to parse the response if it is JSON
+                            let errorMsg = error || "Unknown error";
+
+                            if (status === "timeout") {
+                                errorMsg = "Request timed out. The server took too long to respond.";
+                            } else if (status === "error") {
+                                errorMsg = "Server error: " + (xhr.status || "unknown") + " " + (xhr.statusText || "");
+                            }
+
+                            try {
+                                if (xhr.responseText) {
+                                    var jsonResponse = JSON.parse(xhr.responseText);
+                                    if (jsonResponse && jsonResponse.error) {
+                                        errorMsg = jsonResponse.error;
+
+                                        // Add details if available
+                                        if (jsonResponse.details) {
+                                            console.error("Error details:", jsonResponse.details);
+                                            if (jsonResponse.details.php_error) {
+                                                errorMsg += "\n\nPHP Error: " + jsonResponse.details.php_error;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // If it is not valid JSON, use the raw response text
+                                console.error("Failed to parse error response:", e);
+                                if (xhr.responseText) {
+                                    // Limit the length of the error message
+                                    if (xhr.responseText.length > 200) {
+                                        errorMsg = xhr.responseText.substring(0, 200) + "...";
+                                    } else {
+                                        errorMsg = xhr.responseText;
+                                    }
+                                }
+                            }
+
+                            // Log detailed error information
+                            console.error("AJAX Error:", {
+                                status: status,
+                                error: error,
+                                response: xhr.responseText,
+                                readyState: xhr.readyState,
+                                statusText: xhr.statusText
+                            });
+
+                            alert('Error saving image: ' + errorMsg);
+
                             // Reset button
                             button.html(originalButtonText);
                             button.prop('disabled', false);
@@ -620,30 +681,30 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                 if (component.length) {
                     // Update the preview container
                     component.find('.image-preview-container').addClass('has-image');
-                    
+
                     // Update the preview
                     const preview = component.find('.image-preview');
                     preview.removeClass('empty');
-                    
+
                     // If the preview doesn't have an image, create one
                     if (preview.find('img').length === 0) {
                         preview.empty();
                         preview.append('<img src="' + valueToStore + '" alt="Preview">');
-                        
+
                         // Add info div with remove button
                         const infoDiv = $('<div class="image-info"></div>');
                         const removeBtn = $('<button type="button" class="btn btn-sm btn-danger remove-image"><i class="fas fa-times"></i> Remove</button>');
                         infoDiv.append(removeBtn);
                         preview.append(infoDiv);
-                        
+
                         // Add event listener to remove button
                         removeBtn.on('click', function() {
                             // Clear the URL input
                             $('#' + currentTargetField).val('');
-                            
+
                             // Remove has-image class from container
                             component.find('.image-preview-container').removeClass('has-image');
-                            
+
                             // Reset preview
                             preview.empty();
                             preview.addClass('empty');

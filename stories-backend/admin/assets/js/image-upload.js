@@ -416,11 +416,18 @@ class ImageUploader {
     }
 
     /**
-     * Open the AI image generator (placeholder)
+     * Open the AI image generator
      * @param {HTMLElement} component - The component element
      */
     openAiGenerator(component) {
-        alert('AI image generation is coming soon!');
+        // Find the nearest AI generate button and trigger a click on it
+        const aiGenerateBtn = component.closest('.form-group').querySelector('.ai-generate-btn');
+        if (aiGenerateBtn) {
+            aiGenerateBtn.click();
+        } else {
+            console.warn('AI image generation button not found');
+            alert('AI image generation is not available for this component');
+        }
     }
 }
 

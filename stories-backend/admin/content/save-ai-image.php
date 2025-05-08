@@ -321,44 +321,63 @@ try {
             $db->exec("ALTER TABLE media ADD COLUMN large_url VARCHAR(255) AFTER medium_url");
         }
 
-        // Prepare the SQL statement
-        $sql = "INSERT INTO media (filename, file_path, file_type, file_size, alt_text, width, height, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
-        error_log("Preparing SQL: $sql");
-        $stmt = $db->prepare($sql);
+        // Check if an image with the same filename already exists
+        $checkSql = "SELECT id FROM media WHERE filename = ? OR file_path = ?";
+        error_log("Checking for existing image: $checkSql");
+        $checkStmt = $db->prepare($checkSql);
 
-        if (!$stmt) {
+        if (!$checkStmt) {
             $error = $db->errorInfo();
-            throw new Exception("Failed to prepare statement: " . ($error[2] ?? 'Unknown error'));
+            throw new Exception("Failed to prepare check statement: " . ($error[2] ?? 'Unknown error'));
         }
 
-        // Execute the statement
-        error_log("Executing SQL with parameters: " . json_encode([
-            $filename,
-            $relativeFilePath,
-            'image/png',
-            $fileSize,
-            $altText,
-            $width,
-            $height
-        ]));
+        $checkStmt->execute([$filename, $relativeFilePath]);
+        $existingImage = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-        $result = $stmt->execute([
-            $filename,
-            $relativeFilePath,
-            'image/png',
-            $fileSize,
-            $altText,
-            $width,
-            $height
-        ]);
+        if ($existingImage) {
+            // Image already exists, use the existing ID
+            $mediaId = $existingImage['id'];
+            error_log("Image already exists in media library with ID: $mediaId");
+        } else {
+            // Prepare the SQL statement for insertion
+            $sql = "INSERT INTO media (filename, file_path, file_type, file_size, alt_text, width, height, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+            error_log("Preparing SQL: $sql");
+            $stmt = $db->prepare($sql);
 
-        if (!$result) {
-            $error = $stmt->errorInfo();
-            throw new Exception("Failed to execute statement: " . ($error[2] ?? 'Unknown error'));
+            if (!$stmt) {
+                $error = $db->errorInfo();
+                throw new Exception("Failed to prepare statement: " . ($error[2] ?? 'Unknown error'));
+            }
+
+            // Execute the statement
+            error_log("Executing SQL with parameters: " . json_encode([
+                $filename,
+                $relativeFilePath,
+                'image/png',
+                $fileSize,
+                $altText,
+                $width,
+                $height
+            ]));
+
+            $result = $stmt->execute([
+                $filename,
+                $relativeFilePath,
+                'image/png',
+                $fileSize,
+                $altText,
+                $width,
+                $height
+            ]);
+
+            if (!$result) {
+                $error = $stmt->errorInfo();
+                throw new Exception("Failed to execute statement: " . ($error[2] ?? 'Unknown error'));
+            }
+
+            $mediaId = $db->lastInsertId();
+            error_log("Image saved to media library with ID: $mediaId");
         }
-
-        $mediaId = $db->lastInsertId();
-        error_log("Image saved to media library with ID: $mediaId");
 
         // Update the media record with optimized URLs if available
         if ($variants) {

@@ -144,8 +144,8 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             <label for="ai-size">Image Size</label>
                             <select id="ai-size" class="form-control">
                                 <option value="1024x1024">Square (1024x1024)</option>
-                                <option value="1024x1792">Portrait (1024x1792)</option>
-                                <option value="1792x1024">Landscape (1792x1024)</option>
+                                <option value="1024x1536">Portrait (1024x1536)</option>
+                                <option value="1536x1024">Landscape (1536x1024)</option>
                             </select>
                         </div>
 

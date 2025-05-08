@@ -145,6 +145,14 @@ try {
 
     // Set up request parameters
     $size = $data['size'] ?? '1024x1024';
+
+    // Validate size parameter - only allow supported sizes
+    $validSizes = ['1024x1024', '1024x1536', '1536x1024', 'auto'];
+    if (!in_array($size, $validSizes)) {
+        error_log("Invalid size parameter: $size. Defaulting to 1024x1024");
+        $size = '1024x1024';
+    }
+
     $variations = min(max((int)($data['variations'] ?? 1), 1), 4); // Limit to 1-4 variations
 
     // Map quality values to those supported by the API
@@ -463,13 +471,13 @@ function calculateImageGenerationCost($model, $size, $quality, $variations) {
     $baseCosts = [
         'gpt-image-1' => [
             '1024x1024' => 0.04,
-            '1024x1792' => 0.08,
-            '1792x1024' => 0.08
+            '1024x1536' => 0.08,
+            '1536x1024' => 0.08
         ],
         'dall-e-3' => [
             '1024x1024' => 0.04,
-            '1024x1792' => 0.08,
-            '1792x1024' => 0.08
+            '1024x1536' => 0.08,
+            '1536x1024' => 0.08
         ],
         'dall-e-2' => [
             '1024x1024' => 0.02,

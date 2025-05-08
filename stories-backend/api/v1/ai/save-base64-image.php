@@ -262,25 +262,43 @@ try {
     $smallPath = $optimizedDir . $smallFilename;
     createThumbnail($filepath, $smallPath, 300, 300);
 
+    // Create medium version (640x640)
+    $mediumFilename = pathinfo($filename, PATHINFO_FILENAME) . '-medium.webp';
+    $mediumPath = $optimizedDir . $mediumFilename;
+    createThumbnail($filepath, $mediumPath, 640, 640);
+
+    // Create large version (1200x800)
+    $largeFilename = pathinfo($filename, PATHINFO_FILENAME) . '-large.webp';
+    $largePath = $optimizedDir . $largeFilename;
+    createThumbnail($filepath, $largePath, 1200, 800);
+
     // Prepare the URLs (relative to the site root)
     // Ensure URLs start with a single slash
     $url = '/uploads/ai-generated/' . $filename;
     $thumbnailUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-thumbnail.webp';
     $smallUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-small.webp';
+    $mediumUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-medium.webp';
+    $largeUrl = '/uploads/optimized/' . pathinfo($filename, PATHINFO_FILENAME) . '-large.webp';
 
     // Log the URLs for debugging
     error_log("Generated image URL: $url");
     error_log("Thumbnail URL: $thumbnailUrl");
     error_log("Small URL: $smallUrl");
+    error_log("Medium URL: $mediumUrl");
+    error_log("Large URL: $largeUrl");
 
     // Verify the files exist
     $fullPath = dirname(dirname(dirname(__DIR__))) . $url;
     $thumbnailPath = dirname(dirname(dirname(__DIR__))) . $thumbnailUrl;
     $smallPath = dirname(dirname(dirname(__DIR__))) . $smallUrl;
+    $mediumPath = dirname(dirname(dirname(__DIR__))) . $mediumUrl;
+    $largePath = dirname(dirname(dirname(__DIR__))) . $largeUrl;
 
     error_log("Full path to image: $fullPath");
     error_log("Full path to thumbnail: $thumbnailPath");
     error_log("Full path to small image: $smallPath");
+    error_log("Full path to medium image: $mediumPath");
+    error_log("Full path to large image: $largePath");
 
     if (!file_exists($fullPath)) {
         error_log("Warning: Generated image file does not exist at: $fullPath");
@@ -290,6 +308,12 @@ try {
     }
     if (!file_exists($smallPath)) {
         error_log("Warning: Small image file does not exist at: $smallPath");
+    }
+    if (!file_exists($mediumPath)) {
+        error_log("Warning: Medium image file does not exist at: $mediumPath");
+    }
+    if (!file_exists($largePath)) {
+        error_log("Warning: Large image file does not exist at: $largePath");
     }
 
     // Create a meaningful alt text for SEO
@@ -328,12 +352,14 @@ try {
     // Check if the medium_url and large_url columns exist
     try {
         $stmt = $db->prepare("INSERT INTO media (filename, file_path, thumbnail_url, small_url, medium_url, large_url, file_type, file_size, alt_text, width, height, created_at, updated_at)
-                              VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, NOW(), NOW())");
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
             $filename,
             $url,
             $thumbnailUrl,
             $smallUrl,
+            $mediumUrl,
+            $largeUrl,
             'image/png',
             strlen($imageData),
             $altText,
@@ -372,6 +398,8 @@ try {
             'url' => $url,
             'thumbnail_url' => $thumbnailUrl,
             'small_url' => $smallUrl,
+            'medium_url' => $mediumUrl,
+            'large_url' => $largeUrl,
             'filename' => $filename,
             'alt_text' => $altText,
             'width' => $width,

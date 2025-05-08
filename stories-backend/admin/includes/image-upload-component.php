@@ -47,9 +47,15 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
         <div class="image-preview-container <?php echo $hasImage ? 'has-image' : ''; ?>">
             <?php if ($hasImage): ?>
                 <div class="image-preview">
+                    <div class="placeholder" style="display: none;">
+                        <i class="fas fa-image"></i>
+                        <span>No image selected</span>
+                    </div>
                     <img src="<?php echo htmlspecialchars($currentValue); ?>"
                          alt="Preview"
-                         id="<?php echo $fieldName; ?>-preview">
+                         id="<?php echo $fieldName; ?>-preview"
+                         onerror="this.style.display='none'; $(this).closest('.image-preview').find('.placeholder').show();"
+                         onload="this.style.display='block'; $(this).closest('.image-preview').find('.placeholder').hide();">
                     <div class="image-info">
                         <?php if (!empty($imageDimensions)): ?>
                             <span class="dimensions"><?php echo $imageDimensions; ?></span>
@@ -68,7 +74,9 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
                     <img src=""
                          alt="Preview"
                          id="<?php echo $fieldName; ?>-preview"
-                         style="display: none;">
+                         style="display: none;"
+                         onerror="this.style.display='none';"
+                         onload="if(this.src && this.src !== '') { this.style.display='block'; $(this).closest('.image-preview').find('.placeholder').hide(); }">
                 </div>
             <?php endif; ?>
         </div>

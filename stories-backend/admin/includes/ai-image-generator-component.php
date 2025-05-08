@@ -531,6 +531,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                     $('#' + currentPreviewElement).attr('src', valueToStore);
                                     $('#' + currentPreviewElement).attr('alt', response.data.alt_text);
                                     $('#' + currentPreviewElement).removeClass('d-none');
+                                    $('#' + currentPreviewElement).show(); // Make sure it's visible
                                 }
 
                                 // Find the image upload component and update it
@@ -570,7 +571,22 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                     } else {
                                         // Just update the existing image
                                         preview.find('img').attr('src', valueToStore);
+                                        preview.find('img').show(); // Make sure the image is visible
                                     }
+
+                                    // Find and hide the placeholder if it exists
+                                    preview.find('.placeholder').hide();
+                                }
+
+                                // Also update any image in the parent form that might be the preview
+                                const form = $('#' + currentTargetField).closest('form');
+                                if (form.length) {
+                                    // Look for any image with preview in its ID
+                                    form.find('img[id*="preview"]').each(function() {
+                                        $(this).attr('src', valueToStore);
+                                        $(this).attr('alt', response.data.alt_text || 'Preview');
+                                        $(this).show();
+                                    });
                                 }
 
                                 // Store the filename and alt text in hidden fields if they exist
@@ -677,6 +693,7 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     $('#' + currentPreviewElement).attr('src', valueToStore);
                     $('#' + currentPreviewElement).attr('alt', altText || 'AI generated image');
                     $('#' + currentPreviewElement).removeClass('d-none');
+                    $('#' + currentPreviewElement).show(); // Make sure it's visible
                 }
 
                 // Find the image upload component and update it
@@ -716,7 +733,22 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                     } else {
                         // Just update the existing image
                         preview.find('img').attr('src', valueToStore);
+                        preview.find('img').show(); // Make sure the image is visible
                     }
+
+                    // Find and hide the placeholder if it exists
+                    preview.find('.placeholder').hide();
+                }
+
+                // Also update any image in the parent form that might be the preview
+                const form = $('#' + currentTargetField).closest('form');
+                if (form.length) {
+                    // Look for any image with preview in its ID
+                    form.find('img[id*="preview"]').each(function() {
+                        $(this).attr('src', valueToStore);
+                        $(this).attr('alt', altText || 'Preview');
+                        $(this).show();
+                    });
                 }
 
                 // Store the filename and alt text in hidden fields if they exist

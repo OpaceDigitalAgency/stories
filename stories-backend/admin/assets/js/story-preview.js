@@ -5,6 +5,8 @@
  * by loading the frontend Astro URL based on the story's slug.
  */
 
+// Only define the class if it doesn't already exist
+if (typeof StoryPreview === 'undefined') {
 class StoryPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -213,7 +215,11 @@ class StoryPreview {
     }
 }
 
+} // End of StoryPreview class
+
 // Initialize the story preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.storyPreview = new StoryPreview();
+    if (!window.storyPreview) {
+        window.storyPreview = new StoryPreview();
+    }
 });

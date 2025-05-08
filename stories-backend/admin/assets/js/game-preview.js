@@ -5,6 +5,8 @@
  * by loading the direct preview handler.
  */
 
+// Only define the class if it doesn't already exist
+if (typeof GamePreview === 'undefined') {
 class GamePreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -43,7 +45,7 @@ class GamePreview {
                 event.preventDefault();
 
                 // Get game ID from the button
-                const gameId = target.dataset.gameId || target.closest('[data-game-id]')?.dataset.gameId || 
+                const gameId = target.dataset.gameId || target.closest('[data-game-id]')?.dataset.gameId ||
                                document.querySelector('input[name="id"]')?.value;
 
                 if (gameId) {
@@ -214,7 +216,11 @@ class GamePreview {
     }
 }
 
+} // End of GamePreview class
+
 // Initialize the game preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.gamePreview = new GamePreview();
+    if (!window.gamePreview) {
+        window.gamePreview = new GamePreview();
+    }
 });

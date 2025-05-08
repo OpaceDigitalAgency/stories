@@ -387,6 +387,7 @@ require_once '../includes/header.php';
                                     [
                                         'title' => $post['title'] ?? '',
                                         'summary' => $post['excerpt'] ?? '', // Use summary instead of excerpt
+                                        'excerpt' => $post['excerpt'] ?? '', // Also include excerpt for compatibility
                                         'content' => $post['content'] ?? ''
                                     ],
                                     'cover_url',

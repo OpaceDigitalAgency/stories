@@ -309,7 +309,8 @@ require_once '../includes/header.php';
                                     'directory_item',
                                     [
                                         'title' => $item['title'] ?? '',
-                                        'description' => $item['description'] ?? ''
+                                        'description' => $item['description'] ?? '',
+                                        'summary' => $item['description'] ?? '' // Also include summary for compatibility
                                     ],
                                     'cover_url',
                                     'cover_url_preview'

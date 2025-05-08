@@ -95,9 +95,20 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
     // Encode content data for JavaScript
     $contentDataJson = json_encode($contentData);
 
+    // Debug content data
+    error_log("Content data for $contentType: " . $contentDataJson);
+
     // Render the component
     ?>
     <div class="ai-image-generator-component text-center">
+        <!-- Debug info for development -->
+        <?php if (isset($_GET['debug'])): ?>
+        <div class="small text-muted mb-2">
+            Content Type: <?php echo htmlspecialchars($contentType); ?><br>
+            Content Data: <?php echo htmlspecialchars($contentDataJson); ?>
+        </div>
+        <?php endif; ?>
+
         <button type="button" class="btn btn-primary ai-generate-btn"
                 data-toggle="modal"
                 data-target="#aiImageGeneratorModal"

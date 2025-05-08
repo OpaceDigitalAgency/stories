@@ -51,7 +51,12 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             left: 0;
             right: 0;
             box-sizing: border-box;
-            z-index: 10; /* Lower z-index to avoid conflicts */
+            z-index: 10; /* Lower z-index to avoid conflicts with sticky save bar */
+        }
+
+        /* Add padding to the bottom of the page when sticky save bar is present */
+        body.has-sticky-save-bar .admin-footer {
+            margin-bottom: 70px; /* Height of the sticky save bar */
         }
 
         .footer-content-compact {
@@ -59,8 +64,7 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             justify-content: space-between;
             align-items: center;
             padding: 1rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
             box-sizing: border-box;
         }
 
@@ -133,6 +137,11 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
                 var target = $(this).data('target');
                 $(target).modal('show');
             });
+
+            // Detect if page has sticky save bar and add class to body
+            if ($('.sticky-save-bar, .sticky-action-bar').length > 0) {
+                $('body').addClass('has-sticky-save-bar');
+            }
         });
     </script>
 </body>

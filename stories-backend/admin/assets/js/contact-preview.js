@@ -250,7 +250,11 @@ class ContactPreview {
 
 // Initialize the contact preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.contactPreview) {
-        window.contactPreview = new ContactPreview();
+    try {
+        if (typeof ContactPreview !== 'undefined' && !window.contactPreview) {
+            window.contactPreview = new ContactPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing ContactPreview:', e);
     }
 });

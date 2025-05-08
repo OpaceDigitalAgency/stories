@@ -220,7 +220,11 @@ class DirectoryItemPreview {
 
 // Initialize the directory item preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.directoryItemPreview) {
-        window.directoryItemPreview = new DirectoryItemPreview();
+    try {
+        if (typeof DirectoryItemPreview !== 'undefined' && !window.directoryItemPreview) {
+            window.directoryItemPreview = new DirectoryItemPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing DirectoryItemPreview:', e);
     }
 });

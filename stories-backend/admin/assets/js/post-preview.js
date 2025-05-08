@@ -220,7 +220,11 @@ class PostPreview {
 
 // Initialize the post preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.postPreview) {
-        window.postPreview = new PostPreview();
+    try {
+        if (typeof PostPreview !== 'undefined' && !window.postPreview) {
+            window.postPreview = new PostPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing PostPreview:', e);
     }
 });

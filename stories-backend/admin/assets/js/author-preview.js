@@ -247,7 +247,11 @@ class AuthorPreview {
 
 // Initialize the author preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.authorPreview) {
-        window.authorPreview = new AuthorPreview();
+    try {
+        if (typeof AuthorPreview !== 'undefined' && !window.authorPreview) {
+            window.authorPreview = new AuthorPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing AuthorPreview:', e);
     }
 });

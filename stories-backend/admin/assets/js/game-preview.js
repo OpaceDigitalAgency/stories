@@ -220,7 +220,11 @@ class GamePreview {
 
 // Initialize the game preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.gamePreview) {
-        window.gamePreview = new GamePreview();
+    try {
+        if (typeof GamePreview !== 'undefined' && !window.gamePreview) {
+            window.gamePreview = new GamePreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing GamePreview:', e);
     }
 });

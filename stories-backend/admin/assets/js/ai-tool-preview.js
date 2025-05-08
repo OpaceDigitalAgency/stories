@@ -232,7 +232,11 @@ class AiToolPreview {
 
 // Initialize the AI tool preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.aiToolPreview) {
-        window.aiToolPreview = new AiToolPreview();
+    try {
+        if (typeof AiToolPreview !== 'undefined' && !window.aiToolPreview) {
+            window.aiToolPreview = new AiToolPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing AiToolPreview:', e);
     }
 });

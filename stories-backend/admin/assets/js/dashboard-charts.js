@@ -1,6 +1,6 @@
 /**
  * Dashboard Charts
- * 
+ *
  * This file contains the code for generating charts and visualizations
  * on the admin dashboard.
  */
@@ -8,7 +8,7 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard Charts JS loaded');
-    
+
     // Initialize charts if we're on the dashboard page
     if (document.querySelector('.dashboard-cards')) {
         initContentStatisticsChart();
@@ -27,27 +27,33 @@ function initContentStatisticsChart() {
         console.warn('Chart.js is not loaded. Charts will not be displayed.');
         return;
     }
-    
+
     const chartContainer = document.getElementById('content-stats-chart');
     if (!chartContainer) return;
-    
+
+    // Destroy existing chart if it exists
+    const existingChart = Chart.getChart(chartContainer);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
     // Get data from dashboard cards
     const labels = [];
     const data = [];
     const colors = [];
-    
+
     document.querySelectorAll('.dashboard-card').forEach(card => {
         const titleElement = card.querySelector('h3');
         const valueElement = card.querySelector('.stat-number');
-        
+
         if (titleElement && valueElement) {
             const title = titleElement.textContent.trim().replace(/^\s*\S+\s+/, ''); // Remove icon
             const value = parseInt(valueElement.textContent.trim(), 10);
-            
+
             if (!isNaN(value)) {
                 labels.push(title);
                 data.push(value);
-                
+
                 // Assign colors based on card type
                 if (card.classList.contains('user-card')) {
                     colors.push('#10b981'); // success color
@@ -61,7 +67,7 @@ function initContentStatisticsChart() {
             }
         }
     });
-    
+
     new Chart(chartContainer, {
         type: 'bar',
         data: {
@@ -107,20 +113,26 @@ function initContentStatisticsChart() {
 function initActivityTimelineChart() {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') return;
-    
+
     const chartContainer = document.getElementById('activity-timeline-chart');
     if (!chartContainer) return;
-    
+
+    // Destroy existing chart if it exists
+    const existingChart = Chart.getChart(chartContainer);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
     // Sample data - in a real implementation, this would come from the server
     const dates = [];
     const now = new Date();
-    
+
     for (let i = 6; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     }
-    
+
     new Chart(chartContainer, {
         type: 'line',
         data: {
@@ -175,10 +187,16 @@ function initActivityTimelineChart() {
 function initContentDistributionChart() {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') return;
-    
+
     const chartContainer = document.getElementById('content-distribution-chart');
     if (!chartContainer) return;
-    
+
+    // Destroy existing chart if it exists
+    const existingChart = Chart.getChart(chartContainer);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
     // Sample data - in a real implementation, this would come from the server
     new Chart(chartContainer, {
         type: 'doughnut',
@@ -226,16 +244,22 @@ function initContentDistributionChart() {
 function initUserActivityChart() {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') return;
-    
+
     const chartContainer = document.getElementById('user-activity-chart');
     if (!chartContainer) return;
-    
+
+    // Destroy existing chart if it exists
+    const existingChart = Chart.getChart(chartContainer);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
     // Sample data - in a real implementation, this would come from the server
     const hours = [];
     for (let i = 0; i < 24; i++) {
         hours.push(i + ':00');
     }
-    
+
     new Chart(chartContainer, {
         type: 'bar',
         data: {

@@ -219,7 +219,11 @@ class StoryPreview {
 
 // Initialize the story preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.storyPreview) {
-        window.storyPreview = new StoryPreview();
+    try {
+        if (typeof StoryPreview !== 'undefined' && !window.storyPreview) {
+            window.storyPreview = new StoryPreview();
+        }
+    } catch (e) {
+        console.warn('Error initializing StoryPreview:', e);
     }
 });

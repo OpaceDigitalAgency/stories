@@ -9,6 +9,8 @@
 // Include the image configuration with error handling
 try {
     if (file_exists(__DIR__ . '/image_config.php')) {
+        // Add debug log to track inclusion
+        error_log("Including image_config.php from image_optimizer.php");
         require_once __DIR__ . '/image_config.php';
     } else {
         error_log("image_config.php file not found in image_optimizer.php");
@@ -128,21 +130,23 @@ function getImageType($path) {
 }
 
 /**
- * Get image format configuration
+ * Get image format configuration - only define if not already defined
  *
  * @param string $format Format identifier (jpg, png, webp)
  * @return array Format configuration
  */
-function getImageFormatConfig($format) {
-    global $IMAGE_FORMATS;
+if (!function_exists('getImageFormatConfig')) {
+    function getImageFormatConfig($format) {
+        global $IMAGE_FORMATS;
 
-    // Return the format configuration if it exists
-    if (isset($IMAGE_FORMATS[$format])) {
-        return $IMAGE_FORMATS[$format];
+        // Return the format configuration if it exists
+        if (isset($IMAGE_FORMATS[$format])) {
+            return $IMAGE_FORMATS[$format];
+        }
+
+        // Default to WebP if format not found
+        return $IMAGE_FORMATS['webp'];
     }
-
-    // Default to WebP if format not found
-    return $IMAGE_FORMATS['webp'];
 }
 
 /**

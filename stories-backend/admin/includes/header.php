@@ -101,6 +101,12 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <link rel="stylesheet" href="<?php echo $adminStylesCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $previewModalCssPath; ?>">
 
+    <!-- Admin UI Fixes CSS -->
+    <?php
+    $adminFixesCssPath = $isContentDir ? '../assets/css/admin-fixes.css' : 'assets/css/admin-fixes.css';
+    ?>
+    <link rel="stylesheet" href="<?php echo $adminFixesCssPath; ?>">
+
     <!-- JavaScript Libraries -->
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

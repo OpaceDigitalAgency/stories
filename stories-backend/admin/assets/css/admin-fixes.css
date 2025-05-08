@@ -1,0 +1,334 @@
+/**
+ * Admin UI Fixes
+ *
+ * This file contains fixes for spacing, alignment, and overlapping issues
+ * across the admin interface.
+ */
+
+/* ===== Form Field Spacing ===== */
+.form-group {
+  margin-bottom: 1.5rem !important;
+}
+
+.form-label {
+  margin-bottom: 0.5rem !important;
+  display: block !important;
+}
+
+.form-control {
+  margin-bottom: 0.5rem !important;
+}
+
+.form-text {
+  margin-top: 0.25rem !important;
+  display: block !important;
+}
+
+/* Fix file input spacing */
+input[type="file"] {
+  padding: 0.375rem 0.75rem !important;
+  line-height: 1.5 !important;
+}
+
+/* ===== Button Spacing ===== */
+.btn {
+  margin-right: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.btn:last-child {
+  margin-right: 0 !important;
+}
+
+.btn-group .btn {
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* ===== Card and Container Spacing ===== */
+.wp-card, .card, .section-body, .content-section {
+  margin-bottom: 1.5rem !important;
+  padding: 1.25rem !important;
+}
+
+.wp-card-header, .card-header, .section-header {
+  padding: 1rem 1.25rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.wp-card-body, .card-body {
+  padding: 1.25rem !important;
+}
+
+.wp-card-footer, .card-footer {
+  padding: 1rem 1.25rem !important;
+  margin-top: 1rem !important;
+}
+
+/* ===== Table Spacing ===== */
+.table th, .table td,
+.premium-table th, .premium-table td {
+  padding: 0.75rem 1rem !important;
+  vertical-align: middle !important;
+}
+
+.table-container, .premium-table-container {
+  margin-bottom: 1.5rem !important;
+  overflow-x: auto !important;
+  background-color: white !important;
+  border-radius: var(--radius-md, 0.375rem) !important;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
+}
+
+/* Fix checkbox alignment in tables */
+.table input[type="checkbox"],
+.premium-table input[type="checkbox"] {
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+/* Fix table header styling */
+.table thead th,
+.premium-table thead th {
+  background-color: var(--gray-50, #f9fafb) !important;
+  font-weight: 600 !important;
+  color: var(--gray-700, #374151) !important;
+  border-bottom: 2px solid var(--gray-200, #e5e7eb) !important;
+}
+
+/* Fix table row hover */
+.table tbody tr:hover,
+.premium-table tbody tr:hover {
+  background-color: var(--gray-50, #f9fafb) !important;
+}
+
+/* Fix table action buttons */
+.table .btn,
+.premium-table .btn,
+.premium-table-actions .premium-btn {
+  margin-right: 0.25rem !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.875rem !important;
+}
+
+/* ===== Dropdown Menu Fixes ===== */
+.dropdown-menu {
+  padding: 0.5rem 0 !important;
+  margin-top: 0.125rem !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1.5rem !important;
+}
+
+/* ===== Navigation Fixes ===== */
+.nav-menu, .main-nav {
+  gap: 0.5rem !important;
+  padding: 0.5rem 0 !important;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem !important;
+  margin-right: 0.25rem !important;
+}
+
+/* ===== Upload Form Fixes ===== */
+.upload-tabs {
+  margin-bottom: 1.5rem !important;
+  gap: 0 !important;
+  display: flex !important;
+  border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
+}
+
+.upload-tab {
+  padding: 0.75rem 1.25rem !important;
+  margin-right: 0.25rem !important;
+  cursor: pointer !important;
+  border-bottom: 3px solid transparent !important;
+  font-weight: 500 !important;
+}
+
+.upload-tab.active {
+  border-bottom-color: var(--primary, #4361ee) !important;
+  color: var(--primary, #4361ee) !important;
+}
+
+.upload-form {
+  padding: 1.25rem !important;
+  background-color: white !important;
+  border-radius: var(--radius-md, 0.375rem) !important;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
+}
+
+.upload-tab-content {
+  padding: 1.25rem !important;
+  background-color: white !important;
+  border-radius: var(--radius-md, 0.375rem) !important;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
+}
+
+/* Fix for file input */
+input[type="file"].form-control {
+  padding: 0.375rem 0.75rem !important;
+  height: auto !important;
+}
+
+/* ===== Bulk Actions Fixes ===== */
+.bulk-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1rem !important;
+  padding: 0.75rem 1rem !important;
+  background-color: var(--gray-50, #f8f9fa) !important;
+  border-radius: var(--radius-md, 0.375rem) !important;
+}
+
+.bulk-select {
+  margin-right: 0.5rem !important;
+}
+
+.selected-count {
+  margin-left: 0.5rem !important;
+}
+
+/* ===== Search Form Fixes ===== */
+.search-form {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  margin-bottom: 1.5rem !important;
+  background-color: white !important;
+  padding: 1rem !important;
+  border-radius: var(--radius-md, 0.375rem) !important;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
+}
+
+.search-form input {
+  margin-right: 0.5rem !important;
+  margin-bottom: 0 !important;
+  flex: 1 !important;
+}
+
+.search-form select {
+  min-width: 120px !important;
+}
+
+.search-form button {
+  white-space: nowrap !important;
+}
+
+/* Fix for search results count */
+.showing-results {
+  margin: 1rem 0 !important;
+  color: var(--gray-600, #4b5563) !important;
+  font-size: 0.875rem !important;
+}
+
+/* ===== Page Header Fixes ===== */
+.page-header {
+  margin-bottom: 1.5rem !important;
+  padding-bottom: 1rem !important;
+  border-bottom: 1px solid var(--gray-200, #e5e7eb) !important;
+}
+
+.page-title {
+  margin-bottom: 0.25rem !important;
+  font-weight: 600 !important;
+  color: var(--gray-800, #1f2937) !important;
+}
+
+.page-description {
+  color: var(--gray-600, #4b5563) !important;
+  margin-bottom: 0 !important;
+}
+
+.page-actions {
+  display: flex !important;
+  gap: 0.5rem !important;
+  align-items: center !important;
+}
+
+.page-actions .btn,
+.page-actions .premium-btn {
+  white-space: nowrap !important;
+}
+
+/* ===== Responsive Fixes ===== */
+@media (max-width: 768px) {
+  .d-flex {
+    flex-wrap: wrap !important;
+  }
+
+  .search-form {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .search-form input,
+  .search-form select,
+  .search-form button {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .bulk-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .bulk-select,
+  .apply-button {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .selected-count {
+    margin-left: 0 !important;
+  }
+
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .page-header > div:last-child {
+    margin-top: 1rem !important;
+    width: 100% !important;
+  }
+
+  .page-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .page-actions .btn,
+  .page-actions .premium-btn {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* ===== Fix for sticky action bar ===== */
+.sticky-action-bar {
+  padding: 1rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 0.5rem !important;
+}
+
+/* Add padding to the bottom of the page to prevent content from being hidden behind the sticky bar */
+body {
+  padding-bottom: 70px !important;
+}
+
+/* ===== Fix for image thumbnails in tables ===== */
+.table img, .premium-table img {
+  max-width: 60px !important;
+  max-height: 60px !important;
+  object-fit: cover !important;
+  border-radius: var(--radius-sm, 0.25rem) !important;
+}

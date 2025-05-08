@@ -223,33 +223,33 @@ $extraHeadContent = '
     .upload-form {
         max-width: 600px;
     }
-    
+
     .upload-tabs {
         display: flex;
         margin-bottom: 20px;
         border-bottom: 1px solid var(--border-color);
     }
-    
+
     .upload-tab {
         padding: 10px 20px;
         cursor: pointer;
         border-bottom: 3px solid transparent;
         font-weight: 500;
     }
-    
+
     .upload-tab.active {
         border-bottom-color: var(--primary);
         color: var(--primary);
     }
-    
+
     .upload-tab-content {
         display: none;
     }
-    
+
     .upload-tab-content.active {
         display: block;
     }
-    
+
     /* Bulk upload styles */
     .bulk-dropzone {
         border: 2px dashed var(--border-color);
@@ -260,12 +260,12 @@ $extraHeadContent = '
         background-color: var(--gray-50);
         transition: all 0.3s ease;
     }
-    
+
     .bulk-dropzone.dragover {
         background-color: var(--primary-light);
         border-color: var(--primary);
     }
-    
+
     .bulk-dropzone-message {
         display: flex;
         flex-direction: column;
@@ -273,21 +273,21 @@ $extraHeadContent = '
         gap: 15px;
         color: var(--gray-600);
     }
-    
+
     .bulk-dropzone-message i {
         font-size: 3rem;
     }
-    
+
     .bulk-upload-progress {
         margin-top: 20px;
         display: none;
     }
-    
+
     .bulk-upload-results {
         margin-top: 20px;
         display: none;
     }
-    
+
     .results-list {
         margin-top: 15px;
         max-height: 300px;
@@ -295,39 +295,39 @@ $extraHeadContent = '
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
     }
-    
+
     .upload-result-item {
         display: flex;
         align-items: center;
         padding: 10px;
         border-bottom: 1px solid var(--border-color);
     }
-    
+
     .upload-result-item:last-child {
         border-bottom: none;
     }
-    
+
     .upload-result-icon {
         margin-right: 15px;
         font-size: 1.2rem;
     }
-    
+
     .upload-result-icon.success {
         color: var(--success);
     }
-    
+
     .upload-result-icon.error {
         color: var(--danger);
     }
-    
+
     .upload-result-info {
         flex-grow: 1;
     }
-    
+
     .upload-result-name {
         font-weight: 500;
     }
-    
+
     .upload-result-message {
         font-size: 0.85rem;
         color: var(--gray-600);
@@ -481,7 +481,7 @@ require_once '../includes/header.php';
             <div class="upload-tab" data-tab="bulk">Bulk Upload</div>
             <div class="upload-tab" data-tab="ai">Generate with AI</div>
         </div>
-        
+
         <div id="single-upload" class="upload-tab-content active">
             <form method="POST" enctype="multipart/form-data" class="upload-form">
                 <div class="form-group mb-3">
@@ -501,7 +501,7 @@ require_once '../includes/header.php';
                 </div>
             </form>
         </div>
-        
+
         <div id="bulk-upload" class="upload-tab-content">
             <div class="bulk-dropzone" id="bulk-dropzone">
                 <div class="bulk-dropzone-message">
@@ -514,7 +514,7 @@ require_once '../includes/header.php';
                     <input type="file" id="bulk-file-input" multiple style="display: none;">
                 </div>
             </div>
-            
+
             <div class="bulk-upload-progress">
                 <h4>Uploading Files <span class="upload-count">0/0 files uploaded</span></h4>
                 <div class="progress">
@@ -522,13 +522,13 @@ require_once '../includes/header.php';
                 </div>
                 <p class="current-file"></p>
             </div>
-            
+
             <div class="bulk-upload-results">
                 <h4>Upload Results</h4>
                 <div class="results-list"></div>
             </div>
         </div>
-        
+
         <div id="ai-upload" class="upload-tab-content">
             <?php
             // Render AI image generator
@@ -542,6 +542,77 @@ require_once '../includes/header.php';
                     'ai_generated_image',
                     'ai_generated_image_preview'
                 );
+
+                // Add hidden fields to store AI-generated image data
+                echo '<input type="hidden" id="ai_generated_image" name="ai_generated_image" value="">';
+                echo '<input type="hidden" id="ai_generated_image_alt" name="ai_generated_image_alt" value="">';
+
+                // Add JavaScript to handle AI-generated image saving
+                echo '<script>
+                    $(document).ready(function() {
+                        // Check for AI-generated image every second
+                        var checkInterval = setInterval(function() {
+                            var aiImageUrl = $("#ai_generated_image").val();
+                            var aiImageAlt = $("#ai_generated_image_alt").val();
+
+                            if (aiImageUrl && aiImageUrl !== "") {
+                                clearInterval(checkInterval);
+
+                                // Show loading indicator
+                                $("#progressOverlay").css({
+                                    "visibility": "visible",
+                                    "opacity": "1"
+                                });
+                                $("#progressTitle").text("Saving AI-generated image");
+                                $("#progressMessage").text("Please wait while we save your image to the media library.");
+
+                                // Make AJAX request to save the image to the media library
+                                $.ajax({
+                                    url: "save-ai-image.php",
+                                    type: "POST",
+                                    data: {
+                                        image_url: aiImageUrl,
+                                        alt_text: aiImageAlt || "AI-generated image"
+                                    },
+                                    success: function(response) {
+                                        if (response.success) {
+                                            // Hide loading indicator
+                                            $("#progressOverlay").css({
+                                                "visibility": "hidden",
+                                                "opacity": "0"
+                                            });
+
+                                            // Show success message
+                                            alert("Image saved to media library successfully!");
+
+                                            // Reload the page to show the new image
+                                            window.location.reload();
+                                        } else {
+                                            // Hide loading indicator
+                                            $("#progressOverlay").css({
+                                                "visibility": "hidden",
+                                                "opacity": "0"
+                                            });
+
+                                            // Show error message
+                                            alert("Error saving image: " + (response.error || "Unknown error"));
+                                        }
+                                    },
+                                    error: function(xhr, status, error) {
+                                        // Hide loading indicator
+                                        $("#progressOverlay").css({
+                                            "visibility": "hidden",
+                                            "opacity": "0"
+                                        });
+
+                                        // Show error message
+                                        alert("Error saving image: " + error);
+                                    }
+                                });
+                            }
+                        }, 1000);
+                    });
+                </script>';
             } else {
                 echo '<div class="alert alert-warning">AI image generation is not available. Please contact your administrator.</div>';
             }

@@ -157,6 +157,12 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <script src="<?php echo $postPreviewJsPath; ?>"></script>
     <?php endif; ?>
 
+    <!-- Preview Loader - ensures all preview scripts are properly initialized -->
+    <?php
+    $previewLoaderJsPath = $isContentDir ? '../assets/js/preview-loader.js' : 'assets/js/preview-loader.js';
+    ?>
+    <script src="<?php echo $previewLoaderJsPath; ?>"></script>
+
     <!-- Custom CSS for header navigation -->
     <style>
         /* Header and navigation styles */

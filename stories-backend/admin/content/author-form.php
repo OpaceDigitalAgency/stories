@@ -136,8 +136,20 @@ try {
 
                     <!-- Sticky action bar -->
                     <div class="sticky-action-bar">
-                        <button type="submit" class="btn btn-primary">Save Author</button>
-                        <a href="authors.php" class="btn btn-secondary">Cancel</a>
+                        <div class="author-status">
+                            <?php if (isset($author['id'])): ?>
+                            <span class="text-muted">Last updated: <?php echo date('M j, Y g:i a', strtotime($author['updated_at'] ?? 'now')); ?></span>
+                            <?php else: ?>
+                            <span class="text-muted">Creating new author</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="btn-group">
+                            <a href="authors.php" class="btn btn-secondary">Cancel</a>
+                            <?php if (isset($author['id'])): ?>
+                            <button type="button" id="preview-author" class="btn btn-info" data-author-id="<?php echo $author['id']; ?>" data-action="preview-author">Preview</button>
+                            <?php endif; ?>
+                            <button type="submit" class="btn btn-primary">Save Author</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -212,14 +224,45 @@ try {
 
 <style>
     .sticky-action-bar {
-        position: sticky;
+        position: fixed;
         bottom: 0;
-        background-color: #fff;
-        padding: 15px;
-        margin: 20px -15px -15px;
-        border-top: 1px solid #ddd;
-        text-align: right;
-        z-index: 100;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 15px 20px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* Add padding to the bottom of the form to prevent content from being hidden behind the sticky bar */
+    .content-form {
+        padding-bottom: 70px;
+    }
+
+    .sticky-action-bar .btn-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .sticky-action-bar {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sticky-action-bar .btn-group {
+            width: 100%;
+        }
+
+        .sticky-action-bar .btn {
+            flex: 1;
+        }
     }
 
     .metadata-list {
@@ -272,6 +315,10 @@ try {
 
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
+
+<!-- Include author preview script -->
+<link rel="stylesheet" href="../assets/css/preview-modal.css">
+<script src="../assets/js/author-preview.js"></script>
 
 <?php
 // Include footer

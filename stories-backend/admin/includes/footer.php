@@ -24,30 +24,37 @@ $siteCopyright = get_config('site.footer.copyright', 'Stories from the Web. All 
 $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org');
 ?>
     <footer class="admin-footer" role="contentinfo">
-        <div class="container">
-            <div class="footer-content-compact">
-                <div class="footer-info">
-                    <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteCopyright); ?></span>
-                    <span class="footer-version">v<?php echo htmlspecialchars($siteVersion); ?></span>
-                </div>
+        <div class="footer-content-compact">
+            <div class="footer-info">
+                <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteCopyright); ?></span>
+                <span class="footer-version">v<?php echo htmlspecialchars($siteVersion); ?></span>
+            </div>
 
-                <div class="footer-links-compact">
-                    <a href="/docs/comprehensive-system-architecture-new.php" target="_blank">Documentation</a>
-                    <a href="/docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues</a>
-                    <a href="/public/optimize_image.php" target="_blank">Image Optimizer</a>
-                    <a href="mailto:<?php echo htmlspecialchars($contactEmail); ?>">Support</a>
-                </div>
+            <div class="footer-links-compact">
+                <a href="/docs/comprehensive-system-architecture-new.php" target="_blank">Documentation</a>
+                <a href="/docs/KNOWN_ISSUES_AND_FIXES.md" target="_blank">Known Issues</a>
+                <a href="/public/optimize_image.php" target="_blank">Image Optimizer</a>
+                <a href="mailto:<?php echo htmlspecialchars($contactEmail); ?>">Support</a>
             </div>
         </div>
     </footer>
 
     <style>
+        .admin-footer {
+            background-color: white;
+            border-top: 1px solid var(--gray-200);
+            padding: 0;
+            margin-top: 3rem;
+            width: 100%;
+        }
+
         .footer-content-compact {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 0;
-            border-top: 1px solid var(--gray-200);
+            padding: 1rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .footer-info {
@@ -87,6 +94,7 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
                 flex-direction: column;
                 gap: 1rem;
                 text-align: center;
+                padding: 1rem;
             }
 
             .footer-links-compact {

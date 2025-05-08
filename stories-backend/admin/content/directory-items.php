@@ -131,7 +131,7 @@ if (isset($_SESSION['error'])) {
 
 // Set page variables for header
 $pageTitle = 'Directory Items';
-$currentPage = 'directory';
+$currentPage = 'directory';  // This matches the condition in header.php for loading directory-item-preview.js
 $pageDescription = 'Manage all your directory items from here.';
 
 // Add extra head content for premium features

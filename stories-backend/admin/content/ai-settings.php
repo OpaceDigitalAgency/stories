@@ -416,7 +416,7 @@ if ($refreshModels) {
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>AI Prompt Templates</h3>
                 <div class="btn-group">
-                    <a href="../scripts/add-default-prompt-templates.php" class="btn btn-success">
+                    <a href="/add-default-prompt-templates.php" class="btn btn-success">
                         <i class="fas fa-sync"></i> Add Default Templates
                     </a>
                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTemplateModal">

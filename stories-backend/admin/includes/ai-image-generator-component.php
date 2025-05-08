@@ -251,8 +251,51 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             currentTargetField = $(this).data('target-field');
             currentPreviewElement = $(this).data('preview-element');
 
+            // Get real-time values from form fields
+            const form = $(this).closest('form');
+            if (form.length) {
+                // Update title from form
+                const titleField = form.find('#title');
+                if (titleField.length && titleField.val()) {
+                    currentContentData.title = titleField.val();
+                }
+
+                // Update excerpt/summary from form
+                const excerptField = form.find('#excerpt');
+                if (excerptField.length && excerptField.val()) {
+                    currentContentData.excerpt = excerptField.val();
+                    currentContentData.summary = excerptField.val();
+                }
+
+                // Update description from form
+                const descriptionField = form.find('#description');
+                if (descriptionField.length && descriptionField.val()) {
+                    currentContentData.description = descriptionField.val();
+                    // Also use as summary if no excerpt
+                    if (!currentContentData.summary) {
+                        currentContentData.summary = descriptionField.val();
+                    }
+                }
+
+                // Update content from form
+                const contentField = form.find('#content');
+                if (contentField.length && contentField.val()) {
+                    currentContentData.content = contentField.val();
+                }
+
+                // For CKEditor content
+                const postContentField = form.find('#post_content');
+                if (postContentField.length && window.editor) {
+                    try {
+                        currentContentData.content = window.editor.getData();
+                    } catch (e) {
+                        console.error('Error getting CKEditor content:', e);
+                    }
+                }
+            }
+
             console.log('Content Type:', currentContentType);
-            console.log('Content Data:', currentContentData);
+            console.log('Updated Content Data:', currentContentData);
 
             // Reset the modal
             $('.ai-generation-status').addClass('d-none');

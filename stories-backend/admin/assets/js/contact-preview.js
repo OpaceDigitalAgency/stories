@@ -5,8 +5,6 @@
  * by loading the contact details from the backend.
  */
 
-// Only define the class if it doesn't already exist
-if (typeof ContactPreview === 'undefined') {
 class ContactPreview {
     constructor() {
         this.initEventListeners();
@@ -245,8 +243,6 @@ class ContactPreview {
         }
     }
 }
-
-} // End of ContactPreview class
 
 // Initialize the contact preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

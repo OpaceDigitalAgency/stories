@@ -5,8 +5,6 @@
  * by loading the frontend Astro URL based on the post's slug.
  */
 
-// Only define the class if it doesn't already exist
-if (typeof PostPreview === 'undefined') {
 class PostPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -215,8 +213,6 @@ class PostPreview {
         alert(message);
     }
 }
-
-} // End of PostPreview class
 
 // Initialize the post preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

@@ -5,8 +5,6 @@
  * by loading the direct preview handler.
  */
 
-// Only define the class if it doesn't already exist
-if (typeof DirectoryItemPreview === 'undefined') {
 class DirectoryItemPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -215,8 +213,6 @@ class DirectoryItemPreview {
         alert(message);
     }
 }
-
-} // End of DirectoryItemPreview class
 
 // Initialize the directory item preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

@@ -5,8 +5,6 @@
  * by loading the direct preview handler.
  */
 
-// Only define the class if it doesn't already exist
-if (typeof GamePreview === 'undefined') {
 class GamePreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -215,8 +213,6 @@ class GamePreview {
         alert(message);
     }
 }
-
-} // End of GamePreview class
 
 // Initialize the game preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

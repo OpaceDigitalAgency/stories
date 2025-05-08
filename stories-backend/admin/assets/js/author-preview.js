@@ -5,8 +5,6 @@
  * by loading the author details from the backend.
  */
 
-// Only define the class if it doesn't already exist
-if (typeof AuthorPreview === 'undefined') {
 class AuthorPreview {
     constructor() {
         this.initEventListeners();
@@ -257,8 +255,6 @@ class AuthorPreview {
         }
     }
 }
-
-} // End of AuthorPreview class
 
 // Initialize the author preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

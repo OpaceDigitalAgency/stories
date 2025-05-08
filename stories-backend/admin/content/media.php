@@ -583,6 +583,24 @@ require_once '../includes/header.php';
                                     window.location.href = window.location.href.split('?')[0];
                                 }, 30000);
 
+                                // Check if the image has already been saved via the API
+                                if (window.aiImageAlreadySaved) {
+                                    console.log("Image already saved via API, skipping second save");
+
+                                    // Hide loading indicator
+                                    $("#progressOverlay").css({
+                                        "visibility": "hidden",
+                                        "opacity": "0"
+                                    });
+
+                                    // Show success message
+                                    alert("Image saved to media library successfully!");
+
+                                    // Force reload the page to show the new image
+                                    window.location.href = window.location.href.split('?')[0] + "?refresh=" + new Date().getTime();
+                                    return;
+                                }
+
                                 // Make AJAX request to save the image to the media library
                                 $.ajax({
                                     url: "save-ai-image.php",

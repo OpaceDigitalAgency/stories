@@ -585,6 +585,9 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                                     $('#' + altTextField).val(response.data.alt_text);
                                 }
 
+                                // Set a flag to indicate the image has been saved via API
+                                window.aiImageAlreadySaved = true;
+
                                 // Close the modal
                                 $('#aiImageGeneratorModal').modal('hide');
                             } else {

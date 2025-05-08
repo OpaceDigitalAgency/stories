@@ -5,6 +5,11 @@
  * This page displays a list of all media files and allows for uploading, searching, and managing media.
  */
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Include auth check
 require_once '../includes/auth-check.php';
 
@@ -571,13 +576,13 @@ require_once '../includes/header.php';
                                     url: "save-ai-image.php",
                                     type: "POST",
                                     data: {
-                                        image_url: aiImageUrl,
-                                        alt_text: aiImageAlt || "AI-generated image"
+                                        "image_url": aiImageUrl,
+                                        "alt_text": aiImageAlt || "AI-generated image"
                                     },
                                     dataType: "json",
                                     success: function(response) {
-                                        // Parse the response if it's a string
-                                        if (typeof response === 'string') {
+                                        // Parse the response if it is a string
+                                        if (typeof response === "string") {
                                             try {
                                                 response = JSON.parse(response);
                                             } catch (e) {
@@ -639,7 +644,7 @@ require_once '../includes/header.php';
                                             response: xhr.responseText
                                         });
 
-                                        // Try to parse the response if it's JSON
+                                        // Try to parse the response if it is JSON
                                         var errorMsg = error;
                                         try {
                                             var jsonResponse = JSON.parse(xhr.responseText);
@@ -647,7 +652,7 @@ require_once '../includes/header.php';
                                                 errorMsg = jsonResponse.error;
                                             }
                                         } catch (e) {
-                                            // If it's not valid JSON, use the raw response text
+                                            // If it is not valid JSON, use the raw response text
                                             if (xhr.responseText) {
                                                 errorMsg = xhr.responseText;
                                             }

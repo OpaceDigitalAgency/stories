@@ -626,11 +626,14 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
         $success = resizeImage($sourcePath, $variantPath, $resizeOptions);
 
         if ($success) {
-            // Create URL
-            $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $variantPath);
+            // Create URL - use a more reliable method to generate relative paths
+            $basePath = realpath(dirname(__FILE__) . '/../');
+            $relativePath = str_replace($basePath, '', $variantPath);
             // Ensure the relative path starts with a single slash
             $relativePath = '/' . ltrim($relativePath, '/');
-            $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+
+            // Use relative URLs instead of absolute URLs to avoid domain issues
+            $url = $relativePath;
 
             $variants[$size] = [
                 'path' => $variantPath,
@@ -667,9 +670,10 @@ function optimizeImage($sourcePath, $destinationDir, $options = []) {
     if ($fileSize < $MAX_FILE_SIZE && !($options['force'] ?? false)) {
         error_log("File is already small enough: $sourcePath ($fileSize bytes)");
 
-        // Just return the original file info
-        $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $sourcePath);
-        $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+        // Just return the original file info using a more reliable method
+        $basePath = realpath(dirname(__FILE__) . '/../');
+        $relativePath = str_replace($basePath, '', $sourcePath);
+        $url = '/' . ltrim($relativePath, '/');
 
         return [
             'path' => $sourcePath,
@@ -754,17 +758,21 @@ function getOptimizedImageUrl($originalUrl, $size = 'medium') {
     if (preg_match('/\/media\/(\d+)\//', $originalUrl, $matches)) {
         $mediaId = $matches[1];
 
-        // Connect to database
+        // Connect to database using the existing connection if available
         try {
-            $db = new PDO(
-                'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-                'stories_user',
-                '$tw1cac3*sOt',
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                ]
-            );
+            global $db;
+
+            // If $db is not available, try to include the database connection
+            if (!isset($db) || !$db) {
+                // Try to include the database connection file
+                $dbConnectPath = dirname(__FILE__) . '/../admin/includes/db-connect.php';
+                if (file_exists($dbConnectPath)) {
+                    require_once $dbConnectPath;
+                } else {
+                    error_log("Database connection file not found: $dbConnectPath");
+                    return $originalUrl;
+                }
+            }
 
             // Get the media record
             $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");

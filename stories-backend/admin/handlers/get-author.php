@@ -47,6 +47,7 @@ try {
     // Check if tables exist
     $hasStoriesTable = false;
     $hasPostsTable = false;
+    $hasStoryAuthorsTable = false;
 
     try {
         $stmt = $db->query("SHOW TABLES LIKE 'stories'");
@@ -56,6 +57,11 @@ try {
         $stmt = $db->query("SHOW TABLES LIKE 'posts'");
         $hasPostsTable = $stmt->rowCount() > 0;
         error_log("Posts table exists: " . ($hasPostsTable ? 'Yes' : 'No'));
+
+        // Check if story_authors junction table exists
+        $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+        $hasStoryAuthorsTable = $stmt->rowCount() > 0;
+        error_log("Story_authors table exists: " . ($hasStoryAuthorsTable ? 'Yes' : 'No'));
 
         // Check if authors table exists and has records
         $stmt = $db->query("SHOW TABLES LIKE 'authors'");
@@ -75,21 +81,26 @@ try {
     $query = "SELECT a.*";
     $joins = "";
 
+    // Handle story count based on available tables
     if ($hasStoriesTable) {
-        $query .= ", COUNT(DISTINCT s.id) as story_count";
-        $joins .= " LEFT JOIN stories s ON a.id = s.author_id";
+        if ($hasStoryAuthorsTable) {
+            // Use the junction table if it exists
+            $query .= ", (SELECT COUNT(*) FROM story_authors sa WHERE sa.author_id = a.id) as story_count";
+        } else {
+            // Fall back to direct column if junction table doesn't exist
+            $query .= ", (SELECT COUNT(*) FROM stories s WHERE s.author_id = a.id) as story_count";
+        }
     } else {
         $query .= ", 0 as story_count";
     }
 
     if ($hasPostsTable) {
-        $query .= ", COUNT(DISTINCT p.id) as post_count";
-        $joins .= " LEFT JOIN posts p ON a.id = p.author_id";
+        $query .= ", (SELECT COUNT(*) FROM posts p WHERE p.author_id = a.id) as post_count";
     } else {
         $query .= ", 0 as post_count";
     }
 
-    $query .= " FROM authors a" . $joins . " WHERE a.id = ? GROUP BY a.id";
+    $query .= " FROM authors a WHERE a.id = ?";
 
     // Log the query for debugging
     error_log("Author query: " . $query . " with ID: " . $authorId);
@@ -115,12 +126,24 @@ try {
 
     // Get stories by this author if the table exists
     if ($hasStoriesTable) {
-        $stmtStories = $db->prepare("
-            SELECT s.id, s.title, s.slug, s.published_at
-            FROM stories s
-            WHERE s.author_id = ?
-            ORDER BY s.published_at DESC
-        ");
+        if ($hasStoryAuthorsTable) {
+            // Use the junction table if it exists
+            $stmtStories = $db->prepare("
+                SELECT s.id, s.title, s.slug, s.published_at
+                FROM stories s
+                JOIN story_authors sa ON s.id = sa.story_id
+                WHERE sa.author_id = ?
+                ORDER BY s.published_at DESC
+            ");
+        } else {
+            // Fall back to direct column if junction table doesn't exist
+            $stmtStories = $db->prepare("
+                SELECT s.id, s.title, s.slug, s.published_at
+                FROM stories s
+                WHERE s.author_id = ?
+                ORDER BY s.published_at DESC
+            ");
+        }
         $stmtStories->execute([$authorId]);
         $stories = $stmtStories->fetchAll(PDO::FETCH_ASSOC);
     }

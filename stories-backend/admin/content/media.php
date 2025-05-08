@@ -553,7 +553,8 @@ require_once '../includes/header.php';
                 echo '<input type="hidden" id="ai_generated_image_alt" name="ai_generated_image_alt" value="">';
 
                 // Add JavaScript to handle AI-generated image saving
-                echo '<script>
+                ?>
+                <script>
                     $(document).ready(function() {
                         // Check for AI-generated image every second
                         var checkInterval = setInterval(function() {
@@ -635,9 +636,6 @@ require_once '../includes/header.php';
                                             window.location.href = window.location.href.split('?')[0]; // Remove any query parameters
                                             return; // Exit early to prevent further processing
                                         } else {
-                                            // Clear the auto-close timeout
-                                            clearTimeout(autoCloseTimeout);
-
                                             // Hide loading indicator
                                             $("#progressOverlay").css({
                                                 "visibility": "hidden",
@@ -663,9 +661,6 @@ require_once '../includes/header.php';
                                         }
                                     },
                                     error: function(xhr, status, error) {
-                                        // Clear the auto-close timeout
-                                        clearTimeout(autoCloseTimeout);
-
                                         // Hide loading indicator
                                         $("#progressOverlay").css({
                                             "visibility": "hidden",
@@ -725,7 +720,8 @@ require_once '../includes/header.php';
                             }
                         }, 1000);
                     });
-                </script>';
+                </script>
+                <?php
             } else {
                 echo '<div class="alert alert-warning">AI image generation is not available. Please contact your administrator.</div>';
             }

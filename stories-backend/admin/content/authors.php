@@ -119,6 +119,14 @@ $pageActions = '
 </div>
 ';
 
+// Add preview modal CSS and author preview script
+$extraHeadContent .= '
+<!-- Add Preview Modal CSS -->
+<link rel="stylesheet" href="../assets/css/preview-modal.css">
+<!-- Add Author Preview JS -->
+<script src="../assets/js/author-preview.js"></script>
+';
+
 // Include header
 require_once '../includes/header.php';
 
@@ -296,7 +304,9 @@ if (function_exists('renderEnhancedTable')) {
     }
 }
 
-// No need for JavaScript includes
+// Include author preview script
+echo '<link rel="stylesheet" href="../assets/css/preview-modal.css">';
+echo '<script src="../assets/js/author-preview.js"></script>';
 
 // Include footer
 require_once '../includes/footer.php';

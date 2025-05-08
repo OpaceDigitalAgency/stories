@@ -46,6 +46,10 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             padding: 0;
             margin-top: 3rem;
             width: 100%;
+            position: relative;
+            left: 0;
+            right: 0;
+            box-sizing: border-box;
         }
 
         .footer-content-compact {
@@ -55,6 +59,7 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             padding: 1rem 2rem;
             max-width: 1200px;
             margin: 0 auto;
+            box-sizing: border-box;
         }
 
         .footer-info {

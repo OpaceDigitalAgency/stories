@@ -39,22 +39,41 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
     // Get available prompt templates for this content type
     $promptTemplates = [];
     try {
+        // First try to get templates for the specific content type
         $stmt = $db->prepare("SELECT * FROM ai_prompt_templates WHERE content_type = ? AND is_active = 1");
         $stmt->execute([$contentType]);
         $promptTemplates = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        error_log("Error fetching prompt templates: " . $e->getMessage());
-    }
 
-    // If no templates found, include general templates
-    if (empty($promptTemplates)) {
-        try {
-            $stmt = $db->prepare("SELECT * FROM ai_prompt_templates WHERE content_type = 'general' AND is_active = 1");
+        // Log the number of templates found for debugging
+        error_log("Found " . count($promptTemplates) . " templates for content type: " . $contentType);
+
+        // If content type is directory_item, try with directory
+        if ($contentType === 'directory_item' && empty($promptTemplates)) {
+            $stmt = $db->prepare("SELECT * FROM ai_prompt_templates WHERE content_type = 'directory' AND is_active = 1");
             $stmt->execute();
             $promptTemplates = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error fetching general prompt templates: " . $e->getMessage());
+            error_log("Found " . count($promptTemplates) . " templates for content type: directory");
         }
+
+        // If content type is post, try with blog_post
+        if ($contentType === 'post' && empty($promptTemplates)) {
+            $stmt = $db->prepare("SELECT * FROM ai_prompt_templates WHERE content_type = 'blog_post' AND is_active = 1");
+            $stmt->execute();
+            $promptTemplates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("Found " . count($promptTemplates) . " templates for content type: blog_post");
+        }
+
+        // Always include general templates
+        $stmt = $db->prepare("SELECT * FROM ai_prompt_templates WHERE content_type = 'general' AND is_active = 1");
+        $stmt->execute();
+        $generalTemplates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("Found " . count($generalTemplates) . " templates for content type: general");
+
+        // Merge general templates with content-specific templates
+        $promptTemplates = array_merge($promptTemplates, $generalTemplates);
+
+    } catch (Exception $e) {
+        error_log("Error fetching prompt templates: " . $e->getMessage());
     }
 
     // Get OpenAI settings
@@ -121,8 +140,9 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
                             <option value="">-- Select a template --</option>
                             <?php foreach ($promptTemplates as $template): ?>
                                 <option value="<?php echo htmlspecialchars($template['id']); ?>"
-                                        data-template="<?php echo htmlspecialchars($template['prompt_template']); ?>">
-                                    <?php echo htmlspecialchars($template['name']); ?>
+                                        data-template="<?php echo htmlspecialchars($template['prompt_template']); ?>"
+                                        data-content-type="<?php echo htmlspecialchars($template['content_type']); ?>">
+                                    <?php echo htmlspecialchars($template['name']); ?> (<?php echo ucfirst($template['content_type']); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -220,53 +240,97 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             currentTargetField = $(this).data('target-field');
             currentPreviewElement = $(this).data('preview-element');
 
+            console.log('Content Type:', currentContentType);
+            console.log('Content Data:', currentContentData);
+
             // Reset the modal
             $('.ai-generation-status').addClass('d-none');
             $('.ai-generation-results').addClass('d-none');
             $('.ai-generation-error').addClass('d-none');
             $('.ai-images-container').empty();
 
-            // Set default prompts based on content type
+            // Map content types for compatibility
+            let mappedContentType = currentContentType;
+            if (currentContentType === 'directory_item') {
+                mappedContentType = 'directory';
+            } else if (currentContentType === 'post') {
+                mappedContentType = 'blog_post';
+            }
+
+            // Find the first template for this content type and select it
+            let templateFound = false;
+            $('#ai-prompt-template option').each(function() {
+                const templateType = $(this).data('content-type');
+                if (templateType === mappedContentType) {
+                    $('#ai-prompt-template').val($(this).val());
+                    templateFound = true;
+                    return false; // Break the loop
+                }
+            });
+
+            // If no template found for this content type, try to find a general template
+            if (!templateFound) {
+                $('#ai-prompt-template option').each(function() {
+                    const templateType = $(this).data('content-type');
+                    if (templateType === 'general') {
+                        $('#ai-prompt-template').val($(this).val());
+                        return false; // Break the loop
+                    }
+                });
+            }
+
+            // Get the selected template
+            const selectedTemplate = $('#ai-prompt-template').find('option:selected');
             let defaultPrompt = '';
 
-            if (currentContentType === 'story') {
-                defaultPrompt = "Generate an image for a children's story book in a typical hand-drawn or cartoon illustration form that you would find in traditional story books. Base this on: {{title}}{{#if summary}}. Summary: {{summary}}{{/if}}{{#if age_group}}. Target age: {{age_group}}{{/if}}";
-            } else if (currentContentType === 'post' || currentContentType === 'blog_post') {
-                defaultPrompt = "Create a professional and engaging featured image for a blog post titled \"{{title}}\". {{#if summary}}The post discusses {{summary}}.{{/if}} Style: clean, modern design with relevant imagery that captures the essence of the topic.";
-            } else if (currentContentType === 'author') {
-                defaultPrompt = "Create a professional portrait-style avatar for an author named {{name}}. {{#if bio}}They describe themselves as: {{bio}}{{/if}}. Style: warm, approachable, professional illustration suitable for an author profile.";
-            } else if (currentContentType === 'game') {
-                defaultPrompt = "Create an exciting game cover image for \"{{title}}\". {{#if description}}The game is about {{description}}{{/if}}. {{#if genre}}Genre: {{genre}}{{/if}}. Style: dynamic, colorful, eye-catching design that conveys the excitement and theme of the game.";
-            } else if (currentContentType === 'ai_tool') {
-                defaultPrompt = "Create a modern icon for an AI tool called \"{{title}}\". {{#if description}}The tool's purpose is {{description}}{{/if}}. Style: sleek, tech-focused design with AI-themed elements, using blues and purples for a tech feel.";
-            } else if (currentContentType === 'directory') {
-                defaultPrompt = "Create a representative image for a directory listing titled \"{{title}}\". {{#if description}}This is {{description}}{{/if}}. Style: clean, professional image that represents the business or service.";
+            if (selectedTemplate.length && selectedTemplate.val() !== '') {
+                defaultPrompt = selectedTemplate.data('template');
             } else {
-                defaultPrompt = "Create an image based on the following description: {{title}}{{#if description}}. {{description}}{{/if}}. Style: professional, high-quality, suitable for a website.";
+                // Fallback to hardcoded templates if no template is found in the dropdown
+                if (currentContentType === 'story') {
+                    defaultPrompt = "Generate an image for a children's story book in a typical hand-drawn or cartoon illustration form that you would find in traditional story books. Base this on: {{title}}{{#if summary}}. Summary: {{summary}}{{/if}}{{#if excerpt}}. Summary: {{excerpt}}{{/if}}{{#if age_group}}. Target age: {{age_group}}{{/if}}";
+                } else if (currentContentType === 'post' || currentContentType === 'blog_post') {
+                    defaultPrompt = "Create a professional and engaging featured image for a blog post titled \"{{title}}\". {{#if summary}}The post discusses {{summary}}.{{/if}}{{#if excerpt}}The post discusses {{excerpt}}.{{/if}} Style: clean, modern design with relevant imagery that captures the essence of the topic.";
+                } else if (currentContentType === 'author') {
+                    defaultPrompt = "Create a professional portrait-style avatar for an author named {{name}}{{#if title}}{{title}}{{/if}}. {{#if bio}}They describe themselves as: {{bio}}{{/if}}. Style: warm, approachable, professional illustration suitable for an author profile.";
+                } else if (currentContentType === 'game') {
+                    defaultPrompt = "Create an exciting game cover image for \"{{title}}\". {{#if description}}The game is about {{description}}{{/if}}. {{#if genre}}Genre: {{genre}}{{/if}}. Style: dynamic, colorful, eye-catching design that conveys the excitement and theme of the game.";
+                } else if (currentContentType === 'ai_tool') {
+                    defaultPrompt = "Create a modern icon for an AI tool called \"{{title}}\". {{#if description}}The tool's purpose is {{description}}{{/if}}. Style: sleek, tech-focused design with AI-themed elements, using blues and purples for a tech feel.";
+                } else if (currentContentType === 'directory' || currentContentType === 'directory_item') {
+                    defaultPrompt = "Create a representative image for a directory listing titled \"{{title}}\". {{#if description}}This is {{description}}{{/if}}. Style: clean, professional image that represents the business or service.";
+                } else {
+                    defaultPrompt = "Create an image based on the following description: {{title}}{{#if description}}. {{description}}{{/if}}. Style: professional, high-quality, suitable for a website.";
+                }
             }
 
             // Process the template with content data
             let processedPrompt = defaultPrompt;
 
+            console.log('Template before processing:', processedPrompt);
+            console.log('Content data for processing:', currentContentData);
+
             // Replace simple variables {{variable}}
             processedPrompt = processedPrompt.replace(/\{\{([^}]+)\}\}/g, function(match, key) {
                 key = key.trim();
+                console.log('Replacing variable:', key, 'with value:', currentContentData[key] || '');
                 return currentContentData[key] || '';
             });
 
             // Process conditional blocks {{#if variable}}content{{/if}}
             processedPrompt = processedPrompt.replace(/\{\{#if ([^}]+)\}\}(.*?)\{\{\/if\}\}/g, function(match, key, content) {
                 key = key.trim();
+                console.log('Processing conditional for:', key, 'exists:', !!currentContentData[key]);
                 if (currentContentData[key]) {
                     return content;
                 }
                 return '';
             });
 
+            console.log('Processed prompt:', processedPrompt);
+
             // Set the processed prompt
             $('#ai-prompt').val(processedPrompt);
-
-            $('#ai-prompt-template').val('');
 
             // Filter templates based on content type
             $('#ai-prompt-template option').each(function() {
@@ -278,23 +342,29 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
         $('#ai-prompt-template').change(function() {
             const templateText = $(this).find('option:selected').data('template');
             if (templateText) {
+                console.log('Selected template:', templateText);
+
                 // Process template with content data
                 let processedTemplate = templateText;
 
                 // Replace simple variables {{variable}}
                 processedTemplate = processedTemplate.replace(/\{\{([^}]+)\}\}/g, function(match, key) {
                     key = key.trim();
+                    console.log('Replacing variable:', key, 'with value:', currentContentData[key] || '');
                     return currentContentData[key] || '';
                 });
 
                 // Process conditional blocks {{#if variable}}content{{/if}}
                 processedTemplate = processedTemplate.replace(/\{\{#if ([^}]+)\}\}(.*?)\{\{\/if\}\}/g, function(match, key, content) {
                     key = key.trim();
+                    console.log('Processing conditional for:', key, 'exists:', !!currentContentData[key]);
                     if (currentContentData[key]) {
                         return content;
                     }
                     return '';
                 });
+
+                console.log('Processed template:', processedTemplate);
 
                 $('#ai-prompt').val(processedTemplate);
             }

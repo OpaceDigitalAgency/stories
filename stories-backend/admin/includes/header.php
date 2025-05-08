@@ -319,6 +319,33 @@ $siteName = get_config('site.name', 'Stories From The Web');
                 var target = $(this).data('target');
                 $(target).modal('show');
             });
+
+            // Fix for dollar sign appearing in text
+            function fixDollarSignIssue() {
+                // Fix for "Bulk Actions" button
+                $('button:contains("Bulk Action$")').each(function() {
+                    $(this).text($(this).text().replace('Action$', 'Actions'));
+                });
+
+                // Fix for "All Fields" button
+                $('button:contains("All Field$")').each(function() {
+                    $(this).text($(this).text().replace('Field$', 'Fields'));
+                });
+
+                // Fix for any other buttons with dollar sign
+                $('button, select, .dropdown-toggle').each(function() {
+                    var text = $(this).text();
+                    if (text.includes('$')) {
+                        $(this).text(text.replace('$', ''));
+                    }
+                });
+            }
+
+            // Run the fix on page load
+            fixDollarSignIssue();
+
+            // Run the fix again after a short delay to catch dynamically loaded content
+            setTimeout(fixDollarSignIssue, 500);
         });
     </script>
 

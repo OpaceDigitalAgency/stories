@@ -126,22 +126,38 @@ try {
 
     // Get stories by this author if the table exists
     if ($hasStoriesTable) {
+        // Check if published_at column exists in stories table
+        $hasPublishedAtColumn = false;
+        try {
+            $columnsStmt = $db->query("SHOW COLUMNS FROM stories LIKE 'published_at'");
+            $hasPublishedAtColumn = $columnsStmt->rowCount() > 0;
+            error_log("Stories table has published_at column: " . ($hasPublishedAtColumn ? 'Yes' : 'No'));
+        } catch (Exception $e) {
+            error_log("Error checking for published_at column: " . $e->getMessage());
+        }
+
+        // Build the query based on available columns
+        $orderByClause = $hasPublishedAtColumn ? "ORDER BY s.published_at DESC" : "ORDER BY s.created_at DESC";
+        $selectClause = $hasPublishedAtColumn ?
+            "SELECT s.id, s.title, s.slug, s.published_at" :
+            "SELECT s.id, s.title, s.slug, s.created_at as published_at";
+
         if ($hasStoryAuthorsTable) {
             // Use the junction table if it exists
             $stmtStories = $db->prepare("
-                SELECT s.id, s.title, s.slug, s.published_at
+                {$selectClause}
                 FROM stories s
                 JOIN story_authors sa ON s.id = sa.story_id
                 WHERE sa.author_id = ?
-                ORDER BY s.published_at DESC
+                {$orderByClause}
             ");
         } else {
             // Fall back to direct column if junction table doesn't exist
             $stmtStories = $db->prepare("
-                SELECT s.id, s.title, s.slug, s.published_at
+                {$selectClause}
                 FROM stories s
                 WHERE s.author_id = ?
-                ORDER BY s.published_at DESC
+                {$orderByClause}
             ");
         }
         $stmtStories->execute([$authorId]);
@@ -150,11 +166,27 @@ try {
 
     // Get posts by this author if the table exists
     if ($hasPostsTable) {
+        // Check if published_at column exists in posts table
+        $hasPostsPublishedAtColumn = false;
+        try {
+            $columnsStmt = $db->query("SHOW COLUMNS FROM posts LIKE 'published_at'");
+            $hasPostsPublishedAtColumn = $columnsStmt->rowCount() > 0;
+            error_log("Posts table has published_at column: " . ($hasPostsPublishedAtColumn ? 'Yes' : 'No'));
+        } catch (Exception $e) {
+            error_log("Error checking for published_at column in posts: " . $e->getMessage());
+        }
+
+        // Build the query based on available columns
+        $orderByClause = $hasPostsPublishedAtColumn ? "ORDER BY p.published_at DESC" : "ORDER BY p.created_at DESC";
+        $selectClause = $hasPostsPublishedAtColumn ?
+            "SELECT p.id, p.title, p.slug, p.published_at" :
+            "SELECT p.id, p.title, p.slug, p.created_at as published_at";
+
         $stmtPosts = $db->prepare("
-            SELECT p.id, p.title, p.slug, p.published_at
+            {$selectClause}
             FROM posts p
             WHERE p.author_id = ?
-            ORDER BY p.published_at DESC
+            {$orderByClause}
         ");
         $stmtPosts->execute([$authorId]);
         $posts = $stmtPosts->fetchAll(PDO::FETCH_ASSOC);

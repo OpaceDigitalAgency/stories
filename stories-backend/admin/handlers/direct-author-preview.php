@@ -86,11 +86,27 @@ try {
 
         // Get stories by this author if the table exists
         if ($hasStoriesTable) {
+            // Check if published_at column exists in stories table
+            $hasPublishedAtColumn = false;
+            try {
+                $columnsStmt = $db->query("SHOW COLUMNS FROM stories LIKE 'published_at'");
+                $hasPublishedAtColumn = $columnsStmt->rowCount() > 0;
+                error_log("Stories table has published_at column: " . ($hasPublishedAtColumn ? 'Yes' : 'No'));
+            } catch (Exception $e) {
+                error_log("Error checking for published_at column: " . $e->getMessage());
+            }
+
+            // Build the query based on available columns
+            $orderByClause = $hasPublishedAtColumn ? "ORDER BY published_at DESC" : "ORDER BY created_at DESC";
+            $selectClause = $hasPublishedAtColumn ?
+                "SELECT id, title, slug, published_at" :
+                "SELECT id, title, slug, created_at as published_at";
+
             $stmtStories = $db->prepare("
-                SELECT id, title, slug, published_at
+                {$selectClause}
                 FROM stories
                 WHERE author_id = ?
-                ORDER BY published_at DESC
+                {$orderByClause}
                 LIMIT 10
             ");
             $stmtStories->execute([$authorId]);
@@ -99,11 +115,27 @@ try {
 
         // Get posts by this author if the table exists
         if ($hasPostsTable) {
+            // Check if published_at column exists in posts table
+            $hasPostsPublishedAtColumn = false;
+            try {
+                $columnsStmt = $db->query("SHOW COLUMNS FROM posts LIKE 'published_at'");
+                $hasPostsPublishedAtColumn = $columnsStmt->rowCount() > 0;
+                error_log("Posts table has published_at column: " . ($hasPostsPublishedAtColumn ? 'Yes' : 'No'));
+            } catch (Exception $e) {
+                error_log("Error checking for published_at column in posts: " . $e->getMessage());
+            }
+
+            // Build the query based on available columns
+            $orderByClause = $hasPostsPublishedAtColumn ? "ORDER BY published_at DESC" : "ORDER BY created_at DESC";
+            $selectClause = $hasPostsPublishedAtColumn ?
+                "SELECT id, title, slug, published_at" :
+                "SELECT id, title, slug, created_at as published_at";
+
             $stmtPosts = $db->prepare("
-                SELECT id, title, slug, published_at
+                {$selectClause}
                 FROM posts
                 WHERE author_id = ?
-                ORDER BY published_at DESC
+                {$orderByClause}
                 LIMIT 10
             ");
             $stmtPosts->execute([$authorId]);

@@ -51,10 +51,43 @@ try {
     $optimizedDir = '../../uploads/optimized/';
     $aiGeneratedDir = '../../uploads/ai-generated/';
 
+    // Try multiple approaches to get the document root
+    $possibleDocRoots = [
+        $_SERVER['DOCUMENT_ROOT'],
+        realpath($_SERVER['DOCUMENT_ROOT']),
+        dirname(dirname(dirname(__DIR__))), // Go up three levels from current file
+        realpath(dirname(dirname(dirname(__DIR__)))), // Resolved absolute path
+        dirname(__FILE__) . '/../../', // Relative to current file
+        realpath(dirname(__FILE__) . '/../../'), // Absolute path relative to current file
+    ];
+
+    // Log all possible document roots for debugging
+    foreach ($possibleDocRoots as $index => $root) {
+        error_log("Possible document root $index: " . ($root ?: 'empty'));
+    }
+
     // Log the absolute paths for debugging
     $absUploadDir = realpath(dirname(__FILE__) . '/../../uploads/') ?: dirname(__FILE__) . '/../../uploads/';
     $absOptimizedDir = realpath(dirname(__FILE__) . '/../../uploads/optimized/') ?: dirname(__FILE__) . '/../../uploads/optimized/';
     $absAiGeneratedDir = realpath(dirname(__FILE__) . '/../../uploads/ai-generated/') ?: dirname(__FILE__) . '/../../uploads/ai-generated/';
+
+    // Try to find a working document root for the web-accessible path
+    $webRoot = null;
+    foreach ($possibleDocRoots as $root) {
+        if (!empty($root) && is_dir($root)) {
+            $testPath = $root . '/uploads';
+            error_log("Testing web root path: $testPath");
+
+            if (is_dir($testPath) || @mkdir($testPath, 0755, true)) {
+                $webRoot = $root;
+                error_log("Found working web root: $root");
+                break;
+            }
+        }
+    }
+
+    // Log the web root for debugging
+    error_log("Selected web root: " . ($webRoot ?: 'None found, using fallback'));
 
     error_log("Upload directory absolute path: $absUploadDir");
     error_log("Optimized directory absolute path: $absOptimizedDir");
@@ -176,13 +209,35 @@ try {
     }
 
     // Prepare file path for database - make it relative to web root
-    // Extract the relative path from the absolute path if needed
-    if (strpos($filepath, $absAiGeneratedDir) === 0) {
-        // If we used the absolute path, create a web-accessible relative path
-        $relativeFilePath = '/uploads/ai-generated/' . $filename;
+    // Always use a consistent web-accessible path format
+    $relativeFilePath = '/uploads/ai-generated/' . $filename;
+
+    // Create a full URL for testing
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $fullUrl = $protocol . $host . $relativeFilePath;
+
+    error_log("Full URL for testing: $fullUrl");
+
+    // Try to verify the file is accessible
+    $fileExists = false;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($fullUrl);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $fileExists = ($httpCode == 200);
+        error_log("CURL check for file accessibility: HTTP code $httpCode");
     } else {
-        // If we used the relative path, ensure it starts with a slash
-        $relativeFilePath = '/uploads/ai-generated/' . $filename;
+        error_log("CURL not available for file accessibility check");
+    }
+
+    if (!$fileExists) {
+        error_log("Warning: File may not be accessible via web. Check permissions and paths.");
     }
 
     error_log("Relative file path for database: $relativeFilePath");

@@ -571,6 +571,17 @@ require_once '../includes/header.php';
                                 $("#progressTitle").text("Saving AI-generated image");
                                 $("#progressMessage").text("Please wait while we save your image to the media library.");
 
+                                // Set a timeout to automatically close the popup after 30 seconds
+                                var autoCloseTimeout = setTimeout(function() {
+                                    console.log("Auto-closing popup after timeout");
+                                    $("#progressOverlay").css({
+                                        "visibility": "hidden",
+                                        "opacity": "0"
+                                    });
+                                    // Reload the page to show the new image if it was saved
+                                    window.location.href = window.location.href.split('?')[0];
+                                }, 30000);
+
                                 // Make AJAX request to save the image to the media library
                                 $.ajax({
                                     url: "save-ai-image.php",
@@ -605,7 +616,12 @@ require_once '../includes/header.php';
                                             }
                                         }
 
+                                        // Clear the auto-close timeout
+                                        clearTimeout(autoCloseTimeout);
+
                                         if (response && response.success) {
+                                            console.log("Success response:", response);
+
                                             // Hide loading indicator
                                             $("#progressOverlay").css({
                                                 "visibility": "hidden",
@@ -615,9 +631,13 @@ require_once '../includes/header.php';
                                             // Show success message
                                             alert("Image saved to media library successfully!");
 
-                                            // Reload the page to show the new image
-                                            window.location.reload();
+                                            // Force reload the page to show the new image
+                                            window.location.href = window.location.href.split('?')[0]; // Remove any query parameters
+                                            return; // Exit early to prevent further processing
                                         } else {
+                                            // Clear the auto-close timeout
+                                            clearTimeout(autoCloseTimeout);
+
                                             // Hide loading indicator
                                             $("#progressOverlay").css({
                                                 "visibility": "hidden",
@@ -643,6 +663,9 @@ require_once '../includes/header.php';
                                         }
                                     },
                                     error: function(xhr, status, error) {
+                                        // Clear the auto-close timeout
+                                        clearTimeout(autoCloseTimeout);
+
                                         // Hide loading indicator
                                         $("#progressOverlay").css({
                                             "visibility": "hidden",

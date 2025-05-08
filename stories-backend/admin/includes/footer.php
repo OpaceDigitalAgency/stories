@@ -23,6 +23,8 @@ $siteVersion = get_config('site.version', '2.1');
 $siteCopyright = get_config('site.footer.copyright', 'Stories from the Web. All rights reserved.');
 $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org');
 ?>
+    </div><!-- Close the main container div -->
+
     <footer class="admin-footer" role="contentinfo">
         <div class="footer-content-compact">
             <div class="footer-info">
@@ -52,6 +54,7 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
             right: 0;
             box-sizing: border-box;
             z-index: 10; /* Lower z-index to avoid conflicts with sticky save bar */
+            clear: both; /* Ensure it clears any floated elements */
         }
 
         /* Add padding to the bottom of the page when sticky save bar is present */

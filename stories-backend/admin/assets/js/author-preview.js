@@ -50,41 +50,51 @@ class AuthorPreview {
         try {
             console.log('Loading author preview for ID:', authorId);
 
+            // First, close any existing modals to prevent duplicates
+            this.closeLightbox();
+
             // Show loading indicator
             this.showLoading();
 
-            // Create modal container if it doesn't exist
-            let modal = document.getElementById('author-preview-modal');
-            if (!modal) {
-                console.log('Creating new modal container');
-                modal = document.createElement('div');
-                modal.id = 'author-preview-modal';
-                modal.className = 'preview-modal';
-                modal.innerHTML = `
-                    <div class="preview-modal-content">
-                        <div class="preview-modal-header">
-                            <h2>Author Preview</h2>
-                            <button class="preview-modal-close">&times;</button>
-                        </div>
-                        <div class="preview-modal-body">
-                            <div class="preview-loading">Loading author details...</div>
-                            <div id="author-preview-content" style="display:none;"></div>
-                        </div>
+            // Create a new modal container
+            console.log('Creating new modal container');
+            const modal = document.createElement('div');
+            modal.id = 'author-preview-modal';
+            modal.className = 'preview-modal';
+            modal.innerHTML = `
+                <div class="preview-modal-content">
+                    <div class="preview-modal-header">
+                        <h2>Author Preview</h2>
+                        <button class="preview-modal-close">&times;</button>
                     </div>
-                `;
-                document.body.appendChild(modal);
+                    <div class="preview-modal-body">
+                        <div class="preview-loading">Loading author details...</div>
+                        <div id="author-preview-content" style="display:none;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
 
-                // Add event listener to close button
-                modal.querySelector('.preview-modal-close').addEventListener('click', () => {
+            // Add event listener to close button
+            modal.querySelector('.preview-modal-close').addEventListener('click', () => {
+                this.closeLightbox();
+            });
+
+            // Add event listener to close on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
                     this.closeLightbox();
-                });
-            } else {
-                console.log('Using existing modal container');
-                // Reset content
-                modal.querySelector('#author-preview-content').style.display = 'none';
-                modal.querySelector('.preview-loading').style.display = 'block';
-                modal.style.display = 'flex';
-            }
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+
+            // Add event listener to close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeLightbox();
+                }
+            });
 
             try {
                 // Try to fetch author data via AJAX
@@ -107,70 +117,32 @@ class AuthorPreview {
                     previewContent.style.display = 'block';
                 } else {
                     console.error('Error from API:', data.message);
-                    modal.querySelector('.preview-loading').innerHTML = `Error: ${data.message || 'Failed to load author details'}`;
-
-                    // If AJAX fails with an error, use the direct preview as fallback
-                    setTimeout(() => this.loadDirectPreview(authorId), 2000);
+                    const errorMessage = data.message || 'Failed to load author details';
+                    modal.querySelector('.preview-loading').innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> ${errorMessage}
+                        </div>
+                    `;
                 }
             } catch (ajaxError) {
                 console.error('AJAX error loading author preview:', ajaxError);
-                modal.querySelector('.preview-loading').innerHTML = `AJAX Error: ${ajaxError.message}`;
-
-                // Use direct preview as fallback
-                setTimeout(() => this.loadDirectPreview(authorId), 2000);
+                modal.querySelector('.preview-loading').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${ajaxError.message}
+                    </div>
+                `;
             }
 
             this.hideLoading();
 
         } catch (error) {
             console.error('Error loading author preview:', error);
-            alert(`Error loading author preview: ${error.message}`);
-
-            // Try direct preview as a last resort
-            this.loadDirectPreview(authorId);
             this.hideLoading();
+            alert(`Error loading author preview: ${error.message}`);
         }
     }
 
-    /**
-     * Load author preview directly using an iframe
-     * @param {string} authorId - The ID of the author to preview
-     */
-    loadDirectPreview(authorId) {
-        try {
-            // Create or get the modal
-            let modal = document.getElementById('author-preview-modal');
-            if (!modal) {
-                return; // Should not happen, but just in case
-            }
-
-            const loading = modal.querySelector('.preview-loading');
-            const previewContent = document.getElementById('author-preview-content');
-
-            // Create an iframe to load the direct preview
-            const iframe = document.createElement('iframe');
-            iframe.src = `../handlers/direct-author-preview.php?id=${authorId}`;
-            iframe.style.width = '100%';
-            iframe.style.height = '500px';
-            iframe.style.border = 'none';
-            iframe.style.overflow = 'auto';
-
-            // Clear previous content and add the iframe
-            previewContent.innerHTML = '';
-            previewContent.appendChild(iframe);
-
-            // Show the preview
-            loading.style.display = 'none';
-            previewContent.style.display = 'block';
-
-        } catch (error) {
-            console.error('Error loading direct author preview:', error);
-            const modal = document.getElementById('author-preview-modal');
-            if (modal) {
-                modal.querySelector('.preview-loading').innerHTML = 'Error loading author details. Please try again.';
-            }
-        }
-    }
+    // Direct preview method removed as it's no longer needed and could cause issues
 
     /**
      * Generate HTML for author preview
@@ -219,10 +191,18 @@ class AuthorPreview {
      * Close the lightbox
      */
     closeLightbox() {
-        const modal = document.getElementById('author-preview-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
+        // Find and remove all author preview modals to prevent duplicates
+        const modals = document.querySelectorAll('#author-preview-modal, .preview-modal');
+        modals.forEach(modal => {
+            console.log('Removing modal:', modal);
+            modal.remove();
+        });
+
+        // Also remove any loading indicators
+        const loadingIndicators = document.querySelectorAll('#lightbox-loading, .lightbox-loading');
+        loadingIndicators.forEach(indicator => {
+            indicator.remove();
+        });
     }
 
     /**

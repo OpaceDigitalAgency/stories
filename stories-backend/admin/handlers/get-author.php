@@ -116,10 +116,10 @@ try {
     // Get stories by this author if the table exists
     if ($hasStoriesTable) {
         $stmtStories = $db->prepare("
-            SELECT id, title, slug, published_at
-            FROM stories
-            WHERE author_id = ?
-            ORDER BY published_at DESC
+            SELECT s.id, s.title, s.slug, s.published_at
+            FROM stories s
+            WHERE s.author_id = ?
+            ORDER BY s.published_at DESC
         ");
         $stmtStories->execute([$authorId]);
         $stories = $stmtStories->fetchAll(PDO::FETCH_ASSOC);
@@ -128,10 +128,10 @@ try {
     // Get posts by this author if the table exists
     if ($hasPostsTable) {
         $stmtPosts = $db->prepare("
-            SELECT id, title, slug, published_at
-            FROM posts
-            WHERE author_id = ?
-            ORDER BY published_at DESC
+            SELECT p.id, p.title, p.slug, p.published_at
+            FROM posts p
+            WHERE p.author_id = ?
+            ORDER BY p.published_at DESC
         ");
         $stmtPosts->execute([$authorId]);
         $posts = $stmtPosts->fetchAll(PDO::FETCH_ASSOC);

@@ -308,131 +308,21 @@ if (function_exists('renderEnhancedTable')) {
 echo '<link rel="stylesheet" href="../assets/css/preview-modal.css">';
 echo '<script src="../assets/js/author-preview.js"></script>';
 
-// Add direct initialization script for author preview
+// Add debugging script to help identify any issues
 echo '<script>
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("Initializing author preview buttons");
+        console.log("Authors page loaded - author preview should be initialized by author-preview.js");
 
-        // Initialize preview buttons in the enhanced table
-        const authorPreviewButtons = document.querySelectorAll(".author-preview-btn");
-        authorPreviewButtons.forEach(button => {
-            console.log("Found author preview button:", button);
-            button.addEventListener("click", function(e) {
-                e.preventDefault();
-                console.log("Author preview button clicked");
-                const authorId = this.getAttribute("data-author-id");
-                console.log("Author ID:", authorId);
+        // Check if the AuthorPreview class is available
+        if (window.authorPreview) {
+            console.log("AuthorPreview instance is available");
+        } else {
+            console.error("AuthorPreview instance is NOT available - check if author-preview.js loaded correctly");
+        }
 
-                // Create modal container
-                const modal = document.createElement("div");
-                modal.className = "preview-modal";
-                modal.style.display = "flex";
-                modal.style.position = "fixed";
-                modal.style.top = "0";
-                modal.style.left = "0";
-                modal.style.width = "100%";
-                modal.style.height = "100%";
-                modal.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-                modal.style.zIndex = "9999";
-                modal.style.justifyContent = "center";
-                modal.style.alignItems = "center";
-
-                modal.innerHTML = `
-                    <div class="preview-modal-content" style="background-color: white; border-radius: 5px; width: 90%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);">
-                        <div class="preview-modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #ddd;">
-                            <h2 style="margin: 0; font-size: 1.5rem;">Author Preview</h2>
-                            <button class="preview-modal-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
-                        </div>
-                        <div class="preview-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
-                            <div class="preview-loading" style="text-align: center; padding: 20px; font-style: italic; color: #666;">Loading author details...</div>
-                            <iframe id="author-preview-frame" style="display:none; width:100%; height:600px; border:none;"></iframe>
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(modal);
-
-                // Add event listener to close button
-                modal.querySelector(".preview-modal-close").addEventListener("click", function() {
-                    modal.remove();
-                });
-
-                // Load author details
-                fetch(`../handlers/get-author.php?id=${authorId}`)
-                    .then(response => {
-                        console.log("Response status:", response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log("Response data:", data);
-                        if (data.success) {
-                            const iframe = modal.querySelector("#author-preview-frame");
-                            const loading = modal.querySelector(".preview-loading");
-
-                            // Create HTML content for the iframe
-                            const html = `
-                                <!DOCTYPE html>
-                                <html>
-                                <head>
-                                    <meta charset="UTF-8">
-                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                    <title>${data.author.name}</title>
-                                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
-                                    <style>
-                                        body { padding: 20px; font-family: Arial, sans-serif; }
-                                        .author-header { display: flex; align-items: center; margin-bottom: 20px; }
-                                        .author-avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-right: 20px; }
-                                        .author-name { margin: 0; }
-                                        .author-meta { color: #666; margin-top: 5px; }
-                                        .author-bio { line-height: 1.6; }
-                                        .author-stories { margin-top: 30px; }
-                                    </style>
-                                </head>
-                                <body>
-                                    <div class="container">
-                                        <div class="author-header">
-                                            <img src="${data.author.avatar_url || "../assets/images/default-avatar.svg"}" alt="${data.author.name}" class="author-avatar">
-                                            <div>
-                                                <h1 class="author-name">${data.author.name}</h1>
-                                                <div class="author-meta">
-                                                    ${data.author.author_type ? `<div>Type: ${data.author.author_type}</div>` : ""}
-                                                    ${data.author.age ? `<div>Age: ${data.author.age}</div>` : ""}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="author-bio">
-                                            ${data.author.bio || "<p>No biography available.</p>"}
-                                        </div>
-
-                                        <div class="author-stories">
-                                            <h3>Stories by this author</h3>
-                                            ${data.stories && data.stories.length > 0 ?
-                                                `<ul>${data.stories.map(story => `<li>${story.title}</li>`).join("")}</ul>` :
-                                                "<p>No stories found.</p>"}
-                                        </div>
-                                    </div>
-                                </body>
-                                </html>
-                            `;
-
-                            // Set iframe content
-                            iframe.onload = function() {
-                                loading.style.display = "none";
-                                iframe.style.display = "block";
-                            };
-
-                            iframe.srcdoc = html;
-                        } else {
-                            modal.querySelector(".preview-loading").innerHTML = "Error loading author details: " + (data.message || "Unknown error");
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        modal.querySelector(".preview-loading").innerHTML = "Error loading author details: " + error.message;
-                    });
-            });
-        });
+        // Log the number of preview buttons found
+        const previewButtons = document.querySelectorAll(".author-preview-btn, [data-action=\"preview-author\"]");
+        console.log("Found " + previewButtons.length + " author preview buttons");
     });
 </script>';
 

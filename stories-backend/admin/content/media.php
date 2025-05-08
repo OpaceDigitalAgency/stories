@@ -580,11 +580,15 @@ require_once '../includes/header.php';
                                         "alt_text": aiImageAlt || "AI-generated image"
                                     },
                                     dataType: "json",
+                                    timeout: 60000, // 60 second timeout
                                     success: function(response) {
+                                        console.log("Received response:", response);
+
                                         // Parse the response if it is a string
                                         if (typeof response === "string") {
                                             try {
                                                 response = JSON.parse(response);
+                                                console.log("Parsed JSON response:", response);
                                             } catch (e) {
                                                 console.error("Failed to parse JSON response:", e);
                                                 console.log("Raw response:", response);
@@ -624,6 +628,14 @@ require_once '../includes/header.php';
                                             var errorMsg = "Unknown error";
                                             if (response && response.error) {
                                                 errorMsg = response.error;
+
+                                                // Add details if available
+                                                if (response.details) {
+                                                    console.error("Error details:", response.details);
+                                                    if (response.details.php_error) {
+                                                        errorMsg += "\n\nPHP Error: " + response.details.php_error;
+                                                    }
+                                                }
                                             }
 
                                             console.error("Error response:", response);
@@ -641,20 +653,45 @@ require_once '../includes/header.php';
                                         console.error("AJAX Error:", {
                                             status: status,
                                             error: error,
-                                            response: xhr.responseText
+                                            response: xhr.responseText,
+                                            readyState: xhr.readyState,
+                                            statusText: xhr.statusText
                                         });
 
                                         // Try to parse the response if it is JSON
-                                        var errorMsg = error;
+                                        var errorMsg = error || "Unknown error";
+
+                                        if (status === "timeout") {
+                                            errorMsg = "Request timed out. The server took too long to respond.";
+                                        } else if (status === "error") {
+                                            errorMsg = "Server error: " + (xhr.status || "unknown") + " " + (xhr.statusText || "");
+                                        }
+
                                         try {
-                                            var jsonResponse = JSON.parse(xhr.responseText);
-                                            if (jsonResponse && jsonResponse.error) {
-                                                errorMsg = jsonResponse.error;
+                                            if (xhr.responseText) {
+                                                var jsonResponse = JSON.parse(xhr.responseText);
+                                                if (jsonResponse && jsonResponse.error) {
+                                                    errorMsg = jsonResponse.error;
+
+                                                    // Add details if available
+                                                    if (jsonResponse.details) {
+                                                        console.error("Error details:", jsonResponse.details);
+                                                        if (jsonResponse.details.php_error) {
+                                                            errorMsg += "\n\nPHP Error: " + jsonResponse.details.php_error;
+                                                        }
+                                                    }
+                                                }
                                             }
                                         } catch (e) {
                                             // If it is not valid JSON, use the raw response text
+                                            console.error("Failed to parse error response:", e);
                                             if (xhr.responseText) {
-                                                errorMsg = xhr.responseText;
+                                                // Limit the length of the error message
+                                                if (xhr.responseText.length > 200) {
+                                                    errorMsg = xhr.responseText.substring(0, 200) + "...";
+                                                } else {
+                                                    errorMsg = xhr.responseText;
+                                                }
                                             }
                                         }
 

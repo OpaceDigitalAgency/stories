@@ -226,16 +226,45 @@ function renderAiImageGenerator($contentType, $contentData, $targetField, $previ
             $('.ai-generation-error').addClass('d-none');
             $('.ai-images-container').empty();
 
-            // Set default prompt for story content type
+            // Set default prompts based on content type
+            let defaultPrompt = '';
+
             if (currentContentType === 'story') {
-                const defaultPrompt = "Generate an image for a children's story book in a typical hand-drawn or cartoon illustration form that you would find in traditional story books. Base this on: " +
-                    (currentContentData.title || "") +
-                    (currentContentData.excerpt ? ". Summary: " + currentContentData.excerpt : "") +
-                    (currentContentData.age_group ? ". Target age: " + currentContentData.age_group : "");
-                $('#ai-prompt').val(defaultPrompt);
+                defaultPrompt = "Generate an image for a children's story book in a typical hand-drawn or cartoon illustration form that you would find in traditional story books. Base this on: {{title}}{{#if summary}}. Summary: {{summary}}{{/if}}{{#if age_group}}. Target age: {{age_group}}{{/if}}";
+            } else if (currentContentType === 'post' || currentContentType === 'blog_post') {
+                defaultPrompt = "Create a professional and engaging featured image for a blog post titled \"{{title}}\". {{#if summary}}The post discusses {{summary}}.{{/if}} Style: clean, modern design with relevant imagery that captures the essence of the topic.";
+            } else if (currentContentType === 'author') {
+                defaultPrompt = "Create a professional portrait-style avatar for an author named {{name}}. {{#if bio}}They describe themselves as: {{bio}}{{/if}}. Style: warm, approachable, professional illustration suitable for an author profile.";
+            } else if (currentContentType === 'game') {
+                defaultPrompt = "Create an exciting game cover image for \"{{title}}\". {{#if description}}The game is about {{description}}{{/if}}. {{#if genre}}Genre: {{genre}}{{/if}}. Style: dynamic, colorful, eye-catching design that conveys the excitement and theme of the game.";
+            } else if (currentContentType === 'ai_tool') {
+                defaultPrompt = "Create a modern icon for an AI tool called \"{{title}}\". {{#if description}}The tool's purpose is {{description}}{{/if}}. Style: sleek, tech-focused design with AI-themed elements, using blues and purples for a tech feel.";
+            } else if (currentContentType === 'directory') {
+                defaultPrompt = "Create a representative image for a directory listing titled \"{{title}}\". {{#if description}}This is {{description}}{{/if}}. Style: clean, professional image that represents the business or service.";
             } else {
-                $('#ai-prompt').val('');
+                defaultPrompt = "Create an image based on the following description: {{title}}{{#if description}}. {{description}}{{/if}}. Style: professional, high-quality, suitable for a website.";
             }
+
+            // Process the template with content data
+            let processedPrompt = defaultPrompt;
+
+            // Replace simple variables {{variable}}
+            processedPrompt = processedPrompt.replace(/\{\{([^}]+)\}\}/g, function(match, key) {
+                key = key.trim();
+                return currentContentData[key] || '';
+            });
+
+            // Process conditional blocks {{#if variable}}content{{/if}}
+            processedPrompt = processedPrompt.replace(/\{\{#if ([^}]+)\}\}(.*?)\{\{\/if\}\}/g, function(match, key, content) {
+                key = key.trim();
+                if (currentContentData[key]) {
+                    return content;
+                }
+                return '';
+            });
+
+            // Set the processed prompt
+            $('#ai-prompt').val(processedPrompt);
 
             $('#ai-prompt-template').val('');
 

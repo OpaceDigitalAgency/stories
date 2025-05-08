@@ -350,6 +350,20 @@ require_once '../includes/header.php';
 
                 <!-- Main Content Column -->
                 <div class="wp-layout-main">
+                    <!-- Post Content -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Post Content
+                        </div>
+                        <div class="wp-card-body">
+                            <!-- Summary/Excerpt Field -->
+                            <div class="form-group">
+                                <label for="excerpt">Summary/Excerpt</label>
+                                <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php echo htmlspecialchars($post['excerpt'] ?? ''); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Image Upload -->
                     <div class="wp-card">
                         <div class="wp-card-header">
@@ -372,7 +386,7 @@ require_once '../includes/header.php';
                                     'post',
                                     [
                                         'title' => $post['title'] ?? '',
-                                        'excerpt' => $post['excerpt'] ?? '',
+                                        'summary' => $post['excerpt'] ?? '', // Use summary instead of excerpt
                                         'content' => $post['content'] ?? ''
                                     ],
                                     'cover_url',
@@ -383,17 +397,12 @@ require_once '../includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Post Content -->
+                    <!-- Post Text -->
                     <div class="wp-card">
                         <div class="wp-card-header">
-                            Post Content
+                            Post Text
                         </div>
                         <div class="wp-card-body">
-                            <!-- Summary/Excerpt Field -->
-                            <div class="form-group">
-                                <label for="excerpt">Summary/Excerpt</label>
-                                <textarea id="excerpt" name="excerpt" class="form-control" rows="3"><?php echo htmlspecialchars($post['excerpt'] ?? ''); ?></textarea>
-                            </div>
 
                             <!-- Post Content Field with WYSIWYG -->
                             <div class="form-group mb-0">

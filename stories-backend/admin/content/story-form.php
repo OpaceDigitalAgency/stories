@@ -360,39 +360,6 @@ require_once '../includes/header.php';
 
                 <!-- Main Content Column -->
                 <div class="wp-layout-main">
-                    <!-- Image Upload -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">
-                            Cover Image
-                        </div>
-                        <div class="wp-card-body">
-                            <?php
-                            // Render image upload component
-                            renderImageUploadComponent(
-                                'cover_url',
-                                $story['cover_url'] ?? '',
-                                'Cover Image',
-                                'story',
-                                $story['id'] ?? null
-                            );
-
-                            // Render AI image generator
-                            if (function_exists('renderAiImageGenerator')) {
-                                renderAiImageGenerator(
-                                    'story',
-                                    [
-                                        'title' => $story['title'] ?? '',
-                                        'excerpt' => $story['excerpt'] ?? '',
-                                        'content' => $story['content'] ?? ''
-                                    ],
-                                    'cover_url',
-                                    'cover_url_preview'
-                                );
-                            }
-                            ?>
-                        </div>
-                    </div>
-
                     <!-- Story Content -->
                     <div class="wp-card">
                         <div class="wp-card-header">
@@ -492,7 +459,48 @@ require_once '../includes/header.php';
                                 <label for="summary">Summary/Excerpt</label>
                                 <textarea id="summary" name="summary" class="form-control" rows="3"><?php echo htmlspecialchars($summary); ?></textarea>
                             </div>
+                        </div>
+                    </div>
 
+                    <!-- Image Upload -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Cover Image
+                        </div>
+                        <div class="wp-card-body">
+                            <?php
+                            // Render image upload component
+                            renderImageUploadComponent(
+                                'cover_url',
+                                $story['cover_url'] ?? '',
+                                'Cover Image',
+                                'story',
+                                $story['id'] ?? null
+                            );
+
+                            // Render AI image generator
+                            if (function_exists('renderAiImageGenerator')) {
+                                renderAiImageGenerator(
+                                    'story',
+                                    [
+                                        'title' => $story['title'] ?? '',
+                                        'summary' => $story['excerpt'] ?? '', // Use summary instead of excerpt
+                                        'content' => $story['content'] ?? ''
+                                    ],
+                                    'cover_url',
+                                    'cover_url_preview'
+                                );
+                            }
+                            ?>
+                        </div>
+                    </div>
+
+                    <!-- Story Content Section -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Story Text
+                        </div>
+                        <div class="wp-card-body">
                             <!-- Story Content Field with WYSIWYG -->
                             <div class="form-group mb-0">
                                 <div class="d-flex justify-content-between align-items-center mb-2">

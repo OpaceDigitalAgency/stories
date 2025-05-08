@@ -415,9 +415,14 @@ if ($refreshModels) {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>AI Prompt Templates</h3>
-                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTemplateModal">
-                    <i class="fas fa-plus"></i> Add Template
-                </button>
+                <div class="btn-group">
+                    <a href="../scripts/add-default-prompt-templates.php" class="btn btn-success">
+                        <i class="fas fa-sync"></i> Add Default Templates
+                    </a>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTemplateModal">
+                        <i class="fas fa-plus"></i> Add Template
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3">
@@ -650,7 +655,7 @@ if ($refreshModels) {
                                     </div>
                                     <div class="variable-type" data-type="blog_post">
                                         <strong>Blog Post Variables:</strong>
-                                        <code>{{title}}</code>, <code>{{excerpt}}</code>, <code>{{content}}</code>
+                                        <code>{{title}}</code>, <code>{{summary}}</code>, <code>{{content}}</code>
                                     </div>
                                     <div class="variable-type" data-type="author">
                                         <strong>Author Variables:</strong>
@@ -746,7 +751,7 @@ if ($refreshModels) {
                                     </div>
                                     <div class="variable-type" data-type="blog_post">
                                         <strong>Blog Post Variables:</strong>
-                                        <code>{{title}}</code>, <code>{{excerpt}}</code>, <code>{{content}}</code>
+                                        <code>{{title}}</code>, <code>{{summary}}</code>, <code>{{content}}</code>
                                     </div>
                                     <div class="variable-type" data-type="author">
                                         <strong>Author Variables:</strong>

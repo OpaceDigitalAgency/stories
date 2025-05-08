@@ -40,16 +40,24 @@ $contactEmail = get_config('site.contact.email', 'support@storiesfromtheweb.org'
     </footer>
 
     <style>
+        /* Force full width footer with !important to override any conflicting styles */
         .admin-footer {
             background-color: white;
             border-top: 1px solid var(--gray-200);
             padding: 0;
             margin-top: 3rem;
-            width: 100%;
-            position: relative;
-            left: 0;
-            right: 0;
-            box-sizing: border-box;
+            width: 100% !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            box-sizing: border-box !important;
+            z-index: 1000 !important;
+        }
+
+        /* Add padding to body to prevent content from being hidden behind the footer */
+        body {
+            padding-bottom: 60px !important;
         }
 
         .footer-content-compact {

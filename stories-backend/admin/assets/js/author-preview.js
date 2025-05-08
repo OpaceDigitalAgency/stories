@@ -50,12 +50,15 @@ class AuthorPreview {
      */
     async loadAuthorPreview(authorId) {
         try {
+            console.log('Loading author preview for ID:', authorId);
+
             // Show loading indicator
             this.showLoading();
 
             // Create modal container if it doesn't exist
             let modal = document.getElementById('author-preview-modal');
             if (!modal) {
+                console.log('Creating new modal container');
                 modal = document.createElement('div');
                 modal.id = 'author-preview-modal';
                 modal.className = 'preview-modal';
@@ -78,6 +81,7 @@ class AuthorPreview {
                     this.closeLightbox();
                 });
             } else {
+                console.log('Using existing modal container');
                 // Reset content
                 modal.querySelector('#author-preview-content').style.display = 'none';
                 modal.querySelector('.preview-loading').style.display = 'block';
@@ -86,10 +90,14 @@ class AuthorPreview {
 
             try {
                 // Try to fetch author data via AJAX
+                console.log('Fetching author data from:', `../handlers/get-author.php?id=${authorId}`);
                 const response = await fetch(`../handlers/get-author.php?id=${authorId}`);
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (data.success) {
+                    console.log('Successfully loaded author data');
                     const previewContent = document.getElementById('author-preview-content');
                     const loading = modal.querySelector('.preview-loading');
 
@@ -100,19 +108,26 @@ class AuthorPreview {
                     loading.style.display = 'none';
                     previewContent.style.display = 'block';
                 } else {
+                    console.error('Error from API:', data.message);
+                    modal.querySelector('.preview-loading').innerHTML = `Error: ${data.message || 'Failed to load author details'}`;
+
                     // If AJAX fails with an error, use the direct preview as fallback
-                    this.loadDirectPreview(authorId);
+                    setTimeout(() => this.loadDirectPreview(authorId), 2000);
                 }
             } catch (ajaxError) {
                 console.error('AJAX error loading author preview:', ajaxError);
+                modal.querySelector('.preview-loading').innerHTML = `AJAX Error: ${ajaxError.message}`;
+
                 // Use direct preview as fallback
-                this.loadDirectPreview(authorId);
+                setTimeout(() => this.loadDirectPreview(authorId), 2000);
             }
 
             this.hideLoading();
 
         } catch (error) {
             console.error('Error loading author preview:', error);
+            alert(`Error loading author preview: ${error.message}`);
+
             // Try direct preview as a last resort
             this.loadDirectPreview(authorId);
             this.hideLoading();

@@ -41,6 +41,9 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $authorId = intval($_GET['id']);
 
 try {
+    // Log the author ID we're trying to fetch
+    error_log("Fetching author with ID: " . $authorId);
+
     // Check if tables exist
     $hasStoriesTable = false;
     $hasPostsTable = false;
@@ -48,9 +51,22 @@ try {
     try {
         $stmt = $db->query("SHOW TABLES LIKE 'stories'");
         $hasStoriesTable = $stmt->rowCount() > 0;
+        error_log("Stories table exists: " . ($hasStoriesTable ? 'Yes' : 'No'));
 
         $stmt = $db->query("SHOW TABLES LIKE 'posts'");
         $hasPostsTable = $stmt->rowCount() > 0;
+        error_log("Posts table exists: " . ($hasPostsTable ? 'Yes' : 'No'));
+
+        // Check if authors table exists and has records
+        $stmt = $db->query("SHOW TABLES LIKE 'authors'");
+        $hasAuthorsTable = $stmt->rowCount() > 0;
+        error_log("Authors table exists: " . ($hasAuthorsTable ? 'Yes' : 'No'));
+
+        if ($hasAuthorsTable) {
+            $stmt = $db->query("SELECT COUNT(*) as count FROM authors");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("Number of authors in database: " . $result['count']);
+        }
     } catch (Exception $e) {
         error_log("Error checking tables: " . $e->getMessage());
     }
@@ -75,15 +91,20 @@ try {
 
     $query .= " FROM authors a" . $joins . " WHERE a.id = ? GROUP BY a.id";
 
+    // Log the query for debugging
+    error_log("Author query: " . $query . " with ID: " . $authorId);
+
     // Get author details
     $stmt = $db->prepare($query);
     $stmt->execute([$authorId]);
     $author = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    error_log("Author found: " . ($author ? 'Yes' : 'No'));
+
     if (!$author) {
         echo json_encode([
             'success' => false,
-            'message' => 'Author not found'
+            'message' => 'Author not found with ID: ' . $authorId
         ]);
         exit;
     }
@@ -140,9 +161,17 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log('Error in get-author.php: ' . $e->getMessage());
+    $errorMessage = 'Error in get-author.php: ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine();
+    error_log($errorMessage);
+    error_log('Stack trace: ' . $e->getTraceAsString());
+
     echo json_encode([
         'success' => false,
-        'message' => 'An error occurred while fetching author data'
+        'message' => 'An error occurred while fetching author data: ' . $e->getMessage(),
+        'debug_info' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]
     ]);
 }

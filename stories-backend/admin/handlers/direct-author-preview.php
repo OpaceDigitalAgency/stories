@@ -21,6 +21,11 @@ $stories = [];
 $posts = [];
 $error = null;
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_log("Direct author preview requested for ID: " . $authorId);
+
 try {
     // Check if tables exist
     $hasStoriesTable = false;
@@ -29,9 +34,22 @@ try {
     try {
         $stmt = $db->query("SHOW TABLES LIKE 'stories'");
         $hasStoriesTable = $stmt->rowCount() > 0;
+        error_log("Stories table exists: " . ($hasStoriesTable ? 'Yes' : 'No'));
 
         $stmt = $db->query("SHOW TABLES LIKE 'posts'");
         $hasPostsTable = $stmt->rowCount() > 0;
+        error_log("Posts table exists: " . ($hasPostsTable ? 'Yes' : 'No'));
+
+        // Check if authors table exists and has records
+        $stmt = $db->query("SHOW TABLES LIKE 'authors'");
+        $hasAuthorsTable = $stmt->rowCount() > 0;
+        error_log("Authors table exists: " . ($hasAuthorsTable ? 'Yes' : 'No'));
+
+        if ($hasAuthorsTable) {
+            $stmt = $db->query("SELECT COUNT(*) as count FROM authors");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("Number of authors in database: " . $result['count']);
+        }
     } catch (Exception $e) {
         error_log("Error checking tables: " . $e->getMessage());
     }
@@ -95,6 +113,10 @@ try {
         $error = "Author not found";
     }
 } catch (Exception $e) {
+    $errorMessage = 'Error in direct-author-preview.php: ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine();
+    error_log($errorMessage);
+    error_log('Stack trace: ' . $e->getTraceAsString());
+
     $error = "Error loading author: " . $e->getMessage();
 }
 

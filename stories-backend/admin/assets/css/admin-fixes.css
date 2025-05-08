@@ -61,6 +61,19 @@ select,
   text-transform: none !important;
 }
 
+/* Fix for dropdown width - make them wider to prevent arrow from overlapping text */
+button.dropdown-toggle,
+select.custom-select,
+.dropdown-toggle,
+.custom-select,
+select {
+  min-width: 140px !important;
+  padding-right: 30px !important; /* Extra padding on the right for the dropdown arrow */
+  text-overflow: ellipsis !important; /* Add ellipsis for text that's too long */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
 /* ===== Card and Container Spacing ===== */
 .wp-card, .card, .section-body, .content-section {
   margin-bottom: 1.5rem !important;
@@ -208,6 +221,7 @@ input[type="file"].form-control {
 
 .bulk-select {
   margin-right: 0.5rem !important;
+  min-width: 160px !important; /* Make bulk action dropdown wider */
 }
 
 .selected-count {
@@ -232,6 +246,26 @@ button.dropdown-toggle {
   font-variant: normal !important;
   font-feature-settings: normal !important;
   text-transform: none !important;
+}
+
+/* Specific fixes for "Bulk Actions" button */
+button:contains("Bulk Actions"),
+button:contains("Bulk Action"),
+.bulk-actions > button,
+button.dropdown-toggle[data-toggle="dropdown"] {
+  min-width: 160px !important;
+  padding-right: 30px !important;
+  text-align: left !important;
+}
+
+/* Specific fixes for "All Fields" button */
+button:contains("All Fields"),
+button:contains("All Field"),
+.search-form button.dropdown-toggle,
+.search-form > div > button {
+  min-width: 120px !important;
+  padding-right: 30px !important;
+  text-align: left !important;
 }
 
 /* ===== Search Form Fixes ===== */

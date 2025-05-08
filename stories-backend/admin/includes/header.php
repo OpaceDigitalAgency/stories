@@ -320,16 +320,49 @@ $siteName = get_config('site.name', 'Stories From The Web');
                 $(target).modal('show');
             });
 
-            // Fix for dollar sign appearing in text
-            function fixDollarSignIssue() {
+            // Fix for dollar sign appearing in text and adjust dropdown widths
+            function fixDropdownIssues() {
                 // Fix for "Bulk Actions" button
-                $('button:contains("Bulk Action$")').each(function() {
-                    $(this).text($(this).text().replace('Action$', 'Actions'));
+                $('button:contains("Bulk Action")').each(function() {
+                    var text = $(this).text();
+                    if (text.includes('$')) {
+                        $(this).text(text.replace('$', ''));
+                    }
+                    $(this).css({
+                        'min-width': '160px',
+                        'padding-right': '30px',
+                        'text-align': 'left'
+                    });
                 });
 
                 // Fix for "All Fields" button
-                $('button:contains("All Field$")').each(function() {
-                    $(this).text($(this).text().replace('Field$', 'Fields'));
+                $('button:contains("All Field")').each(function() {
+                    var text = $(this).text();
+                    if (text.includes('$')) {
+                        $(this).text(text.replace('$', ''));
+                    }
+                    $(this).css({
+                        'min-width': '120px',
+                        'padding-right': '30px',
+                        'text-align': 'left'
+                    });
+                });
+
+                // Fix for any dropdown buttons
+                $('.dropdown-toggle').each(function() {
+                    $(this).css({
+                        'min-width': '120px',
+                        'padding-right': '30px',
+                        'text-align': 'left'
+                    });
+                });
+
+                // Fix for any select elements
+                $('select, .custom-select').each(function() {
+                    $(this).css({
+                        'min-width': '120px',
+                        'padding-right': '30px'
+                    });
                 });
 
                 // Fix for any other buttons with dollar sign
@@ -342,10 +375,10 @@ $siteName = get_config('site.name', 'Stories From The Web');
             }
 
             // Run the fix on page load
-            fixDollarSignIssue();
+            fixDropdownIssues();
 
             // Run the fix again after a short delay to catch dynamically loaded content
-            setTimeout(fixDollarSignIssue, 500);
+            setTimeout(fixDropdownIssues, 500);
         });
     </script>
 

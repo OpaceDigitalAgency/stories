@@ -433,13 +433,31 @@ function processBook($db, $bookDir) {
                     flushOutput();
                 }
 
+                // Debug: Show the actual structure of the media table
+                echo "<p class='info'>Checking media table structure...</p>";
+                flushOutput();
+                try {
+                    $tableInfo = $db->query("DESCRIBE media");
+                    echo "<pre>";
+                    while ($row = $tableInfo->fetch(PDO::FETCH_ASSOC)) {
+                        echo htmlspecialchars(print_r($row, true));
+                    }
+                    echo "</pre>";
+                    flushOutput();
+                } catch (Exception $e) {
+                    echo "<p class='error'>Error getting table structure: " . $e->getMessage() . "</p>";
+                    flushOutput();
+                }
+
                 // Always create a new media record for the image, even if the file already exists
                 // This ensures that when "nuke images" is clicked, new records are created in the media table
+                // Using only the columns we know exist from the screenshot
+                $now = date('Y-m-d H:i:s');
                 $stmt = $db->prepare("
                     INSERT INTO media (
                         filename, file_path, file_size, file_type,
-                        alt_text
-                    ) VALUES (?, ?, ?, ?, ?)
+                        alt_text, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
 
                 try {
@@ -448,7 +466,9 @@ function processBook($db, $bookDir) {
                         $relativePath, // Store relative path for consistency
                         $fileSize,
                         $fileType,
-                        "Cover image for $title" // Alt text for the image
+                        "Cover image for $title", // Alt text for the image
+                        $now, // created_at
+                        $now  // updated_at
                     ]);
 
                     $mediaId = $db->lastInsertId();

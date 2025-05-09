@@ -150,7 +150,7 @@ try {
         $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
 
         // Save to media table
-        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $fileName,
             $fileDestination,
@@ -174,7 +174,7 @@ try {
         }
 
         // Save to media table
-        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at, thumbnail_url) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?)");
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $fileName,
             $url,

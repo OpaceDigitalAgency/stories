@@ -911,8 +911,8 @@ function processStory($db, $storyDir) {
                     $stmt = $db->prepare("
                         INSERT INTO media (
                             filename, file_path, file_size, file_type,
-                            alt_text, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                            alt_text
+                        ) VALUES (?, ?, ?, ?, ?)
                     ");
 
                     $stmt->execute([

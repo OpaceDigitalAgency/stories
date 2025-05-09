@@ -1028,18 +1028,8 @@ function processBook($db, $bookDir) {
                 WHERE id = ?
             ");
             
-            // Default category_id to 1 if not found
+            // Use a default category_id of 1
             $categoryId = 1;
-            
-            // Try to find category_id by name if category is provided
-            if (!empty($category)) {
-                $catStmt = $db->prepare("SELECT id FROM categories WHERE name = ? LIMIT 1");
-                $catStmt->execute([$category]);
-                $catResult = $catStmt->fetch(PDO::FETCH_ASSOC);
-                if ($catResult) {
-                    $categoryId = $catResult['id'];
-                }
-            }
             
             $stmt->execute([
                 $description,
@@ -1077,18 +1067,8 @@ function processBook($db, $bookDir) {
         } else {
             // Insert into directory_items
             $now = date('Y-m-d H:i:s');
-            // Default category_id to 1 if not found
+            // Use a default category_id of 1
             $categoryId = 1;
-            
-            // Try to find category_id by name if category is provided
-            if (!empty($category)) {
-                $catStmt = $db->prepare("SELECT id FROM categories WHERE name = ? LIMIT 1");
-                $catStmt->execute([$category]);
-                $catResult = $catStmt->fetch(PDO::FETCH_ASSOC);
-                if ($catResult) {
-                    $categoryId = $catResult['id'];
-                }
-            }
             
             $stmt = $db->prepare("
                 INSERT INTO directory_items (

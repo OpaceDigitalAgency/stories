@@ -311,19 +311,26 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
     ?>
     <style>
         .thumbnail-column {
-            width: 80px;
+            width: 100px;
             text-align: center;
+            padding: 8px;
         }
         .thumbnail-image {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             object-fit: cover;
             border-radius: 4px;
             border: 1px solid #ddd;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+        .thumbnail-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
         }
         .no-image-placeholder {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -333,6 +340,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
             color: #999;
             font-size: 12px;
             margin: 0 auto;
+            text-align: center;
         }
         .loading-indicator {
             position: fixed;
@@ -537,12 +545,9 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     // Add data attributes for debugging
                                     $dataAttrs = 'data-item-id="' . htmlspecialchars($itemId) . '" data-item-type="' . htmlspecialchars($itemType) . '"';
 
-                                    // Check if the URL is a default image or empty
-                                    $isDefaultImage = (strpos($thumbnailUrl, 'default-') !== false || empty($thumbnailUrl));
-                                    
-                                    // Fix for book covers that use relative paths
-                                    if (!$isDefaultImage && strpos($thumbnailUrl, '/uploads/books/') !== false) {
-                                        // Make sure URL is absolute
+                                    // Apply fixes to all image URLs, not just book covers
+                                    if (!empty($thumbnailUrl)) {
+                                        // Make sure URL is absolute for all image URLs
                                         if (strpos($thumbnailUrl, 'http') !== 0) {
                                             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                                             $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
@@ -553,9 +558,16 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                             }
                                             
                                             $thumbnailUrl = $protocol . $serverHost . $thumbnailUrl;
-                                            error_log("Fixed book image URL: " . $thumbnailUrl);
+                                            error_log("Fixed image URL: " . $thumbnailUrl);
                                         }
                                     }
+                                    
+                                    // Check if the URL is a default image or empty AFTER fixing the URL
+                                    $isDefaultImage = (empty($thumbnailUrl) ||
+                                                     strpos($thumbnailUrl, 'default-cover.svg') !== false ||
+                                                     strpos($thumbnailUrl, 'no-image') !== false);
+                                    
+                                    error_log("Is default image check for '$thumbnailUrl': " . ($isDefaultImage ? 'YES' : 'NO'));
 
                                     if ($isDefaultImage) {
                                         // Show "No Image" placeholder

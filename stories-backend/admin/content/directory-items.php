@@ -224,7 +224,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'cover_url' => $item['cover_url'] ?? '../assets/images/default-cover.svg',
+            'cover_url' => !empty($item['cover_url']) ? $item['cover_url'] : '../assets/images/default-cover.svg',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
@@ -233,6 +233,9 @@ if (function_exists('renderEnhancedTable')) {
             'status' => $status,
             'created' => $createdDate
         ];
+        
+        // Debug what URL we're passing to the table
+        error_log("Directory Item {$item['id']} - Cover URL: " . ($item['cover_url'] ?? 'EMPTY'));
     }
 
     // Define columns for the table

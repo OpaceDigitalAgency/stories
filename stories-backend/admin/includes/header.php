@@ -215,6 +215,8 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
         .header-container {
             padding: 0.25rem 1rem; /* Reduced padding to make header less tall */
+            max-width: 1200px; /* Match content width */
+            margin: 0 auto; /* Center the header content */
         }
 
         .main-nav {
@@ -441,8 +443,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
         $dashboardPath = '../admin/dashboard.php';
         $contentPrefix = '../admin/content/';
     } else {
-        $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
-        $contentPrefix = $isContentDir ? '' : 'content/';
+        // Always include /admin/ in paths for consistency
+        $dashboardPath = '/admin/dashboard.php';
+        $contentPrefix = '/admin/content/';
     }
     ?>
     <header class="admin-header">
@@ -462,16 +465,16 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <i class="fas fa-file-alt" aria-hidden="true"></i> Content
                         </button>
                         <div class="dropdown-menu">
-                            <a href="<?php echo $isContentDir ? 'stories.php' : $contentPrefix . 'stories.php'; ?>" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>stories.php" class="dropdown-item <?php echo $currentPage === 'stories' ? 'active' : ''; ?>">
                                 <i class="fas fa-book" aria-hidden="true"></i> Stories
                             </a>
-                            <a href="<?php echo $isContentDir ? 'blog-posts.php' : $contentPrefix . 'blog-posts.php'; ?>" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>blog-posts.php" class="dropdown-item <?php echo $currentPage === 'blog-posts' ? 'active' : ''; ?>">
                                 <i class="fas fa-newspaper" aria-hidden="true"></i> Blog Posts
                             </a>
-                            <a href="<?php echo $isContentDir ? 'authors.php' : $contentPrefix . 'authors.php'; ?>" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>authors.php" class="dropdown-item <?php echo $currentPage === 'authors' ? 'active' : ''; ?>">
                                 <i class="fas fa-user-edit" aria-hidden="true"></i> Authors
                             </a>
-                            <a href="<?php echo $isContentDir ? 'tags.php' : $contentPrefix . 'tags.php'; ?>" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>tags.php" class="dropdown-item <?php echo $currentPage === 'tags' ? 'active' : ''; ?>">
                                 <i class="fas fa-tags" aria-hidden="true"></i> Tags
                             </a>
                         </div>
@@ -483,19 +486,19 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <i class="fas fa-puzzle-piece" aria-hidden="true"></i> Features
                         </button>
                         <div class="dropdown-menu">
-                            <a href="<?php echo $isContentDir ? 'games.php' : $contentPrefix . 'games.php'; ?>" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>games.php" class="dropdown-item <?php echo $currentPage === 'games' ? 'active' : ''; ?>">
                                 <i class="fas fa-gamepad" aria-hidden="true"></i> Games
                             </a>
-                            <a href="<?php echo $isContentDir ? 'directory-items.php' : $contentPrefix . 'directory-items.php'; ?>" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>directory-items.php" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
                                 <i class="fas fa-folder" aria-hidden="true"></i> Directory
                             </a>
-                            <a href="<?php echo $isContentDir ? 'ai-tools.php' : $contentPrefix . 'ai-tools.php'; ?>" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>ai-tools.php" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
                             </a>
                         </div>
                     </div>
 
-                    <a href="<?php echo $isContentDir ? 'media.php' : $contentPrefix . 'media.php'; ?>" class="nav-link mx-1 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
+                    <a href="<?php echo $contentPrefix; ?>media.php" class="nav-link mx-1 <?php echo $currentPage === 'media' ? 'active' : ''; ?>">
                         <i class="fas fa-images" aria-hidden="true"></i> Media
                     </a>
 
@@ -505,10 +508,10 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <i class="fas fa-users" aria-hidden="true"></i> Users
                         </button>
                         <div class="dropdown-menu">
-                            <a href="<?php echo $isContentDir ? 'subscribers.php' : $contentPrefix . 'subscribers.php'; ?>" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>subscribers.php" class="dropdown-item <?php echo $currentPage === 'subscribers' ? 'active' : ''; ?>">
                                 <i class="fas fa-bell" aria-hidden="true"></i> Subscribers
                             </a>
-                            <a href="<?php echo $isContentDir ? 'contacts.php' : $contentPrefix . 'contacts.php'; ?>" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>contacts.php" class="dropdown-item <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>">
                                 <i class="fas fa-envelope" aria-hidden="true"></i> Contacts
                             </a>
                         </div>
@@ -520,7 +523,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <i class="fas fa-cog" aria-hidden="true"></i> Settings
                         </button>
                         <div class="dropdown-menu">
-                            <a href="<?php echo $isContentDir ? 'ai-settings.php' : $contentPrefix . 'ai-settings.php'; ?>" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                            <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
                             </a>
                             <?php if ($isPublicDir): ?>

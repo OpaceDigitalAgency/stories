@@ -1116,9 +1116,16 @@ function processBook($db, $bookDir) {
                 $stmt = $db->prepare("
                     INSERT INTO media (
                         filename, file_path, file_size, file_type,
-                        upload_date, is_public, media_type
-                    ) VALUES (?, ?, ?, ?, NOW(), 1, 'image')
+                        created_at, updated_at, is_public, media_type
+                    ) VALUES (?, ?, ?, ?, NOW(), NOW(), 1, 'image')
                 ");
+                
+                $stmt->execute([
+                    $imageName,
+                    $relativePath,
+                    $fileSize,
+                    $fileType
+                ]);
                 
                 $stmt->execute([
                     $imageName,

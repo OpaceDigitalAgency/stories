@@ -1024,11 +1024,24 @@ function processBook($db, $bookDir) {
             
             if (!$existingPublisher) {
                 // Add publisher to authors table
+                // Generate a slug from the publisher name
+                $publisherSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
+                $publisherSlug = trim($publisherSlug, '-');
+                
+                // Check if slug already exists and make it unique if needed
+                $checkSlugStmt = $db->prepare("SELECT COUNT(*) FROM authors WHERE slug = ?");
+                $checkSlugStmt->execute([$publisherSlug]);
+                $slugCount = $checkSlugStmt->fetchColumn();
+                
+                if ($slugCount > 0) {
+                    $publisherSlug .= '-' . uniqid();
+                }
+                
                 $stmt = $db->prepare("
-                    INSERT INTO authors (name, author_type, created_at, updated_at)
-                    VALUES (?, 'publisher', NOW(), NOW())
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
+                    VALUES (?, 'publisher', ?, NOW(), NOW())
                 ");
-                $stmt->execute([$publisher]);
+                $stmt->execute([$publisher, $publisherSlug]);
                 $publisherId = $db->lastInsertId();
                 echo "<p class='success'>Added publisher '$publisher' to authors table (ID: $publisherId)</p>";
                 flushOutput();
@@ -1048,11 +1061,24 @@ function processBook($db, $bookDir) {
             
             if (!$existingAuthor) {
                 // Add author to authors table
+                // Generate a slug from the author name
+                $authorSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $author));
+                $authorSlug = trim($authorSlug, '-');
+                
+                // Check if slug already exists and make it unique if needed
+                $checkSlugStmt = $db->prepare("SELECT COUNT(*) FROM authors WHERE slug = ?");
+                $checkSlugStmt->execute([$authorSlug]);
+                $slugCount = $checkSlugStmt->fetchColumn();
+                
+                if ($slugCount > 0) {
+                    $authorSlug .= '-' . uniqid();
+                }
+                
                 $stmt = $db->prepare("
-                    INSERT INTO authors (name, author_type, created_at, updated_at)
-                    VALUES (?, 'book_author', NOW(), NOW())
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
+                    VALUES (?, 'book_author', ?, NOW(), NOW())
                 ");
-                $stmt->execute([$author]);
+                $stmt->execute([$author, $authorSlug]);
                 $authorId = $db->lastInsertId();
                 echo "<p class='success'>Added book author '$author' to authors table (ID: $authorId)</p>";
                 flushOutput();

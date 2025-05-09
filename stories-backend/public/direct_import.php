@@ -893,7 +893,38 @@ function processBook($db, $bookDir) {
         $publisher = isset($data['publisher']) ? $data['publisher'] : '';
         $isbn = isset($data['isbn']) ? $data['isbn'] : '';
         $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
-        $publicationDate = isset($data['publication_date']) ? $data['publication_date'] : null;
+        
+        // Format publication date correctly for MySQL
+        $publicationDate = null;
+        if (isset($data['publication_date'])) {
+            // Check if it's just a year
+            if (preg_match('/^\d{4}$/', $data['publication_date'])) {
+                $publicationDate = $data['publication_date'] . '-01-01'; // Add month and day
+            } elseif (preg_match('/^(\d{4})-(\d{1,2})$/', $data['publication_date'], $matches)) {
+                $publicationDate = $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
+            } else {
+                $publicationDate = $data['publication_date'];
+            }
+            
+            // Validate date format
+            $date = DateTime::createFromFormat('Y-m-d', $publicationDate);
+            if (!$date || $date->format('Y-m-d') !== $publicationDate) {
+                // If invalid, extract year and use that
+                if (preg_match('/(\d{4})/', $data['publication_date'], $matches)) {
+                    $publicationDate = $matches[1] . '-01-01';
+                } else {
+                    $publicationDate = null; // Invalid date, set to null
+                }
+            }
+        }
+        
+        // Extract publication date from publisher info if not found in front matter
+        if (!$publicationDate && !empty($publisherInfo['first_published'])) {
+            if (preg_match('/(\d{4})/', $publisherInfo['first_published'], $matches)) {
+                $publicationDate = $matches[1] . '-01-01';
+            }
+        }
+        
         $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;
         $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';

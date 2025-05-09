@@ -92,9 +92,10 @@ function cleanContentData($db, $contentType, $sourceType = null) {
                 flushOutput();
                 
                 // 6. Delete unused authors (those without any stories)
-                $db->exec("DELETE a FROM authors a 
-                          LEFT JOIN story_authors sa ON a.id = sa.author_id 
+                $stmt = $db->prepare("DELETE a FROM authors a
+                          LEFT JOIN story_authors sa ON a.id = sa.author_id
                           WHERE sa.author_id IS NULL AND a.author_type = ?");
+                $stmt->execute([$sourceType]);
                 echo "<p class='info'>Deleted unused $sourceType authors</p>";
                 flushOutput();
                 

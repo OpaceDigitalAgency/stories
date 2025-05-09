@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Book cover background -->
+  <rect width="300" height="450" fill="#f0f0f0" />
+  
+  <!-- Book spine shadow -->
+  <rect x="10" y="10" width="280" height="430" fill="#e0e0e0" rx="5" ry="5" />
+  
+  <!-- Book cover -->
+  <rect x="15" y="15" width="270" height="420" fill="#4a7aff" rx="3" ry="3" />
+  
+  <!-- Book title area -->
+  <rect x="30" y="80" width="240" height="100" fill="#ffffff" opacity="0.9" rx="3" ry="3" />
+  
+  <!-- Book title text -->
+  <text x="150" y="130" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#333333">
+    Book Title
+  </text>
+  <text x="150" y="160" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#666666">
+    Author Name
+  </text>
+  
+  <!-- Book icon -->
+  <g transform="translate(120, 240)">
+    <rect x="0" y="0" width="60" height="80" fill="#ffffff" rx="2" ry="2" />
+    <rect x="10" y="10" width="40" height="5" fill="#333333" />
+    <rect x="10" y="20" width="40" height="5" fill="#333333" />
+    <rect x="10" y="30" width="30" height="5" fill="#333333" />
+    <rect x="10" y="50" width="40" height="5" fill="#333333" />
+    <rect x="10" y="60" width="20" height="5" fill="#333333" />
+  </g>
+  
+  <!-- "Default Cover" text -->
+  <text x="150" y="360" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#ffffff">
+    Default Cover
+  </text>
+  <text x="150" y="380" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#ffffff">
+    Stories From The Web
+  </text>
+</svg>

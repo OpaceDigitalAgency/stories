@@ -651,14 +651,55 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
 }
 
 /**
+ * Create a thumbnail of an image
+ *
+ * @param string $sourcePath Source image path
+ * @param string $destinationPath Destination path
+ * @param int $width Thumbnail width
+ * @param int $height Thumbnail height
+ * @param bool $crop Whether to crop the image to exact dimensions
+ * @return bool Success or failure
+ */
+function createThumbnail($sourcePath, $destinationPath, $width = 150, $height = 150, $crop = true) {
+    return resizeImage($sourcePath, $destinationPath, [
+        'width' => $width,
+        'height' => $height,
+        'crop' => $crop,
+        'quality' => 85,
+        'format' => 'webp'
+    ]);
+}
+
+/**
  * Optimize a single image
+ *
+ * @param string $sourcePath Source image path
+ * @param string $destinationPath Destination path
+ * @param int $maxWidth Maximum width
+ * @param int $maxHeight Maximum height
+ * @param string $format Output format (jpg, png, webp)
+ * @param int $quality Output quality
+ * @return bool Success or failure
+ */
+function optimizeImage($sourcePath, $destinationPath, $maxWidth = 800, $maxHeight = 600, $format = 'webp', $quality = 85) {
+    return resizeImage($sourcePath, $destinationPath, [
+        'width' => $maxWidth,
+        'height' => $maxHeight,
+        'crop' => false,
+        'quality' => $quality,
+        'format' => $format
+    ]);
+}
+
+/**
+ * Optimize a single image and return metadata
  *
  * @param string $sourcePath Source image path
  * @param string $destinationDir Destination directory
  * @param array $options Additional options
  * @return array|false Array with optimization results or false on failure
  */
-function optimizeImage($sourcePath, $destinationDir, $options = []) {
+function optimizeImageWithMetadata($sourcePath, $destinationDir, $options = []) {
     global $MAX_FILE_SIZE;
 
     // Check if the source file exists
@@ -708,18 +749,13 @@ function optimizeImage($sourcePath, $destinationDir, $options = []) {
  */
 function updateMediaRecord($db, $mediaId, $variants) {
     try {
-        // Prepare update statement
-        $sql = "UPDATE media SET
-                file_path = :file_path,
-                file_size = :file_size,
-                file_type = :file_type,
-                thumbnail_url = :thumbnail_url,
-                small_url = :small_url,
-                medium_url = :medium_url,
-                large_url = :large_url
-                WHERE id = :id";
+        // First check if the media table has the required columns
+        $stmt = $db->query("SHOW COLUMNS FROM media LIKE 'metadata'");
+        $hasMetadataColumn = $stmt->rowCount() > 0;
 
-        $stmt = $db->prepare($sql);
+        // Check for thumbnail_url column to determine schema version
+        $stmt = $db->query("SHOW COLUMNS FROM media LIKE 'thumbnail_url'");
+        $hasLegacyColumns = $stmt->rowCount() > 0;
 
         // Determine the file type based on the format used
         $fileType = 'image/webp'; // Default to WebP since we're converting most images
@@ -732,15 +768,107 @@ function updateMediaRecord($db, $mediaId, $variants) {
             }
         }
 
-        // Bind parameters
-        $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? '');
-        $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? 0);
-        $stmt->bindValue(':file_type', $fileType);
-        $stmt->bindValue(':thumbnail_url', $variants['thumbnail']['url'] ?? '');
-        $stmt->bindValue(':small_url', $variants['small']['url'] ?? '');
-        $stmt->bindValue(':medium_url', $variants['medium']['url'] ?? '');
-        $stmt->bindValue(':large_url', $variants['large']['url'] ?? '');
-        $stmt->bindValue(':id', $mediaId, PDO::PARAM_INT);
+        // Get the original media record to preserve existing data
+        $stmt = $db->prepare("SELECT * FROM media WHERE id = ?");
+        $stmt->execute([$mediaId]);
+        $mediaRecord = $stmt->fetch();
+
+        if (!$mediaRecord) {
+            error_log("Media record not found: $mediaId");
+            return false;
+        }
+
+        // If we have the metadata column, use it for storing variant URLs
+        if ($hasMetadataColumn) {
+            // Prepare metadata
+            $metadata = [];
+
+            // If we already have metadata, decode it
+            if (!empty($mediaRecord['metadata'])) {
+                $existingMetadata = json_decode($mediaRecord['metadata'], true);
+                if (is_array($existingMetadata)) {
+                    $metadata = $existingMetadata;
+                }
+            }
+
+            // Add variant URLs to metadata
+            foreach ($variants as $size => $info) {
+                $metadata[$size] = $info['url'];
+            }
+
+            // Add dimensions if available
+            if (isset($variants['original']) && function_exists('getimagesize')) {
+                $dimensions = getimagesize($variants['original']['path']);
+                if ($dimensions) {
+                    $metadata['width'] = $dimensions[0];
+                    $metadata['height'] = $dimensions[1];
+                }
+            }
+
+            // Add alt text if not already present
+            if (!isset($metadata['alt'])) {
+                $metadata['alt'] = pathinfo($mediaRecord['filename'], PATHINFO_FILENAME);
+            }
+
+            // Prepare update statement
+            $sql = "UPDATE media SET
+                    file_path = :file_path,
+                    file_size = :file_size,
+                    file_type = :file_type,
+                    metadata = :metadata
+                    WHERE id = :id";
+
+            $stmt = $db->prepare($sql);
+
+            // Bind parameters
+            $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? $mediaRecord['file_path']);
+            $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? $mediaRecord['file_size']);
+            $stmt->bindValue(':file_type', $fileType);
+            $stmt->bindValue(':metadata', json_encode($metadata));
+            $stmt->bindValue(':id', $mediaId, PDO::PARAM_INT);
+        }
+        // If we have legacy columns, use them
+        else if ($hasLegacyColumns) {
+            // Prepare update statement
+            $sql = "UPDATE media SET
+                    file_path = :file_path,
+                    file_size = :file_size,
+                    file_type = :file_type,
+                    thumbnail_url = :thumbnail_url,
+                    small_url = :small_url,
+                    medium_url = :medium_url,
+                    large_url = :large_url
+                    WHERE id = :id";
+
+            $stmt = $db->prepare($sql);
+
+            // Bind parameters
+            $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? $mediaRecord['file_path']);
+            $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? $mediaRecord['file_size']);
+            $stmt->bindValue(':file_type', $fileType);
+            $stmt->bindValue(':thumbnail_url', $variants['thumbnail']['url'] ?? $mediaRecord['thumbnail_url'] ?? '');
+            $stmt->bindValue(':small_url', $variants['small']['url'] ?? $mediaRecord['small_url'] ?? '');
+            $stmt->bindValue(':medium_url', $variants['medium']['url'] ?? $mediaRecord['medium_url'] ?? '');
+            $stmt->bindValue(':large_url', $variants['large']['url'] ?? $mediaRecord['large_url'] ?? '');
+            $stmt->bindValue(':id', $mediaId, PDO::PARAM_INT);
+        }
+        // If we don't have either schema, just update the basic fields
+        else {
+            // Prepare update statement
+            $sql = "UPDATE media SET
+                    file_path = :file_path,
+                    file_size = :file_size,
+                    file_type = :file_type
+                    WHERE id = :id";
+
+            $stmt = $db->prepare($sql);
+
+            // Bind parameters
+            $stmt->bindValue(':file_path', $variants['medium']['url'] ?? $variants['original']['url'] ?? $mediaRecord['file_path']);
+            $stmt->bindValue(':file_size', $variants['medium']['size'] ?? $variants['original']['size'] ?? $mediaRecord['file_size']);
+            $stmt->bindValue(':file_type', $fileType);
+            $stmt->bindValue(':id', $mediaId, PDO::PARAM_INT);
+        }
 
         // Execute the statement
         return $stmt->execute();

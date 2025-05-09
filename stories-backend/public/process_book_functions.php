@@ -188,7 +188,7 @@ function processBook($db, $bookDir) {
         // Process publisher as an author with role 'publisher'
         $publisherId = null;
         if (!empty($publisher)) {
-            // Publisher info not needed as type is set in SQL
+            // Publisher info not needed as author_type is set in SQL
 
             // Check if publisher exists by name
             $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
@@ -202,7 +202,7 @@ function processBook($db, $bookDir) {
             } else {
                 // Add new publisher
                 $stmt = $db->prepare("
-                    INSERT INTO authors (name, type, slug, created_at, updated_at)
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
                     VALUES (?, ?, ?, NOW(), NOW())
                 ");
 
@@ -210,7 +210,7 @@ function processBook($db, $bookDir) {
                 $publisherSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $publisher));
                 $publisherSlug = trim($publisherSlug, '-');
 
-                $stmt->execute([$publisher, 'publisher', $publisherSlug]);
+                $stmt->execute([$publisher, 'retail', $publisherSlug]);
                 $publisherId = $db->lastInsertId();
                 echo "<p class='success'>Added publisher '" . htmlspecialchars($publisher) . "' to authors table (ID: $publisherId)</p>";
                 flushOutput();
@@ -226,7 +226,7 @@ function processBook($db, $bookDir) {
             $authorName = "** $authorName";
         }
 
-        // Author info not needed as type is set in SQL
+        // Author info not needed as author_type is set in SQL
 
         // Check if author exists by name
         $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
@@ -240,7 +240,7 @@ function processBook($db, $bookDir) {
         } else {
             // Add new author
             $stmt = $db->prepare("
-                INSERT INTO authors (name, type, slug, created_at, updated_at)
+                INSERT INTO authors (name, author_type, slug, created_at, updated_at)
                 VALUES (?, ?, ?, NOW(), NOW())
             ");
 
@@ -248,7 +248,7 @@ function processBook($db, $bookDir) {
             $authorSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorName));
             $authorSlug = trim($authorSlug, '-');
 
-            $stmt->execute([$authorName, 'book_author', $authorSlug]);
+            $stmt->execute([$authorName, 'retail', $authorSlug]);
             $authorId = $db->lastInsertId();
             echo "<p class='success'>Added book author '" . htmlspecialchars($authorName) . "' to authors table (ID: $authorId)</p>";
             flushOutput();
@@ -538,7 +538,7 @@ function processBook($db, $bookDir) {
             $directoryItemId = $existingDirectoryItem['id'];
             $action = 'updated';
 
-            // Update existing directory item
+            // Update existing directory item - using explicit column names to match the actual table structure
             $stmt = $db->prepare("
                 UPDATE directory_items SET
                     title = ?,
@@ -546,16 +546,8 @@ function processBook($db, $bookDir) {
                     category_id = ?,
                     slug = ?,
                     website_url = ?,
-                    contact_email = NULL,
-                    contact_phone = NULL,
-                    address = NULL,
-                    featured = 0,
-                    rating = 0.0,
-                    price_range = NULL,
                     cover_url = ?,
-                    is_published = 0,
                     updated_at = NOW(),
-                    story_id = NULL,
                     type = 'book'
                 WHERE id = ?
             ");
@@ -573,19 +565,13 @@ function processBook($db, $bookDir) {
             echo "<p class='success'>Updated existing directory item: $title (ID: $directoryItemId)</p>";
             flushOutput();
         } else {
-            // Create new directory item
+            // Create new directory item - using explicit column names to match the actual table structure
             $stmt = $db->prepare("
-                INSERT INTO directory_items (
-                    title, description, category_id, slug, published_at, website_url,
-                    contact_email, contact_phone, address, featured, rating,
-                    price_range, cover_url, is_published, created_at, updated_at,
-                    story_id, type
-                ) VALUES (
-                    ?, ?, ?, ?, NOW(), ?,
-                    NULL, NULL, NULL, 0, 0.0,
-                    NULL, ?, 0, ?, ?,
-                    NULL, 'book'
-                )
+                INSERT INTO directory_items
+                    (title, description, category_id, slug, website_url,
+                    cover_url, is_published, created_at, updated_at, type)
+                VALUES
+                    (?, ?, ?, ?, ?, ?, 1, NOW(), NOW(), 'book')
             ");
 
             $now = date('Y-m-d H:i:s');
@@ -596,9 +582,7 @@ function processBook($db, $bookDir) {
                 1,   // category_id (default to books category)
                 $slug,
                 '',  // website_url
-                $coverImageUrl,
-                $now,
-                $now
+                $coverImageUrl
             ]);
 
             $directoryItemId = $db->lastInsertId();

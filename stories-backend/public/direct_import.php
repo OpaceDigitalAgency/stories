@@ -1030,13 +1030,22 @@ function processBook($db, $bookDir) {
         
         // Get publication date string from available sources
         $pubDateStr = null;
+        
+        echo "<p class='info'>Checking front matter for publication_date: " . (isset($data['publication_date']) ? "'{$data['publication_date']}'" : "Not set") . "</p>";
+        flushOutput();
+        
         if (isset($data['publication_date'])) {
             $pubDateStr = $data['publication_date'];
-        } elseif (!empty($publisherInfo['first_published'])) {
+        }
+        
+        echo "<p class='info'>Checking publisher info for first_published: " . (!empty($publisherInfo['first_published']) ? "'{$publisherInfo['first_published']}'" : "Empty or not found") . "</p>";
+        flushOutput();
+        
+        if (empty($pubDateStr) && !empty($publisherInfo['first_published'])) {
             $pubDateStr = $publisherInfo['first_published'];
         }
         
-        echo "<p class='info'>Attempting to convert date string: '$pubDateStr'</p>";
+        echo "<p class='info'>Final date string for conversion: '$pubDateStr'</p>";
         flushOutput();
         
         // Convert publication date to MySQL format

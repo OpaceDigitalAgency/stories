@@ -56,10 +56,19 @@ function cleanContentData($db, $contentType, $sourceType = null) {
             if (!empty($storyIds)) {
                 $storyIdList = implode(',', $storyIds);
                 
-                // 2. Get media IDs associated with these stories
-                $mediaIdsStmt = $db->prepare("SELECT media_id FROM stories WHERE id IN ($storyIdList) AND media_id IS NOT NULL");
-                $mediaIdsStmt->execute();
-                $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                // 2. Check if media_id column exists in stories table
+                $checkColumnStmt = $db->query("SHOW COLUMNS FROM stories LIKE 'media_id'");
+                $mediaIds = [];
+                
+                if ($checkColumnStmt->rowCount() > 0) {
+                    // Get media IDs associated with these stories
+                    $mediaIdsStmt = $db->prepare("SELECT media_id FROM stories WHERE id IN ($storyIdList) AND media_id IS NOT NULL");
+                    $mediaIdsStmt->execute();
+                    $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                } else {
+                    echo "<p class='info'>No media_id column found in stories table, skipping media cleanup</p>";
+                    flushOutput();
+                }
                 
                 // 3. Delete story_tags associations for these stories
                 $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($storyIdList)");
@@ -111,10 +120,19 @@ function cleanContentData($db, $contentType, $sourceType = null) {
             if (!empty($gameIds)) {
                 $gameIdList = implode(',', $gameIds);
                 
-                // Get media IDs associated with these games
-                $mediaIdsStmt = $db->prepare("SELECT media_id FROM games WHERE id IN ($gameIdList) AND media_id IS NOT NULL");
-                $mediaIdsStmt->execute();
-                $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                // Check if media_id column exists in games table
+                $checkColumnStmt = $db->query("SHOW COLUMNS FROM games LIKE 'media_id'");
+                $mediaIds = [];
+                
+                if ($checkColumnStmt->rowCount() > 0) {
+                    // Get media IDs associated with these games
+                    $mediaIdsStmt = $db->prepare("SELECT media_id FROM games WHERE id IN ($gameIdList) AND media_id IS NOT NULL");
+                    $mediaIdsStmt->execute();
+                    $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                } else {
+                    echo "<p class='info'>No media_id column found in games table, skipping media cleanup</p>";
+                    flushOutput();
+                }
                 
                 // Delete game_tags associations
                 $stmt = $db->prepare("DELETE FROM game_tags WHERE game_id IN ($gameIdList)");
@@ -152,10 +170,19 @@ function cleanContentData($db, $contentType, $sourceType = null) {
             if (!empty($storyIds)) {
                 $storyIdList = implode(',', $storyIds);
                 
-                // Get media IDs associated with these stories
-                $mediaIdsStmt = $db->prepare("SELECT media_id FROM stories WHERE id IN ($storyIdList) AND media_id IS NOT NULL");
-                $mediaIdsStmt->execute();
-                $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                // Check if media_id column exists in stories table
+                $checkColumnStmt = $db->query("SHOW COLUMNS FROM stories LIKE 'media_id'");
+                $mediaIds = [];
+                
+                if ($checkColumnStmt->rowCount() > 0) {
+                    // Get media IDs associated with these stories
+                    $mediaIdsStmt = $db->prepare("SELECT media_id FROM stories WHERE id IN ($storyIdList) AND media_id IS NOT NULL");
+                    $mediaIdsStmt->execute();
+                    $mediaIds = $mediaIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                } else {
+                    echo "<p class='info'>No media_id column found in stories table, skipping media cleanup</p>";
+                    flushOutput();
+                }
                 
                 // Delete story_tags associations
                 $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id IN ($storyIdList)");
@@ -432,7 +459,7 @@ require_once '../admin/includes/header.php';
                                     if (!$cleanResult) {
                                         echo "<p class='error'>Failed to clean existing data. Import aborted.</p>";
                                         echo "</div></div></div></div></div>";
-                                        require_once '../stories-backend/admin/includes/footer.php';
+                                        require_once '../admin/includes/footer.php';
                                         exit;
                                     }
                                 } else {

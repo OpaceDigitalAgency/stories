@@ -1024,7 +1024,7 @@ function processBook($db, $bookDir) {
             // Update directory item
             $stmt = $db->prepare("
                 UPDATE directory_items
-                SET description = ?, url = ?, category = ?, updated_at = NOW()
+                SET description = ?, website_url = ?, category = ?, updated_at = NOW()
                 WHERE id = ?
             ");
             $stmt->execute([
@@ -1065,7 +1065,7 @@ function processBook($db, $bookDir) {
             $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    title, description, url, category, type, created_at, updated_at
+                    title, description, website_url, category, type, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, 'book', ?, ?)
             ");
             

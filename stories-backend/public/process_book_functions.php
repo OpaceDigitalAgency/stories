@@ -625,7 +625,6 @@ function processBook($db, $bookDir) {
 
         if ($existingBook) {
             // Update existing book
-            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 UPDATE books SET
                     isbn = ?,
@@ -640,8 +639,7 @@ function processBook($db, $bookDir) {
                     purchase_links = ?,
                     metadata = ?,
                     genre = ?,
-                    series = ?,
-                    updated_at = ?
+                    series = ?
                 WHERE directory_item_id = ?
             ");
 
@@ -665,7 +663,6 @@ function processBook($db, $bookDir) {
                 json_encode($enhancedData),
                 $genre,
                 $series,
-                $now, // updated_at
                 $directoryItemId
             ]);
 
@@ -673,16 +670,15 @@ function processBook($db, $bookDir) {
             flushOutput();
         } else {
             // Create new book
-            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 INSERT INTO books (
                     directory_item_id, isbn, isbn13, author, publisher, publication_date,
                     page_count, age_range, reading_level, cover_image_url, purchase_links,
-                    metadata, genre, series, created_at, updated_at
+                    metadata, genre, series
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?
+                    ?, ?, ?
                 )
             ");
 
@@ -706,9 +702,7 @@ function processBook($db, $bookDir) {
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,
-                $series,
-                $now, // created_at
-                $now  // updated_at
+                $series
             ]);
 
             echo "<p class='success'>Created new book: $title (ID: $directoryItemId)</p>";

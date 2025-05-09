@@ -543,7 +543,10 @@ function convertToMySQLDate($dateStr) {
     // Store original for debugging
     $originalDate = $dateStr;
     
-    // Case 1: Just a year (e.g., "1975")
+    // Clean up the date string
+    $dateStr = trim($dateStr);
+    
+    // Case 1: Just a year (e.g., "1975", "1937")
     if (preg_match('/^\d{4}$/', $dateStr)) {
         return $dateStr . '-01-01'; // Add month and day
     }
@@ -553,22 +556,36 @@ function convertToMySQLDate($dateStr) {
         return $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
     }
     
-    // Case 3: Month Year (e.g., "May 2003", "February 2012")
-    if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/', $dateStr, $matches)) {
+    // Case 3: Month Year (e.g., "May 2003", "February 2012", "September 2013")
+    if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/i', $dateStr, $matches)) {
         $month = $matches[1];
         $year = $matches[2];
         
-        try {
-            // Convert month name to number using strtotime
-            $timestamp = strtotime("$month 1, $year");
-            if ($timestamp === false) {
-                throw new Exception("Invalid month name: $month");
-            }
-            return date('Y-m-d', $timestamp);
-        } catch (Exception $e) {
-            // If month conversion fails, default to January of that year
-            return $year . '-01-01';
+        // Map of month names to numbers
+        $months = array(
+            'january' => '01', 'february' => '02', 'march' => '03',
+            'april' => '04', 'may' => '05', 'june' => '06',
+            'july' => '07', 'august' => '08', 'september' => '09',
+            'october' => '10', 'november' => '11', 'december' => '12'
+        );
+        
+        $monthLower = strtolower($month);
+        if (isset($months[$monthLower])) {
+            return $year . '-' . $months[$monthLower] . '-01';
         }
+        
+        // If month name not found in map, try strtotime as fallback
+        try {
+            $timestamp = strtotime("$month 1, $year");
+            if ($timestamp !== false) {
+                return date('Y-m-d', $timestamp);
+            }
+        } catch (Exception $e) {
+            // Ignore and use default
+        }
+        
+        // If all else fails, default to January of that year
+        return $year . '-01-01';
     }
     
     // Case 4: Already in YYYY-MM-DD format
@@ -586,17 +603,58 @@ function convertToMySQLDate($dateStr) {
         }
     }
     
-    // Case 5: Other formats that PHP's strtotime can handle
+    // Case 5: Try to extract month and year in various formats
+    if (preg_match('/([a-zA-Z]+)[^\d]*(\d{4})/i', $dateStr, $matches)) {
+        $month = $matches[1];
+        $year = $matches[2];
+        
+        // Map of month names to numbers
+        $months = array(
+            'january' => '01', 'february' => '02', 'march' => '03',
+            'april' => '04', 'may' => '05', 'june' => '06',
+            'july' => '07', 'august' => '08', 'september' => '09',
+            'october' => '10', 'november' => '11', 'december' => '12',
+            // Add abbreviated months
+            'jan' => '01', 'feb' => '02', 'mar' => '03',
+            'apr' => '04', 'jun' => '06', 'jul' => '07',
+            'aug' => '08', 'sep' => '09', 'sept' => '09',
+            'oct' => '10', 'nov' => '11', 'dec' => '12'
+        );
+        
+        $monthLower = strtolower($month);
+        if (isset($months[$monthLower])) {
+            echo "<p class='info'>Converting date: Found month '$month' ($monthLower) = {$months[$monthLower]}, year = $year</p>";
+            flushOutput();
+            return $year . '-' . $months[$monthLower] . '-01';
+        }
+    }
+    
+    // Case 6: Just try to find a year as last resort
+    if (preg_match('/(\d{4})/', $dateStr, $matches)) {
+        $year = $matches[1];
+        echo "<p class='info'>Converting date: Extracted year $year from '$dateStr'</p>";
+        flushOutput();
+        return $year . '-01-01';
+    }
+    
+    // Case 7: Other formats that PHP's strtotime can handle
     try {
         $timestamp = strtotime($dateStr);
         if ($timestamp !== false) {
-            return date('Y-m-d', $timestamp);
+            $result = date('Y-m-d', $timestamp);
+            echo "<p class='info'>Converting date: Successfully parsed '$dateStr' to '$result' using strtotime</p>";
+            flushOutput();
+            return $result;
         }
     } catch (Exception $e) {
-        // Ignore and continue to fallback
+        echo "<p class='warning'>Converting date: Failed to parse '$dateStr' using strtotime: " . $e->getMessage() . "</p>";
+        flushOutput();
     }
     
-    // Case 6: Just extract year as fallback
+    // If we get here, all conversion attempts failed
+    echo "<p class='error'>Converting date: Unable to parse date string '$dateStr' into MySQL format</p>";
+    flushOutput();
+    return null;
     if (preg_match('/(\d{4})/', $dateStr, $matches)) {
         return $matches[1] . '-01-01';
     }

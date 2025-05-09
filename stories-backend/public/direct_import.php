@@ -1311,13 +1311,7 @@ function processBook($db, $bookDir) {
                     ) VALUES (?, ?, ?, ?, NOW(), NOW())
                 ");
                 
-                $stmt->execute([
-                    $imageName,
-                    $relativePath,
-                    $fileSize,
-                    $fileType
-                ]);
-                
+                // Fix: Only execute once to avoid duplicate inserts
                 $stmt->execute([
                     $imageName,
                     $relativePath,

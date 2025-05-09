@@ -17,19 +17,30 @@ require_once '../includes/image-upload-component.php';
 // Include AI image generator component
 require_once '../includes/ai-image-generator-component.php';
 
+// Include tag component if it exists
+if (file_exists('../includes/tag-component.php')) {
+    require_once '../includes/tag-component.php';
+}
+
 try {
     // Initialize variables
     $item = null;
     $categories = [];
     $error = null;
     $bookData = []; // Initialize book data
-
+    $tags = [];
+    
     // Get all categories
     $stmt = $db->query("SHOW TABLES LIKE 'directory_categories'");
     if ($stmt->rowCount() > 0) {
         $categories = $db->query("SELECT * FROM directory_categories ORDER BY name")->fetchAll();
     }
-
+    
+    // Get tags if they exist
+    if ($db->query("SHOW TABLES LIKE 'tags'")->rowCount() > 0) {
+        $tags = $db->query("SELECT * FROM tags ORDER BY name")->fetchAll();
+    }
+    
     // Get directory item if editing
     if (isset($_GET['id'])) {
         try {
@@ -55,6 +66,18 @@ try {
                     }
                 }
             }
+            
+            // Get item tags if they exist
+            if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
+                $tagStmt = $db->prepare("
+                    SELECT t.id, t.name 
+                    FROM tags t 
+                    JOIN item_tags it ON t.id = it.tag_id 
+                    WHERE it.item_id = ? AND it.item_type = 'directory_item'
+                ");
+                $tagStmt->execute([$_GET['id']]);
+                $itemTags = $tagStmt->fetchAll();
+            }
 
             if (!$item) {
                 header("Location: directory-items.php");
@@ -77,185 +100,149 @@ $currentPage = 'directory';
 
 // Add custom CSS and JS for form styling and preview
 $extraHeadContent = '
-<!-- Loading overlay styles -->
+<!-- Styles for the tabbed interface and compact form -->
 <style>
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
+    /* Configure core tab styling */
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .nav-tabs .nav-item {
+        margin-bottom: -1px;
+    }
+    
+    .nav-tabs .nav-link {
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #495057;
+        background-color: transparent;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #495057;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+    
+    .tab-content > .tab-pane {
         display: none;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        color: white;
     }
-
-    .loading-overlay.active {
-        display: flex;
+    
+    .tab-content > .active {
+        display: block;
     }
-
-    .loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 5px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-        margin-bottom: 15px;
-    }
-
-    .loading-message {
-        font-size: 18px;
-        text-align: center;
-        max-width: 80%;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-</style>
-
-<style>
-    /* Base form styles */
-    .checkbox-group {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .form-section-title {
-        margin-top: 20px;
-        margin-bottom: 10px;
-        font-size: 1.25rem;
-        color: var(--gray-800);
-        border-bottom: 1px solid var(--border-color);
-        padding-bottom: 5px;
-    }
-
-    .checkbox-section {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 20px;
-        background-color: var(--gray-50);
-        padding: 15px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border-color);
-    }
-
-    .checkbox-group-item {
-        margin-bottom: 0;
-    }
-
-    .content-form {
-        background: white;
-        padding: 20px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-sm);
-    }
-
-    /* WordPress-like layout */
-    .wp-layout {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    @media (min-width: 992px) {
-        .wp-layout {
-            grid-template-columns: 2fr 1fr;
-        }
-    }
-
-    .wp-layout-top {
-        grid-column: 1 / -1;
-        margin-bottom: 20px;
-    }
-
-    .wp-layout-main {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .wp-layout-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
+    
+    /* Compact form elements */
     .wp-card {
-        background: white;
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border-color);
-        overflow: hidden;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
     }
-
+    
     .wp-card-header {
-        padding: 12px 15px;
-        border-bottom: 1px solid var(--border-color);
-        background-color: var(--gray-50);
+        background-color: rgba(0, 0, 0, 0.03);
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid #dee2e6;
         font-weight: 600;
-        color: var(--gray-800);
     }
-
+    
     .wp-card-body {
-        padding: 15px;
+        padding: 1rem;
     }
-
-    /* Sticky save bar */
+    
+    .form-group {
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-row {
+        display: flex;
+        margin-right: -5px;
+        margin-left: -5px;
+        flex-wrap: wrap;
+    }
+    
+    .form-row > div {
+        padding-right: 5px;
+        padding-left: 5px;
+        flex: 1;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    /* Sticky save bar at bottom of screen */
     .sticky-save-bar {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         background: white;
-        padding: 15px 20px;
+        padding: 12px 16px;
         box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         z-index: 1000;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 20px;
-        border-top: 1px solid var(--border-color);
+        border-top: 1px solid #dee2e6;
     }
-
+    
     /* Add padding to the bottom of the form to prevent content from being hidden behind the sticky bar */
     .content-form {
-        padding-bottom: 70px;
+        padding-bottom: 60px;
     }
-
+    
     .sticky-save-bar .btn-group {
         display: flex;
-        gap: 10px;
+        gap: 8px;
     }
-
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .sticky-save-bar {
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
-
+        
         .sticky-save-bar .btn-group {
             width: 100%;
         }
-
+        
         .sticky-save-bar .btn {
             flex: 1;
         }
+    }
+    
+    /* Tag styling */
+    .tag-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .tag-badge {
+        background-color: #e9ecef;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .tag-badge .remove-tag {
+        cursor: pointer;
+        color: #dc3545;
     }
 </style>
 ';
@@ -269,49 +256,103 @@ require_once '../includes/header.php';
     <div class="section-body">
         <form method="POST" action="save-directory-item.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $item['id'] ?? ''; ?>">
-
-            <!-- WordPress-like Layout -->
-            <div class="wp-layout">
-                <!-- Top Section (Title & Slug) -->
-                <div class="wp-layout-top wp-card">
-                    <div class="wp-card-header">
-                        Basic Information
-                    </div>
-                    <div class="wp-card-body">
-                        <div class="form-group">
-                            <div class="row align-items-center">
-                                <div class="col-md-2">
-                                    <label class="form-label mb-md-0" for="title">Title <span class="required">*</span></label>
+            
+            <!-- Tabbed Navigation -->
+            <ul class="nav nav-tabs" id="directoryTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="basic-tab" data-bs-toggle="tab" href="#basic" role="tab">Basic Info</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="media-tab" data-bs-toggle="tab" href="#media" role="tab">Media</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="content-tab" data-bs-toggle="tab" href="#content" role="tab">Content</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="settings-tab" data-bs-toggle="tab" href="#settings" role="tab">Settings</a>
+                </li>
+                <li class="nav-item book-tab" style="display: <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'block' : 'none'; ?>">
+                    <a class="nav-link" id="book-tab" data-bs-toggle="tab" href="#book" role="tab">Book Details</a>
+                </li>
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Basic Info Tab -->
+                <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                    <div class="wp-card">
+                        <div class="wp-card-header">Basic Information</div>
+                        <div class="wp-card-body">
+                            <div class="form-group">
+                                <label class="form-label" for="title">Title <span class="required">*</span></label>
+                                <input type="text" id="title" name="title" class="form-control" required 
+                                    value="<?php echo htmlspecialchars($item['title'] ?? ''); ?>">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="slug">Slug <span class="required">*</span></label>
+                                <input type="text" id="slug" name="slug" class="form-control" required
+                                    value="<?php echo htmlspecialchars($item['slug'] ?? ''); ?>">
+                                <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="category_id">Category <span class="required">*</span></label>
+                                    <select id="category_id" name="category_id" class="form-control" required>
+                                        <option value="">Select Category</option>
+                                        <?php foreach ($categories as $category): ?>
+                                            <option value="<?php echo $category['id']; ?>"
+                                                    <?php echo (isset($item['category_id']) && $item['category_id'] == $category['id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($category['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
-                                <div class="col-md-10">
-                                    <input type="text" id="title" name="title" class="form-control" required
-                                        value="<?php echo htmlspecialchars($item['title'] ?? ''); ?>">
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="type">Item Type</label>
+                                    <select id="type" name="type" class="form-control">
+                                        <option value="general" <?php echo (isset($item['type']) && $item['type'] == 'general') ? 'selected' : ''; ?>>General</option>
+                                        <option value="book" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'selected' : ''; ?>>Book</option>
+                                        <option value="resource" <?php echo (isset($item['type']) && $item['type'] == 'resource') ? 'selected' : ''; ?>>Resource</option>
+                                        <option value="organization" <?php echo (isset($item['type']) && $item['type'] == 'organization') ? 'selected' : ''; ?>>Organization</option>
+                                    </select>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="form-group mb-0">
-                            <div class="row align-items-center">
-                                <div class="col-md-2">
-                                    <label class="form-label mb-md-0" for="slug">Slug <span class="required">*</span></label>
-                                </div>
-                                <div class="col-md-10">
-                                    <input type="text" id="slug" name="slug" class="form-control" required
-                                        value="<?php echo htmlspecialchars($item['slug'] ?? ''); ?>">
-                                    <small class="form-text text-muted">URL-friendly version of the title (auto-generated if left empty)</small>
+                            
+                            <!-- Tags -->
+                            <?php if (!empty($tags)): ?>
+                            <div class="form-group">
+                                <label class="form-label" for="tags">Tags</label>
+                                <select id="tag-select" class="form-control">
+                                    <option value="">Select a tag to add</option>
+                                    <?php foreach ($tags as $tag): ?>
+                                        <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tag['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                
+                                <div class="tag-container" id="tag-container">
+                                    <?php if (isset($itemTags)): ?>
+                                        <?php foreach($itemTags as $tag): ?>
+                                            <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
+                                                <?php echo htmlspecialchars($tag['name']); ?>
+                                                <i class="fas fa-times remove-tag"></i>
+                                                <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
+                                            </span>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
-
-                <!-- Main Content Column -->
-                <div class="wp-layout-main">
-                    <!-- Image Upload -->
+                
+                <!-- Media Tab -->
+                <div class="tab-pane fade" id="media" role="tabpanel">
                     <div class="wp-card">
-                        <div class="wp-card-header">
-                            Cover Image
-                        </div>
+                        <div class="wp-card-header">Cover Image</div>
                         <div class="wp-card-body">
                             <?php
                             // Render image upload component
@@ -322,7 +363,7 @@ require_once '../includes/header.php';
                                 'directory_item',
                                 $item['id'] ?? null
                             );
-
+                            
                             // Render AI image generator
                             if (function_exists('renderAiImageGenerator')) {
                                 renderAiImageGenerator(
@@ -339,24 +380,21 @@ require_once '../includes/header.php';
                             ?>
                         </div>
                     </div>
-
-                    <!-- Description -->
+                </div>
+                
+                <!-- Content Tab -->
+                <div class="tab-pane fade" id="content" role="tabpanel">
                     <div class="wp-card">
-                        <div class="wp-card-header">
-                            Description
-                        </div>
+                        <div class="wp-card-header">Description</div>
                         <div class="wp-card-body">
-                            <div class="form-group mb-0">
-                                <textarea id="description" name="description" class="form-control" rows="8" required><?php echo htmlspecialchars($item['description'] ?? ''); ?></textarea>
+                            <div class="form-group">
+                                <textarea id="description" name="description" class="form-control" rows="6" required><?php echo htmlspecialchars($item['description'] ?? ''); ?></textarea>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Contact Information -->
+                    
                     <div class="wp-card">
-                        <div class="wp-card-header">
-                            Contact Information
-                        </div>
+                        <div class="wp-card-header">Contact Information</div>
                         <div class="wp-card-body">
                             <div class="form-group">
                                 <label class="form-label" for="website_url">Website URL</label>
@@ -364,159 +402,35 @@ require_once '../includes/header.php';
                                     value="<?php echo htmlspecialchars($item['website_url'] ?? ''); ?>"
                                     placeholder="https://example.com">
                             </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="contact_email">Contact Email</label>
-                                <input type="email" id="contact_email" name="contact_email" class="form-control"
-                                    value="<?php echo htmlspecialchars($item['contact_email'] ?? ''); ?>"
-                                    placeholder="contact@example.com">
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="contact_email">Contact Email</label>
+                                    <input type="email" id="contact_email" name="contact_email" class="form-control"
+                                        value="<?php echo htmlspecialchars($item['contact_email'] ?? ''); ?>"
+                                        placeholder="contact@example.com">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="contact_phone">Contact Phone</label>
+                                    <input type="tel" id="contact_phone" name="contact_phone" class="form-control"
+                                        value="<?php echo htmlspecialchars($item['contact_phone'] ?? ''); ?>"
+                                        placeholder="+1 (123) 456-7890">
+                                </div>
                             </div>
-
+                            
                             <div class="form-group">
-                                <label class="form-label" for="contact_phone">Contact Phone</label>
-                                <input type="tel" id="contact_phone" name="contact_phone" class="form-control"
-                                    value="<?php echo htmlspecialchars($item['contact_phone'] ?? ''); ?>"
-                                    placeholder="+1 (123) 456-7890">
-                            </div>
-
-                            <div class="form-group mb-0">
                                 <label class="form-label" for="address">Address</label>
-                                <textarea id="address" name="address" class="form-control" rows="3"><?php echo htmlspecialchars($item['address'] ?? ''); ?></textarea>
+                                <textarea id="address" name="address" class="form-control" rows="2"><?php echo htmlspecialchars($item['address'] ?? ''); ?></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Book Metadata Section - Only visible for book type -->
-                <div id="book-metadata-section" class="wp-card" style="display: <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'block' : 'none'; ?>;">
-                    <div class="wp-card-header">
-                        Book Information
-                    </div>
-                    <div class="wp-card-body">
-                        <!-- Author -->
-                        <div class="form-group">
-                            <label class="form-label" for="author">Author</label>
-                            <input type="text" id="author" name="book_author" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['author'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Publisher -->
-                        <div class="form-group">
-                            <label class="form-label" for="publisher">Publisher</label>
-                            <input type="text" id="publisher" name="book_publisher" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['publisher'] ?? ''); ?>">
-                        </div>
-
-                        <!-- ISBNs -->
-                        <div class="form-group">
-                            <label class="form-label" for="isbn">ISBN</label>
-                            <input type="text" id="isbn" name="book_isbn" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['isbn'] ?? ''); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="isbn13">ISBN-13</label>
-                            <input type="text" id="isbn13" name="book_isbn13" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['isbn13'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Publication Date -->
-                        <div class="form-group">
-                            <label class="form-label" for="publication_date">Publication Date</label>
-                            <input type="date" id="publication_date" name="book_publication_date" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['publication_date'] ?? ''); ?>">
-                            <small class="text-muted">Format: YYYY-MM-DD</small>
-                        </div>
-
-                        <!-- Page Count -->
-                        <div class="form-group">
-                            <label class="form-label" for="page_count">Page Count</label>
-                            <input type="number" id="page_count" name="book_page_count" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['page_count'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Genre -->
-                        <div class="form-group">
-                            <label class="form-label" for="genre">Genre</label>
-                            <input type="text" id="genre" name="book_genre" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['genre'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Series -->
-                        <div class="form-group">
-                            <label class="form-label" for="series">Series</label>
-                            <input type="text" id="series" name="book_series" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['series'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Age Range -->
-                        <div class="form-group">
-                            <label class="form-label" for="age_range">Age Range</label>
-                            <input type="text" id="age_range" name="book_age_range" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['age_range'] ?? ''); ?>">
-                            <small class="text-muted">Example: 7-10, 9-12, etc.</small>
-                        </div>
-
-                        <!-- Reading Level -->
-                        <div class="form-group">
-                            <label class="form-label" for="reading_level">Reading Level</label>
-                            <input type="text" id="reading_level" name="book_reading_level" class="form-control"
-                                value="<?php echo htmlspecialchars($bookData['reading_level'] ?? ''); ?>">
-                        </div>
-
-                        <!-- Purchase Links -->
-                        <div class="form-group">
-                            <label class="form-label" for="purchase_links">Purchase Links (JSON)</label>
-                            <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="4"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
-                            <small class="text-muted">Format: {"amazon":"https://amazon.com/...", "goodreads":"..."}</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sidebar Column -->
-                <div class="wp-layout-sidebar">
-                    <!-- Category -->
+                
+                <!-- Settings Tab -->
+                <div class="tab-pane fade" id="settings" role="tabpanel">
                     <div class="wp-card">
-                        <div class="wp-card-header">
-                            Category
-                        </div>
-                        <div class="wp-card-body">
-                            <div class="form-group mb-0">
-                                <select id="category_id" name="category_id" class="form-control" required>
-                                    <option value="">Select Category</option>
-                                    <?php foreach ($categories as $category): ?>
-                                        <option value="<?php echo $category['id']; ?>"
-                                                <?php echo (isset($item['category_id']) && $item['category_id'] == $category['id']) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($category['name']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Item Type -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">
-                            Item Type
-                        </div>
-                        <div class="wp-card-body">
-                            <div class="form-group mb-0">
-                                <select id="type" name="type" class="form-control">
-                                    <option value="general" <?php echo (isset($item['type']) && $item['type'] == 'general') ? 'selected' : ''; ?>>General</option>
-                                    <option value="book" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'selected' : ''; ?>>Book</option>
-                                    <option value="resource" <?php echo (isset($item['type']) && $item['type'] == 'resource') ? 'selected' : ''; ?>>Resource</option>
-                                    <option value="organization" <?php echo (isset($item['type']) && $item['type'] == 'organization') ? 'selected' : ''; ?>>Organization</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Item Settings -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">
-                            Item Settings
-                        </div>
+                        <div class="wp-card-header">Item Settings</div>
                         <div class="wp-card-body">
                             <!-- Published Status -->
                             <div class="form-group">
@@ -526,45 +440,124 @@ require_once '../includes/header.php';
                                     <label class="form-check-label" for="is_published">Published</label>
                                 </div>
                             </div>
-
+                            
                             <!-- Featured Status -->
-                            <div class="form-group mb-0">
+                            <div class="form-group">
                                 <div class="form-check form-switch">
                                     <input type="checkbox" id="featured" name="featured" class="form-check-input"
                                         value="1" <?php echo (!empty($item['featured'])) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="featured">Featured Item</label>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Additional Information -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">
-                            Additional Information
-                        </div>
-                        <div class="wp-card-body">
-                            <div class="form-group mb-0">
+                            
+                            <!-- Price Range -->
+                            <div class="form-group">
                                 <label class="form-label" for="price_range">Price Range</label>
                                 <input type="text" id="price_range" name="price_range" class="form-control"
                                     value="<?php echo htmlspecialchars($item['price_range'] ?? ''); ?>"
-                                    placeholder="$10-50, Free, Contact for pricing">
-                                <small class="form-text text-muted">Example: $10-50, Free, Contact for pricing</small>
+                                    placeholder="Free, $10-50, Contact for pricing">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Book Details Tab - Only visible for book type -->
+                <div class="tab-pane fade" id="book" role="tabpanel">
+                    <div class="wp-card">
+                        <div class="wp-card-header">Book Information</div>
+                        <div class="wp-card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="author">Author</label>
+                                    <input type="text" id="author" name="book_author" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['author'] ?? ''); ?>">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="publisher">Publisher</label>
+                                    <input type="text" id="publisher" name="book_publisher" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['publisher'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="isbn">ISBN</label>
+                                    <input type="text" id="isbn" name="book_isbn" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['isbn'] ?? ''); ?>">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="isbn13">ISBN-13</label>
+                                    <input type="text" id="isbn13" name="book_isbn13" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['isbn13'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="publication_date">Publication Date</label>
+                                    <input type="date" id="publication_date" name="book_publication_date" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['publication_date'] ?? ''); ?>">
+                                    <small class="text-muted">Format: YYYY-MM-DD</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="page_count">Page Count</label>
+                                    <input type="number" id="page_count" name="book_page_count" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['page_count'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="genre">Genre</label>
+                                    <input type="text" id="genre" name="book_genre" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['genre'] ?? ''); ?>">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="series">Series</label>
+                                    <input type="text" id="series" name="book_series" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['series'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="age_range">Age Range</label>
+                                    <input type="text" id="age_range" name="book_age_range" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['age_range'] ?? ''); ?>">
+                                    <small class="text-muted">Example: 7-10, 9-12, etc.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="reading_level">Reading Level</label>
+                                    <input type="text" id="reading_level" name="book_reading_level" class="form-control"
+                                        value="<?php echo htmlspecialchars($bookData['reading_level'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="purchase_links">Purchase Links (JSON)</label>
+                                <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
+                                <small class="text-muted">Format: {"amazon":"https://amazon.com/...", "goodreads":"..."}</small>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Sticky Save Bar -->
             <div class="sticky-save-bar">
-                <div class="item-status">
+                <div>
                     <?php if (isset($item['id'])): ?>
-                    <span class="text-muted">Last updated: <?php echo date('M j, Y g:i a', strtotime($item['updated_at'] ?? 'now')); ?></span>
+                        <span class="text-muted">Editing item #<?php echo $item['id']; ?></span>
                     <?php else: ?>
-                    <span class="text-muted">Creating new directory item</span>
+                        <span class="text-muted">Creating new directory item</span>
                     <?php endif; ?>
                 </div>
+                
                 <div class="btn-group">
                     <a href="directory-items.php" class="btn btn-secondary">Cancel</a>
                     <button type="button" id="preview-directory-item" class="btn btn-info">Preview</button>
@@ -575,30 +568,116 @@ require_once '../includes/header.php';
     </div>
 </div>
 
+<!-- Scripts for interactivity -->
 <script>
-    // Auto-generate slug from title
     document.addEventListener('DOMContentLoaded', function() {
-        const titleInput = document.getElementById('title');
-        const slugInput = document.getElementById('slug');
-
-        if (titleInput && slugInput) {
-            titleInput.addEventListener('input', function() {
-                // Only auto-generate if slug is empty or hasn't been manually edited
-                if (!slugInput.value || slugInput._autoGenerated) {
-                    const slug = titleInput.value
-                        .toLowerCase()
-                        .replace(/[^\w\s-]/g, '') // Remove special characters
-                        .replace(/\s+/g, '-')     // Replace spaces with hyphens
-                        .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-
-                    slugInput.value = slug;
-                    slugInput._autoGenerated = true;
+        // Tab navigation
+        const tabLinks = document.querySelectorAll('.nav-link');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all tabs and panels
+                tabLinks.forEach(l => l.classList.remove('active'));
+                tabPanes.forEach(p => {
+                    p.classList.remove('show', 'active');
+                });
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Show target panel
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.classList.add('show', 'active');
                 }
             });
-
-            // Mark when user manually edits the slug
+        });
+        
+        // Toggle book tab visibility based on item type
+        const typeSelect = document.getElementById('type');
+        const bookTab = document.querySelector('.book-tab');
+        const bookTabLink = document.getElementById('book-tab');
+        
+        function toggleBookTab() {
+            if (typeSelect.value === 'book') {
+                bookTab.style.display = 'block';
+            } else {
+                bookTab.style.display = 'none';
+                // If book tab is currently active, switch to basic tab
+                if (bookTabLink.classList.contains('active')) {
+                    document.getElementById('basic-tab').click();
+                }
+            }
+        }
+        
+        typeSelect.addEventListener('change', toggleBookTab);
+        
+        // Auto-generate slug from title if slug is empty
+        const titleInput = document.getElementById('title');
+        const slugInput = document.getElementById('slug');
+        
+        if (titleInput && slugInput) {
+            // Flag to check if slug has been manually edited
+            slugInput._autoGenerated = true;
+            
+            titleInput.addEventListener('input', function() {
+                if (slugInput._autoGenerated || slugInput.value === '') {
+                    let slug = this.value.toLowerCase()
+                        .replace(/[^\w\s-]/g, '') // Remove non-word chars
+                        .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+                        .replace(/^-+|-+$/g, ''); // Trim hyphens from start and end
+                    
+                    slugInput.value = slug;
+                }
+            });
+            
             slugInput.addEventListener('input', function() {
                 slugInput._autoGenerated = false;
+            });
+        }
+        
+        // Tag management
+        const tagSelect = document.getElementById('tag-select');
+        const tagContainer = document.getElementById('tag-container');
+        
+        if (tagSelect && tagContainer) {
+            // Add tag when selected from dropdown
+            tagSelect.addEventListener('change', function() {
+                if (this.value) {
+                    const tagId = this.value;
+                    const tagName = this.options[this.selectedIndex].text;
+                    
+                    // Check if tag already exists
+                    const existingTag = document.querySelector(`.tag-badge[data-tag-id="${tagId}"]`);
+                    if (!existingTag) {
+                        const tagBadge = document.createElement('span');
+                        tagBadge.className = 'tag-badge';
+                        tagBadge.setAttribute('data-tag-id', tagId);
+                        tagBadge.innerHTML = `
+                            ${tagName}
+                            <i class="fas fa-times remove-tag"></i>
+                            <input type="hidden" name="tags[]" value="${tagId}">
+                        `;
+                        
+                        tagContainer.appendChild(tagBadge);
+                    }
+                    
+                    // Reset select
+                    this.value = '';
+                }
+            });
+            
+            // Remove tag when clicked
+            tagContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-tag')) {
+                    const badge = e.target.closest('.tag-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
             });
         }
     });
@@ -610,30 +689,28 @@ require_once '../includes/header.php';
 <!-- Include directory item preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/directory-item-preview.js"></script>
+<script src="../assets/js/directory-item-tabs.js"></script>
 
-<!-- Book Metadata Toggle Script -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Get the type select element
-    const typeSelect = document.getElementById('type');
-    const bookMetadataSection = document.getElementById('book-metadata-section');
-    
-    // Function to toggle book metadata section based on type
-    function toggleBookMetadata() {
-        if (typeSelect.value === 'book') {
-            bookMetadataSection.style.display = 'block';
-        } else {
-            bookMetadataSection.style.display = 'none';
-        }
-    }
-    
-    // Add change event listener
-    typeSelect.addEventListener('change', toggleBookMetadata);
-    
-    // Initial toggle based on current value
-    toggleBookMetadata();
-});
-</script>
+<style>
+/* Image preview container styling */
+.image-preview-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    margin-top: 0.5rem;
+    min-height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+}
+</style>
 
 <?php
 // Include footer

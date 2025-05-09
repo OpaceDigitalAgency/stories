@@ -23,3 +23,18 @@ CREATE TABLE books (
 );
 
 -- 4. If the above fails with "Table already exists", it means the table already exists, which is fine
+
+-- 5. Run this to create the book_authors table for book-author relationships
+CREATE TABLE book_authors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    directory_item_id INT NOT NULL,
+    author_id INT NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'author',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE,
+    UNIQUE KEY (directory_item_id, author_id, role)
+);
+
+-- 6. If the above fails with "Table already exists", it means the table already exists, which is fine

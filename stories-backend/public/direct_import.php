@@ -898,6 +898,58 @@ function processBook($db, $bookDir) {
         $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
         
+        // Variables to store author and publisher IDs
+        $authorId = null;
+        $publisherId = null;
+        
+        // Add publisher to authors table if not exists
+        if (!empty($publisher)) {
+            // Check if publisher already exists in authors table
+            $stmt = $db->prepare("SELECT id FROM authors WHERE name = ? AND author_type = 'publisher'");
+            $stmt->execute([$publisher]);
+            $existingPublisher = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$existingPublisher) {
+                // Add publisher to authors table
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, author_type, created_at, updated_at)
+                    VALUES (?, 'publisher', NOW(), NOW())
+                ");
+                $stmt->execute([$publisher]);
+                $publisherId = $db->lastInsertId();
+                echo "<p class='success'>Added publisher '$publisher' to authors table (ID: $publisherId)</p>";
+                flushOutput();
+            } else {
+                $publisherId = $existingPublisher['id'];
+                echo "<p class='info'>Publisher '$publisher' already exists in authors table (ID: $publisherId)</p>";
+                flushOutput();
+            }
+        }
+        
+        // Add book author to authors table if not exists
+        if (!empty($author)) {
+            // Check if author already exists in authors table
+            $stmt = $db->prepare("SELECT id FROM authors WHERE name = ? AND author_type = 'book_author'");
+            $stmt->execute([$author]);
+            $existingAuthor = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$existingAuthor) {
+                // Add author to authors table
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, author_type, created_at, updated_at)
+                    VALUES (?, 'book_author', NOW(), NOW())
+                ");
+                $stmt->execute([$author]);
+                $authorId = $db->lastInsertId();
+                echo "<p class='success'>Added book author '$author' to authors table (ID: $authorId)</p>";
+                flushOutput();
+            } else {
+                $authorId = $existingAuthor['id'];
+                echo "<p class='info'>Book author '$author' already exists in authors table (ID: $authorId)</p>";
+                flushOutput();
+            }
+        }
+        
         // Process cover image
         $coverImageUrl = '';
         $imagesDir = "$bookDir/images";
@@ -960,17 +1012,14 @@ function processBook($db, $bookDir) {
         
         // Check if book already exists
         $stmt = $db->prepare("
-            SELECT b.directory_item_id, d.name
-            FROM books b
-            JOIN directory_items d ON b.directory_item_id = d.id
-            WHERE d.name = ?
+            SELECT id FROM directory_items WHERE type = 'book' AND name = ?
         ");
         $stmt->execute([$title]);
-        $existingBook = $stmt->fetch(PDO::FETCH_ASSOC);
+        $existingDirectoryItem = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($existingBook) {
+        if ($existingDirectoryItem) {
             // Update existing book
-            $directoryItemId = $existingBook['directory_item_id'];
+            $directoryItemId = $existingDirectoryItem['id'];
             
             // Update directory item
             $stmt = $db->prepare("
@@ -1059,6 +1108,33 @@ function processBook($db, $bookDir) {
             flushOutput();
         }
         
+        // Create book-author relationships
+        // First, delete any existing relationships
+        $stmt = $db->prepare("DELETE FROM book_authors WHERE directory_item_id = ?");
+        $stmt->execute([$directoryItemId]);
+        
+        // Add book author relationship
+        if ($authorId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'author')
+            ");
+            $stmt->execute([$directoryItemId, $authorId]);
+            echo "<p class='success'>Created book-author relationship for '$title' and author ID $authorId</p>";
+            flushOutput();
+        }
+        
+        // Add book publisher relationship
+        if ($publisherId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'publisher')
+            ");
+            $stmt->execute([$directoryItemId, $publisherId]);
+            echo "<p class='success'>Created book-publisher relationship for '$title' and publisher ID $publisherId</p>";
+            flushOutput();
+        }
+        
         // Commit the transaction
         $db->commit();
         echo "<p class='success'>Book transaction committed successfully</p>";
@@ -1066,7 +1142,7 @@ function processBook($db, $bookDir) {
         
         return [
             'success' => true,
-            'action' => $existingBook ? 'updated' : 'created',
+            'action' => $existingDirectoryItem ? 'updated' : 'created',
             'id' => $directoryItemId
         ];
     } catch (Exception $e) {

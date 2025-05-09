@@ -440,9 +440,15 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <?php
     // Set paths for navigation
     if ($isPublicDir) {
+        // For files in the public directory
         $dashboardPath = '../admin/dashboard.php';
         $contentPrefix = '../admin/content/';
+    } else if (strpos($_SERVER['SCRIPT_FILENAME'], 'diagnostic-dashboard.php') !== false) {
+        // For the diagnostic dashboard page
+        $dashboardPath = '/admin/dashboard.php';
+        $contentPrefix = '/admin/content/';
     } else {
+        // For regular admin pages
         $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
         $contentPrefix = $isContentDir ? '' : 'content/';
     }

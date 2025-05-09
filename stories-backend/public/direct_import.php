@@ -219,6 +219,39 @@ function cleanContentData($db, $contentType, $sourceType = null) {
                 echo "<p class='info'>No existing retail stories found to clean</p>";
                 flushOutput();
             }
+        } elseif ($contentType === 'books') {
+            // Logic for books (as directory items)
+            try {
+                // Get IDs of directory items that are books
+                $dirItemIdsStmt = $db->prepare("SELECT id FROM directory_items WHERE type = 'book'");
+                $dirItemIdsStmt->execute();
+                $dirItemIds = $dirItemIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (!empty($dirItemIds)) {
+                    $dirItemIdList = implode(',', $dirItemIds);
+                    
+                    // Delete book entries
+                    $stmt = $db->prepare("DELETE FROM books WHERE directory_item_id IN ($dirItemIdList)");
+                    $stmt->execute();
+                    $deletedAssociations += $stmt->rowCount();
+                    echo "<p class='info'>Deleted " . $stmt->rowCount() . " book entries</p>";
+                    flushOutput();
+                    
+                    // Delete directory items
+                    $stmt = $db->prepare("DELETE FROM directory_items WHERE id IN ($dirItemIdList)");
+                    $stmt->execute();
+                    $deletedItems = $stmt->rowCount();
+                    echo "<p class='info'>Deleted $deletedItems existing book directory items</p>";
+                    flushOutput();
+                } else {
+                    echo "<p class='info'>No existing book entries found to clean</p>";
+                    flushOutput();
+                }
+            } catch (Exception $e) {
+                echo "<p class='error'>Error cleaning book data: " . $e->getMessage() . "</p>";
+                flushOutput();
+                throw $e; // Re-throw to be caught by the outer try-catch
+            }
         }
         
         // Commit transaction
@@ -811,6 +844,247 @@ function processStory($db, $storyDir) {
     }
 }
 
+// Function to process a book
+function processBook($db, $bookDir) {
+    $mdFile = "$bookDir/index.md";
+    
+    if (!file_exists($mdFile)) {
+        echo "<p class='error'>Markdown file not found: $mdFile</p>";
+        flushOutput();
+        return false;
+    }
+    
+    // Begin transaction for this book
+    $db->beginTransaction();
+    
+    try {
+        // Read markdown file
+        $content = file_get_contents($mdFile);
+        
+        // Extract front matter
+        $pattern = '/^---\s*\n(.*?)\n---\s*\n(.*)/s';
+        if (!preg_match($pattern, $content, $matches)) {
+            echo "<p class='error'>Invalid markdown format in: $mdFile</p>";
+            flushOutput();
+            $db->rollBack();
+            return false;
+        }
+        
+        $frontMatter = $matches[1];
+        $markdownContent = $matches[2];
+        
+        // Parse front matter
+        $data = [];
+        $lines = explode("\n", $frontMatter);
+        foreach ($lines as $line) {
+            if (preg_match('/^(\w+):\s*(.*)$/', $line, $parts)) {
+                $key = $parts[1];
+                $value = trim($parts[2], '"\'');
+                $data[$key] = $value;
+            }
+        }
+        
+        $title = isset($data['title']) ? $data['title'] : basename($bookDir);
+        echo "<h3>Processing Book: $title</h3>";
+        flushOutput();
+        
+        // Extract book metadata
+        $author = isset($data['author']) ? $data['author'] : '';
+        $publisher = isset($data['publisher']) ? $data['publisher'] : '';
+        $isbn = isset($data['isbn']) ? $data['isbn'] : '';
+        $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
+        $publicationDate = isset($data['publication_date']) ? $data['publication_date'] : null;
+        $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;
+        $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
+        $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+        
+        // Process cover image
+        $coverImageUrl = '';
+        $imagesDir = "$bookDir/images";
+        if (is_dir($imagesDir)) {
+            $images = glob("$imagesDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            if (!empty($images)) {
+                $coverImageUrl = '/uploads/books/' . basename($images[0]);
+                
+                // Copy image to uploads directory
+                $uploadsDir = __DIR__ . '/../uploads/books';
+                if (!is_dir($uploadsDir)) {
+                    mkdir($uploadsDir, 0755, true);
+                }
+                
+                copy($images[0], $uploadsDir . '/' . basename($images[0]));
+                echo "<p class='success'>Used image: " . basename($images[0]) . " as cover</p>";
+                flushOutput();
+            }
+        }
+        
+        // Extract description from content
+        $description = '';
+        if (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*|$)/s', $markdownContent, $summaryMatch)) {
+            $description = trim($summaryMatch[1]);
+        } else {
+            // Use first paragraph as description
+            $paragraphs = preg_split('/\n\s*\n/', $markdownContent);
+            $description = trim($paragraphs[0]);
+        }
+        
+        // Generate purchase links
+        $purchaseLinks = [];
+        if (isset($data['amazon_url'])) {
+            $purchaseLinks['amazon'] = $data['amazon_url'];
+        }
+        if (isset($data['goodreads_url'])) {
+            $purchaseLinks['goodreads'] = $data['goodreads_url'];
+        }
+        if (isset($data['publisher_url'])) {
+            $purchaseLinks['publisher'] = $data['publisher_url'];
+        }
+        
+        // Determine URL for the book
+        $url = '';
+        if (isset($data['url'])) {
+            $url = $data['url'];
+        } elseif (!empty($purchaseLinks['amazon'])) {
+            $url = $purchaseLinks['amazon'];
+        } elseif (!empty($purchaseLinks['publisher'])) {
+            $url = $purchaseLinks['publisher'];
+        } else {
+            // Generate a search URL if no specific URL is available
+            $encodedTitle = urlencode($title);
+            $encodedAuthor = urlencode($author);
+            $url = "https://www.google.com/search?q=$encodedTitle+by+$encodedAuthor+book";
+        }
+        
+        // Determine category
+        $category = isset($data['category']) ? $data['category'] : 'general';
+        
+        // Check if book already exists
+        $stmt = $db->prepare("
+            SELECT b.directory_item_id, d.name
+            FROM books b
+            JOIN directory_items d ON b.directory_item_id = d.id
+            WHERE d.name = ?
+        ");
+        $stmt->execute([$title]);
+        $existingBook = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($existingBook) {
+            // Update existing book
+            $directoryItemId = $existingBook['directory_item_id'];
+            
+            // Update directory item
+            $stmt = $db->prepare("
+                UPDATE directory_items
+                SET description = ?, url = ?, category = ?, updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $description,
+                $url,
+                $category,
+                $directoryItemId
+            ]);
+            
+            // Update book
+            $stmt = $db->prepare("
+                UPDATE books
+                SET isbn = ?, isbn13 = ?, author = ?, publisher = ?,
+                    publication_date = ?, page_count = ?, age_range = ?,
+                    reading_level = ?, cover_image_url = ?, purchase_links = ?,
+                    metadata = ?
+                WHERE directory_item_id = ?
+            ");
+            $stmt->execute([
+                $isbn,
+                $isbn13,
+                $author,
+                $publisher,
+                $publicationDate,
+                $pageCount,
+                $ageRange,
+                $readingLevel,
+                $coverImageUrl,
+                json_encode($purchaseLinks),
+                json_encode($data),
+                $directoryItemId
+            ]);
+            
+            echo "<p class='success'>Updated existing book: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        } else {
+            // Insert into directory_items
+            $now = date('Y-m-d H:i:s');
+            $stmt = $db->prepare("
+                INSERT INTO directory_items (
+                    name, description, url, category, type, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'book', ?, ?)
+            ");
+            
+            $stmt->execute([
+                $title,
+                $description,
+                $url,
+                $category,
+                $now,
+                $now
+            ]);
+            
+            $directoryItemId = $db->lastInsertId();
+            
+            // Insert into books
+            $stmt = $db->prepare("
+                INSERT INTO books (
+                    directory_item_id, isbn, isbn13, author, publisher,
+                    publication_date, page_count, age_range, reading_level,
+                    cover_image_url, purchase_links, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            $stmt->execute([
+                $directoryItemId,
+                $isbn,
+                $isbn13,
+                $author,
+                $publisher,
+                $publicationDate,
+                $pageCount,
+                $ageRange,
+                $readingLevel,
+                $coverImageUrl,
+                json_encode($purchaseLinks),
+                json_encode($data)
+            ]);
+            
+            echo "<p class='success'>Created new book: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        }
+        
+        // Commit the transaction
+        $db->commit();
+        echo "<p class='success'>Book transaction committed successfully</p>";
+        flushOutput();
+        
+        return [
+            'success' => true,
+            'action' => $existingBook ? 'updated' : 'created',
+            'id' => $directoryItemId
+        ];
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        if ($db->inTransaction()) {
+            $db->rollBack();
+            echo "<p class='error'>Transaction rolled back</p>";
+            flushOutput();
+        }
+        echo "<p class='error'>Error processing book: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
 // Set page variables for header
 $pageTitle = 'Import Tool';
 $currentPage = 'import';
@@ -836,6 +1110,7 @@ require_once '../admin/includes/header.php';
                                 <option value="retail_stories">Retail Publisher Stories</option>
                                 <option value="games">Games</option>
                                 <option value="artwork">Artwork</option>
+                                <option value="books">Recommended Books</option>
                             </select>
                         </div>
                         
@@ -991,6 +1266,26 @@ require_once '../admin/includes/header.php';
                                             }
                                         }
                                     }
+                                } elseif ($contentType === 'books') {
+                                    $wpDir = __DIR__ . '/../_wp migration/wp-md/custom/book';
+                                    
+                                    // Fallback paths for books
+                                    $fallbackPaths = [
+                                        __DIR__ . '/../_wp migration/wp-md/custom/book',
+                                        __DIR__ . '/../_wp migration/wp-md/custom/books',
+                                        __DIR__ . '/../_wp migration/wp-md/pages/books'
+                                    ];
+                                    
+                                    if (!is_dir($wpDir)) {
+                                        foreach ($fallbackPaths as $path) {
+                                            if (is_dir($path)) {
+                                                $wpDir = $path;
+                                                echo "<p class='info'>Using alternate WordPress export directory for books: $wpDir</p>";
+                                                flushOutput();
+                                                break;
+                                            }
+                                        }
+                                    }
                                 }
                                 
                                 if (!is_dir($wpDir)) {
@@ -1083,6 +1378,84 @@ require_once '../admin/includes/header.php';
                                             echo "</ul>";
                                             
                                             echo "<p>Check the <a href='/admin/stories'>Stories Admin</a> to verify the imported content.</p>";
+                                            flushOutput();
+                                        }
+                                    } elseif ($contentType === 'books') {
+                                        // Get all book directories
+                                        $bookDirs = [];
+                                        try {
+                                            $bookDirs = array_filter(glob("$wpDir/*"), 'is_dir');
+                                            echo "<p>Found " . count($bookDirs) . " potential book directories</p>";
+                                            flushOutput();
+                                            
+                                            // If no directories found, try recursive search
+                                            if (count($bookDirs) === 0) {
+                                                echo "<p class='info'>No book directories found at top level, searching recursively...</p>";
+                                                flushOutput();
+                                                
+                                                $iterator = new RecursiveIteratorIterator(
+                                                    new RecursiveDirectoryIterator($wpDir, RecursiveDirectoryIterator::SKIP_DOTS)
+                                                );
+                                                
+                                                foreach ($iterator as $file) {
+                                                    if ($file->isFile() && $file->getFilename() === 'index.md') {
+                                                        $bookDirs[] = dirname($file->getPathname());
+                                                    }
+                                                }
+                                                
+                                                echo "<p>Found " . count($bookDirs) . " book directories through recursive search</p>";
+                                                flushOutput();
+                                            }
+                                        } catch (Exception $e) {
+                                            echo "<p class='error'>Error scanning directories: " . $e->getMessage() . "</p>";
+                                            flushOutput();
+                                        }
+                                        
+                                        if (count($bookDirs) === 0) {
+                                            echo "<p class='error'>No book directories found. Import aborted.</p>";
+                                            flushOutput();
+                                        } else {
+                                            // Stats
+                                            $stats = [
+                                                'created' => 0,
+                                                'updated' => 0,
+                                                'skipped' => 0,
+                                                'errors' => 0
+                                            ];
+                                            
+                                            // Process each book
+                                            foreach ($bookDirs as $bookDir) {
+                                                try {
+                                                    $result = processBook($db, $bookDir);
+                                                    
+                                                    if ($result && $result['success']) {
+                                                        $stats[$result['action']]++;
+                                                    } else {
+                                                        $stats['errors']++;
+                                                    }
+                                                } catch (Exception $e) {
+                                                    echo "<p class='error'>Unexpected error processing book directory '$bookDir': " . $e->getMessage() . "</p>";
+                                                    flushOutput();
+                                                    $stats['errors']++;
+                                                    // Continue with next book
+                                                    continue;
+                                                }
+                                                
+                                                // Add a small delay to prevent server overload
+                                                usleep(100000); // 0.1 second
+                                            }
+                                            
+                                            // Display summary
+                                            echo "<h3>Import Complete!</h3>";
+                                            echo "<p class='success'>Summary:</p>";
+                                            echo "<ul>";
+                                            echo "<li>Created: {$stats['created']} books</li>";
+                                            echo "<li>Updated: {$stats['updated']} books</li>";
+                                            echo "<li>Skipped: {$stats['skipped']} books</li>";
+                                            echo "<li>Errors: {$stats['errors']} books</li>";
+                                            echo "</ul>";
+                                            
+                                            echo "<p>Check the <a href='/admin/directory'>Directory Admin</a> to verify the imported content.</p>";
                                             flushOutput();
                                         }
                                     } else {

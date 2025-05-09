@@ -3,12 +3,7 @@
  * Enhanced Direct Import Tool
  * 
  * A comprehensive tool to import content with proper handling of
- * media files, authors, and tags. This improved version:
- * 
- * 1. Only deletes data related to the specific content being imported
- * 2. Supports multiple content types (stories, retail publisher stories, games, etc.)
- * 3. Uses the admin header/footer template for consistent UX
- * 4. Provides better error handling and reporting
+ * media files, authors, and tags.
  */
 
 // Include auth check
@@ -16,9 +11,6 @@ require_once '../admin/includes/auth-check.php';
 
 // Include database connection
 require_once '../admin/includes/db-connect.php';
-
-// Include book processing functions
-require_once 'process_book_functions.php';
 
 // Basic error handling and setup
 ini_set('display_errors', 1);
@@ -28,40 +20,6 @@ ini_set('output_buffering', 'off');
 ini_set('implicit_flush', true);
 ob_implicit_flush(true);
 
-// Add error logging
-error_log("Direct Import Script Started");
-
-// Helper function to check if required file exists
-function checkRequiredFile($file) {
-    if (!file_exists($file)) {
-        error_log("Critical: Required file not found: $file");
-        echo "<div style='color:red; font-weight:bold;'>Critical: Required file not found: $file</div>";
-        return false;
-    }
-    return true;
-}
-
-// Check required files
-$authCheck = '../admin/includes/auth-check.php';
-$dbConnect = '../admin/includes/db-connect.php';
-$header = '../admin/includes/header.php';
-$footer = '../admin/includes/footer.php';
-
-$filesExist =
-    checkRequiredFile($authCheck) &&
-    checkRequiredFile($dbConnect) &&
-    checkRequiredFile($header) &&
-    checkRequiredFile($footer);
-
-if (!$filesExist) {
-    echo "<div style='margin: 30px; padding: 20px; border: 1px solid #dc3545; background: #f8d7da; color: #721c24;'>";
-    echo "<h2>Error: Missing Required Files</h2>";
-    echo "<p>The import tool cannot run because one or more required files are missing.</p>";
-    echo "<p>Please check the server logs for details.</p>";
-    echo "</div>";
-    exit;
-}
-
 // Function to flush output buffer to ensure real-time progress display
 function flushOutput() {
     if (ob_get_level() > 0) {
@@ -70,426 +28,496 @@ function flushOutput() {
     }
 }
 
-// Function to clean data for specific content type
-function cleanContentData($db, $contentType, $sourceType = null) {
-    try {
-        // Begin transaction
-        $db->beginTransaction();
-        
-        // Default to 'child' if no source type provided
-        $sourceType = $sourceType ?: 'child';
-        
-        // Initialize counters for reporting
-        $deletedAssociations = 0;
-        $deletedItems = 0;
-        $deletedMedia = 0;
-        
-        if ($contentType === 'books') {
-            // For books, we need to clean directory_items with type 'book'
-            echo "<h2>Cleaning Existing Data</h2>";
-            flushOutput();
-            
-            // Get directory items IDs of book type
-            $idStmt = $db->prepare("SELECT id FROM directory_items WHERE type = 'book'");
-            $idStmt->execute();
-            $itemIds = $idStmt->fetchAll(PDO::FETCH_COLUMN);
-            
-            if (!empty($itemIds)) {
-                $itemIdList = implode(',', $itemIds);
-                
-                // Delete book entries
-                $stmt = $db->prepare("DELETE FROM books WHERE directory_item_id IN ($itemIdList)");
-                $stmt->execute();
-                $deletedItems = $stmt->rowCount();
-                echo "<p class='info'>Deleted $deletedItems book entries</p>";
-                flushOutput();
-                
-                // Delete book_authors associations
-                $stmt = $db->prepare("DELETE FROM book_authors WHERE directory_item_id IN ($itemIdList)");
-                $stmt->execute();
-                $bookAuthorCount = $stmt->rowCount();
-                $deletedAssociations += $bookAuthorCount;
-                echo "<p class='info'>Deleted $bookAuthorCount book author relationships</p>";
-                flushOutput();
-                
-                // Delete directory items
-                $stmt = $db->prepare("DELETE FROM directory_items WHERE id IN ($itemIdList)");
-                $stmt->execute();
-                $dirItemCount = $stmt->rowCount();
-                echo "<p class='info'>Deleted $dirItemCount existing book directory items</p>";
-                flushOutput();
-            } else {
-                echo "<p class='info'>No existing books found to clean</p>";
-                flushOutput();
-            }
-        } 
-        
-        // Commit transaction
-        $db->commit();
-        
-        echo "<div class='alert alert-success'>";
-        echo "<h3>Database cleaned successfully:</h3>";
-        echo "<p>Removed $deletedItems items, $deletedAssociations associations, and $deletedMedia media files</p>";
-        echo "</div>";
+// Function to process a book
+function processBook($db, $bookDir) {
+    $mdFile = "$bookDir/index.md";
+    
+    if (!file_exists($mdFile)) {
+        echo "<p class='error'>Markdown file not found: $mdFile</p>";
         flushOutput();
-        
-        return true;
-    } catch (Exception $e) {
-        // Rollback on error
-        if ($db->inTransaction()) {
-            $db->rollBack();
-        }
-        
-        echo "<div class='alert alert-danger'>";
-        echo "<h3>Error cleaning database:</h3>";
-        echo "<p>" . $e->getMessage() . "</p>";
-        echo "</div>";
-        flushOutput();
-        
         return false;
     }
-}
-
-/**
- * Convert various date formats to MySQL YYYY-MM-DD format
- *
- * @param string|null $dateStr The date string to convert
- * @return string|null MySQL formatted date or null if conversion fails
- */
-function convertToMySQLDate($dateStr) {
-    if (empty($dateStr)) {
-        return null;
-    }
     
-    // Store original for debugging
-    $originalDate = $dateStr;
+    // Begin transaction for this book
+    $db->beginTransaction();
     
-    // Clean up the date string
-    $dateStr = trim($dateStr);
-    
-    // Case 1: Just a year (e.g., "1975", "1937")
-    if (preg_match('/^\d{4}$/', $dateStr)) {
-        return $dateStr . '-01-01'; // Add month and day
-    }
-    
-    // Case 2: Year-month (e.g., "2003-05")
-    if (preg_match('/^(\d{4})-(\d{1,2})$/', $dateStr, $matches)) {
-        return $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
-    }
-    
-    // Case 3: Month Year (e.g., "May 2003", "February 2012", "September 2013")
-    if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/i', $dateStr, $matches)) {
-        $month = $matches[1];
-        $year = $matches[2];
-        
-        // Map of month names to numbers
-        $months = array(
-            'january' => '01', 'february' => '02', 'march' => '03',
-            'april' => '04', 'may' => '05', 'june' => '06',
-            'july' => '07', 'august' => '08', 'september' => '09',
-            'october' => '10', 'november' => '11', 'december' => '12'
-        );
-        
-        $monthLower = strtolower($month);
-        if (isset($months[$monthLower])) {
-            return $year . '-' . $months[$monthLower] . '-01';
-        }
-        
-        // If month name not found in map, try strtotime as fallback
-        try {
-            $timestamp = strtotime("$month 1, $year");
-            if ($timestamp !== false) {
-                return date('Y-m-d', $timestamp);
-            }
-        } catch (Exception $e) {
-            // Ignore and use default
-        }
-        
-        // If all else fails, default to January of that year
-        return $year . '-01-01';
-    }
-    
-    // Case 4: Already in YYYY-MM-DD format
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
-        // Validate the date
-        try {
-            $date = new DateTime($dateStr);
-            return $date->format('Y-m-d');
-        } catch (Exception $e) {
-            // Invalid date, try to extract just the year
-            if (preg_match('/(\d{4})/', $dateStr, $matches)) {
-                return $matches[1] . '-01-01';
-            }
-            return null;
-        }
-    }
-    
-    // Case 5: Try to extract month and year in various formats
-    if (preg_match('/([a-zA-Z]+)[^\d]*(\d{4})/i', $dateStr, $matches)) {
-        $month = $matches[1];
-        $year = $matches[2];
-        
-        // Map of month names to numbers
-        $months = array(
-            'january' => '01', 'february' => '02', 'march' => '03',
-            'april' => '04', 'may' => '05', 'june' => '06',
-            'july' => '07', 'august' => '08', 'september' => '09',
-            'october' => '10', 'november' => '11', 'december' => '12',
-            // Add abbreviated months
-            'jan' => '01', 'feb' => '02', 'mar' => '03',
-            'apr' => '04', 'jun' => '06', 'jul' => '07',
-            'aug' => '08', 'sep' => '09', 'sept' => '09',
-            'oct' => '10', 'nov' => '11', 'dec' => '12'
-        );
-        
-        $monthLower = strtolower($month);
-        if (isset($months[$monthLower])) {
-            echo "<p class='info'>Converting date: Found month '$month' ($monthLower) = {$months[$monthLower]}, year = $year</p>";
-            flushOutput();
-            return $year . '-' . $months[$monthLower] . '-01';
-        }
-    }
-    
-    // Case 6: Just try to find a year as last resort
-    if (preg_match('/(\d{4})/', $dateStr, $matches)) {
-        $year = $matches[1];
-        echo "<p class='info'>Converting date: Extracted year $year from '$dateStr'</p>";
-        flushOutput();
-        return $year . '-01-01';
-    }
-    
-    // Case 7: Other formats that PHP's strtotime can handle
     try {
-        $timestamp = strtotime($dateStr);
-        if ($timestamp !== false) {
-            $result = date('Y-m-d', $timestamp);
-            echo "<p class='info'>Converting date: Successfully parsed '$dateStr' to '$result' using strtotime</p>";
-            flushOutput();
-            return $result;
-        }
-    } catch (Exception $e) {
-        echo "<p class='warning'>Converting date: Failed to parse '$dateStr' using strtotime: " . $e->getMessage() . "</p>";
-        flushOutput();
-    }
-    
-    // If we get here, all conversion attempts failed
-    echo "<p class='error'>Converting date: Unable to parse date string '$dateStr' into MySQL format</p>";
-    flushOutput();
-    
-    // If all else fails, extract the year if possible
-    if (preg_match('/(\d{4})/', $dateStr, $matches)) {
-        return $matches[1] . '-01-01';
-    }
-    
-    // If all else fails, return null
-    return null;
-}
-
-// Set page variables for header
-$pageTitle = 'Import Tool';
-$currentPage = 'import';
-$pageDescription = '';
-
-// Include header
-require_once '../admin/includes/header.php';
-?>
-
-<div class="container">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h2 class="mb-0">Content Import Tool</h2>
-                </div>
-                <div class="card-body">
-                    <?php if (isset($_POST['import']) && !empty($_POST['content_type']) && !empty($_POST['source_path'])): ?>
-                        <?php
-                        $contentType = $_POST['content_type'];
-                        $sourcePath = $_POST['source_path'];
-                        $sourceType = $_POST['source_type'] ?? 'child';
-                        $cleanFirst = isset($_POST['clean_first']) && $_POST['clean_first'] === '1';
-                        
-                        // Start output section for import results
-                        echo '<div class="import-results">';
-                        echo '<h2>Starting Import: ' . htmlspecialchars($contentType) . ' (' . htmlspecialchars($sourceType) . ')</h2>';
-                        flushOutput();
-                        
-                        // Clean existing data if requested
-                        if ($cleanFirst) {
-                            cleanContentData($db, $contentType, $sourceType);
-                        }
-                        
-                        // Process the import based on content type
-                        echo '<h2>Importing ' . htmlspecialchars($contentType) . ' (' . htmlspecialchars($sourceType) . ')</h2>';
-                        echo '<p class="text-muted">Import source: ' . htmlspecialchars($sourcePath) . '</p>';
-                        flushOutput();
-                        
-                        // Statistics counters
-                        $created = 0;
-                        $updated = 0;
-                        $skipped = 0;
-                        $errors = 0;
-                        
-                        if ($contentType === 'books') {
-                            // Get list of potential book directories
-                            if (!is_dir($sourcePath)) {
-                                echo '<div class="alert alert-danger">Source path is not a valid directory: ' . htmlspecialchars($sourcePath) . '</div>';
-                                flushOutput();
-                            } else {
-                                $bookDirs = glob("$sourcePath/*", GLOB_ONLYDIR);
-                                
-                                echo '<p>Found ' . count($bookDirs) . ' potential book directories</p>';
-                                flushOutput();
-                                
-                                // Process each book directory
-                                foreach ($bookDirs as $bookDir) {
-                                    $result = processBook($db, $bookDir);
-                                    
-                                    if ($result) {
-                                        if ($result['success']) {
-                                            if ($result['action'] === 'created') {
-                                                $created++;
-                                            } else {
-                                                $updated++;
-                                            }
-                                        } else {
-                                            $errors++;
-                                        }
-                                    } else {
-                                        $skipped++;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Display summary
-                        echo '<h2>Import Complete!</h2>';
-                        echo '<div class="alert alert-info">';
-                        echo '<h4>Summary:</h4>';
-                        echo '<ul>';
-                        echo '<li>Created: ' . $created . ' ' . htmlspecialchars($contentType) . '</li>';
-                        echo '<li>Updated: ' . $updated . ' ' . htmlspecialchars($contentType) . '</li>';
-                        echo '<li>Skipped: ' . $skipped . ' ' . htmlspecialchars($contentType) . '</li>';
-                        echo '<li>Errors: ' . $errors . ' ' . htmlspecialchars($contentType) . '</li>';
-                        echo '</ul>';
-                        echo '</div>';
-                        flushOutput();
-                        
-                        echo '</div>'; // End import-results div
-                        
-                        // Add button to return to form
-                        echo '<p class="mt-4"><a href="direct_import.php" class="btn btn-primary">Return to Import Form</a></p>';
-                        flushOutput();
-                        ?>
-                    <?php else: ?>
-                        <form method="post" class="needs-validation" novalidate>
-                            <div class="mb-3">
-                                <label for="content_type" class="form-label">Content Type</label>
-                                <select name="content_type" id="content_type" class="form-control" required>
-                                    <option value="">Select Content Type</option>
-                                    <option value="books">Books</option>
-                                </select>
-                                <div class="invalid-feedback">Please select a content type.</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="source_type" class="form-label">Source Type</label>
-                                <select name="source_type" id="source_type" class="form-control" required>
-                                    <option value="retail">Retail Publisher</option>
-                                </select>
-                                <div class="invalid-feedback">Please select a source type.</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="source_path" class="form-label">Source Path</label>
-                                <input type="text" name="source_path" id="source_path" class="form-control" required
-                                       value="/home/stories/api.storiesfromtheweb.org/public/../_wp migration/wp-md/custom/book">
-                                <div class="form-text">Directory containing content markdown files</div>
-                                <div class="invalid-feedback">Please enter a valid source path.</div>
-                            </div>
-                            
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" name="clean_first" id="clean_first" class="form-check-input" value="1" checked>
-                                <label class="form-check-label" for="clean_first">Clean existing data before import</label>
-                            </div>
-                            
-                            <button type="submit" name="import" class="btn btn-primary">Import Content</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .import-results {
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        max-height: 600px;
-        overflow-y: auto;
-    }
-    
-    .import-results p {
-        margin-bottom: 0.5rem;
-        padding: 0.25rem 0;
-    }
-    
-    .import-results .success {
-        color: #0c5460;
-        background-color: #d1ecf1;
-        padding: 0.5rem;
-        border-radius: 3px;
-        border-left: 3px solid #0c5460;
-    }
-    
-    .import-results .info {
-        color: #383d41;
-        background-color: #e2e3e5;
-        padding: 0.5rem;
-        border-radius: 3px;
-        border-left: 3px solid #383d41;
-    }
-    
-    .import-results .warning {
-        color: #856404;
-        background-color: #fff3cd;
-        padding: 0.5rem;
-        border-radius: 3px;
-        border-left: 3px solid #856404;
-    }
-    
-    .import-results .error {
-        color: #721c24;
-        background-color: #f8d7da;
-        padding: 0.5rem;
-        border-radius: 3px;
-        border-left: 3px solid #721c24;
-    }
-    
-    .import-results h2, .import-results h3 {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #dee2e6;
-    }
-</style>
-
-<script>
-    // Form validation script
-    (function() {
-        'use strict';
+        // Read markdown file
+        $content = file_get_contents($mdFile);
         
-        // Add event listener for form submission
-        document.querySelector('.needs-validation').addEventListener('submit', function(event) {
-            if (!this.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
+        // Extract front matter
+        $pattern = '/^---\s*\n(.*?)\n---\s*\n(.*)/s';
+        if (!preg_match($pattern, $content, $matches)) {
+            echo "<p class='error'>Invalid markdown format in: $mdFile</p>";
+            flushOutput();
+            $db->rollBack();
+            return false;
+        }
+        
+        $frontMatter = $matches[1];
+        $markdownContent = $matches[2];
+        
+        // Parse front matter
+        $data = [];
+        $lines = explode("\n", $frontMatter);
+        foreach ($lines as $line) {
+            if (preg_match('/^(\w+):\s*(.*)$/', $line, $parts)) {
+                $key = $parts[1];
+                $value = trim($parts[2], '"\'');
+                $data[$key] = $value;
+            }
+        }
+        
+        $title = isset($data['title']) ? $data['title'] : basename($bookDir);
+        echo "<h3>Processing Book: $title</h3>";
+        flushOutput();
+        
+        // Extract book metadata from front matter
+        $author = isset($data['author']) ? $data['author'] : '';
+        $publisher = isset($data['publisher']) ? $data['publisher'] : '';
+        $isbn = isset($data['isbn']) ? $data['isbn'] : '';
+        $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
+        
+        // Get publication date string from available sources
+        $pubDateStr = null;
+        
+        echo "<p class='info'>Checking front matter for publication_date: " . (isset($data['publication_date']) ? "'{$data['publication_date']}'" : "Not set") . "</p>";
+        flushOutput();
+        
+        if (isset($data['publication_date'])) {
+            $pubDateStr = $data['publication_date'];
+        }
+        
+        // Extract page count
+        $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;
+        
+        // Extract age range
+        $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
+        
+        // Extract reading level
+        $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+        
+        // Extract plot or summary info
+        $plotInfo = '';
+        if (isset($data['plot'])) {
+            $plotInfo = $data['plot'];
+        } elseif (isset($data['summary'])) {
+            $plotInfo = $data['summary'];
+        }
+        
+        // Extract genre and series data
+        $genre = isset($data['genre']) ? $data['genre'] : '';
+        $series = isset($data['series']) ? $data['series'] : '';
+        
+        // Extract enhanced data for JSON storage
+        $enhancedData = [];
+        foreach ($data as $key => $value) {
+            // Skip keys we're already handling explicitly
+            if (!in_array($key, ['title', 'author', 'publisher', 'isbn', 'isbn13', 'publication_date', 'page_count', 'age_range', 'reading_level', 'plot', 'summary', 'genre', 'series'])) {
+                $enhancedData[$key] = $value;
+            }
+        }
+        
+        // Process publisher as an author with role 'publisher'
+        $publisherId = null;
+        if (!empty($publisher)) {
+            $publisherInfo = [
+                'name' => $publisher,
+                'type' => 'publisher'
+            ];
+            
+            // Check if publisher exists by name
+            $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
+            $stmt->execute([$publisher]);
+            $publisherResult = $stmt->fetch();
+            
+            if ($publisherResult) {
+                $publisherId = $publisherResult['id'];
+                echo "<p class='info'>Publisher '" . htmlspecialchars($publisher) . "' already exists in authors table (ID: $publisherId)</p>";
+                flushOutput();
+            } else {
+                // Add new publisher
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, type, slug, created_at, updated_at)
+                    VALUES (?, 'publisher', ?, NOW(), NOW())
+                ");
+                
+                // Generate slug
+                $publisherSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $publisher));
+                $publisherSlug = trim($publisherSlug, '-');
+                
+                $stmt->execute([$publisher, $publisherSlug]);
+                $publisherId = $db->lastInsertId();
+                echo "<p class='success'>Added publisher '" . htmlspecialchars($publisher) . "' to authors table (ID: $publisherId)</p>";
+                flushOutput();
+            }
+        }
+        
+        // Process book author
+        $authorId = null;
+        $authorName = !empty($author) ? $author : 'Unknown Author';
+        
+        // Prefix with ** to identify as book author in the system
+        if (strpos($authorName, '**') !== 0) {
+            $authorName = "** $authorName";
+        }
+        
+        $authorInfo = [
+            'name' => $authorName,
+            'type' => 'book_author'
+        ];
+        
+        // Check if author exists by name
+        $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
+        $stmt->execute([$authorName]);
+        $authorResult = $stmt->fetch();
+        
+        if ($authorResult) {
+            $authorId = $authorResult['id'];
+            echo "<p class='info'>Book author '" . htmlspecialchars($authorName) . "' already exists in authors table (ID: $authorId)</p>";
+            flushOutput();
+        } else {
+            // Add new author
+            $stmt = $db->prepare("
+                INSERT INTO authors (name, type, slug, created_at, updated_at)
+                VALUES (?, 'book_author', ?, NOW(), NOW())
+            ");
+            
+            // Generate slug
+            $authorSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorName));
+            $authorSlug = trim($authorSlug, '-');
+            
+            $stmt->execute([$authorName, $authorSlug]);
+            $authorId = $db->lastInsertId();
+            echo "<p class='success'>Added book author '" . htmlspecialchars($authorName) . "' to authors table (ID: $authorId)</p>";
+            flushOutput();
+        }
+        
+        // Process cover image and add to media table
+        $coverImageUrl = '';
+        $mediaId = null;
+        
+        // Look for images in multiple potential locations
+        $imagePaths = [];
+        
+        // Check in the main directory
+        $imagePatterns = [
+            "$bookDir/*.{jpg,jpeg,png,gif}",                // Root directory
+            "$bookDir/images/*.{jpg,jpeg,png,gif}",         // images subdirectory
+            "$bookDir/image/*.{jpg,jpeg,png,gif}",          // image subdirectory
+            "$bookDir/cover/*.{jpg,jpeg,png,gif}",          // cover subdirectory
+            "$bookDir/covers/*.{jpg,jpeg,png,gif}",         // covers subdirectory
+            "$bookDir/media/*.{jpg,jpeg,png,gif}"           // media subdirectory
+        ];
+        
+        foreach ($imagePatterns as $pattern) {
+            $matches = glob($pattern, GLOB_BRACE);
+            if (!empty($matches)) {
+                $imagePaths = array_merge($imagePaths, $matches);
+            }
+        }
+        
+        echo "<p class='info'>Found " . count($imagePaths) . " potential images for book: $title</p>";
+        flushOutput();
+        
+        if (!empty($imagePaths)) {
+            // Sort by filename to prioritize cover images
+            usort($imagePaths, function($a, $b) {
+                $aName = strtolower(basename($a));
+                $bName = strtolower(basename($b));
+                
+                // Prioritize files with "cover" in the name
+                $aHasCover = strpos($aName, 'cover') !== false;
+                $bHasCover = strpos($bName, 'cover') !== false;
+                
+                if ($aHasCover && !$bHasCover) return -1;
+                if (!$aHasCover && $bHasCover) return 1;
+                
+                return strcmp($aName, $bName);
+            });
+            
+            $imageFile = $imagePaths[0];
+            $imageName = basename($imageFile);
+            
+            echo "<p class='info'>Selected image: $imageName from path: $imageFile</p>";
+            flushOutput();
+            
+            // Copy image to uploads directory
+            $uploadsDir = __DIR__ . '/../uploads/books';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
             }
             
-            this.classList.add('was-validated');
-        }, false);
-    })();
-</script>
-
-<?php require_once '../admin/includes/footer.php'; ?>
+            $destinationPath = $uploadsDir . '/' . $imageName;
+            copy($imageFile, $destinationPath);
+            
+            // Add image to media table
+            $fileSize = filesize($imageFile);
+            $fileType = mime_content_type($imageFile);
+            $relativePath = '/uploads/books/' . $imageName;
+            
+            $stmt = $db->prepare("
+                INSERT INTO media (
+                    filename, file_path, file_size, file_type,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, NOW(), NOW())
+            ");
+            
+            // Fix: Only execute once to avoid duplicate inserts
+            $stmt->execute([
+                $imageName,
+                $relativePath,
+                $fileSize,
+                $fileType
+            ]);
+            
+            $mediaId = $db->lastInsertId();
+            $coverImageUrl = $relativePath;
+            
+            echo "<p class='success'>Added image: $imageName to media table (ID: $mediaId)</p>";
+            flushOutput();
+        }
+        
+        // Extract description from content
+        $description = '';
+        if (!empty($plotInfo)) {
+            // Use plot information as description
+            $description = $plotInfo;
+        } elseif (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*|$)/s', $markdownContent, $summaryMatch)) {
+            $description = trim($summaryMatch[1]);
+        } else {
+            // Use first paragraph as description
+            $paragraphs = preg_split('/\n\s*\n/', $markdownContent);
+            $description = trim($paragraphs[0]);
+        }
+        
+        // Generate purchase links
+        $purchaseLinks = [];
+        
+        // Add to amazon if ISBN is available
+        if (!empty($isbn)) {
+            $purchaseLinks['amazon'] = "https://www.amazon.com/dp/$isbn/";
+        } elseif (!empty($isbn13)) {
+            $purchaseLinks['amazon'] = "https://www.amazon.com/dp/$isbn13/";
+        }
+        
+        // Add to goodreads if ISBN is available
+        if (!empty($isbn)) {
+            $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/$isbn";
+        } elseif (!empty($isbn13)) {
+            $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/$isbn13";
+        }
+        
+        // Generate slug from title
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+        $slug = trim($slug, '-');
+        
+        // Check if directory item already exists
+        $existingDirectoryItem = null;
+        $stmt = $db->prepare("SELECT * FROM directory_items WHERE slug = ? OR title = ?");
+        $stmt->execute([$slug, $title]);
+        $existingDirectoryItem = $stmt->fetch();
+        
+        $directoryItemId = null;
+        $action = 'created';
+        
+        if ($existingDirectoryItem) {
+            $directoryItemId = $existingDirectoryItem['id'];
+            $action = 'updated';
+            
+            // Update existing directory item
+            $stmt = $db->prepare("
+                UPDATE directory_items SET
+                    title = ?,
+                    description = ?,
+                    website_url = ?,
+                    category_id = ?,
+                    slug = ?,
+                    cover_url = ?,
+                    is_published = 1,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $title,
+                $description,
+                '',  // website_url
+                1,   // category_id (default to books category)
+                $slug,
+                $coverImageUrl,
+                $directoryItemId
+            ]);
+            
+            echo "<p class='success'>Updated existing directory item: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        } else {
+            // Create new directory item
+            $stmt = $db->prepare("
+                INSERT INTO directory_items (
+                    title, description, website_url, category_id, slug, cover_url, is_published, published_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), ?, ?)
+            ");
+            
+            $now = date('Y-m-d H:i:s');
+            
+            $stmt->execute([
+                $title,
+                $description,
+                '',  // website_url
+                1,   // category_id (default to books category)
+                $slug,
+                $coverImageUrl,
+                $now,
+                $now
+            ]);
+            
+            $directoryItemId = $db->lastInsertId();
+            echo "<p class='success'>Created new directory item: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        }
+        
+        // Check if book already exists
+        $stmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
+        $stmt->execute([$directoryItemId]);
+        $existingBook = $stmt->fetch();
+        
+        if ($existingBook) {
+            // Update existing book
+            $stmt = $db->prepare("
+                UPDATE books SET
+                    isbn = ?,
+                    isbn13 = ?,
+                    author = ?,
+                    publisher = ?,
+                    publication_date = ?,
+                    page_count = ?,
+                    age_range = ?,
+                    reading_level = ?,
+                    cover_image_url = ?,
+                    purchase_links = ?,
+                    metadata = ?,
+                    genre = ?,
+                    series = ?,
+                    updated_at = NOW()
+                WHERE directory_item_id = ?
+            ");
+            
+            // Convert publication date to MySQL format
+            $publicationDate = $pubDateStr ?: null;
+            $formattedDate = convertToMySQLDate($publicationDate);
+            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            flushOutput();
+            
+            $stmt->execute([
+                $isbn,
+                $isbn13,
+                $author,
+                $publisher,
+                $formattedDate,
+                $pageCount,
+                $ageRange,
+                $readingLevel,
+                $coverImageUrl,
+                json_encode($purchaseLinks),
+                json_encode($enhancedData),
+                $genre,
+                $series,
+                $directoryItemId
+            ]);
+            
+            echo "<p class='success'>Updated book data for: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        } else {
+            // Create new book
+            $stmt = $db->prepare("
+                INSERT INTO books (
+                    directory_item_id, isbn, isbn13, author, publisher, publication_date,
+                    page_count, age_range, reading_level, cover_image_url, purchase_links,
+                    metadata, genre, series, created_at, updated_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, NOW(), NOW()
+                )
+            ");
+            
+            // Convert publication date to MySQL format
+            $publicationDate = $pubDateStr ?: null;
+            $formattedDate = convertToMySQLDate($publicationDate);
+            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            flushOutput();
+            
+            $stmt->execute([
+                $directoryItemId,
+                $isbn,
+                $isbn13,
+                $author,
+                $publisher,
+                $formattedDate, // Use the properly converted date
+                $pageCount,
+                $ageRange,
+                $readingLevel,
+                $coverImageUrl,
+                json_encode($purchaseLinks),
+                json_encode($enhancedData),
+                $genre,
+                $series
+            ]);
+            
+            echo "<p class='success'>Created new book: $title (ID: $directoryItemId)</p>";
+            flushOutput();
+        }
+        
+        // Create book-author relationships
+        // First, delete any existing relationships
+        $stmt = $db->prepare("DELETE FROM book_authors WHERE directory_item_id = ?");
+        $stmt->execute([$directoryItemId]);
+        
+        // Add book author relationship
+        if ($authorId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'author')
+            ");
+            $stmt->execute([$directoryItemId, $authorId]);
+            echo "<p class='success'>Created book-author relationship for '$title' and author ID $authorId</p>";
+            flushOutput();
+        }
+        
+        // Add book publisher relationship
+        if ($publisherId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'publisher')
+            ");
+            $stmt->execute([$directoryItemId, $publisherId]);
+            echo "<p class='success'>Created book-publisher relationship for '$title' and publisher ID $publisherId</p>";
+            flushOutput();
+        }
+        
+        // Commit the transaction
+        $db->commit();
+        echo "<p class='success'>Book transaction committed successfully</p>";
+        flushOutput();
+        
+        return [
+            'success' => true,
+            'action' => $existingDirectoryItem ? 'updated' : 'created',
+            'id' => $directoryItemId
+        ];
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        if ($db->inTransaction()) {
+            $db->rollBack();
+            echo "<p class='error'>Transaction rolled back</p>";
+            flushOutput();
+        }
+        echo "<p class='error'>Error processing book: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}

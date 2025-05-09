@@ -98,8 +98,16 @@ class AuthorPreview {
 
             try {
                 // Try to fetch author data via AJAX
-                console.log('Fetching author data from:', `../handlers/get-author.php?id=${authorId}`);
-                const response = await fetch(`../handlers/get-author.php?id=${authorId}`);
+                // Use the correct path based on context
+                let apiUrl;
+                if (window.IS_DASHBOARD) {
+                    apiUrl = `handlers/get-author.php?id=${authorId}`;
+                } else {
+                    apiUrl = `../handlers/get-author.php?id=${authorId}`;
+                }
+                
+                console.log('Fetching author data from:', apiUrl);
+                const response = await fetch(apiUrl);
                 console.log('Response status:', response.status);
                 const data = await response.json();
                 console.log('Response data:', data);
@@ -151,7 +159,7 @@ class AuthorPreview {
         return `
             <div class="author-card">
                 <div class="author-header">
-                    <img src="${author.avatar_url || '../assets/images/default-avatar.svg'}" alt="${author.name}" class="author-avatar">
+                    <img src="${author.avatar_url || (window.IS_DASHBOARD ? 'assets/images/default-avatar.svg' : '../assets/images/default-avatar.svg')}" alt="${author.name}" class="author-avatar">
                     <div class="author-info">
                         <h1 class="author-name">${author.name}</h1>
                         <div class="author-meta">

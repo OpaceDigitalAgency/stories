@@ -73,8 +73,13 @@ class StoryPreview {
             // Show loading indicator
             this.showLoading();
 
-            // Use our direct preview handler instead of trying to load from the frontend
-            const previewUrl = `../handlers/direct-story-preview.php?id=${storyId}`;
+            // Use our direct preview handler with the correct path based on context
+            let previewUrl;
+            if (window.IS_DASHBOARD) {
+                previewUrl = `handlers/direct-story-preview.php?id=${storyId}`;
+            } else {
+                previewUrl = `../handlers/direct-story-preview.php?id=${storyId}`;
+            }
 
             console.log('Loading story preview directly:', previewUrl);
 
@@ -130,7 +135,12 @@ class StoryPreview {
                 const link = document.createElement('link');
                 link.id = 'story-preview-css';
                 link.rel = 'stylesheet';
-                link.href = '../assets/css/story-preview.css';
+                // Use the correct path based on context
+                if (window.IS_DASHBOARD) {
+                    link.href = 'assets/css/story-preview.css'; // From dashboard
+                } else {
+                    link.href = '../assets/css/story-preview.css'; // From content pages
+                }
                 document.head.appendChild(link);
             }
         } else {

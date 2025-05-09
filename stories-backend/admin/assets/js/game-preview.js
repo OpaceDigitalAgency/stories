@@ -74,8 +74,13 @@ class GamePreview {
             // Show loading indicator
             this.showLoading();
 
-            // Use our direct preview handler
-            const previewUrl = `../handlers/direct-game-preview.php?id=${gameId}`;
+            // Use our direct preview handler with the correct path based on context
+            let previewUrl;
+            if (window.IS_DASHBOARD) {
+                previewUrl = `handlers/direct-game-preview.php?id=${gameId}`;
+            } else {
+                previewUrl = `../handlers/direct-game-preview.php?id=${gameId}`;
+            }
 
             console.log('Loading game preview directly:', previewUrl);
 
@@ -131,7 +136,12 @@ class GamePreview {
                 const link = document.createElement('link');
                 link.id = 'game-preview-css';
                 link.rel = 'stylesheet';
-                link.href = '../assets/css/story-preview.css'; // Reuse the same CSS
+                // Use the correct path based on context
+                if (window.IS_DASHBOARD) {
+                    link.href = 'assets/css/story-preview.css'; // From dashboard
+                } else {
+                    link.href = '../assets/css/story-preview.css'; // From content pages
+                }
                 document.head.appendChild(link);
             }
         } else {

@@ -74,8 +74,13 @@ class DirectoryItemPreview {
             // Show loading indicator
             this.showLoading();
 
-            // Use our direct preview handler
-            const previewUrl = `../handlers/direct-directory-item-preview.php?id=${itemId}`;
+            // Use our direct preview handler with the correct path based on context
+            let previewUrl;
+            if (window.IS_DASHBOARD) {
+                previewUrl = `handlers/direct-directory-item-preview.php?id=${itemId}`;
+            } else {
+                previewUrl = `../handlers/direct-directory-item-preview.php?id=${itemId}`;
+            }
 
             console.log('Loading directory item preview directly:', previewUrl);
 
@@ -131,7 +136,12 @@ class DirectoryItemPreview {
                 const link = document.createElement('link');
                 link.id = 'directory-item-preview-css';
                 link.rel = 'stylesheet';
-                link.href = '../assets/css/story-preview.css'; // Reuse the same CSS
+                // Use the correct path based on context
+                if (window.IS_DASHBOARD) {
+                    link.href = 'assets/css/story-preview.css'; // From dashboard
+                } else {
+                    link.href = '../assets/css/story-preview.css'; // From content pages
+                }
                 document.head.appendChild(link);
             }
         } else {

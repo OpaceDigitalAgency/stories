@@ -74,8 +74,13 @@ class PostPreview {
             // Show loading indicator
             this.showLoading();
 
-            // Use our direct preview handler
-            const previewUrl = `../handlers/direct-post-preview.php?id=${postId}`;
+            // Use our direct preview handler with the correct path based on context
+            let previewUrl;
+            if (window.IS_DASHBOARD) {
+                previewUrl = `handlers/direct-post-preview.php?id=${postId}`;
+            } else {
+                previewUrl = `../handlers/direct-post-preview.php?id=${postId}`;
+            }
 
             console.log('Loading post preview directly:', previewUrl);
 
@@ -131,7 +136,12 @@ class PostPreview {
                 const link = document.createElement('link');
                 link.id = 'post-preview-css';
                 link.rel = 'stylesheet';
-                link.href = '../assets/css/story-preview.css'; // Reuse the same CSS
+                // Use the correct path based on context
+                if (window.IS_DASHBOARD) {
+                    link.href = 'assets/css/story-preview.css'; // From dashboard
+                } else {
+                    link.href = '../assets/css/story-preview.css'; // From content pages
+                }
                 document.head.appendChild(link);
             }
         } else {

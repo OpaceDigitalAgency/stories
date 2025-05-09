@@ -549,6 +549,10 @@ if (isset($error)): ?>
     </div>
 
 <!-- Include preview JS files -->
+<script>
+// Define a global variable to help preview scripts determine their context
+window.IS_DASHBOARD = true;
+</script>
 <script src="assets/js/story-preview.js"></script>
 <script src="assets/js/post-preview.js"></script>
 <script src="assets/js/author-preview.js"></script>

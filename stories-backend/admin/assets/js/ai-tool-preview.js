@@ -76,7 +76,15 @@ class AiToolPreview {
 
             // First try to fetch the AI tool data
             try {
-                const response = await fetch(`../handlers/get-ai-tool.php?id=${toolId}`);
+                // Use the correct path based on context
+                let apiUrl;
+                if (window.IS_DASHBOARD) {
+                    apiUrl = `handlers/get-ai-tool.php?id=${toolId}`;
+                } else {
+                    apiUrl = `../handlers/get-ai-tool.php?id=${toolId}`;
+                }
+                
+                const response = await fetch(apiUrl);
                 const data = await response.json();
 
                 if (data.success) {
@@ -86,8 +94,13 @@ class AiToolPreview {
                 console.warn('Could not fetch AI tool data:', e);
             }
 
-            // Use our direct preview handler
-            const previewUrl = `../handlers/direct-ai-tool-preview.php?id=${toolId}`;
+            // Use our direct preview handler with the correct path based on context
+            let previewUrl;
+            if (window.IS_DASHBOARD) {
+                previewUrl = `handlers/direct-ai-tool-preview.php?id=${toolId}`;
+            } else {
+                previewUrl = `../handlers/direct-ai-tool-preview.php?id=${toolId}`;
+            }
 
             console.log('Loading AI tool preview directly:', previewUrl);
 
@@ -143,7 +156,12 @@ class AiToolPreview {
                 const link = document.createElement('link');
                 link.id = 'ai-tool-preview-css';
                 link.rel = 'stylesheet';
-                link.href = '../assets/css/story-preview.css'; // Reuse the same CSS
+                // Use the correct path based on context
+                if (window.IS_DASHBOARD) {
+                    link.href = 'assets/css/story-preview.css'; // From dashboard
+                } else {
+                    link.href = '../assets/css/story-preview.css'; // From content pages
+                }
                 document.head.appendChild(link);
             }
         } else {

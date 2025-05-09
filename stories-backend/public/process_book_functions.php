@@ -549,6 +549,7 @@ function processBook($db, $bookDir) {
                     description = ?,
                     website_url = ?,
                     category_id = ?,
+                    type = ?,
                     slug = ?,
                     cover_url = ?,
                     is_published = 1,
@@ -561,6 +562,7 @@ function processBook($db, $bookDir) {
                 $description,
                 '',  // website_url
                 1,   // category_id (default to books category)
+                'book',  // type
                 $slug,
                 $coverImageUrl,
                 $directoryItemId

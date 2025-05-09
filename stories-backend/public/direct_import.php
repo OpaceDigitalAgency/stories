@@ -1283,12 +1283,51 @@ function processBook($db, $bookDir) {
         // Process cover image and add to media table
         $coverImageUrl = '';
         $mediaId = null;
-        $imagesDir = "$bookDir/images";
-        if (is_dir($imagesDir)) {
-            $images = glob("$imagesDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
-            if (!empty($images)) {
-                $imageFile = $images[0];
-                $imageName = basename($imageFile);
+        
+        // Look for images in multiple potential locations
+        $imagePaths = [];
+        
+        // Check in the main directory
+        $imagePatterns = [
+            "$bookDir/*.{jpg,jpeg,png,gif}",                // Root directory
+            "$bookDir/images/*.{jpg,jpeg,png,gif}",         // images subdirectory
+            "$bookDir/image/*.{jpg,jpeg,png,gif}",          // image subdirectory
+            "$bookDir/cover/*.{jpg,jpeg,png,gif}",          // cover subdirectory
+            "$bookDir/covers/*.{jpg,jpeg,png,gif}",         // covers subdirectory
+            "$bookDir/media/*.{jpg,jpeg,png,gif}"           // media subdirectory
+        ];
+        
+        foreach ($imagePatterns as $pattern) {
+            $matches = glob($pattern, GLOB_BRACE);
+            if (!empty($matches)) {
+                $imagePaths = array_merge($imagePaths, $matches);
+            }
+        }
+        
+        echo "<p class='info'>Found " . count($imagePaths) . " potential images for book: $title</p>";
+        flushOutput();
+        
+        if (!empty($imagePaths)) {
+            // Sort by filename to prioritize cover images
+            usort($imagePaths, function($a, $b) {
+                $aName = strtolower(basename($a));
+                $bName = strtolower(basename($b));
+                
+                // Prioritize files with "cover" in the name
+                $aHasCover = strpos($aName, 'cover') !== false;
+                $bHasCover = strpos($bName, 'cover') !== false;
+                
+                if ($aHasCover && !$bHasCover) return -1;
+                if (!$aHasCover && $bHasCover) return 1;
+                
+                return strcmp($aName, $bName);
+            });
+            
+            $imageFile = $imagePaths[0];
+            $imageName = basename($imageFile);
+            
+            echo "<p class='info'>Selected image: $imageName from path: $imageFile</p>";
+            flushOutput();
                 
                 // Copy image to uploads directory
                 $uploadsDir = __DIR__ . '/../uploads/books';

@@ -319,12 +319,26 @@ $siteName = get_config('site.name', 'Stories From The Web');
         .user-name {
             margin-right: 0.5rem;
             white-space: nowrap;
+            align-self: center; /* Ensure vertical centering */
         }
 
         /* Fix for form inside user-info */
         .user-info form {
             margin: 0;
             height: 36px; /* Fixed height for consistency */
+            display: flex; /* Ensure proper alignment */
+            align-items: center; /* Vertical centering */
+        }
+
+        /* Specific fix for logout button */
+        .user-info .btn-danger {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 0;
+            padding-bottom: 0;
+            line-height: 1;
         }
 
         /* Responsive adjustments */

@@ -375,9 +375,9 @@ if (isset($error)): ?>
                                             </div>
                                         </div>
                                         <div class="content-item-actions">
-                                            <a href="content/view-story.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-info btn-sm story-preview-btn" data-story-id="<?php echo $item['id']; ?>">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
                                             <a href="content/story-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -413,9 +413,9 @@ if (isset($error)): ?>
                                             </div>
                                         </div>
                                         <div class="content-item-actions">
-                                            <a href="content/view-post.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-info btn-sm post-preview-btn" data-post-id="<?php echo $item['id']; ?>">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
                                             <a href="content/post-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -451,9 +451,9 @@ if (isset($error)): ?>
                                             </div>
                                         </div>
                                         <div class="content-item-actions">
-                                            <a href="content/view-author.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-info btn-sm author-preview-btn" data-author-id="<?php echo $item['id']; ?>">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
                                             <a href="content/author-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -489,9 +489,9 @@ if (isset($error)): ?>
                                             </div>
                                         </div>
                                         <div class="content-item-actions">
-                                            <a href="content/view-game.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-info btn-sm game-preview-btn" data-game-id="<?php echo $item['id']; ?>">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
                                             <a href="content/game-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -527,9 +527,9 @@ if (isset($error)): ?>
                                             </div>
                                         </div>
                                         <div class="content-item-actions">
-                                            <a href="content/view-directory-item.php?id=<?php echo $item['id']; ?>" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-info btn-sm directory-item-preview-btn" data-directory-item-id="<?php echo $item['id']; ?>">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
                                             <a href="content/directory-item-form.php?id=<?php echo $item['id']; ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
@@ -547,6 +547,79 @@ if (isset($error)): ?>
             </div>
         </div>
     </div>
+
+<!-- Include preview JS files -->
+<script src="assets/js/story-preview.js"></script>
+<script src="assets/js/post-preview.js"></script>
+<script src="assets/js/author-preview.js"></script>
+<script src="assets/js/game-preview.js"></script>
+<script src="assets/js/directory-item-preview.js"></script>
+<script src="assets/js/ai-tool-preview.js"></script>
+
+<script>
+// Initialize preview buttons when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Story preview buttons
+    document.querySelectorAll('.story-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const storyId = this.dataset.storyId;
+            if (window.storyPreview) {
+                window.storyPreview.loadStoryPreview(storyId);
+            }
+        });
+    });
+    
+    // Post preview buttons
+    document.querySelectorAll('.post-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            if (window.postPreview) {
+                window.postPreview.loadPostPreview(postId);
+            }
+        });
+    });
+    
+    // Author preview buttons
+    document.querySelectorAll('.author-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const authorId = this.dataset.authorId;
+            if (window.authorPreview) {
+                window.authorPreview.loadAuthorPreview(authorId);
+            }
+        });
+    });
+    
+    // Game preview buttons
+    document.querySelectorAll('.game-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const gameId = this.dataset.gameId;
+            if (window.gamePreview) {
+                window.gamePreview.loadGamePreview(gameId);
+            }
+        });
+    });
+    
+    // Directory item preview buttons
+    document.querySelectorAll('.directory-item-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const directoryItemId = this.dataset.directoryItemId;
+            if (window.directoryItemPreview) {
+                window.directoryItemPreview.loadDirectoryItemPreview(directoryItemId);
+            }
+        });
+    });
+    
+    // AI tool preview buttons
+    document.querySelectorAll('.ai-tool-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const aiToolId = this.dataset.aiToolId;
+            if (window.aiToolPreview) {
+                window.aiToolPreview.loadAiToolPreview(aiToolId);
+            }
+        });
+    });
+});
+</script>
 
 <?php
 // Include footer

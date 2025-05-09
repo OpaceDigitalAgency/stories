@@ -180,12 +180,9 @@ try {
                                     <td><?php echo htmlspecialchars($story['slug']); ?></td>
                                     <td>
                                         <div class="table-actions">
-                                            <form method="GET" action="view-story.php" style="display: inline;">
-                                                <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                                <button type="submit" class="btn btn-info btn-sm">
-                                                    <span class="icon-view"></span> View
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-info btn-sm story-preview-btn" data-story-id="<?php echo $story['id']; ?>">
+                                                <span class="icon-view"></span> Preview
+                                            </button>
                                             <form method="GET" action="story-form.php" style="display: inline;">
                                                 <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
                                                 <button type="submit" class="btn btn-primary btn-sm">
@@ -223,12 +220,9 @@ try {
                                     <td><?php echo htmlspecialchars($post['title']); ?></td>
                                     <td>
                                         <div class="table-actions">
-                                            <form method="GET" action="view-post.php" style="display: inline;">
-                                                <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
-                                                <button type="submit" class="btn btn-info btn-sm">
-                                                    <span class="icon-view"></span> View
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-info btn-sm post-preview-btn" data-post-id="<?php echo $post['id']; ?>">
+                                                <span class="icon-view"></span> Preview
+                                            </button>
                                             <form method="GET" action="post-form.php" style="display: inline;">
                                                 <input type="hidden" name="id" value="<?php echo $post['id']; ?>">
                                                 <button type="submit" class="btn btn-primary btn-sm">
@@ -281,5 +275,34 @@ try {
             gap: 0.5rem;
         }
     </style>
+
+<!-- Include preview JS files -->
+<script src="../assets/js/story-preview.js"></script>
+<script src="../assets/js/post-preview.js"></script>
+
+<script>
+// Initialize preview buttons when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Story preview buttons
+    document.querySelectorAll('.story-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const storyId = this.dataset.storyId;
+            if (window.storyPreview) {
+                window.storyPreview.loadStoryPreview(storyId);
+            }
+        });
+    });
+    
+    // Post preview buttons
+    document.querySelectorAll('.post-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            if (window.postPreview) {
+                window.postPreview.loadPostPreview(postId);
+            }
+        });
+    });
+});
+</script>
 
 <?php require_once '../includes/footer.php'; ?>

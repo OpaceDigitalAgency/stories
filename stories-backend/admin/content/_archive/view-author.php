@@ -208,12 +208,9 @@ require_once '../includes/header.php';
                                             <td><?php echo date('M j, Y', strtotime($story['created_at'])); ?></td>
                                             <td>
                                                 <div class="table-actions">
-                                                    <form method="GET" action="view-story.php" style="display: inline;">
-                                                        <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
-                                                        <button type="submit" class="btn btn-info btn-sm">
-                                                            <i class="fas fa-eye"></i> View
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-info btn-sm story-preview-btn" data-story-id="<?php echo $story['id']; ?>">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
                                                     <form method="GET" action="story-form.php" style="display: inline;">
                                                         <input type="hidden" name="id" value="<?php echo $story['id']; ?>">
                                                         <button type="submit" class="btn btn-primary btn-sm">
@@ -243,6 +240,24 @@ require_once '../includes/header.php';
                 </button>
             </form>
         </div>
+
+<!-- Include preview JS files -->
+<script src="../assets/js/story-preview.js"></script>
+
+<script>
+// Initialize preview buttons when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Story preview buttons
+    document.querySelectorAll('.story-preview-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const storyId = this.dataset.storyId;
+            if (window.storyPreview) {
+                window.storyPreview.loadStoryPreview(storyId);
+            }
+        });
+    });
+});
+</script>
 
 <?php
 // Include footer

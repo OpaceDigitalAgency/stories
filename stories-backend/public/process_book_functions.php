@@ -433,53 +433,42 @@ function processBook($db, $bookDir) {
                     flushOutput();
                 }
 
-                // Check if image already exists in media table
-                $stmt = $db->prepare("SELECT id FROM media WHERE file_path = ?");
-                $stmt->execute([$relativePath]);
-                $existingMedia = $stmt->fetch();
+                // Always create a new media record for the image, even if the file already exists
+                // This ensures that when "nuke images" is clicked, new records are created in the media table
+                $stmt = $db->prepare("
+                    INSERT INTO media (
+                        filename, file_path, file_size, file_type,
+                        alt_text, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                ");
 
-                if ($existingMedia) {
-                    // Use existing media record
-                    $mediaId = $existingMedia['id'];
-                    echo "<p class='info'>Using existing media record (ID: $mediaId) for path: $relativePath</p>";
+                try {
+                    $stmt->execute([
+                        $uniqueImageName,
+                        $relativePath, // Store relative path for consistency
+                        $fileSize,
+                        $fileType,
+                        "Cover image for $title" // Alt text for the image
+                    ]);
+
+                    $mediaId = $db->lastInsertId();
+                    echo "<p class='success'>Added image to media table (ID: $mediaId)</p>";
+                    echo "<p class='info'>Image URL: $absoluteUrl</p>";
                     flushOutput();
-                } else {
-                    // Create a new media record - using columns that exist in the media table
-                    $stmt = $db->prepare("
-                        INSERT INTO media (
-                            filename, file_path, file_size, file_type,
-                            alt_text, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-                    ");
 
-                    try {
-                        $stmt->execute([
-                            $uniqueImageName,
-                            $relativePath, // Store relative path for consistency
-                            $fileSize,
-                            $fileType,
-                            "Cover image for $title" // Alt text for the image
-                        ]);
-
-                        $mediaId = $db->lastInsertId();
-                        echo "<p class='success'>Added image to media table (ID: $mediaId)</p>";
-                        echo "<p class='info'>Image URL: $absoluteUrl</p>";
-                        flushOutput();
-
-                        // Update media record with variants if available
-                        if ($variants && function_exists('updateMediaRecord')) {
-                            $updateResult = updateMediaRecord($db, $mediaId, $variants);
-                            if ($updateResult) {
-                                echo "<p class='success'>Updated media record with variant information</p>";
-                            } else {
-                                echo "<p class='warning'>Failed to update media record with variant information</p>";
-                            }
-                            flushOutput();
+                    // Update media record with variants if available
+                    if ($variants && function_exists('updateMediaRecord')) {
+                        $updateResult = updateMediaRecord($db, $mediaId, $variants);
+                        if ($updateResult) {
+                            echo "<p class='success'>Updated media record with variant information</p>";
+                        } else {
+                            echo "<p class='warning'>Failed to update media record with variant information</p>";
                         }
-                    } catch (Exception $e) {
-                        echo "<p class='error'>Database error adding image to media table: " . $e->getMessage() . "</p>";
                         flushOutput();
                     }
+                } catch (Exception $e) {
+                    echo "<p class='error'>Database error adding image to media table: " . $e->getMessage() . "</p>";
+                    flushOutput();
                 }
 
                 // Set the cover image URL

@@ -901,6 +901,35 @@ function processStory($db, $storyDir) {
                 copy($images[0], $uploadsDir . '/' . basename($images[0]));
                 echo "<p class='success'>Used image: " . basename($images[0]) . " as cover</p>";
                 flushOutput();
+
+                // Always create a new media record for the image
+                $imagePath = '/uploads/' . basename($images[0]);
+                $fileSize = filesize($images[0]);
+                $fileType = mime_content_type($images[0]);
+
+                try {
+                    $stmt = $db->prepare("
+                        INSERT INTO media (
+                            filename, file_path, file_size, file_type,
+                            alt_text, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                    ");
+
+                    $stmt->execute([
+                        basename($images[0]),
+                        $imagePath,
+                        $fileSize,
+                        $fileType,
+                        "Cover image for $title"
+                    ]);
+
+                    $mediaId = $db->lastInsertId();
+                    echo "<p class='success'>Added image to media table (ID: $mediaId)</p>";
+                    flushOutput();
+                } catch (Exception $e) {
+                    echo "<p class='warning'>Could not add image to media table: " . $e->getMessage() . "</p>";
+                    flushOutput();
+                }
             }
         }
 

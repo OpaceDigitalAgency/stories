@@ -224,7 +224,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'cover_url' => !empty($item['cover_url']) ? $item['cover_url'] : '../assets/images/default-cover.svg',
+            'image' => !empty($item['cover_url']) ? $item['cover_url'] : '../assets/images/default-cover.svg', // Changed from 'cover_url' to 'image' to match stories.php
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
@@ -233,9 +233,10 @@ if (function_exists('renderEnhancedTable')) {
             'status' => $status,
             'created' => $createdDate
         ];
-        
+
         // Debug what URL we're passing to the table
         error_log("Directory Item {$item['id']} - Cover URL: " . ($item['cover_url'] ?? 'EMPTY'));
+        error_log("Directory Item {$item['id']} - Image field in tableData: " . ($tableData[count($tableData)-1]['image'] ?? 'EMPTY'));
     }
 
     // Define columns for the table
@@ -267,7 +268,7 @@ if (function_exists('renderEnhancedTable')) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
-            'thumbnailField' => 'cover_url', // Use the cover_url field for thumbnails
+            'thumbnailField' => 'image', // Changed from 'cover_url' to 'image' to match the field name in tableData
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]
     );

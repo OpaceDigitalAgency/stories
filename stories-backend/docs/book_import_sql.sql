@@ -4,26 +4,25 @@
 -- If you're setting up a new installation, you would need to ensure the directory_items table has a 'type' column:
 -- ALTER TABLE directory_items ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general';
 
--- 1. Run this to create the books table
-CREATE TABLE books (
-    directory_item_id INT PRIMARY KEY,
-    isbn VARCHAR(20),
-    isbn13 VARCHAR(20),
-    author VARCHAR(255),
-    publisher VARCHAR(255),
-    publication_date DATE,
-    page_count INT,
-    age_range VARCHAR(50),
-    reading_level VARCHAR(50),
-    cover_image_url VARCHAR(255),
-    purchase_links JSON,
-    metadata JSON,
-    FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE
-);
+-- Note: The 'books' table already exists, so we don't need to create it.
+-- If you're setting up a new installation, you would need to create the books table:
+-- CREATE TABLE books (
+--     directory_item_id INT PRIMARY KEY,
+--     isbn VARCHAR(20),
+--     isbn13 VARCHAR(20),
+--     author VARCHAR(255),
+--     publisher VARCHAR(255),
+--     publication_date DATE,
+--     page_count INT,
+--     age_range VARCHAR(50),
+--     reading_level VARCHAR(50),
+--     cover_image_url VARCHAR(255),
+--     purchase_links JSON,
+--     metadata JSON,
+--     FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE
+-- );
 
--- 2. If the above fails with "Table already exists", it means the table already exists, which is fine
-
--- 3. Run this to create the book_authors table for book-author relationships
+-- Run this to create the book_authors table for book-author relationships
 CREATE TABLE book_authors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     directory_item_id INT NOT NULL,
@@ -36,4 +35,4 @@ CREATE TABLE book_authors (
     UNIQUE KEY (directory_item_id, author_id, role)
 );
 
--- 4. If the above fails with "Table already exists", it means the table already exists, which is fine
+-- If the above fails with "Table already exists", it means the table already exists, which is fine

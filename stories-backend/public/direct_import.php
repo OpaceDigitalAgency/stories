@@ -1012,7 +1012,7 @@ function processBook($db, $bookDir) {
         
         // Check if book already exists
         $stmt = $db->prepare("
-            SELECT id FROM directory_items WHERE type = 'book' AND name = ?
+            SELECT id FROM directory_items WHERE type = 'book' AND title = ?
         ");
         $stmt->execute([$title]);
         $existingDirectoryItem = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -547,6 +547,7 @@ function processBook($db, $bookDir) {
             $action = 'updated';
 
             // Update existing directory item - using explicit column names to match the actual table structure
+            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 UPDATE directory_items SET
                     title = ?,
@@ -555,7 +556,7 @@ function processBook($db, $bookDir) {
                     slug = ?,
                     website_url = ?,
                     cover_url = ?,
-                    updated_at = NOW(),
+                    updated_at = ?,
                     type = 'book'
                 WHERE id = ?
             ");
@@ -567,6 +568,7 @@ function processBook($db, $bookDir) {
                 $slug,
                 '',  // website_url
                 $coverImageUrl,
+                $now, // updated_at
                 $directoryItemId
             ]);
 
@@ -574,15 +576,14 @@ function processBook($db, $bookDir) {
             flushOutput();
         } else {
             // Create new directory item - using explicit column names to match the actual table structure
+            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 INSERT INTO directory_items
                     (title, description, category_id, slug, website_url,
                     cover_url, is_published, created_at, updated_at, type)
                 VALUES
-                    (?, ?, ?, ?, ?, ?, 1, NOW(), NOW(), 'book')
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?, 'book')
             ");
-
-            $now = date('Y-m-d H:i:s');
 
             $stmt->execute([
                 $title,
@@ -590,7 +591,10 @@ function processBook($db, $bookDir) {
                 1,   // category_id (default to books category)
                 $slug,
                 '',  // website_url
-                $coverImageUrl
+                $coverImageUrl,
+                1,   // is_published
+                $now, // created_at
+                $now  // updated_at
             ]);
 
             $directoryItemId = $db->lastInsertId();
@@ -605,6 +609,7 @@ function processBook($db, $bookDir) {
 
         if ($existingBook) {
             // Update existing book
+            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 UPDATE books SET
                     isbn = ?,
@@ -620,7 +625,7 @@ function processBook($db, $bookDir) {
                     metadata = ?,
                     genre = ?,
                     series = ?,
-                    updated_at = NOW()
+                    updated_at = ?
                 WHERE directory_item_id = ?
             ");
 
@@ -644,6 +649,7 @@ function processBook($db, $bookDir) {
                 json_encode($enhancedData),
                 $genre,
                 $series,
+                $now, // updated_at
                 $directoryItemId
             ]);
 
@@ -651,6 +657,7 @@ function processBook($db, $bookDir) {
             flushOutput();
         } else {
             // Create new book
+            $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 INSERT INTO books (
                     directory_item_id, isbn, isbn13, author, publisher, publication_date,
@@ -659,7 +666,7 @@ function processBook($db, $bookDir) {
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, NOW(), NOW()
+                    ?, ?, ?, ?, ?
                 )
             ");
 
@@ -683,7 +690,9 @@ function processBook($db, $bookDir) {
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,
-                $series
+                $series,
+                $now, // created_at
+                $now  // updated_at
             ]);
 
             echo "<p class='success'>Created new book: $title (ID: $directoryItemId)</p>";

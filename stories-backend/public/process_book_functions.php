@@ -573,7 +573,7 @@ function processBook($db, $bookDir) {
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
                     title, description, website_url, category_id, type, slug, cover_url, is_published, published_at, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'book', ?, ?, 1, NOW(), ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), ?, ?)
             ");
 
             $now = date('Y-m-d H:i:s');
@@ -583,6 +583,7 @@ function processBook($db, $bookDir) {
                 $description,
                 '',  // website_url
                 1,   // category_id (default to books category)
+                'book',  // type
                 $slug,
                 $coverImageUrl,
                 $now,

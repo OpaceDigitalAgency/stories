@@ -169,42 +169,14 @@ function nukeImages($db, $deleteUploads = false) {
             }
         }
 
-        // 3. Reset media records in the database
-        // First check if the media table has the required columns
-        $hasMetadataColumn = false;
-        $hasLegacyColumns = false;
-
+        // 3. Truncate the media table to remove all records
         try {
-            $stmt = $db->query("SHOW COLUMNS FROM media LIKE 'metadata'");
-            $hasMetadataColumn = $stmt->rowCount() > 0;
-
-            $stmt = $db->query("SHOW COLUMNS FROM media LIKE 'thumbnail_url'");
-            $hasLegacyColumns = $stmt->rowCount() > 0;
+            $stmt = $db->query("TRUNCATE TABLE media");
+            echo "<p style='color:green'>Removed all media records from database</p>";
         } catch (PDOException $e) {
-            echo "<p style='color:red'>Error checking media table structure: " . $e->getMessage() . "</p>";
+            echo "<p style='color:red'>Error truncating media table: " . $e->getMessage() . "</p>";
             $stats['errors']++;
         }
-
-        // Reset the appropriate columns based on the schema
-        if ($hasMetadataColumn) {
-            $sql = "UPDATE media SET metadata = NULL";
-            $stmt = $db->prepare($sql);
-            $stmt->execute();
-            $stats['records_reset'] += $stmt->rowCount();
-        }
-
-        if ($hasLegacyColumns) {
-            $sql = "UPDATE media SET
-                    thumbnail_url = NULL,
-                    small_url = NULL,
-                    medium_url = NULL,
-                    large_url = NULL";
-            $stmt = $db->prepare($sql);
-            $stmt->execute();
-            $stats['records_reset'] += $stmt->rowCount();
-        }
-
-        echo "<p style='color:green'>Reset {$stats['records_reset']} media records</p>";
 
         // 4. Recreate the directories
         if (!is_dir($optimizedDir)) {

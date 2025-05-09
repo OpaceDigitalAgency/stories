@@ -1395,12 +1395,21 @@ function processBook($db, $bookDir) {
                 'tags' => $extractedTags
             ]);
             
+            // Log the publication date right before update to see what's happening
+            echo "<p class='warning'>FINAL PUBLICATION DATE FOR UPDATE: '$publicationDate'</p>";
+            flushOutput();
+            
+            // Force conversion here to ensure it's in the right format
+            $formattedDate = convertToMySQLDate($publicationDate);
+            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            flushOutput();
+            
             $stmt->execute([
                 $isbn,
                 $isbn13,
                 $author,
                 $publisher,
-                $publicationDate,
+                $formattedDate, // Use the properly converted date
                 $pageCount,
                 $ageRange,
                 $readingLevel,
@@ -1470,13 +1479,22 @@ function processBook($db, $bookDir) {
                 'tags' => $extractedTags
             ]);
             
+            // Log the publication date right before insert to see what's happening
+            echo "<p class='warning'>FINAL PUBLICATION DATE FOR INSERT: '$publicationDate'</p>";
+            flushOutput();
+            
+            // Force conversion here to ensure it's in the right format
+            $formattedDate = convertToMySQLDate($publicationDate);
+            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            flushOutput();
+            
             $stmt->execute([
                 $directoryItemId,
                 $isbn,
                 $isbn13,
                 $author,
                 $publisher,
-                $publicationDate,
+                $formattedDate, // Use the properly converted date
                 $pageCount,
                 $ageRange,
                 $readingLevel,

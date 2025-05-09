@@ -293,6 +293,209 @@ function extractAuthorInfo($title) {
 }
 
 // Function to get or create author with proper handling
+// Function to extract clean, meaningful excerpt
+function extractExcerpt($title, $markdownContent) {
+    // Strip out "by ... aged ... from ..." metadata from title
+    $cleanTitle = preg_replace('/by\s+[^,]+(?:,?\s+aged\s+\d+)?(?:,?\s+from\s+[^,.]+)?/i', '', $title);
+    $cleanTitle = trim($cleanTitle);
+    
+    // First try to get from Summary section
+    if (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*|$)/s', $markdownContent, $summaryMatch)) {
+        $summary = trim($summaryMatch[1]);
+        
+        // Extract just the first sentence
+        if (preg_match('/^(.*?[.!?])(?:\s|$)/s', $summary, $sentenceMatch)) {
+            return trim($sentenceMatch[1]);
+        } else {
+            return $summary;
+        }
+    }
+    
+    // If no summary or empty excerpt, use first paragraph
+    $paragraphs = preg_split('/\n\s*\n/', $markdownContent);
+    $firstPara = trim($paragraphs[0]);
+    
+    // Remove any metadata like Name/Age/Location
+    $firstPara = preg_replace('/^(?:Name|Age|Location):\s+.*$/m', '', $firstPara);
+    
+    // Extract just the first sentence
+    if (preg_match('/^(.*?[.!?])(?:\s|$)/s', $firstPara, $sentenceMatch)) {
+        return trim($sentenceMatch[1]);
+    } else {
+        return substr(strip_tags($firstPara), 0, 150) . '...';
+    }
+}
+
+// Function to extract tags from content
+function extractTags($frontMatter, $markdownContent) {
+    $tags = [];
+    
+    // Try to extract tags from front matter
+    if (preg_match('/tags:\s*\[(.*?)\]/i', $frontMatter, $matches) ||
+        preg_match('/tags:\s*(.+)$/im', $frontMatter, $matches)) {
+        $tagString = $matches[1];
+        $tagArray = explode(',', $tagString);
+        foreach ($tagArray as $tag) {
+            $tag = trim($tag, " \t\n\r\0\x0B\"'");
+            if (!empty($tag)) {
+                $tags[] = $tag;
+            }
+        }
+    }
+    
+    // If no tags found, extract from content
+    if (empty($tags)) {
+        // Extract keywords from title and content
+        $content = strtolower($markdownContent);
+        
+        // Common children's story themes
+        $commonThemes = [
+            'adventure', 'animals', 'friendship', 'family', 'magic', 'school',
+            'fantasy', 'nature', 'space', 'dinosaurs', 'dragons', 'fairy', 'princess',
+            'superhero', 'monster', 'robot', 'pirate', 'ghost', 'mystery', 'sports',
+            'ocean', 'jungle', 'farm', 'zoo', 'circus', 'holiday', 'seasons',
+            'winter', 'summer', 'spring', 'autumn', 'fall', 'christmas', 'halloween',
+            'birthday', 'bedtime', 'dreams', 'imagination', 'learning', 'growing up'
+        ];
+        
+        foreach ($commonThemes as $theme) {
+            if (stripos($content, $theme) !== false) {
+                $tags[] = $theme;
+                
+                // Limit to 5 tags
+                if (count($tags) >= 5) {
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Ensure we have at least some tags
+    if (empty($tags)) {
+        $tags = ['children story', 'kids literature'];
+    }
+    
+    // Normalize tags
+    $normalizedTags = [];
+    foreach ($tags as $tag) {
+        // Convert to lowercase and remove special characters
+        $normalizedTag = strtolower(trim($tag));
+        $normalizedTag = preg_replace('/[^a-z0-9\s-]/', '', $normalizedTag);
+        $normalizedTag = preg_replace('/\s+/', ' ', $normalizedTag);
+        
+        if (!empty($normalizedTag) && !in_array($normalizedTag, $normalizedTags)) {
+            $normalizedTags[] = $normalizedTag;
+        }
+    }
+    
+    return $normalizedTags;
+}
+
+// Function to process story tags
+function processStoryTags($db, $storyId, $tags) {
+    try {
+        // First delete existing tags for this story
+        $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
+        $stmt->execute([$storyId]);
+        
+        // Process each tag
+        foreach ($tags as $tagName) {
+            // Check if tag exists
+            $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
+            $stmt->execute([trim($tagName)]);
+            $tag = $stmt->fetch();
+            
+            if ($tag) {
+                $tagId = $tag['id'];
+            } else {
+                // Create new tag
+                $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', trim($tagName)));
+                $slug = trim($slug, '-');
+                
+                $stmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                $stmt->execute([trim($tagName), $slug]);
+                $tagId = $db->lastInsertId();
+            }
+            
+            // Associate tag with story
+            $stmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+            $stmt->execute([$storyId, $tagId]);
+        }
+        
+        echo "<p class='success'>Processed " . count($tags) . " tags for story ID: $storyId</p>";
+        flushOutput();
+        return true;
+    } catch (Exception $e) {
+        echo "<p class='error'>Error processing tags: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return false;
+    }
+}
+
+// Function to find existing story by title or slug
+function findExistingStory($db, $title, $slug) {
+    $stmt = $db->prepare("SELECT id, title FROM stories WHERE LOWER(slug) = LOWER(?) OR LOWER(title) = LOWER(?)");
+    $stmt->execute([$slug, $title]);
+    return $stmt->fetch();
+}
+
+// Function to generate unique slug
+function generateUniqueSlug($db, $title) {
+    // Remove "by Author" part
+    $title = preg_replace('/\s+by\s+[^,]+(?:,?\s+aged\s+\d+)?(?:,?\s+from\s+[^,.]+)?/i', '', $title);
+    $title = trim($title);
+    
+    // Generate base slug
+    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+    $slug = trim($slug, '-');
+    
+    // Check if slug exists
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM stories WHERE slug = ?");
+    $stmt->execute([$slug]);
+    $result = $stmt->fetch();
+    
+    // If slug exists, append a number
+    if ($result['count'] > 0) {
+        $i = 1;
+        $newSlug = $slug;
+        do {
+            $newSlug = $slug . '-' . $i++;
+            $stmt->execute([$newSlug]);
+            $result = $stmt->fetch();
+        } while ($result['count'] > 0);
+        $slug = $newSlug;
+    }
+    
+    return $slug;
+}
+
+// Function to determine age group based on author age
+function getAgeGroup($age) {
+    if (!$age || !is_numeric($age)) {
+        return '6-8'; // Default age group
+    }
+    
+    $age = (int)$age;
+    
+    if ($age <= 5) {
+        return '3-5';
+    } elseif ($age <= 8) {
+        return '6-8';
+    } elseif ($age <= 12) {
+        return '9-12';
+    } else {
+        return '13+';
+    }
+}
+
+// Function to calculate reading time
+function getReadingTime($content) {
+    // Average reading speed: 200 words per minute for children's content
+    $wordCount = str_word_count(strip_tags($content));
+    $minutes = ceil($wordCount / 200);
+    return max(1, $minutes); // Minimum 1 minute
+}
+
 function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
     echo "<p class='info'><strong>AUTHOR PROCESSING:</strong> Starting author lookup/creation</p>";
     flushOutput();
@@ -376,6 +579,235 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
             flushOutput();
             return null;
         }
+    }
+}
+
+// Function to process a story directory and import it
+function processStory($db, $storyDir) {
+    $mdFile = "$storyDir/index.md";
+    
+    if (!file_exists($mdFile)) {
+        echo "<p class='error'>Markdown file not found: $mdFile</p>";
+        flushOutput();
+        return false;
+    }
+    
+    // Begin transaction for this story
+    $db->beginTransaction();
+    
+    try {
+        // Read markdown file
+        $content = file_get_contents($mdFile);
+        
+        // Extract front matter
+        $pattern = '/^---\s*\n(.*?)\n---\s*\n(.*)/s';
+        if (!preg_match($pattern, $content, $matches)) {
+            echo "<p class='error'>Invalid markdown format in: $mdFile</p>";
+            flushOutput();
+            $db->rollBack();
+            return false;
+        }
+        
+        $frontMatter = $matches[1];
+        $markdownContent = $matches[2];
+        
+        // Parse front matter
+        $data = [];
+        $lines = explode("\n", $frontMatter);
+        foreach ($lines as $line) {
+            if (preg_match('/^(\w+):\s*(.*)$/', $line, $parts)) {
+                $key = $parts[1];
+                $value = trim($parts[2], '"\'');
+                $data[$key] = $value;
+            }
+        }
+        
+        $title = isset($data['title']) ? $data['title'] : basename($storyDir);
+        echo "<h3>Importing: $title</h3>";
+        flushOutput();
+        
+        // Extract author info
+        $authorInfo = extractAuthorInfo($title);
+        $authorAge = isset($authorInfo['age']) && $authorInfo['age'] ? $authorInfo['age'] : 'unknown';
+        $authorLocation = isset($authorInfo['location']) && $authorInfo['location'] ? $authorInfo['location'] : 'unknown';
+        echo "<p class='info'><strong>Author extraction result:</strong> Name=\"{$authorInfo['name']}\", Age={$authorAge}, Location=\"{$authorLocation}\"</p>";
+        flushOutput();
+        
+        $authorId = getOrCreateAuthor($db, $authorInfo, 'child');
+        if ($authorId) {
+            echo "<p class='success'><strong>Author ID:</strong> $authorId</p>";
+        } else {
+            echo "<p class='error'><strong>Failed to get or create author</strong></p>";
+        }
+        flushOutput();
+        
+        // Process cover image
+        // Use default cover image if no image is found
+        $defaultCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/images/default-cover.svg';
+        $coverUrl = $defaultCoverUrl; // Default
+        
+        // Check for images in the story directory
+        $imagesDir = "$storyDir/images";
+        if (is_dir($imagesDir)) {
+            $images = glob("$imagesDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
+            if (!empty($images)) {
+                // Use the first image as cover
+                $coverUrl = '/uploads/' . basename($images[0]);
+                
+                // Copy image to uploads directory
+                $uploadsDir = __DIR__ . '/../uploads';
+                if (!is_dir($uploadsDir)) {
+                    mkdir($uploadsDir, 0755, true);
+                }
+                
+                copy($images[0], $uploadsDir . '/' . basename($images[0]));
+                echo "<p class='success'>Used image: " . basename($images[0]) . " as cover</p>";
+                flushOutput();
+            }
+        }
+        
+        // Extract clean excerpt
+        $excerpt = extractExcerpt($title, $markdownContent);
+        echo "<p class='info'>Excerpt: " . htmlspecialchars(substr($excerpt, 0, 100)) . "...</p>";
+        flushOutput();
+        
+        // Generate slug
+        $slug = generateUniqueSlug($db, $title);
+        
+        // Calculate reading time
+        $readingTime = getReadingTime($markdownContent);
+        
+        // Determine age group
+        $ageGroup = getAgeGroup($authorInfo['age']);
+        
+        // Extract tags
+        $tags = extractTags($frontMatter, $markdownContent);
+        echo "<p class='info'>Tags: " . implode(', ', $tags) . "</p>";
+        flushOutput();
+        
+        // Check if story exists
+        $existingStory = findExistingStory($db, $title, $slug);
+        
+        if ($existingStory) {
+            // Update existing story
+            $stmt = $db->prepare("
+                UPDATE stories SET
+                    content = ?,
+                    excerpt = ?,
+                    cover_url = ?,
+                    estimated_reading_time = ?,
+                    age_group = ?,
+                    source_type = 'child',
+                    allow_reviews = 0
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $markdownContent,
+                $excerpt,
+                $coverUrl,
+                $readingTime,
+                $ageGroup,
+                $existingStory['id']
+            ]);
+            
+            echo "<p class='success'>Updated story: $title (ID: {$existingStory['id']})</p>";
+            flushOutput();
+            
+            // Make sure author is associated
+            if ($authorId) {
+                try {
+                    $checkStmt = $db->prepare("SELECT * FROM story_authors WHERE story_id = ? AND author_id = ?");
+                    $checkStmt->execute([$existingStory['id'], $authorId]);
+                    if (!$checkStmt->fetch()) {
+                        $linkStmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                        $linkStmt->execute([$existingStory['id'], $authorId]);
+                        echo "<p class='success'><strong>STORY-AUTHOR LINK CREATED:</strong> Story ID {$existingStory['id']} linked to Author ID $authorId</p>";
+                        flushOutput();
+                    } else {
+                        echo "<p class='info'><strong>STORY-AUTHOR LINK EXISTS:</strong> Story already associated with author ID $authorId</p>";
+                        flushOutput();
+                    }
+                } catch (Exception $e) {
+                    echo "<p class='error'><strong>STORY-AUTHOR LINK ERROR:</strong> " . $e->getMessage() . "</p>";
+                    flushOutput();
+                }
+            } else {
+                echo "<p class='warning'><strong>STORY-AUTHOR LINK SKIPPED:</strong> No author ID available</p>";
+                flushOutput();
+            }
+            
+            // Process tags
+            processStoryTags($db, $existingStory['id'], $tags);
+            
+            $storyId = $existingStory['id'];
+        } else {
+            // Insert new story
+            $stmt = $db->prepare("
+                INSERT INTO stories (
+                    title, slug, content, excerpt, cover_url,
+                    is_published, source_type, allow_reviews,
+                    estimated_reading_time, age_group
+                ) VALUES (?, ?, ?, ?, ?, 1, 'child', 0, ?, ?)
+            ");
+            
+            $stmt->execute([
+                $title,
+                $slug,
+                $markdownContent,
+                $excerpt,
+                $coverUrl,
+                $readingTime,
+                $ageGroup
+            ]);
+            
+            $storyId = $db->lastInsertId();
+            echo "<p class='success'>Created story with ID: $storyId</p>";
+            flushOutput();
+            
+            // Associate with author
+            if ($authorId) {
+                try {
+                    $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                    $stmt->execute([$storyId, $authorId]);
+                    echo "<p class='success'><strong>STORY-AUTHOR LINK CREATED:</strong> Story ID $storyId linked to Author ID $authorId</p>";
+                    flushOutput();
+                } catch (Exception $e) {
+                    echo "<p class='error'><strong>STORY-AUTHOR LINK ERROR:</strong> " . $e->getMessage() . "</p>";
+                    flushOutput();
+                }
+            } else {
+                echo "<p class='warning'><strong>STORY-AUTHOR LINK SKIPPED:</strong> No author ID available</p>";
+                flushOutput();
+            }
+            
+            // Process tags
+            processStoryTags($db, $storyId, $tags);
+        }
+        
+        // Commit the transaction
+        $db->commit();
+        echo "<p class='success'>Story transaction committed successfully</p>";
+        flushOutput();
+        
+        return [
+            'success' => true,
+            'action' => $existingStory ? 'updated' : 'created',
+            'id' => $storyId
+        ];
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        if ($db->inTransaction()) {
+            $db->rollBack();
+            echo "<p class='error'>Transaction rolled back</p>";
+            flushOutput();
+        }
+        echo "<p class='error'>Error processing story: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -571,11 +1003,91 @@ require_once '../admin/includes/header.php';
                                     echo "<p class='info'>Import source: $wpDir</p>";
                                     flushOutput();
                                     
-                                    // Here would be the actual import logic based on content type
-                                    // For now, we'll just show a placeholder message
-                                    echo "<p class='info'>Import functionality for $contentType will be implemented based on specific requirements.</p>";
-                                    echo "<p class='info'>The import will only delete data related to the specific content being imported.</p>";
-                                    flushOutput();
+                                    // Process WordPress export directory
+                                    if ($contentType === 'stories' && $sourceType === 'child') {
+                                        // Get all story directories
+                                        $storyDirs = [];
+                                        try {
+                                            $storyDirs = array_filter(glob("$wpDir/*"), 'is_dir');
+                                            echo "<p>Found " . count($storyDirs) . " potential story directories</p>";
+                                            flushOutput();
+                                            
+                                            // If no directories found, try recursive search
+                                            if (count($storyDirs) === 0) {
+                                                echo "<p class='info'>No story directories found at top level, searching recursively...</p>";
+                                                flushOutput();
+                                                
+                                                $iterator = new RecursiveIteratorIterator(
+                                                    new RecursiveDirectoryIterator($wpDir, RecursiveDirectoryIterator::SKIP_DOTS)
+                                                );
+                                                
+                                                foreach ($iterator as $file) {
+                                                    if ($file->isFile() && $file->getFilename() === 'index.md') {
+                                                        $storyDirs[] = dirname($file->getPathname());
+                                                    }
+                                                }
+                                                
+                                                echo "<p>Found " . count($storyDirs) . " story directories through recursive search</p>";
+                                                flushOutput();
+                                            }
+                                        } catch (Exception $e) {
+                                            echo "<p class='error'>Error scanning directories: " . $e->getMessage() . "</p>";
+                                            flushOutput();
+                                        }
+                                        
+                                        if (count($storyDirs) === 0) {
+                                            echo "<p class='error'>No story directories found. Import aborted.</p>";
+                                            flushOutput();
+                                        } else {
+                                            // Stats
+                                            $stats = [
+                                                'created' => 0,
+                                                'updated' => 0,
+                                                'skipped' => 0,
+                                                'errors' => 0
+                                            ];
+                                            
+                                            // Process each story
+                                            foreach ($storyDirs as $storyDir) {
+                                                try {
+                                                    $result = processStory($db, $storyDir);
+                                                    
+                                                    if ($result && $result['success']) {
+                                                        $stats[$result['action']]++;
+                                                    } else {
+                                                        $stats['errors']++;
+                                                    }
+                                                } catch (Exception $e) {
+                                                    echo "<p class='error'>Unexpected error processing story directory '$storyDir': " . $e->getMessage() . "</p>";
+                                                    flushOutput();
+                                                    $stats['errors']++;
+                                                    // Continue with next story
+                                                    continue;
+                                                }
+                                                
+                                                // Add a small delay to prevent server overload
+                                                usleep(100000); // 0.1 second
+                                            }
+                                            
+                                            // Display summary
+                                            echo "<h3>Import Complete!</h3>";
+                                            echo "<p class='success'>Summary:</p>";
+                                            echo "<ul>";
+                                            echo "<li>Created: {$stats['created']} stories</li>";
+                                            echo "<li>Updated: {$stats['updated']} stories</li>";
+                                            echo "<li>Skipped: {$stats['skipped']} stories</li>";
+                                            echo "<li>Errors: {$stats['errors']} stories</li>";
+                                            echo "</ul>";
+                                            
+                                            echo "<p>Check the <a href='/admin/stories'>Stories Admin</a> to verify the imported content.</p>";
+                                            flushOutput();
+                                        }
+                                    } else {
+                                        // For other content types, show placeholder message
+                                        echo "<p class='info'>Import functionality for $contentType will be implemented based on specific requirements.</p>";
+                                        echo "<p class='info'>The import will only delete data related to the specific content being imported.</p>";
+                                        flushOutput();
+                                    }
                                 }
                             } else {
                                 // Display initial instructions

@@ -210,29 +210,58 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
         }
     }
 
+    // If the file path is empty, return a default image
+    if (empty($filePath) || $filePath === '../assets/images/default-cover.svg') {
+        return '../assets/images/default-cover.svg';
+    }
+
     // If it's already an absolute URL
     if (strpos($filePath, 'http') === 0) {
         return $filePath;
     }
 
+    // Get the server base URL
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
+    $baseUrl = $protocol . $serverHost;
+    
+    // Debug logging
+    error_log("Processing image URL: $filePath");
+    error_log("Base URL: $baseUrl");
+
     // If it's a relative URL starting with /
     if (strpos($filePath, '/') === 0) {
-        // Check if we're in a development environment
-        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'localhost') {
-            return $filePath;
-        }
-        return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
+        error_log("Using absolute path: $baseUrl$filePath");
+        return $baseUrl . $filePath;
+    }
+
+    // If it's a relative path without leading slash but includes uploads/books
+    if (strpos($filePath, 'uploads/books/') !== false) {
+        $path = '/' . $filePath;
+        error_log("Converted to absolute path with leading slash: $baseUrl$path");
+        return $baseUrl . $path;
     }
 
     // If it's a relative path without leading slash
     if (strpos($filePath, '../') === 0 || strpos($filePath, './') === 0) {
-        return $filePath;
+        // Convert relative path to absolute
+        $pathParts = explode('/', $filePath);
+        // Remove the ../ or ./ prefix
+        array_shift($pathParts);
+        $absolutePath = '/' . implode('/', $pathParts);
+        error_log("Converted relative path to absolute: $baseUrl$absolutePath");
+        return $baseUrl . $absolutePath;
     }
 
     // If it's just a filename, assume it's in the uploads directory
     if (strpos($filePath, '/') === false) {
-        return '../uploads/' . $filePath;
+        error_log("Using uploads path: $baseUrl/uploads/$filePath");
+        return $baseUrl . '/uploads/' . $filePath;
     }
+    
+    // If all else fails, prepend the server URL to make it absolute
+    error_log("Fallback to base URL + path: $baseUrl/$filePath");
+    return $baseUrl . '/' . ltrim($filePath, '/');
 
     return $filePath;
 }
@@ -501,12 +530,32 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     if ($isClickable && !empty($clickUrl)) {
                                         echo '<a href="' . htmlspecialchars($clickUrl) . '" class="thumbnail-link">';
                                     }
+                                    
+                                    // Log server information
+                                    error_log("SERVER_NAME: " . $_SERVER['SERVER_NAME'] . ", HTTP_HOST: " . $_SERVER['HTTP_HOST']);
 
                                     // Add data attributes for debugging
                                     $dataAttrs = 'data-item-id="' . htmlspecialchars($itemId) . '" data-item-type="' . htmlspecialchars($itemType) . '"';
 
                                     // Check if the URL is a default image or empty
                                     $isDefaultImage = (strpos($thumbnailUrl, 'default-') !== false || empty($thumbnailUrl));
+                                    
+                                    // Fix for book covers that use relative paths
+                                    if (!$isDefaultImage && strpos($thumbnailUrl, '/uploads/books/') !== false) {
+                                        // Make sure URL is absolute
+                                        if (strpos($thumbnailUrl, 'http') !== 0) {
+                                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                                            $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
+                                            
+                                            // Normalize path to always start with /
+                                            if (strpos($thumbnailUrl, '/') !== 0) {
+                                                $thumbnailUrl = '/' . ltrim($thumbnailUrl, '/');
+                                            }
+                                            
+                                            $thumbnailUrl = $protocol . $serverHost . $thumbnailUrl;
+                                            error_log("Fixed book image URL: " . $thumbnailUrl);
+                                        }
+                                    }
 
                                     if ($isDefaultImage) {
                                         // Show "No Image" placeholder

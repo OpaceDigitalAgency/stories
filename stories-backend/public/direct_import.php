@@ -1028,6 +1028,8 @@ function processBook($db, $bookDir) {
         $isbn = isset($data['isbn']) ? $data['isbn'] : '';
         $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
         
+        // Improve metadata extraction for searchable fields
+        
         // Get publication date string from available sources
         $pubDateStr = null;
         
@@ -1038,15 +1040,24 @@ function processBook($db, $bookDir) {
             $pubDateStr = $data['publication_date'];
         }
         
-        echo "<p class='info'>Checking publisher info for first_published: " . (!empty($publisherInfo['first_published']) ? "'{$publisherInfo['first_published']}'" : "Empty or not found") . "</p>";
-        flushOutput();
+        // Extract page count
+        $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;
         
-        if (empty($pubDateStr) && !empty($publisherInfo['first_published'])) {
-            $pubDateStr = $publisherInfo['first_published'];
-        }
+        // Extract age range
+        $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
         
-        echo "<p class='info'>Final date string for conversion: '$pubDateStr'</p>";
-        flushOutput();
+        // Extract reading level
+        $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+        
+        // Extract genre
+        $genre = isset($data['genre']) ? $data['genre'] : '';
+        
+        // Extract series
+        $series = isset($data['series']) ? $data['series'] : '';
+        
+        // Extract ISBN/ISBN13
+        $isbn = isset($data['isbn']) ? $data['isbn'] : '';
+        $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
         
         // Convert publication date to MySQL format
         $publicationDate = convertToMySQLDate($pubDateStr);
@@ -1084,6 +1095,8 @@ function processBook($db, $bookDir) {
                 $bookInfo['author'] = trim($match[1]);
                 if (empty($author)) {
                     $author = $bookInfo['author'];
+                    echo "<p class='info'>Setting author from book info: '$author'</p>";
+                    flushOutput();
                 }
             }
             
@@ -1092,6 +1105,8 @@ function processBook($db, $bookDir) {
                 $bookInfo['genre'] = trim($match[1]);
                 if (empty($genre)) {
                     $genre = $bookInfo['genre'];
+                    echo "<p class='info'>Setting genre from book info: '$genre'</p>";
+                    flushOutput();
                 }
             }
             
@@ -1100,6 +1115,8 @@ function processBook($db, $bookDir) {
                 $bookInfo['series'] = trim($match[1]);
                 if (empty($series)) {
                     $series = $bookInfo['series'];
+                    echo "<p class='info'>Setting series from book info: '$series'</p>";
+                    flushOutput();
                 }
             }
             
@@ -1108,6 +1125,18 @@ function processBook($db, $bookDir) {
                 $bookInfo['age_range'] = trim($match[1]);
                 if (empty($ageRange)) {
                     $ageRange = $bookInfo['age_range'];
+                    echo "<p class='info'>Setting age range from book info: '$ageRange'</p>";
+                    flushOutput();
+                }
+            }
+            
+            // Extract Reading Level if available
+            if (preg_match('/Reading\s+Level:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['reading_level'] = trim($match[1]);
+                if (empty($readingLevel)) {
+                    $readingLevel = $bookInfo['reading_level'];
+                    echo "<p class='info'>Setting reading level from book info: '$readingLevel'</p>";
+                    flushOutput();
                 }
             }
         }

@@ -471,13 +471,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
                             </a>
-                            <a href="https://api.storiesfromtheweb.org/public/direct_import.php" class="dropdown-item" target="_blank">
+                            <a href="/public/direct_import.php" class="dropdown-item">
                                 <i class="fas fa-file-import" aria-hidden="true"></i> Imports
                             </a>
-                            <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" class="dropdown-item" target="_blank">
+                            <a href="/diagnostic-dashboard.php" class="dropdown-item">
                                 <i class="fas fa-chart-line" aria-hidden="true"></i> Diagnostics
                             </a>
-                            <a href="https://api.storiesfromtheweb.org/public/optimize_image.php" class="dropdown-item" target="_blank">
+                            <a href="/public/optimize_image.php" class="dropdown-item">
                                 <i class="fas fa-image" aria-hidden="true"></i> Image Optimization
                             </a>
                         </div>

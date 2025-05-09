@@ -190,39 +190,29 @@ function optimizeAllMedia($db) {
     return $stats;
 }
 
-// Main HTML output
-header('Content-Type: text/html; charset=utf-8');
+// Include auth check
+require_once '../stories-backend/admin/includes/auth-check.php';
+
+// Include database connection
+require_once '../stories-backend/admin/includes/db-connect.php';
+
+// Set page variables for header
+$pageTitle = 'Image Optimization Tool';
+$currentPage = 'image-optimization';
+$pageDescription = 'Optimize images for better performance and quality.';
+
+// Include header
+require_once '../stories-backend/admin/includes/header.php';
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Image Optimization Tool</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        h1, h2, h3 { color: #4a6ee0; }
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px 0;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Image Optimization Tool</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2><i class="fas fa-image"></i> Image Optimization Tool</h2>
+                </div>
+                <div class="card-body">
 
     <div>
         <h2>Optimize a Single Image</h2>
@@ -380,6 +370,13 @@ header('Content-Type: text/html; charset=utf-8');
             }
         }
         ?>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<?php
+// Include footer
+require_once '../stories-backend/admin/includes/footer.php';
+?>

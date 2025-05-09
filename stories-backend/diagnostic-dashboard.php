@@ -189,85 +189,30 @@ $diagnosticTools = [
     ]
 ];
 
+// Include auth check
+require_once 'admin/includes/auth-check.php';
+
+// Include database connection
+require_once 'admin/includes/db-connect.php';
+
+// Set page variables for header
+$pageTitle = 'Diagnostic Dashboard';
+$currentPage = 'diagnostics';
+$pageDescription = 'This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.';
+
+// Include header
+require_once 'admin/includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnostic Dashboard - Stories from the Web</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #555;
-            margin-top: 30px;
-        }
-        .card {
-            margin-bottom: 20px;
-            transition: transform 0.3s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        .card-header {
-            font-weight: bold;
-        }
-        .tool-icon {
-            font-size: 2rem;
-            margin-bottom: 15px;
-        }
-        .ai-tests .tool-icon { color: #6610f2; }
-        .api-tests .tool-icon { color: #28a745; }
-        .auth-tests .tool-icon { color: #007bff; }
-        .admin-tests .tool-icon { color: #6f42c1; }
-        .db-tests .tool-icon { color: #fd7e14; }
-        .system-tests .tool-icon { color: #dc3545; }
-        .documentation .tool-icon { color: #17a2b8; }
-        .unavailable {
-            opacity: 0.5;
-        }
-        .unavailable .card-body {
-            position: relative;
-        }
-        .unavailable .card-body::after {
-            content: "Not Available";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            background-color: rgba(220, 53, 69, 0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Diagnostic Dashboard - Stories from the Web</h1>
-        <p class="lead">This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.</p>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-line"></i> Diagnostic Dashboard</h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead">This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.</p>
 
         <?php foreach ($diagnosticTools as $category => $tools): ?>
             <h2><?php echo $category; ?></h2>
@@ -347,9 +292,52 @@ $diagnosticTools = [
                     </div>
                 </div>
             </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<style>
+    .tool-icon {
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+    .ai-tests .tool-icon { color: #6610f2; }
+    .api-tests .tool-icon { color: #28a745; }
+    .auth-tests .tool-icon { color: #007bff; }
+    .admin-tests .tool-icon { color: #6f42c1; }
+    .db-tests .tool-icon { color: #fd7e14; }
+    .system-tests .tool-icon { color: #dc3545; }
+    .documentation .tool-icon { color: #17a2b8; }
+    .unavailable {
+        opacity: 0.5;
+    }
+    .unavailable .card-body {
+        position: relative;
+    }
+    .unavailable .card-body::after {
+        content: "Not Available";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        background-color: rgba(220, 53, 69, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    .card {
+        transition: transform 0.3s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+
+<?php
+// Include footer
+require_once 'admin/includes/footer.php';
+?>

@@ -888,7 +888,7 @@ function processBook($db, $bookDir) {
         echo "<h3>Processing Book: $title</h3>";
         flushOutput();
         
-        // Extract book metadata
+        // Extract book metadata from front matter
         $author = isset($data['author']) ? $data['author'] : '';
         $publisher = isset($data['publisher']) ? $data['publisher'] : '';
         $isbn = isset($data['isbn']) ? $data['isbn'] : '';
@@ -897,6 +897,119 @@ function processBook($db, $bookDir) {
         $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;
         $ageRange = isset($data['age_range']) ? $data['age_range'] : '';
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+        $genre = isset($data['genre']) ? $data['genre'] : '';
+        $series = isset($data['series']) ? $data['series'] : '';
+        $publisherAddress = isset($data['publisher_address']) ? $data['publisher_address'] : '';
+        $tags = isset($data['tags']) ? $data['tags'] : '';
+        
+        // Extract additional metadata from markdown content
+        $bookInfo = [];
+        $publisherInfo = [];
+        $plotInfo = '';
+        $relatedBooks = [];
+        
+        // Extract Book & Author Info section
+        if (preg_match('/#{1,3}\s*BOOK\s*&\s*AUTHOR\s*INFO.*?(?=#{1,3}|$)/is', $markdownContent, $bookInfoMatch)) {
+            $bookInfoContent = $bookInfoMatch[0];
+            
+            // Extract Book Title
+            if (preg_match('/Book\s+Title:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['title'] = trim($match[1]);
+            }
+            
+            // Extract Book Author
+            if (preg_match('/Book\s+Author:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['author'] = trim($match[1]);
+                if (empty($author)) {
+                    $author = $bookInfo['author'];
+                }
+            }
+            
+            // Extract Genre
+            if (preg_match('/Genre:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['genre'] = trim($match[1]);
+                if (empty($genre)) {
+                    $genre = $bookInfo['genre'];
+                }
+            }
+            
+            // Extract Series
+            if (preg_match('/Series:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['series'] = trim($match[1]);
+                if (empty($series)) {
+                    $series = $bookInfo['series'];
+                }
+            }
+            
+            // Extract Book Age Range
+            if (preg_match('/Book\s+Age\s+Range:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookInfo['age_range'] = trim($match[1]);
+                if (empty($ageRange)) {
+                    $ageRange = $bookInfo['age_range'];
+                }
+            }
+        }
+        
+        // Extract Plot section
+        if (preg_match('/#{1,3}\s*(?:THE\s*)?(?:.*?)PLOT.*?\n(.*?)(?=#{1,3}|$)/is', $markdownContent, $plotMatch)) {
+            $plotInfo = trim($plotMatch[1]);
+        }
+        
+        // Extract Publisher Information section
+        if (preg_match('/#{1,3}\s*PUBLISHER\s*INFORMATION.*?(?=#{1,3}|$)/is', $markdownContent, $publisherMatch)) {
+            $publisherContent = $publisherMatch[0];
+            
+            // Extract First published date
+            if (preg_match('/First\s+published\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
+                $publisherInfo['first_published'] = trim($match[1]);
+                if (empty($publicationDate)) {
+                    $publicationDate = $publisherInfo['first_published'];
+                }
+            }
+            
+            // Extract Publisher name
+            if (preg_match('/published\s+by\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
+                $publisherInfo['name'] = trim($match[1]);
+                if (empty($publisher)) {
+                    $publisher = $publisherInfo['name'];
+                }
+            }
+            
+            // Extract Publisher address
+            if (preg_match('/(?:Orion|Publisher)\s+(?:House|Address).*?\n(.*?)(?:\n\n|\n#|$)/is', $publisherContent, $match)) {
+                $publisherInfo['address'] = trim($match[1]);
+                if (empty($publisherAddress)) {
+                    $publisherAddress = $publisherInfo['address'];
+                }
+            }
+            
+            // Extract ISBN
+            if (preg_match('/ISBN.*?(\d[\d\-]+\d)/i', $publisherContent, $match)) {
+                $publisherInfo['isbn'] = trim($match[1]);
+                if (empty($isbn)) {
+                    $isbn = $publisherInfo['isbn'];
+                }
+            }
+        }
+        
+        // Extract Tags
+        $extractedTags = [];
+        if (preg_match('/Tags:.*?\n(.*?)(?:\n\n|\n#|$)/is', $markdownContent, $tagsMatch)) {
+            $tagsContent = $tagsMatch[1];
+            preg_match_all('/<a.*?>(.*?)<\/a>/i', $tagsContent, $matches);
+            if (!empty($matches[1])) {
+                $extractedTags = $matches[1];
+            }
+        }
+        
+        // Extract Related Posts
+        if (preg_match('/RELATED\s+POSTS.*?\n(.*?)(?=#{1,3}|$)/is', $markdownContent, $relatedMatch)) {
+            $relatedContent = $relatedMatch[1];
+            preg_match_all('/<li>.*?<a.*?>(.*?)<\/a>.*?<\/li>/is', $relatedContent, $matches);
+            if (!empty($matches[1])) {
+                $relatedBooks = $matches[1];
+            }
+        }
         
         // Variables to store author and publisher IDs
         $authorId = null;
@@ -950,13 +1063,15 @@ function processBook($db, $bookDir) {
             }
         }
         
-        // Process cover image
+        // Process cover image and add to media table
         $coverImageUrl = '';
+        $mediaId = null;
         $imagesDir = "$bookDir/images";
         if (is_dir($imagesDir)) {
             $images = glob("$imagesDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
             if (!empty($images)) {
-                $coverImageUrl = '/uploads/books/' . basename($images[0]);
+                $imageFile = $images[0];
+                $imageName = basename($imageFile);
                 
                 // Copy image to uploads directory
                 $uploadsDir = __DIR__ . '/../uploads/books';
@@ -964,15 +1079,42 @@ function processBook($db, $bookDir) {
                     mkdir($uploadsDir, 0755, true);
                 }
                 
-                copy($images[0], $uploadsDir . '/' . basename($images[0]));
-                echo "<p class='success'>Used image: " . basename($images[0]) . " as cover</p>";
+                $destinationPath = $uploadsDir . '/' . $imageName;
+                copy($imageFile, $destinationPath);
+                
+                // Add image to media table
+                $fileSize = filesize($imageFile);
+                $fileType = mime_content_type($imageFile);
+                $relativePath = '/uploads/books/' . $imageName;
+                
+                $stmt = $db->prepare("
+                    INSERT INTO media (
+                        filename, file_path, file_size, file_type,
+                        upload_date, is_public, media_type
+                    ) VALUES (?, ?, ?, ?, NOW(), 1, 'image')
+                ");
+                
+                $stmt->execute([
+                    $imageName,
+                    $relativePath,
+                    $fileSize,
+                    $fileType
+                ]);
+                
+                $mediaId = $db->lastInsertId();
+                $coverImageUrl = $relativePath;
+                
+                echo "<p class='success'>Added image: $imageName to media table (ID: $mediaId)</p>";
                 flushOutput();
             }
         }
         
         // Extract description from content
         $description = '';
-        if (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*|$)/s', $markdownContent, $summaryMatch)) {
+        if (!empty($plotInfo)) {
+            // Use plot information as description
+            $description = $plotInfo;
+        } elseif (preg_match('/Summary\s*\n(.*?)(?:\n\n|\n#|\n\*\*|$)/s', $markdownContent, $summaryMatch)) {
             $description = trim($summaryMatch[1]);
         } else {
             // Use first paragraph as description
@@ -1024,7 +1166,7 @@ function processBook($db, $bookDir) {
             // Update directory item
             $stmt = $db->prepare("
                 UPDATE directory_items
-                SET description = ?, website_url = ?, category_id = ?, updated_at = NOW()
+                SET description = ?, website_url = ?, category_id = ?, cover_url = ?, updated_at = NOW()
                 WHERE id = ?
             ");
             
@@ -1035,6 +1177,7 @@ function processBook($db, $bookDir) {
                 $description,
                 $url,
                 $categoryId,
+                $coverImageUrl, // Set cover_url to the cover image URL
                 $directoryItemId
             ]);
             
@@ -1044,9 +1187,19 @@ function processBook($db, $bookDir) {
                 SET isbn = ?, isbn13 = ?, author = ?, publisher = ?,
                     publication_date = ?, page_count = ?, age_range = ?,
                     reading_level = ?, cover_image_url = ?, purchase_links = ?,
-                    metadata = ?
+                    metadata = ?, genre = ?, series = ?
                 WHERE directory_item_id = ?
             ");
+            
+            // Create enhanced metadata with all the extracted information
+            $enhancedData = array_merge($data, [
+                'book_info' => $bookInfo,
+                'publisher_info' => $publisherInfo,
+                'plot_info' => $plotInfo,
+                'related_books' => $relatedBooks,
+                'tags' => $extractedTags
+            ]);
+            
             $stmt->execute([
                 $isbn,
                 $isbn13,
@@ -1058,7 +1211,9 @@ function processBook($db, $bookDir) {
                 $readingLevel,
                 $coverImageUrl,
                 json_encode($purchaseLinks),
-                json_encode($data),
+                json_encode($enhancedData),
+                $genre,
+                $series,
                 $directoryItemId
             ]);
             
@@ -1085,8 +1240,8 @@ function processBook($db, $bookDir) {
             
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    title, description, website_url, category_id, type, slug, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'book', ?, ?, ?)
+                    title, description, website_url, category_id, type, slug, cover_url, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'book', ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -1095,6 +1250,7 @@ function processBook($db, $bookDir) {
                 $url,
                 $categoryId,
                 $slug,
+                $coverImageUrl, // Set cover_url to the cover image URL
                 $now,
                 $now
             ]);
@@ -1106,9 +1262,18 @@ function processBook($db, $bookDir) {
                 INSERT INTO books (
                     directory_item_id, isbn, isbn13, author, publisher,
                     publication_date, page_count, age_range, reading_level,
-                    cover_image_url, purchase_links, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    cover_image_url, purchase_links, metadata, genre, series
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
+            
+            // Create enhanced metadata with all the extracted information
+            $enhancedData = array_merge($data, [
+                'book_info' => $bookInfo,
+                'publisher_info' => $publisherInfo,
+                'plot_info' => $plotInfo,
+                'related_books' => $relatedBooks,
+                'tags' => $extractedTags
+            ]);
             
             $stmt->execute([
                 $directoryItemId,
@@ -1122,7 +1287,9 @@ function processBook($db, $bookDir) {
                 $readingLevel,
                 $coverImageUrl,
                 json_encode($purchaseLinks),
-                json_encode($data)
+                json_encode($enhancedData),
+                $genre,
+                $series
             ]);
             
             echo "<p class='success'>Created new book: $title (ID: $directoryItemId)</p>";

@@ -19,8 +19,38 @@
 --     cover_image_url VARCHAR(255),
 --     purchase_links JSON,
 --     metadata JSON,
+--     genre VARCHAR(255),
+--     series VARCHAR(255),
 --     FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE
 -- );
+
+-- Add genre and series columns to the books table if they don't exist
+-- Note: MySQL doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN
+-- Run these statements one at a time, and ignore errors if the columns already exist
+
+-- First, check if genre column exists
+SELECT COUNT(*) INTO @genre_exists FROM information_schema.columns
+WHERE table_schema = DATABASE() AND table_name = 'books' AND column_name = 'genre';
+
+-- Add genre column if it doesn't exist
+SET @query = IF(@genre_exists = 0, 'ALTER TABLE books ADD COLUMN genre VARCHAR(255)', 'SELECT "Genre column already exists"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Then, check if series column exists
+SELECT COUNT(*) INTO @series_exists FROM information_schema.columns
+WHERE table_schema = DATABASE() AND table_name = 'books' AND column_name = 'series';
+
+-- Add series column if it doesn't exist
+SET @query = IF(@series_exists = 0, 'ALTER TABLE books ADD COLUMN series VARCHAR(255)', 'SELECT "Series column already exists"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Alternative approach: Just run these directly and ignore errors if columns already exist
+-- ALTER TABLE books ADD COLUMN genre VARCHAR(255);
+-- ALTER TABLE books ADD COLUMN series VARCHAR(255);
 
 -- Run this to create the book_authors table for book-author relationships
 CREATE TABLE book_authors (

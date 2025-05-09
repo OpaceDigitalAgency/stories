@@ -221,7 +221,7 @@ $currentPage = 'image-optimization';
 $pageDescription = 'Optimize images for better performance and quality.';
 
 // Include header
-require_once '../stories-backend/admin/includes/header.php';
+require_once '../admin/includes/header.php';
 ?>
 
 <div class="container">

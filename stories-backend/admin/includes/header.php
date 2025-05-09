@@ -61,7 +61,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <?php
     // Determine the correct path to assets based on the current file location
     $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
-    $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
+    
+    // Adjust paths based on directory
+    if ($isPublicDir) {
+        $assetsPath = '../admin/assets/css/enhanced-admin.css';
+    } else {
+        $assetsPath = strpos($basePath, '/admin/content') !== false ? '../assets/css/enhanced-admin.css' : 'assets/css/enhanced-admin.css';
+    }
 
     // Get favicon from config or use default
     $faviconPath = get_config('site.favicon.png', '/favicon.png');
@@ -69,7 +75,11 @@ $siteName = get_config('site.name', 'Stories From The Web');
     // Make sure the favicon path is correct for the admin environment
     if (strpos($faviconPath, '/') === 0) {
         // If it starts with a slash, it's a root-relative path
-        $faviconPath = $isContentDir ? '../../public' . $faviconPath : '../public' . $faviconPath;
+        if ($isPublicDir) {
+            $faviconPath = '../public' . $faviconPath;
+        } else {
+            $faviconPath = $isContentDir ? '../../public' . $faviconPath : '../public' . $faviconPath;
+        }
     }
     ?>
     <link rel="icon" type="image/png" href="<?php echo $faviconPath; ?>">
@@ -90,11 +100,19 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
     <!-- Admin CSS Files -->
     <?php
-    $modernDashboardCssPath = $isContentDir ? '../assets/css/modern-dashboard.css' : 'assets/css/modern-dashboard.css';
-    $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
-    $premiumAdminCssPath = $isContentDir ? '../assets/css/premium-admin.css' : 'assets/css/premium-admin.css';
-    $adminStylesCssPath = $isContentDir ? '../assets/css/admin-styles.css' : 'assets/css/admin-styles.css';
-    $previewModalCssPath = $isContentDir ? '../assets/css/preview-modal.css' : 'assets/css/preview-modal.css';
+    if ($isPublicDir) {
+        $modernDashboardCssPath = '../admin/assets/css/modern-dashboard.css';
+        $thumbnailsCssPath = '../admin/assets/css/thumbnails.css';
+        $premiumAdminCssPath = '../admin/assets/css/premium-admin.css';
+        $adminStylesCssPath = '../admin/assets/css/admin-styles.css';
+        $previewModalCssPath = '../admin/assets/css/preview-modal.css';
+    } else {
+        $modernDashboardCssPath = $isContentDir ? '../assets/css/modern-dashboard.css' : 'assets/css/modern-dashboard.css';
+        $thumbnailsCssPath = $isContentDir ? '../assets/css/thumbnails.css' : 'assets/css/thumbnails.css';
+        $premiumAdminCssPath = $isContentDir ? '../assets/css/premium-admin.css' : 'assets/css/premium-admin.css';
+        $adminStylesCssPath = $isContentDir ? '../assets/css/admin-styles.css' : 'assets/css/admin-styles.css';
+        $previewModalCssPath = $isContentDir ? '../assets/css/preview-modal.css' : 'assets/css/preview-modal.css';
+    }
     ?>
     <link rel="stylesheet" href="<?php echo $modernDashboardCssPath; ?>">
     <link rel="stylesheet" href="<?php echo $thumbnailsCssPath; ?>">
@@ -104,7 +122,11 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
     <!-- Admin UI Fixes CSS -->
     <?php
-    $adminFixesCssPath = $isContentDir ? '../assets/css/admin-fixes.css' : 'assets/css/admin-fixes.css';
+    if ($isPublicDir) {
+        $adminFixesCssPath = '../admin/assets/css/admin-fixes.css';
+    } else {
+        $adminFixesCssPath = $isContentDir ? '../assets/css/admin-fixes.css' : 'assets/css/admin-fixes.css';
+    }
     ?>
     <link rel="stylesheet" href="<?php echo $adminFixesCssPath; ?>">
 
@@ -118,18 +140,33 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
     <!-- Admin JavaScript Files -->
     <?php
-    $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
-    $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
-    $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
+    if ($isPublicDir) {
+        $enhancedAdminJsPath = '../admin/assets/js/enhanced-admin.js';
+        $liveSearchJsPath = '../admin/assets/js/live-search.js';
+        $inlineEditingJsPath = '../admin/assets/js/inline-editing.js';
 
-    // Preview JS files
-    $storyPreviewJsPath = $isContentDir ? '../assets/js/story-preview.js' : 'assets/js/story-preview.js';
-    $authorPreviewJsPath = $isContentDir ? '../assets/js/author-preview.js' : 'assets/js/author-preview.js';
-    $contactPreviewJsPath = $isContentDir ? '../assets/js/contact-preview.js' : 'assets/js/contact-preview.js';
-    $gamePreviewJsPath = $isContentDir ? '../assets/js/game-preview.js' : 'assets/js/game-preview.js';
-    $directoryItemPreviewJsPath = $isContentDir ? '../assets/js/directory-item-preview.js' : 'assets/js/directory-item-preview.js';
-    $aiToolPreviewJsPath = $isContentDir ? '../assets/js/ai-tool-preview.js' : 'assets/js/ai-tool-preview.js';
-    $postPreviewJsPath = $isContentDir ? '../assets/js/post-preview.js' : 'assets/js/post-preview.js';
+        // Preview JS files
+        $storyPreviewJsPath = '../admin/assets/js/story-preview.js';
+        $authorPreviewJsPath = '../admin/assets/js/author-preview.js';
+        $contactPreviewJsPath = '../admin/assets/js/contact-preview.js';
+        $gamePreviewJsPath = '../admin/assets/js/game-preview.js';
+        $directoryItemPreviewJsPath = '../admin/assets/js/directory-item-preview.js';
+        $aiToolPreviewJsPath = '../admin/assets/js/ai-tool-preview.js';
+        $postPreviewJsPath = '../admin/assets/js/post-preview.js';
+    } else {
+        $enhancedAdminJsPath = $isContentDir ? '../assets/js/enhanced-admin.js' : 'assets/js/enhanced-admin.js';
+        $liveSearchJsPath = $isContentDir ? '../assets/js/live-search.js' : 'assets/js/live-search.js';
+        $inlineEditingJsPath = $isContentDir ? '../assets/js/inline-editing.js' : 'assets/js/inline-editing.js';
+
+        // Preview JS files
+        $storyPreviewJsPath = $isContentDir ? '../assets/js/story-preview.js' : 'assets/js/story-preview.js';
+        $authorPreviewJsPath = $isContentDir ? '../assets/js/author-preview.js' : 'assets/js/author-preview.js';
+        $contactPreviewJsPath = $isContentDir ? '../assets/js/contact-preview.js' : 'assets/js/contact-preview.js';
+        $gamePreviewJsPath = $isContentDir ? '../assets/js/game-preview.js' : 'assets/js/game-preview.js';
+        $directoryItemPreviewJsPath = $isContentDir ? '../assets/js/directory-item-preview.js' : 'assets/js/directory-item-preview.js';
+        $aiToolPreviewJsPath = $isContentDir ? '../assets/js/ai-tool-preview.js' : 'assets/js/ai-tool-preview.js';
+        $postPreviewJsPath = $isContentDir ? '../assets/js/post-preview.js' : 'assets/js/post-preview.js';
+    }
     ?>
     <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
     <script src="<?php echo $liveSearchJsPath; ?>"></script>

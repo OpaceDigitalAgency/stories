@@ -438,8 +438,8 @@ function processBook($db, $bookDir) {
                 $stmt = $db->prepare("
                     INSERT INTO media (
                         filename, file_path, file_size, file_type,
-                        alt_text, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                        alt_text, created_at, updated_at, entity_type, entity_id
+                    ) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
                 ");
 
                 try {
@@ -448,7 +448,9 @@ function processBook($db, $bookDir) {
                         $relativePath, // Store relative path for consistency
                         $fileSize,
                         $fileType,
-                        "Cover image for $title" // Alt text for the image
+                        "Cover image for $title", // Alt text for the image
+                        'book', // entity_type
+                        0 // entity_id (will be updated later)
                     ]);
 
                     $mediaId = $db->lastInsertId();
@@ -552,6 +554,14 @@ function processBook($db, $bookDir) {
 
             echo "<p class='success'>Updated existing directory item: $title (ID: $directoryItemId)</p>";
             flushOutput();
+
+            // Update the media record with the directory item ID
+            if (isset($mediaId)) {
+                $updateMediaStmt = $db->prepare("UPDATE media SET entity_id = ? WHERE id = ?");
+                $updateMediaStmt->execute([$directoryItemId, $mediaId]);
+                echo "<p class='success'>Updated media record with directory item ID</p>";
+                flushOutput();
+            }
         } else {
             // Create new directory item - using explicit column names to match the actual table structure
             $stmt = $db->prepare("
@@ -576,6 +586,14 @@ function processBook($db, $bookDir) {
             $directoryItemId = $db->lastInsertId();
             echo "<p class='success'>Created new directory item: $title (ID: $directoryItemId)</p>";
             flushOutput();
+
+            // Update the media record with the directory item ID
+            if (isset($mediaId)) {
+                $updateMediaStmt = $db->prepare("UPDATE media SET entity_id = ? WHERE id = ?");
+                $updateMediaStmt->execute([$directoryItemId, $mediaId]);
+                echo "<p class='success'>Updated media record with directory item ID</p>";
+                flushOutput();
+            }
         }
 
         // Check if book already exists

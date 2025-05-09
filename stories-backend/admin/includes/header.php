@@ -211,34 +211,41 @@ $siteName = get_config('site.name', 'Stories From The Web');
             position: sticky;
             top: 0;
             z-index: 1000;
+            height: 60px; /* Fixed height to match diagnostics page */
         }
 
         .header-container {
-            padding: 0.25rem 1rem; /* Reduced padding to make header less tall */
+            padding: 0 1rem; /* Remove vertical padding completely */
             max-width: 1200px; /* Match content width */
             margin: 0 auto; /* Center the header content */
+            height: 100%; /* Full height of header */
         }
 
         .main-nav {
             flex-grow: 1;
             align-items: center; /* Ensure vertical centering */
+            height: 100%; /* Full height of container */
         }
 
         .dashboard-link {
             font-weight: 600;
             margin-right: 1.5rem;
-            padding: 0.4rem 0.75rem; /* Reduced padding */
+            padding: 0.3rem 0.6rem; /* Further reduced padding */
             border-radius: var(--radius-md);
+            height: 36px; /* Fixed height for consistency */
+            display: flex;
+            align-items: center;
         }
 
         .nav-items {
             flex-grow: 1;
             display: flex;
             align-items: center; /* Ensure vertical centering */
+            height: 100%; /* Full height of container */
         }
 
         .main-nav .nav-link {
-            padding: 0.4rem 0.75rem; /* Reduced padding */
+            padding: 0.3rem 0.6rem; /* Further reduced padding */
             border-radius: var(--radius-md);
             color: var(--gray-700);
             font-weight: 500;
@@ -250,6 +257,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
             align-items: center;
             gap: 0.5rem;
             white-space: nowrap;
+            height: 36px; /* Fixed height for consistency */
         }
 
         .main-nav .nav-link:hover {
@@ -293,7 +301,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
         .user-info {
             display: flex;
             align-items: center; /* Ensure vertical centering */
-            gap: 0.75rem;
+            gap: 0.5rem; /* Reduced gap */
             height: 100%; /* Full height of container */
         }
 
@@ -303,6 +311,20 @@ $siteName = get_config('site.name', 'Stories From The Web');
             align-items: center;
             justify-content: center;
             padding: 0.25rem 0.5rem; /* Smaller padding */
+            height: 36px; /* Fixed height for consistency */
+            margin: 0; /* Remove any margin */
+        }
+
+        /* Fix for the welcome text */
+        .user-name {
+            margin-right: 0.5rem;
+            white-space: nowrap;
+        }
+
+        /* Fix for form inside user-info */
+        .user-info form {
+            margin: 0;
+            height: 36px; /* Fixed height for consistency */
         }
 
         /* Responsive adjustments */

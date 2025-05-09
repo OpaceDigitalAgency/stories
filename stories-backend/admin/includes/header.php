@@ -468,13 +468,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
                             </a>
-                            <a href="/admin/direct_import.php" class="dropdown-item">
+                            <a href="/public/direct_import.php" class="dropdown-item">
                                 <i class="fas fa-file-import" aria-hidden="true"></i> Imports
                             </a>
-                            <a href="/admin/diagnostic-dashboard.php" class="dropdown-item">
+                            <a href="/diagnostic-dashboard.php" class="dropdown-item">
                                 <i class="fas fa-chart-line" aria-hidden="true"></i> Diagnostics
                             </a>
-                            <a href="/admin/optimize_image.php" class="dropdown-item">
+                            <a href="/public/optimize_image.php" class="dropdown-item">
                                 <i class="fas fa-image" aria-hidden="true"></i> Image Optimization
                             </a>
                         </div>

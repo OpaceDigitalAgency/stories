@@ -547,10 +547,9 @@ function processBook($db, $bookDir) {
                 UPDATE directory_items SET
                     title = ?,
                     description = ?,
-                    website_url = ?,
                     category_id = ?,
-                    type = ?,
                     slug = ?,
+                    website_url = ?,
                     cover_url = ?,
                     is_published = 1,
                     updated_at = NOW()
@@ -560,10 +559,9 @@ function processBook($db, $bookDir) {
             $stmt->execute([
                 $title,
                 $description,
-                '',  // website_url
                 1,   // category_id (default to books category)
-                'book',  // type
                 $slug,
+                '',  // website_url
                 $coverImageUrl,
                 $directoryItemId
             ]);
@@ -574,8 +572,9 @@ function processBook($db, $bookDir) {
             // Create new directory item
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    title, description, website_url, category_id, type, slug, cover_url, is_published, published_at, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), ?, ?)
+                    title, description, category_id, slug, published_at, website_url,
+                    cover_url, is_published, created_at, updated_at, type
+                ) VALUES (?, ?, ?, ?, NOW(), ?, ?, 1, ?, ?, 'book')
             ");
 
             $now = date('Y-m-d H:i:s');
@@ -583,10 +582,9 @@ function processBook($db, $bookDir) {
             $stmt->execute([
                 $title,
                 $description,
-                '',  // website_url
                 1,   // category_id (default to books category)
-                'book',  // type
                 $slug,
+                '',  // website_url
                 $coverImageUrl,
                 $now,
                 $now

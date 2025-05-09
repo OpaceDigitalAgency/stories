@@ -214,26 +214,29 @@ $siteName = get_config('site.name', 'Stories From The Web');
         }
 
         .header-container {
-            padding: 0.5rem 1rem;
+            padding: 0.25rem 1rem; /* Reduced padding to make header less tall */
         }
 
         .main-nav {
             flex-grow: 1;
+            align-items: center; /* Ensure vertical centering */
         }
 
         .dashboard-link {
             font-weight: 600;
             margin-right: 1.5rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.4rem 0.75rem; /* Reduced padding */
             border-radius: var(--radius-md);
         }
 
         .nav-items {
             flex-grow: 1;
+            display: flex;
+            align-items: center; /* Ensure vertical centering */
         }
 
         .main-nav .nav-link {
-            padding: 0.5rem 0.75rem;
+            padding: 0.4rem 0.75rem; /* Reduced padding */
             border-radius: var(--radius-md);
             color: var(--gray-700);
             font-weight: 500;
@@ -287,8 +290,17 @@ $siteName = get_config('site.name', 'Stories From The Web');
 
         .user-info {
             display: flex;
-            align-items: center;
+            align-items: center; /* Ensure vertical centering */
             gap: 0.75rem;
+            height: 100%; /* Full height of container */
+        }
+
+        /* Ensure buttons are vertically centered */
+        .user-info .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem 0.5rem; /* Smaller padding */
         }
 
         /* Responsive adjustments */
@@ -511,6 +523,17 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $isContentDir ? 'ai-settings.php' : $contentPrefix . 'ai-settings.php'; ?>" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
                             </a>
+                            <?php if ($isPublicDir): ?>
+                            <a href="../public/direct_import.php" class="dropdown-item <?php echo $currentPage === 'import' ? 'active' : ''; ?>">
+                                <i class="fas fa-file-import" aria-hidden="true"></i> Imports
+                            </a>
+                            <a href="../diagnostic-dashboard.php" class="dropdown-item">
+                                <i class="fas fa-chart-line" aria-hidden="true"></i> Diagnostics
+                            </a>
+                            <a href="../public/optimize_image.php" class="dropdown-item">
+                                <i class="fas fa-image" aria-hidden="true"></i> Image Optimization
+                            </a>
+                            <?php else: ?>
                             <a href="/public/direct_import.php" class="dropdown-item <?php echo $currentPage === 'import' ? 'active' : ''; ?>">
                                 <i class="fas fa-file-import" aria-hidden="true"></i> Imports
                             </a>
@@ -520,6 +543,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="/public/optimize_image.php" class="dropdown-item">
                                 <i class="fas fa-image" aria-hidden="true"></i> Image Optimization
                             </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

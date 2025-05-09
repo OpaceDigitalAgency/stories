@@ -45,8 +45,9 @@ try {
     $db = null;
 }
 
-// Determine if we're in the content directory or main admin directory
+// Determine if we're in the content directory, public directory, or main admin directory
 $isContentDir = strpos($_SERVER['SCRIPT_FILENAME'], '/admin/content/') !== false;
+$isPublicDir = strpos($_SERVER['SCRIPT_FILENAME'], '/public/') !== false;
 
 // Get site name from config
 $siteName = get_config('site.name', 'Stories From The Web');
@@ -387,8 +388,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
 <body>
     <?php
     // Set paths for navigation
-    $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
-    $contentPrefix = $isContentDir ? '' : 'content/';
+    if ($isPublicDir) {
+        $dashboardPath = '../admin/dashboard.php';
+        $contentPrefix = '../admin/content/';
+    } else {
+        $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';
+        $contentPrefix = $isContentDir ? '' : 'content/';
+    }
     ?>
     <header class="admin-header">
         <div class="header-container">
@@ -484,12 +490,21 @@ $siteName = get_config('site.name', 'Stories From The Web');
                 <!-- User Info and Actions (pushed to the right) -->
                 <div class="user-info ml-auto">
                     <span class="user-name">Welcome, <?php echo htmlspecialchars($user['name'] ?? 'User'); ?></span>
+                    <?php if ($isPublicDir): ?>
+                    <a href="../admin/clear_session.php" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
+                        <i class="fas fa-broom"></i> Clear Session
+                    </a>
+                    <form method="POST" action="../admin/logout.php" style="display: inline;">
+                        <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                    </form>
+                    <?php else: ?>
                     <a href="<?php echo $isContentDir ? '../clear_session.php' : 'clear_session.php'; ?>" class="btn btn-warning btn-sm" title="Clear session data if you experience login issues">
                         <i class="fas fa-broom"></i> Clear Session
                     </a>
                     <form method="POST" action="<?php echo $isContentDir ? '../logout.php' : 'logout.php'; ?>" style="display: inline;">
                         <button type="submit" class="btn btn-danger btn-sm">Logout</button>
                     </form>
+                    <?php endif; ?>
                 </div>
             </nav>
         </div>

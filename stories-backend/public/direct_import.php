@@ -864,6 +864,9 @@ require_once '../admin/includes/header.php';
                             <a href="optimize_image.php" class="btn btn-secondary">
                                 <i class="fas fa-image"></i> Optimize Media Files
                             </a>
+                            <a href="../docs/import-documentation.php" class="btn btn-info" target="_blank">
+                                <i class="fas fa-book"></i> Documentation
+                            </a>
                         </div>
                     </form>
                     

@@ -188,10 +188,7 @@ function processBook($db, $bookDir) {
         // Process publisher as an author with role 'publisher'
         $publisherId = null;
         if (!empty($publisher)) {
-            $publisherInfo = [
-                'name' => $publisher,
-                'type' => 'publisher'
-            ];
+            // Publisher info not needed as type is set in SQL
 
             // Check if publisher exists by name
             $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
@@ -206,14 +203,14 @@ function processBook($db, $bookDir) {
                 // Add new publisher
                 $stmt = $db->prepare("
                     INSERT INTO authors (name, type, slug, created_at, updated_at)
-                    VALUES (?, 'publisher', ?, NOW(), NOW())
+                    VALUES (?, ?, ?, NOW(), NOW())
                 ");
 
                 // Generate slug
                 $publisherSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $publisher));
                 $publisherSlug = trim($publisherSlug, '-');
 
-                $stmt->execute([$publisher, $publisherSlug]);
+                $stmt->execute([$publisher, 'publisher', $publisherSlug]);
                 $publisherId = $db->lastInsertId();
                 echo "<p class='success'>Added publisher '" . htmlspecialchars($publisher) . "' to authors table (ID: $publisherId)</p>";
                 flushOutput();
@@ -229,10 +226,7 @@ function processBook($db, $bookDir) {
             $authorName = "** $authorName";
         }
 
-        $authorInfo = [
-            'name' => $authorName,
-            'type' => 'book_author'
-        ];
+        // Author info not needed as type is set in SQL
 
         // Check if author exists by name
         $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
@@ -247,14 +241,14 @@ function processBook($db, $bookDir) {
             // Add new author
             $stmt = $db->prepare("
                 INSERT INTO authors (name, type, slug, created_at, updated_at)
-                VALUES (?, 'book_author', ?, NOW(), NOW())
+                VALUES (?, ?, ?, NOW(), NOW())
             ");
 
             // Generate slug
             $authorSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorName));
             $authorSlug = trim($authorSlug, '-');
 
-            $stmt->execute([$authorName, $authorSlug]);
+            $stmt->execute([$authorName, 'book_author', $authorSlug]);
             $authorId = $db->lastInsertId();
             echo "<p class='success'>Added book author '" . htmlspecialchars($authorName) . "' to authors table (ID: $authorId)</p>";
             flushOutput();

@@ -12,10 +12,10 @@
  */
 
 // Include auth check
-require_once '../stories-backend/admin/includes/auth-check.php';
+require_once '../admin/includes/auth-check.php';
 
 // Include database connection
-require_once '../stories-backend/admin/includes/db-connect.php';
+require_once '../admin/includes/db-connect.php';
 
 // Basic error handling and setup
 ini_set('display_errors', 1);
@@ -357,7 +357,7 @@ $currentPage = 'import';
 $pageDescription = 'Import content from various sources into the Stories From The Web database.';
 
 // Include header
-require_once '../stories-backend/admin/includes/header.php';
+require_once '../admin/includes/header.php';
 ?>
 
 <div class="container">
@@ -590,5 +590,5 @@ require_once '../stories-backend/admin/includes/header.php';
 
 <?php
 // Include footer
-require_once '../stories-backend/admin/includes/footer.php';
+require_once '../admin/includes/footer.php';
 ?>

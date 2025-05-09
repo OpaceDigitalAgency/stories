@@ -214,40 +214,40 @@ require_once 'admin/includes/header.php';
                 <div class="card-body">
                     <p class="lead">This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.</p>
 
-        <?php foreach ($diagnosticTools as $category => $tools): ?>
-            <h2><?php echo $category; ?></h2>
-            <div class="row">
-                <?php foreach ($tools as $tool): ?>
-                    <?php
-                    $isAvailable = fileExists(__DIR__ . '/' . $tool['path']);
-                    $categoryClass = strtolower(str_replace(' ', '-', $category));
-                    ?>
-                    <div class="col-md-4">
-                        <div class="card <?php echo $categoryClass; ?> <?php echo $isAvailable ? '' : 'unavailable'; ?>">
-                            <div class="card-body text-center">
-                                <div class="tool-icon">
-                                    <i class="fas <?php echo $tool['icon']; ?>"></i>
+                    <?php foreach ($diagnosticTools as $category => $tools): ?>
+                        <h2><?php echo $category; ?></h2>
+                        <div class="row">
+                            <?php foreach ($tools as $tool): ?>
+                                <?php
+                                $isAvailable = fileExists(__DIR__ . '/' . $tool['path']);
+                                $categoryClass = strtolower(str_replace(' ', '-', $category));
+                                ?>
+                                <div class="col-md-4 mb-4">
+                                    <div class="card <?php echo $categoryClass; ?> <?php echo $isAvailable ? '' : 'unavailable'; ?>">
+                                        <div class="card-body text-center">
+                                            <div class="tool-icon">
+                                                <i class="fas <?php echo $tool['icon']; ?>"></i>
+                                            </div>
+                                            <h5 class="card-title"><?php echo $tool['name']; ?></h5>
+                                            <p class="card-text"><?php echo $tool['description']; ?></p>
+                                            <?php if ($isAvailable): ?>
+                                                <a href="<?php echo $tool['path']; ?>" class="btn btn-primary">
+                                                    Launch Tool
+                                                </a>
+                                            <?php else: ?>
+                                                <button class="btn btn-secondary" disabled>Not Available</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h5 class="card-title"><?php echo $tool['name']; ?></h5>
-                                <p class="card-text"><?php echo $tool['description']; ?></p>
-                                <?php if ($isAvailable): ?>
-                                    <a href="<?php echo $tool['path']; ?>" class="btn btn-primary" target="_blank">
-                                        Launch Tool
-                                    </a>
-                                <?php else: ?>
-                                    <button class="btn btn-secondary" disabled>Not Available</button>
-                                <?php endif; ?>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endforeach; ?>
+                    <?php endforeach; ?>
 
-        <div class="mt-5">
-            <h2>System Information</h2>
-            <div class="card">
-                <div class="card-body">
+                    <div class="mt-5">
+                        <h2>System Information</h2>
+                        <div class="card">
+                            <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <h5>PHP Information</h5>
@@ -290,12 +290,14 @@ require_once 'admin/includes/header.php';
                             </ul>
                         </div>
                     </div>
-                </div>
-            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+</div>
     </div>
 </div>
 

@@ -191,10 +191,10 @@ function optimizeAllMedia($db) {
 }
 
 // Include auth check
-require_once '../stories-backend/admin/includes/auth-check.php';
+require_once '../admin/includes/auth-check.php';
 
 // Include database connection
-require_once '../stories-backend/admin/includes/db-connect.php';
+require_once '../admin/includes/db-connect.php';
 
 // Set page variables for header
 $pageTitle = 'Image Optimization Tool';
@@ -378,5 +378,5 @@ require_once '../stories-backend/admin/includes/header.php';
 
 <?php
 // Include footer
-require_once '../stories-backend/admin/includes/footer.php';
+require_once '../admin/includes/footer.php';
 ?>

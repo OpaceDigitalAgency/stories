@@ -13,7 +13,26 @@ error_reporting(E_ALL);
 set_time_limit(0);
 
 // Include the image optimization library
-require_once __DIR__ . '/../../stories-backend/includes/image_optimizer.php';
+// Try multiple possible paths to find the image_optimizer.php file
+$possiblePaths = [
+    __DIR__ . '/../includes/image_optimizer.php',                   // ../includes/image_optimizer.php
+    __DIR__ . '/../../includes/image_optimizer.php',                // ../../includes/image_optimizer.php
+    __DIR__ . '/../stories-backend/includes/image_optimizer.php',   // ../stories-backend/includes/image_optimizer.php
+    __DIR__ . '/../../stories-backend/includes/image_optimizer.php' // ../../stories-backend/includes/image_optimizer.php
+];
+
+$foundPath = false;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $foundPath = true;
+        break;
+    }
+}
+
+if (!$foundPath) {
+    die("Error: Could not find image_optimizer.php file. Please check the server file structure and update the path in optimize_image.php.");
+}
 
 // Initialize global variable for current media filename
 $GLOBALS['current_media_filename'] = '';

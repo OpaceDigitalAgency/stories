@@ -1473,8 +1473,8 @@ function processBook($db, $bookDir) {
             
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    title, description, website_url, category_id, type, slug, cover_url, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'book', ?, ?, ?, ?)
+                    title, description, website_url, category_id, type, slug, cover_url, is_published, published_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'book', ?, ?, 1, NOW(), ?, ?)
             ");
             
             $stmt->execute([

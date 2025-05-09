@@ -22,6 +22,7 @@ $itemId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $item = null;
 $category = null;
 $error = null;
+$bookData = null;
 
 try {
     // Get directory item data
@@ -35,7 +36,26 @@ try {
         $stmt->execute([$itemId]);
         $item = $stmt->fetch();
 
-        if (!$item) {
+        if ($item) {
+            // If this is a book type, get book data
+            if ($item['type'] === 'book') {
+                $bookStmt = $db->prepare("
+                    SELECT * FROM books WHERE directory_item_id = ?
+                ");
+                $bookStmt->execute([$itemId]);
+                $bookData = $bookStmt->fetch();
+                
+                // Parse purchase links JSON if available
+                if (!empty($bookData['purchase_links'])) {
+                    try {
+                        $bookData['purchase_links_array'] = json_decode($bookData['purchase_links'], true);
+                    } catch (Exception $e) {
+                        // If parsing fails, keep it as a string
+                        $bookData['purchase_links_array'] = [];
+                    }
+                }
+            }
+        } else {
             $error = "Directory item not found.";
         }
     } else {
@@ -87,6 +107,17 @@ function renderDescription($description) {
         return nl2br(htmlspecialchars($description));
     }
 }
+
+// Format date from MySQL date to readable format
+function formatDate($date) {
+    if (empty($date)) return '';
+    
+    // Check if it's a valid date format
+    $timestamp = strtotime($date);
+    if ($timestamp === false) return $date;
+    
+    return date('F j, Y', $timestamp);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -104,7 +135,7 @@ function renderDescription($description) {
             padding: 20px;
         }
         .item-header {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         .item-title {
             font-size: 28px;
@@ -121,7 +152,15 @@ function renderDescription($description) {
             border-radius: 4px;
             padding: 4px 8px;
             font-size: 12px;
-            margin-bottom: 15px;
+            margin-right: 8px;
+        }
+        .item-featured {
+            display: inline-block;
+            background-color: #fbf2cc;
+            color: #8a6d3b;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
         }
         .item-cover {
             width: 100%;
@@ -130,14 +169,17 @@ function renderDescription($description) {
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        .item-details {
+        .item-details, .book-details {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             padding: 15px;
             background-color: #f5f5f5;
             border-radius: 8px;
+        }
+        .book-details {
+            background-color: #f5f8ff;
         }
         .detail-item {
             margin-bottom: 10px;
@@ -145,15 +187,44 @@ function renderDescription($description) {
         .detail-label {
             font-weight: bold;
             color: #555;
+            margin-bottom: 2px;
         }
         .item-description {
             line-height: 1.8;
+            margin-bottom: 30px;
         }
         .item-description img {
             max-width: 100%;
             height: auto;
             border-radius: 4px;
             margin: 10px 0;
+        }
+        .section-title {
+            font-size: 18px;
+            margin: 25px 0 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+        .purchase-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .purchase-link {
+            display: inline-block;
+            padding: 5px 12px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .purchase-link:hover {
+            background-color: #e0e0e0;
         }
         .item-cta {
             margin-top: 30px;
@@ -179,6 +250,16 @@ function renderDescription($description) {
             padding: 15px;
             margin-bottom: 20px;
         }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: #ebf5f0;
+            color: #495057;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -191,15 +272,109 @@ function renderDescription($description) {
         <div class="item-header">
             <h1 class="item-title"><?php echo htmlspecialchars($item['title']); ?></h1>
             
-            <?php if (!empty($item['category_name'])): ?>
-                <div class="item-category"><?php echo htmlspecialchars($item['category_name']); ?></div>
-            <?php endif; ?>
+            <div>
+                <?php if (!empty($item['category_name'])): ?>
+                    <span class="item-category"><?php echo htmlspecialchars($item['category_name']); ?></span>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['featured'])): ?>
+                    <span class="item-featured">Featured</span>
+                <?php endif; ?>
+                
+                <?php if (!empty($item['type']) && $item['type'] !== 'general'): ?>
+                    <span class="badge"><?php echo ucfirst(htmlspecialchars($item['type'])); ?></span>
+                <?php endif; ?>
+            </div>
 
             <?php if (!empty($item['cover_url'])): ?>
                 <img src="<?php echo htmlspecialchars($item['cover_url']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" class="item-cover">
             <?php endif; ?>
         </div>
 
+        <div class="item-description">
+            <?php echo renderDescription($item['description']); ?>
+        </div>
+        
+        <?php if ($item['type'] === 'book' && $bookData): ?>
+            <h3 class="section-title">Book Information</h3>
+            <div class="book-details">
+                <?php if (!empty($bookData['author'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Author:</div>
+                        <div><?php echo htmlspecialchars($bookData['author']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['publisher'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Publisher:</div>
+                        <div><?php echo htmlspecialchars($bookData['publisher']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['publication_date'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Published:</div>
+                        <div><?php echo htmlspecialchars(formatDate($bookData['publication_date'])); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['isbn']) || !empty($bookData['isbn13'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">ISBN:</div>
+                        <div><?php echo htmlspecialchars(!empty($bookData['isbn13']) ? $bookData['isbn13'] : $bookData['isbn']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['page_count'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Pages:</div>
+                        <div><?php echo htmlspecialchars($bookData['page_count']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['genre'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Genre:</div>
+                        <div><?php echo htmlspecialchars($bookData['genre']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['series'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Series:</div>
+                        <div><?php echo htmlspecialchars($bookData['series']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['age_range'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Age Range:</div>
+                        <div><?php echo htmlspecialchars($bookData['age_range']); ?></div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($bookData['reading_level'])): ?>
+                    <div class="detail-item">
+                        <div class="detail-label">Reading Level:</div>
+                        <div><?php echo htmlspecialchars($bookData['reading_level']); ?></div>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <?php if (!empty($bookData['purchase_links_array']) && is_array($bookData['purchase_links_array'])): ?>
+                <div>
+                    <div class="detail-label">Where to Buy:</div>
+                    <div class="purchase-links">
+                        <?php foreach ($bookData['purchase_links_array'] as $store => $url): ?>
+                            <a href="<?php echo htmlspecialchars($url); ?>" class="purchase-link" target="_blank"><?php echo htmlspecialchars(ucfirst($store)); ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <h3 class="section-title">Contact Information</h3>
         <div class="item-details">
             <?php if (!empty($item['contact_email'])): ?>
                 <div class="detail-item">
@@ -228,10 +403,6 @@ function renderDescription($description) {
                     <div><?php echo htmlspecialchars($item['price_range']); ?></div>
                 </div>
             <?php endif; ?>
-        </div>
-
-        <div class="item-description">
-            <?php echo renderDescription($item['description']); ?>
         </div>
 
         <?php if (!empty($item['website_url'])): ?>

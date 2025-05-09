@@ -1036,6 +1036,9 @@ function processBook($db, $bookDir) {
             $pubDateStr = $publisherInfo['first_published'];
         }
         
+        echo "<p class='info'>Attempting to convert date string: '$pubDateStr'</p>";
+        flushOutput();
+        
         // Convert publication date to MySQL format
         $publicationDate = convertToMySQLDate($pubDateStr);
         

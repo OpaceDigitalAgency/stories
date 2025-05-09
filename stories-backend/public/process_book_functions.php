@@ -550,9 +550,17 @@ function processBook($db, $bookDir) {
                     category_id = ?,
                     slug = ?,
                     website_url = ?,
+                    contact_email = NULL,
+                    contact_phone = NULL,
+                    address = NULL,
+                    featured = 0,
+                    rating = 0.0,
+                    price_range = NULL,
                     cover_url = ?,
-                    is_published = 1,
-                    updated_at = NOW()
+                    is_published = 0,
+                    updated_at = NOW(),
+                    story_id = NULL,
+                    type = 'book'
                 WHERE id = ?
             ");
 
@@ -573,8 +581,15 @@ function processBook($db, $bookDir) {
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
                     title, description, category_id, slug, published_at, website_url,
-                    cover_url, is_published, created_at, updated_at, type
-                ) VALUES (?, ?, ?, ?, NOW(), ?, ?, 1, ?, ?, 'book')
+                    contact_email, contact_phone, address, featured, rating,
+                    price_range, cover_url, is_published, created_at, updated_at,
+                    story_id, type
+                ) VALUES (
+                    ?, ?, ?, ?, NOW(), ?,
+                    NULL, NULL, NULL, 0, 0.0,
+                    NULL, ?, 0, ?, ?,
+                    NULL, 'book'
+                )
             ");
 
             $now = date('Y-m-d H:i:s');

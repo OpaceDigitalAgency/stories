@@ -7,16 +7,16 @@
 
 /* ===== Form Field Spacing ===== */
 .form-group {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
 }
 
 .form-label {
-  margin-bottom: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
   display: block !important;
 }
 
 .form-control {
-  margin-bottom: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
 }
 
 .form-text {
@@ -76,33 +76,33 @@ select {
 
 /* ===== Card and Container Spacing ===== */
 .wp-card, .card, .section-body, .content-section {
-  margin-bottom: 1.5rem !important;
-  padding: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+  padding: 0.75rem !important;
 }
 
 .wp-card-header, .card-header, .section-header {
-  padding: 1rem 1.25rem !important;
-  margin-bottom: 1rem !important;
+  padding: 0.5rem 0.75rem !important;
+  margin-bottom: 0.5rem !important;
 }
 
 .wp-card-body, .card-body {
-  padding: 1.25rem !important;
+  padding: 0.75rem !important;
 }
 
 .wp-card-footer, .card-footer {
-  padding: 1rem 1.25rem !important;
-  margin-top: 1rem !important;
+  padding: 0.5rem 0.75rem !important;
+  margin-top: 0.5rem !important;
 }
 
 /* ===== Table Spacing ===== */
 .table th, .table td,
 .premium-table th, .premium-table td {
-  padding: 0.75rem 1rem !important;
+  padding: 0.5rem 0.75rem !important;
   vertical-align: middle !important;
 }
 
 .table-container, .premium-table-container {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
   overflow-x: auto !important;
   background-color: white !important;
   border-radius: var(--radius-md, 0.375rem) !important;
@@ -213,8 +213,8 @@ input[type="file"].form-control {
   display: flex !important;
   align-items: center !important;
   gap: 0.5rem !important;
-  margin-bottom: 1rem !important;
-  padding: 0.75rem 1rem !important;
+  margin-bottom: 0.75rem !important;
+  padding: 0.5rem 0.75rem !important;
   background-color: var(--gray-50, #f8f9fa) !important;
   border-radius: var(--radius-md, 0.375rem) !important;
 }
@@ -273,9 +273,9 @@ button:contains("All Field"),
   display: flex !important;
   align-items: center !important;
   gap: 0.5rem !important;
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
   background-color: white !important;
-  padding: 1rem !important;
+  padding: 0.75rem !important;
   border-radius: var(--radius-md, 0.375rem) !important;
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
 }

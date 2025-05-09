@@ -529,6 +529,82 @@ function getReadingTime($content) {
     return max(1, $minutes); // Minimum 1 minute
 }
 
+/**
+ * Convert various date formats to MySQL YYYY-MM-DD format
+ *
+ * @param string|null $dateStr The date string to convert
+ * @return string|null MySQL formatted date or null if conversion fails
+ */
+function convertToMySQLDate($dateStr) {
+    if (empty($dateStr)) {
+        return null;
+    }
+    
+    // Store original for debugging
+    $originalDate = $dateStr;
+    
+    // Case 1: Just a year (e.g., "1975")
+    if (preg_match('/^\d{4}$/', $dateStr)) {
+        return $dateStr . '-01-01'; // Add month and day
+    }
+    
+    // Case 2: Year-month (e.g., "2003-05")
+    if (preg_match('/^(\d{4})-(\d{1,2})$/', $dateStr, $matches)) {
+        return $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
+    }
+    
+    // Case 3: Month Year (e.g., "May 2003", "February 2012")
+    if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/', $dateStr, $matches)) {
+        $month = $matches[1];
+        $year = $matches[2];
+        
+        try {
+            // Convert month name to number using strtotime
+            $timestamp = strtotime("$month 1, $year");
+            if ($timestamp === false) {
+                throw new Exception("Invalid month name: $month");
+            }
+            return date('Y-m-d', $timestamp);
+        } catch (Exception $e) {
+            // If month conversion fails, default to January of that year
+            return $year . '-01-01';
+        }
+    }
+    
+    // Case 4: Already in YYYY-MM-DD format
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
+        // Validate the date
+        try {
+            $date = new DateTime($dateStr);
+            return $date->format('Y-m-d');
+        } catch (Exception $e) {
+            // Invalid date, try to extract just the year
+            if (preg_match('/(\d{4})/', $dateStr, $matches)) {
+                return $matches[1] . '-01-01';
+            }
+            return null;
+        }
+    }
+    
+    // Case 5: Other formats that PHP's strtotime can handle
+    try {
+        $timestamp = strtotime($dateStr);
+        if ($timestamp !== false) {
+            return date('Y-m-d', $timestamp);
+        }
+    } catch (Exception $e) {
+        // Ignore and continue to fallback
+    }
+    
+    // Case 6: Just extract year as fallback
+    if (preg_match('/(\d{4})/', $dateStr, $matches)) {
+        return $matches[1] . '-01-01';
+    }
+    
+    // If all else fails, return null
+    return null;
+}
+
 function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
     echo "<p class='info'><strong>AUTHOR PROCESSING:</strong> Starting author lookup/creation</p>";
     flushOutput();
@@ -894,58 +970,20 @@ function processBook($db, $bookDir) {
         $isbn = isset($data['isbn']) ? $data['isbn'] : '';
         $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
         
-        // Format publication date correctly for MySQL
-        $publicationDate = null;
+        // Get publication date string from available sources
         $pubDateStr = null;
-        
-        // First check data['publication_date']
         if (isset($data['publication_date'])) {
             $pubDateStr = $data['publication_date'];
-        }
-        // Then check publisherInfo['first_published'] if not found
-        elseif (!empty($publisherInfo['first_published'])) {
+        } elseif (!empty($publisherInfo['first_published'])) {
             $pubDateStr = $publisherInfo['first_published'];
         }
         
+        // Convert publication date to MySQL format
+        $publicationDate = convertToMySQLDate($pubDateStr);
+        
+        // Store the original date string in metadata for reference
         if ($pubDateStr) {
-            // Handle various date formats
-            
-            // Case 1: Just a year (e.g., "1975")
-            if (preg_match('/^\d{4}$/', $pubDateStr)) {
-                $publicationDate = $pubDateStr . '-01-01'; // Add month and day
-            }
-            // Case 2: Year-month (e.g., "2003-05")
-            elseif (preg_match('/^(\d{4})-(\d{1,2})$/', $pubDateStr, $matches)) {
-                $publicationDate = $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
-            }
-            // Case 3: Month Year (e.g., "May 2003", "February 2012")
-            elseif (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/', $pubDateStr, $matches)) {
-                $month = $matches[1];
-                $year = $matches[2];
-                
-                // Convert month name to number
-                $monthNum = date('m', strtotime($month . ' 1, 2000'));
-                $publicationDate = $year . '-' . $monthNum . '-01';
-            }
-            // Case 4: Already in YYYY-MM-DD format
-            elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $pubDateStr)) {
-                $publicationDate = $pubDateStr;
-            }
-            // Case 5: Just extract year as fallback
-            elseif (preg_match('/(\d{4})/', $pubDateStr, $matches)) {
-                $publicationDate = $matches[1] . '-01-01';
-            }
-            
-            // Final validation
-            if ($publicationDate) {
-                try {
-                    $date = new DateTime($publicationDate);
-                    $publicationDate = $date->format('Y-m-d');
-                } catch (Exception $e) {
-                    // If date is invalid, set to null
-                    $publicationDate = null;
-                }
-            }
+            $data['original_publication_date'] = $pubDateStr;
         }
         
         $pageCount = isset($data['page_count']) ? intval($data['page_count']) : null;

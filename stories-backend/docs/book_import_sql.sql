@@ -1,23 +1,12 @@
--- Check if type column exists in directory_items table
-SET @columnExists = 0;
-SELECT COUNT(*) INTO @columnExists FROM information_schema.columns
-WHERE table_schema = DATABASE() AND table_name = 'directory_items' AND column_name = 'type';
+-- Simple SQL script for adding book support
 
--- Add type field to directory_items table if it doesn't exist
-SET @query = IF(@columnExists = 0,
-    'ALTER TABLE directory_items ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT \'general\'',
-    'SELECT \'Column already exists\' AS message');
-PREPARE stmt FROM @query;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+-- 1. Run this first to add the type column to directory_items
+ALTER TABLE directory_items ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general';
 
--- Check if books table exists
-SET @tableExists = 0;
-SELECT COUNT(*) INTO @tableExists FROM information_schema.tables
-WHERE table_schema = DATABASE() AND table_name = 'books';
+-- 2. If the above fails with "Duplicate column name", it means the column already exists, which is fine
 
--- Create books table if it doesn't exist
-SET @query = IF(@tableExists = 0, 'CREATE TABLE books (
+-- 3. Run this to create the books table
+CREATE TABLE books (
     directory_item_id INT PRIMARY KEY,
     isbn VARCHAR(20),
     isbn13 VARCHAR(20),
@@ -31,7 +20,6 @@ SET @query = IF(@tableExists = 0, 'CREATE TABLE books (
     purchase_links JSON,
     metadata JSON,
     FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE
-)', 'SELECT \'Books table already exists\' AS message');
-PREPARE stmt FROM @query;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+);
+
+-- 4. If the above fails with "Table already exists", it means the table already exists, which is fine

@@ -602,6 +602,22 @@ function processBook($db, $bookDir) {
             flushOutput();
         }
 
+        // Debug: Show the actual structure of the books table
+        echo "<p class='info'>Checking books table structure...</p>";
+        flushOutput();
+        try {
+            $tableInfo = $db->query("DESCRIBE books");
+            echo "<pre>";
+            while ($row = $tableInfo->fetch(PDO::FETCH_ASSOC)) {
+                echo htmlspecialchars(print_r($row, true));
+            }
+            echo "</pre>";
+            flushOutput();
+        } catch (Exception $e) {
+            echo "<p class='error'>Error getting books table structure: " . $e->getMessage() . "</p>";
+            flushOutput();
+        }
+
         // Check if book already exists
         $stmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
         $stmt->execute([$directoryItemId]);
@@ -743,8 +759,13 @@ function processBook($db, $bookDir) {
             echo "<p class='error'>Transaction rolled back</p>";
             flushOutput();
         }
+
+        // Get the stack trace to help identify where the error is occurring
         echo "<p class='error'>Error processing book: " . $e->getMessage() . "</p>";
+        echo "<p class='error'>Error occurred at: " . $e->getFile() . " line " . $e->getLine() . "</p>";
+        echo "<pre class='error'>" . $e->getTraceAsString() . "</pre>";
         flushOutput();
+
         return [
             'success' => false,
             'error' => $e->getMessage()

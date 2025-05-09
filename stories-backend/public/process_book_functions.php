@@ -39,7 +39,7 @@ function pathToUrl($path) {
  * @param string|null $dateStr Date string
  * @return string|null MySQL formatted date or null
  */
-function convertToMySQLDate($dateStr) {
+function convertToMySQLDateOLD($dateStr) {
     if (empty($dateStr)) {
         return null;
     }

@@ -198,7 +198,7 @@ require_once 'admin/includes/db-connect.php';
 // Set page variables for header
 $pageTitle = 'Diagnostic Dashboard';
 $currentPage = 'diagnostics';
-$pageDescription = 'This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.';
+$pageDescription = '';
 
 // Include header
 require_once 'admin/includes/header.php';
@@ -209,7 +209,7 @@ require_once 'admin/includes/header.php';
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h2><i class="fas fa-chart-line"></i> Diagnostic Dashboard</h2>
+                    <h2><i class="fas fa-chart-line"></i></h2>
                 </div>
                 <div class="card-body">
                     <?php foreach ($diagnosticTools as $category => $tools): ?>

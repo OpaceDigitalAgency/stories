@@ -381,7 +381,7 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
 // Set page variables for header
 $pageTitle = 'Import Tool';
 $currentPage = 'import';
-$pageDescription = 'Import content from various sources into the Stories From The Web database.';
+$pageDescription = '';
 
 // Include header
 require_once '../admin/includes/header.php';
@@ -392,7 +392,7 @@ require_once '../admin/includes/header.php';
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h2><i class="fas fa-file-import"></i> Enhanced Import Tool</h2>
+                    <h2><i class="fas fa-file-import"></i></h2>
                 </div>
                 <div class="card-body">
                     <form method="post" class="mb-4">

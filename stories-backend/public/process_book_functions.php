@@ -444,13 +444,12 @@ function processBook($db, $bookDir) {
                     echo "<p class='info'>Using existing media record (ID: $mediaId) for path: $relativePath</p>";
                     flushOutput();
                 } else {
-                    // Create a new media record
+                    // Create a new media record - using columns that exist in the media table
                     $stmt = $db->prepare("
                         INSERT INTO media (
                             filename, file_path, file_size, file_type,
-                            entity_type, entity_id, type,
-                            created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, 'directory_item', ?, 'cover', NOW(), NOW())
+                            alt_text, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
                     ");
 
                     try {
@@ -459,7 +458,7 @@ function processBook($db, $bookDir) {
                             $relativePath, // Store relative path for consistency
                             $fileSize,
                             $fileType,
-                            $directoryItemId
+                            "Cover image for $title" // Alt text for the image
                         ]);
 
                         $mediaId = $db->lastInsertId();

@@ -212,8 +212,6 @@ require_once 'admin/includes/header.php';
                     <h2><i class="fas fa-chart-line"></i> Diagnostic Dashboard</h2>
                 </div>
                 <div class="card-body">
-                    <p class="lead">This dashboard provides easy access to all diagnostic and testing tools for the Stories from the Web platform.</p>
-
                     <?php foreach ($diagnosticTools as $category => $tools): ?>
                         <h2><?php echo $category; ?></h2>
                         <div class="row">

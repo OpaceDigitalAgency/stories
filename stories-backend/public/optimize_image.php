@@ -13,7 +13,7 @@ error_reporting(E_ALL);
 set_time_limit(0);
 
 // Include the image optimization library
-require_once __DIR__ . '/../includes/image_optimizer.php';
+require_once __DIR__ . '/../../stories-backend/includes/image_optimizer.php';
 
 // Initialize global variable for current media filename
 $GLOBALS['current_media_filename'] = '';

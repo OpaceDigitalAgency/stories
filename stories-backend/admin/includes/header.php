@@ -385,9 +385,6 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <?php if (isset($extraHeadContent)) echo $extraHeadContent; ?>
 </head>
 <body>
-    <!-- Skip to content link for accessibility -->
-    <a href="#main-content" class="skip-to-content">Skip to content</a>
-
     <?php
     // Set paths for navigation
     $dashboardPath = $isContentDir ? '../dashboard.php' : 'dashboard.php';

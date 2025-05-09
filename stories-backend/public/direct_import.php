@@ -368,11 +368,6 @@ require_once '../admin/includes/header.php';
                     <h2><i class="fas fa-file-import"></i> Enhanced Import Tool</h2>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <p><strong>This tool allows you to import content from various sources.</strong></p>
-                        <p>Select the content type and source, then click the import button to start the process.</p>
-                    </div>
-                    
                     <form method="post" class="mb-4">
                         <div class="form-group mb-3">
                             <label for="content-type"><strong>Content Type:</strong></label>

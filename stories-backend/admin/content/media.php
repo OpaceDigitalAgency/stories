@@ -219,6 +219,9 @@ $pageActions = '
 <a href="../../public/optimize_image.php" class="btn btn-success">
     <i class="fas fa-image" aria-hidden="true"></i> Optimize All Media
 </a>
+<button id="clean-duplicates-btn" class="btn btn-warning">
+    <i class="fas fa-broom" aria-hidden="true"></i> Clean Duplicate Media
+</button>
 ';
 
 // Add custom CSS and JavaScript for media page
@@ -888,6 +891,67 @@ require_once '../includes/header.php';
         <p id="progressMessage">Please wait while we optimize your images.</p>
     </div>
 </div>
+
+<!-- JavaScript for Clean Duplicate Media button -->
+<script>
+$(document).ready(function() {
+    // Handle Clean Duplicate Media button click
+    $("#clean-duplicates-btn").on("click", function() {
+        if (confirm("This will remove duplicate and orphaned media records. Continue?")) {
+            // Show loading indicator
+            $("#progressOverlay").css({
+                "visibility": "visible",
+                "opacity": "1"
+            });
+            $("#progressTitle").text("Cleaning Duplicate Media");
+            $("#progressMessage").text("Please wait while we clean up duplicate and orphaned media records.");
+
+            // Make AJAX request to clean duplicate media
+            $.ajax({
+                url: "../handlers/clean-duplicate-media.php",
+                type: "POST",
+                dataType: "json",
+                success: function(response) {
+                    // Hide loading indicator
+                    $("#progressOverlay").css({
+                        "visibility": "hidden",
+                        "opacity": "0"
+                    });
+
+                    if (response.success) {
+                        // Show success message with stats
+                        var message = response.message + "\n\n";
+                        message += "Duplicates found: " + response.stats.duplicates_found + "\n";
+                        message += "Duplicates deleted: " + response.stats.duplicates_deleted + "\n";
+                        message += "Orphans found: " + response.stats.orphans_found + "\n";
+                        message += "Orphans deleted: " + response.stats.orphans_deleted + "\n";
+                        message += "Total deleted: " + response.stats.total_deleted;
+
+                        alert(message);
+
+                        // Reload the page to show updated media list
+                        window.location.reload();
+                    } else {
+                        // Show error message
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Hide loading indicator
+                    $("#progressOverlay").css({
+                        "visibility": "hidden",
+                        "opacity": "0"
+                    });
+
+                    // Show error message
+                    alert("Error: " + error);
+                }
+            });
+        }
+    });
+});
+</script>
+
 <?php
 // Include footer
 include_once '../includes/footer.php';

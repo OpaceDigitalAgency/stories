@@ -33,7 +33,7 @@ ob_implicit_flush(true);
  *
  * @return array Information about the image optimizer setup
  */
-function checkImageOptimizerSetup() {
+function checkImageOptimizerSetupOLD() {
     $result = [
         'found' => false,
         'functions_available' => false,

@@ -448,8 +448,9 @@ function processBook($db, $bookDir) {
                     $stmt = $db->prepare("
                         INSERT INTO media (
                             filename, file_path, file_size, file_type,
+                            entity_type, entity_id, type,
                             created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, NOW(), NOW())
+                        ) VALUES (?, ?, ?, ?, 'directory_item', ?, 'cover', NOW(), NOW())
                     ");
 
                     try {
@@ -457,7 +458,8 @@ function processBook($db, $bookDir) {
                             $uniqueImageName,
                             $relativePath, // Store relative path for consistency
                             $fileSize,
-                            $fileType
+                            $fileType,
+                            $directoryItemId
                         ]);
 
                         $mediaId = $db->lastInsertId();

@@ -1065,7 +1065,7 @@ function processBook($db, $bookDir) {
             $now = date('Y-m-d H:i:s');
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    name, description, url, category, type, created_at, updated_at
+                    title, description, url, category, type, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, 'book', ?, ?)
             ");
             

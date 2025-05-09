@@ -1,11 +1,10 @@
 -- Simple SQL script for adding book support
 
--- 1. Run this first to add the type column to directory_items
-ALTER TABLE directory_items ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general';
+-- Note: The 'type' column already exists in the directory_items table, so we don't need to add it.
+-- If you're setting up a new installation, you would need to ensure the directory_items table has a 'type' column:
+-- ALTER TABLE directory_items ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general';
 
--- 2. If the above fails with "Duplicate column name", it means the column already exists, which is fine
-
--- 3. Run this to create the books table
+-- 1. Run this to create the books table
 CREATE TABLE books (
     directory_item_id INT PRIMARY KEY,
     isbn VARCHAR(20),
@@ -22,9 +21,9 @@ CREATE TABLE books (
     FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE
 );
 
--- 4. If the above fails with "Table already exists", it means the table already exists, which is fine
+-- 2. If the above fails with "Table already exists", it means the table already exists, which is fine
 
--- 5. Run this to create the book_authors table for book-author relationships
+-- 3. Run this to create the book_authors table for book-author relationships
 CREATE TABLE book_authors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     directory_item_id INT NOT NULL,
@@ -37,4 +36,4 @@ CREATE TABLE book_authors (
     UNIQUE KEY (directory_item_id, author_id, role)
 );
 
--- 6. If the above fails with "Table already exists", it means the table already exists, which is fine
+-- 4. If the above fails with "Table already exists", it means the table already exists, which is fine

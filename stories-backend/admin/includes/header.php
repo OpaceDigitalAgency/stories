@@ -462,10 +462,26 @@ $siteName = get_config('site.name', 'Stories From The Web');
                         </div>
                     </div>
 
-                    <!-- Settings -->
-                    <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="nav-link mx-1 <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
-                        <i class="fas fa-cog" aria-hidden="true"></i> Settings
-                    </a>
+                    <!-- Settings Dropdown -->
+                    <div class="dropdown mx-1">
+                        <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog" aria-hidden="true"></i> Settings
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="<?php echo $contentPrefix; ?>ai-settings.php" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                                <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
+                            </a>
+                            <a href="https://api.storiesfromtheweb.org/public/direct_import.php" class="dropdown-item" target="_blank">
+                                <i class="fas fa-file-import" aria-hidden="true"></i> Imports
+                            </a>
+                            <a href="https://api.storiesfromtheweb.org/diagnostic-dashboard.php" class="dropdown-item" target="_blank">
+                                <i class="fas fa-chart-line" aria-hidden="true"></i> Diagnostics
+                            </a>
+                            <a href="https://api.storiesfromtheweb.org/public/optimize_image.php" class="dropdown-item" target="_blank">
+                                <i class="fas fa-image" aria-hidden="true"></i> Image Optimization
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- User Info and Actions (pushed to the right) -->

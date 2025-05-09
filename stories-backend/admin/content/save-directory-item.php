@@ -40,6 +40,25 @@ try {
     $slug = trim($_POST['slug'] ?? '');
     $published_at = $_POST['published_at'] ?? null;
     $cover_url = trim($_POST['cover_url'] ?? '');
+    $type = trim($_POST['type'] ?? 'general');
+    
+    // Get book-specific data if applicable
+    $bookData = [];
+    if ($type === 'book') {
+        $bookData = [
+            'author' => trim($_POST['book_author'] ?? ''),
+            'publisher' => trim($_POST['book_publisher'] ?? ''),
+            'isbn' => trim($_POST['book_isbn'] ?? ''),
+            'isbn13' => trim($_POST['book_isbn13'] ?? ''),
+            'publication_date' => trim($_POST['book_publication_date'] ?? ''),
+            'page_count' => !empty($_POST['book_page_count']) ? intval($_POST['book_page_count']) : null,
+            'genre' => trim($_POST['book_genre'] ?? ''),
+            'series' => trim($_POST['book_series'] ?? ''),
+            'age_range' => trim($_POST['book_age_range'] ?? ''),
+            'reading_level' => trim($_POST['book_reading_level'] ?? ''),
+            'purchase_links' => trim($_POST['book_purchase_links'] ?? '')
+        ];
+    }
 
     // Validate required fields
     if (empty($title)) {
@@ -127,6 +146,107 @@ try {
             $cover_url
         ]);
         $success = "Directory item created successfully";
+    }
+
+    // Process book data if item type is book
+    if ($type === 'book') {
+        // Check if book record already exists
+        if ($id) {
+            $bookStmt = $db->prepare("SELECT id FROM books WHERE directory_item_id = ?");
+            $bookStmt->execute([$id]);
+            $existingBook = $bookStmt->fetch();
+        } else {
+            $existingBook = false;
+            $id = $db->lastInsertId(); // Get ID of newly created directory item
+        }
+
+        // Format purchase links as JSON if provided
+        $purchaseLinks = !empty($bookData['purchase_links']) ? $bookData['purchase_links'] : '{}';
+        try {
+            // Validate JSON
+            json_decode($purchaseLinks);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $purchaseLinks = '{}'; // Reset to empty object if invalid
+            }
+        } catch (Exception $e) {
+            $purchaseLinks = '{}';
+        }
+
+        // Convert publication date to MySQL format if needed
+        if (!empty($bookData['publication_date'])) {
+            // Use direct format if it's already YYYY-MM-DD
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookData['publication_date'])) {
+                // Try to convert using the format conversion function if available
+                if (function_exists('convertToMySQLDate')) {
+                    $bookData['publication_date'] = convertToMySQLDate($bookData['publication_date']);
+                }
+            }
+        }
+
+        if ($existingBook) {
+            // Update existing book record
+            $stmt = $db->prepare("UPDATE books SET
+                isbn = ?,
+                isbn13 = ?,
+                author = ?,
+                publisher = ?,
+                publication_date = ?,
+                page_count = ?,
+                age_range = ?,
+                reading_level = ?,
+                cover_image_url = ?,
+                purchase_links = ?,
+                genre = ?,
+                series = ?
+                WHERE directory_item_id = ?");
+            $stmt->execute([
+                $bookData['isbn'],
+                $bookData['isbn13'],
+                $bookData['author'],
+                $bookData['publisher'],
+                $bookData['publication_date'],
+                $bookData['page_count'],
+                $bookData['age_range'],
+                $bookData['reading_level'],
+                $cover_url, // Use the same cover URL as directory item
+                $purchaseLinks,
+                $bookData['genre'],
+                $bookData['series'],
+                $id
+            ]);
+        } else {
+            // Insert new book record
+            $stmt = $db->prepare("INSERT INTO books (
+                directory_item_id,
+                isbn,
+                isbn13,
+                author,
+                publisher,
+                publication_date,
+                page_count,
+                age_range,
+                reading_level,
+                cover_image_url,
+                purchase_links,
+                genre,
+                series
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $id,
+                $bookData['isbn'],
+                $bookData['isbn13'],
+                $bookData['author'],
+                $bookData['publisher'],
+                $bookData['publication_date'],
+                $bookData['page_count'],
+                $bookData['age_range'],
+                $bookData['reading_level'],
+                $cover_url, // Use the same cover URL as directory item
+                $purchaseLinks,
+                $bookData['genre'],
+                $bookData['series']
+            ]);
+        }
     }
 
     // Commit transaction

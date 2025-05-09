@@ -22,6 +22,7 @@ try {
     $item = null;
     $categories = [];
     $error = null;
+    $bookData = []; // Initialize book data
 
     // Get all categories
     $stmt = $db->query("SHOW TABLES LIKE 'directory_categories'");
@@ -35,6 +36,25 @@ try {
             $stmt = $db->prepare("SELECT * FROM directory_items WHERE id = ?");
             $stmt->execute([$_GET['id']]);
             $item = $stmt->fetch();
+            
+            // If this is a book type directory item, get the book data
+            if ($item && isset($item['type']) && $item['type'] == 'book') {
+                $bookStmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
+                $bookStmt->execute([$_GET['id']]);
+                $bookData = $bookStmt->fetch();
+                
+                // Format purchase_links JSON for display
+                if (isset($bookData['purchase_links']) && !empty($bookData['purchase_links'])) {
+                    try {
+                        $links = json_decode($bookData['purchase_links'], true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $bookData['purchase_links'] = json_encode($links, JSON_PRETTY_PRINT);
+                        }
+                    } catch (Exception $e) {
+                        // Keep original if can't parse JSON
+                    }
+                }
+            }
 
             if (!$item) {
                 header("Location: directory-items.php");
@@ -367,6 +387,92 @@ require_once '../includes/header.php';
                     </div>
                 </div>
 
+                <!-- Book Metadata Section - Only visible for book type -->
+                <div id="book-metadata-section" class="wp-card" style="display: <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'block' : 'none'; ?>;">
+                    <div class="wp-card-header">
+                        Book Information
+                    </div>
+                    <div class="wp-card-body">
+                        <!-- Author -->
+                        <div class="form-group">
+                            <label class="form-label" for="author">Author</label>
+                            <input type="text" id="author" name="book_author" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['author'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Publisher -->
+                        <div class="form-group">
+                            <label class="form-label" for="publisher">Publisher</label>
+                            <input type="text" id="publisher" name="book_publisher" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['publisher'] ?? ''); ?>">
+                        </div>
+
+                        <!-- ISBNs -->
+                        <div class="form-group">
+                            <label class="form-label" for="isbn">ISBN</label>
+                            <input type="text" id="isbn" name="book_isbn" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['isbn'] ?? ''); ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="isbn13">ISBN-13</label>
+                            <input type="text" id="isbn13" name="book_isbn13" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['isbn13'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Publication Date -->
+                        <div class="form-group">
+                            <label class="form-label" for="publication_date">Publication Date</label>
+                            <input type="date" id="publication_date" name="book_publication_date" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['publication_date'] ?? ''); ?>">
+                            <small class="text-muted">Format: YYYY-MM-DD</small>
+                        </div>
+
+                        <!-- Page Count -->
+                        <div class="form-group">
+                            <label class="form-label" for="page_count">Page Count</label>
+                            <input type="number" id="page_count" name="book_page_count" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['page_count'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Genre -->
+                        <div class="form-group">
+                            <label class="form-label" for="genre">Genre</label>
+                            <input type="text" id="genre" name="book_genre" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['genre'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Series -->
+                        <div class="form-group">
+                            <label class="form-label" for="series">Series</label>
+                            <input type="text" id="series" name="book_series" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['series'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Age Range -->
+                        <div class="form-group">
+                            <label class="form-label" for="age_range">Age Range</label>
+                            <input type="text" id="age_range" name="book_age_range" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['age_range'] ?? ''); ?>">
+                            <small class="text-muted">Example: 7-10, 9-12, etc.</small>
+                        </div>
+
+                        <!-- Reading Level -->
+                        <div class="form-group">
+                            <label class="form-label" for="reading_level">Reading Level</label>
+                            <input type="text" id="reading_level" name="book_reading_level" class="form-control"
+                                value="<?php echo htmlspecialchars($bookData['reading_level'] ?? ''); ?>">
+                        </div>
+
+                        <!-- Purchase Links -->
+                        <div class="form-group">
+                            <label class="form-label" for="purchase_links">Purchase Links (JSON)</label>
+                            <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="4"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
+                            <small class="text-muted">Format: {"amazon":"https://amazon.com/...", "goodreads":"..."}</small>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Sidebar Column -->
                 <div class="wp-layout-sidebar">
                     <!-- Category -->
@@ -384,6 +490,23 @@ require_once '../includes/header.php';
                                             <?php echo htmlspecialchars($category['name']); ?>
                                         </option>
                                     <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item Type -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">
+                            Item Type
+                        </div>
+                        <div class="wp-card-body">
+                            <div class="form-group mb-0">
+                                <select id="type" name="type" class="form-control">
+                                    <option value="general" <?php echo (isset($item['type']) && $item['type'] == 'general') ? 'selected' : ''; ?>>General</option>
+                                    <option value="book" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'selected' : ''; ?>>Book</option>
+                                    <option value="resource" <?php echo (isset($item['type']) && $item['type'] == 'resource') ? 'selected' : ''; ?>>Resource</option>
+                                    <option value="organization" <?php echo (isset($item['type']) && $item['type'] == 'organization') ? 'selected' : ''; ?>>Organization</option>
                                 </select>
                             </div>
                         </div>
@@ -487,6 +610,30 @@ require_once '../includes/header.php';
 <!-- Include directory item preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/directory-item-preview.js"></script>
+
+<!-- Book Metadata Toggle Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the type select element
+    const typeSelect = document.getElementById('type');
+    const bookMetadataSection = document.getElementById('book-metadata-section');
+    
+    // Function to toggle book metadata section based on type
+    function toggleBookMetadata() {
+        if (typeSelect.value === 'book') {
+            bookMetadataSection.style.display = 'block';
+        } else {
+            bookMetadataSection.style.display = 'none';
+        }
+    }
+    
+    // Add change event listener
+    typeSelect.addEventListener('change', toggleBookMetadata);
+    
+    // Initial toggle based on current value
+    toggleBookMetadata();
+});
+</script>
 
 <?php
 // Include footer

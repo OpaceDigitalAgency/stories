@@ -896,32 +896,55 @@ function processBook($db, $bookDir) {
         
         // Format publication date correctly for MySQL
         $publicationDate = null;
+        $pubDateStr = null;
+        
+        // First check data['publication_date']
         if (isset($data['publication_date'])) {
-            // Check if it's just a year
-            if (preg_match('/^\d{4}$/', $data['publication_date'])) {
-                $publicationDate = $data['publication_date'] . '-01-01'; // Add month and day
-            } elseif (preg_match('/^(\d{4})-(\d{1,2})$/', $data['publication_date'], $matches)) {
-                $publicationDate = $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
-            } else {
-                $publicationDate = $data['publication_date'];
-            }
-            
-            // Validate date format
-            $date = DateTime::createFromFormat('Y-m-d', $publicationDate);
-            if (!$date || $date->format('Y-m-d') !== $publicationDate) {
-                // If invalid, extract year and use that
-                if (preg_match('/(\d{4})/', $data['publication_date'], $matches)) {
-                    $publicationDate = $matches[1] . '-01-01';
-                } else {
-                    $publicationDate = null; // Invalid date, set to null
-                }
-            }
+            $pubDateStr = $data['publication_date'];
+        }
+        // Then check publisherInfo['first_published'] if not found
+        elseif (!empty($publisherInfo['first_published'])) {
+            $pubDateStr = $publisherInfo['first_published'];
         }
         
-        // Extract publication date from publisher info if not found in front matter
-        if (!$publicationDate && !empty($publisherInfo['first_published'])) {
-            if (preg_match('/(\d{4})/', $publisherInfo['first_published'], $matches)) {
+        if ($pubDateStr) {
+            // Handle various date formats
+            
+            // Case 1: Just a year (e.g., "1975")
+            if (preg_match('/^\d{4}$/', $pubDateStr)) {
+                $publicationDate = $pubDateStr . '-01-01'; // Add month and day
+            }
+            // Case 2: Year-month (e.g., "2003-05")
+            elseif (preg_match('/^(\d{4})-(\d{1,2})$/', $pubDateStr, $matches)) {
+                $publicationDate = $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
+            }
+            // Case 3: Month Year (e.g., "May 2003", "February 2012")
+            elseif (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/', $pubDateStr, $matches)) {
+                $month = $matches[1];
+                $year = $matches[2];
+                
+                // Convert month name to number
+                $monthNum = date('m', strtotime($month . ' 1, 2000'));
+                $publicationDate = $year . '-' . $monthNum . '-01';
+            }
+            // Case 4: Already in YYYY-MM-DD format
+            elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $pubDateStr)) {
+                $publicationDate = $pubDateStr;
+            }
+            // Case 5: Just extract year as fallback
+            elseif (preg_match('/(\d{4})/', $pubDateStr, $matches)) {
                 $publicationDate = $matches[1] . '-01-01';
+            }
+            
+            // Final validation
+            if ($publicationDate) {
+                try {
+                    $date = new DateTime($publicationDate);
+                    $publicationDate = $date->format('Y-m-d');
+                } catch (Exception $e) {
+                    // If date is invalid, set to null
+                    $publicationDate = null;
+                }
             }
         }
         

@@ -1070,10 +1070,23 @@ function processBook($db, $bookDir) {
             // Use a default category_id of 1
             $categoryId = 1;
             
+            // Generate a slug from the title
+            $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+            $slug = trim($slug, '-');
+            
+            // Check if slug already exists and make it unique if needed
+            $checkSlugStmt = $db->prepare("SELECT COUNT(*) FROM directory_items WHERE slug = ?");
+            $checkSlugStmt->execute([$slug]);
+            $slugCount = $checkSlugStmt->fetchColumn();
+            
+            if ($slugCount > 0) {
+                $slug .= '-' . uniqid();
+            }
+            
             $stmt = $db->prepare("
                 INSERT INTO directory_items (
-                    title, description, website_url, category_id, type, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'book', ?, ?)
+                    title, description, website_url, category_id, type, slug, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'book', ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -1081,6 +1094,7 @@ function processBook($db, $bookDir) {
                 $description,
                 $url,
                 $categoryId,
+                $slug,
                 $now,
                 $now
             ]);

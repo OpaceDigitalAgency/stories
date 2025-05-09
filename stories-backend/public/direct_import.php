@@ -911,8 +911,8 @@ function processStory($db, $storyDir) {
                     $stmt = $db->prepare("
                         INSERT INTO media (
                             filename, file_path, file_size, file_type,
-                            alt_text, created_at, updated_at, entity_type, entity_id
-                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
+                            alt_text, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
                     ");
 
                     $stmt->execute([
@@ -920,9 +920,7 @@ function processStory($db, $storyDir) {
                         $imagePath,
                         $fileSize,
                         $fileType,
-                        "Cover image for $title",
-                        'story', // entity_type
-                        0 // entity_id (will be updated later)
+                        "Cover image for $title"
                     ]);
 
                     $mediaId = $db->lastInsertId();
@@ -1033,14 +1031,6 @@ function processStory($db, $storyDir) {
             $storyId = $db->lastInsertId();
             echo "<p class='success'>Created story with ID: $storyId</p>";
             flushOutput();
-
-            // Update the media record with the story ID
-            if (isset($mediaId)) {
-                $updateMediaStmt = $db->prepare("UPDATE media SET entity_id = ? WHERE id = ?");
-                $updateMediaStmt->execute([$storyId, $mediaId]);
-                echo "<p class='success'>Updated media record with story ID</p>";
-                flushOutput();
-            }
 
             // Associate with author
             if ($authorId) {

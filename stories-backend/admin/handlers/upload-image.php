@@ -85,9 +85,7 @@ try {
     // Check if this is a CKEditor upload
     $isForEditor = isset($_POST['for_editor']) && $_POST['for_editor'] === 'true';
 
-    // Get entity info
-    $entityType = $_POST['entity_type'] ?? 'general';
-    $entityId = $_POST['entity_id'] ?? '0';
+    // Get field info
     $fieldName = $_POST['field_name'] ?? '';
     $altText = $_POST['alt_text'] ?? '';
 
@@ -117,14 +115,7 @@ try {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Create entity-specific directory if needed
-    if ($entityType !== 'general') {
-        $entityDir = $uploadDir . $entityType . 's/';
-        if (!file_exists($entityDir)) {
-            mkdir($entityDir, 0755, true);
-        }
-        $uploadDir = $entityDir;
-    }
+    // Use a general uploads directory for all images
 
     // Generate unique filename
     $fileNameNew = uniqid('', true) . '_' . $fileName;

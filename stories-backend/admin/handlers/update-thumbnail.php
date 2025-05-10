@@ -133,8 +133,12 @@ try {
     error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE {$idField} = {$itemId}");
 
     try {
+        // Construct the SQL query with proper quoting
+        $sql = "UPDATE " . $tableName . " SET " . $imageField . " = ?, " . $thumbnailField . " = ? WHERE " . $idField . " = ?";
+        error_log("Prepared SQL: " . $sql);
+
         // Update the item in the database
-        $stmt = $db->prepare("UPDATE {$tableName} SET {$imageField} = ?, {$thumbnailField} = ? WHERE {$idField} = ?");
+        $stmt = $db->prepare($sql);
         $stmt->execute([$imageUrl, $thumbnailUrl, $itemId]);
 
         // Check if the update was successful
@@ -142,7 +146,10 @@ try {
         error_log("Update affected {$rowCount} rows");
 
         // Verify the update by querying the database
-        $verifyStmt = $db->prepare("SELECT {$imageField}, {$thumbnailField} FROM {$tableName} WHERE {$idField} = ?");
+        $sql = "SELECT " . $imageField . ", " . $thumbnailField . " FROM " . $tableName . " WHERE " . $idField . " = ?";
+        error_log("Verify SQL: " . $sql);
+
+        $verifyStmt = $db->prepare($sql);
         $verifyStmt->execute([$itemId]);
         $result = $verifyStmt->fetch(PDO::FETCH_ASSOC);
         error_log("After update: " . print_r($result, true));

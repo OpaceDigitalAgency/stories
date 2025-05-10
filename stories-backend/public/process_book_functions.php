@@ -1071,6 +1071,13 @@ function processBook($db, $bookDir) {
             $purchaseLinks['goodreads'] = "https://www.goodreads.com/book/isbn/$isbn13";
         }
 
+        // Add to Google Books if ISBN is available
+        if (!empty($isbn)) {
+            $purchaseLinks['google_books'] = "https://books.google.com/books?isbn=$isbn";
+        } elseif (!empty($isbn13)) {
+            $purchaseLinks['google_books'] = "https://books.google.com/books?isbn=$isbn13";
+        }
+
         // Generate slug from title
         $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
         // Convert accented characters to ASCII while preserving all characters
@@ -1207,6 +1214,10 @@ function processBook($db, $bookDir) {
             }
             flushOutput();
 
+            // Clean up author and publisher names - remove ** prefix
+            $author = trim(str_replace('**', '', $author));
+            $publisher = trim(str_replace('**', '', $publisher));
+
             // Debug values before executing SQL
             echo "<p class='info'>Book data to be updated:</p>";
             echo "<ul>";
@@ -1282,6 +1293,10 @@ function processBook($db, $bookDir) {
                 echo "<p class='warning'>No publication date found to convert</p>";
             }
             flushOutput();
+
+            // Clean up author and publisher names - remove ** prefix
+            $author = trim(str_replace('**', '', $author));
+            $publisher = trim(str_replace('**', '', $publisher));
 
             // Debug values before executing SQL
             echo "<p class='info'>Book data to be inserted:</p>";

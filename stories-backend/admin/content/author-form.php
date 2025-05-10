@@ -76,8 +76,6 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
-                    <!-- Add a hidden field to track if the image was updated via AJAX -->
-                    <input type="hidden" name="image_updated" value="0" id="image_updated_field">
                     <!-- Debug info - will be hidden in production -->
                     <div class="alert alert-info">
                         <strong>Debug:</strong>
@@ -228,27 +226,6 @@ try {
                                     console.log('Set avatar_url_backup field to:', defaultAvatarUrl);
                                 }
 
-                                // Set the image_updated flag to 1
-                                const imageUpdatedField = document.getElementById('image_updated_field');
-                                if (imageUpdatedField) {
-                                    imageUpdatedField.value = '1';
-                                    console.log('Set image_updated field to 1');
-
-                                    // Add a visible notification that the flag was set
-                                    const notification = document.createElement('div');
-                                    notification.className = 'alert alert-info mt-2';
-                                    notification.innerHTML = '<strong>Debug:</strong> image_updated flag set to 1';
-                                    document.querySelector('.content-section').appendChild(notification);
-
-                                    // Remove the notification after 5 seconds
-                                    setTimeout(() => {
-                                        notification.remove();
-                                    }, 5000);
-                                } else {
-                                    console.log('Could not find image_updated_field');
-                                    alert('Error: Could not find image_updated_field. Please check the console for more information.');
-                                }
-
                                 // Update the preview image
                                 const previewContainer = document.querySelector('.image-preview-container');
                                 const preview = document.querySelector('.image-preview');
@@ -288,27 +265,6 @@ try {
                             });
                         </script>
                     </div>
-
-                    <!-- Force image_updated to 1 when form is submitted -->
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const form = document.getElementById('author-form');
-                            if (form) {
-                                form.addEventListener('submit', function() {
-                                    // Check if we have a default avatar
-                                    const avatarUrlField = document.querySelector('input[name="avatar_url"]');
-                                    if (avatarUrlField && avatarUrlField.value && avatarUrlField.value.includes('default-avatar.svg')) {
-                                        // Force the image_updated flag to 1
-                                        const imageUpdatedField = document.getElementById('image_updated_field');
-                                        if (imageUpdatedField) {
-                                            imageUpdatedField.value = '1';
-                                            console.log('Form submission - Forced image_updated to 1 for default avatar');
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    </script>
                 </div>
                 <?php endif; ?>
 
@@ -529,8 +485,7 @@ try {
                                 // Also update the backup field
                                 $("#avatar_url_backup").val(imgSrc);
 
-                                // Set the image_updated flag
-                                $("#image_updated_field").val("1");
+                                // No need to set image_updated flag anymore
                             }
                         }
                     });
@@ -709,96 +664,9 @@ try {
 <link rel="stylesheet" href="../assets/css/preview-modal.css">
 <script src="../assets/js/author-preview.js"></script>
 
-<!-- Custom fix for author form -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Author form fix script loaded');
+<!-- Custom script removed - simplified approach -->
 
-    // Find the form
-    const form = document.getElementById('author-form');
-    console.log('Form element by ID:', form);
-
-    // Find the image_updated field
-    const imageUpdatedField = document.getElementById('image_updated_field');
-    console.log('Image updated field by ID:', imageUpdatedField);
-
-    // Find the image upload component
-    const imageUploadComponent = document.querySelector('.image-upload-component');
-    if (imageUploadComponent) {
-        console.log('Image upload component found');
-
-        // Create a MutationObserver to watch for changes to the image preview
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                    console.log('Image component mutation detected');
-
-                    // Check if the image was removed (placeholder is visible)
-                    const placeholder = imageUploadComponent.querySelector('.placeholder');
-                    const isVisible = placeholder && (window.getComputedStyle(placeholder).display !== 'none');
-
-                    if (isVisible) {
-                        console.log('Image was removed (placeholder is visible)');
-
-                        // Set the image_updated field to 1
-                        if (imageUpdatedField) {
-                            imageUpdatedField.value = '1';
-                            console.log('Set image_updated to 1 because image was removed');
-                        }
-                    }
-                }
-            });
-        });
-
-        // Start observing the image upload component
-        observer.observe(imageUploadComponent, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style', 'class']
-        });
-    }
-
-    // Direct event listener for the remove button
-    document.addEventListener('click', function(event) {
-        if (event.target.classList.contains('remove-image') ||
-            (event.target.parentElement && event.target.parentElement.classList.contains('remove-image'))) {
-            console.log('Remove button clicked (captured by event delegation)');
-
-            // Set the image_updated field to 1
-            if (imageUpdatedField) {
-                imageUpdatedField.value = '1';
-                console.log('Set image_updated to 1 because remove button was clicked');
-
-                // Also clear the avatar_url field
-                const avatarUrlField = document.querySelector('input[name="avatar_url"]');
-                if (avatarUrlField) {
-                    avatarUrlField.value = '';
-                    console.log('Cleared avatar_url field');
-                }
-            }
-        }
-    });
-
-    // Add a submit handler to the form
-    if (form) {
-        form.addEventListener('submit', function() {
-            console.log('Form is being submitted');
-            console.log('image_updated value:', imageUpdatedField ? imageUpdatedField.value : 'not found');
-
-            // Check if the avatar_url field is empty
-            const avatarUrlField = document.querySelector('input[name="avatar_url"]');
-            if (avatarUrlField && !avatarUrlField.value) {
-                console.log('avatar_url is empty, setting image_updated to 1');
-                if (imageUpdatedField) {
-                    imageUpdatedField.value = '1';
-                }
-            }
-        });
-    }
-});</script>
-
-<!-- Custom script to ensure image URL is properly transferred to the form -->
+<!-- Custom script to ensure image URL is properly transferred from preview to form -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Listen for form submission
@@ -811,7 +679,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (avatarUrlInput) {
                     console.log('Form submission - Avatar URL:', avatarUrlInput.value);
-                    console.log('Avatar URL backup:', avatarUrlBackup ? avatarUrlBackup.value : 'not found');
 
                     // If the avatar URL is empty but there's an image in the preview, try to get it from there
                     if (!avatarUrlInput.value) {
@@ -826,38 +693,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
 
-                    // Set the image_updated field to 1 if we have an avatar URL
-                    if (avatarUrlInput.value) {
-                        const imageUpdatedField = document.getElementById('image_updated_field');
-                        if (imageUpdatedField) {
-                            imageUpdatedField.value = '1';
-                            console.log('Set image_updated to 1 because we have an avatar URL');
-                        }
-                    }
-
                     // Log the final form data
                     console.log('Final avatar URL before submission:', avatarUrlInput.value);
-                    console.log('Image updated field value:', document.getElementById('image_updated_field').value);
                 }
             });
-
-            // Also add a direct event listener for the Save button
-            const saveButton = form.querySelector('button[type="submit"]');
-            if (saveButton) {
-                saveButton.addEventListener('click', function() {
-                    console.log('Save button clicked');
-
-                    // Force the image_updated field to 1
-                    const imageUpdatedField = document.getElementById('image_updated_field');
-                    if (imageUpdatedField) {
-                        imageUpdatedField.value = '1';
-                        console.log('Set image_updated to 1 because save button was clicked');
-                    }
-                });
-            }
         }
 
-        // Also listen for changes to the image preview
+        // Listen for changes to the image preview
         const imageUploadComponent = document.querySelector('.image-upload-component');
         if (imageUploadComponent) {
             // Create a MutationObserver to watch for changes to the image preview
@@ -871,7 +713,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
                             if (avatarUrlInput) {
                                 avatarUrlInput.value = previewImg.src;
-                                document.getElementById('image_updated_field').value = '1';
                                 console.log('Image preview changed - Updated avatar URL:', previewImg.src);
                             }
                         }

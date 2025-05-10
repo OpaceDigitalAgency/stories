@@ -37,18 +37,11 @@ try {
     $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
     $location = trim($_POST['location'] ?? '');
 
-    // Check for backup avatar URL if the main one is empty
+    // SIMPLIFIED APPROACH: Just use whatever is in the form
+    // If avatar_url is empty, check for backup
     if (empty($avatar_url) && isset($_POST['avatar_url_backup']) && !empty($_POST['avatar_url_backup'])) {
         $avatar_url = trim($_POST['avatar_url_backup']);
         error_log("Using backup avatar URL: " . $avatar_url);
-    }
-
-    // Check if the avatar URL is the default avatar
-    $isDefaultAvatar = !empty($avatar_url) && strpos($avatar_url, 'default-avatar.svg') !== false;
-    if ($isDefaultAvatar) {
-        error_log("Default avatar detected: " . $avatar_url);
-        // Always force image_updated to true for default avatar
-        $image_updated = true;
     }
 
     // Fix for empty avatar_url that should be NULL in database
@@ -57,54 +50,8 @@ try {
         error_log("Empty avatar URL - setting to NULL in database");
     }
 
-    // Log form data for debugging
-    error_log("Save author form data: " . print_r($_POST, true));
-    error_log("Avatar URL from form: " . ($avatar_url ?? 'NULL'));
-    error_log("Avatar URL type: " . gettype($avatar_url));
-    error_log("Avatar URL empty check: " . (empty($avatar_url) ? 'EMPTY' : 'NOT EMPTY'));
-    error_log("Avatar URL null check: " . ($avatar_url === null ? 'NULL' : 'NOT NULL'));
-    error_log("Avatar URL string check: " . (is_string($avatar_url) ? 'STRING' : 'NOT STRING'));
-    error_log("Image updated flag: " . (isset($_POST['image_updated']) ? $_POST['image_updated'] : 'not set'));
-
-    // Check if image_updated flag is set
-    $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
-    error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
-
-    // If we have an ID and the image_updated flag is not set, check if there's an existing avatar_url in the database
-    // This is to handle cases where the image was not updated
-    if ($id && !$image_updated) {
-        try {
-            $checkStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
-            $checkStmt->execute([$id]);
-            $existingData = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($existingData && !empty($existingData['avatar_url']) && empty($avatar_url)) {
-                // If we have an existing avatar_url in the database but not in the form,
-                // use the one from the database
-                $avatar_url = $existingData['avatar_url'];
-                error_log("Using existing avatar_url from database: " . $avatar_url);
-            }
-        } catch (Exception $e) {
-            error_log("Error checking existing avatar_url: " . $e->getMessage());
-        }
-    } else if ($image_updated) {
-        // If image_updated flag is set, use the avatar_url from the form
-        // If it's empty, set it to NULL to remove the image
-        if (empty($avatar_url)) {
-            $avatar_url = null;
-            error_log("Removing avatar image (setting to NULL)");
-        } else {
-            error_log("Updating avatar image to: " . $avatar_url);
-
-            // Force the image_updated flag to true if we have a non-empty avatar_url
-            $image_updated = true;
-        }
-    }
-
-    // Special handling for default avatar already done above
-
-    // Always log the final avatar_url value that will be used
-    error_log("Final avatar_url value to be saved: " . ($avatar_url ?? 'NULL'));
+    // Log the avatar URL for debugging
+    error_log("Avatar URL to be saved: " . ($avatar_url ?? 'NULL'));
 
     // Validate required fields
     if (empty($name)) {

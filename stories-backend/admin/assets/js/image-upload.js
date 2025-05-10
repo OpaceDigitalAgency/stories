@@ -329,31 +329,9 @@ class ImageUploader {
                 }
             }
 
-            // If we found a form, update the image_updated field
+            // Log form information
             if (form) {
                 console.log('Found parent form:', form.id || 'unnamed form');
-
-                // Look for the image_updated field
-                let hiddenInput = form.querySelector('input[name="image_updated"]');
-                if (!hiddenInput) {
-                    // If not found, look for an element with ID 'image_updated_field'
-                    hiddenInput = document.getElementById('image_updated_field');
-                    if (!hiddenInput) {
-                        // If still not found, create a new one
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'image_updated';
-                        hiddenInput.id = 'image_updated_field';
-                        form.appendChild(hiddenInput);
-                        console.log('Created new image_updated hidden input');
-                    }
-                }
-
-                // Set the value to 1 to indicate the image was updated
-                hiddenInput.value = '1';
-                console.log('Set image_updated flag to 1');
-
-                // Log for debugging
                 console.log('Form updated with image URL:', url);
                 console.log('Form element:', form);
                 console.log('URL input value:', urlInput.value);
@@ -458,29 +436,10 @@ class ImageUploader {
             }
         }
 
-        // If we found a form, update the image_updated field
+        // Log form information
         if (form) {
             console.log('Found parent form:', form.id || 'unnamed form');
-
-            // Look for the image_updated field
-            let hiddenInput = form.querySelector('input[name="image_updated"]');
-            if (!hiddenInput) {
-                // If not found, look for an element with ID 'image_updated_field'
-                hiddenInput = document.getElementById('image_updated_field');
-                if (!hiddenInput) {
-                    // If still not found, create a new one
-                    hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = 'image_updated';
-                    hiddenInput.id = 'image_updated_field';
-                    form.appendChild(hiddenInput);
-                    console.log('Created new image_updated hidden input');
-                }
-            }
-
-            // Set the value to 1 to indicate the image was updated
-            hiddenInput.value = '1';
-            console.log('Image removed - Updated form with image_updated=1');
+            console.log('Image removed - Updated form');
         } else {
             console.log('No parent form found for this component');
         }
@@ -740,20 +699,10 @@ class ImageUploader {
                                     // Make sure the form field is updated with the image URL
                                     urlInput.value = url;
 
-                                    // If we're in a form, find the form and mark it as having unsaved changes
+                                    // If we're in a form, log that we've updated it
                                     const form = component.closest('form');
                                     if (form) {
-                                        // Add a hidden input to indicate the image was updated
-                                        let hiddenInput = form.querySelector('input[name="image_updated"]');
-                                        if (!hiddenInput) {
-                                            hiddenInput = document.createElement('input');
-                                            hiddenInput.type = 'hidden';
-                                            hiddenInput.name = 'image_updated';
-                                            form.appendChild(hiddenInput);
-                                            console.log('Created new image_updated hidden input');
-                                        }
-                                        hiddenInput.value = '1';
-                                        console.log('Set image_updated to 1 because image was selected from media library');
+                                        console.log('Updated form with image from media library');
                                     }
                                 } else {
                                     console.error('Failed to update thumbnail:', response.message);
@@ -836,28 +785,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.log('Updated empty image URL from preview:', previewImg.src);
                     }
 
-                    // Set the image_updated flag
-                    let hiddenInput = form.querySelector('input[name="image_updated"]');
-                    if (!hiddenInput) {
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'image_updated';
-                        form.appendChild(hiddenInput);
-                    }
-                    hiddenInput.value = '1';
-                    console.log('Set image_updated flag to 1');
+                    console.log('Found image in preview, ensuring URL is set');
                 } else if (urlInput && !urlInput.value) {
-                    // If we have no preview image and no URL, make sure the image_updated flag is set
-                    // This ensures that if the user removed an image, it stays removed
-                    let hiddenInput = form.querySelector('input[name="image_updated"]');
-                    if (!hiddenInput) {
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'image_updated';
-                        form.appendChild(hiddenInput);
-                    }
-                    hiddenInput.value = '1';
-                    console.log('No image in preview, empty URL - set image_updated flag to 1');
+                    console.log('No image in preview, empty URL');
                 }
             });
 

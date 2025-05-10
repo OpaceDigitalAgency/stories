@@ -32,8 +32,11 @@ try {
     $itemId = intval($_POST['item_id']);
     $imageUrl = isset($_POST['image_url']) ? $_POST['image_url'] : '';
 
-    // Log the request for debugging
-    error_log("Update thumbnail request: Type: $itemType, ID: $itemId, URL: $imageUrl");
+    // Handle empty image URL as NULL
+    $isNullImage = empty($imageUrl) || $imageUrl === 'null' || $imageUrl === 'undefined';
+
+    // Log the request with NULL status
+    error_log("Update thumbnail request: Type: $itemType, ID: $itemId, URL: " . ($isNullImage ? 'NULL' : $imageUrl));
 
     // Validate item type
     $validItemTypes = ['story', 'post', 'author', 'game', 'ai_tool', 'directory_item'];
@@ -132,12 +135,24 @@ try {
     }
 
     // Log the update query for debugging
-    error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE {$idField} = {$itemId}");
+    if ($isNullImage) {
+        error_log("Updating {$tableName} SET {$imageField} = NULL, {$thumbnailField} = NULL WHERE {$idField} = {$itemId}");
+    } else {
+        error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE {$idField} = {$itemId}");
+    }
 
     try {
-        // Use direct query with quoted values to avoid prepared statement issues
-        $imageUrlEscaped = $db->quote($imageUrl);
-        $thumbnailUrlEscaped = $db->quote($thumbnailUrl);
+        // Handle NULL values properly
+        if ($isNullImage) {
+            // If image URL is NULL, set the field to NULL in the database
+            $imageUrlEscaped = "NULL";
+            $thumbnailUrlEscaped = "NULL";
+        } else {
+            // Otherwise, quote the values
+            $imageUrlEscaped = $db->quote($imageUrl);
+            $thumbnailUrlEscaped = $db->quote($thumbnailUrl);
+        }
+
         $itemIdEscaped = intval($itemId); // Integer values don't need quotes
 
         // Construct the SQL query with proper quoting

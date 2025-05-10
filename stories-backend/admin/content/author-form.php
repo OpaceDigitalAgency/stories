@@ -203,7 +203,12 @@ try {
                 </div>
                 <?php else: ?>
                 <div class="alert alert-warning">
-                    <strong>Debug:</strong> No avatar URL set in author data
+                    <strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn't set avatar URLs.
+                    <div class="mt-2">
+                        <a href="direct-sql-update.php?id=<?php echo $author['id']; ?>&url=https://api.storiesfromtheweb.org/uploads/optimized/default-author-avatar.jpg" class="btn btn-sm btn-primary">
+                            Set Default Avatar
+                        </a>
+                    </div>
                 </div>
                 <?php endif; ?>
 

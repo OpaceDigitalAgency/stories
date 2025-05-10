@@ -52,16 +52,16 @@ try {
     // If we have an ID and the image wasn't updated, get the existing cover_url from the database
     if ($id && !$image_updated && empty($cover_url)) {
         try {
-            $stmt = $db->prepare("SELECT cover_url FROM directory_items WHERE id = ?");
+            $stmt = $db->prepare("SELECT cover_image_url FROM directory_items WHERE directory_item_id = ?");
             $stmt->execute([$id]);
             $existingData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($existingData && !empty($existingData['cover_url'])) {
-                $cover_url = $existingData['cover_url'];
-                error_log("Using existing cover_url from database: " . $cover_url);
+            if ($existingData && !empty($existingData['cover_image_url'])) {
+                $cover_url = $existingData['cover_image_url'];
+                error_log("Using existing cover_image_url from database: " . $cover_url);
             }
         } catch (Exception $e) {
-            error_log("Error checking existing cover_url: " . $e->getMessage());
+            error_log("Error checking existing cover_image_url: " . $e->getMessage());
         }
     }
 
@@ -168,9 +168,9 @@ try {
             is_published = ?,
             slug = ?,
             published_at = ?,
-            cover_url = ?,
+            cover_image_url = ?,
             updated_at = NOW()
-            WHERE id = ?");
+            WHERE directory_item_id = ?");
         $stmt->execute([
             $title,
             $description,
@@ -201,7 +201,7 @@ try {
             is_published,
             slug,
             published_at,
-            cover_url,
+            cover_image_url,
             created_at,
             updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");

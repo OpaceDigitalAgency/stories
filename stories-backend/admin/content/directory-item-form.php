@@ -1489,7 +1489,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Include directory item preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
-<script src="../assets/js/directory-item-preview.js"></script>
+<!-- Create a custom preview script instead of using the shared one -->
+<script>
+// Custom preview script for directory items
+document.addEventListener('DOMContentLoaded', function() {
+    // Base URL for the frontend
+    const frontendBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://storiesfromtheweb.org';
+
+    // Find the preview button
+    const previewButton = document.querySelector('.preview-button');
+    if (!previewButton) return;
+
+    // Add click event listener
+    previewButton.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Get the directory item ID
+        const idInput = document.querySelector('input[name="id"]');
+        if (!idInput) return;
+
+        const id = idInput.value;
+        if (!id) return;
+
+        // Open the preview in a new tab
+        const previewUrl = `${frontendBaseUrl}/directory/${id}`;
+        window.open(previewUrl, '_blank');
+    });
+
+    console.log('Directory item custom preview initialized');
+});
+</script>
 
 <!-- Include book form enhancements -->
 <link rel="stylesheet" href="../assets/css/book-form-enhancements.css">

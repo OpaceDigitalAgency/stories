@@ -188,11 +188,25 @@ try {
 
     // Add cover_url field if it exists in the table
     if (in_array('cover_url', $columns) && isset($_POST['cover_url'])) {
-        $data['cover_url'] = $_POST['cover_url'];
-        
+        // Include the image optimizer to use normalizeImageUrl function
+        if (file_exists('../../includes/image_optimizer.php')) {
+            require_once '../../includes/image_optimizer.php';
+            // Normalize the URL to ensure it doesn't have ../../ in it
+            if (function_exists('normalizeImageUrl')) {
+                $data['cover_url'] = normalizeImageUrl($_POST['cover_url']);
+                error_log("Normalized cover_url: " . $data['cover_url']);
+            } else {
+                $data['cover_url'] = $_POST['cover_url'];
+                error_log("normalizeImageUrl function not available, using original URL: " . $data['cover_url']);
+            }
+        } else {
+            $data['cover_url'] = $_POST['cover_url'];
+            error_log("image_optimizer.php not found, using original URL: " . $data['cover_url']);
+        }
+
         // Also update featured_image field with the same value if it exists
         if (in_array('featured_image', $columns)) {
-            $data['featured_image'] = $_POST['cover_url'];
+            $data['featured_image'] = $data['cover_url'];
         }
     }
 

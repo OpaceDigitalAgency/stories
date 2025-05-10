@@ -638,8 +638,13 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
             // Create a clean path that doesn't include ../../
             $cleanPath = '/uploads/' . $directory . '/' . $filename;
 
-            // Create absolute URL
-            $url = 'https://' . $_SERVER['HTTP_HOST'] . $cleanPath;
+            // Create absolute URL with protocol detection
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+            $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+            $url = $protocol . $host . $cleanPath;
+
+            // Log the URL for debugging
+            error_log("Generated clean image URL: $url for size $size");
 
             $variants[$size] = [
                 'path' => $variantPath,
@@ -719,9 +724,17 @@ function optimizeImageWithMetadata($sourcePath, $destinationDir, $options = []) 
 
         // Just return the original file info using a clean path
         $filename = basename($sourcePath);
+        $directory = basename(dirname($sourcePath));
+
         // Create a clean path that doesn't include ../../
-        $cleanPath = '/uploads/' . $filename;
-        $url = 'https://' . $_SERVER['HTTP_HOST'] . $cleanPath;
+        $cleanPath = '/uploads/' . $directory . '/' . $filename;
+
+        // Create absolute URL with protocol detection
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+        $url = $protocol . $host . $cleanPath;
+
+        error_log("Generated clean original image URL: $url");
 
         return [
             'path' => $sourcePath,
@@ -926,6 +939,49 @@ function getOptimizedImageUrl($originalUrl, $size = 'medium') {
         }
     }
 
-    // If we can't get an optimized URL, return the original
-    return $originalUrl;
+    // If we can't get an optimized URL, return the original but normalize it
+    return normalizeImageUrl($originalUrl);
+}
+
+/**
+ * Normalize an image URL to ensure it doesn't contain ../../ and is absolute
+ *
+ * @param string $url The image URL to normalize
+ * @return string The normalized URL
+ */
+function normalizeImageUrl($url) {
+    // If it's already an absolute URL
+    if (strpos($url, 'http') === 0) {
+        // Clean up any instances of ../../ in the URL
+        $url = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $url);
+        return $url;
+    }
+
+    // If it's a relative URL starting with ../
+    if (strpos($url, '../') === 0) {
+        $relativePath = substr($url, 3); // Remove the leading ../
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+        return $protocol . $host . '/' . $relativePath;
+    }
+
+    // If it's a relative URL starting with /../../
+    if (strpos($url, '/../../') === 0) {
+        $relativePath = substr($url, 6); // Remove the leading /../../
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+        return $protocol . $host . '/' . $relativePath;
+    }
+
+    // If it's a relative URL starting with /
+    if (strpos($url, '/') === 0) {
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+        return $protocol . $host . $url;
+    }
+
+    // If it's a relative URL with no leading /
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'api.storiesfromtheweb.org';
+    return $protocol . $host . '/' . $url;
 }

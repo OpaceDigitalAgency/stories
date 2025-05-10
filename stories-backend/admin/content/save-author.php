@@ -37,6 +37,12 @@ try {
     $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
     $location = trim($_POST['location'] ?? '');
 
+    // Check for backup avatar URL if the main one is empty
+    if (empty($avatar_url) && isset($_POST['avatar_url_backup']) && !empty($_POST['avatar_url_backup'])) {
+        $avatar_url = trim($_POST['avatar_url_backup']);
+        error_log("Using backup avatar URL: " . $avatar_url);
+    }
+
     // Fix for empty avatar_url that should be NULL in database
     if (empty($avatar_url)) {
         $avatar_url = null;

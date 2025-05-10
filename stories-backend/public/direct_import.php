@@ -906,7 +906,8 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
 
         // If no avatar URL, set a default one
         if (empty($avatarResult['avatar_url'])) {
-            $defaultAvatarUrl = '/uploads/default-avatar.svg';
+            // Use absolute URL for the default avatar
+            $defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
 
             // Check if the default avatar file exists, if not, create it
             $defaultAvatarPath = __DIR__ . '/../uploads/default-avatar.svg';
@@ -933,7 +934,7 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
 
             $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = ?, avatar_url = ? WHERE id = ?");
             $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $authorType, $defaultAvatarUrl, $author['id']]);
-            echo "<p class='success'><strong>AUTHOR UPDATED WITH AVATAR:</strong> Added default avatar URL</p>";
+            echo "<p class='success'><strong>AUTHOR UPDATED WITH AVATAR:</strong> Added default avatar URL: $defaultAvatarUrl</p>";
         } else {
             $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = ? WHERE id = ?");
             $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $authorType, $author['id']]);
@@ -952,8 +953,8 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
                ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
 
         try {
-            // Set a default avatar URL for all authors
-            $defaultAvatarUrl = '/uploads/default-avatar.svg';
+            // Set a default avatar URL for all authors - use absolute URL
+            $defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
 
             // Check if the default avatar file exists, if not, create it
             $defaultAvatarPath = __DIR__ . '/../uploads/default-avatar.svg';

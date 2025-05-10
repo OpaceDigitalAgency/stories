@@ -255,7 +255,7 @@ try {
 
                 <?php
                 // Render image upload component
-                // Check if avatar_url is empty or points to default-avatar.svg
+                // Get avatar URL from author data
                 $avatarUrl = $author['avatar_url'] ?? '';
 
                 // If we have a direct avatar query result, use that instead
@@ -264,12 +264,29 @@ try {
                     error_log("Using avatar URL from direct query: " . ($avatarUrl ?? 'NULL'));
                 }
 
-                if (empty($avatarUrl) || strpos($avatarUrl, 'default-avatar.svg') !== false) {
-                    $avatarUrl = ''; // Clear it so the component shows "No image selected"
+                // IMPORTANT: Don't clear the default avatar URL - we want to show it
+                // This was causing the form to not display the default avatar
+
+                // Check if avatar URL is empty or NULL
+                $hasAvatar = !empty($avatarUrl);
+
+                // Show appropriate debug message
+                if (!$hasAvatar) {
+                    echo '<div class="alert alert-warning">';
+                    echo '<strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn\'t set avatar URLs.';
+                    echo '<div class="mt-2"><button type="button" class="btn btn-primary set-default-avatar">Set Default Avatar</button></div>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="alert alert-info">';
+                    echo '<strong>Debug:</strong> Avatar URL set in author data: ' . htmlspecialchars($avatarUrl);
+                    echo '</div>';
                 }
 
                 // Add a hidden field to ensure the avatar URL is included in the form
-                echo '<input type="hidden" id="avatar_url_backup" value="' . htmlspecialchars($avatarUrl) . '">';
+                echo '<input type="hidden" id="avatar_url_backup" name="avatar_url_backup" value="' . htmlspecialchars($avatarUrl) . '">';
+
+                // Debug the avatar URL before rendering
+                error_log("Avatar URL being passed to renderImageUploadComponent: " . ($avatarUrl ?? 'NULL'));
 
                 renderImageUploadComponent(
                     'avatar_url',
@@ -278,6 +295,45 @@ try {
                     'author',
                     $author['id'] ?? null
                 );
+
+                // Add JavaScript for the Set Default Avatar button
+                echo '<script>
+                $(document).ready(function() {
+                    $(".set-default-avatar").click(function() {
+                        const defaultAvatarUrl = "https://api.storiesfromtheweb.org/uploads/default-avatar.svg";
+
+                        // Set the value in both the visible and hidden fields
+                        $("#avatar_url").val(defaultAvatarUrl);
+                        $("#avatar_url_backup").val(defaultAvatarUrl);
+
+                        // Update the preview image
+                        const previewImg = $("#avatar_url-preview");
+                        previewImg.attr("src", defaultAvatarUrl);
+                        previewImg.show();
+
+                        // Hide the placeholder
+                        previewImg.closest(".image-preview").find(".placeholder").hide();
+
+                        // Add has-image class to container
+                        $(".image-preview-container").addClass("has-image");
+
+                        // Update the image preview to show the image
+                        const preview = previewImg.closest(".image-preview");
+                        preview.removeClass("empty");
+
+                        // Set the image_updated flag
+                        $("<input>").attr({
+                            type: "hidden",
+                            name: "image_updated",
+                            value: "1"
+                        }).appendTo("form");
+
+                        // Update debug info
+                        $(this).closest(".alert").removeClass("alert-warning").addClass("alert-success")
+                            .html("<strong>Success:</strong> Default avatar set. Click Save to apply changes.");
+                    });
+                });
+                </script>';
 
                 // Render AI image generator
                 if (function_exists('renderAiImageGenerator')) {

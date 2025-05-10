@@ -44,7 +44,11 @@ try {
 
     // Log form data for debugging
     error_log("Save author form data: " . print_r($_POST, true));
-    error_log("Avatar URL from form: " . $avatar_url);
+    error_log("Avatar URL from form: " . ($avatar_url ?? 'NULL'));
+    error_log("Avatar URL type: " . gettype($avatar_url));
+    error_log("Avatar URL empty check: " . (empty($avatar_url) ? 'EMPTY' : 'NOT EMPTY'));
+    error_log("Avatar URL null check: " . ($avatar_url === null ? 'NULL' : 'NOT NULL'));
+    error_log("Avatar URL string check: " . (is_string($avatar_url) ? 'STRING' : 'NOT STRING'));
     error_log("Image updated flag: " . (isset($_POST['image_updated']) ? $_POST['image_updated'] : 'not set'));
 
     // Check if image_updated flag is set
@@ -234,8 +238,18 @@ try {
         $params[] = $id; // Add ID for WHERE clause
 
         $sql = "UPDATE authors SET " . implode(', ', $setClause) . " WHERE id = ?";
+        error_log("UPDATE SQL: " . $sql);
+        error_log("UPDATE params: " . print_r($params, true));
+
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $result = $stmt->execute($params);
+        error_log("UPDATE result: " . ($result ? 'SUCCESS' : 'FAILED') . ", affected rows: " . $stmt->rowCount());
+
+        // Verify the update
+        $verifyStmt = $db->prepare("SELECT id, name, avatar_url FROM authors WHERE id = ?");
+        $verifyStmt->execute([$id]);
+        $verifiedAuthor = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Verified author after update: " . print_r($verifiedAuthor, true));
 
         $message = "Author updated successfully";
     } else {
@@ -295,8 +309,19 @@ try {
         // Let MySQL handle the timestamps with its DEFAULT values
 
         $sql = "INSERT INTO authors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        error_log("INSERT SQL: " . $sql);
+        error_log("INSERT params: " . print_r($params, true));
+
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $result = $stmt->execute($params);
+        error_log("INSERT result: " . ($result ? 'SUCCESS' : 'FAILED') . ", last insert ID: " . $db->lastInsertId());
+
+        // Verify the insert
+        $newId = $db->lastInsertId();
+        $verifyStmt = $db->prepare("SELECT id, name, avatar_url FROM authors WHERE id = ?");
+        $verifyStmt->execute([$newId]);
+        $verifiedAuthor = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Verified author after insert: " . print_r($verifiedAuthor, true));
 
         $message = "Author created successfully";
     }

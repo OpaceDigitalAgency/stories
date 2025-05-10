@@ -275,6 +275,9 @@ class ImageUploader {
         console.log('updatePreview called for field:', urlInput ? urlInput.name : 'unknown');
         console.log('New image URL:', url);
         console.log('Entity type:', entityType, 'Entity ID:', entityId);
+        console.log('URL input value before update:', urlInput ? urlInput.value : 'no input');
+        console.log('Preview container:', previewContainer ? 'found' : 'not found');
+        console.log('Preview element:', preview ? 'found' : 'not found');
 
         // Make sure the URL input is updated
         if (urlInput) {
@@ -498,7 +501,46 @@ class ImageUploader {
      * Open the media library in a modal
      * @param {HTMLElement} component - The component element
      */
+    // Add debug logging for the entire component
+    logComponentState(component) {
+        const urlInput = component.querySelector('.image-url-input');
+        const previewImg = component.querySelector('.image-preview img');
+        const entityType = component.querySelector('.entity-type')?.value;
+        const entityId = component.querySelector('.entity-id')?.value;
+        const fieldName = urlInput ? urlInput.name : 'unknown';
+
+        console.log('Component state:', {
+            fieldName: fieldName,
+            urlInputValue: urlInput ? urlInput.value : 'no input',
+            previewImgSrc: previewImg ? previewImg.src : 'no preview',
+            entityType: entityType,
+            entityId: entityId
+        });
+
+        // Find the form
+        let form = null;
+        let currentElement = component;
+        while (currentElement && !form) {
+            currentElement = currentElement.parentElement;
+            if (currentElement && currentElement.tagName === 'FORM') {
+                form = currentElement;
+            }
+        }
+
+        if (form) {
+            console.log('Form ID:', form.id);
+            console.log('Form action:', form.action);
+            const imageUpdatedField = form.querySelector('input[name="image_updated"]') || document.getElementById('image_updated_field');
+            console.log('Image updated field value:', imageUpdatedField ? imageUpdatedField.value : 'not found');
+        } else {
+            console.log('No parent form found');
+        }
+    }
     openMediaLibrary(component) {
+        // Log the component state before opening the media library
+        console.log('Opening media library for component:');
+        this.logComponentState(component);
+
         // Create modal backdrop
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
@@ -590,9 +632,16 @@ class ImageUploader {
                 const url = event.data.url;
                 const dimensions = event.data.dimensions || '';
 
+                console.log('Media selected event received:', {
+                    url: url,
+                    dimensions: dimensions
+                });
+
                 // Update the component
                 const urlInput = component.querySelector('.image-url-input');
+                console.log('URL input before update:', urlInput ? urlInput.value : 'not found');
                 urlInput.value = url;
+                console.log('URL input after update:', urlInput.value);
 
                 // Update the preview
                 this.updatePreview(component, url, dimensions);
@@ -600,6 +649,10 @@ class ImageUploader {
                 // Close the modal
                 document.body.removeChild(backdrop);
                 document.body.removeChild(modal);
+
+                // Log the component state after media selection
+                console.log('After media selection:');
+                this.logComponentState(component);
 
                 // Update thumbnail in database if we have an item ID
                 const entityType = component.querySelector('.entity-type').value;
@@ -692,6 +745,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function(e) {
             console.log('Form submission handler triggered for form:', form.id || 'unnamed form');
+            console.log('Form action:', form.action);
+            console.log('Form method:', form.method);
+
+            // Log all form fields
+            const formData = new FormData(form);
+            console.log('Form data before processing:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
 
             // Find all image upload components in this form
             const components = form.querySelectorAll('.image-upload-component');
@@ -742,6 +804,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('No image in preview, empty URL - set image_updated flag to 1');
                 }
             });
+
+            // Log all form fields after processing
+            const finalFormData = new FormData(form);
+            console.log('Form data after processing:');
+            for (let [key, value] of finalFormData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
         });
     });
 });

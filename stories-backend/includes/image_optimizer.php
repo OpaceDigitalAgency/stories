@@ -180,8 +180,24 @@ function getImageDimensions($path) {
  * @return string Unique filename
  */
 function createOptimizedFilename($originalFilename, $size = 'medium', $format = 'webp') {
+    // Handle null or empty values
+    if (empty($originalFilename)) {
+        $originalFilename = 'image-' . time() . '.jpg';
+        error_log("Empty original filename provided to createOptimizedFilename, using: $originalFilename");
+    }
+
+    if (empty($size) || $size === null) {
+        $size = 'medium';
+        error_log("Empty size provided to createOptimizedFilename, using default: $size");
+    }
+
+    if (empty($format) || $format === null) {
+        $format = 'webp';
+        error_log("Empty format provided to createOptimizedFilename, using default: $format");
+    }
+
     $pathInfo = pathinfo($originalFilename);
-    $baseName = $pathInfo['filename'];
+    $baseName = isset($pathInfo['filename']) ? $pathInfo['filename'] : 'image-' . time();
 
     // Extract the original descriptive part if it exists
     if (preg_match('/^[0-9a-f]+-(.+)$/', $baseName, $matches)) {
@@ -637,8 +653,16 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
         // Get format config
         $formatConfig = getImageFormatConfig($outputFormat);
 
+        // Check if formatConfig is valid and has an extension
+        if (!is_array($formatConfig) || !isset($formatConfig['extension'])) {
+            error_log("Invalid format config for $outputFormat. Using 'webp' as default extension.");
+            $extension = 'webp';
+        } else {
+            $extension = $formatConfig['extension'];
+        }
+
         // Create unique filename
-        $variantFilename = createOptimizedFilename($originalFilename, $size, $formatConfig['extension']);
+        $variantFilename = createOptimizedFilename($originalFilename, $size, $extension);
 
         // Ensure no double slashes in the path
         $destinationDir = rtrim($destinationDir, '/');
@@ -650,7 +674,7 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
             'height' => $sizeConfig['height'],
             'crop' => $sizeConfig['crop'],
             'format' => $outputFormat,
-            'quality' => $formatConfig['quality']
+            'quality' => isset($formatConfig['quality']) ? $formatConfig['quality'] : 85 // Default to 85 if not set
         ];
 
         // For original size, just convert format if needed

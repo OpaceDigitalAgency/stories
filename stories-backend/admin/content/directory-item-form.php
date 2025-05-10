@@ -547,9 +547,9 @@ if ($debug) {
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label" for="tag-select">Tags</label>
+                                        <label class="form-label" for="tag-select">Genre</label>
                                         <select id="tag-select" class="form-control">
-                                            <option value="">Select a tag to add</option>
+                                            <option value="">Select a genre to add</option>
                                             <?php foreach ($tags as $tag): ?>
                                                 <?php
                                                     // Clean up tag name (remove ** prefix if present)
@@ -804,57 +804,9 @@ if ($debug) {
                                     </div>
                                 </div>
 
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label class="form-label" for="genre">Genre</label>
-                                        <select id="genre" name="book_genre" class="form-control">
-                                            <option value="">Select Genre</option>
-                                            <?php
-                                            // Add common genres that should always be available
-                                            $commonGenres = [
-                                                'fiction' => 'Fiction',
-                                                'non-fiction' => 'Non-Fiction',
-                                                'picture-book' => 'Picture Book',
-                                                'chapter-book' => 'Chapter Book',
-                                                'middle-grade' => 'Middle Grade',
-                                                'young-adult' => 'Young Adult',
-                                                'fantasy' => 'Fantasy',
-                                                'science-fiction' => 'Science Fiction',
-                                                'mystery' => 'Mystery',
-                                                'adventure' => 'Adventure',
-                                                'historical-fiction' => 'Historical Fiction',
-                                                'biography' => 'Biography',
-                                                'educational' => 'Educational'
-                                            ];
+                                <!-- Genre dropdown removed - using tags section instead -->
 
-                                            // Combine common genres with database genres
-                                            $allGenres = $commonGenres;
-                                            foreach ($genreList as $genre) {
-                                                if (!isset($allGenres[$genre])) {
-                                                    // Format the display name
-                                                    $displayName = ucwords(str_replace('-', ' ', $genre));
-                                                    $allGenres[$genre] = $displayName;
-                                                }
-                                            }
 
-                                            // Add the current genre if it's not in the list
-                                            if (isset($bookData['genre']) && !empty($bookData['genre']) && !isset($allGenres[$bookData['genre']])) {
-                                                $displayName = ucwords(str_replace('-', ' ', $bookData['genre']));
-                                                $allGenres[$bookData['genre']] = $displayName;
-                                            }
-
-                                            // Sort genres alphabetically
-                                            asort($allGenres);
-
-                                            // Output all genre options
-                                            foreach ($allGenres as $value => $label) {
-                                                $selected = (isset($bookData['genre']) && $bookData['genre'] == $value) ? 'selected' : '';
-                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
-                                </div>
 
                                 <div class="col-md-4">
                                     <div class="form-group">

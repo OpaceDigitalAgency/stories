@@ -155,30 +155,42 @@ try {
 
         $itemIdEscaped = intval($itemId); // Integer values don't need quotes
 
-        // Construct the SQL query with proper quoting
+        // Use prepared statements instead of direct SQL
         if (!empty($thumbnailField)) {
-            $sql = "UPDATE `{$tableName}` SET `{$imageField}` = {$imageUrlEscaped}, `{$thumbnailField}` = {$thumbnailUrlEscaped} WHERE `{$idField}` = {$itemIdEscaped}";
+            if ($isNullImage) {
+                $stmt = $db->prepare("UPDATE `{$tableName}` SET `{$imageField}` = NULL, `{$thumbnailField}` = NULL WHERE `{$idField}` = ?");
+                $stmt->execute([$itemIdEscaped]);
+            } else {
+                $stmt = $db->prepare("UPDATE `{$tableName}` SET `{$imageField}` = ?, `{$thumbnailField}` = ? WHERE `{$idField}` = ?");
+                $stmt->execute([$imageUrl, $thumbnailUrl, $itemIdEscaped]);
+            }
         } else {
             // For tables without a thumbnail field (like authors)
-            $sql = "UPDATE `{$tableName}` SET `{$imageField}` = {$imageUrlEscaped} WHERE `{$idField}` = {$itemIdEscaped}";
+            if ($isNullImage) {
+                $stmt = $db->prepare("UPDATE `{$tableName}` SET `{$imageField}` = NULL WHERE `{$idField}` = ?");
+                $stmt->execute([$itemIdEscaped]);
+            } else {
+                $stmt = $db->prepare("UPDATE `{$tableName}` SET `{$imageField}` = ? WHERE `{$idField}` = ?");
+                $stmt->execute([$imageUrl, $itemIdEscaped]);
+            }
         }
-        error_log("Direct SQL: " . $sql);
+        error_log("Executed prepared statement for update");
 
-        // Execute the direct SQL query
-        $rowCount = $db->exec($sql);
+        // Get the number of affected rows
+        $rowCount = $stmt->rowCount();
         error_log("Update affected {$rowCount} rows");
 
         // Verify the update by querying the database
         if (!empty($thumbnailField)) {
-            $verifySQL = "SELECT `{$imageField}`, `{$thumbnailField}` FROM `{$tableName}` WHERE `{$idField}` = {$itemIdEscaped}";
+            $verifyStmt = $db->prepare("SELECT `{$imageField}`, `{$thumbnailField}` FROM `{$tableName}` WHERE `{$idField}` = ?");
         } else {
             // For tables without a thumbnail field (like authors)
-            $verifySQL = "SELECT `{$imageField}` FROM `{$tableName}` WHERE `{$idField}` = {$itemIdEscaped}";
+            $verifyStmt = $db->prepare("SELECT `{$imageField}` FROM `{$tableName}` WHERE `{$idField}` = ?");
         }
-        error_log("Verify SQL: " . $verifySQL);
+        error_log("Verify SQL prepared statement for ID: " . $itemIdEscaped);
 
-        $verifyResult = $db->query($verifySQL);
-        $result = $verifyResult->fetch(PDO::FETCH_ASSOC);
+        $verifyStmt->execute([$itemIdEscaped]);
+        $result = $verifyStmt->fetch(PDO::FETCH_ASSOC);
         error_log("After update: " . print_r($result, true));
 
         // Set success response

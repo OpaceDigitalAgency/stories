@@ -377,7 +377,7 @@ $extraHeadContent = '
 
     /* Book fields toggle */
     .book-fields {
-        display: none;
+        /* Allow inline style to control visibility instead of CSS */
     }
 
     /* Image preview styling */
@@ -961,6 +961,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set initial visibility based on current selection
         if (typeSelect.value === 'book') {
             bookFields.style.display = 'block';
+
+            // Initialize book form enhancements on page load if book type is selected
+            setTimeout(() => {
+                if (typeof initTagSelection === 'function') initTagSelection();
+                if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
+                if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
+                if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
+                if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
+                if (typeof initGenreDropdown === 'function') initGenreDropdown();
+                if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
+                if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
+                console.log('Book fields initialized on page load');
+            }, 100);
         } else {
             bookFields.style.display = 'none';
         }

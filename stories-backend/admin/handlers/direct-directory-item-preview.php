@@ -44,7 +44,7 @@ try {
                 ");
                 $bookStmt->execute([$itemId]);
                 $bookData = $bookStmt->fetch();
-                
+
                 // Parse purchase links JSON if available
                 if (!empty($bookData['purchase_links'])) {
                     try {
@@ -111,11 +111,11 @@ function renderDescription($description) {
 // Format date from MySQL date to readable format
 function formatDate($date) {
     if (empty($date)) return '';
-    
+
     // Check if it's a valid date format
     $timestamp = strtotime($date);
     if ($timestamp === false) return $date;
-    
+
     return date('F j, Y', $timestamp);
 }
 ?>
@@ -271,16 +271,16 @@ function formatDate($date) {
     <?php elseif ($item): ?>
         <div class="item-header">
             <h1 class="item-title"><?php echo htmlspecialchars($item['title']); ?></h1>
-            
+
             <div>
                 <?php if (!empty($item['category_name'])): ?>
                     <span class="item-category"><?php echo htmlspecialchars($item['category_name']); ?></span>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($item['featured'])): ?>
                     <span class="item-featured">Featured</span>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($item['type']) && $item['type'] !== 'general'): ?>
                     <span class="badge"><?php echo ucfirst(htmlspecialchars($item['type'])); ?></span>
                 <?php endif; ?>
@@ -294,75 +294,82 @@ function formatDate($date) {
         <div class="item-description">
             <?php echo renderDescription($item['description']); ?>
         </div>
-        
-        <?php if ($item['type'] === 'book' && $bookData): ?>
+
+        <?php if ($item['type'] === 'book'): ?>
             <h3 class="section-title">Book Information</h3>
             <div class="book-details">
+            <?php if (!$bookData): ?>
+                <div class="detail-item" style="grid-column: 1 / -1;">
+                    <div class="detail-label">Note:</div>
+                    <div>No book data found for this directory item.</div>
+                </div>
+            <?php else: ?>
                 <?php if (!empty($bookData['author'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Author:</div>
                         <div><?php echo htmlspecialchars($bookData['author']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['publisher'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Publisher:</div>
                         <div><?php echo htmlspecialchars($bookData['publisher']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['publication_date'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Published:</div>
                         <div><?php echo htmlspecialchars(formatDate($bookData['publication_date'])); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['isbn']) || !empty($bookData['isbn13'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">ISBN:</div>
                         <div><?php echo htmlspecialchars(!empty($bookData['isbn13']) ? $bookData['isbn13'] : $bookData['isbn']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['page_count'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Pages:</div>
                         <div><?php echo htmlspecialchars($bookData['page_count']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['genre'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Genre:</div>
                         <div><?php echo htmlspecialchars($bookData['genre']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['series'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Series:</div>
                         <div><?php echo htmlspecialchars($bookData['series']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['age_range'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Age Range:</div>
                         <div><?php echo htmlspecialchars($bookData['age_range']); ?></div>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($bookData['reading_level'])): ?>
                     <div class="detail-item">
                         <div class="detail-label">Reading Level:</div>
                         <div><?php echo htmlspecialchars($bookData['reading_level']); ?></div>
                     </div>
                 <?php endif; ?>
+            <?php endif; ?>
             </div>
-            
-            <?php if (!empty($bookData['purchase_links_array']) && is_array($bookData['purchase_links_array'])): ?>
+
+            <?php if ($bookData && !empty($bookData['purchase_links_array']) && is_array($bookData['purchase_links_array'])): ?>
                 <div>
                     <div class="detail-label">Where to Buy:</div>
                     <div class="purchase-links">
@@ -382,21 +389,21 @@ function formatDate($date) {
                     <div><?php echo htmlspecialchars($item['contact_email']); ?></div>
                 </div>
             <?php endif; ?>
-            
+
             <?php if (!empty($item['contact_phone'])): ?>
                 <div class="detail-item">
                     <div class="detail-label">Phone:</div>
                     <div><?php echo htmlspecialchars($item['contact_phone']); ?></div>
                 </div>
             <?php endif; ?>
-            
+
             <?php if (!empty($item['address'])): ?>
                 <div class="detail-item">
                     <div class="detail-label">Address:</div>
                     <div><?php echo nl2br(htmlspecialchars($item['address'])); ?></div>
                 </div>
             <?php endif; ?>
-            
+
             <?php if (!empty($item['price_range'])): ?>
                 <div class="detail-item">
                     <div class="detail-label">Price Range:</div>

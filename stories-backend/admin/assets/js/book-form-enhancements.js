@@ -15,15 +15,31 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Book Form Enhancements loaded');
 
-    // Initialize all enhancements
-    initTagSelection();
-    initAuthorDropdown();
-    initSeriesDropdown();
-    initPurchaseLinksManager();
-    initAgeRangeDropdown();
-    initGenreDropdown();
-    initReadingLevelDropdown();
-    initPublisherDropdown();
+    // Check if we're on a page with book fields
+    const bookFields = document.querySelector('.book-fields');
+    const typeSelect = document.getElementById('type');
+
+    // Only initialize if we're on a page with book fields and either:
+    // 1. The book fields are visible (display != 'none')
+    // 2. The type select is set to 'book'
+    if (bookFields &&
+        (bookFields.style.display !== 'none' ||
+         (typeSelect && typeSelect.value === 'book'))) {
+
+        console.log('Initializing book form enhancements');
+
+        // Initialize all enhancements
+        initTagSelection();
+        initAuthorDropdown();
+        initSeriesDropdown();
+        initPurchaseLinksManager();
+        initAgeRangeDropdown();
+        initGenreDropdown();
+        initReadingLevelDropdown();
+        initPublisherDropdown();
+    } else {
+        console.log('Book fields not visible or not a book type, skipping initialization');
+    }
 });
 
 /**

@@ -1,0 +1,116 @@
+/**
+ * Book Form Enhancements CSS
+ * 
+ * Styles for the enhanced book form elements
+ */
+
+/* Purchase Links Manager */
+.purchase-links-manager {
+    margin-bottom: 15px;
+}
+
+.purchase-links-list {
+    margin-bottom: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.purchase-links-list:empty {
+    display: none;
+}
+
+.purchase-link-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 5px;
+}
+
+.purchase-link-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.store-name {
+    font-weight: bold;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.store-url {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0 10px;
+}
+
+.store-url a {
+    color: #0275d8;
+    text-decoration: none;
+}
+
+.store-url a:hover {
+    text-decoration: underline;
+}
+
+.store-actions {
+    flex-shrink: 0;
+}
+
+.purchase-links-form {
+    margin-top: 10px;
+}
+
+/* Dropdown Styling */
+select.form-control {
+    appearance: auto;
+    padding-right: 30px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23333' d='M0 2l4 4 4-4H0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 8px 8px;
+}
+
+/* Tag Badges */
+.tag-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 2px;
+    font-size: 0.85rem;
+}
+
+.tag-badge .remove-tag {
+    margin-left: 5px;
+    cursor: pointer;
+    color: #999;
+}
+
+.tag-badge .remove-tag:hover {
+    color: #d9534f;
+}
+
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    min-height: 36px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: #fff;
+}
+
+/* Fix for duplicate purchase links section */
+.book-fields:nth-of-type(n+2) {
+    display: none !important;
+}

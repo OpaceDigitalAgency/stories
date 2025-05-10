@@ -747,10 +747,40 @@ function processBook($db, $bookDir) {
                 ");
 
                 // Generate slug
-                $publisherSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
+                $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
                 // Convert accented characters to ASCII while preserving all characters
-                $publisherSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $publisherSlug);
-                $publisherSlug = trim($publisherSlug, '-');
+                $baseSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $baseSlug);
+                $baseSlug = trim($baseSlug, '-');
+
+                // Check if slug exists and make it unique if needed
+                $publisherSlug = $baseSlug;
+                $counter = 1;
+
+                while (true) {
+                    // Check if slug exists
+                    $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM authors WHERE slug = ?");
+                    $checkStmt->execute([$publisherSlug]);
+                    $slugCount = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+                    if ($slugCount == 0) {
+                        // Slug is unique, we can use it
+                        break;
+                    }
+
+                    // Slug exists, append counter and try again
+                    $publisherSlug = $baseSlug . '-' . $counter;
+                    $counter++;
+
+                    // Safety check to prevent infinite loops
+                    if ($counter > 100) {
+                        echo "<p class='error'>Could not generate a unique slug for publisher after 100 attempts</p>";
+                        flushOutput();
+                        break;
+                    }
+                }
+
+                echo "<p class='info'>Using publisher slug: '$publisherSlug'</p>";
+                flushOutput();
 
                 $stmt->execute([$publisher, 'retail', $publisherSlug]);
                 $publisherId = $db->lastInsertId();
@@ -766,34 +796,72 @@ function processBook($db, $bookDir) {
         // Remove ** prefix if it exists (we'll add it only for display purposes, not storage)
         $authorName = trim(preg_replace('/^\*\*\s*/', '', $authorName));
 
-        // Author info not needed as author_type is set in SQL
-
-        // Check if author exists by name
-        $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
-        $stmt->execute([$authorName]);
-        $authorResult = $stmt->fetch();
-
-        if ($authorResult) {
-            $authorId = $authorResult['id'];
-            echo "<p class='info'>Book author '" . htmlspecialchars($authorName) . "' already exists in authors table (ID: $authorId)</p>";
+        // Check if author and publisher are the same entity
+        if (!empty($publisher) && strtolower($authorName) === strtolower($publisher) && $publisherId) {
+            // Use the publisher ID as the author ID
+            $authorId = $publisherId;
+            echo "<p class='info'>Author and publisher are the same entity: '" . htmlspecialchars($authorName) . "'. Using publisher ID: $publisherId</p>";
             flushOutput();
         } else {
-            // Add new author
-            $stmt = $db->prepare("
-                INSERT INTO authors (name, author_type, slug, created_at, updated_at)
-                VALUES (?, ?, ?, NOW(), NOW())
-            ");
+            // Author info not needed as author_type is set in SQL
 
-            // Generate slug
-            $authorSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $authorName));
-            // Convert accented characters to ASCII while preserving all characters
-            $authorSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $authorSlug);
-            $authorSlug = trim($authorSlug, '-');
+            // Check if author exists by name
+            $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
+            $stmt->execute([$authorName]);
+            $authorResult = $stmt->fetch();
 
-            $stmt->execute([$authorName, 'retail', $authorSlug]);
-            $authorId = $db->lastInsertId();
-            echo "<p class='success'>Added book author '" . htmlspecialchars($authorName) . "' to authors table (ID: $authorId)</p>";
-            flushOutput();
+            if ($authorResult) {
+                $authorId = $authorResult['id'];
+                echo "<p class='info'>Book author '" . htmlspecialchars($authorName) . "' already exists in authors table (ID: $authorId)</p>";
+                flushOutput();
+            } else {
+                // Add new author
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
+                    VALUES (?, ?, ?, NOW(), NOW())
+                ");
+
+                // Generate slug
+                $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $authorName));
+                // Convert accented characters to ASCII while preserving all characters
+                $baseSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $baseSlug);
+                $baseSlug = trim($baseSlug, '-');
+
+                // Check if slug exists and make it unique if needed
+                $authorSlug = $baseSlug;
+                $counter = 1;
+
+                while (true) {
+                    // Check if slug exists
+                    $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM authors WHERE slug = ?");
+                    $checkStmt->execute([$authorSlug]);
+                    $slugCount = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+                    if ($slugCount == 0) {
+                        // Slug is unique, we can use it
+                        break;
+                    }
+
+                    // Slug exists, append counter and try again
+                    $authorSlug = $baseSlug . '-' . $counter;
+                    $counter++;
+
+                    // Safety check to prevent infinite loops
+                    if ($counter > 100) {
+                        echo "<p class='error'>Could not generate a unique slug for author after 100 attempts</p>";
+                        flushOutput();
+                        break;
+                    }
+                }
+
+                echo "<p class='info'>Using author slug: '$authorSlug'</p>";
+                flushOutput();
+
+                $stmt->execute([$authorName, 'retail', $authorSlug]);
+                $authorId = $db->lastInsertId();
+                echo "<p class='success'>Added book author '" . htmlspecialchars($authorName) . "' to authors table (ID: $authorId)</p>";
+                flushOutput();
+            }
         }
 
         // Process cover image and add to media table

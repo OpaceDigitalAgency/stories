@@ -955,7 +955,8 @@ if ($debug) {
                                     <!-- Purchase links will be dynamically added here -->
                                 </div>
                                 <button type="button" id="add-purchase-link-btn" class="btn btn-sm btn-primary mt-2">Add Purchase Link</button>
-                                <textarea id="purchase_links" name="book_purchase_links" class="form-control d-none" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? '{}'); ?></textarea>
+                                <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? '{}'); ?></textarea>
+                                <small class="form-text text-muted">Purchase links in JSON format. You can edit this directly or use the Add Purchase Link button above.</small>
                             </div>
 
                             <!-- Debug information -->

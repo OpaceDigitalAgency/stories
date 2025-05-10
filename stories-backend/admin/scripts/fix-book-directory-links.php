@@ -31,10 +31,10 @@ try {
 
     // Get all books without directory_item_id
     $booksStmt = $db->query("
-        SELECT b.id, di.title
-        FROM books b
-        LEFT JOIN directory_items di ON b.directory_item_id = di.id
-        WHERE b.directory_item_id IS NULL OR b.directory_item_id = 0
+        SELECT books.id, directory_items.title
+        FROM books
+        LEFT JOIN directory_items ON books.directory_item_id = directory_items.id
+        WHERE books.directory_item_id IS NULL OR books.directory_item_id = 0
     ");
     $books = $booksStmt->fetchAll();
 
@@ -72,10 +72,10 @@ try {
 
     // Get all directory items of type 'book' without a corresponding book entry
     $dirItemsStmt = $db->query("
-        SELECT di.id, di.title
-        FROM directory_items di
-        LEFT JOIN books b ON di.id = b.directory_item_id
-        WHERE di.type = 'book' AND b.id IS NULL
+        SELECT directory_items.id, directory_items.title
+        FROM directory_items
+        LEFT JOIN books ON directory_items.id = books.directory_item_id
+        WHERE directory_items.type = 'book' AND books.id IS NULL
     ");
     $orphanedDirItems = $dirItemsStmt->fetchAll();
 

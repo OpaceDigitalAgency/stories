@@ -256,7 +256,8 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete', 'publish', 'unpublish'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'totalItems' => $totalItems // Pass the total items count from SQL query
         ]
     );
 } else {

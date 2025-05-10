@@ -155,6 +155,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
+            'totalItems' => $totalItems, // Pass the total items count from SQL query
             'thumbnailField' => false // Disable image column for tags
         ]
     );

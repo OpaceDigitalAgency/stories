@@ -67,7 +67,7 @@ try {
         SELECT m.id, m.filename, m.file_path
         FROM media m
         LEFT JOIN directory_items d ON m.file_path = d.cover_url
-        LEFT JOIN books b ON m.file_path = b.cover_image_url
+        LEFT JOIN books b ON m.file_path = b.cover_url
         LEFT JOIN stories s ON m.file_path = s.cover_url
         LEFT JOIN games g ON m.file_path = g.cover_url
         LEFT JOIN ai_tools a ON m.file_path = a.cover_url

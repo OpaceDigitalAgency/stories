@@ -46,7 +46,7 @@ try {
     switch ($itemType) {
         case 'story':
             $tableName = 'stories';
-            $imageField = 'cover_image';
+            $imageField = 'cover_url';
             $thumbnailField = 'thumbnail_url';
             break;
         case 'post':
@@ -56,12 +56,12 @@ try {
             break;
         case 'author':
             $tableName = 'authors';
-            $imageField = 'avatar';
-            $thumbnailField = 'avatar_thumbnail';
+            $imageField = 'avatar_url';
+            $thumbnailField = 'thumbnail_url';
             break;
         case 'game':
             $tableName = 'games';
-            $imageField = 'cover_image';
+            $imageField = 'cover_url';
             $thumbnailField = 'thumbnail_url';
             break;
         case 'ai_tool':
@@ -71,7 +71,7 @@ try {
             break;
         case 'directory_item':
             $tableName = 'directory_items';
-            $imageField = 'image_url';
+            $imageField = 'cover_image_url';
             $thumbnailField = 'thumbnail_url';
             break;
     }
@@ -89,17 +89,17 @@ try {
     if (strpos($imageUrl, '/uploads/') !== false && strpos($imageUrl, '-thumbnail') === false) {
         // Try to use the thumbnail version if it exists
         $pathInfo = pathinfo($imageUrl);
-        
+
         // Use the correct path format without any unique ID prefix
         // First, remove any unique ID prefix if it exists (like '6819c7559130f-')
         $filename = $pathInfo['filename'];
         if (preg_match('/^[a-f0-9]+-(.+)$/', $filename, $matches)) {
             $filename = $matches[1];
         }
-        
+
         // Use .webp extension for thumbnails as that's what the system is using
         $thumbnailPath = $pathInfo['dirname'] . '/optimized/' . $filename . '-thumbnail.webp';
-        
+
         // Check if the thumbnail exists on the server
         $thumbnailPathAbs = $_SERVER['DOCUMENT_ROOT'] . $thumbnailPath;
         if (file_exists($thumbnailPathAbs)) {

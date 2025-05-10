@@ -34,6 +34,10 @@ try {
             header("Location: authors.php");
             exit;
         }
+
+        // Log author data for debugging
+        error_log("Author data loaded: " . print_r($author, true));
+        error_log("Avatar URL: " . ($author['avatar_url'] ?? 'Not set'));
     }
 
 } catch (PDOException $e) {
@@ -54,6 +58,12 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
+                    <!-- Debug info - will be hidden in production -->
+                    <?php if (isset($author['avatar_url']) && !empty($author['avatar_url'])): ?>
+                    <div class="alert alert-info">
+                        <strong>Debug:</strong> Current avatar URL: <?php echo htmlspecialchars($author['avatar_url']); ?>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Basic Information -->
                     <div class="form-group mb-3">

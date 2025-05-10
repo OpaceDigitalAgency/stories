@@ -450,16 +450,55 @@ class ImageUploader {
                     // Use absolute path to ensure it works from any admin page
                     xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
                     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                    // Log the data being sent
+                    console.log('Updating thumbnail for:', {
+                        entityType: entityType,
+                        entityId: entityId,
+                        imageUrl: url,
+                        fieldName: urlInput.name
+                    });
+
                     xhr.onload = function() {
                         if (xhr.status === 200) {
                             try {
                                 const response = JSON.parse(xhr.responseText);
                                 console.log('Thumbnail update response:', response);
+
+                                // If successful, update the form field
+                                if (response.success) {
+                                    // Make sure the form field is updated with the image URL
+                                    urlInput.value = url;
+
+                                    // If we're in a form, find the form and mark it as having unsaved changes
+                                    const form = component.closest('form');
+                                    if (form) {
+                                        // Add a hidden input to indicate the image was updated
+                                        let hiddenInput = form.querySelector('input[name="image_updated"]');
+                                        if (!hiddenInput) {
+                                            hiddenInput = document.createElement('input');
+                                            hiddenInput.type = 'hidden';
+                                            hiddenInput.name = 'image_updated';
+                                            form.appendChild(hiddenInput);
+                                        }
+                                        hiddenInput.value = '1';
+                                    }
+                                } else {
+                                    console.error('Failed to update thumbnail:', response.message);
+                                }
                             } catch (e) {
                                 console.error('Error parsing thumbnail update response:', e);
+                                console.error('Raw response:', xhr.responseText);
                             }
+                        } else {
+                            console.error('HTTP error updating thumbnail:', xhr.status);
                         }
                     };
+
+                    xhr.onerror = function() {
+                        console.error('Network error updating thumbnail');
+                    };
+
                     xhr.send('item_type=' + encodeURIComponent(entityType) + '&item_id=' + encodeURIComponent(entityId) + '&image_url=' + encodeURIComponent(url));
                 }
             }

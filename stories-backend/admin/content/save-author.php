@@ -41,6 +41,10 @@ try {
     error_log("Save author form data: " . print_r($_POST, true));
     error_log("Avatar URL: " . $avatar_url);
 
+    // Check if image_updated flag is set
+    $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
+    error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
+
     // Validate required fields
     if (empty($name)) {
         throw new Exception("Please fill in the name field");

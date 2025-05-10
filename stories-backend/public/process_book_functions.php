@@ -378,13 +378,42 @@ function processBook($db, $bookDir) {
                 }
             }
 
-            // Extract Book Author
-            if (preg_match('/\*\*Book\s+Author:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
-                $bookAuthor = trim($match[1]);
-                echo "<p class='info'>Found book author in content: '$bookAuthor'</p>";
-                flushOutput();
-                if (!empty($bookAuthor)) {
-                    $author = $bookAuthor;
+            // Extract Book Author with multiple patterns
+            $authorPatterns = [
+                '/\*\*Book\s+Author:\*\*\s*(.*?)(?:\n|$)/i',
+                '/\*\*Author:\*\*\s*(.*?)(?:\n|$)/i',
+                '/Author:\s*(.*?)(?:\n|$)/i',
+                '/By\s+(.*?)(?:\n|$)/i',
+                '/Written\s+by\s+(.*?)(?:\n|$)/i'
+            ];
+
+            $authorFound = false;
+            foreach ($authorPatterns as $pattern) {
+                if (preg_match($pattern, $bookInfoContent, $match)) {
+                    $bookAuthor = trim($match[1]);
+                    echo "<p class='info'>Found book author in content with pattern '$pattern': '$bookAuthor'</p>";
+                    flushOutput();
+                    if (!empty($bookAuthor)) {
+                        $author = $bookAuthor;
+                        $authorFound = true;
+                        break;
+                    }
+                }
+            }
+
+            // If author not found in Book & Author Info section, try the entire content
+            if (!$authorFound) {
+                foreach ($authorPatterns as $pattern) {
+                    if (preg_match($pattern, $markdownContent, $match)) {
+                        $bookAuthor = trim($match[1]);
+                        echo "<p class='info'>Found book author in entire content with pattern '$pattern': '$bookAuthor'</p>";
+                        flushOutput();
+                        if (!empty($bookAuthor)) {
+                            $author = $bookAuthor;
+                            $authorFound = true;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -486,13 +515,56 @@ function processBook($db, $bookDir) {
             }
         }
 
-        // Extract Publisher name
-        if (preg_match('/published\s+by\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
-            $publisherName = trim($match[1]);
-            echo "<p class='info'>Found publisher in content: '$publisherName'</p>";
-            flushOutput();
-            if (!empty($publisherName)) {
-                $publisher = $publisherName;
+        // Extract Publisher name with multiple patterns
+        $publisherPatterns = [
+            '/published\s+by\s+(.*?)(?:\n|$)/i',
+            '/\*\*Publisher:\*\*\s*(.*?)(?:\n|$)/i',
+            '/Publisher:\s*(.*?)(?:\n|$)/i',
+            '/\*\*Book\s+Publisher:\*\*\s*(.*?)(?:\n|$)/i',
+            '/\*\*Publishing\s+House:\*\*\s*(.*?)(?:\n|$)/i',
+            '/Publishing\s+House:\s*(.*?)(?:\n|$)/i'
+        ];
+
+        $publisherFound = false;
+        foreach ($publisherPatterns as $pattern) {
+            if (preg_match($pattern, $publisherContent, $match)) {
+                $publisherName = trim($match[1]);
+                echo "<p class='info'>Found publisher in content with pattern '$pattern': '$publisherName'</p>";
+                flushOutput();
+                if (!empty($publisherName)) {
+                    $publisher = $publisherName;
+                    $publisherFound = true;
+                    break;
+                }
+            }
+        }
+
+        // If publisher not found in Publisher section, try the entire content
+        if (!$publisherFound) {
+            foreach ($publisherPatterns as $pattern) {
+                if (preg_match($pattern, $markdownContent, $match)) {
+                    $publisherName = trim($match[1]);
+                    echo "<p class='info'>Found publisher in entire content with pattern '$pattern': '$publisherName'</p>";
+                    flushOutput();
+                    if (!empty($publisherName)) {
+                        $publisher = $publisherName;
+                        $publisherFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Try to extract publisher from the title of the Publisher section
+        if (!$publisherFound && isset($publisherMatch[0])) {
+            if (preg_match('/#{1,3}\s*Publisher(?:.*?):\s*(.*?)(?:\n|$)/i', $publisherMatch[0], $match)) {
+                $publisherName = trim($match[1]);
+                echo "<p class='info'>Found publisher in section title: '$publisherName'</p>";
+                flushOutput();
+                if (!empty($publisherName)) {
+                    $publisher = $publisherName;
+                    $publisherFound = true;
+                }
             }
         }
 

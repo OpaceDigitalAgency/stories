@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Cleanup Script
- * 
+ *
  * This script cleans up the database by:
  * 1. Removing age-related tags from the tags table
  * 2. Removing duplicate tags
@@ -91,53 +91,69 @@ output("=== Cleaning up tags table ===", $isWeb);
 // 1.1 Remove age-related tags
 try {
     $agePatterns = [
-        '0-3', '3-5', '4-6', '5-7', '6-8', '7-9', '7-10', '8-10', '8-12', '9-12', '10-12', 
+        '0-3', '3-5', '4-6', '5-7', '6-8', '7-9', '7-10', '8-10', '8-12', '9-12', '10-12',
         '10+', '12+', '13+', '14+', '16+', 'teen', 'young adult', 'adult'
     ];
-    
+
     $placeholders = implode(',', array_fill(0, count($agePatterns), '?'));
-    
+
     // First, get the IDs of age-related tags
-    $stmt = $db->prepare("SELECT id, name FROM tags WHERE LOWER(name) IN ($placeholders) OR 
-                          LOWER(name) LIKE '%years%' OR 
-                          LOWER(name) LIKE '%age%' OR 
-                          LOWER(name) REGEXP '^[0-9]+-[0-9]+$' OR 
+    $stmt = $db->prepare("SELECT id, name FROM tags WHERE LOWER(name) IN ($placeholders) OR
+                          LOWER(name) LIKE '%years%' OR
+                          LOWER(name) LIKE '%age%' OR
+                          LOWER(name) REGEXP '^[0-9]+-[0-9]+$' OR
                           LOWER(name) REGEXP '^[0-9]+\\\\+$'");
-    
+
     // Bind all the age patterns
     foreach ($agePatterns as $index => $pattern) {
         $stmt->bindValue($index + 1, strtolower($pattern));
     }
-    
+
     $stmt->execute();
     $ageTags = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     if (count($ageTags) > 0) {
         output("Found " . count($ageTags) . " age-related tags:", $isWeb);
         foreach ($ageTags as $tag) {
             output("  - " . $tag['name'] . " (ID: " . $tag['id'] . ")", $isWeb);
         }
-        
+
         // Get the IDs
         $ageTagIds = array_column($ageTags, 'id');
         $idPlaceholders = implode(',', array_fill(0, count($ageTagIds), '?'));
-        
-        // Delete tag associations first
-        $deleteAssocStmt = $db->prepare("DELETE FROM item_tags WHERE tag_id IN ($idPlaceholders)");
-        foreach ($ageTagIds as $index => $id) {
-            $deleteAssocStmt->bindValue($index + 1, $id);
+
+        // Check for directory_item_tags table
+        if ($db->query("SHOW TABLES LIKE 'directory_item_tags'")->rowCount() > 0) {
+            $deleteAssocStmt = $db->prepare("DELETE FROM directory_item_tags WHERE tag_id IN ($idPlaceholders)");
+            foreach ($ageTagIds as $index => $id) {
+                $deleteAssocStmt->bindValue($index + 1, $id);
+            }
+            $deleteAssocStmt->execute();
+            output("Deleted " . $deleteAssocStmt->rowCount() . " directory item tag associations", $isWeb);
+        } else if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
+            // Fallback to item_tags if directory_item_tags doesn't exist
+            $deleteAssocStmt = $db->prepare("DELETE FROM item_tags WHERE tag_id IN ($idPlaceholders)");
+            foreach ($ageTagIds as $index => $id) {
+                $deleteAssocStmt->bindValue($index + 1, $id);
+            }
+            $deleteAssocStmt->execute();
+            output("Deleted " . $deleteAssocStmt->rowCount() . " item tag associations", $isWeb);
+        } else {
+            output("No item_tags or directory_item_tags table found, skipping tag associations", $isWeb);
         }
-        $deleteAssocStmt->execute();
-        output("Deleted " . $deleteAssocStmt->rowCount() . " tag associations", $isWeb);
-        
-        // Delete story tag associations
-        $deleteStoryTagsStmt = $db->prepare("DELETE FROM story_tags WHERE tag_id IN ($idPlaceholders)");
-        foreach ($ageTagIds as $index => $id) {
-            $deleteStoryTagsStmt->bindValue($index + 1, $id);
+
+        // Delete story tag associations if the table exists
+        if ($db->query("SHOW TABLES LIKE 'story_tags'")->rowCount() > 0) {
+            $deleteStoryTagsStmt = $db->prepare("DELETE FROM story_tags WHERE tag_id IN ($idPlaceholders)");
+            foreach ($ageTagIds as $index => $id) {
+                $deleteStoryTagsStmt->bindValue($index + 1, $id);
+            }
+            $deleteStoryTagsStmt->execute();
+            output("Deleted " . $deleteStoryTagsStmt->rowCount() . " story tag associations", $isWeb);
+        } else {
+            output("story_tags table does not exist, skipping", $isWeb);
         }
-        $deleteStoryTagsStmt->execute();
-        output("Deleted " . $deleteStoryTagsStmt->rowCount() . " story tag associations", $isWeb);
-        
+
         // Delete post tag associations if they exist
         if ($db->query("SHOW TABLES LIKE 'post_tags'")->rowCount() > 0) {
             $deletePostTagsStmt = $db->prepare("DELETE FROM post_tags WHERE tag_id IN ($idPlaceholders)");
@@ -146,8 +162,10 @@ try {
             }
             $deletePostTagsStmt->execute();
             output("Deleted " . $deletePostTagsStmt->rowCount() . " post tag associations", $isWeb);
+        } else {
+            output("post_tags table does not exist, skipping", $isWeb);
         }
-        
+
         // Now delete the tags
         $deleteTagsStmt = $db->prepare("DELETE FROM tags WHERE id IN ($idPlaceholders)");
         foreach ($ageTagIds as $index => $id) {
@@ -180,7 +198,7 @@ try {
     // Get all tags
     $stmt = $db->query("SELECT id, name, LOWER(TRIM(name)) as normalized_name FROM tags ORDER BY name");
     $tags = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Group tags by normalized name
     $tagGroups = [];
     foreach ($tags as $tag) {
@@ -190,43 +208,55 @@ try {
         }
         $tagGroups[$normalizedName][] = $tag;
     }
-    
+
     // Find groups with more than one tag (duplicates)
     $duplicateGroups = array_filter($tagGroups, function($group) {
         return count($group) > 1;
     });
-    
+
     if (count($duplicateGroups) > 0) {
         output("Found " . count($duplicateGroups) . " duplicate tag groups:", $isWeb);
-        
+
         foreach ($duplicateGroups as $normalizedName => $group) {
             output("  - Group '" . $normalizedName . "' has " . count($group) . " tags:", $isWeb);
-            
+
             // Keep the first tag (usually the one with the lowest ID)
             $keepTag = $group[0];
             $keepId = $keepTag['id'];
-            
+
             output("    - Keeping: " . $keepTag['name'] . " (ID: " . $keepId . ")", $isWeb);
-            
+
             // Process the rest (duplicates to merge)
             $duplicateIds = [];
             for ($i = 1; $i < count($group); $i++) {
                 $duplicateIds[] = $group[$i]['id'];
                 output("    - Merging: " . $group[$i]['name'] . " (ID: " . $group[$i]['id'] . ")", $isWeb);
             }
-            
+
             if (count($duplicateIds) > 0) {
                 $idPlaceholders = implode(',', array_fill(0, count($duplicateIds), '?'));
-                
-                // Update item_tags associations
-                $updateItemTagsStmt = $db->prepare("UPDATE item_tags SET tag_id = ? WHERE tag_id IN ($idPlaceholders)");
-                $updateItemTagsStmt->bindValue(1, $keepId);
-                foreach ($duplicateIds as $index => $id) {
-                    $updateItemTagsStmt->bindValue($index + 2, $id);
+
+                // Update directory_item_tags or item_tags associations
+                if ($db->query("SHOW TABLES LIKE 'directory_item_tags'")->rowCount() > 0) {
+                    $updateItemTagsStmt = $db->prepare("UPDATE directory_item_tags SET tag_id = ? WHERE tag_id IN ($idPlaceholders)");
+                    $updateItemTagsStmt->bindValue(1, $keepId);
+                    foreach ($duplicateIds as $index => $id) {
+                        $updateItemTagsStmt->bindValue($index + 2, $id);
+                    }
+                    $updateItemTagsStmt->execute();
+                    output("    - Updated " . $updateItemTagsStmt->rowCount() . " directory item tag associations", $isWeb);
+                } else if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
+                    $updateItemTagsStmt = $db->prepare("UPDATE item_tags SET tag_id = ? WHERE tag_id IN ($idPlaceholders)");
+                    $updateItemTagsStmt->bindValue(1, $keepId);
+                    foreach ($duplicateIds as $index => $id) {
+                        $updateItemTagsStmt->bindValue($index + 2, $id);
+                    }
+                    $updateItemTagsStmt->execute();
+                    output("    - Updated " . $updateItemTagsStmt->rowCount() . " item tag associations", $isWeb);
+                } else {
+                    output("    - No item_tags or directory_item_tags table found, skipping tag associations", $isWeb);
                 }
-                $updateItemTagsStmt->execute();
-                output("    - Updated " . $updateItemTagsStmt->rowCount() . " item tag associations", $isWeb);
-                
+
                 // Update story_tags associations
                 $updateStoryTagsStmt = $db->prepare("UPDATE story_tags SET tag_id = ? WHERE tag_id IN ($idPlaceholders)");
                 $updateStoryTagsStmt->bindValue(1, $keepId);
@@ -235,7 +265,7 @@ try {
                 }
                 $updateStoryTagsStmt->execute();
                 output("    - Updated " . $updateStoryTagsStmt->rowCount() . " story tag associations", $isWeb);
-                
+
                 // Update post_tags associations if they exist
                 if ($db->query("SHOW TABLES LIKE 'post_tags'")->rowCount() > 0) {
                     $updatePostTagsStmt = $db->prepare("UPDATE post_tags SET tag_id = ? WHERE tag_id IN ($idPlaceholders)");
@@ -246,7 +276,7 @@ try {
                     $updatePostTagsStmt->execute();
                     output("    - Updated " . $updatePostTagsStmt->rowCount() . " post tag associations", $isWeb);
                 }
-                
+
                 // Delete the duplicate tags
                 $deleteTagsStmt = $db->prepare("DELETE FROM tags WHERE id IN ($idPlaceholders)");
                 foreach ($duplicateIds as $index => $id) {
@@ -310,25 +340,25 @@ try {
     // Get unique publishers from books table
     $stmt = $db->query("SELECT DISTINCT publisher FROM books WHERE publisher IS NOT NULL AND publisher != ''");
     $publishers = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
+
     if (count($publishers) > 0) {
         output("Found " . count($publishers) . " unique publishers to migrate", $isWeb);
-        
+
         // Insert each publisher into the publishers table
         $insertStmt = $db->prepare("INSERT IGNORE INTO publishers (name, slug) VALUES (?, ?)");
         $count = 0;
-        
+
         foreach ($publishers as $publisher) {
             // Generate slug
             $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
             $slug = trim($slug, '-');
-            
+
             $insertStmt->execute([$publisher, $slug]);
             if ($insertStmt->rowCount() > 0) {
                 $count++;
             }
         }
-        
+
         output("Migrated $count publishers to the publishers table", $isWeb);
     } else {
         output("No publishers found to migrate", $isWeb);
@@ -347,7 +377,7 @@ try {
         // Add publisher_id column
         $db->exec("ALTER TABLE books ADD COLUMN publisher_id INT");
         output("Added publisher_id column to books table", $isWeb);
-        
+
         // Update publisher_id based on publisher name
         $updateStmt = $db->prepare("
             UPDATE books b

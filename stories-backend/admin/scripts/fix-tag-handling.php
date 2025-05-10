@@ -120,7 +120,7 @@ try {
             $stmt = $db->prepare("
                 SELECT b.directory_item_id, b.age_range
                 FROM books b
-                JOIN directory_item_tags dit ON b.directory_item_id = dit.item_id
+                JOIN directory_item_tags dit ON b.directory_item_id = dit.directory_item_id
                 WHERE dit.tag_id = ?
             ");
             $stmt->execute([$tagId]);

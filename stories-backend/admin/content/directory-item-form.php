@@ -22,6 +22,16 @@ if (file_exists('../includes/tag-component.php')) {
     require_once '../includes/tag-component.php';
 }
 
+// Include publisher dropdown component
+if (file_exists('../includes/publisher-dropdown.php')) {
+    require_once '../includes/publisher-dropdown.php';
+}
+
+// Include series dropdown component
+if (file_exists('../includes/series-dropdown.php')) {
+    require_once '../includes/series-dropdown.php';
+}
+
 try {
     // Initialize variables
     $item = null;
@@ -38,13 +48,48 @@ try {
 
     // Get tags if they exist
     if ($db->query("SHOW TABLES LIKE 'tags'")->rowCount() > 0) {
-        $tags = $db->query("SELECT * FROM tags ORDER BY name")->fetchAll();
+        // Get all tags and filter out age-related tags
+        $allTags = $db->query("SELECT * FROM tags ORDER BY name")->fetchAll();
+        $tags = array_filter($allTags, function($tag) {
+            $name = strtolower($tag['name']);
+            // Filter out age range tags
+            return !(
+                preg_match('/^\d+-\d+$/', $name) ||
+                preg_match('/^\d+\+$/', $name) ||
+                strpos($name, 'years') !== false ||
+                $name === 'teen' ||
+                $name === 'young adult' ||
+                $name === 'adult'
+            );
+        });
     }
 
     // Get authors for dropdown
     $authors = [];
     if ($db->query("SHOW TABLES LIKE 'authors'")->rowCount() > 0) {
         $authors = $db->query("SELECT id, name FROM authors ORDER BY name")->fetchAll();
+    }
+
+    // Get unique publishers from books table
+    $publishers = [];
+    try {
+        $publisherStmt = $db->query("SELECT DISTINCT publisher FROM books WHERE publisher IS NOT NULL AND publisher != '' ORDER BY publisher");
+        while ($row = $publisherStmt->fetch()) {
+            $publishers[] = $row['publisher'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
+    // Get unique series from books table
+    $seriesList = [];
+    try {
+        $seriesStmt = $db->query("SELECT DISTINCT series FROM books WHERE series IS NOT NULL AND series != '' ORDER BY series");
+        while ($row = $seriesStmt->fetch()) {
+            $seriesList[] = $row['series'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
     }
 
     // Get directory item if editing
@@ -300,14 +345,28 @@ require_once '../includes/header.php';
                                         <select id="tag-select" class="form-control">
                                             <option value="">Select a tag to add</option>
                                             <?php foreach ($tags as $tag): ?>
-                                                <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tag['name']); ?></option>
+                                                <?php
+                                                    // Clean up tag name (remove ** prefix if present)
+                                                    $tagName = $tag['name'];
+                                                    if (strpos($tagName, '**') === 0) {
+                                                        $tagName = substr($tagName, 2);
+                                                    }
+                                                ?>
+                                                <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tagName); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                         <div class="tag-container" id="tag-container">
                                             <?php if (isset($itemTags)): ?>
                                                 <?php foreach($itemTags as $tag): ?>
+                                                    <?php
+                                                        // Clean up tag name (remove ** prefix if present)
+                                                        $tagName = $tag['name'];
+                                                        if (strpos($tagName, '**') === 0) {
+                                                            $tagName = substr($tagName, 2);
+                                                        }
+                                                    ?>
                                                     <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
-                                                        <?php echo htmlspecialchars($tag['name']); ?>
+                                                        <?php echo htmlspecialchars($tagName); ?>
                                                         <i class="fas fa-times remove-tag"></i>
                                                         <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
                                                     </span>
@@ -371,12 +430,29 @@ require_once '../includes/header.php';
                                         <select id="author" name="book_author" class="form-control">
                                             <option value="">Select Author</option>
                                             <?php foreach ($authors as $author): ?>
-                                                <option value="<?php echo htmlspecialchars($author['name']); ?>"
-                                                        <?php echo (isset($bookData['author']) && $bookData['author'] == $author['name']) ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($author['name']); ?>
+                                                <?php
+                                                    // Clean up author name (remove ** prefix if present)
+                                                    $authorName = $author['name'];
+                                                    if (strpos($authorName, '**') === 0) {
+                                                        $authorName = substr($authorName, 2);
+                                                    }
+
+                                                    // Check if this author is selected
+                                                    $isSelected = false;
+                                                    if (isset($bookData['author'])) {
+                                                        // Compare with and without ** prefix
+                                                        $isSelected = ($bookData['author'] == $authorName ||
+                                                                      $bookData['author'] == $author['name']);
+                                                    }
+                                                ?>
+                                                <option value="<?php echo htmlspecialchars($authorName); ?>"
+                                                        <?php echo $isSelected ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($authorName); ?>
                                                 </option>
                                             <?php endforeach; ?>
-                                            <option value="custom">Other (enter manually)</option>
+                                            <option value="custom" <?php echo (isset($bookData['author']) && !in_array($bookData['author'], array_column($authors, 'name')) && !in_array($bookData['author'], array_map(function($a) { return strpos($a['name'], '**') === 0 ? substr($a['name'], 2) : $a['name']; }, $authors))) ? 'selected' : ''; ?>>
+                                                Other (enter manually)
+                                            </option>
                                         </select>
                                         <input type="text" id="custom_author" name="custom_author" class="form-control mt-1 d-none"
                                             placeholder="Enter author name"
@@ -387,8 +463,25 @@ require_once '../includes/header.php';
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="publisher">Publisher</label>
-                                        <input type="text" id="publisher" name="book_publisher" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['publisher'] ?? ''); ?>">
+                                        <?php if (function_exists('renderPublisherDropdown')): ?>
+                                            <?php echo renderPublisherDropdown($db, $bookData['publisher'] ?? ''); ?>
+                                        <?php else: ?>
+                                            <select id="publisher" name="book_publisher" class="form-control">
+                                                <option value="">Select Publisher</option>
+                                                <?php foreach ($publishers as $publisher): ?>
+                                                    <option value="<?php echo htmlspecialchars($publisher); ?>"
+                                                            <?php echo (isset($bookData['publisher']) && $bookData['publisher'] == $publisher) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($publisher); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                                <option value="custom" <?php echo (isset($bookData['publisher']) && !in_array($bookData['publisher'], $publishers)) ? 'selected' : ''; ?>>
+                                                    Other (enter manually)
+                                                </option>
+                                            </select>
+                                            <input type="text" id="custom_publisher" name="custom_publisher" class="form-control mt-1 <?php echo (isset($bookData['publisher']) && !in_array($bookData['publisher'], $publishers)) ? '' : 'd-none'; ?>"
+                                                placeholder="Enter publisher name"
+                                                value="<?php echo (isset($bookData['publisher']) && !in_array($bookData['publisher'], $publishers)) ? htmlspecialchars($bookData['publisher']) : ''; ?>">
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -454,8 +547,25 @@ require_once '../includes/header.php';
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="series">Series</label>
-                                        <input type="text" id="series" name="book_series" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['series'] ?? ''); ?>">
+                                        <?php if (function_exists('renderSeriesDropdown')): ?>
+                                            <?php echo renderSeriesDropdown($db, $bookData['series'] ?? ''); ?>
+                                        <?php else: ?>
+                                            <select id="series" name="book_series" class="form-control">
+                                                <option value="">Select Series</option>
+                                                <?php foreach ($seriesList as $series): ?>
+                                                    <option value="<?php echo htmlspecialchars($series); ?>"
+                                                            <?php echo (isset($bookData['series']) && $bookData['series'] == $series) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($series); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                                <option value="custom" <?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? 'selected' : ''; ?>>
+                                                    Other (enter manually)
+                                                </option>
+                                            </select>
+                                            <input type="text" id="custom_series" name="custom_series" class="form-control mt-1 <?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? '' : 'd-none'; ?>"
+                                                placeholder="Enter series name"
+                                                value="<?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? htmlspecialchars($bookData['series']) : ''; ?>">
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -726,31 +836,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle custom author field
-    const authorSelect = document.getElementById('author');
-    const customAuthorInput = document.getElementById('custom_author');
+    // Handle custom fields (author, publisher, series)
+    function setupCustomField(selectId, customInputId) {
+        const select = document.getElementById(selectId);
+        const customInput = document.getElementById(customInputId);
 
-    if (authorSelect && customAuthorInput) {
-        // Show/hide custom author field based on selection
-        authorSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customAuthorInput.classList.remove('d-none');
-                customAuthorInput.focus();
-            } else {
-                customAuthorInput.classList.add('d-none');
+        if (select && customInput) {
+            // Show/hide custom field based on selection
+            select.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customInput.classList.remove('d-none');
+                    customInput.focus();
+                } else {
+                    customInput.classList.add('d-none');
+                }
+            });
+
+            // Initialize custom field visibility
+            if (select.value === 'custom') {
+                customInput.classList.remove('d-none');
             }
-        });
-
-        // Initialize custom author field visibility
-        if (authorSelect.value === 'custom') {
-            customAuthorInput.classList.remove('d-none');
         }
+    }
 
-        // Handle form submission to use custom author value
-        document.querySelector('form.content-form').addEventListener('submit', function(e) {
-            if (authorSelect.value === 'custom' && customAuthorInput.value.trim()) {
-                // Set the author value to the custom input
+    // Setup all custom fields
+    setupCustomField('author', 'custom_author');
+    setupCustomField('publisher', 'custom_publisher');
+    setupCustomField('series', 'custom_series');
+
+    // Handle form submission for all custom fields
+    const form = document.querySelector('form.content-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Handle custom author
+            const authorSelect = document.getElementById('author');
+            const customAuthorInput = document.getElementById('custom_author');
+            if (authorSelect && customAuthorInput && authorSelect.value === 'custom' && customAuthorInput.value.trim()) {
                 authorSelect.value = customAuthorInput.value.trim();
+            }
+
+            // Handle custom publisher
+            const publisherSelect = document.getElementById('publisher');
+            const customPublisherInput = document.getElementById('custom_publisher');
+            if (publisherSelect && customPublisherInput && publisherSelect.value === 'custom' && customPublisherInput.value.trim()) {
+                publisherSelect.value = customPublisherInput.value.trim();
+            }
+
+            // Handle custom series
+            const seriesSelect = document.getElementById('series');
+            const customSeriesInput = document.getElementById('custom_series');
+            if (seriesSelect && customSeriesInput && seriesSelect.value === 'custom' && customSeriesInput.value.trim()) {
+                seriesSelect.value = customSeriesInput.value.trim();
             }
         });
     }
@@ -764,8 +900,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/directory-item-preview.js"></script>
 
-<!-- Include purchase links manager script -->
-<script src="../assets/js/purchase-links-manager.js"></script>
+<!-- Include book form enhancements -->
+<link rel="stylesheet" href="../assets/css/book-form-enhancements.css">
+<script src="../assets/js/book-form-enhancements.js"></script>
 
 <style>
 /* Image preview container styling */

@@ -1,6 +1,6 @@
 /**
  * Purchase Links Manager
- * 
+ *
  * This script provides a user-friendly interface for managing purchase links
  * for books in the directory item form.
  */
@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const purchaseLinksField = document.getElementById('purchase_links');
     const purchaseLinksContainer = document.getElementById('purchase-links-container');
     const addPurchaseLinkBtn = document.getElementById('add-purchase-link-btn');
+
+    // Remove any duplicate purchase links containers that might exist
+    const duplicateContainers = document.querySelectorAll('#purchase-links-container');
+    if (duplicateContainers.length > 1) {
+        for (let i = 1; i < duplicateContainers.length; i++) {
+            duplicateContainers[i].remove();
+        }
+    }
 
     // Common book store options
     const commonStores = [
@@ -77,23 +85,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function addPurchaseLinkRow(site, url) {
         const row = document.createElement('div');
         row.className = 'purchase-link-row mb-2';
-        
+
         // Create store dropdown options
         let storeOptions = '<option value="">Select store</option>';
         commonStores.forEach(store => {
-            const displayName = store.split('-').map(word => 
+            const displayName = store.split('-').map(word =>
                 word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
-            
+
             const selected = store === site ? 'selected' : '';
             storeOptions += `<option value="${store}" ${selected}>${displayName}</option>`;
         });
-        
+
         // Add custom option if site is not in common stores
         if (site && !commonStores.includes(site)) {
             storeOptions += `<option value="${site}" selected>${site}</option>`;
         }
-        
+
         row.innerHTML = `
             <div class="row">
                 <div class="col-md-4">
@@ -113,13 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         purchaseLinksContainer.appendChild(row);
-        
+
         // Add event listener for custom store option
         const siteSelect = row.querySelector('.purchase-link-site');
         const customInput = row.querySelector('.purchase-link-custom');
-        
+
         siteSelect.addEventListener('change', function() {
             if (this.value === 'custom') {
                 customInput.classList.remove('d-none');
@@ -129,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             updatePurchaseLinksJson();
         });
-        
+
         customInput.addEventListener('input', updatePurchaseLinksJson);
     }
 
@@ -144,14 +152,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const siteSelect = row.querySelector('.purchase-link-site');
             const customInput = row.querySelector('.purchase-link-custom');
             const urlInput = row.querySelector('.purchase-link-url');
-            
+
             let site = siteSelect.value;
             if (site === 'custom') {
                 site = customInput.value.trim();
             }
-            
+
             const url = urlInput.value.trim();
-            
+
             if (site && url) {
                 links[site] = url;
             }

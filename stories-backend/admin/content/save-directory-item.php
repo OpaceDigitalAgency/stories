@@ -247,7 +247,7 @@ try {
     if ($type === 'book') {
         // Check if book record already exists
         if ($id) {
-            $bookStmt = $db->prepare("SELECT id FROM books WHERE directory_item_id = ?");
+            $bookStmt = $db->prepare("SELECT directory_item_id FROM books WHERE directory_item_id = ?");
             $bookStmt->execute([$id]);
             $existingBook = $bookStmt->fetch();
         } else {

@@ -291,46 +291,54 @@ function processBook($db, $bookDir) {
         // Extract reading level
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
 
-        // Function to determine reading level based on age range
-        function determineReadingLevel($ageRange) {
-            // Default reading level
-            $readingLevel = '';
+        // Check if the function already exists before declaring it
+        if (!function_exists('determineReadingLevel')) {
+            /**
+             * Determine reading level based on age range
+             *
+             * @param string $ageRange Age range string (e.g. "6-8", "12+")
+             * @return string Reading level
+             */
+            function determineReadingLevel($ageRange) {
+                // Default reading level
+                $readingLevel = '';
 
-            // Parse age range to get min and max ages
-            if (preg_match('/(\d+)\s*-\s*(\d+)/', $ageRange, $matches)) {
-                $minAge = (int)$matches[1];
-                $maxAge = (int)$matches[2];
+                // Parse age range to get min and max ages
+                if (preg_match('/(\d+)\s*-\s*(\d+)/', $ageRange, $matches)) {
+                    $minAge = (int)$matches[1];
+                    $maxAge = (int)$matches[2];
 
-                // Determine reading level based on age range
-                if ($minAge <= 3) {
-                    $readingLevel = 'early-reader';
-                } else if ($minAge <= 6) {
-                    $readingLevel = 'first-reader';
-                } else if ($minAge <= 8) {
-                    $readingLevel = 'chapter-book';
-                } else if ($minAge <= 12) {
-                    $readingLevel = 'middle-grade';
-                } else {
-                    $readingLevel = 'young-adult';
+                    // Determine reading level based on age range
+                    if ($minAge <= 3) {
+                        $readingLevel = 'early-reader';
+                    } else if ($minAge <= 6) {
+                        $readingLevel = 'first-reader';
+                    } else if ($minAge <= 8) {
+                        $readingLevel = 'chapter-book';
+                    } else if ($minAge <= 12) {
+                        $readingLevel = 'middle-grade';
+                    } else {
+                        $readingLevel = 'young-adult';
+                    }
+                } else if (preg_match('/(\d+)\s*\+/', $ageRange, $matches)) {
+                    $minAge = (int)$matches[1];
+
+                    // Determine reading level based on minimum age
+                    if ($minAge <= 3) {
+                        $readingLevel = 'early-reader';
+                    } else if ($minAge <= 6) {
+                        $readingLevel = 'first-reader';
+                    } else if ($minAge <= 8) {
+                        $readingLevel = 'chapter-book';
+                    } else if ($minAge <= 12) {
+                        $readingLevel = 'middle-grade';
+                    } else {
+                        $readingLevel = 'young-adult';
+                    }
                 }
-            } else if (preg_match('/(\d+)\s*\+/', $ageRange, $matches)) {
-                $minAge = (int)$matches[1];
 
-                // Determine reading level based on minimum age
-                if ($minAge <= 3) {
-                    $readingLevel = 'early-reader';
-                } else if ($minAge <= 6) {
-                    $readingLevel = 'first-reader';
-                } else if ($minAge <= 8) {
-                    $readingLevel = 'chapter-book';
-                } else if ($minAge <= 12) {
-                    $readingLevel = 'middle-grade';
-                } else {
-                    $readingLevel = 'young-adult';
-                }
+                return $readingLevel;
             }
-
-            return $readingLevel;
         }
 
         // Extract plot or summary info

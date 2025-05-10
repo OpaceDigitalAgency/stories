@@ -582,15 +582,36 @@ function processBook($db, $bookDir) {
             }
         }
 
-        // Extract First published date with improved pattern
-        if (preg_match('/First\s+[Pp]ublished\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
-            $publisherDate = trim($match[1]);
-            echo "<p class='info'>Found publication date in publisher info: '$publisherDate'</p>";
-            flushOutput();
+        // Extract First published date with improved patterns
+        $datePatterns = [
+            '/First\s+[Pp]ublished\s*:?\s*(.*?)(?:\n|$)/i',
+            '/First\s+[Pp]ublished\s+(.*?)(?:\n|$)/i',
+            '/[Pp]ublished\s*:?\s*(.*?)(?:\n|$)/i',
+            '/[Pp]ublication\s+[Dd]ate\s*:?\s*(.*?)(?:\n|$)/i',
+            '/[Cc]opyright\s*:?\s*(.*?)(?:\n|$)/i',
+            '/©\s*(.*?)(?:\n|$)/i'
+        ];
 
-            if (empty($pubDateStr)) {
-                $pubDateStr = $publisherDate;
-                echo "<p class='success'>Using publication date from publisher info</p>";
+        foreach ($datePatterns as $pattern) {
+            if (preg_match($pattern, $publisherContent, $match)) {
+                $publisherDate = trim($match[1]);
+                echo "<p class='info'>Found publication date in publisher info with pattern '$pattern': '$publisherDate'</p>";
+                flushOutput();
+
+                if (empty($pubDateStr)) {
+                    $pubDateStr = $publisherDate;
+                    echo "<p class='success'>Using publication date from publisher info: '$pubDateStr'</p>";
+                    flushOutput();
+                    break;
+                }
+            }
+        }
+
+        // If we still don't have a date, look for just a year anywhere in the content
+        if (empty($pubDateStr)) {
+            if (preg_match('/\b(19\d{2}|20\d{2})\b/', $markdownContent, $match)) {
+                $pubDateStr = $match[1];
+                echo "<p class='success'>Found year in content: '$pubDateStr'</p>";
                 flushOutput();
             }
         }
@@ -704,6 +725,9 @@ function processBook($db, $bookDir) {
         // Process publisher as an author with role 'publisher'
         $publisherId = null;
         if (!empty($publisher)) {
+            // Remove ** prefix if it exists
+            $publisher = trim(preg_replace('/^\*\*\s*/', '', $publisher));
+
             // Publisher info not needed as author_type is set in SQL
 
             // Check if publisher exists by name
@@ -739,10 +763,8 @@ function processBook($db, $bookDir) {
         $authorId = null;
         $authorName = !empty($author) ? $author : 'Unknown Author';
 
-        // Prefix with ** to identify as book author in the system
-        if (strpos($authorName, '**') !== 0) {
-            $authorName = "** $authorName";
-        }
+        // Remove ** prefix if it exists (we'll add it only for display purposes, not storage)
+        $authorName = trim(preg_replace('/^\*\*\s*/', '', $authorName));
 
         // Author info not needed as author_type is set in SQL
 

@@ -7,7 +7,17 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Purchase Links Formatter loaded');
-    initPurchaseLinksManager();
+
+    // Wait a short time to ensure all DOM elements are fully loaded
+    setTimeout(function() {
+        initPurchaseLinksManager();
+    }, 500);
+
+    // Also initialize when the window is fully loaded
+    window.addEventListener('load', function() {
+        console.log('Window load event - initializing purchase links manager');
+        initPurchaseLinksManager();
+    });
 });
 
 /**
@@ -23,6 +33,7 @@ function initPurchaseLinksManager() {
     }
 
     console.log('Initializing purchase links manager');
+    console.log('Purchase links field value:', purchaseLinksField.value);
 
     // Parse the current JSON value
     let purchaseLinks = {};
@@ -31,11 +42,25 @@ function initPurchaseLinksManager() {
             const parsed = JSON.parse(purchaseLinksField.value);
             if (parsed && typeof parsed === 'object') {
                 purchaseLinks = parsed;
+                console.log('Successfully parsed purchase links:', purchaseLinks);
             }
         }
     } catch (e) {
         console.error('Error parsing purchase links JSON:', e);
         console.log('Raw value:', purchaseLinksField.value);
+
+        // Try to fix common JSON issues
+        try {
+            // Replace single quotes with double quotes
+            const fixedJson = purchaseLinksField.value.replace(/'/g, '"');
+            const parsed = JSON.parse(fixedJson);
+            if (parsed && typeof parsed === 'object') {
+                purchaseLinks = parsed;
+                console.log('Successfully parsed purchase links after fixing quotes:', purchaseLinks);
+            }
+        } catch (e2) {
+            console.error('Still could not parse JSON after fixing quotes:', e2);
+        }
     }
 
     // Render the current links

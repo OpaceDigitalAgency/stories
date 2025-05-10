@@ -159,6 +159,9 @@ $pageActions = '
     <a href="author-form.php" class="premium-btn premium-btn-success">
         <i class="fas fa-plus" aria-hidden="true"></i> Add New Author
     </a>
+    <a href="fix-author-images.php" class="premium-btn premium-btn-primary">
+        <i class="fas fa-image" aria-hidden="true"></i> Fix Author Images
+    </a>
     <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>

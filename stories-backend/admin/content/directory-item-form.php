@@ -482,6 +482,46 @@ if ($debug) {
         console.log("Debug mode enabled");
         window.DEBUG_MODE = true;
     </script>
+
+    <!-- Add image upload debug script -->
+    <script src="../assets/js/image-upload-debug.js"></script>
+
+    <!-- Add directory item form fix script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            console.log("Directory item form fix script loaded");
+
+            // Find the form
+            const form = document.getElementById("directory-item-form");
+            console.log("Form element by ID:", form);
+
+            // Check all forms on the page
+            const allForms = document.querySelectorAll("form");
+            console.log("All forms on page:", allForms.length);
+
+            for (let i = 0; i < allForms.length; i++) {
+                console.log(`Form #${i+1}:`, allForms[i]);
+                console.log(`Form #${i+1} ID:`, allForms[i].querySelector("input[name=\'id\']"));
+                console.log(`Form #${i+1} action:`, allForms[i].getAttribute("action"));
+
+                // Check if form has image_updated field
+                const imageUpdatedField = allForms[i].querySelector("input[name=\'image_updated\']");
+                console.log(`Form #${i+1} has image_updated field:`, !!imageUpdatedField);
+
+                // Check if form has cover_url field
+                const coverUrlField = allForms[i].querySelector("input[name=\'cover_url\']");
+                console.log(`Form #${i+1} has cover_url field:`, !!coverUrlField);
+            }
+
+            // Check for image_updated field
+            const imageUpdatedField = document.getElementById("image_updated");
+            console.log("Image updated field by ID:", imageUpdatedField);
+
+            // Check for image upload component
+            const imageUploadComponent = document.querySelector(".image-upload-component");
+            console.log("Image upload component found", !!imageUploadComponent);
+        });
+    </script>
     ';
 
     // Add more detailed error reporting
@@ -491,6 +531,62 @@ if ($debug) {
 
 // Include header
 require_once '../includes/header.php';
+
+// Add script to ensure cover_url is properly synced
+echo '<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Find the form
+    const form = document.getElementById("directory-item-form");
+    if (!form) return;
+
+    // Find the cover_url input in the main form
+    const coverUrlInput = form.querySelector("input[name=\'cover_url\']");
+    if (!coverUrlInput) return;
+
+    // Find the image upload component
+    const imageComponent = document.querySelector(".image-upload-component");
+    if (!imageComponent) return;
+
+    // Find the image URL input in the component
+    const componentUrlInput = imageComponent.querySelector("input[type=\'hidden\']");
+    if (!componentUrlInput) return;
+
+    // Sync the value from component to main form
+    console.log("Synced cover_url from component to main form:", componentUrlInput.value);
+    coverUrlInput.value = componentUrlInput.value;
+
+    // Add event listener to sync values when component changes
+    imageComponent.addEventListener("change", function() {
+        setTimeout(function() {
+            coverUrlInput.value = componentUrlInput.value;
+            console.log("Updated cover_url in main form:", coverUrlInput.value);
+        }, 100);
+    });
+
+    // Add specific handler for the remove image button
+    const removeButton = imageComponent.querySelector(".remove-image-btn");
+    if (removeButton) {
+        removeButton.addEventListener("click", function() {
+            setTimeout(function() {
+                coverUrlInput.value = "";
+                console.log("Cleared cover_url after remove image clicked");
+            }, 100);
+        });
+    }
+
+    // Add event listener to the form submission
+    form.addEventListener("submit", function(e) {
+        // Check if the image was removed (component has empty class)
+        if (imageComponent.classList.contains("empty")) {
+            coverUrlInput.value = "";
+            console.log("Image was removed, clearing cover_url field");
+        } else {
+            coverUrlInput.value = componentUrlInput.value;
+            console.log("Final cover_url value on submit:", coverUrlInput.value);
+        }
+    });
+});
+</script>';
 
 // Display debug information if requested
 if ($debug) {

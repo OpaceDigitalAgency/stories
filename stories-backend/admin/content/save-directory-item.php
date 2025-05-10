@@ -45,12 +45,11 @@ try {
     $cover_url = trim($_POST['cover_url'] ?? '');
     $type = trim($_POST['type'] ?? 'general');
 
-    // Check if we need to handle the image update
-    $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
-    error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
+    // Log the cover URL for debugging
+    error_log("Cover URL from form: " . $cover_url);
 
-    // If we have an ID and the image wasn't updated, get the existing cover_url from the database
-    if ($id && !$image_updated && empty($cover_url)) {
+    // If we have an ID and the cover_url is empty, keep the existing one from the database
+    if ($id && empty($cover_url)) {
         try {
             $stmt = $db->prepare("SELECT cover_url FROM directory_items WHERE id = ?");
             $stmt->execute([$id]);

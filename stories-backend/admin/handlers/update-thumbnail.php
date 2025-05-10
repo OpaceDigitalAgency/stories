@@ -80,9 +80,9 @@ try {
             break;
         case 'directory_item':
             $tableName = 'directory_items';
-            $imageField = 'cover_url'; // Fixed field name to match database schema
+            $imageField = 'cover_url'; // Correct field name for directory_items
             $thumbnailField = 'thumbnail_url';
-            $idField = 'id'; // Fixed ID field name to match database schema
+            $idField = 'id';
             break;
     }
 

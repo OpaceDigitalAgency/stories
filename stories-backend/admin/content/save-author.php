@@ -40,6 +40,7 @@ try {
     // Log form data for debugging
     error_log("Save author form data: " . print_r($_POST, true));
     error_log("Avatar URL from form: " . $avatar_url);
+    error_log("Image updated flag: " . (isset($_POST['image_updated']) ? $_POST['image_updated'] : 'not set'));
 
     // Check if image_updated flag is set
     $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';

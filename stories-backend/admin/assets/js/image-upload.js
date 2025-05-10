@@ -641,8 +641,10 @@ class ImageUploader {
                                             hiddenInput.type = 'hidden';
                                             hiddenInput.name = 'image_updated';
                                             form.appendChild(hiddenInput);
+                                            console.log('Created new image_updated hidden input');
                                         }
                                         hiddenInput.value = '1';
+                                        console.log('Set image_updated to 1 because image was selected from media library');
                                     }
                                 } else {
                                     console.error('Failed to update thumbnail:', response.message);

@@ -118,6 +118,66 @@ try {
                 // Debug: Log book data to error log
                 if ($bookData) {
                     error_log("Found book data for directory item ID " . $_GET['id'] . ": " . print_r($bookData, true));
+
+                    // Check if book_authors table exists
+                    $tableCheck = $db->query("SHOW TABLES LIKE 'book_authors'");
+                    if ($tableCheck->rowCount() > 0) {
+                        // Get author relationship from book_authors table
+                        $authorStmt = $db->prepare("
+                            SELECT a.id, a.name
+                            FROM authors a
+                            JOIN book_authors ba ON a.id = ba.author_id
+                            WHERE ba.directory_item_id = ? AND ba.role = 'author'
+                        ");
+                        $authorStmt->execute([$_GET['id']]);
+                        $authorData = $authorStmt->fetch();
+
+                        if ($authorData) {
+                            error_log("Found author relationship: " . print_r($authorData, true));
+                        } else {
+                            error_log("No author relationship found in book_authors table for directory item ID " . $_GET['id']);
+                        }
+                    } else {
+                        error_log("book_authors table does not exist");
+                        $authorData = null;
+                    }
+
+                    if ($authorData) {
+                        error_log("Found author relationship: " . print_r($authorData, true));
+                        // Override the author field with the related author
+                        $bookData['author'] = $authorData['name'];
+                        $bookData['author_id'] = $authorData['id'];
+                    }
+
+                    // Check if book_authors table exists
+                    $tableCheck = $db->query("SHOW TABLES LIKE 'book_authors'");
+                    if ($tableCheck->rowCount() > 0) {
+                        // Get publisher relationship from book_authors table
+                        $publisherStmt = $db->prepare("
+                            SELECT a.id, a.name
+                            FROM authors a
+                            JOIN book_authors ba ON a.id = ba.author_id
+                            WHERE ba.directory_item_id = ? AND ba.role = 'publisher'
+                        ");
+                        $publisherStmt->execute([$_GET['id']]);
+                        $publisherData = $publisherStmt->fetch();
+
+                        if ($publisherData) {
+                            error_log("Found publisher relationship: " . print_r($publisherData, true));
+                        } else {
+                            error_log("No publisher relationship found in book_authors table for directory item ID " . $_GET['id']);
+                        }
+                    } else {
+                        error_log("book_authors table does not exist");
+                        $publisherData = null;
+                    }
+
+                    if ($publisherData) {
+                        error_log("Found publisher relationship: " . print_r($publisherData, true));
+                        // Override the publisher field with the related publisher
+                        $bookData['publisher'] = $publisherData['name'];
+                        $bookData['publisher_id'] = $publisherData['id'];
+                    }
                 } else {
                     error_log("No book data found for directory item ID " . $_GET['id'] . " by directory_item_id");
 
@@ -133,6 +193,35 @@ try {
                         $updateStmt = $db->prepare("UPDATE books SET directory_item_id = ? WHERE id = ?");
                         $updateStmt->execute([$_GET['id'], $bookData['id']]);
                         error_log("Updated book record to link to directory item ID " . $_GET['id']);
+
+                        // Check if book_authors table exists
+                        $tableCheck = $db->query("SHOW TABLES LIKE 'book_authors'");
+                        if ($tableCheck->rowCount() > 0) {
+                            // Get author relationship from book_authors table
+                            $authorStmt = $db->prepare("
+                                SELECT a.id, a.name
+                                FROM authors a
+                                JOIN book_authors ba ON a.id = ba.author_id
+                                WHERE ba.directory_item_id = ? AND ba.role = 'author'
+                            ");
+                            $authorStmt->execute([$_GET['id']]);
+                            $authorData = $authorStmt->fetch();
+
+                            if ($authorData) {
+                                error_log("Found author relationship after title match: " . print_r($authorData, true));
+                            } else {
+                                error_log("No author relationship found in book_authors table after title match for directory item ID " . $_GET['id']);
+                            }
+                        } else {
+                            error_log("book_authors table does not exist");
+                            $authorData = null;
+                        }
+
+                        if ($authorData) {
+                            // Override the author field with the related author
+                            $bookData['author'] = $authorData['name'];
+                            $bookData['author_id'] = $authorData['id'];
+                        }
                     } else {
                         error_log("No book data found by title match either for: " . $item['title']);
 
@@ -141,7 +230,9 @@ try {
                             'isbn' => '',
                             'isbn13' => '',
                             'author' => '',
+                            'author_id' => '',
                             'publisher' => '',
+                            'publisher_id' => '',
                             'publication_date' => '',
                             'page_count' => '',
                             'genre' => '',
@@ -547,6 +638,25 @@ if ($debug) {
                                     <strong>Warning:</strong> No book data found for this directory item.
                                     This may happen if the book was imported but not properly linked to the directory item.
                                 </div>
+                            <?php else: ?>
+                                <?php if ($debug): ?>
+                                <div class="alert alert-info">
+                                    <strong>Book Data Found:</strong>
+                                    <ul>
+                                        <li>Title: <?php echo htmlspecialchars($bookData['title'] ?? 'Not set'); ?></li>
+                                        <li>Author: <?php echo htmlspecialchars($bookData['author'] ?? 'Not set'); ?></li>
+                                        <li>Author ID: <?php echo htmlspecialchars($bookData['author_id'] ?? 'Not set'); ?></li>
+                                        <li>Publisher: <?php echo htmlspecialchars($bookData['publisher'] ?? 'Not set'); ?></li>
+                                        <li>Publisher ID: <?php echo htmlspecialchars($bookData['publisher_id'] ?? 'Not set'); ?></li>
+                                        <li>ISBN: <?php echo htmlspecialchars($bookData['isbn'] ?? 'Not set'); ?></li>
+                                        <li>ISBN-13: <?php echo htmlspecialchars($bookData['isbn13'] ?? 'Not set'); ?></li>
+                                        <li>Genre: <?php echo htmlspecialchars($bookData['genre'] ?? 'Not set'); ?></li>
+                                        <li>Series: <?php echo htmlspecialchars($bookData['series'] ?? 'Not set'); ?></li>
+                                        <li>Age Range: <?php echo htmlspecialchars($bookData['age_range'] ?? 'Not set'); ?></li>
+                                        <li>Reading Level: <?php echo htmlspecialchars($bookData['reading_level'] ?? 'Not set'); ?></li>
+                                    </ul>
+                                </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <div class="form-row">
                                 <div class="col-md-6">

@@ -306,6 +306,114 @@ try {
                 $bookData['series']
             ]);
         }
+
+        // Process book author relationships
+        // First, check if we have author information
+        $authorId = null;
+        if (!empty($bookData['author'])) {
+            // Handle custom author field
+            $author = trim($bookData['author']);
+            if ($author === 'custom' && !empty($_POST['custom_author'])) {
+                $author = trim($_POST['custom_author']);
+            }
+
+            // Check if author exists by name
+            $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
+            $stmt->execute([$author]);
+            $authorResult = $stmt->fetch();
+
+            if ($authorResult) {
+                $authorId = $authorResult['id'];
+            } else {
+                // Add new author
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
+                    VALUES (?, ?, ?, NOW(), NOW())
+                ");
+
+                // Generate slug
+                $authorSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $author));
+                $authorSlug = trim($authorSlug, '-');
+
+                $stmt->execute([$author, 'retail', $authorSlug]);
+                $authorId = $db->lastInsertId();
+            }
+        }
+
+        // Process publisher relationship
+        $publisherId = null;
+        if (!empty($bookData['publisher'])) {
+            // Handle custom publisher field
+            $publisher = trim($bookData['publisher']);
+            if ($publisher === 'custom' && !empty($_POST['custom_publisher'])) {
+                $publisher = trim($_POST['custom_publisher']);
+            }
+
+            // Check if publisher exists by name
+            $stmt = $db->prepare("SELECT id FROM authors WHERE LOWER(name) = LOWER(?)");
+            $stmt->execute([$publisher]);
+            $publisherResult = $stmt->fetch();
+
+            if ($publisherResult) {
+                $publisherId = $publisherResult['id'];
+            } else {
+                // Add new publisher
+                $stmt = $db->prepare("
+                    INSERT INTO authors (name, author_type, slug, created_at, updated_at)
+                    VALUES (?, ?, ?, NOW(), NOW())
+                ");
+
+                // Generate slug
+                $publisherSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $publisher));
+                $publisherSlug = trim($publisherSlug, '-');
+
+                $stmt->execute([$publisher, 'retail', $publisherSlug]);
+                $publisherId = $db->lastInsertId();
+            }
+        }
+
+        // Create book-author relationships
+        // First, check if book_authors table exists, create if not
+        $stmt = $db->query("SHOW TABLES LIKE 'book_authors'");
+        if ($stmt->rowCount() === 0) {
+            $db->exec("CREATE TABLE IF NOT EXISTS book_authors (
+                directory_item_id INT NOT NULL,
+                author_id INT NOT NULL,
+                role ENUM('author', 'publisher') NOT NULL DEFAULT 'author',
+                PRIMARY KEY (directory_item_id, author_id, role),
+                FOREIGN KEY (directory_item_id) REFERENCES directory_items(id) ON DELETE CASCADE,
+                FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
+            )");
+            error_log("Created book_authors table");
+        }
+
+        // Delete any existing relationships
+        $stmt = $db->prepare("DELETE FROM book_authors WHERE directory_item_id = ?");
+        $stmt->execute([$id]);
+
+        // Add book author relationship
+        if ($authorId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'author')
+            ");
+            $stmt->execute([$id, $authorId]);
+            error_log("Created book-author relationship for book ID $id and author ID $authorId");
+        } else {
+            error_log("No author ID found for book ID $id - author name: " . ($bookData['author'] ?? 'Not set'));
+        }
+
+        // Add book publisher relationship
+        if ($publisherId) {
+            $stmt = $db->prepare("
+                INSERT INTO book_authors (directory_item_id, author_id, role)
+                VALUES (?, ?, 'publisher')
+            ");
+            $stmt->execute([$id, $publisherId]);
+            error_log("Created book-publisher relationship for book ID $id and publisher ID $publisherId");
+        } else {
+            error_log("No publisher ID found for book ID $id - publisher name: " . ($bookData['publisher'] ?? 'Not set'));
+        }
     }
 
     // Process tags if provided

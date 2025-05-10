@@ -26,35 +26,14 @@ $error = null;
 try {
     // Get author if editing
     if (isset($_GET['id'])) {
-        // Use a more explicit query to ensure we get the avatar_url field
+        // Simple query to get author data
         $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $author = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Double-check the avatar_url directly from the database
-        $avatarStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
-        $avatarStmt->execute([$_GET['id']]);
-        $avatarResult = $avatarStmt->fetch(PDO::FETCH_ASSOC);
-
-        // Log the direct avatar query result
-        error_log("Direct avatar query result: " . print_r($avatarResult, true));
-
         if (!$author) {
             header("Location: authors.php");
             exit;
-        }
-
-        // Log author data for debugging
-        error_log("Author data loaded: " . print_r($author, true));
-        error_log("Avatar URL: " . ($author['avatar_url'] ?? 'Not set'));
-        error_log("Avatar URL type: " . gettype($author['avatar_url'] ?? null));
-        error_log("Avatar URL empty check: " . (empty($author['avatar_url']) ? 'EMPTY' : 'NOT EMPTY'));
-
-        // Ensure avatar_url is properly set
-        if (isset($author['avatar_url']) && $author['avatar_url'] !== null) {
-            error_log("Avatar URL is set to: " . $author['avatar_url']);
-        } else {
-            error_log("Avatar URL is NULL or not set");
         }
     }
 
@@ -76,15 +55,7 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
-                    <!-- Debug info - will be hidden in production -->
-                    <div class="alert alert-info">
-                        <strong>Debug:</strong>
-                        <?php if (isset($author['avatar_url'])): ?>
-                            Current avatar URL: <?php echo htmlspecialchars($author['avatar_url']); ?>
-                        <?php else: ?>
-                            No avatar URL set in author data
-                        <?php endif; ?>
-                    </div>
+                    <!-- No debug info needed -->
 
                     <!-- Basic Information -->
                     <div class="form-group mb-3">
@@ -195,111 +166,9 @@ try {
                 <h2 class="section-title">Profile Picture</h2>
             </div>
             <div class="section-body">
-                <?php if (isset($author['avatar_url']) && !empty($author['avatar_url'])): ?>
-                <div class="alert alert-info">
-                    <strong>Debug:</strong> Avatar URL set in author data: <?php echo htmlspecialchars($author['avatar_url']); ?>
-                </div>
-                <?php else: ?>
-                <div class="alert alert-warning">
-                    <strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn't set avatar URLs.
-                    <div class="mt-2">
-                        <button type="button" id="set-default-avatar" class="btn btn-sm btn-primary">
-                            Set Default Avatar
-                        </button>
-                        <script>
-                            document.getElementById('set-default-avatar').addEventListener('click', function() {
-                                // Set a default avatar URL
-                                const defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
-                                console.log('Setting default avatar URL:', defaultAvatarUrl);
-
-                                // Set the value in the avatar_url field
-                                const avatarUrlField = document.querySelector('input[name="avatar_url"]');
-                                if (avatarUrlField) {
-                                    avatarUrlField.value = defaultAvatarUrl;
-                                    console.log('Set avatar_url field to:', defaultAvatarUrl);
-                                }
-
-                                // Set the value in the backup field
-                                const backupField = document.querySelector('input[name="avatar_url_backup"]');
-                                if (backupField) {
-                                    backupField.value = defaultAvatarUrl;
-                                    console.log('Set avatar_url_backup field to:', defaultAvatarUrl);
-                                }
-
-                                // Update the preview image
-                                const previewContainer = document.querySelector('.image-preview-container');
-                                const preview = document.querySelector('.image-preview');
-
-                                if (preview) {
-                                    // Clear existing content
-                                    preview.innerHTML = '';
-                                    preview.classList.remove('empty');
-
-                                    // Create image element
-                                    const img = document.createElement('img');
-                                    img.src = defaultAvatarUrl;
-                                    img.alt = 'Preview';
-                                    preview.appendChild(img);
-
-                                    // Create info div with remove button
-                                    const infoDiv = document.createElement('div');
-                                    infoDiv.className = 'image-info';
-
-                                    const removeButton = document.createElement('button');
-                                    removeButton.type = 'button';
-                                    removeButton.className = 'btn btn-sm btn-danger remove-image';
-                                    removeButton.innerHTML = '<i class="fas fa-times"></i> Remove';
-                                    infoDiv.appendChild(removeButton);
-
-                                    preview.appendChild(infoDiv);
-
-                                    // Add has-image class to container
-                                    if (previewContainer) {
-                                        previewContainer.classList.add('has-image');
-                                    }
-                                }
-
-                                // Update the alert to show success
-                                this.closest('.alert').className = 'alert alert-success';
-                                this.closest('.alert').innerHTML = '<strong>Success:</strong> Default avatar set. Click Save to apply changes.';
-                            });
-                        </script>
-                    </div>
-                </div>
-                <?php endif; ?>
-
                 <?php
-                // Render image upload component
-                // Get avatar URL from author data
+                // Simple approach - just get the avatar URL from the author data
                 $avatarUrl = $author['avatar_url'] ?? '';
-
-                // If we have a direct avatar query result, use that instead
-                if (isset($avatarResult) && isset($avatarResult['avatar_url'])) {
-                    $avatarUrl = $avatarResult['avatar_url'];
-                    error_log("Using avatar URL from direct query: " . ($avatarUrl ?? 'NULL'));
-                }
-
-                // IMPORTANT: Don't clear the default avatar URL - we want to show it
-                // This was causing the form to not display the default avatar
-
-                // Check if avatar URL is empty or NULL
-                $hasAvatar = !empty($avatarUrl);
-
-                // Show appropriate debug message
-                if (!$hasAvatar) {
-                    echo '<div class="alert alert-warning">';
-                    echo '<strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn\'t set avatar URLs.';
-                    echo '</div>';
-                } else {
-                    echo '<div class="alert alert-info">';
-                    echo '<strong>Debug:</strong> Avatar URL set in author data: ' . htmlspecialchars($avatarUrl);
-                    echo '</div>';
-                }
-
-                // No need for a backup field
-
-                // Debug the avatar URL before rendering
-                error_log("Avatar URL being passed to renderImageUploadComponent: " . ($avatarUrl ?? 'NULL'));
 
                 renderImageUploadComponent(
                     'avatar_url',
@@ -309,185 +178,24 @@ try {
                     $author['id'] ?? null
                 );
 
-                // Add JavaScript for the Set Default Avatar button and to fix avatar display
+                // Simple script to ensure the image URL is saved
                 echo '<script>
-                $(document).ready(function() {
-                    // Fix for avatar display - check if we have a default avatar in the URL
-                    const avatarUrl = $("#avatar_url").val();
-                    console.log("Avatar URL on page load:", avatarUrl);
-
-                    if (avatarUrl && avatarUrl.includes("default-avatar.svg")) {
-                        console.log("Default avatar detected in field, fixing display");
-
-                        // Force the preview to show
-                        const previewImg = $(".image-preview img");
-                        if (previewImg.length) {
-                            previewImg.attr("src", avatarUrl);
-                            previewImg.show();
-
-                            // Hide the placeholder
-                            $(".image-preview .placeholder").hide();
-
-                            // Add has-image class to container
-                            $(".image-preview-container").addClass("has-image");
-
-                            // Update the image preview to show the image
-                            $(".image-preview").removeClass("empty");
-                        } else {
-                            console.log("Preview image element not found, creating one");
-
-                            // Create the preview image if it doesn\'t exist
-                            const preview = $(".image-preview");
-                            if (preview.length) {
-                                // Clear existing content
-                                preview.empty();
-
-                                // Create image element
-                                const img = $("<img>").attr({
-                                    "src": avatarUrl,
-                                    "alt": "Preview"
-                                });
-                                preview.append(img);
-
-                                // Create info div with remove button
-                                const infoDiv = $("<div>").addClass("image-info");
-                                const removeBtn = $("<button>").attr({
-                                    "type": "button",
-                                    "class": "btn btn-sm btn-danger remove-image"
-                                }).html(\'<i class="fas fa-times"></i> Remove\');
-
-                                infoDiv.append(removeBtn);
-                                preview.append(infoDiv);
-
-                                // Add has-image class to container
-                                $(".image-preview-container").addClass("has-image");
-                                preview.removeClass("empty");
-
-                                // Add event listener to remove button
-                                removeBtn.on("click", function() {
-                                    // Clear the URL input
-                                    $("#avatar_url").val("");
-                                    $("#avatar_url_backup").val("");
-
-                                    // Reset the preview
-                                    preview.empty().addClass("empty").html(`
-                                        <div class="placeholder">
-                                            <i class="fas fa-image"></i>
-                                            <span>No image selected</span>
-                                        </div>
-                                    `);
-
-                                    // Remove has-image class from container
-                                    $(".image-preview-container").removeClass("has-image");
-
-                                    // Set the image_updated flag
-                                    $("#image_updated_field").val("1");
-                                });
+                document.addEventListener("DOMContentLoaded", function() {
+                    // When the form is submitted, make sure the avatar_url field has the image URL
+                    const form = document.getElementById("author-form");
+                    if (form) {
+                        form.addEventListener("submit", function() {
+                            // Get the image URL from the preview
+                            const previewImg = document.querySelector(".image-preview img");
+                            if (previewImg && previewImg.src && previewImg.style.display !== "none") {
+                                // Update the avatar_url field
+                                const avatarUrlField = document.querySelector("input[name=\'avatar_url\']");
+                                if (avatarUrlField && (!avatarUrlField.value || avatarUrlField.value === "")) {
+                                    avatarUrlField.value = previewImg.src;
+                                }
                             }
-                        }
+                        });
                     }
-
-                    // Set Default Avatar button handler
-                    $(".set-default-avatar").click(function() {
-                        const defaultAvatarUrl = "https://api.storiesfromtheweb.org/uploads/default-avatar.svg";
-                        console.log("Setting default avatar URL:", defaultAvatarUrl);
-
-                        // Set the value in both the visible and hidden fields
-                        $("#avatar_url").val(defaultAvatarUrl);
-                        $("#avatar_url_backup").val(defaultAvatarUrl);
-
-                        // Update the preview image
-                        const previewImg = $(".image-preview img");
-                        if (previewImg.length) {
-                            previewImg.attr("src", defaultAvatarUrl);
-                            previewImg.show();
-
-                            // Hide the placeholder
-                            $(".image-preview .placeholder").hide();
-                        } else {
-                            // Create the preview image if it doesn\'t exist
-                            const preview = $(".image-preview");
-                            if (preview.length) {
-                                // Clear existing content
-                                preview.empty();
-
-                                // Create image element
-                                const img = $("<img>").attr({
-                                    "src": defaultAvatarUrl,
-                                    "alt": "Preview"
-                                });
-                                preview.append(img);
-
-                                // Create info div with remove button
-                                const infoDiv = $("<div>").addClass("image-info");
-                                const removeBtn = $("<button>").attr({
-                                    "type": "button",
-                                    "class": "btn btn-sm btn-danger remove-image"
-                                }).html(\'<i class="fas fa-times"></i> Remove\');
-
-                                infoDiv.append(removeBtn);
-                                preview.append(infoDiv);
-
-                                // Add event listener to remove button
-                                removeBtn.on("click", function() {
-                                    // Clear the URL input
-                                    $("#avatar_url").val("");
-                                    $("#avatar_url_backup").val("");
-
-                                    // Reset the preview
-                                    preview.empty().addClass("empty").html(`
-                                        <div class="placeholder">
-                                            <i class="fas fa-image"></i>
-                                            <span>No image selected</span>
-                                        </div>
-                                    `);
-
-                                    // Remove has-image class from container
-                                    $(".image-preview-container").removeClass("has-image");
-
-                                    // Set the image_updated flag
-                                    $("#image_updated_field").val("1");
-                                });
-                            }
-                        }
-
-                        // Add has-image class to container
-                        $(".image-preview-container").addClass("has-image");
-
-                        // Update the image preview to show the image
-                        $(".image-preview").removeClass("empty");
-
-                        // Set the image_updated flag
-                        $("#image_updated_field").val("1");
-
-                        // Update debug info
-                        $(this).closest(".alert").removeClass("alert-warning").addClass("alert-success")
-                            .html("<strong>Success:</strong> Default avatar set. Click Save to apply changes.");
-                    });
-
-                    // Add form submission handler to ensure avatar URL is properly submitted
-                    $("#author-form").on("submit", function(e) {
-                        console.log("Form submission handler triggered");
-
-                        // Check if we have an image in the preview
-                        const previewImg = $(".image-preview img");
-                        if (previewImg.length && previewImg.is(":visible")) {
-                            const imgSrc = previewImg.attr("src");
-                            console.log("Found visible preview image with src:", imgSrc);
-
-                            // If the avatar_url field is empty but we have an image, use the image src
-                            const avatarUrlField = $("#avatar_url");
-                            if (!avatarUrlField.val() && imgSrc) {
-                                avatarUrlField.val(imgSrc);
-                                console.log("Updated empty avatar_url field with preview image src");
-
-                                // Also update the backup field
-                                $("#avatar_url_backup").val(imgSrc);
-
-                                // No need to set image_updated flag anymore
-                            }
-                        }
-                    });
                 });
                 </script>';
 
@@ -665,58 +373,7 @@ try {
 
 <!-- Custom script removed - simplified approach -->
 
-<!-- Simple script to ensure image URL is properly saved -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Simple direct approach - when an image is selected, update the avatar_url field
-        const imageUploadComponent = document.querySelector('.image-upload-component');
-        if (imageUploadComponent) {
-            // When the image preview changes, update the avatar_url field
-            imageUploadComponent.addEventListener('click', function(e) {
-                // Check if we clicked the "Select from Media Library" button
-                if (e.target.classList.contains('select-from-media') ||
-                    (e.target.parentElement && e.target.parentElement.classList.contains('select-from-media'))) {
-                    console.log('Media library button clicked');
-
-                    // Add a listener for the message from the media library
-                    window.addEventListener('message', function messageHandler(event) {
-                        if (event.data && event.data.type === 'media-selected') {
-                            const url = event.data.url;
-                            console.log('Media selected:', url);
-
-                            // Update the avatar_url field
-                            const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
-                            if (avatarUrlInput) {
-                                avatarUrlInput.value = url;
-                                console.log('Updated avatar_url field with:', url);
-                            }
-
-                            // Remove this event listener to avoid duplicates
-                            window.removeEventListener('message', messageHandler);
-                        }
-                    });
-                }
-            });
-
-            // When the form is submitted, make sure the avatar_url field has the image URL
-            const form = document.getElementById('author-form');
-            if (form) {
-                form.addEventListener('submit', function() {
-                    // Get the image URL from the preview
-                    const previewImg = imageUploadComponent.querySelector('.image-preview img');
-                    if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
-                        // Update the avatar_url field
-                        const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
-                        if (avatarUrlInput && (!avatarUrlInput.value || avatarUrlInput.value === '')) {
-                            avatarUrlInput.value = previewImg.src;
-                            console.log('Form submission - Updated avatar_url field with preview image:', previewImg.src);
-                        }
-                    }
-                });
-            }
-        }
-    });
-</script>
+<!-- No custom script needed -->
 
 <?php
 // Include footer

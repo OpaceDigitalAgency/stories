@@ -43,11 +43,7 @@ try {
     // Fix for empty avatar_url that should be NULL in database
     if (empty($avatar_url)) {
         $avatar_url = null;
-        error_log("Empty avatar URL - setting to NULL in database");
     }
-
-    // Log the avatar URL for debugging
-    error_log("Avatar URL to be saved: " . ($avatar_url ?? 'NULL'));
 
     // Validate required fields
     if (empty($name)) {
@@ -201,18 +197,8 @@ try {
         $params[] = $id; // Add ID for WHERE clause
 
         $sql = "UPDATE authors SET " . implode(', ', $setClause) . " WHERE id = ?";
-        error_log("UPDATE SQL: " . $sql);
-        error_log("UPDATE params: " . print_r($params, true));
-
         $stmt = $db->prepare($sql);
         $result = $stmt->execute($params);
-        error_log("UPDATE result: " . ($result ? 'SUCCESS' : 'FAILED') . ", affected rows: " . $stmt->rowCount());
-
-        // Verify the update
-        $verifyStmt = $db->prepare("SELECT id, name, avatar_url FROM authors WHERE id = ?");
-        $verifyStmt->execute([$id]);
-        $verifiedAuthor = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-        error_log("Verified author after update: " . print_r($verifiedAuthor, true));
 
         $message = "Author updated successfully";
     } else {
@@ -272,19 +258,9 @@ try {
         // Let MySQL handle the timestamps with its DEFAULT values
 
         $sql = "INSERT INTO authors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
-        error_log("INSERT SQL: " . $sql);
-        error_log("INSERT params: " . print_r($params, true));
-
         $stmt = $db->prepare($sql);
         $result = $stmt->execute($params);
-        error_log("INSERT result: " . ($result ? 'SUCCESS' : 'FAILED') . ", last insert ID: " . $db->lastInsertId());
-
-        // Verify the insert
         $newId = $db->lastInsertId();
-        $verifyStmt = $db->prepare("SELECT id, name, avatar_url FROM authors WHERE id = ?");
-        $verifyStmt->execute([$newId]);
-        $verifiedAuthor = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-        error_log("Verified author after insert: " . print_r($verifiedAuthor, true));
 
         $message = "Author created successfully";
     }

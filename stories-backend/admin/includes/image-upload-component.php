@@ -24,14 +24,7 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
     // Check if the current value is a valid image URL
     $hasImage = !empty($currentValue);
 
-    // Debug the current value
-    error_log("Image Upload Component - Field: $fieldName, Current Value: " . ($currentValue ?: 'empty'));
-
-    // Force image display for avatar_url field if it contains default-avatar.svg
-    if ($fieldName === 'avatar_url' && strpos($currentValue, 'default-avatar.svg') !== false) {
-        $hasImage = true;
-        error_log("Default avatar detected, forcing hasImage=true");
-    }
+    // No debug needed
 
     // Get the image dimensions if available
     $imageDimensions = '';
@@ -51,11 +44,7 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
                value="<?php echo htmlspecialchars($currentValue); ?>"
                class="form-control image-url-input">
 
-        <!-- Debug info -->
-        <div class="small text-muted mt-1">
-            Field name: <?php echo $fieldName; ?>,
-            Current value: <?php echo htmlspecialchars($currentValue); ?>
-        </div>
+        <!-- No debug info needed -->
 
         <!-- Image preview area -->
         <div class="image-preview-container <?php echo $hasImage ? 'has-image' : ''; ?>">
@@ -68,11 +57,8 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
                     <img src="<?php echo htmlspecialchars($currentValue); ?>"
                          alt="Preview"
                          id="<?php echo $fieldName; ?>-preview"
-                         onerror="console.error('Image load error for ' + this.src); this.style.display='none'; $(this).closest('.image-preview').find('.placeholder').show();"
-                         onload="console.log('Image loaded successfully: ' + this.src); this.style.display='block'; $(this).closest('.image-preview').find('.placeholder').hide();"
-                         <?php if (strpos($currentValue, 'default-avatar.svg') !== false): ?>
-                         style="display: block;"
-                         <?php endif; ?>>
+                         onerror="this.style.display='none'; $(this).closest('.image-preview').find('.placeholder').show();"
+                         onload="this.style.display='block'; $(this).closest('.image-preview').find('.placeholder').hide();">
                     <div class="image-info">
                         <?php if (!empty($imageDimensions)): ?>
                             <span class="dimensions"><?php echo $imageDimensions; ?></span>

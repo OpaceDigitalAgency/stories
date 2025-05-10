@@ -1090,9 +1090,14 @@ function processBook($db, $bookDir) {
             flushOutput();
         }
 
-        // Process tags for the book
-        $tagCount = processBookTags($db, $directoryItemId, $markdownContent, $genre);
-        echo "<p class='info'>Processed $tagCount tags for book: $title</p>";
+        // Process tags for the book - wrapped in try-catch to prevent tag errors from failing the entire import
+        try {
+            $tagCount = processBookTags($db, $directoryItemId, $markdownContent, $genre);
+            echo "<p class='info'>Processed $tagCount tags for book: $title</p>";
+        } catch (Exception $e) {
+            echo "<p class='error'>Error processing tags: " . $e->getMessage() . "</p>";
+            echo "<p class='warning'>Continuing with book import despite tag processing error</p>";
+        }
         flushOutput();
 
         // Commit the transaction
@@ -1147,13 +1152,18 @@ function processBookTags($db, $directoryItemId, $markdownContent, $genre = '') {
         '/Tags:\s*(.*?)(?:\n|$)/i',
         '/Genre:\s*(.*?)(?:\n|$)/i',
         '/\*\*Genre:\*\*\s*(.*?)(?:\n|$|\*\*)/i',
-        '/\*\*Tags:\*\*\s*(.*?)(?:\n|$|\*\*)/i'
+        '/\*\*Tags:\*\*\s*(.*?)(?:\n|$|\*\*)/i',
+        '/\*\*Book Genre:\*\*\s*(.*?)(?:\n|$|\*\*)/i',
+        '/\*\*Book Age Range:\*\*\s*(.*?)(?:\n|$|\*\*)/i'
     ];
 
     foreach ($tagPatterns as $pattern) {
         if (preg_match($pattern, $markdownContent, $match)) {
             $tagsString = trim($match[1]);
             echo "<p class='info'>Found tags/genre with pattern '$pattern': '$tagsString'</p>";
+
+            // Clean up the tag string - remove any ** markers
+            $tagsString = preg_replace('/\*\*/', '', $tagsString);
 
             // Extract tags from HTML links or plain text
             if (preg_match_all('/<a.*?>(.*?)<\/a>/i', $tagsString, $matches)) {
@@ -1181,24 +1191,57 @@ function processBookTags($db, $directoryItemId, $markdownContent, $genre = '') {
     foreach ($tags as $tagName) {
         if (empty(trim($tagName))) continue;
 
-        // Get or create tag
-        $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
-        $stmt->execute([trim($tagName)]);
+        // Clean up tag name - remove any leading/trailing ** or spaces
+        $cleanTagName = trim($tagName);
+        $cleanTagName = trim($cleanTagName, '*');
+        $cleanTagName = trim($cleanTagName);
+
+        if (empty($cleanTagName)) {
+            echo "<p class='warning'>Skipping empty tag after cleanup</p>";
+            continue;
+        }
+
+        // Get or create tag - first try by exact name
+        $stmt = $db->prepare("SELECT id, slug FROM tags WHERE LOWER(name) = LOWER(?)");
+        $stmt->execute([$cleanTagName]);
         $tag = $stmt->fetch();
 
         if ($tag) {
             $tagId = $tag['id'];
-            echo "<p class='info'>Found existing tag: " . htmlspecialchars($tagName) . " (ID: $tagId)</p>";
+            echo "<p class='info'>Found existing tag: " . htmlspecialchars($cleanTagName) . " (ID: $tagId)</p>";
         } else {
-            // Create new tag
-            $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', trim($tagName)));
-            $tagSlug = trim($tagSlug, '-');
-            $now = date('Y-m-d H:i:s');
+            try {
+                // Generate a unique slug
+                $baseSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $cleanTagName));
+                $baseSlug = trim($baseSlug, '-');
 
-            $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, ?, ?)");
-            $stmt->execute([trim($tagName), $tagSlug, $now, $now]);
-            $tagId = $db->lastInsertId();
-            echo "<p class='success'>Created new tag: " . htmlspecialchars($tagName) . " (ID: $tagId)</p>";
+                // Check if slug exists
+                $stmt = $db->prepare("SELECT COUNT(*) as count FROM tags WHERE slug = ?");
+                $stmt->execute([$baseSlug]);
+                $slugCount = $stmt->fetch()['count'];
+
+                // If slug exists, append a number
+                $tagSlug = $baseSlug;
+                $counter = 1;
+                while ($slugCount > 0) {
+                    $tagSlug = $baseSlug . '-' . $counter;
+                    $stmt = $db->prepare("SELECT COUNT(*) as count FROM tags WHERE slug = ?");
+                    $stmt->execute([$tagSlug]);
+                    $slugCount = $stmt->fetch()['count'];
+                    $counter++;
+                }
+
+                $now = date('Y-m-d H:i:s');
+
+                // Create new tag with unique slug
+                $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$cleanTagName, $tagSlug, $now, $now]);
+                $tagId = $db->lastInsertId();
+                echo "<p class='success'>Created new tag: " . htmlspecialchars($cleanTagName) . " with slug: " . $tagSlug . " (ID: $tagId)</p>";
+            } catch (Exception $e) {
+                echo "<p class='error'>Error creating tag: " . $e->getMessage() . "</p>";
+                continue; // Skip this tag but continue processing others
+            }
         }
 
         // Check if tag is already associated with the directory item

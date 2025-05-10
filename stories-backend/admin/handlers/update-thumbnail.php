@@ -45,37 +45,44 @@ try {
     $tableName = '';
     $imageField = '';
     $thumbnailField = '';
+    $idField = 'id'; // Default ID field name
 
     switch ($itemType) {
         case 'story':
             $tableName = 'stories';
             $imageField = 'cover_url';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'id';
             break;
         case 'post':
             $tableName = 'posts';
             $imageField = 'featured_image';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'id';
             break;
         case 'author':
             $tableName = 'authors';
             $imageField = 'avatar_url';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'id';
             break;
         case 'game':
             $tableName = 'games';
             $imageField = 'cover_url';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'id';
             break;
         case 'ai_tool':
             $tableName = 'ai_tools';
             $imageField = 'cover_url';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'id';
             break;
         case 'directory_item':
             $tableName = 'directory_items';
             $imageField = 'cover_image_url';
             $thumbnailField = 'thumbnail_url';
+            $idField = 'directory_item_id'; // Different ID field name for directory items
             break;
     }
 
@@ -123,11 +130,11 @@ try {
     }
 
     // Log the update query for debugging
-    error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE id = {$itemId}");
+    error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE {$idField} = {$itemId}");
 
     try {
         // Update the item in the database
-        $stmt = $db->prepare("UPDATE {$tableName} SET {$imageField} = ?, {$thumbnailField} = ? WHERE id = ?");
+        $stmt = $db->prepare("UPDATE {$tableName} SET {$imageField} = ?, {$thumbnailField} = ? WHERE {$idField} = ?");
         $stmt->execute([$imageUrl, $thumbnailUrl, $itemId]);
 
         // Check if the update was successful
@@ -135,7 +142,7 @@ try {
         error_log("Update affected {$rowCount} rows");
 
         // Verify the update by querying the database
-        $verifyStmt = $db->prepare("SELECT {$imageField}, {$thumbnailField} FROM {$tableName} WHERE id = ?");
+        $verifyStmt = $db->prepare("SELECT {$imageField}, {$thumbnailField} FROM {$tableName} WHERE {$idField} = ?");
         $verifyStmt->execute([$itemId]);
         $result = $verifyStmt->fetch(PDO::FETCH_ASSOC);
         error_log("After update: " . print_r($result, true));

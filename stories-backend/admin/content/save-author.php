@@ -47,6 +47,8 @@ try {
     $isDefaultAvatar = !empty($avatar_url) && strpos($avatar_url, 'default-avatar.svg') !== false;
     if ($isDefaultAvatar) {
         error_log("Default avatar detected: " . $avatar_url);
+        // Always force image_updated to true for default avatar
+        $image_updated = true;
     }
 
     // Fix for empty avatar_url that should be NULL in database
@@ -99,12 +101,7 @@ try {
         }
     }
 
-    // Special handling for default avatar
-    if ($isDefaultAvatar) {
-        // Always update the avatar_url if it's the default avatar
-        error_log("Default avatar detected, forcing update");
-        $image_updated = true;
-    }
+    // Special handling for default avatar already done above
 
     // Always log the final avatar_url value that will be used
     error_log("Final avatar_url value to be saved: " . ($avatar_url ?? 'NULL'));

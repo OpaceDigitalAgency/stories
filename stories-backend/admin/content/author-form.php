@@ -288,6 +288,27 @@ try {
                             });
                         </script>
                     </div>
+
+                    <!-- Force image_updated to 1 when form is submitted -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const form = document.getElementById('author-form');
+                            if (form) {
+                                form.addEventListener('submit', function() {
+                                    // Check if we have a default avatar
+                                    const avatarUrlField = document.querySelector('input[name="avatar_url"]');
+                                    if (avatarUrlField && avatarUrlField.value && avatarUrlField.value.includes('default-avatar.svg')) {
+                                        // Force the image_updated flag to 1
+                                        const imageUpdatedField = document.getElementById('image_updated_field');
+                                        if (imageUpdatedField) {
+                                            imageUpdatedField.value = '1';
+                                            console.log('Form submission - Forced image_updated to 1 for default avatar');
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    </script>
                 </div>
                 <?php endif; ?>
 

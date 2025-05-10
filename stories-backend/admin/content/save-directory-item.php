@@ -291,7 +291,7 @@ try {
                 page_count = ?,
                 age_range = ?,
                 reading_level = ?,
-                cover_image_url = ?,  /* Using cover_image_url as that's the column name in the books table */
+                cover_url = ?,  /* Using cover_url as that's now the column name in the books table */
                 purchase_links = ?,
                 genre = ?,
                 series = ?
@@ -327,7 +327,7 @@ try {
                 page_count,
                 age_range,
                 reading_level,
-                cover_image_url,  /* Using cover_image_url as that's the column name in the books table */
+                cover_url,  /* Using cover_url as that's now the column name in the books table */
                 purchase_links,
                 genre,
                 series
@@ -500,6 +500,11 @@ try {
     }
 
     error_log("Save directory item error: " . $e->getMessage());
+    error_log("Error trace: " . $e->getTraceAsString());
+
+    // Add more detailed error information for debugging
+    $errorDetails = "Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine();
+    error_log($errorDetails);
 
     // Store error in session and redirect back to form
     $_SESSION['error'] = $e->getMessage();

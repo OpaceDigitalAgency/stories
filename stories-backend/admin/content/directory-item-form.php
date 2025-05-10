@@ -607,6 +607,15 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>';
 
+// Display error message if there is one
+if (isset($_SESSION['error'])) {
+    echo '<div class="alert alert-danger mb-3">
+        <h5>Error</h5>
+        <p>' . htmlspecialchars($_SESSION['error']) . '</p>
+    </div>';
+    unset($_SESSION['error']);
+}
+
 // Display debug information if requested
 if ($debug) {
     echo '<div class="alert alert-info mb-3">
@@ -1183,9 +1192,9 @@ Selected option in dropdown: <?php
                             $coverUrl = $item['cover_url'] ?? '';
 
                             // If this is a book and we have book data with a cover image, use that instead
-                            if (isset($item['type']) && $item['type'] == 'book' && isset($bookData['cover_image_url']) && !empty($bookData['cover_image_url'])) {
-                                $coverUrl = $bookData['cover_image_url'];
-                                error_log("Using book cover image URL: " . $coverUrl);
+                            if (isset($item['type']) && $item['type'] == 'book' && isset($bookData['cover_url']) && !empty($bookData['cover_url'])) {
+                                $coverUrl = $bookData['cover_url'];
+                                error_log("Using book cover URL: " . $coverUrl);
                             }
 
                             renderImageUploadComponent(

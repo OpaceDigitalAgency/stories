@@ -1,7 +1,7 @@
 <?php
 /**
  * Patch Import Script
- * 
+ *
  * This script patches the direct_import.php file to include our age tag handling patch.
  */
 
@@ -102,7 +102,14 @@ $importScript = preg_replace('/(require_once \'process_book_functions\.php\';)/'
 // Modify the processBook function to use our patch
 $importScript = preg_replace(
     '/(\/\/ Process tags.*?)(\$stmt = \$db->prepare\("INSERT INTO tags)/s',
-    "$1// Filter out age-related tags\n        \$tags = filterAgeTags(\$tags);\n\n        // Extract age range from tags\n        \$extractedAgeRange = extractAgeRange(\$originalTags);\n        if (\$extractedAgeRange && empty(\$ageRange)) {\n            \$ageRange = \$extractedAgeRange;\n            echo \"<p class='info'>Extracted age range from tags: '\$ageRange'</p>\";\n            flushOutput();\n        }\n\n        $2",
+    "$1// Filter out age-related tags\n        \$originalTags = \$tags; // Save original tags for age extraction\n        \$tags = filterAgeTags(\$tags);\n\n        // Extract age range from tags\n        \$extractedAgeRange = extractAgeRange(\$originalTags);\n        if (\$extractedAgeRange && empty(\$ageRange)) {\n            \$ageRange = \$extractedAgeRange;\n            echo \"<p class='info'>Extracted age range from tags: '\$ageRange'</p>\";\n            flushOutput();\n        }\n\n        $2",
+    $importScript
+);
+
+// Also update the directory_item_tags insertion to use the correct column names
+$importScript = preg_replace(
+    '/\$stmt = \$db->prepare\("INSERT INTO directory_item_tags \(item_id, tag_id\) VALUES \(\?, \?\)"\);/',
+    '$stmt = $db->prepare("INSERT INTO directory_item_tags (directory_item_id, tag_id) VALUES (?, ?)");',
     $importScript
 );
 

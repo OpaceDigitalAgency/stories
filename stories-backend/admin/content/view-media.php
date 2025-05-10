@@ -280,12 +280,26 @@ require_once '../includes/header.php';
                     <div class="detail-item">
                         <strong>File Path:</strong>
                         <?php
-                        // Clean up the file path for display
+                        // Force absolute URL for file path display
                         $displayPath = $media['file_path'];
+
+                        // If it's already an absolute URL, just clean it up
                         if (strpos($displayPath, 'http') === 0) {
-                            // Clean up any instances of ../../ in the URL
                             $displayPath = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $displayPath);
                         }
+                        // If it's a relative URL starting with /../../
+                        else if (strpos($displayPath, '/../../') === 0) {
+                            $displayPath = 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/' . substr($displayPath, 7); // Remove /../../
+                        }
+                        // If it's a relative URL starting with ../
+                        else if (strpos($displayPath, '../') === 0) {
+                            $displayPath = 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/' . substr($displayPath, 3); // Remove ../
+                        }
+                        // Any other relative path
+                        else if (strpos($displayPath, 'http') !== 0) {
+                            $displayPath = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($displayPath, '/');
+                        }
+
                         echo htmlspecialchars($displayPath);
                         ?>
                         <?php if (!$fileExists): ?>

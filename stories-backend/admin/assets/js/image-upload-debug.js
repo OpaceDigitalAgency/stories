@@ -104,9 +104,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="alert alert-secondary">
                 <strong>Debug Actions:</strong>
                 <div class="mt-2">
-                    <button type="button" class="btn btn-sm btn-warning force-image-updated">
-                        Force image_updated=1
-                    </button>
                     <button type="button" class="btn btn-sm btn-info check-image-state">
                         Check Image State
                     </button>
@@ -119,31 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
         component.appendChild(debugActions);
 
         // Add event listeners to the debug buttons
-        const forceImageUpdatedBtn = debugActions.querySelector('.force-image-updated');
-        if (forceImageUpdatedBtn) {
-            forceImageUpdatedBtn.addEventListener('click', function() {
-                // Find the form
-                const form = component.closest('form');
-                if (form) {
-                    // Find or create the image_updated field
-                    let imageUpdatedField = form.querySelector('input[name="image_updated"]');
-                    if (!imageUpdatedField) {
-                        imageUpdatedField = document.createElement('input');
-                        imageUpdatedField.type = 'hidden';
-                        imageUpdatedField.name = 'image_updated';
-                        form.appendChild(imageUpdatedField);
-                    }
-
-                    // Set the value to 1
-                    imageUpdatedField.value = '1';
-                    logDebug('Forced image_updated=1');
-                    alert('Set image_updated=1');
-                } else {
-                    logDebug('No form found');
-                    alert('No form found');
-                }
-            });
-        }
 
         // Add event listener to the check image state button
         const checkImageStateBtn = debugActions.querySelector('.check-image-state');
@@ -237,24 +209,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (directoryItemForm) {
         logDebug(`Found directory-item-form by ID`);
 
-        // Check for image_updated field
-        const imageUpdatedField = directoryItemForm.querySelector('input[name="image_updated"]');
-        if (imageUpdatedField) {
-            logDebug(`directory-item-form has image_updated field with value: ${imageUpdatedField.value}`);
-
-            // Add a direct event listener for the remove button
-            const removeButtons = document.querySelectorAll('.remove-image');
-            removeButtons.forEach((button, idx) => {
-                logDebug(`Adding click listener to remove button #${idx+1}`);
-                button.addEventListener('click', function() {
-                    logDebug(`Remove button #${idx+1} clicked`);
-                    imageUpdatedField.value = '1';
-                    logDebug(`Set image_updated to 1`);
-                });
+        // Add direct event listeners for the remove buttons
+        const removeButtons = document.querySelectorAll('.remove-image');
+        removeButtons.forEach((button, idx) => {
+            logDebug(`Adding click listener to remove button #${idx+1}`);
+            button.addEventListener('click', function() {
+                logDebug(`Remove button #${idx+1} clicked`);
             });
-        } else {
-            logDebug(`directory-item-form does NOT have image_updated field`);
-        }
+        });
     }
 
     forms.forEach((form, index) => {
@@ -268,12 +230,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const action = form.getAttribute('action') || 'unknown';
         logDebug(`Form #${index+1}: ${formId}, Action: ${action}`);
 
-        // Check for image_updated field
-        const imageUpdatedField = form.querySelector('input[name="image_updated"]');
-        if (imageUpdatedField) {
-            logDebug(`Form ${formId} has image_updated field with value: ${imageUpdatedField.value}`);
+        // Check for cover_url field
+        const coverUrlField = form.querySelector('input[name="cover_url"]');
+        if (coverUrlField) {
+            logDebug(`Form ${formId} has cover_url field with value: ${coverUrlField.value}`);
         } else {
-            logDebug(`Form ${formId} does NOT have image_updated field`);
+            logDebug(`Form ${formId} does NOT have cover_url field`);
         }
 
         // Monitor form submission

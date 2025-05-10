@@ -504,18 +504,14 @@ if ($debug) {
                 console.log(`Form #${i+1} ID:`, allForms[i].querySelector("input[name=\'id\']"));
                 console.log(`Form #${i+1} action:`, allForms[i].getAttribute("action"));
 
-                // Check if form has image_updated field
-                const imageUpdatedField = allForms[i].querySelector("input[name=\'image_updated\']");
-                console.log(`Form #${i+1} has image_updated field:`, !!imageUpdatedField);
-
                 // Check if form has cover_url field
                 const coverUrlField = allForms[i].querySelector("input[name=\'cover_url\']");
                 console.log(`Form #${i+1} has cover_url field:`, !!coverUrlField);
             }
 
-            // Check for image_updated field
-            const imageUpdatedField = document.getElementById("image_updated");
-            console.log("Image updated field by ID:", imageUpdatedField);
+            // Check for cover_url field in main form
+            const mainCoverUrlField = document.getElementById("cover_url_main");
+            console.log("Main cover_url field by ID:", mainCoverUrlField);
 
             // Check for image upload component
             const imageUploadComponent = document.querySelector(".image-upload-component");

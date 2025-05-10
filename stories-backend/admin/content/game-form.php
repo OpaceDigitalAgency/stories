@@ -242,8 +242,7 @@ require_once '../includes/header.php';
     <div class="section-body">
         <form method="POST" action="save-game.php" class="content-form" id="game-form">
             <input type="hidden" name="id" value="<?php echo $game['id'] ?? ''; ?>">
-            <!-- Add a hidden field to track if the image was updated via AJAX -->
-            <input type="hidden" name="image_updated" value="0" id="image_updated_field">
+            <input type="hidden" name="cover_url" value="<?php echo htmlspecialchars($game['cover_url'] ?? ''); ?>" id="cover_url_main">
 
             <!-- WordPress-like Layout -->
             <div class="wp-layout">
@@ -469,6 +468,59 @@ require_once '../includes/header.php';
 
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
+
+<!-- Script to sync the cover_url field with the main form -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Get the main cover_url field and the image upload component field
+    const mainCoverUrlField = document.getElementById("cover_url_main");
+    const componentCoverUrlField = document.querySelector(".image-upload-component input[name='cover_url']");
+
+    // Function to sync the fields
+    function syncCoverUrlFields() {
+        if (componentCoverUrlField && componentCoverUrlField.value) {
+            // Update the main form field with the component field value
+            if (mainCoverUrlField) {
+                mainCoverUrlField.value = componentCoverUrlField.value;
+                console.log("Synced cover_url from component to main form:", componentCoverUrlField.value);
+            }
+        } else if (mainCoverUrlField && mainCoverUrlField.value) {
+            // Update the component field with the main form field value
+            if (componentCoverUrlField) {
+                componentCoverUrlField.value = mainCoverUrlField.value;
+                console.log("Synced cover_url from main form to component:", mainCoverUrlField.value);
+            }
+        }
+    }
+
+    // Sync fields on page load
+    syncCoverUrlFields();
+
+    // Sync fields when the component field changes
+    if (componentCoverUrlField) {
+        componentCoverUrlField.addEventListener("change", syncCoverUrlFields);
+    }
+
+    // Sync fields when the form is submitted
+    const form = document.getElementById("game-form");
+    if (form) {
+        form.addEventListener("submit", function() {
+            // Get the image URL from the preview
+            const previewImg = document.querySelector(".image-preview img");
+            if (previewImg && previewImg.src && previewImg.style.display !== "none") {
+                // Update both cover_url fields
+                if (componentCoverUrlField) {
+                    componentCoverUrlField.value = previewImg.src;
+                }
+                if (mainCoverUrlField) {
+                    mainCoverUrlField.value = previewImg.src;
+                }
+                console.log("Updated cover_url fields from preview image:", previewImg.src);
+            }
+        });
+    }
+});
+</script>
 
 <!-- Include game preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">

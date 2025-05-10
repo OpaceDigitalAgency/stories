@@ -226,8 +226,28 @@ if (function_exists('renderEnhancedTable')) {
         $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
                      (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.svg');
 
+        // Make sure avatar URL is absolute for proper display
+        if (!empty($avatarImage) && strpos($avatarImage, 'http') !== 0) {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+            $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
+
+            // Handle relative paths that start with ../
+            if (strpos($avatarImage, '../') === 0) {
+                $avatarImage = str_replace('../', '/', $avatarImage);
+            }
+
+            // Normalize path to always start with /
+            if (strpos($avatarImage, '/') !== 0) {
+                $avatarImage = '/' . ltrim($avatarImage, '/');
+            }
+
+            $avatarImage = $protocol . $serverHost . $avatarImage;
+        }
+
         // Log the avatar URL for debugging
-        error_log("Author ID: " . $author['id'] . " - Avatar URL: " . $avatarImage);
+        error_log("Author ID: " . $author['id'] . " - Final Avatar URL: " . $avatarImage);
+
+
 
         // Format the bio
         $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
@@ -310,7 +330,26 @@ if (function_exists('renderEnhancedTable')) {
 
             // Get avatar image
             $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
-                         (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '');
+                         (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '../assets/images/default-avatar.svg');
+
+            // Make sure avatar URL is absolute for proper display
+            if (!empty($avatarImage) && strpos($avatarImage, 'http') !== 0) {
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
+
+                // Handle relative paths that start with ../
+                if (strpos($avatarImage, '../') === 0) {
+                    $avatarImage = str_replace('../', '/', $avatarImage);
+                }
+
+                // Normalize path to always start with /
+                if (strpos($avatarImage, '/') !== 0) {
+                    $avatarImage = '/' . ltrim($avatarImage, '/');
+                }
+
+                $avatarImage = $protocol . $serverHost . $avatarImage;
+                error_log("Fallback - Author ID: " . $author['id'] . " - Fixed avatar URL: " . $avatarImage);
+            }
 
             // Clean up author name - remove ** prefix if it exists
             $authorName = $author['name'];

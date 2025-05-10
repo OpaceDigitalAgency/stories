@@ -45,10 +45,22 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     $currentUrl = strtok($_SERVER['REQUEST_URI'], '?');
     $queryParams = $_GET;
 
+    // Debug log for troubleshooting
+    error_log("Pagination: Current URL: " . $currentUrl);
+    error_log("Pagination: Query params: " . print_r($queryParams, true));
+
+    // Make sure we preserve all existing query parameters
+    foreach ($_GET as $key => $value) {
+        if ($key !== 'page') {
+            $queryParams[$key] = $value;
+        }
+    }
+
     // Function to generate page URL
     $getPageUrl = function($page) use ($currentUrl, $queryParams) {
-        $queryParams['page'] = $page;
-        return $currentUrl . '?' . http_build_query($queryParams);
+        $params = $queryParams;
+        $params['page'] = $page;
+        return $currentUrl . '?' . http_build_query($params);
     };
 
     // Render pagination

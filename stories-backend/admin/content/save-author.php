@@ -37,6 +37,10 @@ try {
     $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
     $location = trim($_POST['location'] ?? '');
 
+    // Log form data for debugging
+    error_log("Save author form data: " . print_r($_POST, true));
+    error_log("Avatar URL: " . $avatar_url);
+
     // Validate required fields
     if (empty($name)) {
         throw new Exception("Please fill in the name field");
@@ -236,10 +240,13 @@ try {
             $params[] = $location;
         }
 
+        // Add created_at and updated_at with explicit values to avoid SQL error
         $columns[] = "created_at";
         $columns[] = "updated_at";
-        $placeholders[] = "NOW()";
-        $placeholders[] = "NOW()";
+        $placeholders[] = "?";
+        $placeholders[] = "?";
+        $params[] = date('Y-m-d H:i:s'); // Current date/time for created_at
+        $params[] = date('Y-m-d H:i:s'); // Current date/time for updated_at
 
         $sql = "INSERT INTO authors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $db->prepare($sql);

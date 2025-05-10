@@ -22,7 +22,10 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     if (empty($filePath)) {
         // Check if this is an author avatar
         if ($itemType === 'author') {
-            return '../assets/images/default-avatar.svg';
+            // Get the server base URL for absolute path
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+            $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
+            return $protocol . $serverHost . '/assets/images/default-avatar.svg';
         }
         // For other content types, use the default cover
         return '../assets/images/default-cover.svg';
@@ -224,7 +227,7 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
     $baseUrl = $protocol . $serverHost;
-    
+
     // Debug logging
     error_log("Processing image URL: $filePath");
     error_log("Base URL: $baseUrl");
@@ -258,7 +261,7 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
         error_log("Using uploads path: $baseUrl/uploads/$filePath");
         return $baseUrl . '/uploads/' . $filePath;
     }
-    
+
     // If all else fails, prepend the server URL to make it absolute
     error_log("Fallback to base URL + path: $baseUrl/$filePath");
     return $baseUrl . '/' . ltrim($filePath, '/');
@@ -538,7 +541,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                     if ($isClickable && !empty($clickUrl)) {
                                         echo '<a href="' . htmlspecialchars($clickUrl) . '" class="thumbnail-link">';
                                     }
-                                    
+
                                     // Log server information
                                     error_log("SERVER_NAME: " . $_SERVER['SERVER_NAME'] . ", HTTP_HOST: " . $_SERVER['HTTP_HOST']);
 
@@ -551,22 +554,28 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
                                         if (strpos($thumbnailUrl, 'http') !== 0) {
                                             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                                             $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
-                                            
+
+                                            // Handle relative paths that start with ../
+                                            if (strpos($thumbnailUrl, '../') === 0) {
+                                                $thumbnailUrl = str_replace('../', '/', $thumbnailUrl);
+                                                error_log("Converted relative path: " . $thumbnailUrl);
+                                            }
+
                                             // Normalize path to always start with /
                                             if (strpos($thumbnailUrl, '/') !== 0) {
                                                 $thumbnailUrl = '/' . ltrim($thumbnailUrl, '/');
                                             }
-                                            
+
                                             $thumbnailUrl = $protocol . $serverHost . $thumbnailUrl;
                                             error_log("Fixed image URL: " . $thumbnailUrl);
                                         }
                                     }
-                                    
+
                                     // Check if the URL is a default image or empty AFTER fixing the URL
                                     $isDefaultImage = (empty($thumbnailUrl) ||
                                                      strpos($thumbnailUrl, 'default-cover.svg') !== false ||
                                                      strpos($thumbnailUrl, 'no-image') !== false);
-                                    
+
                                     error_log("Is default image check for '$thumbnailUrl': " . ($isDefaultImage ? 'YES' : 'NO'));
 
                                     if ($isDefaultImage) {
@@ -701,8 +710,19 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
 
         <?php if ($totalPages > 1): ?>
             <div class="premium-pagination" style="padding: 1rem; border-top: 1px solid var(--premium-gray-200);">
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                    <a href="?page=<?php echo $i; ?>" class="premium-pagination-item <?php echo $i === $options['currentPage'] ? 'active' : ''; ?>">
+                <?php
+                // Get current URL parameters
+                $queryParams = $_GET;
+
+                // Function to generate page URL preserving other parameters
+                $getPageUrl = function($page) use ($queryParams) {
+                    $queryParams['page'] = $page;
+                    return '?' . http_build_query($queryParams);
+                };
+
+                for ($i = 1; $i <= $totalPages; $i++):
+                ?>
+                    <a href="<?php echo $getPageUrl($i); ?>" class="premium-pagination-item <?php echo $i === $options['currentPage'] ? 'active' : ''; ?>">
                         <?php echo $i; ?>
                     </a>
                 <?php endfor; ?>

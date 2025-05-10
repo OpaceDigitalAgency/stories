@@ -55,7 +55,8 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
-                    <!-- No debug info needed -->
+                    <!-- Add a hidden field to track if the image was updated via AJAX -->
+                    <input type="hidden" name="image_updated" value="0" id="image_updated_field">
 
                     <!-- Basic Information -->
                     <div class="form-group mb-3">

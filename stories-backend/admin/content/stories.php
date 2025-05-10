@@ -348,6 +348,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
+            'totalItems' => $totalItems, // Pass the total items count from SQL query
             'customActionRenderer' => $customActionRenderer // Add custom action renderer
         ]
     );

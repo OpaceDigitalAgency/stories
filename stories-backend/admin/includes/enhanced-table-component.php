@@ -303,12 +303,21 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
         return;
     }
 
-    // Calculate pagination
-    $totalItems = count($items);
-    $totalPages = ceil($totalItems / $options['itemsPerPage']);
-    $startIndex = ($options['currentPage'] - 1) * $options['itemsPerPage'];
-    $endIndex = min($startIndex + $options['itemsPerPage'], $totalItems);
-    $paginatedItems = array_slice($items, $startIndex, $options['itemsPerPage']);
+    // Check if we need to paginate the data
+    // If the total items count is provided in options, we assume pagination has already been applied at the SQL level
+    if (isset($options['totalItems'])) {
+        // Use the provided total items count and don't paginate the data again
+        $totalItems = $options['totalItems'];
+        $totalPages = ceil($totalItems / $options['itemsPerPage']);
+        $paginatedItems = $items; // Use the items as is, already paginated
+    } else {
+        // Apply pagination in the component
+        $totalItems = count($items);
+        $totalPages = ceil($totalItems / $options['itemsPerPage']);
+        $startIndex = ($options['currentPage'] - 1) * $options['itemsPerPage'];
+        $endIndex = min($startIndex + $options['itemsPerPage'], $totalItems);
+        $paginatedItems = array_slice($items, $startIndex, $options['itemsPerPage']);
+    }
 
     // Render the table
     ?>

@@ -277,6 +277,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
+            'totalItems' => $totalItems, // Pass the total items count from SQL query
             'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
             'thumbnailField' => 'image', // Changed from 'cover_url' to 'image' to match the field name in tableData
             'thumbnailAltField' => 'title' // Use the title as alt text

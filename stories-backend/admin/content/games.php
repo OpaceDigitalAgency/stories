@@ -223,6 +223,7 @@ if (function_exists('renderEnhancedTable')) {
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
+            'totalItems' => $totalItems, // Pass the total items count from SQL query
             'thumbnailField' => 'cover_url', // Use the cover_url field for thumbnails
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]

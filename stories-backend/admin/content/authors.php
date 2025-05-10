@@ -323,7 +323,8 @@ if (function_exists('renderEnhancedTable')) {
             'editableFields' => $editableFields,
             'bulkActions' => ['delete'],
             'itemsPerPage' => $perPage,
-            'currentPage' => $page
+            'currentPage' => $page,
+            'totalItems' => $totalItems // Pass the total items count from SQL query
         ]
     );
 } else {
@@ -430,7 +431,8 @@ if (function_exists('renderEnhancedTable')) {
                 'editableFields' => $editableFields,
                 'bulkActions' => ['delete', 'notify'],
                 'itemsPerPage' => $perPage,
-                'currentPage' => $page
+                'currentPage' => $page,
+                'totalItems' => $totalItems // Pass the total items count from SQL query
             ]
         );
     } else {

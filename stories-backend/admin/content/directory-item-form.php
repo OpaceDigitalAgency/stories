@@ -764,6 +764,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const bookFields = document.querySelector('.book-fields');
 
     if (typeSelect && bookFields) {
+        // Set initial visibility based on current selection
+        if (typeSelect.value === 'book') {
+            bookFields.style.display = 'block';
+        } else {
+            bookFields.style.display = 'none';
+        }
+
+        // Update visibility when selection changes
         typeSelect.addEventListener('change', function() {
             if (this.value === 'book') {
                 bookFields.style.display = 'block';

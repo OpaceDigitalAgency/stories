@@ -1138,23 +1138,40 @@ function processBook($db, $bookDir) {
 function processBookTags($db, $directoryItemId, $markdownContent, $genre = '') {
     // Extract tags from markdown content
     $tags = [];
-    if (preg_match('/Tags:\s*(.*?)(?:\n|$)/i', $markdownContent, $match)) {
-        $tagsString = trim($match[1]);
-        echo "<p class='info'>Found tags in content: '$tagsString'</p>";
 
-        // Extract tags from HTML links or plain text
-        if (preg_match_all('/<a.*?>(.*?)<\/a>/i', $tagsString, $matches)) {
-            $tags = $matches[1];
-        } else {
-            // Split by commas if no HTML links
-            $tags = array_map('trim', explode(',', $tagsString));
+    // Debug the markdown content
+    echo "<p class='info'>Searching for tags in markdown content...</p>";
+
+    // Try to find tags in various formats
+    $tagPatterns = [
+        '/Tags:\s*(.*?)(?:\n|$)/i',
+        '/Genre:\s*(.*?)(?:\n|$)/i',
+        '/\*\*Genre:\*\*\s*(.*?)(?:\n|$|\*\*)/i',
+        '/\*\*Tags:\*\*\s*(.*?)(?:\n|$|\*\*)/i'
+    ];
+
+    foreach ($tagPatterns as $pattern) {
+        if (preg_match($pattern, $markdownContent, $match)) {
+            $tagsString = trim($match[1]);
+            echo "<p class='info'>Found tags/genre with pattern '$pattern': '$tagsString'</p>";
+
+            // Extract tags from HTML links or plain text
+            if (preg_match_all('/<a.*?>(.*?)<\/a>/i', $tagsString, $matches)) {
+                $extractedTags = $matches[1];
+                echo "<p class='info'>Extracted tags from HTML links: " . implode(', ', $extractedTags) . "</p>";
+                $tags = array_merge($tags, $extractedTags);
+            } else {
+                // Split by commas if no HTML links
+                $extractedTags = array_map('trim', explode(',', $tagsString));
+                echo "<p class='info'>Extracted tags from text: " . implode(', ', $extractedTags) . "</p>";
+                $tags = array_merge($tags, $extractedTags);
+            }
         }
-
-        echo "<p class='info'>Extracted tags: " . implode(', ', $tags) . "</p>";
     }
 
     // If no tags found but we have genre, use genre as tags
     if (empty($tags) && !empty($genre)) {
+        echo "<p class='info'>No tags found in content, using genre: '$genre'</p>";
         $genreTags = array_map('trim', explode(',', $genre));
         $tags = array_merge($tags, $genreTags);
         echo "<p class='info'>Using genre as tags: " . implode(', ', $genreTags) . "</p>";

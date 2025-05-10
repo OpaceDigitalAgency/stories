@@ -92,133 +92,16 @@ function initSeriesDropdown() {
  * Initialize purchase links manager
  */
 function initPurchaseLinksManager() {
+    console.log('Book form enhancements: initPurchaseLinksManager called');
+    // This is now handled by purchase-links-formatter.js
+    // We'll just make sure the purchase links field exists
     const purchaseLinksField = document.getElementById('purchase_links');
-    if (!purchaseLinksField) return;
-
-    // Get the parent element
-    const parentElement = purchaseLinksField.parentElement;
-
-    // Create a container for the purchase links manager
-    const managerContainer = document.createElement('div');
-    managerContainer.id = 'purchase-links-manager';
-    managerContainer.className = 'purchase-links-manager';
-
-    // Parse the current JSON value
-    let purchaseLinks = {};
-    try {
-        if (purchaseLinksField.value.trim()) {
-            purchaseLinks = JSON.parse(purchaseLinksField.value);
-        }
-    } catch (e) {
-        console.error('Invalid JSON format in purchase links:', e);
+    if (!purchaseLinksField) {
+        console.log('Purchase links field not found');
+        return;
     }
 
-    // Create the manager UI
-    managerContainer.innerHTML = `
-        <div class="purchase-links-list">
-            <!-- Links will be added here dynamically -->
-        </div>
-        <div class="purchase-links-form">
-            <div class="form-row">
-                <div class="col">
-                    <select id="store-select" class="form-control">
-                        <option value="">Select Store</option>
-                        <option value="amazon">Amazon</option>
-                        <option value="goodreads">Goodreads</option>
-                        <option value="barnes_noble">Barnes & Noble</option>
-                        <option value="waterstones">Waterstones</option>
-                        <option value="bookshop">Bookshop.org</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="col">
-                    <input type="text" id="store-url" class="form-control" placeholder="Enter URL">
-                </div>
-                <div class="col-auto">
-                    <button type="button" id="add-store" class="btn btn-primary">Add</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Hide the original textarea
-    purchaseLinksField.style.display = 'none';
-
-    // Insert the manager before the textarea
-    parentElement.insertBefore(managerContainer, purchaseLinksField);
-
-    // Function to update the purchase links list
-    function updatePurchaseLinks() {
-        const linksList = managerContainer.querySelector('.purchase-links-list');
-        linksList.innerHTML = '';
-
-        // Add each link to the list
-        Object.entries(purchaseLinks).forEach(([store, url]) => {
-            const linkItem = document.createElement('div');
-            linkItem.className = 'purchase-link-item';
-            linkItem.innerHTML = `
-                <div class="store-name">${store.charAt(0).toUpperCase() + store.slice(1).replace('_', ' ')}</div>
-                <div class="store-url"><a href="${url}" target="_blank">${url}</a></div>
-                <div class="store-actions">
-                    <button type="button" class="btn btn-sm btn-danger remove-store" data-store="${store}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-            linksList.appendChild(linkItem);
-        });
-
-        // Update the JSON in the textarea
-        purchaseLinksField.value = JSON.stringify(purchaseLinks, null, 2);
-    }
-
-    // Initialize the list
-    updatePurchaseLinks();
-
-    // Add event listener for adding a store
-    const addStoreButton = managerContainer.querySelector('#add-store');
-    addStoreButton.addEventListener('click', function() {
-        const storeSelect = managerContainer.querySelector('#store-select');
-        const storeUrl = managerContainer.querySelector('#store-url');
-
-        let store = storeSelect.value;
-        const url = storeUrl.value.trim();
-
-        if (!store || !url) {
-            alert('Please select a store and enter a URL');
-            return;
-        }
-
-        // Validate URL
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            alert('Please enter a valid URL starting with http:// or https://');
-            return;
-        }
-
-        // Add the store to the purchase links
-        purchaseLinks[store] = url;
-
-        // Update the list
-        updatePurchaseLinks();
-
-        // Reset the form
-        storeSelect.value = '';
-        storeUrl.value = '';
-    });
-
-    // Add event delegation for removing a store
-    managerContainer.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove-store') || e.target.closest('.remove-store')) {
-            const button = e.target.classList.contains('remove-store') ? e.target : e.target.closest('.remove-store');
-            const store = button.dataset.store;
-
-            // Remove the store from the purchase links
-            delete purchaseLinks[store];
-
-            // Update the list
-            updatePurchaseLinks();
-        }
-    });
+    console.log('Purchase links field found');
 }
 
 /**

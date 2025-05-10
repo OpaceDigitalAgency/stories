@@ -107,21 +107,49 @@ try {
 
             // If this is a book type directory item, get the book data
             if ($item && isset($item['type']) && $item['type'] == 'book') {
+                // Debug: Log the item ID we're looking for
+                error_log("Looking for book data for directory item ID " . $_GET['id']);
+
+                // First try to get book by directory_item_id
                 $bookStmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
                 $bookStmt->execute([$_GET['id']]);
                 $bookData = $bookStmt->fetch();
 
                 // Debug: Log book data to error log
-                error_log("Book data for directory item ID " . $_GET['id'] . ": " . print_r($bookData, true));
+                if ($bookData) {
+                    error_log("Found book data for directory item ID " . $_GET['id'] . ": " . print_r($bookData, true));
+                } else {
+                    error_log("No book data found for directory item ID " . $_GET['id'] . " by directory_item_id");
 
-                // If no book data found, try to find by title match
-                if (!$bookData) {
+                    // If no book data found, try to find by title match
                     $titleStmt = $db->prepare("SELECT * FROM books WHERE title = ?");
                     $titleStmt->execute([$item['title']]);
                     $bookData = $titleStmt->fetch();
 
                     if ($bookData) {
                         error_log("Found book data by title match: " . print_r($bookData, true));
+
+                        // Update the book record to link it to this directory item
+                        $updateStmt = $db->prepare("UPDATE books SET directory_item_id = ? WHERE id = ?");
+                        $updateStmt->execute([$_GET['id'], $bookData['id']]);
+                        error_log("Updated book record to link to directory item ID " . $_GET['id']);
+                    } else {
+                        error_log("No book data found by title match either for: " . $item['title']);
+
+                        // Create an empty book data array to avoid errors
+                        $bookData = [
+                            'isbn' => '',
+                            'isbn13' => '',
+                            'author' => '',
+                            'publisher' => '',
+                            'publication_date' => '',
+                            'page_count' => '',
+                            'genre' => '',
+                            'series' => '',
+                            'age_range' => '',
+                            'reading_level' => '',
+                            'purchase_links' => '{}'
+                        ];
                     }
                 }
 
@@ -134,6 +162,7 @@ try {
                         }
                     } catch (Exception $e) {
                         // Keep original if can't parse JSON
+                        error_log("Error parsing purchase links JSON: " . $e->getMessage());
                     }
                 }
             }
@@ -172,7 +201,9 @@ $currentPage = 'directory';
 // Add custom CSS for form styling
 $extraHeadContent = '
 <!-- Include purchase links formatter script -->
-<script src="js/purchase-links-formatter.js"></script>
+<script src="../assets/js/purchase-links-formatter.js"></script>
+<!-- Include book form enhancements script -->
+<script src="../assets/js/book-form-enhancements.js"></script>
 <style>
     /* Grid layout for space efficiency */
     .form-row {
@@ -313,8 +344,33 @@ $extraHeadContent = '
 </style>
 ';
 
+// Add debug mode if requested
+$debug = isset($_GET['debug']) && $_GET['debug'] == '1';
+if ($debug) {
+    $extraHeadContent .= '
+    <script>
+        console.log("Debug mode enabled");
+        window.DEBUG_MODE = true;
+    </script>
+    ';
+
+    // Add more detailed error reporting
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+}
+
 // Include header
 require_once '../includes/header.php';
+
+// Display debug information if requested
+if ($debug) {
+    echo '<div class="alert alert-info mb-3">
+        <h5>Debug Mode Enabled</h5>
+        <p>Directory Item ID: ' . ($_GET['id'] ?? 'New Item') . '</p>
+        <p>Item Type: ' . ($item['type'] ?? 'Not set') . '</p>
+        <p>Book Data: ' . (empty($bookData) ? 'Not found' : 'Found') . '</p>
+    </div>';
+}
 ?>
 
 <div class="content-section mb-3">
@@ -681,8 +737,16 @@ require_once '../includes/header.php';
                                     <!-- Purchase links will be dynamically added here -->
                                 </div>
                                 <button type="button" id="add-purchase-link-btn" class="btn btn-sm btn-primary mt-2">Add Purchase Link</button>
-                                <textarea id="purchase_links" name="book_purchase_links" class="form-control d-none" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
+                                <textarea id="purchase_links" name="book_purchase_links" class="form-control d-none" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? '{}'); ?></textarea>
                             </div>
+
+                            <!-- Debug information -->
+                            <?php if (isset($_GET['debug'])): ?>
+                            <div class="alert alert-info mt-3">
+                                <h5>Debug Information</h5>
+                                <pre><?php print_r($bookData); ?></pre>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -795,6 +859,18 @@ document.addEventListener('DOMContentLoaded', function() {
         typeSelect.addEventListener('change', function() {
             if (this.value === 'book') {
                 bookFields.style.display = 'block';
+
+                // Initialize book form enhancements when switching to book type
+                if (typeof initTagSelection === 'function') initTagSelection();
+                if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
+                if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
+                if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
+                if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
+                if (typeof initGenreDropdown === 'function') initGenreDropdown();
+                if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
+                if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
+
+                console.log('Book fields initialized after type change');
             } else {
                 bookFields.style.display = 'none';
             }

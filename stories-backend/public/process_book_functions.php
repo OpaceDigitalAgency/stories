@@ -748,8 +748,25 @@ function processBook($db, $bookDir) {
 
                 // Generate slug
                 $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
-                // Convert accented characters to ASCII while preserving all characters
-                $baseSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $baseSlug);
+
+                // Then split into words
+                $words = explode('-', $baseSlug);
+                $processedWords = [];
+
+                foreach ($words as $word) {
+                    if (empty($word)) continue;
+
+                    // Keep the first character as is
+                    $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+                    $restChars = mb_substr($word, 1, null, 'UTF-8');
+
+                    // Only convert rest of the word to ASCII
+                    $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+
+                    $processedWords[] = $firstChar . $restChars;
+                }
+
+                $baseSlug = implode('-', $processedWords);
                 $baseSlug = trim($baseSlug, '-');
 
                 // Check if slug exists and make it unique if needed
@@ -823,8 +840,25 @@ function processBook($db, $bookDir) {
 
                 // Generate slug
                 $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $authorName));
-                // Convert accented characters to ASCII while preserving all characters
-                $baseSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $baseSlug);
+
+                // Then split into words
+                $words = explode('-', $baseSlug);
+                $processedWords = [];
+
+                foreach ($words as $word) {
+                    if (empty($word)) continue;
+
+                    // Keep the first character as is
+                    $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+                    $restChars = mb_substr($word, 1, null, 'UTF-8');
+
+                    // Only convert rest of the word to ASCII
+                    $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+
+                    $processedWords[] = $firstChar . $restChars;
+                }
+
+                $baseSlug = implode('-', $processedWords);
                 $baseSlug = trim($baseSlug, '-');
 
                 // Check if slug exists and make it unique if needed
@@ -1147,9 +1181,26 @@ function processBook($db, $bookDir) {
         }
 
         // Generate slug from title
-        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
-        // Convert accented characters to ASCII while preserving all characters
-        $slug = iconv('UTF-8', 'ASCII//TRANSLIT', $slug);
+        $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+
+        // Then split into words
+        $words = explode('-', $baseSlug);
+        $processedWords = [];
+
+        foreach ($words as $word) {
+            if (empty($word)) continue;
+
+            // Keep the first character as is
+            $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+            $restChars = mb_substr($word, 1, null, 'UTF-8');
+
+            // Only convert rest of the word to ASCII
+            $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+
+            $processedWords[] = $firstChar . $restChars;
+        }
+
+        $slug = implode('-', $processedWords);
         $slug = trim($slug, '-');
 
         // Check if directory item already exists

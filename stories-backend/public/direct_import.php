@@ -636,9 +636,29 @@ function generateUniqueSlug($db, $title) {
     $title = preg_replace('/\s+by\s+[^,]+(?:,?\s+aged\s+\d+)?(?:,?\s+from\s+[^,.]+)?/i', '', $title);
     $title = trim($title);
 
-    // Generate base slug
-    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
-    $slug = trim($slug, '-');
+    // Convert to lowercase and replace non-alphanumeric with hyphens
+    $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+
+    // Then split into words
+    $words = explode('-', $baseSlug);
+    $processedWords = [];
+
+    foreach ($words as $word) {
+        if (empty($word)) continue;
+
+        // Keep the first character as is
+        $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+        $restChars = mb_substr($word, 1, null, 'UTF-8');
+
+        // Only convert rest of the word to ASCII
+        $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+
+        $processedWords[] = $firstChar . $restChars;
+    }
+
+    $baseSlug = implode('-', $processedWords);
+    $baseSlug = trim($baseSlug, '-');
+    $slug = $baseSlug;
 
     // Check if slug exists
     $stmt = $db->prepare("SELECT COUNT(*) as count FROM stories WHERE slug = ?");
@@ -835,10 +855,26 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
     $name = trim($authorInfo['name']);
 
     // First convert to lowercase and replace non-alphanumeric with hyphens
-    $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+    $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
 
-    // Convert accented characters to ASCII while preserving all characters
-    $slug = iconv('UTF-8', 'ASCII//TRANSLIT', $slug);
+    // Then split into words
+    $words = explode('-', $baseSlug);
+    $processedWords = [];
+
+    foreach ($words as $word) {
+        if (empty($word)) continue;
+
+        // Keep the first character as is
+        $firstChar = mb_substr($word, 0, 1, 'UTF-8');
+        $restChars = mb_substr($word, 1, null, 'UTF-8');
+
+        // Only convert rest of the word to ASCII
+        $restChars = iconv('UTF-8', 'ASCII//TRANSLIT', $restChars);
+
+        $processedWords[] = $firstChar . $restChars;
+    }
+
+    $slug = implode('-', $processedWords);
 
     // Remove any leading or trailing dashes
     $slug = trim($slug, '-');

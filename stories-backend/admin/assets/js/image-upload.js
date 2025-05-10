@@ -645,6 +645,19 @@ class ImageUploader {
                         backupField.value = url;
                         console.log('Updated avatar_url_backup field with:', url);
                     }
+                } else {
+                    // If we can't find the parent form, look for a specific field by ID
+                    // This is for cases where the image upload component is outside the main form
+                    const fieldName = urlInput ? urlInput.name : '';
+                    if (fieldName === 'avatar_url') {
+                        const mainField = document.getElementById('avatar_url_main');
+                        if (mainField) {
+                            mainField.value = url;
+                            console.log('Updated avatar_url_main field with:', url);
+                        } else {
+                            console.log('Could not find avatar_url_main field');
+                        }
+                    }
                 }
 
                 // Update the preview

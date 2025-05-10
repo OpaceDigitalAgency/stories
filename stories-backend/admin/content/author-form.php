@@ -55,6 +55,7 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
+                    <input type="hidden" name="avatar_url" value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>" id="avatar_url_main">
 
                     <!-- Basic Information -->
                     <div class="form-group mb-3">
@@ -177,21 +178,53 @@ try {
                     $author['id'] ?? null
                 );
 
-                // Simple script to ensure the image URL is saved
+                // Script to sync the avatar_url field with the main form
                 echo '<script>
                 document.addEventListener("DOMContentLoaded", function() {
-                    // When the form is submitted, make sure the avatar_url field has the image URL
+                    // Get the main avatar_url field and the image upload component field
+                    const mainAvatarUrlField = document.getElementById("avatar_url_main");
+                    const componentAvatarUrlField = document.querySelector(".image-upload-component input[name=\'avatar_url\']");
+
+                    // Function to sync the fields
+                    function syncAvatarUrlFields() {
+                        if (componentAvatarUrlField && componentAvatarUrlField.value) {
+                            // Update the main form field with the component field value
+                            if (mainAvatarUrlField) {
+                                mainAvatarUrlField.value = componentAvatarUrlField.value;
+                                console.log("Synced avatar_url from component to main form:", componentAvatarUrlField.value);
+                            }
+                        } else if (mainAvatarUrlField && mainAvatarUrlField.value) {
+                            // Update the component field with the main form field value
+                            if (componentAvatarUrlField) {
+                                componentAvatarUrlField.value = mainAvatarUrlField.value;
+                                console.log("Synced avatar_url from main form to component:", mainAvatarUrlField.value);
+                            }
+                        }
+                    }
+
+                    // Sync fields on page load
+                    syncAvatarUrlFields();
+
+                    // Sync fields when the component field changes
+                    if (componentAvatarUrlField) {
+                        componentAvatarUrlField.addEventListener("change", syncAvatarUrlFields);
+                    }
+
+                    // Sync fields when the form is submitted
                     const form = document.getElementById("author-form");
                     if (form) {
                         form.addEventListener("submit", function() {
                             // Get the image URL from the preview
                             const previewImg = document.querySelector(".image-preview img");
                             if (previewImg && previewImg.src && previewImg.style.display !== "none") {
-                                // Update the avatar_url field
-                                const avatarUrlField = document.querySelector("input[name=\'avatar_url\']");
-                                if (avatarUrlField && (!avatarUrlField.value || avatarUrlField.value === "")) {
-                                    avatarUrlField.value = previewImg.src;
+                                // Update both avatar_url fields
+                                if (componentAvatarUrlField) {
+                                    componentAvatarUrlField.value = previewImg.src;
                                 }
+                                if (mainAvatarUrlField) {
+                                    mainAvatarUrlField.value = previewImg.src;
+                                }
+                                console.log("Updated avatar_url fields from preview image:", previewImg.src);
                             }
                         });
                     }

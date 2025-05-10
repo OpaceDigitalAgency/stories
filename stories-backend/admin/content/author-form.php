@@ -211,9 +211,19 @@ try {
                 // Render image upload component
                 // Check if avatar_url is empty or points to default-avatar.svg
                 $avatarUrl = $author['avatar_url'] ?? '';
+
+                // If we have a direct avatar query result, use that instead
+                if (isset($avatarResult) && isset($avatarResult['avatar_url'])) {
+                    $avatarUrl = $avatarResult['avatar_url'];
+                    error_log("Using avatar URL from direct query: " . ($avatarUrl ?? 'NULL'));
+                }
+
                 if (empty($avatarUrl) || strpos($avatarUrl, 'default-avatar.svg') !== false) {
                     $avatarUrl = ''; // Clear it so the component shows "No image selected"
                 }
+
+                // Add a hidden field to ensure the avatar URL is included in the form
+                echo '<input type="hidden" id="avatar_url_backup" value="' . htmlspecialchars($avatarUrl) . '">';
 
                 renderImageUploadComponent(
                     'avatar_url',
@@ -470,24 +480,54 @@ document.addEventListener('DOMContentLoaded', function() {
             form.addEventListener('submit', function(e) {
                 // Get the avatar URL from the image upload component
                 const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
+                const avatarUrlBackup = document.getElementById('avatar_url_backup');
+
                 if (avatarUrlInput) {
                     console.log('Form submission - Avatar URL:', avatarUrlInput.value);
+                    console.log('Avatar URL backup:', avatarUrlBackup ? avatarUrlBackup.value : 'not found');
 
                     // If the avatar URL is empty but there's an image in the preview, try to get it from there
                     if (!avatarUrlInput.value) {
                         const previewImg = document.querySelector('.image-preview img');
-                        if (previewImg && previewImg.src) {
+                        if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
                             avatarUrlInput.value = previewImg.src;
                             console.log('Using image from preview:', previewImg.src);
+                        } else if (avatarUrlBackup && avatarUrlBackup.value) {
+                            // If we still don't have a value, use the backup
+                            avatarUrlInput.value = avatarUrlBackup.value;
+                            console.log('Using backup avatar URL:', avatarUrlBackup.value);
                         }
                     }
 
                     // Set the image_updated field to 1 if we have an avatar URL
                     if (avatarUrlInput.value) {
-                        document.getElementById('image_updated_field').value = '1';
+                        const imageUpdatedField = document.getElementById('image_updated_field');
+                        if (imageUpdatedField) {
+                            imageUpdatedField.value = '1';
+                            console.log('Set image_updated to 1 because we have an avatar URL');
+                        }
                     }
+
+                    // Log the final form data
+                    console.log('Final avatar URL before submission:', avatarUrlInput.value);
+                    console.log('Image updated field value:', document.getElementById('image_updated_field').value);
                 }
             });
+
+            // Also add a direct event listener for the Save button
+            const saveButton = form.querySelector('button[type="submit"]');
+            if (saveButton) {
+                saveButton.addEventListener('click', function() {
+                    console.log('Save button clicked');
+
+                    // Force the image_updated field to 1
+                    const imageUpdatedField = document.getElementById('image_updated_field');
+                    if (imageUpdatedField) {
+                        imageUpdatedField.value = '1';
+                        console.log('Set image_updated to 1 because save button was clicked');
+                    }
+                });
+            }
         }
 
         // Also listen for changes to the image preview

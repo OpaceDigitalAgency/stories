@@ -157,7 +157,8 @@ class ImageUploader {
 
         // Create AJAX request
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '../handlers/upload-image.php', true);
+        // Use absolute path to ensure it works from any admin page
+        xhr.open('POST', '/stories-backend/admin/handlers/upload-image.php', true);
 
         // Track upload progress
         xhr.upload.addEventListener('progress', (e) => {
@@ -367,7 +368,8 @@ class ImageUploader {
 
         // Create iframe to load media library
         const iframe = document.createElement('iframe');
-        iframe.src = '../content/media-select.php';
+        // Use absolute path to ensure it works from any admin page
+        iframe.src = '/stories-backend/admin/content/media-select.php';
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = 'none';
@@ -397,7 +399,8 @@ class ImageUploader {
                 if (entityId && entityId !== '0') {
                     // Make an AJAX request to update the thumbnail
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '../handlers/update-thumbnail.php', true);
+                    // Use absolute path to ensure it works from any admin page
+                    xhr.open('POST', '/stories-backend/admin/handlers/update-thumbnail.php', true);
                     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                     xhr.onload = function() {
                         if (xhr.status === 200) {

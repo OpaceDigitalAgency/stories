@@ -463,7 +463,7 @@ try {
             const formData = new FormData();
             formData.append('media_file_file', file);
 
-            fetch('media.php', {
+            fetch('/stories-backend/admin/content/media.php', {
                 method: 'POST',
                 body: formData
             })

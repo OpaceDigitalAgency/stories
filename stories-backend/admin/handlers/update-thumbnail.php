@@ -63,7 +63,7 @@ try {
         case 'author':
             $tableName = 'authors';
             $imageField = 'avatar_url';
-            $thumbnailField = 'thumbnail_url';
+            $thumbnailField = ''; // Authors table doesn't have a thumbnail_url field
             $idField = 'id';
             break;
         case 'game':
@@ -86,12 +86,14 @@ try {
             break;
     }
 
-    // Check if the thumbnail field exists in the table
-    $stmt = $db->prepare("SHOW COLUMNS FROM {$tableName} LIKE ?");
-    $stmt->execute([$thumbnailField]);
-    if ($stmt->rowCount() === 0) {
-        // Add the thumbnail field if it doesn't exist
-        $db->exec("ALTER TABLE {$tableName} ADD COLUMN {$thumbnailField} VARCHAR(255) AFTER {$imageField}");
+    // Check if the thumbnail field exists in the table (skip for authors as they don't need it)
+    if (!empty($thumbnailField)) {
+        $stmt = $db->prepare("SHOW COLUMNS FROM {$tableName} LIKE ?");
+        $stmt->execute([$thumbnailField]);
+        if ($stmt->rowCount() === 0) {
+            // Add the thumbnail field if it doesn't exist
+            $db->exec("ALTER TABLE {$tableName} ADD COLUMN {$thumbnailField} VARCHAR(255) AFTER {$imageField}");
+        }
     }
 
     // Generate thumbnail URL from the image URL
@@ -133,34 +135,51 @@ try {
     error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE {$idField} = {$itemId}");
 
     try {
+        // Use direct query with quoted values to avoid prepared statement issues
+        $imageUrlEscaped = $db->quote($imageUrl);
+        $thumbnailUrlEscaped = $db->quote($thumbnailUrl);
+        $itemIdEscaped = intval($itemId); // Integer values don't need quotes
+
         // Construct the SQL query with proper quoting
-        $sql = "UPDATE " . $tableName . " SET " . $imageField . " = ?, " . $thumbnailField . " = ? WHERE " . $idField . " = ?";
-        error_log("Prepared SQL: " . $sql);
+        if (!empty($thumbnailField)) {
+            $sql = "UPDATE `{$tableName}` SET `{$imageField}` = {$imageUrlEscaped}, `{$thumbnailField}` = {$thumbnailUrlEscaped} WHERE `{$idField}` = {$itemIdEscaped}";
+        } else {
+            // For tables without a thumbnail field (like authors)
+            $sql = "UPDATE `{$tableName}` SET `{$imageField}` = {$imageUrlEscaped} WHERE `{$idField}` = {$itemIdEscaped}";
+        }
+        error_log("Direct SQL: " . $sql);
 
-        // Update the item in the database
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$imageUrl, $thumbnailUrl, $itemId]);
-
-        // Check if the update was successful
-        $rowCount = $stmt->rowCount();
+        // Execute the direct SQL query
+        $rowCount = $db->exec($sql);
         error_log("Update affected {$rowCount} rows");
 
         // Verify the update by querying the database
-        $sql = "SELECT " . $imageField . ", " . $thumbnailField . " FROM " . $tableName . " WHERE " . $idField . " = ?";
-        error_log("Verify SQL: " . $sql);
+        if (!empty($thumbnailField)) {
+            $verifySQL = "SELECT `{$imageField}`, `{$thumbnailField}` FROM `{$tableName}` WHERE `{$idField}` = {$itemIdEscaped}";
+        } else {
+            // For tables without a thumbnail field (like authors)
+            $verifySQL = "SELECT `{$imageField}` FROM `{$tableName}` WHERE `{$idField}` = {$itemIdEscaped}";
+        }
+        error_log("Verify SQL: " . $verifySQL);
 
-        $verifyStmt = $db->prepare($sql);
-        $verifyStmt->execute([$itemId]);
-        $result = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        $verifyResult = $db->query($verifySQL);
+        $result = $verifyResult->fetch(PDO::FETCH_ASSOC);
         error_log("After update: " . print_r($result, true));
 
         // Set success response
         $response['success'] = true;
-        $response['message'] = "Thumbnail updated successfully ({$rowCount} rows affected)";
-        $response['thumbnail_url'] = $thumbnailUrl;
+        if (!empty($thumbnailField)) {
+            $response['message'] = "Image and thumbnail updated successfully ({$rowCount} rows affected)";
+            $response['thumbnail_url'] = $thumbnailUrl;
+        } else {
+            $response['message'] = "Image updated successfully ({$rowCount} rows affected)";
+            // For authors, we don't have a thumbnail_url field, so we use the main image URL
+            $response['thumbnail_url'] = $imageUrl;
+        }
         $response['debug'] = [
             'table' => $tableName,
             'field' => $imageField,
+            'thumbnail_field' => $thumbnailField,
             'id' => $itemId,
             'rows_affected' => $rowCount,
             'verification' => $result

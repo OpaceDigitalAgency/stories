@@ -240,8 +240,10 @@ require_once '../includes/header.php';
 
 <div class="content-section mb-4">
     <div class="section-body">
-        <form method="POST" action="save-game.php" class="content-form">
+        <form method="POST" action="save-game.php" class="content-form" id="game-form">
             <input type="hidden" name="id" value="<?php echo $game['id'] ?? ''; ?>">
+            <!-- Add a hidden field to track if the image was updated via AJAX -->
+            <input type="hidden" name="image_updated" value="0" id="image_updated_field">
 
             <!-- WordPress-like Layout -->
             <div class="wp-layout">

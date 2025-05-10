@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const debugContainer = document.createElement('div');
     debugContainer.id = 'image-upload-debug';
     debugContainer.style.position = 'fixed';
-    debugContainer.style.bottom = '10px';
-    debugContainer.style.right = '10px';
+    debugContainer.style.bottom = '50px'; // Positioned above the toggle button
+    debugContainer.style.left = '10px'; // Changed from right to left
     debugContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
     debugContainer.style.color = 'white';
     debugContainer.style.padding = '10px';
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleButton.textContent = 'Toggle Debug';
     toggleButton.style.position = 'fixed';
     toggleButton.style.bottom = '10px';
-    toggleButton.style.right = '10px';
+    toggleButton.style.left = '10px'; // Changed from right to left
     toggleButton.style.zIndex = '10000';
     toggleButton.style.padding = '5px 10px';
     toggleButton.style.backgroundColor = '#007bff';

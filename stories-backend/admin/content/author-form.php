@@ -27,7 +27,7 @@ try {
     // Get author if editing
     if (isset($_GET['id'])) {
         // Use a more explicit query to ensure we get the avatar_url field
-        $stmt = $db->prepare("SELECT id, name, slug, email, bio, avatar_url, author_type, age, location, created_at, updated_at, is_published FROM authors WHERE id = ?");
+        $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
         $stmt->execute([$_GET['id']]);
         $author = $stmt->fetch(PDO::FETCH_ASSOC);
 

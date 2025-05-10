@@ -30,16 +30,26 @@ $pageDescription = $pageDescription ?? '';
 
 // Database connection
 try {
+    // Use config values if available, otherwise use defaults
+    $dbHost = $config['host'] ?? 'localhost';
+    $dbName = $config['name'] ?? 'stories_db';
+    $dbUser = $config['user'] ?? 'stories_user';
+    $dbPass = $config['password'] ?? '$tw1cac3*sOt';
+    $dbCharset = $config['charset'] ?? 'utf8mb4';
+
     $db = new PDO(
-        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-        'stories_user',
-        '$tw1cac3*sOt',
+        "mysql:host={$dbHost};dbname={$dbName};charset={$dbCharset}",
+        $dbUser,
+        $dbPass,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+
+    // Log successful connection for debugging
+    error_log("Database connection successful in header.php");
 } catch (PDOException $e) {
     error_log("Database connection error in header.php: " . $e->getMessage());
     $db = null;
@@ -61,7 +71,7 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <?php
     // Determine the correct path to assets based on the current file location
     $basePath = dirname($_SERVER['SCRIPT_FILENAME']);
-    
+
     // Adjust paths based on directory
     if ($isPublicDir) {
         $assetsPath = '../admin/assets/css/enhanced-admin.css';

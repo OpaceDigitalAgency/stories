@@ -291,7 +291,7 @@ try {
                 page_count = ?,
                 age_range = ?,
                 reading_level = ?,
-                cover_url = ?,
+                cover_image_url = ?,  /* Using cover_image_url as that's the column name in the books table */
                 purchase_links = ?,
                 genre = ?,
                 series = ?
@@ -307,7 +307,7 @@ try {
                 $bookData['page_count'],
                 $bookData['age_range'],
                 $bookData['reading_level'],
-                $cover_url, // Use the same cover URL as directory item
+                $cover_url, // Use the directory item's cover_url for the book's cover_image_url
                 $purchaseLinks,
                 $bookData['genre'],
                 $bookData['series'],
@@ -327,7 +327,7 @@ try {
                 page_count,
                 age_range,
                 reading_level,
-                cover_url,
+                cover_image_url,  /* Using cover_image_url as that's the column name in the books table */
                 purchase_links,
                 genre,
                 series
@@ -344,7 +344,7 @@ try {
                 $bookData['page_count'],
                 $bookData['age_range'],
                 $bookData['reading_level'],
-                $cover_url, // Use the same cover URL as directory item
+                $cover_url, // Use the directory item's cover_url for the book's cover_image_url
                 $purchaseLinks,
                 $bookData['genre'],
                 $bookData['series']

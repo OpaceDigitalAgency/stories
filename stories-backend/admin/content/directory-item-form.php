@@ -1179,8 +1179,14 @@ Selected option in dropdown: <?php
                         <div class="wp-card-header">Cover Image</div>
                         <div class="wp-card-body">
                             <?php
-                            // Simple approach - just get the cover URL from the item data
+                            // Get the cover URL from the item data or the book data
                             $coverUrl = $item['cover_url'] ?? '';
+
+                            // If this is a book and we have book data with a cover image, use that instead
+                            if (isset($item['type']) && $item['type'] == 'book' && isset($bookData['cover_image_url']) && !empty($bookData['cover_image_url'])) {
+                                $coverUrl = $bookData['cover_image_url'];
+                                error_log("Using book cover image URL: " . $coverUrl);
+                            }
 
                             renderImageUploadComponent(
                                 'cover_url',

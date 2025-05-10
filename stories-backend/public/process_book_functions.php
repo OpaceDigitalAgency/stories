@@ -291,6 +291,48 @@ function processBook($db, $bookDir) {
         // Extract reading level
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
 
+        // Function to determine reading level based on age range
+        function determineReadingLevel($ageRange) {
+            // Default reading level
+            $readingLevel = '';
+
+            // Parse age range to get min and max ages
+            if (preg_match('/(\d+)\s*-\s*(\d+)/', $ageRange, $matches)) {
+                $minAge = (int)$matches[1];
+                $maxAge = (int)$matches[2];
+
+                // Determine reading level based on age range
+                if ($minAge <= 3) {
+                    $readingLevel = 'early-reader';
+                } else if ($minAge <= 6) {
+                    $readingLevel = 'first-reader';
+                } else if ($minAge <= 8) {
+                    $readingLevel = 'chapter-book';
+                } else if ($minAge <= 12) {
+                    $readingLevel = 'middle-grade';
+                } else {
+                    $readingLevel = 'young-adult';
+                }
+            } else if (preg_match('/(\d+)\s*\+/', $ageRange, $matches)) {
+                $minAge = (int)$matches[1];
+
+                // Determine reading level based on minimum age
+                if ($minAge <= 3) {
+                    $readingLevel = 'early-reader';
+                } else if ($minAge <= 6) {
+                    $readingLevel = 'first-reader';
+                } else if ($minAge <= 8) {
+                    $readingLevel = 'chapter-book';
+                } else if ($minAge <= 12) {
+                    $readingLevel = 'middle-grade';
+                } else {
+                    $readingLevel = 'young-adult';
+                }
+            }
+
+            return $readingLevel;
+        }
+
         // Extract plot or summary info
         $plotInfo = '';
         if (isset($data['plot'])) {
@@ -341,11 +383,19 @@ function processBook($db, $bookDir) {
             // Extract Book Series
             if (preg_match('/\*\*(?:Book\s+)?Series:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $series = trim($match[1]);
-                echo "<p class='success'>Found book series in content: '$series'</p>";
-                flushOutput();
+                // Make sure series is not empty or just whitespace
+                if (!empty($series)) {
+                    echo "<p class='success'>Found book series in content: '$series'</p>";
+                    flushOutput();
+                } else {
+                    echo "<p class='warning'>Series found but is empty in Book & Author Info section</p>";
+                    flushOutput();
+                    $series = ''; // Ensure it's an empty string, not null
+                }
             } else {
                 echo "<p class='warning'>No series found in Book & Author Info section</p>";
                 flushOutput();
+                $series = ''; // Ensure it's an empty string, not null
             }
 
             // Extract Book Genre
@@ -356,6 +406,13 @@ function processBook($db, $bookDir) {
             } else {
                 echo "<p class='warning'>No genre found in Book & Author Info section</p>";
                 flushOutput();
+
+                // Try to find genre in the entire content as a fallback
+                if (preg_match('/genre:?\s*(.*?)(?:\n|$)/i', $markdownContent, $match)) {
+                    $genre = trim($match[1]);
+                    echo "<p class='success'>Found genre in markdown content: '$genre'</p>";
+                    flushOutput();
+                }
             }
 
             // Extract Book Age Range
@@ -495,8 +552,43 @@ function processBook($db, $bookDir) {
 
         // Extract genre and series data
         $genre = isset($data['genre']) ? $data['genre'] : '';
-        $series = isset($data['series']) ? $data['series'] : '';
+
+        // Only set series from front matter if it's not already set from content
+        // This ensures content extraction takes precedence
+        if (!isset($series) || (isset($series) && empty($series))) {
+            $series = isset($data['series']) ? $data['series'] : '';
+            if (!empty($series)) {
+                echo "<p class='success'>Using series from front matter: '$series'</p>";
+                flushOutput();
+            }
+        }
+
         $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+
+        // The series variable is already set from the Book & Author Info section
+        // This condition is logically incorrect - if series is empty, it can't also be not empty
+        // Let's add additional series extraction logic
+        if (empty($series)) {
+            // Try to find series in the entire content as a fallback
+            if (preg_match('/series:?\s*(.*?)(?:\n|$)/i', $markdownContent, $match)) {
+                $series = trim($match[1]);
+                echo "<p class='success'>Found series in markdown content: '$series'</p>";
+                flushOutput();
+            }
+        } else {
+            echo "<p class='info'>Using series from content section: '$series'</p>";
+            flushOutput();
+        }
+
+        // If reading level is not set but we have age range, determine reading level
+        if (empty($readingLevel) && !empty($ageRange)) {
+            $determinedReadingLevel = determineReadingLevel($ageRange);
+            if (!empty($determinedReadingLevel)) {
+                $readingLevel = $determinedReadingLevel;
+                echo "<p class='success'>Determined reading level from age range: '$readingLevel'</p>";
+                flushOutput();
+            }
+        }
 
         // Debug: Log the genre, series, and reading level from front matter
         echo "<p class='info'>Genre from front matter: " . ($genre ? "'$genre'" : "Not set") . "</p>";
@@ -535,7 +627,9 @@ function processBook($db, $bookDir) {
                 ");
 
                 // Generate slug
-                $publisherSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $publisher));
+                $publisherSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
+                // Convert accented characters to ASCII while preserving all characters
+                $publisherSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $publisherSlug);
                 $publisherSlug = trim($publisherSlug, '-');
 
                 $stmt->execute([$publisher, 'retail', $publisherSlug]);
@@ -573,7 +667,9 @@ function processBook($db, $bookDir) {
             ");
 
             // Generate slug
-            $authorSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $authorName));
+            $authorSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $authorName));
+            // Convert accented characters to ASCII while preserving all characters
+            $authorSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $authorSlug);
             $authorSlug = trim($authorSlug, '-');
 
             $stmt->execute([$authorName, 'retail', $authorSlug]);
@@ -858,7 +954,9 @@ function processBook($db, $bookDir) {
         }
 
         // Generate slug from title
-        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $title));
+        // Convert accented characters to ASCII while preserving all characters
+        $slug = iconv('UTF-8', 'ASCII//TRANSLIT', $slug);
         $slug = trim($slug, '-');
 
         // Check if directory item already exists
@@ -1006,8 +1104,12 @@ function processBook($db, $bookDir) {
             echo "<li>reading_level: $readingLevel</li>";
             echo "<li>cover_image_url: $coverImageUrl</li>";
             echo "<li>genre: $genre</li>";
-            echo "<li>series: $series</li>";
+            echo "<li>series: " . (empty($series) ? "EMPTY" : "'$series'") . "</li>";
             echo "</ul>";
+            flushOutput();
+
+            // Debug the series value specifically
+            echo "<p class='info'><strong>SERIES DEBUG:</strong> Value type: " . gettype($series) . ", Length: " . strlen($series) . ", Raw value: '" . htmlspecialchars($series) . "'</p>";
             flushOutput();
 
             $stmt->execute([
@@ -1078,8 +1180,12 @@ function processBook($db, $bookDir) {
             echo "<li>reading_level: $readingLevel</li>";
             echo "<li>cover_image_url: $coverImageUrl</li>";
             echo "<li>genre: $genre</li>";
-            echo "<li>series: $series</li>";
+            echo "<li>series: " . (empty($series) ? "EMPTY" : "'$series'") . "</li>";
             echo "</ul>";
+            flushOutput();
+
+            // Debug the series value specifically
+            echo "<p class='info'><strong>SERIES DEBUG:</strong> Value type: " . gettype($series) . ", Length: " . strlen($series) . ", Raw value: '" . htmlspecialchars($series) . "'</p>";
             flushOutput();
 
             $stmt->execute([
@@ -1253,7 +1359,9 @@ function processBookTags($db, $directoryItemId, $markdownContent, $genre = '') {
         } else {
             try {
                 // Generate a unique slug
-                $baseSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $cleanTagName));
+                $baseSlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $cleanTagName));
+                // Convert accented characters to ASCII while preserving all characters
+                $baseSlug = iconv('UTF-8', 'ASCII//TRANSLIT', $baseSlug);
                 $baseSlug = trim($baseSlug, '-');
 
                 // Check if slug exists

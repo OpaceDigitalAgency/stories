@@ -543,24 +543,37 @@ document.addEventListener("DOMContentLoaded", function() {
     const imageComponent = document.querySelector(".image-upload-component");
     if (!imageComponent) return;
 
-    // Find the image URL input in the component
-    const componentUrlInput = imageComponent.querySelector("input[type=\'hidden\']");
+    // Find the image URL input in the component - it could be a hidden input or an input with name=cover_url
+    const componentUrlInput = imageComponent.querySelector("input.image-url-input") || imageComponent.querySelector("input[name=\'cover_url\']");
     if (!componentUrlInput) return;
 
-    // Sync the value from component to main form
-    console.log("Synced cover_url from component to main form:", componentUrlInput.value);
-    coverUrlInput.value = componentUrlInput.value;
+    // Function to sync the fields
+    function syncCoverUrlFields() {
+        if (componentUrlInput && componentUrlInput.value) {
+            // Update the main form field with the component field value
+            if (coverUrlInput) {
+                coverUrlInput.value = componentUrlInput.value;
+                console.log("Synced cover_url from component to main form:", componentUrlInput.value);
+            }
+        } else if (coverUrlInput && coverUrlInput.value) {
+            // Update the component field with the main form field value
+            if (componentUrlInput) {
+                componentUrlInput.value = coverUrlInput.value;
+                console.log("Synced cover_url from main form to component:", coverUrlInput.value);
+            }
+        }
+    }
 
-    // Add event listener to sync values when component changes
-    imageComponent.addEventListener("change", function() {
-        setTimeout(function() {
-            coverUrlInput.value = componentUrlInput.value;
-            console.log("Updated cover_url in main form:", coverUrlInput.value);
-        }, 100);
-    });
+    // Sync fields on page load
+    syncCoverUrlFields();
+
+    // Sync fields when the component field changes
+    if (componentUrlInput) {
+        componentUrlInput.addEventListener("change", syncCoverUrlFields);
+    }
 
     // Add specific handler for the remove image button
-    const removeButton = imageComponent.querySelector(".remove-image-btn");
+    const removeButton = imageComponent.querySelector(".remove-image");
     if (removeButton) {
         removeButton.addEventListener("click", function() {
             setTimeout(function() {
@@ -570,15 +583,25 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Add event listener to the form submission
-    form.addEventListener("submit", function(e) {
-        // Check if the image was removed (component has empty class)
-        if (imageComponent.classList.contains("empty")) {
-            coverUrlInput.value = "";
-            console.log("Image was removed, clearing cover_url field");
+    // Sync fields when the form is submitted
+    form.addEventListener("submit", function() {
+        // Get the image URL from the preview
+        const previewImg = document.querySelector(".image-preview img");
+        if (previewImg && previewImg.src && previewImg.style.display !== "none") {
+            // Update both cover_url fields
+            if (componentUrlInput) {
+                componentUrlInput.value = previewImg.src;
+            }
+            if (coverUrlInput) {
+                coverUrlInput.value = previewImg.src;
+            }
+            console.log("Updated cover_url fields from preview image:", previewImg.src);
         } else {
-            coverUrlInput.value = componentUrlInput.value;
-            console.log("Final cover_url value on submit:", coverUrlInput.value);
+            // If no image is displayed, clear the fields
+            if (imageComponent.classList.contains("empty")) {
+                coverUrlInput.value = "";
+                console.log("Image was removed, clearing cover_url field");
+            }
         }
     });
 });
@@ -1156,10 +1179,12 @@ Selected option in dropdown: <?php
                         <div class="wp-card-header">Cover Image</div>
                         <div class="wp-card-body">
                             <?php
-                            // Render image upload component
+                            // Simple approach - just get the cover URL from the item data
+                            $coverUrl = $item['cover_url'] ?? '';
+
                             renderImageUploadComponent(
                                 'cover_url',
-                                $item['cover_url'] ?? '',
+                                $coverUrl,
                                 'Cover Image',
                                 'directory_item',
                                 $item['id'] ?? null
@@ -1470,12 +1495,24 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Include debug script -->
 <script src="../assets/js/image-upload-debug.js"></script>
 
+<!-- Force re-initialization of image uploader -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Re-initialize the image uploader to ensure it picks up all components
+    if (window.imageUploader) {
+        console.log('Re-initializing image uploader');
+        window.imageUploader.initComponents();
+    } else {
+        console.log('Image uploader not found, will be initialized by image-upload.js');
+    }
+});</script>
+
 <!-- Script to sync the cover_url field with the main form -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     // Get the main cover_url field and the image upload component field
     const mainCoverUrlField = document.getElementById("cover_url_main");
-    const componentCoverUrlField = document.querySelector(".image-upload-component input[name='cover_url']");
+    const componentCoverUrlField = document.querySelector(".image-upload-component input.image-url-input") || document.querySelector(".image-upload-component input[name='cover_url']");
 
     // Function to sync the fields
     function syncCoverUrlFields() {
@@ -1502,6 +1539,19 @@ document.addEventListener("DOMContentLoaded", function() {
         componentCoverUrlField.addEventListener("change", syncCoverUrlFields);
     }
 
+    // Add specific handler for the remove image button
+    const removeButton = document.querySelector(".image-upload-component .remove-image");
+    if (removeButton) {
+        removeButton.addEventListener("click", function() {
+            setTimeout(function() {
+                if (mainCoverUrlField) {
+                    mainCoverUrlField.value = "";
+                    console.log("Cleared cover_url_main after remove image clicked");
+                }
+            }, 100);
+        });
+    }
+
     // Sync fields when the form is submitted
     const form = document.getElementById("directory-item-form");
     if (form) {
@@ -1517,6 +1567,15 @@ document.addEventListener("DOMContentLoaded", function() {
                     mainCoverUrlField.value = previewImg.src;
                 }
                 console.log("Updated cover_url fields from preview image:", previewImg.src);
+            } else {
+                // If no image is displayed, clear the fields
+                const imageComponent = document.querySelector(".image-upload-component");
+                if (imageComponent && imageComponent.classList.contains("empty")) {
+                    if (mainCoverUrlField) {
+                        mainCoverUrlField.value = "";
+                    }
+                    console.log("Image was removed, clearing cover_url_main field");
+                }
             }
         });
     }

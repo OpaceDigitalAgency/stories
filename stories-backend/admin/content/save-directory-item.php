@@ -48,20 +48,12 @@ try {
     // Log the cover URL for debugging
     error_log("Cover URL from form: " . $cover_url);
 
-    // If we have an ID and the cover_url is empty, keep the existing one from the database
-    if ($id && empty($cover_url)) {
-        try {
-            $stmt = $db->prepare("SELECT cover_url FROM directory_items WHERE id = ?");
-            $stmt->execute([$id]);
-            $existingData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($existingData && !empty($existingData['cover_url'])) {
-                $cover_url = $existingData['cover_url'];
-                error_log("Using existing cover_url from database: " . $cover_url);
-            }
-        } catch (Exception $e) {
-            error_log("Error checking existing cover_url: " . $e->getMessage());
-        }
+    // If cover_url is empty, set it to NULL
+    if (empty($cover_url)) {
+        $cover_url = null;
+        error_log("Setting cover_url to NULL");
+    } else {
+        error_log("Setting cover_url to: " . $cover_url);
     }
 
     // Get book-specific data if applicable
@@ -155,22 +147,21 @@ try {
 
     if ($id) {
         // Update existing directory item
-        $stmt = $db->prepare("UPDATE directory_items SET
-            title = ?,
-            description = ?,
-            category_id = ?,
-            website_url = ?,
-            contact_email = ?,
-            contact_phone = ?,
-            address = ?,
-            featured = ?,
-            is_published = ?,
-            slug = ?,
-            published_at = ?,
-            cover_url = ?,
-            updated_at = NOW()
-            WHERE id = ?");
-        $stmt->execute([
+        $setClause = [
+            "title = ?",
+            "description = ?",
+            "category_id = ?",
+            "website_url = ?",
+            "contact_email = ?",
+            "contact_phone = ?",
+            "address = ?",
+            "featured = ?",
+            "is_published = ?",
+            "slug = ?",
+            "published_at = ?"
+        ];
+
+        $params = [
             $title,
             $description,
             $category_id,
@@ -181,30 +172,43 @@ try {
             $featured,
             $is_published,
             $slug,
-            $published_at,
-            $cover_url,
-            $id
-        ]);
+            $published_at
+        ];
+
+        // Handle NULL values properly in SQL for cover_url
+        if ($cover_url === null) {
+            $setClause[] = "cover_url = NULL";
+        } else {
+            $setClause[] = "cover_url = ?";
+            $params[] = $cover_url;
+        }
+
+        $setClause[] = "updated_at = NOW()";
+        $params[] = $id; // Add ID for WHERE clause
+
+        $sql = "UPDATE directory_items SET " . implode(', ', $setClause) . " WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $success = "Directory item updated successfully";
     } else {
         // Create new directory item
-        $stmt = $db->prepare("INSERT INTO directory_items (
-            title,
-            description,
-            category_id,
-            website_url,
-            contact_email,
-            contact_phone,
-            address,
-            featured,
-            is_published,
-            slug,
-            published_at,
-            cover_url,
-            created_at,
-            updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
-        $stmt->execute([
+        $columns = [
+            "title",
+            "description",
+            "category_id",
+            "website_url",
+            "contact_email",
+            "contact_phone",
+            "address",
+            "featured",
+            "is_published",
+            "slug",
+            "published_at"
+        ];
+
+        $placeholders = ["?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"];
+
+        $params = [
             $title,
             $description,
             $category_id,
@@ -215,9 +219,27 @@ try {
             $featured,
             $is_published,
             $slug,
-            $published_at,
-            $cover_url
-        ]);
+            $published_at
+        ];
+
+        // Handle NULL values properly in SQL for cover_url
+        $columns[] = "cover_url";
+        if ($cover_url === null) {
+            $placeholders[] = "NULL";
+        } else {
+            $placeholders[] = "?";
+            $params[] = $cover_url;
+        }
+
+        // Add created_at and updated_at
+        $columns[] = "created_at";
+        $columns[] = "updated_at";
+        $placeholders[] = "NOW()";
+        $placeholders[] = "NOW()";
+
+        $sql = "INSERT INTO directory_items (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $success = "Directory item created successfully";
     }
 

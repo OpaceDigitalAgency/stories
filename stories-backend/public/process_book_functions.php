@@ -302,6 +302,9 @@ function processBook($db, $bookDir) {
         // Extract data from markdown content sections
         echo "<p class='info'>Extracting metadata from markdown content sections</p>";
         echo "<p class='info'>Markdown content preview: " . substr(htmlspecialchars($markdownContent), 0, 300) . "...</p>";
+
+        // Debug: Log the title we're using
+        echo "<p class='info'>Book title being used: '$title'</p>";
         flushOutput();
 
         // Extract Book & Author Info section
@@ -338,25 +341,47 @@ function processBook($db, $bookDir) {
             // Extract Book Series
             if (preg_match('/\*\*(?:Book\s+)?Series:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $series = trim($match[1]);
-                echo "<p class='info'>Found book series in content: '$series'</p>";
+                echo "<p class='success'>Found book series in content: '$series'</p>";
+                flushOutput();
+            } else {
+                echo "<p class='warning'>No series found in Book & Author Info section</p>";
                 flushOutput();
             }
 
             // Extract Book Genre
             if (preg_match('/\*\*(?:Book\s+)?Genre:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $genre = trim($match[1]);
-                echo "<p class='info'>Found book genre in content: '$genre'</p>";
+                echo "<p class='success'>Found book genre in content: '$genre'</p>";
+                flushOutput();
+            } else {
+                echo "<p class='warning'>No genre found in Book & Author Info section</p>";
                 flushOutput();
             }
 
             // Extract Book Age Range
             if (preg_match('/\*\*(?:Book\s+)?Age\s+Range:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $bookAgeRange = trim($match[1]);
-                echo "<p class='info'>Found book age range in content: '$bookAgeRange'</p>";
+                echo "<p class='success'>Found book age range in content: '$bookAgeRange'</p>";
                 flushOutput();
                 if (!empty($bookAgeRange)) {
                     $ageRange = $bookAgeRange;
                 }
+            } else {
+                echo "<p class='warning'>No age range found in Book & Author Info section</p>";
+                flushOutput();
+            }
+
+            // Extract Book Reading Level
+            if (preg_match('/\*\*(?:Book\s+)?Reading\s+Level:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookReadingLevel = trim($match[1]);
+                echo "<p class='success'>Found book reading level in content: '$bookReadingLevel'</p>";
+                flushOutput();
+                if (!empty($bookReadingLevel)) {
+                    $readingLevel = $bookReadingLevel;
+                }
+            } else {
+                echo "<p class='warning'>No reading level found in Book & Author Info section</p>";
+                flushOutput();
             }
         }
 
@@ -471,6 +496,13 @@ function processBook($db, $bookDir) {
         // Extract genre and series data
         $genre = isset($data['genre']) ? $data['genre'] : '';
         $series = isset($data['series']) ? $data['series'] : '';
+        $readingLevel = isset($data['reading_level']) ? $data['reading_level'] : '';
+
+        // Debug: Log the genre, series, and reading level from front matter
+        echo "<p class='info'>Genre from front matter: " . ($genre ? "'$genre'" : "Not set") . "</p>";
+        echo "<p class='info'>Series from front matter: " . ($series ? "'$series'" : "Not set") . "</p>";
+        echo "<p class='info'>Reading level from front matter: " . ($readingLevel ? "'$readingLevel'" : "Not set") . "</p>";
+        flushOutput();
 
         // Extract enhanced data for JSON storage
         $enhancedData = [];
@@ -962,6 +994,7 @@ function processBook($db, $bookDir) {
             // Debug values before executing SQL
             echo "<p class='info'>Book data to be updated:</p>";
             echo "<ul>";
+            echo "<li>title: $title</li>";
             echo "<li>directory_item_id: $directoryItemId</li>";
             echo "<li>isbn: $isbn</li>";
             echo "<li>isbn13: $isbn13</li>";
@@ -972,6 +1005,8 @@ function processBook($db, $bookDir) {
             echo "<li>age_range: $ageRange</li>";
             echo "<li>reading_level: $readingLevel</li>";
             echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "<li>genre: $genre</li>";
+            echo "<li>series: $series</li>";
             echo "</ul>";
             flushOutput();
 
@@ -1032,6 +1067,7 @@ function processBook($db, $bookDir) {
             echo "<p class='info'>Book data to be inserted:</p>";
             echo "<ul>";
             echo "<li>directory_item_id: $directoryItemId</li>";
+            echo "<li>title: $title</li>";
             echo "<li>isbn: $isbn</li>";
             echo "<li>isbn13: $isbn13</li>";
             echo "<li>author: $author</li>";
@@ -1041,6 +1077,8 @@ function processBook($db, $bookDir) {
             echo "<li>age_range: $ageRange</li>";
             echo "<li>reading_level: $readingLevel</li>";
             echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "<li>genre: $genre</li>";
+            echo "<li>series: $series</li>";
             echo "</ul>";
             flushOutput();
 

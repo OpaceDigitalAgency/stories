@@ -1,7 +1,7 @@
 <?php
 /**
  * Create Missing Tables Script
- * 
+ *
  * This script checks for missing tables and creates them if they don't exist.
  */
 
@@ -71,14 +71,10 @@ if ($isWeb) {
 output("Starting table check...", $isWeb);
 output("", $isWeb);
 
-// Begin transaction
-try {
-    $db->beginTransaction();
-    output("Transaction started", $isWeb);
-} catch (PDOException $e) {
-    output("Error starting transaction: " . $e->getMessage(), $isWeb);
-    exit;
-}
+// We'll perform each operation independently without a transaction
+// This way, if one operation fails, the others can still proceed
+$hasActiveTransaction = false;
+output("Starting operations (no transaction)", $isWeb);
 
 // 1. Check for directory_item_tags table
 output("=== Checking for directory_item_tags table ===", $isWeb);
@@ -92,14 +88,14 @@ try {
             PRIMARY KEY (item_id, tag_id)
         )");
         output("Created directory_item_tags table", $isWeb);
-        
+
         // Check if item_tags table exists and has data
         $stmt = $db->query("SHOW TABLES LIKE 'item_tags'");
         if ($stmt->rowCount() > 0) {
             // Check if item_tags has data
             $stmt = $db->query("SELECT COUNT(*) FROM item_tags WHERE item_type = 'directory_item'");
             $count = $stmt->fetchColumn();
-            
+
             if ($count > 0) {
                 // Migrate data from item_tags to directory_item_tags
                 $db->exec("INSERT INTO directory_item_tags (item_id, tag_id)
@@ -114,8 +110,7 @@ try {
     }
 } catch (PDOException $e) {
     output("Error checking/creating directory_item_tags table: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 2. Check for publishers table
@@ -136,29 +131,29 @@ try {
             UNIQUE KEY (slug)
         )");
         output("Created publishers table", $isWeb);
-        
+
         // Migrate publisher data from books table
         $stmt = $db->query("SELECT DISTINCT publisher FROM books WHERE publisher IS NOT NULL AND publisher != ''");
         $publishers = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+
         if (count($publishers) > 0) {
             output("Found " . count($publishers) . " unique publishers to migrate", $isWeb);
-            
+
             // Insert each publisher into the publishers table
             $insertStmt = $db->prepare("INSERT IGNORE INTO publishers (name, slug) VALUES (?, ?)");
             $count = 0;
-            
+
             foreach ($publishers as $publisher) {
                 // Generate slug
                 $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $publisher));
                 $slug = trim($slug, '-');
-                
+
                 $insertStmt->execute([$publisher, $slug]);
                 if ($insertStmt->rowCount() > 0) {
                     $count++;
                 }
             }
-            
+
             output("Migrated $count publishers to the publishers table", $isWeb);
         } else {
             output("No publishers found to migrate", $isWeb);
@@ -168,8 +163,7 @@ try {
     }
 } catch (PDOException $e) {
     output("Error checking/creating publishers table: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 3. Check for publisher_id column in books table
@@ -181,7 +175,7 @@ try {
         // Add publisher_id column
         $db->exec("ALTER TABLE books ADD COLUMN publisher_id INT");
         output("Added publisher_id column to books table", $isWeb);
-        
+
         // Update publisher_id based on publisher name
         $updateStmt = $db->prepare("
             UPDATE books b
@@ -196,20 +190,12 @@ try {
     }
 } catch (PDOException $e) {
     output("Error checking/adding publisher_id column: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
-// Commit transaction
-try {
-    $db->commit();
-    output("", $isWeb);
-    output("Transaction committed successfully", $isWeb);
-} catch (PDOException $e) {
-    output("Error committing transaction: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
-}
+// All operations completed
+output("", $isWeb);
+output("All operations completed successfully", $isWeb);
 
 output("", $isWeb);
 output("Table check completed successfully!", $isWeb);

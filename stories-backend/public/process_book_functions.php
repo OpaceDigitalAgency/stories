@@ -305,7 +305,7 @@ function processBook($db, $bookDir) {
         flushOutput();
 
         // Extract Book & Author Info section
-        $bookInfoPattern = '/#{1,3}\s*BOOK\s*&\s*AUTHOR\s*INFO.*?(?=#{1,3}|$)/is';
+        $bookInfoPattern = '/#{1,3}\s*Book\s*&\s*Author\s*Info.*?(?=#{1,3}|$)/is';
         echo "<p class='info'>Searching for Book & Author Info section with pattern: " . htmlspecialchars($bookInfoPattern) . "</p>";
         flushOutput();
 
@@ -315,7 +315,7 @@ function processBook($db, $bookDir) {
             flushOutput();
 
             // Extract Book Title
-            if (preg_match('/Book\s+Title:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+            if (preg_match('/\*\*Book\s+Title:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $bookTitle = trim($match[1]);
                 echo "<p class='info'>Found book title in content: '$bookTitle'</p>";
                 flushOutput();
@@ -326,7 +326,7 @@ function processBook($db, $bookDir) {
             }
 
             // Extract Book Author
-            if (preg_match('/Book\s+Author:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+            if (preg_match('/\*\*Book\s+Author:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $bookAuthor = trim($match[1]);
                 echo "<p class='info'>Found book author in content: '$bookAuthor'</p>";
                 flushOutput();
@@ -336,21 +336,21 @@ function processBook($db, $bookDir) {
             }
 
             // Extract Book Series
-            if (preg_match('/Book\s+Series:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+            if (preg_match('/\*\*(?:Book\s+)?Series:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $series = trim($match[1]);
                 echo "<p class='info'>Found book series in content: '$series'</p>";
                 flushOutput();
             }
 
             // Extract Book Genre
-            if (preg_match('/Book\s+Genre:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+            if (preg_match('/\*\*(?:Book\s+)?Genre:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $genre = trim($match[1]);
                 echo "<p class='info'>Found book genre in content: '$genre'</p>";
                 flushOutput();
             }
 
             // Extract Book Age Range
-            if (preg_match('/Book\s+Age\s+Range:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+            if (preg_match('/\*\*(?:Book\s+)?Age\s+Range:\*\*\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
                 $bookAgeRange = trim($match[1]);
                 echo "<p class='info'>Found book age range in content: '$bookAgeRange'</p>";
                 flushOutput();
@@ -371,7 +371,7 @@ function processBook($db, $bookDir) {
         }
 
         // Extract Publisher Information section
-        $publisherPattern = '/#{1,3}\s*PUBLISHER\s*INFO.*?(?=#{1,3}|$)/is';
+        $publisherPattern = '/#{1,3}\s*Publisher\s*Information.*?(?=#{1,3}|$)/is';
         echo "<p class='info'>Searching for Publisher Information section with pattern: " . htmlspecialchars($publisherPattern) . "</p>";
         flushOutput();
 
@@ -381,7 +381,7 @@ function processBook($db, $bookDir) {
             flushOutput();
         } else {
             // Try alternative pattern
-            $altPublisherPattern = '/#{1,3}\s*PUBLISHER.*?(?=#{1,3}|$)/is';
+            $altPublisherPattern = '/#{1,3}\s*Publisher.*?(?=#{1,3}|$)/is';
             echo "<p class='info'>Trying alternative pattern for Publisher section: " . htmlspecialchars($altPublisherPattern) . "</p>";
             flushOutput();
 
@@ -407,7 +407,7 @@ function processBook($db, $bookDir) {
         }
 
         // Extract First published date with improved pattern
-        if (preg_match('/First\s+published\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
+        if (preg_match('/First\s+[Pp]ublished\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
             $publisherDate = trim($match[1]);
             echo "<p class='info'>Found publication date in publisher info: '$publisherDate'</p>";
             flushOutput();
@@ -419,8 +419,8 @@ function processBook($db, $bookDir) {
             }
         }
 
-        // Extract ISBN
-        if (preg_match('/ISBN.*?([0-9-]+)/i', $publisherContent, $match)) {
+        // Extract ISBN - try multiple patterns
+        if (preg_match('/ISBN\s*[-:]\s*([0-9-]+)/i', $publisherContent, $match)) {
             $extractedIsbn = trim($match[1]);
             echo "<p class='info'>Found ISBN in publisher info: '$extractedIsbn'</p>";
             flushOutput();
@@ -435,6 +435,24 @@ function processBook($db, $bookDir) {
                 echo "<p class='success'>Using ISBN-13 from publisher info</p>";
             }
             flushOutput();
+        } else {
+            // Try alternative pattern for ISBN
+            if (preg_match('/ISBN.*?(\d[\d-]+\d)/i', $publisherContent, $match)) {
+                $extractedIsbn = trim($match[1]);
+                echo "<p class='info'>Found ISBN with alternative pattern: '$extractedIsbn'</p>";
+                flushOutput();
+
+                // Determine if it's ISBN-10 or ISBN-13 based on length
+                $cleanIsbn = preg_replace('/[^0-9]/', '', $extractedIsbn);
+                if (strlen($cleanIsbn) == 10) {
+                    $isbn = $extractedIsbn;
+                    echo "<p class='success'>Using ISBN-10 from publisher info</p>";
+                } elseif (strlen($cleanIsbn) == 13) {
+                    $isbn13 = $extractedIsbn;
+                    echo "<p class='success'>Using ISBN-13 from publisher info</p>";
+                }
+                flushOutput();
+            }
         }
 
         // Extract Page Count

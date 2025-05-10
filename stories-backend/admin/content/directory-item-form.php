@@ -973,6 +973,29 @@ Value in $bookData['genre']: <?php echo isset($bookData['genre']) ? "'" . htmlsp
 Selected option in dropdown: <?php
     if (isset($bookData['genre'])) {
         $found = false;
+        // Define genres if not already defined
+        if (!isset($allGenres) || !is_array($allGenres)) {
+            $allGenres = [
+                'fiction' => 'Fiction',
+                'non-fiction' => 'Non-Fiction',
+                'childrens' => 'Children\'s',
+                'young-adult' => 'Young Adult',
+                'mystery' => 'Mystery',
+                'thriller' => 'Thriller',
+                'romance' => 'Romance',
+                'science-fiction' => 'Science Fiction',
+                'fantasy' => 'Fantasy',
+                'horror' => 'Horror',
+                'biography' => 'Biography',
+                'history' => 'History',
+                'poetry' => 'Poetry',
+                'adventure' => 'Adventure',
+                'comedy' => 'Comedy',
+                'drama' => 'Drama',
+                'educational' => 'Educational'
+            ];
+        }
+
         foreach ($allGenres as $value => $label) {
             if ($value == $bookData['genre']) {
                 echo "Found match: value='$value', label='$label'";
@@ -995,6 +1018,23 @@ Value in $bookData['reading_level']: <?php echo isset($bookData['reading_level']
 Selected option in dropdown: <?php
     if (isset($bookData['reading_level'])) {
         $found = false;
+        // Define reading levels if not already defined
+        if (!isset($allReadingLevels) || !is_array($allReadingLevels)) {
+            $allReadingLevels = [
+                'early-reader' => 'Early Reader',
+                'picture-book' => 'Picture Book',
+                'chapter-book' => 'Chapter Book',
+                'middle-grade' => 'Middle Grade',
+                'young-adult' => 'Young Adult',
+                'adult' => 'Adult',
+                'level-1' => 'Level 1',
+                'level-2' => 'Level 2',
+                'level-3' => 'Level 3',
+                'level-4' => 'Level 4',
+                'level-5' => 'Level 5'
+            ];
+        }
+
         foreach ($allReadingLevels as $value => $label) {
             if ($value == $bookData['reading_level']) {
                 echo "Found match: value='$value', label='$label'";

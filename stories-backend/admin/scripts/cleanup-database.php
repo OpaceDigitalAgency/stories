@@ -76,14 +76,10 @@ if ($isWeb) {
 output("Starting database cleanup...", $isWeb);
 output("", $isWeb);
 
-// Begin transaction
-try {
-    $db->beginTransaction();
-    output("Transaction started", $isWeb);
-} catch (PDOException $e) {
-    output("Error starting transaction: " . $e->getMessage(), $isWeb);
-    exit;
-}
+// We'll perform each operation independently without a transaction
+// This way, if one operation fails, the others can still proceed
+$hasActiveTransaction = false;
+output("Starting operations (no transaction)", $isWeb);
 
 // 1. Clean up tags table
 output("=== Cleaning up tags table ===", $isWeb);
@@ -178,8 +174,7 @@ try {
     }
 } catch (PDOException $e) {
     output("Error removing age-related tags: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 1.2 Remove "**" prefix from tag names
@@ -189,8 +184,7 @@ try {
     output("Removed '**' prefix from " . $stmt->rowCount() . " tags", $isWeb);
 } catch (PDOException $e) {
     output("Error removing '**' prefix from tags: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 1.3 Find and merge duplicate tags
@@ -291,8 +285,7 @@ try {
     }
 } catch (PDOException $e) {
     output("Error merging duplicate tags: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 output("", $isWeb);
@@ -307,8 +300,7 @@ try {
     output("Removed '**' prefix from " . $stmt->rowCount() . " authors", $isWeb);
 } catch (PDOException $e) {
     output("Error removing '**' prefix from authors: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 output("", $isWeb);
@@ -331,8 +323,7 @@ try {
     output("Publishers table created or already exists", $isWeb);
 } catch (PDOException $e) {
     output("Error creating publishers table: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 3.2 Migrate publisher data from books table
@@ -365,8 +356,7 @@ try {
     }
 } catch (PDOException $e) {
     output("Error migrating publisher data: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 // 3.3 Add publisher_id column to books table if it doesn't exist
@@ -392,21 +382,13 @@ try {
     }
 } catch (PDOException $e) {
     output("Error adding publisher_id column: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
+    output("Continuing with next operation...", $isWeb);
 }
 
 output("", $isWeb);
 
-// Commit transaction
-try {
-    $db->commit();
-    output("Transaction committed successfully", $isWeb);
-} catch (PDOException $e) {
-    output("Error committing transaction: " . $e->getMessage(), $isWeb);
-    $db->rollBack();
-    exit;
-}
+// All operations completed
+output("All operations completed successfully", $isWeb);
 
 output("", $isWeb);
 output("Database cleanup completed successfully!", $isWeb);

@@ -859,25 +859,15 @@ if ($debug) {
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="series">Series</label>
-                                        <?php if (function_exists('renderSeriesDropdown')): ?>
-                                            <?php echo renderSeriesDropdown($db, $bookData['series'] ?? ''); ?>
-                                        <?php else: ?>
-                                            <select id="series" name="book_series" class="form-control">
-                                                <option value="">Select Series</option>
-                                                <?php foreach ($seriesList as $series): ?>
-                                                    <option value="<?php echo htmlspecialchars($series); ?>"
-                                                            <?php echo (isset($bookData['series']) && $bookData['series'] == $series) ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($series); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                                <option value="custom" <?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? 'selected' : ''; ?>>
-                                                    Other (enter manually)
-                                                </option>
-                                            </select>
-                                            <input type="text" id="custom_series" name="custom_series" class="form-control mt-1 <?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? '' : 'd-none'; ?>"
-                                                placeholder="Enter series name"
-                                                value="<?php echo (isset($bookData['series']) && !in_array($bookData['series'], $seriesList)) ? htmlspecialchars($bookData['series']) : ''; ?>">
-                                        <?php endif; ?>
+                                        <input type="text" id="series" name="book_series" class="form-control"
+                                            value="<?php echo htmlspecialchars($bookData['series'] ?? ''); ?>"
+                                            placeholder="Enter series name"
+                                            list="series-list">
+                                        <datalist id="series-list">
+                                            <?php foreach ($seriesList as $series): ?>
+                                                <option value="<?php echo htmlspecialchars($series); ?>">
+                                            <?php endforeach; ?>
+                                        </datalist>
                                     </div>
                                 </div>
                             </div>
@@ -1161,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Manually trigger initialization of book form enhancements
                 if (typeof initTagSelection === 'function') initTagSelection();
                 if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
-                if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
+                // Series is now a text field with datalist, no initialization needed
                 if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
                 // Disable JavaScript enhancement for these fields - using PHP-generated dropdowns instead
                 // if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
@@ -1313,7 +1303,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup all custom fields
     setupCustomField('author', 'custom_author');
     setupCustomField('publisher', 'custom_publisher');
-    setupCustomField('series', 'custom_series');
 
     // Handle form submission for all custom fields
     const form = document.querySelector('form.content-form');
@@ -1333,12 +1322,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 publisherSelect.value = customPublisherInput.value.trim();
             }
 
-            // Handle custom series
-            const seriesSelect = document.getElementById('series');
-            const customSeriesInput = document.getElementById('custom_series');
-            if (seriesSelect && customSeriesInput && seriesSelect.value === 'custom' && customSeriesInput.value.trim()) {
-                seriesSelect.value = customSeriesInput.value.trim();
-            }
+            // Series is now a text field with datalist, no custom handling needed
         });
     }
 });
@@ -1420,7 +1404,7 @@ window.addEventListener('load', function() {
         // Force initialization of book form enhancements
         if (typeof initTagSelection === 'function') initTagSelection();
         if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
-        if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
+        // Series is now a text field with datalist, no initialization needed
         if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
         // Disable JavaScript enhancement for these fields - using PHP-generated dropdowns instead
         // if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();

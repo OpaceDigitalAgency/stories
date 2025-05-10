@@ -29,18 +29,19 @@ require_once '../includes/ai-image-generator-component.php';
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
     if (strpos($filePath, 'http') === 0) {
-        return $filePath;
+        // Clean up any instances of ../../ in the URL
+        return preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $filePath);
+    }
+
+    // If it's a relative URL starting with ../
+    if (strpos($filePath, '../') === 0) {
+        $relativePath = substr($filePath, 3); // Remove the leading ../
+        return 'https://' . $_SERVER['HTTP_HOST'] . '/' . $relativePath;
     }
 
     // If it's a relative URL starting with /
     if (strpos($filePath, '/') === 0) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
-    }
-
-    // If it's a relative URL starting with ../
-    if (strpos($filePath, '../') === 0) {
-        $relativePath = substr($filePath, 2); // Remove the leading ..
-        return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
 
     // If it's a server path
@@ -49,15 +50,15 @@ function getDisplayUrl($filePath) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
 
-    // For paths that don't exist but might be valid
+    // For paths with uploads directory
     if (strpos($filePath, 'uploads/') !== false) {
         // Extract the path after 'uploads/'
-        $pattern = '/.*?(\/uploads\/.*)/i';
-        if (preg_match($pattern, $filePath, $matches)) {
-            return 'https://' . $_SERVER['HTTP_HOST'] . $matches[1];
+        if (preg_match('/(.*?uploads\/)(.*?)$/', $filePath, $matches)) {
+            return 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/' . $matches[2];
         }
     }
 
+    // If all else fails, just return the path with the host
     return 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($filePath, '/');
 }
 

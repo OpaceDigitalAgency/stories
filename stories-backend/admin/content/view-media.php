@@ -23,7 +23,8 @@ require_once '../../includes/image_optimizer.php';
 function getDisplayUrl($filePath) {
     // If it's already an absolute URL
     if (strpos($filePath, 'http') === 0) {
-        return $filePath;
+        // Clean up any instances of ../../ in the URL
+        return preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $filePath);
     }
 
     // Check for optimized versions
@@ -33,12 +34,28 @@ function getDisplayUrl($filePath) {
 
         // Check if we have optimized versions
         if (!empty($GLOBALS['media']['medium_url'])) {
-            return $GLOBALS['media']['medium_url'];
+            $url = $GLOBALS['media']['medium_url'];
+            // Clean up any instances of ../../ in the URL
+            if (strpos($url, 'http') === 0) {
+                return preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $url);
+            }
+            return $url;
         }
 
         if (!empty($GLOBALS['media']['large_url'])) {
-            return $GLOBALS['media']['large_url'];
+            $url = $GLOBALS['media']['large_url'];
+            // Clean up any instances of ../../ in the URL
+            if (strpos($url, 'http') === 0) {
+                return preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $url);
+            }
+            return $url;
         }
+    }
+
+    // If it's a relative URL starting with ../
+    if (strpos($filePath, '../') === 0) {
+        $relativePath = substr($filePath, 3); // Remove the leading ../
+        return 'https://' . $_SERVER['HTTP_HOST'] . '/' . $relativePath;
     }
 
     // If it's a relative URL starting with /
@@ -52,17 +69,62 @@ function getDisplayUrl($filePath) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
 
-    return $filePath;
+    // For paths with uploads directory
+    if (strpos($filePath, 'uploads/') !== false) {
+        // Extract the path after 'uploads/'
+        if (preg_match('/(.*?uploads\/)(.*?)$/', $filePath, $matches)) {
+            return 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/' . $matches[2];
+        }
+    }
+
+    // If all else fails, just return the path with the host
+    return 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($filePath, '/');
 }
 
 // Function to check if a file exists (handling both local paths and URLs)
 function fileExistsCheck($path) {
     // If it's a URL
     if (strpos($path, 'http') === 0) {
-        $headers = @get_headers($path);
+        // Clean up any instances of ../../ in the URL
+        $cleanPath = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $path);
+
+        // Try with curl first (more reliable)
+        if (function_exists('curl_init')) {
+            $ch = curl_init($cleanPath);
+            curl_setopt($ch, CURLOPT_NOBODY, true);
+            curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            return $httpCode == 200;
+        }
+
+        // Fallback to get_headers
+        $headers = @get_headers($cleanPath);
         return $headers && strpos($headers[0], '200') !== false;
     }
-    
+
+    // If it's a relative path with ../
+    if (strpos($path, '../') === 0) {
+        // Try to resolve the real path
+        $basePath = realpath(dirname(__FILE__) . '/../../');
+        $relativePath = substr($path, 3); // Remove the leading ../
+        $fullPath = $basePath . '/' . $relativePath;
+        return file_exists($fullPath);
+    }
+
+    // If it's a path with /uploads/
+    if (strpos($path, '/uploads/') !== false || strpos($path, 'uploads/') !== false) {
+        // Try to find the file in the uploads directory
+        $uploadsPath = realpath(dirname(__FILE__) . '/../../uploads/');
+        if ($uploadsPath) {
+            // Extract the part after /uploads/
+            if (preg_match('/(\/uploads\/|uploads\/)(.*?)$/', $path, $matches)) {
+                $filePath = $uploadsPath . '/' . $matches[2];
+                return file_exists($filePath);
+            }
+        }
+    }
+
     // If it's a local file
     return file_exists($path);
 }
@@ -151,8 +213,14 @@ require_once '../includes/header.php';
             <div class="col-md-6">
                 <div class="media-preview mb-4">
                     <?php if ($isImage): ?>
+                        <?php
+                        // Generate alt text from filename if not provided
+                        $altText = !empty($media['alt_text']) ? $media['alt_text'] : pathinfo($media['filename'], PATHINFO_FILENAME);
+                        $altText = str_replace(['-', '_'], ' ', $altText);
+                        $altText = ucfirst($altText);
+                        ?>
                         <img src="<?php echo htmlspecialchars($displayUrl); ?>"
-                             alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"
+                             alt="<?php echo htmlspecialchars($altText); ?>"
                              class="img-preview">
                     <?php else: ?>
                         <div class="file-icon-large">
@@ -246,7 +314,21 @@ require_once '../includes/header.php';
 
                     <div class="detail-item mt-4">
                         <strong>Usage in HTML:</strong>
-                        <pre class="code-block"><code><?php if ($isImage): ?>&lt;img src="<?php echo htmlspecialchars($displayUrl); ?>" alt="<?php echo htmlspecialchars($media['alt_text'] ?? $media['filename']); ?>"&gt;<?php else: ?>&lt;a href="<?php echo htmlspecialchars($displayUrl); ?>"&gt;Download <?php echo htmlspecialchars($media['filename']); ?>&lt;/a&gt;<?php endif; ?></code></pre>
+                        <pre class="code-block"><code><?php
+                        // Ensure we have an absolute URL for the HTML usage example
+                        $absoluteUrl = $displayUrl;
+                        if (strpos($absoluteUrl, 'http') !== 0) {
+                            $absoluteUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($absoluteUrl, '/');
+                        }
+                        // Clean up any instances of ../../ in the URL
+                        $absoluteUrl = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $absoluteUrl);
+
+                        // Generate alt text from filename if not provided
+                        $altText = !empty($media['alt_text']) ? $media['alt_text'] : pathinfo($media['filename'], PATHINFO_FILENAME);
+                        $altText = str_replace(['-', '_'], ' ', $altText);
+                        $altText = ucfirst($altText);
+
+                        if ($isImage): ?>&lt;img src="<?php echo htmlspecialchars($absoluteUrl); ?>" alt="<?php echo htmlspecialchars($altText); ?>"&gt;<?php else: ?>&lt;a href="<?php echo htmlspecialchars($absoluteUrl); ?>"&gt;Download <?php echo htmlspecialchars($media['filename']); ?>&lt;/a&gt;<?php endif; ?></code></pre>
                     </div>
                 </div>
             </div>

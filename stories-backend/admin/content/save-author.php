@@ -37,6 +37,11 @@ try {
     $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
     $location = trim($_POST['location'] ?? '');
 
+    // Fix for empty avatar_url that should be NULL in database
+    if (empty($avatar_url)) {
+        $avatar_url = null;
+    }
+
     // Log form data for debugging
     error_log("Save author form data: " . print_r($_POST, true));
     error_log("Avatar URL from form: " . $avatar_url);
@@ -73,6 +78,9 @@ try {
             error_log("Updating avatar image to: " . $avatar_url);
         }
     }
+
+    // Always log the final avatar_url value that will be used
+    error_log("Final avatar_url value to be saved: " . ($avatar_url ?? 'NULL'));
 
     // Validate required fields
     if (empty($name)) {
@@ -198,8 +206,13 @@ try {
         }
 
         if ($hasAvatarColumn) {
-            $setClause[] = "avatar_url = ?";
-            $params[] = $avatar_url;
+            // Handle NULL values properly in SQL
+            if ($avatar_url === null) {
+                $setClause[] = "avatar_url = NULL";
+            } else {
+                $setClause[] = "avatar_url = ?";
+                $params[] = $avatar_url;
+            }
         }
 
         if ($hasAuthorTypeColumn) {
@@ -251,8 +264,12 @@ try {
 
         if ($hasAvatarColumn) {
             $columns[] = "avatar_url";
-            $placeholders[] = "?";
-            $params[] = $avatar_url;
+            if ($avatar_url === null) {
+                $placeholders[] = "NULL";
+            } else {
+                $placeholders[] = "?";
+                $params[] = $avatar_url;
+            }
         }
 
         if ($hasAuthorTypeColumn) {

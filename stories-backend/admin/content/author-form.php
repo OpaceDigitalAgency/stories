@@ -181,9 +181,15 @@ try {
             <div class="section-body">
                 <?php
                 // Render image upload component
+                // Check if avatar_url is empty or points to default-avatar.svg
+                $avatarUrl = $author['avatar_url'] ?? '';
+                if (empty($avatarUrl) || strpos($avatarUrl, 'default-avatar.svg') !== false) {
+                    $avatarUrl = ''; // Clear it so the component shows "No image selected"
+                }
+
                 renderImageUploadComponent(
                     'avatar_url',
-                    $author['avatar_url'] ?? '',
+                    $avatarUrl,
                     'Profile Picture',
                     'author',
                     $author['id'] ?? null

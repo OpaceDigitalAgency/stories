@@ -72,7 +72,7 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
                         break;
                     case 'directory_item':
                         $tableName = 'directory_items';
-                        $thumbnailField = 'image_url';
+                        $thumbnailField = 'cover_url';
                         break;
                     case 'game':
                         $tableName = 'games';

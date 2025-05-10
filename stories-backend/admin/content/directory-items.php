@@ -100,7 +100,7 @@ try {
                d.contact_email,
                d.contact_phone,
                d.address,
-               d.cover_url as image_url,
+               d.cover_url,
                d.featured,
                d.is_published,
                d.slug,
@@ -234,7 +234,7 @@ if (function_exists('renderEnhancedTable')) {
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
-            'image' => !empty($item['cover_url']) ? $item['cover_url'] : '../assets/images/default-cover.svg', // Changed from 'cover_url' to 'image' to match stories.php
+            'image' => !empty($item['cover_url']) ? $item['cover_url'] : '../assets/images/default-cover.svg',
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',

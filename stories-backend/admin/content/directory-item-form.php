@@ -1240,6 +1240,32 @@ setTimeout(function() {
         // Log the current state
         console.log('Book fields final display state:', bookFields.style.display);
         console.log('Book fields computed style:', getComputedStyle(bookFields).display);
+
+        // Ensure the form preserves the selected values
+        const form = document.querySelector('form.content-form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                // Log the values before submission
+                const ageRangeSelect = document.getElementById('age_range');
+                const genreSelect = document.getElementById('genre');
+                const readingLevelSelect = document.getElementById('reading_level');
+
+                if (ageRangeSelect) {
+                    console.log('Submitting with age range value:', ageRangeSelect.value);
+                    console.log('Selected age range option:', ageRangeSelect.options[ageRangeSelect.selectedIndex]?.text);
+                }
+
+                if (genreSelect) {
+                    console.log('Submitting with genre value:', genreSelect.value);
+                    console.log('Selected genre option:', genreSelect.options[genreSelect.selectedIndex]?.text);
+                }
+
+                if (readingLevelSelect) {
+                    console.log('Submitting with reading level value:', readingLevelSelect.value);
+                    console.log('Selected reading level option:', readingLevelSelect.options[readingLevelSelect.selectedIndex]?.text);
+                }
+            });
+        }
     }
 }, 500);
 </script>

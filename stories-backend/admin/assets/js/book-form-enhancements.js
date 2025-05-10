@@ -141,8 +141,24 @@ function initAgeRangeDropdown() {
     const ageRangeSelect = document.getElementById('age_range');
     if (!ageRangeSelect) return;
 
-    // Get the current value
+    // Log the initial state
+    console.log('Initializing age range dropdown');
+    console.log('Initial value:', ageRangeSelect.value);
+    console.log('Initial selected index:', ageRangeSelect.selectedIndex);
+
+    // Store the current value before we modify the dropdown
     const currentValue = ageRangeSelect.value;
+    console.log('Current age range value:', currentValue);
+
+    // Also check if there's a selected option already
+    let initialSelectedOption = null;
+    for (let i = 0; i < ageRangeSelect.options.length; i++) {
+        if (ageRangeSelect.options[i].selected) {
+            initialSelectedOption = ageRangeSelect.options[i];
+            console.log('Found initially selected option:', initialSelectedOption.value, initialSelectedOption.text);
+            break;
+        }
+    }
 
     // Common age range options to add if they don't exist
     const ageRangeOptions = [
@@ -167,6 +183,7 @@ function initAgeRangeDropdown() {
 
     // Get existing options
     const existingOptions = Array.from(ageRangeSelect.options).map(option => option.value.toLowerCase());
+    console.log('Existing age range options:', existingOptions);
 
     // Add missing options
     ageRangeOptions.forEach(ageRange => {
@@ -180,23 +197,56 @@ function initAgeRangeDropdown() {
 
     // Set the selected option if there's a value
     if (currentValue) {
-        // Check if the value exists in the options
-        const existingOption = Array.from(ageRangeSelect.options).find(option =>
-            option.value.toLowerCase() === currentValue.toLowerCase() ||
-            option.text.toLowerCase() === currentValue.toLowerCase()
-        );
+        console.log('Trying to select age range value:', currentValue);
 
-        if (existingOption) {
-            existingOption.selected = true;
-        } else {
-            // Add a new option for the current value
+        // First try exact match
+        let found = false;
+        for (let i = 0; i < ageRangeSelect.options.length; i++) {
+            const option = ageRangeSelect.options[i];
+            if (option.value === currentValue) {
+                console.log('Found exact match for age range:', option.value);
+                option.selected = true;
+                found = true;
+                break;
+            }
+        }
+
+        // If no exact match, try case-insensitive match
+        if (!found) {
+            for (let i = 0; i < ageRangeSelect.options.length; i++) {
+                const option = ageRangeSelect.options[i];
+                if (option.value.toLowerCase() === currentValue.toLowerCase()) {
+                    console.log('Found case-insensitive match for age range:', option.value);
+                    option.selected = true;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        // If still no match, add a new option
+        if (!found) {
+            console.log('No match found for age range, adding new option:', currentValue);
             const newOption = document.createElement('option');
             newOption.value = currentValue;
             newOption.text = currentValue;
             newOption.selected = true;
             ageRangeSelect.appendChild(newOption);
         }
+    } else if (initialSelectedOption) {
+        // If there was a selected option but no value, restore the selection
+        console.log('Restoring initial selection for age range:', initialSelectedOption.value);
+        for (let i = 0; i < ageRangeSelect.options.length; i++) {
+            if (ageRangeSelect.options[i].value === initialSelectedOption.value) {
+                ageRangeSelect.options[i].selected = true;
+                break;
+            }
+        }
     }
+
+    // Log the final state
+    console.log('Final age range selected index:', ageRangeSelect.selectedIndex);
+    console.log('Final age range value:', ageRangeSelect.value);
 }
 
 /**
@@ -206,8 +256,24 @@ function initGenreDropdown() {
     const genreSelect = document.getElementById('genre');
     if (!genreSelect) return;
 
-    // Get the current value
+    // Log the initial state
+    console.log('Initializing genre dropdown');
+    console.log('Initial value:', genreSelect.value);
+    console.log('Initial selected index:', genreSelect.selectedIndex);
+
+    // Store the current value before we modify the dropdown
     const currentValue = genreSelect.value;
+    console.log('Current genre value:', currentValue);
+
+    // Also check if there's a selected option already
+    let initialSelectedOption = null;
+    for (let i = 0; i < genreSelect.options.length; i++) {
+        if (genreSelect.options[i].selected) {
+            initialSelectedOption = genreSelect.options[i];
+            console.log('Found initially selected option:', initialSelectedOption.value, initialSelectedOption.text);
+            break;
+        }
+    }
 
     // Common genre options to add if they don't exist
     const genreOptions = [
@@ -227,11 +293,16 @@ function initGenreDropdown() {
         'Picture Book',
         'Poetry',
         'Biography',
-        'Non-fiction'
+        'Non-fiction',
+        'Fiction',
+        'Chapter Book',
+        'Middle Grade',
+        'Young Adult'
     ];
 
     // Get existing options
     const existingOptions = Array.from(genreSelect.options).map(option => option.value.toLowerCase());
+    console.log('Existing genre options:', existingOptions);
 
     // Add missing options
     genreOptions.forEach(genre => {
@@ -245,23 +316,56 @@ function initGenreDropdown() {
 
     // Set the selected option if there's a value
     if (currentValue) {
-        // Check if the value exists in the options
-        const existingOption = Array.from(genreSelect.options).find(option =>
-            option.value.toLowerCase() === currentValue.toLowerCase() ||
-            option.text.toLowerCase() === currentValue.toLowerCase()
-        );
+        console.log('Trying to select genre value:', currentValue);
 
-        if (existingOption) {
-            existingOption.selected = true;
-        } else {
-            // Add a new option for the current value
+        // First try exact match
+        let found = false;
+        for (let i = 0; i < genreSelect.options.length; i++) {
+            const option = genreSelect.options[i];
+            if (option.value === currentValue) {
+                console.log('Found exact match for genre:', option.value);
+                option.selected = true;
+                found = true;
+                break;
+            }
+        }
+
+        // If no exact match, try case-insensitive match
+        if (!found) {
+            for (let i = 0; i < genreSelect.options.length; i++) {
+                const option = genreSelect.options[i];
+                if (option.value.toLowerCase() === currentValue.toLowerCase()) {
+                    console.log('Found case-insensitive match for genre:', option.value);
+                    option.selected = true;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        // If still no match, add a new option
+        if (!found) {
+            console.log('No match found for genre, adding new option:', currentValue);
             const newOption = document.createElement('option');
             newOption.value = currentValue;
             newOption.text = currentValue.charAt(0).toUpperCase() + currentValue.slice(1).replace(/-/g, ' ');
             newOption.selected = true;
             genreSelect.appendChild(newOption);
         }
+    } else if (initialSelectedOption) {
+        // If there was a selected option but no value, restore the selection
+        console.log('Restoring initial selection for genre:', initialSelectedOption.value);
+        for (let i = 0; i < genreSelect.options.length; i++) {
+            if (genreSelect.options[i].value === initialSelectedOption.value) {
+                genreSelect.options[i].selected = true;
+                break;
+            }
+        }
     }
+
+    // Log the final state
+    console.log('Final genre selected index:', genreSelect.selectedIndex);
+    console.log('Final genre value:', genreSelect.value);
 }
 
 /**
@@ -271,8 +375,24 @@ function initReadingLevelDropdown() {
     const readingLevelSelect = document.getElementById('reading_level');
     if (!readingLevelSelect) return;
 
-    // Get the current value
+    // Log the initial state
+    console.log('Initializing reading level dropdown');
+    console.log('Initial value:', readingLevelSelect.value);
+    console.log('Initial selected index:', readingLevelSelect.selectedIndex);
+
+    // Store the current value before we modify the dropdown
     const currentValue = readingLevelSelect.value;
+    console.log('Current reading level value:', currentValue);
+
+    // Also check if there's a selected option already
+    let initialSelectedOption = null;
+    for (let i = 0; i < readingLevelSelect.options.length; i++) {
+        if (readingLevelSelect.options[i].selected) {
+            initialSelectedOption = readingLevelSelect.options[i];
+            console.log('Found initially selected option:', initialSelectedOption.value, initialSelectedOption.text);
+            break;
+        }
+    }
 
     // Common reading level options to add if they don't exist
     const readingLevelOptions = [
@@ -303,6 +423,7 @@ function initReadingLevelDropdown() {
 
     // Get existing options
     const existingOptions = Array.from(readingLevelSelect.options).map(option => option.value.toLowerCase());
+    console.log('Existing reading level options:', existingOptions);
 
     // Add missing options
     readingLevelOptions.forEach(readingLevel => {
@@ -316,23 +437,56 @@ function initReadingLevelDropdown() {
 
     // Set the selected option if there's a value
     if (currentValue) {
-        // Check if the value exists in the options
-        const existingOption = Array.from(readingLevelSelect.options).find(option =>
-            option.value.toLowerCase() === currentValue.toLowerCase() ||
-            option.text.toLowerCase() === currentValue.toLowerCase()
-        );
+        console.log('Trying to select reading level value:', currentValue);
 
-        if (existingOption) {
-            existingOption.selected = true;
-        } else {
-            // Add a new option for the current value
+        // First try exact match
+        let found = false;
+        for (let i = 0; i < readingLevelSelect.options.length; i++) {
+            const option = readingLevelSelect.options[i];
+            if (option.value === currentValue) {
+                console.log('Found exact match for reading level:', option.value);
+                option.selected = true;
+                found = true;
+                break;
+            }
+        }
+
+        // If no exact match, try case-insensitive match
+        if (!found) {
+            for (let i = 0; i < readingLevelSelect.options.length; i++) {
+                const option = readingLevelSelect.options[i];
+                if (option.value.toLowerCase() === currentValue.toLowerCase()) {
+                    console.log('Found case-insensitive match for reading level:', option.value);
+                    option.selected = true;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        // If still no match, add a new option
+        if (!found) {
+            console.log('No match found for reading level, adding new option:', currentValue);
             const newOption = document.createElement('option');
             newOption.value = currentValue;
             newOption.text = currentValue.charAt(0).toUpperCase() + currentValue.slice(1).replace(/-/g, ' ');
             newOption.selected = true;
             readingLevelSelect.appendChild(newOption);
         }
+    } else if (initialSelectedOption) {
+        // If there was a selected option but no value, restore the selection
+        console.log('Restoring initial selection for reading level:', initialSelectedOption.value);
+        for (let i = 0; i < readingLevelSelect.options.length; i++) {
+            if (readingLevelSelect.options[i].value === initialSelectedOption.value) {
+                readingLevelSelect.options[i].selected = true;
+                break;
+            }
+        }
     }
+
+    // Log the final state
+    console.log('Final reading level selected index:', readingLevelSelect.selectedIndex);
+    console.log('Final reading level value:', readingLevelSelect.value);
 }
 
 /**

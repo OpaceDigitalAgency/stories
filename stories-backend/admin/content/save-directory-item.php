@@ -51,15 +51,60 @@ try {
             $author = trim($_POST['custom_author']);
         }
 
+        // Handle custom publisher field
+        $publisher = trim($_POST['book_publisher'] ?? '');
+        $publisherId = null;
+
+        // Check if publisher is a numeric ID (from publishers table)
+        if (is_numeric($publisher)) {
+            $publisherId = (int)$publisher;
+
+            // Get the publisher name from the ID
+            $publisherStmt = $db->prepare("SELECT name FROM publishers WHERE id = ?");
+            $publisherStmt->execute([$publisherId]);
+            $publisherData = $publisherStmt->fetch();
+
+            if ($publisherData) {
+                $publisher = $publisherData['name'];
+            }
+        } elseif ($publisher === 'custom' && !empty($_POST['custom_publisher'])) {
+            $publisher = trim($_POST['custom_publisher']);
+
+            // Check if this publisher exists in the publishers table
+            $publisherStmt = $db->prepare("SELECT id FROM publishers WHERE name = ?");
+            $publisherStmt->execute([$publisher]);
+            $publisherData = $publisherStmt->fetch();
+
+            if ($publisherData) {
+                $publisherId = $publisherData['id'];
+            } else {
+                // Create a new publisher
+                $slug = strtolower(preg_replace('/[^\w\s-]+/', '', $publisher));
+                $slug = preg_replace('/[\s-]+/', '-', $slug);
+                $slug = trim($slug, '-');
+
+                $publisherStmt = $db->prepare("INSERT INTO publishers (name, slug) VALUES (?, ?)");
+                $publisherStmt->execute([$publisher, $slug]);
+                $publisherId = $db->lastInsertId();
+            }
+        }
+
+        // Handle custom series field
+        $series = trim($_POST['book_series'] ?? '');
+        if ($series === 'custom' && !empty($_POST['custom_series'])) {
+            $series = trim($_POST['custom_series']);
+        }
+
         $bookData = [
             'author' => $author,
-            'publisher' => trim($_POST['book_publisher'] ?? ''),
+            'publisher' => $publisher,
+            'publisher_id' => $publisherId,
             'isbn' => trim($_POST['book_isbn'] ?? ''),
             'isbn13' => trim($_POST['book_isbn13'] ?? ''),
             'publication_date' => trim($_POST['book_publication_date'] ?? ''),
             'page_count' => !empty($_POST['book_page_count']) ? intval($_POST['book_page_count']) : null,
             'genre' => trim($_POST['book_genre'] ?? ''),
-            'series' => trim($_POST['book_series'] ?? ''),
+            'series' => $series,
             'age_range' => trim($_POST['book_age_range'] ?? ''),
             'reading_level' => trim($_POST['book_reading_level'] ?? ''),
             'purchase_links' => trim($_POST['book_purchase_links'] ?? '')
@@ -196,6 +241,7 @@ try {
                 isbn13 = ?,
                 author = ?,
                 publisher = ?,
+                publisher_id = ?,
                 publication_date = ?,
                 page_count = ?,
                 age_range = ?,
@@ -210,6 +256,7 @@ try {
                 $bookData['isbn13'],
                 $bookData['author'],
                 $bookData['publisher'],
+                $bookData['publisher_id'],
                 $bookData['publication_date'],
                 $bookData['page_count'],
                 $bookData['age_range'],
@@ -228,6 +275,7 @@ try {
                 isbn13,
                 author,
                 publisher,
+                publisher_id,
                 publication_date,
                 page_count,
                 age_range,
@@ -236,13 +284,14 @@ try {
                 purchase_links,
                 genre,
                 series
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $id,
                 $bookData['isbn'],
                 $bookData['isbn13'],
                 $bookData['author'],
                 $bookData['publisher'],
+                $bookData['publisher_id'],
                 $bookData['publication_date'],
                 $bookData['page_count'],
                 $bookData['age_range'],

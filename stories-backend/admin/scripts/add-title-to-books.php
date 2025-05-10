@@ -1,7 +1,7 @@
 <?php
 /**
  * Add Title Column to Books Table
- * 
+ *
  * This script adds a title column to the books table and populates it with
  * the title from the corresponding directory item.
  */
@@ -23,43 +23,59 @@ function logMessage($message) {
 }
 
 try {
-    // Start transaction
-    $db->beginTransaction();
-
     // Check if title column exists
     $stmt = $db->query("SHOW COLUMNS FROM books LIKE 'title'");
     $titleColumnExists = $stmt->rowCount() > 0;
 
     if (!$titleColumnExists) {
-        // Add title column to books table
-        $db->exec("ALTER TABLE books ADD COLUMN title VARCHAR(255) AFTER directory_item_id");
-        logMessage("Added title column to books table");
+        // Start transaction for ALTER TABLE
+        $db->beginTransaction();
 
-        // Update title column with values from directory_items
-        $updateStmt = $db->prepare("
-            UPDATE books b
-            JOIN directory_items di ON b.directory_item_id = di.id
-            SET b.title = di.title
-            WHERE b.directory_item_id IS NOT NULL
-        ");
-        $updateStmt->execute();
-        $updatedCount = $updateStmt->rowCount();
-        logMessage("Updated $updatedCount book titles from directory items");
+        try {
+            // Add title column to books table
+            $db->exec("ALTER TABLE books ADD COLUMN title VARCHAR(255) AFTER directory_item_id");
+            // Commit the ALTER TABLE transaction
+            $db->commit();
+            logMessage("Added title column to books table");
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            logMessage("Error adding title column: " . $e->getMessage());
+            throw $e; // Re-throw to be caught by outer try-catch
+        }
+
+        // Start a new transaction for the UPDATE
+        $db->beginTransaction();
+
+        try {
+            // Update title column with values from directory_items
+            $updateStmt = $db->prepare("
+                UPDATE books b
+                JOIN directory_items di ON b.directory_item_id = di.id
+                SET b.title = di.title
+                WHERE b.directory_item_id IS NOT NULL
+            ");
+            $updateStmt->execute();
+            $updatedCount = $updateStmt->rowCount();
+
+            // Commit the UPDATE transaction
+            $db->commit();
+            logMessage("Updated $updatedCount book titles from directory items");
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            logMessage("Error updating book titles: " . $e->getMessage());
+            throw $e; // Re-throw to be caught by outer try-catch
+        }
     } else {
         logMessage("Title column already exists in books table");
     }
 
-    // Commit transaction
-    $db->commit();
-
     logMessage("Script completed successfully.");
 
 } catch (Exception $e) {
-    // Rollback transaction on error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
     logMessage("Error: " . $e->getMessage());
 }
 

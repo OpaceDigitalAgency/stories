@@ -1379,6 +1379,114 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Include debug script -->
 <script src="../assets/js/image-upload-debug.js"></script>
 
+<!-- Custom fix for directory item form -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Directory item form fix script loaded');
+
+    // Find the form
+    const form = document.getElementById('directory-item-form');
+    console.log('Form element by ID:', form);
+
+    // Find all forms on the page
+    const allForms = document.querySelectorAll('form');
+    console.log('All forms on page:', allForms.length);
+
+    allForms.forEach((formElement, index) => {
+        console.log(`Form #${index+1}:`, formElement);
+        console.log(`Form #${index+1} ID:`, formElement.id);
+        console.log(`Form #${index+1} action:`, formElement.getAttribute('action'));
+
+        // Check if this form has the image_updated field
+        const imageUpdatedField = formElement.querySelector('input[name="image_updated"]');
+        console.log(`Form #${index+1} has image_updated field:`, !!imageUpdatedField);
+
+        // Check if this form has the cover_url field
+        const coverUrlField = formElement.querySelector('input[name="cover_url"]');
+        console.log(`Form #${index+1} has cover_url field:`, !!coverUrlField);
+    });
+
+    // Find the image_updated field
+    const imageUpdatedField = document.getElementById('image_updated_field');
+    console.log('Image updated field by ID:', imageUpdatedField);
+
+    // Find the image upload component
+    const imageUploadComponent = document.querySelector('.image-upload-component');
+    if (imageUploadComponent) {
+        console.log('Image upload component found');
+
+        // Create a MutationObserver to watch for changes to the image preview
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    console.log('Image component mutation detected');
+
+                    // Check if the image was removed (placeholder is visible)
+                    const placeholder = imageUploadComponent.querySelector('.placeholder');
+                    const isVisible = placeholder && (window.getComputedStyle(placeholder).display !== 'none');
+
+                    if (isVisible) {
+                        console.log('Image was removed (placeholder is visible)');
+
+                        // Set the image_updated field to 1
+                        if (imageUpdatedField) {
+                            imageUpdatedField.value = '1';
+                            console.log('Set image_updated to 1 because image was removed');
+                        }
+                    }
+                }
+            });
+        });
+
+        // Start observing the image upload component
+        observer.observe(imageUploadComponent, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+
+    // Direct event listener for the remove button
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-image') ||
+            (event.target.parentElement && event.target.parentElement.classList.contains('remove-image'))) {
+            console.log('Remove button clicked (captured by event delegation)');
+
+            // Set the image_updated field to 1
+            if (imageUpdatedField) {
+                imageUpdatedField.value = '1';
+                console.log('Set image_updated to 1 because remove button was clicked');
+
+                // Also clear the cover_url field
+                const coverUrlField = document.querySelector('input[name="cover_url"]');
+                if (coverUrlField) {
+                    coverUrlField.value = '';
+                    console.log('Cleared cover_url field');
+                }
+            }
+        }
+    });
+
+    // Add a submit handler to the form
+    if (form) {
+        form.addEventListener('submit', function() {
+            console.log('Form is being submitted');
+            console.log('image_updated value:', imageUpdatedField ? imageUpdatedField.value : 'not found');
+
+            // Check if the cover_url field is empty
+            const coverUrlField = document.querySelector('input[name="cover_url"]');
+            if (coverUrlField && !coverUrlField.value) {
+                console.log('cover_url is empty, setting image_updated to 1');
+                if (imageUpdatedField) {
+                    imageUpdatedField.value = '1';
+                }
+            }
+        });
+    }
+});
+</script>
+
 <!-- Include directory item preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/directory-item-preview.js"></script>

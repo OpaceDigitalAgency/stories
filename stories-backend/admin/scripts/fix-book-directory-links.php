@@ -29,9 +29,10 @@ try {
     // Start transaction
     $db->beginTransaction();
 
-    // Get all books without directory_item_id
+    // Get all books with NULL or 0 directory_item_id
+    // Note: books table uses directory_item_id as its primary key, not id
     $booksStmt = $db->query("
-        SELECT books.id, directory_items.title
+        SELECT books.directory_item_id, directory_items.title
         FROM books
         LEFT JOIN directory_items ON books.directory_item_id = directory_items.id
         WHERE books.directory_item_id IS NULL OR books.directory_item_id = 0
@@ -51,8 +52,8 @@ try {
 
         if ($directoryItem) {
             // Update the book with the directory_item_id
-            $updateStmt = $db->prepare("UPDATE books SET directory_item_id = ? WHERE id = ?");
-            $updateStmt->execute([$directoryItem['id'], $book['id']]);
+            $updateStmt = $db->prepare("UPDATE books SET directory_item_id = ? WHERE directory_item_id = ?");
+            $updateStmt->execute([$directoryItem['id'], $book['directory_item_id']]);
 
             // If the directory item type is not 'book', update it
             if ($directoryItem['type'] !== 'book') {
@@ -61,11 +62,11 @@ try {
                 logMessage("Updated directory item #{$directoryItem['id']} type to 'book'");
             }
 
-            logMessage("Linked book #{$book['id']} '{$book['title']}' to directory item #{$directoryItem['id']}");
+            logMessage("Linked book with directory_item_id #{$book['directory_item_id']} '{$book['title']}' to directory item #{$directoryItem['id']}");
             $matchedCount++;
         } else {
             // No matching directory item found
-            logMessage("No matching directory item found for book #{$book['id']} '{$book['title']}'");
+            logMessage("No matching directory item found for book with directory_item_id #{$book['directory_item_id']} '{$book['title']}'");
             $notFoundCount++;
         }
     }
@@ -75,7 +76,7 @@ try {
         SELECT directory_items.id, directory_items.title
         FROM directory_items
         LEFT JOIN books ON directory_items.id = books.directory_item_id
-        WHERE directory_items.type = 'book' AND books.id IS NULL
+        WHERE directory_items.type = 'book' AND books.directory_item_id IS NULL
     ");
     $orphanedDirItems = $dirItemsStmt->fetchAll();
 
@@ -85,15 +86,13 @@ try {
 
     foreach ($orphanedDirItems as $dirItem) {
         // Look for a book with the same directory item ID
-        $stmt = $db->prepare("SELECT id FROM books WHERE directory_item_id = ?");
+        $stmt = $db->prepare("SELECT directory_item_id FROM books WHERE directory_item_id = ?");
         $stmt->execute([$dirItem['id']]);
         $existingBook = $stmt->fetch();
 
         if ($existingBook) {
-            // Update the existing book with the directory_item_id
-            $updateStmt = $db->prepare("UPDATE books SET directory_item_id = ? WHERE id = ?");
-            $updateStmt->execute([$dirItem['id'], $existingBook['id']]);
-            logMessage("Linked existing book #{$existingBook['id']} to directory item #{$dirItem['id']} '{$dirItem['title']}'");
+            // Book already exists with this directory_item_id
+            logMessage("Book already exists for directory item #{$dirItem['id']} '{$dirItem['title']}'");
         } else {
             // Create a new book entry for this directory item
             $insertStmt = $db->prepare("

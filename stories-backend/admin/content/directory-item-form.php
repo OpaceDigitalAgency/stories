@@ -98,6 +98,39 @@ try {
         // Silently fail
     }
 
+    // Get unique genres from books table
+    $genreList = [];
+    try {
+        $genreStmt = $db->query("SELECT DISTINCT genre FROM books WHERE genre IS NOT NULL AND genre != '' ORDER BY genre");
+        while ($row = $genreStmt->fetch()) {
+            $genreList[] = $row['genre'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
+    // Get unique age ranges from books table
+    $ageRangeList = [];
+    try {
+        $ageRangeStmt = $db->query("SELECT DISTINCT age_range FROM books WHERE age_range IS NOT NULL AND age_range != '' ORDER BY age_range");
+        while ($row = $ageRangeStmt->fetch()) {
+            $ageRangeList[] = $row['age_range'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
+    // Get unique reading levels from books table
+    $readingLevelList = [];
+    try {
+        $readingLevelStmt = $db->query("SELECT DISTINCT reading_level FROM books WHERE reading_level IS NOT NULL AND reading_level != '' ORDER BY reading_level");
+        while ($row = $readingLevelStmt->fetch()) {
+            $readingLevelList[] = $row['reading_level'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
     // Get directory item if editing
     if (isset($_GET['id'])) {
         try {
@@ -663,6 +696,11 @@ if ($debug) {
                                     </ul>
                                     <script>
                                         console.log('Debug Book Data:', <?php echo json_encode($bookData); ?>);
+
+                                        // Log the raw values for debugging
+                                        console.log('Raw age_range value:', <?php echo json_encode($bookData['age_range'] ?? null); ?>);
+                                        console.log('Raw genre value:', <?php echo json_encode($bookData['genre'] ?? null); ?>);
+                                        console.log('Raw reading_level value:', <?php echo json_encode($bookData['reading_level'] ?? null); ?>);
                                     </script>
                                 </div>
                                 <?php endif; ?>
@@ -771,19 +809,49 @@ if ($debug) {
                                         <label class="form-label" for="genre">Genre</label>
                                         <select id="genre" name="book_genre" class="form-control">
                                             <option value="">Select Genre</option>
-                                            <option value="fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'fiction') ? 'selected' : ''; ?>>Fiction</option>
-                                            <option value="non-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'non-fiction') ? 'selected' : ''; ?>>Non-Fiction</option>
-                                            <option value="picture-book" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'picture-book') ? 'selected' : ''; ?>>Picture Book</option>
-                                            <option value="chapter-book" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'chapter-book') ? 'selected' : ''; ?>>Chapter Book</option>
-                                            <option value="middle-grade" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'middle-grade') ? 'selected' : ''; ?>>Middle Grade</option>
-                                            <option value="young-adult" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
-                                            <option value="fantasy" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'fantasy') ? 'selected' : ''; ?>>Fantasy</option>
-                                            <option value="science-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'science-fiction') ? 'selected' : ''; ?>>Science Fiction</option>
-                                            <option value="mystery" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'mystery') ? 'selected' : ''; ?>>Mystery</option>
-                                            <option value="adventure" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'adventure') ? 'selected' : ''; ?>>Adventure</option>
-                                            <option value="historical-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'historical-fiction') ? 'selected' : ''; ?>>Historical Fiction</option>
-                                            <option value="biography" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'biography') ? 'selected' : ''; ?>>Biography</option>
-                                            <option value="educational" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'educational') ? 'selected' : ''; ?>>Educational</option>
+                                            <?php
+                                            // Add common genres that should always be available
+                                            $commonGenres = [
+                                                'fiction' => 'Fiction',
+                                                'non-fiction' => 'Non-Fiction',
+                                                'picture-book' => 'Picture Book',
+                                                'chapter-book' => 'Chapter Book',
+                                                'middle-grade' => 'Middle Grade',
+                                                'young-adult' => 'Young Adult',
+                                                'fantasy' => 'Fantasy',
+                                                'science-fiction' => 'Science Fiction',
+                                                'mystery' => 'Mystery',
+                                                'adventure' => 'Adventure',
+                                                'historical-fiction' => 'Historical Fiction',
+                                                'biography' => 'Biography',
+                                                'educational' => 'Educational'
+                                            ];
+
+                                            // Combine common genres with database genres
+                                            $allGenres = $commonGenres;
+                                            foreach ($genreList as $genre) {
+                                                if (!isset($allGenres[$genre])) {
+                                                    // Format the display name
+                                                    $displayName = ucwords(str_replace('-', ' ', $genre));
+                                                    $allGenres[$genre] = $displayName;
+                                                }
+                                            }
+
+                                            // Add the current genre if it's not in the list
+                                            if (isset($bookData['genre']) && !empty($bookData['genre']) && !isset($allGenres[$bookData['genre']])) {
+                                                $displayName = ucwords(str_replace('-', ' ', $bookData['genre']));
+                                                $allGenres[$bookData['genre']] = $displayName;
+                                            }
+
+                                            // Sort genres alphabetically
+                                            asort($allGenres);
+
+                                            // Output all genre options
+                                            foreach ($allGenres as $value => $label) {
+                                                $selected = (isset($bookData['genre']) && $bookData['genre'] == $value) ? 'selected' : '';
+                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
+                                            }
+                                            ?>
                                         </select>
                                     </div>
                                 </div>
@@ -820,15 +888,69 @@ if ($debug) {
                                         <label class="form-label" for="age_range">Age Range</label>
                                         <select id="age_range" name="book_age_range" class="form-control">
                                             <option value="">Select Age Range</option>
-                                            <option value="0-3" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '0-3') ? 'selected' : ''; ?>>0-3 years</option>
-                                            <option value="3-5" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '3-5') ? 'selected' : ''; ?>>3-5 years</option>
-                                            <option value="5-7" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '5-7') ? 'selected' : ''; ?>>5-7 years</option>
-                                            <option value="7-9" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '7-9') ? 'selected' : ''; ?>>7-9 years</option>
-                                            <option value="9-12" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '9-12') ? 'selected' : ''; ?>>9-12 years</option>
-                                            <option value="12+" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '12+') ? 'selected' : ''; ?>>12+ years</option>
-                                            <option value="teen" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'teen') ? 'selected' : ''; ?>>Teen</option>
-                                            <option value="young-adult" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
-                                            <option value="adult" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'adult') ? 'selected' : ''; ?>>Adult</option>
+                                            <?php
+                                            // Add common age ranges that should always be available
+                                            $commonAgeRanges = [
+                                                '0-3' => '0-3 years',
+                                                '3-5' => '3-5 years',
+                                                '5-7' => '5-7 years',
+                                                '7-9' => '7-9 years',
+                                                '7-10' => '7-10 years',
+                                                '9-12' => '9-12 years',
+                                                '12+' => '12+ years',
+                                                'teen' => 'Teen',
+                                                'young-adult' => 'Young Adult',
+                                                'adult' => 'Adult'
+                                            ];
+
+                                            // Combine common age ranges with database age ranges
+                                            $allAgeRanges = $commonAgeRanges;
+                                            foreach ($ageRangeList as $ageRange) {
+                                                if (!isset($allAgeRanges[$ageRange])) {
+                                                    // Format the display name
+                                                    if (preg_match('/^\d+-\d+$/', $ageRange)) {
+                                                        $displayName = $ageRange . ' years';
+                                                    } elseif (preg_match('/^\d+\+$/', $ageRange)) {
+                                                        $displayName = $ageRange . ' years';
+                                                    } else {
+                                                        $displayName = ucwords(str_replace('-', ' ', $ageRange));
+                                                    }
+                                                    $allAgeRanges[$ageRange] = $displayName;
+                                                }
+                                            }
+
+                                            // Add the current age range if it's not in the list
+                                            if (isset($bookData['age_range']) && !empty($bookData['age_range']) && !isset($allAgeRanges[$bookData['age_range']])) {
+                                                if (preg_match('/^\d+-\d+$/', $bookData['age_range'])) {
+                                                    $displayName = $bookData['age_range'] . ' years';
+                                                } elseif (preg_match('/^\d+\+$/', $bookData['age_range'])) {
+                                                    $displayName = $bookData['age_range'] . ' years';
+                                                } else {
+                                                    $displayName = ucwords(str_replace('-', ' ', $bookData['age_range']));
+                                                }
+                                                $allAgeRanges[$bookData['age_range']] = $displayName;
+                                            }
+
+                                            // Sort age ranges
+                                            uksort($allAgeRanges, function($a, $b) {
+                                                // Extract first number from range if possible
+                                                $aNum = intval($a);
+                                                $bNum = intval($b);
+
+                                                if ($aNum && $bNum) {
+                                                    return $aNum - $bNum;
+                                                }
+
+                                                // If not numeric, use alphabetical order
+                                                return strcmp($a, $b);
+                                            });
+
+                                            // Output all age range options
+                                            foreach ($allAgeRanges as $value => $label) {
+                                                $selected = (isset($bookData['age_range']) && $bookData['age_range'] == $value) ? 'selected' : '';
+                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
+                                            }
+                                            ?>
                                         </select>
                                     </div>
                                 </div>
@@ -838,13 +960,43 @@ if ($debug) {
                                         <label class="form-label" for="reading_level">Reading Level</label>
                                         <select id="reading_level" name="book_reading_level" class="form-control">
                                             <option value="">Select Reading Level</option>
-                                            <option value="early-reader" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'early-reader') ? 'selected' : ''; ?>>Early Reader</option>
-                                            <option value="beginner" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'beginner') ? 'selected' : ''; ?>>Beginner</option>
-                                            <option value="intermediate" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'intermediate') ? 'selected' : ''; ?>>Intermediate</option>
-                                            <option value="advanced" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'advanced') ? 'selected' : ''; ?>>Advanced</option>
-                                            <option value="chapter-book" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'chapter-book') ? 'selected' : ''; ?>>Chapter Book</option>
-                                            <option value="middle-grade" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'middle-grade') ? 'selected' : ''; ?>>Middle Grade</option>
-                                            <option value="young-adult" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
+                                            <?php
+                                            // Add common reading levels that should always be available
+                                            $commonReadingLevels = [
+                                                'early-reader' => 'Early Reader',
+                                                'beginner' => 'Beginner',
+                                                'intermediate' => 'Intermediate',
+                                                'advanced' => 'Advanced',
+                                                'chapter-book' => 'Chapter Book',
+                                                'middle-grade' => 'Middle Grade',
+                                                'young-adult' => 'Young Adult'
+                                            ];
+
+                                            // Combine common reading levels with database reading levels
+                                            $allReadingLevels = $commonReadingLevels;
+                                            foreach ($readingLevelList as $readingLevel) {
+                                                if (!isset($allReadingLevels[$readingLevel])) {
+                                                    // Format the display name
+                                                    $displayName = ucwords(str_replace('-', ' ', $readingLevel));
+                                                    $allReadingLevels[$readingLevel] = $displayName;
+                                                }
+                                            }
+
+                                            // Add the current reading level if it's not in the list
+                                            if (isset($bookData['reading_level']) && !empty($bookData['reading_level']) && !isset($allReadingLevels[$bookData['reading_level']])) {
+                                                $displayName = ucwords(str_replace('-', ' ', $bookData['reading_level']));
+                                                $allReadingLevels[$bookData['reading_level']] = $displayName;
+                                            }
+
+                                            // Sort reading levels alphabetically
+                                            asort($allReadingLevels);
+
+                                            // Output all reading level options
+                                            foreach ($allReadingLevels as $value => $label) {
+                                                $selected = (isset($bookData['reading_level']) && $bookData['reading_level'] == $value) ? 'selected' : '';
+                                                echo "<option value=\"" . htmlspecialchars($value) . "\" $selected>" . htmlspecialchars($label) . "</option>";
+                                            }
+                                            ?>
                                         </select>
                                     </div>
                                 </div>
@@ -984,7 +1136,8 @@ document.addEventListener('DOMContentLoaded', function() {
             void bookFields.offsetWidth;
 
             // Initialize book form enhancements on page load if book type is selected
-            // We'll let the book-form-enhancements.js handle this now
+            // We'll use PHP-generated dropdowns for genre, age range, and reading level
+            // and only use JavaScript for other enhancements
         } else {
             bookFields.style.display = 'none';
             document.body.classList.remove('has-book-type');
@@ -1010,9 +1163,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
                 if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
                 if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
-                if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
-                if (typeof initGenreDropdown === 'function') initGenreDropdown();
-                if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
+                // Disable JavaScript enhancement for these fields - using PHP-generated dropdowns instead
+                // if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
+                // if (typeof initGenreDropdown === 'function') initGenreDropdown();
+                // if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
                 if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
             } else {
                 bookFields.style.display = 'none';
@@ -1268,25 +1422,14 @@ window.addEventListener('load', function() {
         if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
         if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
         if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
-        if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
-        if (typeof initGenreDropdown === 'function') initGenreDropdown();
-        if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
+        // Disable JavaScript enhancement for these fields - using PHP-generated dropdowns instead
+        // if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
+        // if (typeof initGenreDropdown === 'function') initGenreDropdown();
+        // if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
         if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
 
-        // Directly set dropdown values from PHP data
-        if (bookData) {
-            if (bookData.age_range) {
-                setDropdownValue('age_range', bookData.age_range);
-            }
-
-            if (bookData.genre) {
-                setDropdownValue('genre', bookData.genre);
-            }
-
-            if (bookData.reading_level) {
-                setDropdownValue('reading_level', bookData.reading_level);
-            }
-        }
+        // We're now using PHP to set dropdown values directly in the HTML
+        // No need to use JavaScript for this
     }
 });
 
@@ -1306,20 +1449,8 @@ setTimeout(function() {
         console.log('Book fields final display state:', bookFields.style.display);
         console.log('Book fields computed style:', getComputedStyle(bookFields).display);
 
-        // Directly set dropdown values again as a final check
-        if (bookData) {
-            if (bookData.age_range) {
-                setDropdownValue('age_range', bookData.age_range);
-            }
-
-            if (bookData.genre) {
-                setDropdownValue('genre', bookData.genre);
-            }
-
-            if (bookData.reading_level) {
-                setDropdownValue('reading_level', bookData.reading_level);
-            }
-        }
+        // We're now using PHP to set dropdown values directly in the HTML
+        // No need to use JavaScript for this
 
         // Ensure the form preserves the selected values
         const form = document.querySelector('form.content-form');

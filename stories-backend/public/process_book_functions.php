@@ -923,6 +923,7 @@ function processBook($db, $bookDir) {
             // Update existing book
             $stmt = $db->prepare("
                 UPDATE books SET
+                    title = ?,
                     isbn = ?,
                     isbn13 = ?,
                     author = ?,
@@ -975,6 +976,7 @@ function processBook($db, $bookDir) {
             flushOutput();
 
             $stmt->execute([
+                $title,
                 $isbn,
                 $isbn13,
                 $author,
@@ -997,11 +999,11 @@ function processBook($db, $bookDir) {
             // Create new book
             $stmt = $db->prepare("
                 INSERT INTO books (
-                    directory_item_id, isbn, isbn13, author, publisher, publication_date,
+                    directory_item_id, title, isbn, isbn13, author, publisher, publication_date,
                     page_count, age_range, reading_level, cover_image_url, purchase_links,
                     metadata, genre, series
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
                     ?, ?, ?
                 )
@@ -1044,6 +1046,7 @@ function processBook($db, $bookDir) {
 
             $stmt->execute([
                 $directoryItemId,
+                $title,
                 $isbn,
                 $isbn13,
                 $author,

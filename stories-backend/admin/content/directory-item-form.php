@@ -1002,12 +1002,14 @@ if ($debug) {
                             </div>
 
                             <!-- Debug information -->
-                            <?php if (isset($_GET['debug'])): ?>
                             <div class="alert alert-info mt-3">
                                 <h5>Debug Information</h5>
                                 <pre><?php print_r($bookData); ?></pre>
+                                <h5>SQL Query</h5>
+                                <pre>
+SELECT * FROM books WHERE directory_item_id = <?php echo $_GET['id'] ?? 'NULL'; ?>
+                                </pre>
                             </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

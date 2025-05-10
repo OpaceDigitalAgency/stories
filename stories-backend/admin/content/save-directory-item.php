@@ -237,6 +237,7 @@ try {
         if ($existingBook) {
             // Update existing book record
             $stmt = $db->prepare("UPDATE books SET
+                title = ?,
                 isbn = ?,
                 isbn13 = ?,
                 author = ?,
@@ -252,6 +253,7 @@ try {
                 series = ?
                 WHERE directory_item_id = ?");
             $stmt->execute([
+                $title, // Use the directory item title
                 $bookData['isbn'],
                 $bookData['isbn13'],
                 $bookData['author'],
@@ -271,6 +273,7 @@ try {
             // Insert new book record
             $stmt = $db->prepare("INSERT INTO books (
                 directory_item_id,
+                title,
                 isbn,
                 isbn13,
                 author,
@@ -284,9 +287,10 @@ try {
                 purchase_links,
                 genre,
                 series
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $id,
+                $title, // Use the directory item title
                 $bookData['isbn'],
                 $bookData['isbn13'],
                 $bookData['author'],

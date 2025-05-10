@@ -111,6 +111,20 @@ try {
                 $bookStmt->execute([$_GET['id']]);
                 $bookData = $bookStmt->fetch();
 
+                // Debug: Log book data to error log
+                error_log("Book data for directory item ID " . $_GET['id'] . ": " . print_r($bookData, true));
+
+                // If no book data found, try to find by title match
+                if (!$bookData) {
+                    $titleStmt = $db->prepare("SELECT * FROM books WHERE title = ?");
+                    $titleStmt->execute([$item['title']]);
+                    $bookData = $titleStmt->fetch();
+
+                    if ($bookData) {
+                        error_log("Found book data by title match: " . print_r($bookData, true));
+                    }
+                }
+
                 // Format purchase_links JSON for display
                 if (isset($bookData['purchase_links']) && !empty($bookData['purchase_links'])) {
                     try {
@@ -472,6 +486,12 @@ require_once '../includes/header.php';
                     <div class="wp-card book-fields" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'style="display:block"' : ''; ?>>
                         <div class="wp-card-header">Book Information</div>
                         <div class="wp-card-body">
+                            <?php if (empty($bookData)): ?>
+                                <div class="alert alert-warning">
+                                    <strong>Warning:</strong> No book data found for this directory item.
+                                    This may happen if the book was imported but not properly linked to the directory item.
+                                </div>
+                            <?php endif; ?>
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">

@@ -29,31 +29,31 @@ try {
     $error = null;
     $bookData = []; // Initialize book data
     $tags = [];
-    
+
     // Get all categories
     $stmt = $db->query("SHOW TABLES LIKE 'directory_categories'");
     if ($stmt->rowCount() > 0) {
         $categories = $db->query("SELECT * FROM directory_categories ORDER BY name")->fetchAll();
     }
-    
+
     // Get tags if they exist
     if ($db->query("SHOW TABLES LIKE 'tags'")->rowCount() > 0) {
         $tags = $db->query("SELECT * FROM tags ORDER BY name")->fetchAll();
     }
-    
+
     // Get directory item if editing
     if (isset($_GET['id'])) {
         try {
             $stmt = $db->prepare("SELECT * FROM directory_items WHERE id = ?");
             $stmt->execute([$_GET['id']]);
             $item = $stmt->fetch();
-            
+
             // If this is a book type directory item, get the book data
             if ($item && isset($item['type']) && $item['type'] == 'book') {
                 $bookStmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
                 $bookStmt->execute([$_GET['id']]);
                 $bookData = $bookStmt->fetch();
-                
+
                 // Format purchase_links JSON for display
                 if (isset($bookData['purchase_links']) && !empty($bookData['purchase_links'])) {
                     try {
@@ -66,13 +66,13 @@ try {
                     }
                 }
             }
-            
+
             // Get item tags if they exist
             if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
                 $tagStmt = $db->prepare("
-                    SELECT t.id, t.name 
-                    FROM tags t 
-                    JOIN item_tags it ON t.id = it.tag_id 
+                    SELECT t.id, t.name
+                    FROM tags t
+                    JOIN item_tags it ON t.id = it.tag_id
                     WHERE it.item_id = ? AND it.item_type = 'directory_item'
                 ");
                 $tagStmt->execute([$_GET['id']]);
@@ -100,6 +100,8 @@ $currentPage = 'directory';
 
 // Add custom CSS for form styling
 $extraHeadContent = '
+<!-- Include purchase links formatter script -->
+<script src="js/purchase-links-formatter.js"></script>
 <style>
     /* Grid layout for space efficiency */
     .form-row {
@@ -108,52 +110,52 @@ $extraHeadContent = '
         margin-right: -10px;
         margin-left: -10px;
     }
-    
-    .form-row > .col, 
+
+    .form-row > .col,
     .form-row > [class*="col-"] {
         padding-right: 10px;
         padding-left: 10px;
     }
-    
+
     /* Compact form elements */
     .form-group {
         margin-bottom: 0.75rem;
     }
-    
+
     .form-label {
         margin-bottom: 0.25rem;
         font-weight: 500;
     }
-    
+
     .form-control {
         padding: 0.375rem 0.5rem;
     }
-    
+
     .card, .wp-card {
         margin-bottom: 0.75rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    
+
     .card-header, .wp-card-header {
         padding: 0.5rem 0.75rem;
         background-color: rgba(0,0,0,0.03);
         font-weight: 600;
         border-bottom: 1px solid rgba(0,0,0,0.125);
     }
-    
+
     .card-body, .wp-card-body {
         padding: 0.75rem;
     }
-    
+
     /* Compact sections */
     .content-section {
         padding: 0.5rem !important;
     }
-    
+
     .section-body {
         padding: 0.5rem !important;
     }
-    
+
     /* Sticky save bar at bottom of screen */
     .sticky-save-bar {
         position: fixed;
@@ -169,12 +171,12 @@ $extraHeadContent = '
         align-items: center;
         border-top: 1px solid #dee2e6;
     }
-    
+
     /* Add padding to the bottom of the form to prevent content from being hidden behind the sticky bar */
     .content-form {
         padding-bottom: 60px;
     }
-    
+
     .sticky-save-bar .btn-group {
         display: flex;
         gap: 8px;
@@ -184,7 +186,7 @@ $extraHeadContent = '
     .book-fields {
         display: none;
     }
-    
+
     /* Image preview styling */
     .image-preview-container {
         border: 1px solid #dee2e6;
@@ -203,7 +205,7 @@ $extraHeadContent = '
         max-height: 300px;
         object-fit: contain;
     }
-    
+
     /* Tag styling */
     .tag-container {
         display: flex;
@@ -211,7 +213,7 @@ $extraHeadContent = '
         gap: 0.5rem;
         margin-top: 0.5rem;
     }
-    
+
     .tag-badge {
         background-color: #e9ecef;
         padding: 0.25rem 0.5rem;
@@ -220,19 +222,19 @@ $extraHeadContent = '
         align-items: center;
         gap: 0.25rem;
     }
-    
+
     .tag-badge .remove-tag {
         cursor: pointer;
         color: #dc3545;
     }
-    
+
     /* Stack in mobile */
     @media (max-width: 767px) {
         .form-row {
             flex-direction: column;
         }
-        
-        .form-row > .col, 
+
+        .form-row > .col,
         .form-row > [class*="col-"] {
             width: 100%;
         }
@@ -248,7 +250,7 @@ require_once '../includes/header.php';
     <div class="section-body">
         <form method="POST" action="save-directory-item.php" class="content-form">
             <input type="hidden" name="id" value="<?php echo $item['id'] ?? ''; ?>">
-            
+
             <div class="row">
                 <!-- Left Column - Basic Info and Settings -->
                 <div class="col-md-8">
@@ -258,10 +260,10 @@ require_once '../includes/header.php';
                         <div class="wp-card-body">
                             <div class="form-group">
                                 <label class="form-label" for="title">Title <span class="text-danger">*</span></label>
-                                <input type="text" id="title" name="title" class="form-control" required 
+                                <input type="text" id="title" name="title" class="form-control" required
                                     value="<?php echo htmlspecialchars($item['title'] ?? ''); ?>">
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -271,7 +273,7 @@ require_once '../includes/header.php';
                                         <small class="form-text text-muted">URL-friendly version (auto-generated if empty)</small>
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="type">Item Type</label>
@@ -284,7 +286,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -300,7 +302,7 @@ require_once '../includes/header.php';
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="price_range">Price Range</label>
@@ -310,7 +312,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Settings Options -->
                             <div class="form-row mt-2">
                                 <div class="col-md-6">
@@ -320,7 +322,7 @@ require_once '../includes/header.php';
                                         <label class="form-check-label" for="is_published">Published</label>
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-check">
                                         <input type="checkbox" id="featured" name="featured" class="form-check-input"
@@ -331,7 +333,7 @@ require_once '../includes/header.php';
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Description Card -->
                     <div class="wp-card">
                         <div class="wp-card-header">Description</div>
@@ -341,7 +343,7 @@ require_once '../includes/header.php';
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Contact Information Card -->
                     <div class="wp-card">
                         <div class="wp-card-header">Contact Information</div>
@@ -355,7 +357,7 @@ require_once '../includes/header.php';
                                             placeholder="https://example.com">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="contact_email">Contact Email</label>
@@ -365,7 +367,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -375,7 +377,7 @@ require_once '../includes/header.php';
                                             placeholder="+1 (123) 456-7890">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="address">Address</label>
@@ -385,7 +387,7 @@ require_once '../includes/header.php';
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Book Information Card -->
                     <div class="wp-card book-fields" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'style="display:block"' : ''; ?>>
                         <div class="wp-card-header">Book Information</div>
@@ -398,7 +400,7 @@ require_once '../includes/header.php';
                                             value="<?php echo htmlspecialchars($bookData['author'] ?? ''); ?>">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="publisher">Publisher</label>
@@ -407,7 +409,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -416,7 +418,7 @@ require_once '../includes/header.php';
                                             value="<?php echo htmlspecialchars($bookData['isbn'] ?? ''); ?>">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="isbn13">ISBN-13</label>
@@ -424,7 +426,7 @@ require_once '../includes/header.php';
                                             value="<?php echo htmlspecialchars($bookData['isbn13'] ?? ''); ?>">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="page_count">Page Count</label>
@@ -433,7 +435,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -443,7 +445,7 @@ require_once '../includes/header.php';
                                         <small class="text-muted">Format: YYYY-MM-DD</small>
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="genre">Genre</label>
@@ -451,7 +453,7 @@ require_once '../includes/header.php';
                                             value="<?php echo htmlspecialchars($bookData['genre'] ?? ''); ?>">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="series">Series</label>
@@ -460,7 +462,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -470,7 +472,7 @@ require_once '../includes/header.php';
                                             placeholder="7-10, 9-12, etc.">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="reading_level">Reading Level</label>
@@ -479,7 +481,7 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label" for="purchase_links">Purchase Links (JSON)</label>
                                 <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
@@ -488,7 +490,7 @@ require_once '../includes/header.php';
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Right Column - Image and Tags -->
                 <div class="col-md-4">
                     <!-- Cover Image Card -->
@@ -504,7 +506,7 @@ require_once '../includes/header.php';
                                 'directory_item',
                                 $item['id'] ?? null
                             );
-                            
+
                             // Render AI image generator
                             if (function_exists('renderAiImageGenerator')) {
                                 renderAiImageGenerator(
@@ -521,7 +523,7 @@ require_once '../includes/header.php';
                             ?>
                         </div>
                     </div>
-                    
+
                     <!-- Tags Card -->
                     <?php if (!empty($tags)): ?>
                     <div class="wp-card">
@@ -535,7 +537,7 @@ require_once '../includes/header.php';
                                         <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tag['name']); ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                
+
                                 <div class="tag-container" id="tag-container">
                                     <?php if (isset($itemTags)): ?>
                                         <?php foreach($itemTags as $tag): ?>
@@ -553,7 +555,7 @@ require_once '../includes/header.php';
                     <?php endif; ?>
                 </div>
             </div>
-            
+
             <!-- Sticky Save Bar -->
             <div class="sticky-save-bar">
                 <div>
@@ -563,7 +565,7 @@ require_once '../includes/header.php';
                         <span class="text-muted">Creating new directory item</span>
                     <?php endif; ?>
                 </div>
-                
+
                 <div class="btn-group">
                     <a href="directory-items.php" class="btn btn-secondary">Cancel</a>
                     <button type="button" id="preview-directory-item" class="btn btn-info">Preview</button>
@@ -580,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle book fields visibility based on item type
     const typeSelect = document.getElementById('type');
     const bookFields = document.querySelector('.book-fields');
-    
+
     if (typeSelect && bookFields) {
         typeSelect.addEventListener('change', function() {
             if (this.value === 'book') {
@@ -590,11 +592,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Auto-generate slug from title
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
-    
+
     if (titleInput && slugInput && slugInput.value === '') {
         titleInput.addEventListener('input', function() {
             let slug = this.value.toLowerCase()
@@ -602,22 +604,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 .replace(/\s+/g, '-')      // Replace spaces with hyphens
                 .replace(/-+/g, '-')       // Replace multiple hyphens with single hyphen
                 .replace(/^-+|-+$/g, '');  // Remove hyphens from start and end
-            
+
             slugInput.value = slug;
         });
     }
-    
+
     // Tag management
     const tagSelect = document.getElementById('tag-select');
     const tagContainer = document.getElementById('tag-container');
-    
+
     if (tagSelect && tagContainer) {
         // Add tag when selected from dropdown
         tagSelect.addEventListener('change', function() {
             if (this.value) {
                 const tagId = this.value;
                 const tagName = this.options[this.selectedIndex].text;
-                
+
                 // Check if tag already exists
                 const existingTag = document.querySelector(`.tag-badge[data-tag-id="${tagId}"]`);
                 if (!existingTag) {
@@ -629,15 +631,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="fas fa-times remove-tag"></i>
                         <input type="hidden" name="tags[]" value="${tagId}">
                     `;
-                    
+
                     tagContainer.appendChild(tagBadge);
                 }
-                
+
                 // Reset select
                 this.value = '';
             }
         });
-        
+
         // Remove tag when clicked
         tagContainer.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-tag')) {
@@ -648,15 +650,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Preview functionality
     const previewButton = document.getElementById('preview-directory-item');
-    
+
     if (previewButton) {
         previewButton.addEventListener('click', function() {
             const formData = new FormData(document.querySelector('form.content-form'));
             const id = formData.get('id');
-            
+
             if (id) {
                 window.open('../handlers/direct-directory-item-preview.php?id=' + id, '_blank');
             } else {
@@ -664,10 +666,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // JSON validation for purchase links
     const purchaseLinksField = document.getElementById('purchase_links');
-    
+
     if (purchaseLinksField) {
         purchaseLinksField.addEventListener('blur', function() {
             try {

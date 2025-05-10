@@ -1090,6 +1090,11 @@ function processBook($db, $bookDir) {
             flushOutput();
         }
 
+        // Process tags for the book
+        $tagCount = processBookTags($db, $directoryItemId, $markdownContent, $genre);
+        echo "<p class='info'>Processed $tagCount tags for book: $title</p>";
+        flushOutput();
+
         // Commit the transaction
         $db->commit();
         echo "<p class='success'>Book transaction committed successfully</p>";
@@ -1119,4 +1124,80 @@ function processBook($db, $bookDir) {
             'error' => $e->getMessage()
         ];
     }
+}
+
+/**
+ * Process tags for a book and associate them with the directory item
+ *
+ * @param PDO $db Database connection
+ * @param int $directoryItemId Directory item ID
+ * @param string $markdownContent Markdown content
+ * @param string $genre Genre string (comma-separated)
+ * @return int Number of tags processed
+ */
+function processBookTags($db, $directoryItemId, $markdownContent, $genre = '') {
+    // Extract tags from markdown content
+    $tags = [];
+    if (preg_match('/Tags:\s*(.*?)(?:\n|$)/i', $markdownContent, $match)) {
+        $tagsString = trim($match[1]);
+        echo "<p class='info'>Found tags in content: '$tagsString'</p>";
+
+        // Extract tags from HTML links or plain text
+        if (preg_match_all('/<a.*?>(.*?)<\/a>/i', $tagsString, $matches)) {
+            $tags = $matches[1];
+        } else {
+            // Split by commas if no HTML links
+            $tags = array_map('trim', explode(',', $tagsString));
+        }
+
+        echo "<p class='info'>Extracted tags: " . implode(', ', $tags) . "</p>";
+    }
+
+    // If no tags found but we have genre, use genre as tags
+    if (empty($tags) && !empty($genre)) {
+        $genreTags = array_map('trim', explode(',', $genre));
+        $tags = array_merge($tags, $genreTags);
+        echo "<p class='info'>Using genre as tags: " . implode(', ', $genreTags) . "</p>";
+    }
+
+    // Process each tag
+    foreach ($tags as $tagName) {
+        if (empty(trim($tagName))) continue;
+
+        // Get or create tag
+        $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
+        $stmt->execute([trim($tagName)]);
+        $tag = $stmt->fetch();
+
+        if ($tag) {
+            $tagId = $tag['id'];
+            echo "<p class='info'>Found existing tag: " . htmlspecialchars($tagName) . " (ID: $tagId)</p>";
+        } else {
+            // Create new tag
+            $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/', '-', trim($tagName)));
+            $tagSlug = trim($tagSlug, '-');
+            $now = date('Y-m-d H:i:s');
+
+            $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, ?, ?)");
+            $stmt->execute([trim($tagName), $tagSlug, $now, $now]);
+            $tagId = $db->lastInsertId();
+            echo "<p class='success'>Created new tag: " . htmlspecialchars($tagName) . " (ID: $tagId)</p>";
+        }
+
+        // Check if tag is already associated with the directory item
+        $stmt = $db->prepare("SELECT * FROM directory_item_tags WHERE directory_item_id = ? AND tag_id = ?");
+        $stmt->execute([$directoryItemId, $tagId]);
+        $existingRelation = $stmt->fetch();
+
+        if (!$existingRelation) {
+            // Associate tag with directory item
+            $stmt = $db->prepare("INSERT INTO directory_item_tags (directory_item_id, tag_id) VALUES (?, ?)");
+            $stmt->execute([$directoryItemId, $tagId]);
+            echo "<p class='success'>Associated tag " . htmlspecialchars($tagName) . " with book ID $directoryItemId</p>";
+        } else {
+            echo "<p class='info'>Tag " . htmlspecialchars($tagName) . " already associated with book ID $directoryItemId</p>";
+        }
+    }
+
+    return count($tags);
 }

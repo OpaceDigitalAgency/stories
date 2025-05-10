@@ -56,8 +56,10 @@ try {
                 <p class="text-muted">Fields marked with <span class="required">*</span> are required</p>
             </div>
             <div class="section-body">
-                <form method="POST" action="save-author.php" class="content-form">
+                <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
+                    <!-- Add a hidden field to track if the image was updated via AJAX -->
+                    <input type="hidden" name="image_updated" value="0" id="image_updated_field">
                     <!-- Debug info - will be hidden in production -->
                     <?php if (isset($author['avatar_url']) && !empty($author['avatar_url'])): ?>
                     <div class="alert alert-info">
@@ -329,6 +331,68 @@ try {
 <!-- Include author preview script -->
 <link rel="stylesheet" href="../assets/css/preview-modal.css">
 <script src="../assets/js/author-preview.js"></script>
+
+<!-- Custom script to ensure image URL is properly transferred to the form -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Listen for form submission
+        const form = document.getElementById('author-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Get the avatar URL from the image upload component
+                const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
+                if (avatarUrlInput) {
+                    console.log('Form submission - Avatar URL:', avatarUrlInput.value);
+
+                    // If the avatar URL is empty but there's an image in the preview, try to get it from there
+                    if (!avatarUrlInput.value) {
+                        const previewImg = document.querySelector('.image-preview img');
+                        if (previewImg && previewImg.src) {
+                            avatarUrlInput.value = previewImg.src;
+                            console.log('Using image from preview:', previewImg.src);
+                        }
+                    }
+
+                    // Set the image_updated field to 1 if we have an avatar URL
+                    if (avatarUrlInput.value) {
+                        document.getElementById('image_updated_field').value = '1';
+                    }
+                }
+            });
+        }
+
+        // Also listen for changes to the image preview
+        const imageUploadComponent = document.querySelector('.image-upload-component');
+        if (imageUploadComponent) {
+            // Create a MutationObserver to watch for changes to the image preview
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                        // Check if there's an image in the preview
+                        const previewImg = imageUploadComponent.querySelector('.image-preview img');
+                        if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
+                            // Update the avatar URL input
+                            const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
+                            if (avatarUrlInput) {
+                                avatarUrlInput.value = previewImg.src;
+                                document.getElementById('image_updated_field').value = '1';
+                                console.log('Image preview changed - Updated avatar URL:', previewImg.src);
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Start observing the image preview
+            observer.observe(imageUploadComponent, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['src', 'style']
+            });
+        }
+    });
+</script>
 
 <?php
 // Include footer

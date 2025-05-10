@@ -899,8 +899,45 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
                    ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
         }
 
-        $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = ? WHERE id = ?");
-        $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $authorType, $author['id']]);
+        // Check if the author has an avatar URL
+        $checkAvatarStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
+        $checkAvatarStmt->execute([$author['id']]);
+        $avatarResult = $checkAvatarStmt->fetch();
+
+        // If no avatar URL, set a default one
+        if (empty($avatarResult['avatar_url'])) {
+            $defaultAvatarUrl = '/uploads/default-avatar.svg';
+
+            // Check if the default avatar file exists, if not, create it
+            $defaultAvatarPath = __DIR__ . '/../uploads/default-avatar.svg';
+            if (!file_exists($defaultAvatarPath)) {
+                // Create the uploads directory if it doesn't exist
+                if (!is_dir(__DIR__ . '/../uploads')) {
+                    mkdir(__DIR__ . '/../uploads', 0755, true);
+                }
+
+                // Copy the default avatar from the admin assets if it exists
+                $sourceAvatarPath = __DIR__ . '/../admin/assets/images/default-avatar.svg';
+                if (file_exists($sourceAvatarPath)) {
+                    copy($sourceAvatarPath, $defaultAvatarPath);
+                    echo "<p class='info'>Created default avatar at: $defaultAvatarPath</p>";
+                    flushOutput();
+                } else {
+                    // Create a simple SVG avatar
+                    $svgContent = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><circle cx="100" cy="100" r="100" fill="#e0e0e0"/><circle cx="100" cy="80" r="40" fill="#a0a0a0"/><path d="M100 130 C60 130 40 170 40 200 L160 200 C160 170 140 130 100 130 Z" fill="#a0a0a0"/></svg>';
+                    file_put_contents($defaultAvatarPath, $svgContent);
+                    echo "<p class='info'>Created default SVG avatar at: $defaultAvatarPath</p>";
+                    flushOutput();
+                }
+            }
+
+            $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = ?, avatar_url = ? WHERE id = ?");
+            $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $authorType, $defaultAvatarUrl, $author['id']]);
+            echo "<p class='success'><strong>AUTHOR UPDATED WITH AVATAR:</strong> Added default avatar URL</p>";
+        } else {
+            $stmt = $db->prepare("UPDATE authors SET age = ?, location = ?, bio = ?, author_type = ? WHERE id = ?");
+            $stmt->execute([$authorInfo['age'], $authorInfo['location'], $bio, $authorType, $author['id']]);
+        }
         echo "<p class='success'><strong>AUTHOR UPDATED:</strong> Age={$authorInfo['age']}, Location=\"{$authorInfo['location']}\"</p>";
         flushOutput();
 
@@ -915,14 +952,41 @@ function getOrCreateAuthor($db, $authorInfo, $authorType = 'child') {
                ($authorInfo['location'] ? " from {$authorInfo['location']}" : "") . ".";
 
         try {
-            $stmt = $db->prepare("INSERT INTO authors (name, slug, bio, author_type, age, location, is_published) VALUES (?, ?, ?, ?, ?, ?, 1)");
+            // Set a default avatar URL for all authors
+            $defaultAvatarUrl = '/uploads/default-avatar.svg';
+
+            // Check if the default avatar file exists, if not, create it
+            $defaultAvatarPath = __DIR__ . '/../uploads/default-avatar.svg';
+            if (!file_exists($defaultAvatarPath)) {
+                // Create the uploads directory if it doesn't exist
+                if (!is_dir(__DIR__ . '/../uploads')) {
+                    mkdir(__DIR__ . '/../uploads', 0755, true);
+                }
+
+                // Copy the default avatar from the admin assets if it exists
+                $sourceAvatarPath = __DIR__ . '/../admin/assets/images/default-avatar.svg';
+                if (file_exists($sourceAvatarPath)) {
+                    copy($sourceAvatarPath, $defaultAvatarPath);
+                    echo "<p class='info'>Created default avatar at: $defaultAvatarPath</p>";
+                    flushOutput();
+                } else {
+                    // Create a simple SVG avatar
+                    $svgContent = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><circle cx="100" cy="100" r="100" fill="#e0e0e0"/><circle cx="100" cy="80" r="40" fill="#a0a0a0"/><path d="M100 130 C60 130 40 170 40 200 L160 200 C160 170 140 130 100 130 Z" fill="#a0a0a0"/></svg>';
+                    file_put_contents($defaultAvatarPath, $svgContent);
+                    echo "<p class='info'>Created default SVG avatar at: $defaultAvatarPath</p>";
+                    flushOutput();
+                }
+            }
+
+            $stmt = $db->prepare("INSERT INTO authors (name, slug, bio, author_type, age, location, avatar_url, is_published) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
             $stmt->execute([
                 $authorInfo['name'],
                 $slug,
                 $bio,
                 $authorType,
                 $authorInfo['age'],
-                $authorInfo['location']
+                $authorInfo['location'],
+                $defaultAvatarUrl
             ]);
 
             $authorId = $db->lastInsertId();

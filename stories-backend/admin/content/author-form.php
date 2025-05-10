@@ -205,9 +205,50 @@ try {
                 <div class="alert alert-warning">
                     <strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn't set avatar URLs.
                     <div class="mt-2">
-                        <a href="direct-sql-update.php?id=<?php echo $author['id']; ?>&url=https://api.storiesfromtheweb.org/uploads/optimized/default-author-avatar.jpg" class="btn btn-sm btn-primary">
+                        <button type="button" id="set-default-avatar" class="btn btn-sm btn-primary">
                             Set Default Avatar
-                        </a>
+                        </button>
+                        <script>
+                            document.getElementById('set-default-avatar').addEventListener('click', function() {
+                                // Set a default avatar URL
+                                const defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
+
+                                // Make an AJAX request to update the avatar URL
+                                const xhr = new XMLHttpRequest();
+                                xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
+                                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                                xhr.onload = function() {
+                                    if (xhr.status === 200) {
+                                        try {
+                                            const response = JSON.parse(xhr.responseText);
+                                            console.log('Avatar update response:', response);
+
+                                            if (response.success) {
+                                                alert('Default avatar set successfully!');
+                                                // Reload the page to see the changes
+                                                window.location.reload();
+                                            } else {
+                                                alert('Failed to set default avatar: ' + response.message);
+                                            }
+                                        } catch (e) {
+                                            console.error('Error parsing response:', e);
+                                            alert('Error setting default avatar');
+                                        }
+                                    } else {
+                                        alert('Error setting default avatar: ' + xhr.status);
+                                    }
+                                };
+
+                                xhr.onerror = function() {
+                                    alert('Network error while setting default avatar');
+                                };
+
+                                // Send the request
+                                const data = 'item_type=author&item_id=<?php echo $author['id']; ?>&image_url=' + encodeURIComponent(defaultAvatarUrl);
+                                xhr.send(data);
+                            });
+                        </script>
                     </div>
                 </div>
                 <?php endif; ?>

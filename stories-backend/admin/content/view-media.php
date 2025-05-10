@@ -171,18 +171,41 @@ try {
     // Get display URL for the file
     $displayUrl = getDisplayUrl($media['file_path']);
 
+    // Force absolute URL for display URL
+    if (strpos($displayUrl, 'http') !== 0) {
+        $displayUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($displayUrl, '/');
+    }
+    // Clean up any instances of ../../ in the URL
+    $displayUrl = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $displayUrl);
+
     // Get absolute URLs for all optimized versions
     if (!empty($media['thumbnail_url'])) {
         $media['thumbnail_url'] = getDisplayUrl($media['thumbnail_url']);
+        if (strpos($media['thumbnail_url'], 'http') !== 0) {
+            $media['thumbnail_url'] = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($media['thumbnail_url'], '/');
+        }
+        $media['thumbnail_url'] = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $media['thumbnail_url']);
     }
     if (!empty($media['small_url'])) {
         $media['small_url'] = getDisplayUrl($media['small_url']);
+        if (strpos($media['small_url'], 'http') !== 0) {
+            $media['small_url'] = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($media['small_url'], '/');
+        }
+        $media['small_url'] = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $media['small_url']);
     }
     if (!empty($media['medium_url'])) {
         $media['medium_url'] = getDisplayUrl($media['medium_url']);
+        if (strpos($media['medium_url'], 'http') !== 0) {
+            $media['medium_url'] = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($media['medium_url'], '/');
+        }
+        $media['medium_url'] = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $media['medium_url']);
     }
     if (!empty($media['large_url'])) {
         $media['large_url'] = getDisplayUrl($media['large_url']);
+        if (strpos($media['large_url'], 'http') !== 0) {
+            $media['large_url'] = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($media['large_url'], '/');
+        }
+        $media['large_url'] = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $media['large_url']);
     }
 
 } catch (PDOException $e) {
@@ -272,7 +295,16 @@ require_once '../includes/header.php';
 
                     <div class="detail-item">
                         <strong>Display URL:</strong>
-                        <?php echo htmlspecialchars($displayUrl); ?>
+                        <?php
+                        // Ensure we have an absolute URL for display
+                        $absoluteDisplayUrl = $displayUrl;
+                        if (strpos($absoluteDisplayUrl, 'http') !== 0) {
+                            $absoluteDisplayUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($absoluteDisplayUrl, '/');
+                        }
+                        // Clean up any instances of ../../ in the URL
+                        $absoluteDisplayUrl = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $absoluteDisplayUrl);
+                        echo htmlspecialchars($absoluteDisplayUrl);
+                        ?>
                     </div>
 
                     <?php if ($isImage): ?>

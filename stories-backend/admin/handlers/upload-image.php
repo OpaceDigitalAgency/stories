@@ -146,8 +146,9 @@ try {
         error_log("Image optimization failed for: " . $fileDestination);
 
         // If optimization fails, use the original file
-        $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $fileDestination);
-        $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+        // Create a proper URL without ../../ in the path
+        $cleanPath = '/uploads/' . basename($fileDestination);
+        $url = 'https://' . $_SERVER['HTTP_HOST'] . $cleanPath;
 
         // Save to media table with created_at and updated_at timestamps
         $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");

@@ -630,14 +630,16 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
         $success = resizeImage($sourcePath, $variantPath, $resizeOptions);
 
         if ($success) {
-            // Create URL - use a more reliable method to generate relative paths
-            $basePath = realpath(dirname(__FILE__) . '/../');
-            $relativePath = str_replace($basePath, '', $variantPath);
-            // Ensure the relative path starts with a single slash
-            $relativePath = '/' . ltrim($relativePath, '/');
+            // Create URL - use a clean path without ../../ in it
+            // Extract just the filename and create a clean path
+            $filename = basename($variantPath);
+            $directory = basename(dirname($variantPath));
+
+            // Create a clean path that doesn't include ../../
+            $cleanPath = '/uploads/' . $directory . '/' . $filename;
 
             // Create absolute URL
-            $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+            $url = 'https://' . $_SERVER['HTTP_HOST'] . $cleanPath;
 
             $variants[$size] = [
                 'path' => $variantPath,
@@ -715,11 +717,11 @@ function optimizeImageWithMetadata($sourcePath, $destinationDir, $options = []) 
     if ($fileSize < $MAX_FILE_SIZE && !($options['force'] ?? false)) {
         error_log("File is already small enough: $sourcePath ($fileSize bytes)");
 
-        // Just return the original file info using a more reliable method
-        $basePath = realpath(dirname(__FILE__) . '/../');
-        $relativePath = str_replace($basePath, '', $sourcePath);
-        $relativePath = '/' . ltrim($relativePath, '/');
-        $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+        // Just return the original file info using a clean path
+        $filename = basename($sourcePath);
+        // Create a clean path that doesn't include ../../
+        $cleanPath = '/uploads/' . $filename;
+        $url = 'https://' . $_SERVER['HTTP_HOST'] . $cleanPath;
 
         return [
             'path' => $sourcePath,

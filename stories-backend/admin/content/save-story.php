@@ -221,8 +221,26 @@ try {
     }
 
     // Add cover_url field if it exists in the table
-    if (in_array('cover_url', $columns) && isset($_POST['cover_url'])) {
-        $data['cover_url'] = $_POST['cover_url'];
+    if (in_array('cover_url', $columns)) {
+        // Check if image_updated flag is set
+        $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
+        error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
+
+        // If image_updated is set, update the cover_url field
+        if ($image_updated) {
+            // If cover_url is empty or not set, set it to NULL
+            if (empty($_POST['cover_url'])) {
+                $data['cover_url'] = null;
+                error_log("Removing cover image (setting to NULL)");
+            } else {
+                $data['cover_url'] = $_POST['cover_url'];
+                error_log("Updating cover image to: " . $_POST['cover_url']);
+            }
+        } else if (isset($_POST['cover_url'])) {
+            // If image_updated is not set but cover_url is provided, use it
+            $data['cover_url'] = $_POST['cover_url'];
+            error_log("Using provided cover_url without image_updated flag: " . $_POST['cover_url']);
+        }
     }
 
     // Add any additional fields from the form

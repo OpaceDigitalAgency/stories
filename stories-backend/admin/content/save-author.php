@@ -45,9 +45,9 @@ try {
     $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
     error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
 
-    // If we have an ID, check if there's an existing avatar_url in the database
-    // This is to handle cases where the image was updated via AJAX but not reflected in the form
-    if ($id) {
+    // If we have an ID and the image_updated flag is not set, check if there's an existing avatar_url in the database
+    // This is to handle cases where the image was not updated
+    if ($id && !$image_updated) {
         try {
             $checkStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
             $checkStmt->execute([$id]);
@@ -61,6 +61,15 @@ try {
             }
         } catch (Exception $e) {
             error_log("Error checking existing avatar_url: " . $e->getMessage());
+        }
+    } else if ($image_updated) {
+        // If image_updated flag is set, use the avatar_url from the form
+        // If it's empty, set it to NULL to remove the image
+        if (empty($avatar_url)) {
+            $avatar_url = null;
+            error_log("Removing avatar image (setting to NULL)");
+        } else {
+            error_log("Updating avatar image to: " . $avatar_url);
         }
     }
 

@@ -1,7 +1,7 @@
 <?php
 /**
  * Fix Book Directory Links
- * 
+ *
  * This script fixes the relationship between books and directory items by:
  * 1. Finding books that don't have a directory_item_id
  * 2. Looking for matching directory items by title
@@ -30,7 +30,12 @@ try {
     $db->beginTransaction();
 
     // Get all books without directory_item_id
-    $booksStmt = $db->query("SELECT id, title FROM books WHERE directory_item_id IS NULL OR directory_item_id = 0");
+    $booksStmt = $db->query("
+        SELECT b.id, di.title
+        FROM books b
+        LEFT JOIN directory_items di ON b.directory_item_id = di.id
+        WHERE b.directory_item_id IS NULL OR b.directory_item_id = 0
+    ");
     $books = $booksStmt->fetchAll();
 
     logMessage("Found " . count($books) . " books without directory item links.");
@@ -67,7 +72,7 @@ try {
 
     // Get all directory items of type 'book' without a corresponding book entry
     $dirItemsStmt = $db->query("
-        SELECT di.id, di.title 
+        SELECT di.id, di.title
         FROM directory_items di
         LEFT JOIN books b ON di.id = b.directory_item_id
         WHERE di.type = 'book' AND b.id IS NULL
@@ -79,9 +84,9 @@ try {
     $createdBookCount = 0;
 
     foreach ($orphanedDirItems as $dirItem) {
-        // Look for a book with the same title
-        $stmt = $db->prepare("SELECT id FROM books WHERE title = ?");
-        $stmt->execute([$dirItem['title']]);
+        // Look for a book with the same directory item ID
+        $stmt = $db->prepare("SELECT id FROM books WHERE directory_item_id = ?");
+        $stmt->execute([$dirItem['id']]);
         $existingBook = $stmt->fetch();
 
         if ($existingBook) {
@@ -92,8 +97,8 @@ try {
         } else {
             // Create a new book entry for this directory item
             $insertStmt = $db->prepare("
-                INSERT INTO books (directory_item_id, title, cover_image_url)
-                SELECT id, title, cover_url FROM directory_items WHERE id = ?
+                INSERT INTO books (directory_item_id, cover_image_url)
+                SELECT id, cover_url FROM directory_items WHERE id = ?
             ");
             $insertStmt->execute([$dirItem['id']]);
             logMessage("Created new book entry for directory item #{$dirItem['id']} '{$dirItem['title']}'");

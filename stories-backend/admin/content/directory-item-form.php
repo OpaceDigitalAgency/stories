@@ -868,6 +868,11 @@ if ($debug) {
                                                 <option value="<?php echo htmlspecialchars($series); ?>">
                                             <?php endforeach; ?>
                                         </datalist>
+                                        <?php if ($debug): ?>
+                                        <div class="mt-2 small text-muted">
+                                            Series value from database: "<?php echo htmlspecialchars($bookData['series'] ?? 'Not set'); ?>"
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1008,6 +1013,50 @@ if ($debug) {
                                 <h5>SQL Query</h5>
                                 <pre>
 SELECT * FROM books WHERE directory_item_id = <?php echo $_GET['id'] ?? 'NULL'; ?>
+                                </pre>
+                                <h5>Genre Value</h5>
+                                <pre>
+Value in $bookData['genre']: <?php echo isset($bookData['genre']) ? "'" . htmlspecialchars($bookData['genre']) . "'" : 'NULL'; ?>
+
+Selected option in dropdown: <?php
+    if (isset($bookData['genre'])) {
+        $found = false;
+        foreach ($allGenres as $value => $label) {
+            if ($value == $bookData['genre']) {
+                echo "Found match: value='$value', label='$label'";
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            echo "No matching option found in dropdown for '" . htmlspecialchars($bookData['genre']) . "'";
+        }
+    } else {
+        echo "No genre value in \$bookData";
+    }
+?>
+                                </pre>
+                                <h5>Reading Level Value</h5>
+                                <pre>
+Value in $bookData['reading_level']: <?php echo isset($bookData['reading_level']) ? "'" . htmlspecialchars($bookData['reading_level']) . "'" : 'NULL'; ?>
+
+Selected option in dropdown: <?php
+    if (isset($bookData['reading_level'])) {
+        $found = false;
+        foreach ($allReadingLevels as $value => $label) {
+            if ($value == $bookData['reading_level']) {
+                echo "Found match: value='$value', label='$label'";
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            echo "No matching option found in dropdown for '" . htmlspecialchars($bookData['reading_level']) . "'";
+        }
+    } else {
+        echo "No reading_level value in \$bookData";
+    }
+?>
                                 </pre>
                             </div>
                         </div>

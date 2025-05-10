@@ -474,56 +474,7 @@ $extraHeadContent = '
 </style>
 ';
 
-// Add debug mode if requested
-$debug = isset($_GET['debug']) && $_GET['debug'] == '1';
-if ($debug) {
-    $extraHeadContent .= '
-    <script>
-        console.log("Debug mode enabled");
-        window.DEBUG_MODE = true;
-    </script>
 
-    <!-- Add image upload debug script -->
-    <script src="../assets/js/image-upload-debug.js"></script>
-
-    <!-- Add directory item form fix script -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            console.log("Directory item form fix script loaded");
-
-            // Find the form
-            const form = document.getElementById("directory-item-form");
-            console.log("Form element by ID:", form);
-
-            // Check all forms on the page
-            const allForms = document.querySelectorAll("form");
-            console.log("All forms on page:", allForms.length);
-
-            for (let i = 0; i < allForms.length; i++) {
-                console.log(`Form #${i+1}:`, allForms[i]);
-                console.log(`Form #${i+1} ID:`, allForms[i].querySelector("input[name=\'id\']"));
-                console.log(`Form #${i+1} action:`, allForms[i].getAttribute("action"));
-
-                // Check if form has cover_url field
-                const coverUrlField = allForms[i].querySelector("input[name=\'cover_url\']");
-                console.log(`Form #${i+1} has cover_url field:`, !!coverUrlField);
-            }
-
-            // Check for cover_url field in main form
-            const mainCoverUrlField = document.getElementById("cover_url_main");
-            console.log("Main cover_url field by ID:", mainCoverUrlField);
-
-            // Check for image upload component
-            const imageUploadComponent = document.querySelector(".image-upload-component");
-            console.log("Image upload component found", !!imageUploadComponent);
-        });
-    </script>
-    ';
-
-    // Add more detailed error reporting
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-}
 
 // Include header
 require_once '../includes/header.php';
@@ -616,15 +567,7 @@ if (isset($_SESSION['error'])) {
     unset($_SESSION['error']);
 }
 
-// Display debug information if requested
-if ($debug) {
-    echo '<div class="alert alert-info mb-3">
-        <h5>Debug Mode Enabled</h5>
-        <p>Directory Item ID: ' . ($_GET['id'] ?? 'New Item') . '</p>
-        <p>Item Type: ' . ($item['type'] ?? 'Not set') . '</p>
-        <p>Book Data: ' . (empty($bookData) ? 'Not found' : 'Found') . '</p>
-    </div>';
-}
+
 ?>
 
 <div class="content-section mb-3">
@@ -1084,99 +1027,7 @@ if ($debug) {
                                 <small class="form-text text-muted">Purchase links in JSON format. You can edit this directly or use the Add Purchase Link button above.</small>
                             </div>
 
-                            <!-- Debug information -->
-                            <div class="alert alert-info mt-3">
-                                <h5>Debug Information</h5>
-                                <pre><?php print_r($bookData); ?></pre>
-                                <h5>SQL Query</h5>
-                                <pre>
-SELECT * FROM books WHERE directory_item_id = <?php echo $_GET['id'] ?? 'NULL'; ?>
-                                </pre>
-                                <h5>Genre Value</h5>
-                                <pre>
-Value in $bookData['genre']: <?php echo isset($bookData['genre']) ? "'" . htmlspecialchars($bookData['genre']) . "'" : 'NULL'; ?>
 
-Selected option in dropdown: <?php
-    if (isset($bookData['genre'])) {
-        $found = false;
-        // Define genres if not already defined
-        if (!isset($allGenres) || !is_array($allGenres)) {
-            $allGenres = [
-                'fiction' => 'Fiction',
-                'non-fiction' => 'Non-Fiction',
-                'childrens' => 'Children\'s',
-                'young-adult' => 'Young Adult',
-                'mystery' => 'Mystery',
-                'thriller' => 'Thriller',
-                'romance' => 'Romance',
-                'science-fiction' => 'Science Fiction',
-                'fantasy' => 'Fantasy',
-                'horror' => 'Horror',
-                'biography' => 'Biography',
-                'history' => 'History',
-                'poetry' => 'Poetry',
-                'adventure' => 'Adventure',
-                'comedy' => 'Comedy',
-                'drama' => 'Drama',
-                'educational' => 'Educational'
-            ];
-        }
-
-        foreach ($allGenres as $value => $label) {
-            if ($value == $bookData['genre']) {
-                echo "Found match: value='$value', label='$label'";
-                $found = true;
-                break;
-            }
-        }
-        if (!$found) {
-            echo "No matching option found in dropdown for '" . htmlspecialchars($bookData['genre']) . "'";
-        }
-    } else {
-        echo "No genre value in \$bookData";
-    }
-?>
-                                </pre>
-                                <h5>Reading Level Value</h5>
-                                <pre>
-Value in $bookData['reading_level']: <?php echo isset($bookData['reading_level']) ? "'" . htmlspecialchars($bookData['reading_level']) . "'" : 'NULL'; ?>
-
-Selected option in dropdown: <?php
-    if (isset($bookData['reading_level'])) {
-        $found = false;
-        // Define reading levels if not already defined
-        if (!isset($allReadingLevels) || !is_array($allReadingLevels)) {
-            $allReadingLevels = [
-                'early-reader' => 'Early Reader',
-                'picture-book' => 'Picture Book',
-                'chapter-book' => 'Chapter Book',
-                'middle-grade' => 'Middle Grade',
-                'young-adult' => 'Young Adult',
-                'adult' => 'Adult',
-                'level-1' => 'Level 1',
-                'level-2' => 'Level 2',
-                'level-3' => 'Level 3',
-                'level-4' => 'Level 4',
-                'level-5' => 'Level 5'
-            ];
-        }
-
-        foreach ($allReadingLevels as $value => $label) {
-            if ($value == $bookData['reading_level']) {
-                echo "Found match: value='$value', label='$label'";
-                $found = true;
-                break;
-            }
-        }
-        if (!$found) {
-            echo "No matching option found in dropdown for '" . htmlspecialchars($bookData['reading_level']) . "'";
-        }
-    } else {
-        echo "No reading_level value in \$bookData";
-    }
-?>
-                                </pre>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1507,8 +1358,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
-<!-- Include debug script -->
-<script src="../assets/js/image-upload-debug.js"></script>
 
 <!-- Force re-initialization of image uploader -->
 <script>

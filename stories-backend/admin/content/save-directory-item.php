@@ -45,8 +45,14 @@ try {
     // Get book-specific data if applicable
     $bookData = [];
     if ($type === 'book') {
+        // Handle custom author field
+        $author = trim($_POST['book_author'] ?? '');
+        if ($author === 'custom' && !empty($_POST['custom_author'])) {
+            $author = trim($_POST['custom_author']);
+        }
+
         $bookData = [
-            'author' => trim($_POST['book_author'] ?? ''),
+            'author' => $author,
             'publisher' => trim($_POST['book_publisher'] ?? ''),
             'isbn' => trim($_POST['book_isbn'] ?? ''),
             'isbn13' => trim($_POST['book_isbn13'] ?? ''),

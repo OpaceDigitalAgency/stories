@@ -41,6 +41,12 @@ try {
         $tags = $db->query("SELECT * FROM tags ORDER BY name")->fetchAll();
     }
 
+    // Get authors for dropdown
+    $authors = [];
+    if ($db->query("SHOW TABLES LIKE 'authors'")->rowCount() > 0) {
+        $authors = $db->query("SELECT id, name FROM authors ORDER BY name")->fetchAll();
+    }
+
     // Get directory item if editing
     if (isset($_GET['id'])) {
         try {
@@ -290,17 +296,24 @@ require_once '../includes/header.php';
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label" for="category_id">Category</label>
-                                        <select id="category_id" name="category_id" class="form-control">
-                                            <option value="">Select Category</option>
-                                            <?php foreach ($categories as $category): ?>
-                                                <option value="<?php echo $category['id']; ?>"
-                                                        <?php echo (isset($item['category_id']) && $item['category_id'] == $category['id']) ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($category['name']); ?>
-                                                </option>
+                                        <label class="form-label" for="tag-select">Tags</label>
+                                        <select id="tag-select" class="form-control">
+                                            <option value="">Select a tag to add</option>
+                                            <?php foreach ($tags as $tag): ?>
+                                                <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tag['name']); ?></option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <small class="text-muted">Categories are being phased out. Please use tags instead.</small>
+                                        <div class="tag-container" id="tag-container">
+                                            <?php if (isset($itemTags)): ?>
+                                                <?php foreach($itemTags as $tag): ?>
+                                                    <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
+                                                        <?php echo htmlspecialchars($tag['name']); ?>
+                                                        <i class="fas fa-times remove-tag"></i>
+                                                        <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -355,8 +368,19 @@ require_once '../includes/header.php';
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="author">Author</label>
-                                        <input type="text" id="author" name="book_author" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['author'] ?? ''); ?>">
+                                        <select id="author" name="book_author" class="form-control">
+                                            <option value="">Select Author</option>
+                                            <?php foreach ($authors as $author): ?>
+                                                <option value="<?php echo htmlspecialchars($author['name']); ?>"
+                                                        <?php echo (isset($bookData['author']) && $bookData['author'] == $author['name']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($author['name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                            <option value="custom">Other (enter manually)</option>
+                                        </select>
+                                        <input type="text" id="custom_author" name="custom_author" class="form-control mt-1 d-none"
+                                            placeholder="Enter author name"
+                                            value="<?php echo (!empty($bookData['author']) && !in_array($bookData['author'], array_column($authors, 'name'))) ? htmlspecialchars($bookData['author']) : ''; ?>">
                                     </div>
                                 </div>
 
@@ -517,35 +541,7 @@ require_once '../includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Tags Card -->
-                    <?php if (!empty($tags)): ?>
-                    <div class="wp-card">
-                        <div class="wp-card-header">Tags</div>
-                        <div class="wp-card-body">
-                            <div class="form-group">
-                                <label class="form-label" for="tag-select">Add Tags</label>
-                                <select id="tag-select" class="form-control">
-                                    <option value="">Select a tag to add</option>
-                                    <?php foreach ($tags as $tag): ?>
-                                        <option value="<?php echo $tag['id']; ?>"><?php echo htmlspecialchars($tag['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
 
-                                <div class="tag-container" id="tag-container">
-                                    <?php if (isset($itemTags)): ?>
-                                        <?php foreach($itemTags as $tag): ?>
-                                            <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
-                                                <?php echo htmlspecialchars($tag['name']); ?>
-                                                <i class="fas fa-times remove-tag"></i>
-                                                <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
-                                            </span>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <!-- Contact Information Card -->
                     <div class="wp-card">
@@ -730,85 +726,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Purchase links handling
-    const purchaseLinksField = document.getElementById('purchase_links');
-    const purchaseLinksContainer = document.getElementById('purchase-links-container');
-    const addPurchaseLinkBtn = document.getElementById('add-purchase-link-btn');
+    // Handle custom author field
+    const authorSelect = document.getElementById('author');
+    const customAuthorInput = document.getElementById('custom_author');
 
-    if (purchaseLinksField && purchaseLinksContainer && addPurchaseLinkBtn) {
-        // Initialize purchase links from JSON
-        try {
-            if (purchaseLinksField.value.trim()) {
-                const links = JSON.parse(purchaseLinksField.value);
-
-                // Create UI elements for each link
-                for (const [site, url] of Object.entries(links)) {
-                    addPurchaseLinkRow(site, url);
-                }
+    if (authorSelect && customAuthorInput) {
+        // Show/hide custom author field based on selection
+        authorSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customAuthorInput.classList.remove('d-none');
+                customAuthorInput.focus();
+            } else {
+                customAuthorInput.classList.add('d-none');
             }
-        } catch (e) {
-            console.error('Error parsing purchase links JSON:', e);
+        });
+
+        // Initialize custom author field visibility
+        if (authorSelect.value === 'custom') {
+            customAuthorInput.classList.remove('d-none');
         }
 
-        // Add new purchase link
-        addPurchaseLinkBtn.addEventListener('click', function() {
-            addPurchaseLinkRow('', '');
-        });
-
-        // Event delegation for remove buttons
-        purchaseLinksContainer.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-purchase-link')) {
-                e.target.closest('.purchase-link-row').remove();
-                updatePurchaseLinksJson();
+        // Handle form submission to use custom author value
+        document.querySelector('form.content-form').addEventListener('submit', function(e) {
+            if (authorSelect.value === 'custom' && customAuthorInput.value.trim()) {
+                // Set the author value to the custom input
+                authorSelect.value = customAuthorInput.value.trim();
             }
         });
-
-        // Update JSON when inputs change
-        purchaseLinksContainer.addEventListener('change', function(e) {
-            if (e.target.classList.contains('purchase-link-site') ||
-                e.target.classList.contains('purchase-link-url')) {
-                updatePurchaseLinksJson();
-            }
-        });
-    }
-
-    // Function to add a new purchase link row
-    function addPurchaseLinkRow(site, url) {
-        const row = document.createElement('div');
-        row.className = 'purchase-link-row mb-2';
-        row.innerHTML = `
-            <div class="row">
-                <div class="col-md-4">
-                    <input type="text" class="form-control purchase-link-site"
-                           value="${site}" placeholder="e.g. amazon">
-                </div>
-                <div class="col-md-7">
-                    <input type="text" class="form-control purchase-link-url"
-                           value="${url}" placeholder="https://...">
-                </div>
-                <div class="col-md-1">
-                    <button type="button" class="btn btn-sm btn-danger remove-purchase-link">×</button>
-                </div>
-            </div>
-        `;
-        purchaseLinksContainer.appendChild(row);
-    }
-
-    // Function to update the hidden JSON field
-    function updatePurchaseLinksJson() {
-        const links = {};
-        const rows = purchaseLinksContainer.querySelectorAll('.purchase-link-row');
-
-        rows.forEach(row => {
-            const siteInput = row.querySelector('.purchase-link-site');
-            const urlInput = row.querySelector('.purchase-link-url');
-
-            if (siteInput && urlInput && siteInput.value.trim() && urlInput.value.trim()) {
-                links[siteInput.value.trim()] = urlInput.value.trim();
-            }
-        });
-
-        purchaseLinksField.value = JSON.stringify(links);
     }
 });
 </script>
@@ -819,6 +763,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Include directory item preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/directory-item-preview.js"></script>
+
+<!-- Include purchase links manager script -->
+<script src="../assets/js/purchase-links-manager.js"></script>
 
 <style>
 /* Image preview container styling */

@@ -55,8 +55,6 @@ try {
             <div class="section-body">
                 <form method="POST" action="save-author.php" class="content-form" id="author-form">
                     <input type="hidden" name="id" value="<?php echo $author['id'] ?? ''; ?>">
-                    <!-- Add a hidden field to track if the image was updated via AJAX -->
-                    <input type="hidden" name="image_updated" value="0" id="image_updated_field">
 
                     <!-- Basic Information -->
                     <div class="form-group mb-3">
@@ -344,9 +342,7 @@ try {
         const form = document.getElementById('author-form');
         console.log("Form element by ID:", form);
 
-        // Find the image_updated field
-        const imageUpdatedField = document.getElementById('image_updated_field');
-        console.log("Image updated field by ID:", imageUpdatedField);
+        // No need for image_updated field
 
         // Find the image upload component
         const imageUploadComponent = document.querySelector('.image-upload-component');

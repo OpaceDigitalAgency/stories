@@ -37,12 +37,12 @@ try {
     $age = ($author_type === 'child') ? (int)($_POST['age'] ?? null) : null;
     $location = trim($_POST['location'] ?? '');
 
-    // SIMPLIFIED APPROACH: Just use whatever is in the form
-    // No need for backup field logic
-
-    // Fix for empty avatar_url that should be NULL in database
+    // If avatar_url is empty, set it to NULL
     if (empty($avatar_url)) {
         $avatar_url = null;
+        error_log("Setting avatar image to NULL");
+    } else {
+        error_log("Setting avatar image to: " . $avatar_url);
     }
 
     // Validate required fields

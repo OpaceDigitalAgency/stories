@@ -149,8 +149,8 @@ try {
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $fileDestination);
         $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
 
-        // Save to media table
-        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text) VALUES (?, ?, ?, ?, ?)");
+        // Save to media table with created_at and updated_at timestamps
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
             $fileName,
             $fileDestination,
@@ -173,8 +173,8 @@ try {
             error_log("Thumbnail URL: " . $variants['thumbnail']['url']);
         }
 
-        // Save to media table
-        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?)");
+        // Save to media table with created_at and updated_at timestamps
+        $stmt = $db->prepare("INSERT INTO media (filename, file_path, file_type, file_size, alt_text, thumbnail_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
         $stmt->execute([
             $fileName,
             $url,

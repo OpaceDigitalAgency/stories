@@ -26,9 +26,18 @@ $error = null;
 try {
     // Get author if editing
     if (isset($_GET['id'])) {
-        $stmt = $db->prepare("SELECT * FROM authors WHERE id = ?");
+        // Use a more explicit query to ensure we get the avatar_url field
+        $stmt = $db->prepare("SELECT id, name, slug, email, bio, avatar_url, author_type, age, location, created_at, updated_at, is_published FROM authors WHERE id = ?");
         $stmt->execute([$_GET['id']]);
-        $author = $stmt->fetch();
+        $author = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Double-check the avatar_url directly from the database
+        $avatarStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
+        $avatarStmt->execute([$_GET['id']]);
+        $avatarResult = $avatarStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Log the direct avatar query result
+        error_log("Direct avatar query result: " . print_r($avatarResult, true));
 
         if (!$author) {
             header("Location: authors.php");
@@ -38,6 +47,15 @@ try {
         // Log author data for debugging
         error_log("Author data loaded: " . print_r($author, true));
         error_log("Avatar URL: " . ($author['avatar_url'] ?? 'Not set'));
+        error_log("Avatar URL type: " . gettype($author['avatar_url'] ?? null));
+        error_log("Avatar URL empty check: " . (empty($author['avatar_url']) ? 'EMPTY' : 'NOT EMPTY'));
+
+        // Ensure avatar_url is properly set
+        if (isset($author['avatar_url']) && $author['avatar_url'] !== null) {
+            error_log("Avatar URL is set to: " . $author['avatar_url']);
+        } else {
+            error_log("Avatar URL is NULL or not set");
+        }
     }
 
 } catch (PDOException $e) {
@@ -179,6 +197,16 @@ try {
                 <h2 class="section-title">Profile Picture</h2>
             </div>
             <div class="section-body">
+                <?php if (isset($author['avatar_url']) && !empty($author['avatar_url'])): ?>
+                <div class="alert alert-info">
+                    <strong>Debug:</strong> Avatar URL set in author data: <?php echo htmlspecialchars($author['avatar_url']); ?>
+                </div>
+                <?php else: ?>
+                <div class="alert alert-warning">
+                    <strong>Debug:</strong> No avatar URL set in author data
+                </div>
+                <?php endif; ?>
+
                 <?php
                 // Render image upload component
                 // Check if avatar_url is empty or points to default-avatar.svg

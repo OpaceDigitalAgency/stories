@@ -96,6 +96,136 @@ document.addEventListener('DOMContentLoaded', function() {
                 logDebug(`Remove button clicked for ${fieldName}`);
             });
         }
+
+        // Add debug actions
+        const debugActions = document.createElement('div');
+        debugActions.className = 'debug-actions mt-3';
+        debugActions.innerHTML = `
+            <div class="alert alert-secondary">
+                <strong>Debug Actions:</strong>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-warning force-image-updated">
+                        Force image_updated=1
+                    </button>
+                    <button type="button" class="btn btn-sm btn-info check-image-state">
+                        Check Image State
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger direct-update">
+                        Direct DB Update
+                    </button>
+                </div>
+            </div>
+        `;
+        component.appendChild(debugActions);
+
+        // Add event listeners to the debug buttons
+        const forceImageUpdatedBtn = debugActions.querySelector('.force-image-updated');
+        if (forceImageUpdatedBtn) {
+            forceImageUpdatedBtn.addEventListener('click', function() {
+                // Find the form
+                const form = component.closest('form');
+                if (form) {
+                    // Find or create the image_updated field
+                    let imageUpdatedField = form.querySelector('input[name="image_updated"]');
+                    if (!imageUpdatedField) {
+                        imageUpdatedField = document.createElement('input');
+                        imageUpdatedField.type = 'hidden';
+                        imageUpdatedField.name = 'image_updated';
+                        form.appendChild(imageUpdatedField);
+                    }
+
+                    // Set the value to 1
+                    imageUpdatedField.value = '1';
+                    logDebug('Forced image_updated=1');
+                    alert('Set image_updated=1');
+                } else {
+                    logDebug('No form found');
+                    alert('No form found');
+                }
+            });
+        }
+
+        // Add event listener to the check image state button
+        const checkImageStateBtn = debugActions.querySelector('.check-image-state');
+        if (checkImageStateBtn) {
+            checkImageStateBtn.addEventListener('click', function() {
+                // Get the current state
+                const urlInput = component.querySelector('.image-url-input');
+                const previewImg = component.querySelector('.image-preview img');
+                const previewContainer = component.querySelector('.image-preview-container');
+
+                const state = {
+                    fieldName: urlInput ? urlInput.name : 'unknown',
+                    urlValue: urlInput ? urlInput.value : 'no input',
+                    hasPreviewImg: previewImg ? 'yes' : 'no',
+                    previewImgSrc: previewImg ? previewImg.src : 'no image',
+                    previewImgDisplay: previewImg ? previewImg.style.display : 'no image',
+                    hasPreviewContainer: previewContainer ? 'yes' : 'no',
+                    previewContainerClasses: previewContainer ? previewContainer.className : 'no container'
+                };
+
+                logDebug('Image state: ' + JSON.stringify(state, null, 2));
+                alert(`Image state:\n${JSON.stringify(state, null, 2)}`);
+            });
+        }
+
+        // Add event listener to the direct update button
+        const directUpdateBtn = debugActions.querySelector('.direct-update');
+        if (directUpdateBtn) {
+            directUpdateBtn.addEventListener('click', function() {
+                // Get the current URL value
+                const urlInput = component.querySelector('.image-url-input');
+                const url = urlInput ? urlInput.value : '';
+
+                // Get the entity type and ID
+                const entityType = component.querySelector('.entity-type')?.value;
+                const entityId = component.querySelector('.entity-id')?.value;
+
+                if (entityId && entityId !== '0') {
+                    // Prompt for a new URL
+                    const newUrl = prompt('Enter the image URL to set directly in the database:', url || 'https://api.storiesfromtheweb.org/uploads/optimized/test-image.jpg');
+
+                    if (newUrl) {
+                        // Make an AJAX request to update the image URL directly in the database
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', `/admin/content/direct-sql-update.php?id=${entityId}&url=${encodeURIComponent(newUrl)}`, true);
+
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    logDebug('Direct update response: ' + JSON.stringify(response, null, 2));
+
+                                    if (response.success) {
+                                        alert(`Direct update successful!\n${response.message}`);
+
+                                        // Reload the page to see the changes
+                                        if (confirm('Reload the page to see the changes?')) {
+                                            window.location.reload();
+                                        }
+                                    } else {
+                                        alert(`Direct update failed: ${response.message}`);
+                                    }
+                                } catch (e) {
+                                    logDebug('Error parsing direct update response: ' + e);
+                                    alert('Error parsing direct update response');
+                                }
+                            } else {
+                                alert(`HTTP error: ${xhr.status}`);
+                            }
+                        };
+
+                        xhr.onerror = function() {
+                            alert('Network error during direct update');
+                        };
+
+                        xhr.send();
+                    }
+                } else {
+                    alert('No entity ID found. Save the author first.');
+                }
+            });
+        }
     });
 
     // Monitor form submissions

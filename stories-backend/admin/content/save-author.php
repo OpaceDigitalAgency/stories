@@ -240,13 +240,9 @@ try {
             $params[] = $location;
         }
 
-        // Add created_at and updated_at with explicit values to avoid SQL error
-        $columns[] = "created_at";
-        $columns[] = "updated_at";
-        $placeholders[] = "?";
-        $placeholders[] = "?";
-        $params[] = date('Y-m-d H:i:s'); // Current date/time for created_at
-        $params[] = date('Y-m-d H:i:s'); // Current date/time for updated_at
+        // Don't add created_at and updated_at columns - they have DEFAULT values in the database
+        // The error occurs because we're trying to set these values explicitly
+        // Let MySQL handle the timestamps with its DEFAULT values
 
         $sql = "INSERT INTO authors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $db->prepare($sql);

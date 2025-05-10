@@ -228,6 +228,25 @@ if (function_exists('renderEnhancedTable')) {
 
         // Make sure avatar URL is absolute for proper display
         if (!empty($avatarImage) && strpos($avatarImage, 'http') !== 0) {
+            // Check if the file exists on the server
+            $localPath = $avatarImage;
+
+            // If it starts with ../, convert to server path for file_exists check
+            if (strpos($localPath, '../') === 0) {
+                $localPath = str_replace('../', $_SERVER['DOCUMENT_ROOT'] . '/', $localPath);
+            } else if (strpos($localPath, '/') === 0) {
+                $localPath = $_SERVER['DOCUMENT_ROOT'] . $localPath;
+            } else {
+                $localPath = $_SERVER['DOCUMENT_ROOT'] . '/' . $localPath;
+            }
+
+            // If file doesn't exist, use default avatar
+            if (!file_exists($localPath)) {
+                $avatarImage = '../assets/images/default-avatar.svg';
+                error_log("Avatar file not found at: " . $localPath . " - using default");
+            }
+
+            // Now create the absolute URL
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
             $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
 
@@ -334,6 +353,25 @@ if (function_exists('renderEnhancedTable')) {
 
             // Make sure avatar URL is absolute for proper display
             if (!empty($avatarImage) && strpos($avatarImage, 'http') !== 0) {
+                // Check if the file exists on the server
+                $localPath = $avatarImage;
+
+                // If it starts with ../, convert to server path for file_exists check
+                if (strpos($localPath, '../') === 0) {
+                    $localPath = str_replace('../', $_SERVER['DOCUMENT_ROOT'] . '/', $localPath);
+                } else if (strpos($localPath, '/') === 0) {
+                    $localPath = $_SERVER['DOCUMENT_ROOT'] . $localPath;
+                } else {
+                    $localPath = $_SERVER['DOCUMENT_ROOT'] . '/' . $localPath;
+                }
+
+                // If file doesn't exist, use default avatar
+                if (!file_exists($localPath)) {
+                    $avatarImage = '../assets/images/default-avatar.svg';
+                    error_log("Fallback - Avatar file not found at: " . $localPath . " - using default");
+                }
+
+                // Now create the absolute URL
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                 $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'api.storiesfromtheweb.org';
 

@@ -75,8 +75,18 @@ try {
 
     // Get pagination parameters
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 25;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
+
+    // Ensure per_page is a valid value
+    $validPerPageValues = [10, 25, 50, 100];
+    if (!in_array($perPage, $validPerPageValues)) {
+        $perPage = 10; // Default to 10 if invalid
+    }
+
     $offset = ($page - 1) * $perPage;
+
+    // Log pagination parameters for debugging
+    error_log("Directory Items - Page: $page, Per Page: $perPage, Offset: $offset");
 
     // Get total count for pagination
     $countQuery = "SELECT COUNT(*) FROM directory_items";

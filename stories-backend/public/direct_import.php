@@ -1278,6 +1278,99 @@ function processStory($db, $storyDir) {
 
 // Note: processBook() function is now imported from process_book_functions.php
 
+// Function to verify and fix story-author associations
+function verifyAndFixStoryAuthors($db) {
+    try {
+        // Begin transaction
+        $db->beginTransaction();
+
+        echo "<h4>Verifying Story-Author Associations</h4>";
+        flushOutput();
+
+        // Get all stories
+        $storyStmt = $db->query("SELECT id, title FROM stories ORDER BY id");
+        $stories = $storyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalStories = count($stories);
+        $fixedCount = 0;
+        $alreadyLinkedCount = 0;
+        $noAuthorCount = 0;
+
+        echo "<p class='info'>Found $totalStories stories to check</p>";
+        flushOutput();
+
+        foreach ($stories as $story) {
+            $storyId = $story['id'];
+            $title = $story['title'];
+
+            // Check if story already has an author association
+            $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM story_authors WHERE story_id = ?");
+            $checkStmt->execute([$storyId]);
+            $result = $checkStmt->fetch();
+
+            if ($result['count'] > 0) {
+                $alreadyLinkedCount++;
+                echo "<p class='info'>Story ID $storyId \"$title\" already has author association(s)</p>";
+                flushOutput();
+                continue;
+            }
+
+            // Extract author info from title
+            $authorInfo = extractAuthorInfo($title);
+
+            if (empty($authorInfo['name'])) {
+                $noAuthorCount++;
+                echo "<p class='warning'>Story ID $storyId \"$title\" - Could not extract author name</p>";
+                flushOutput();
+                continue;
+            }
+
+            // Find or create author
+            $authorId = getOrCreateAuthor($db, $authorInfo, 'child');
+
+            if (!$authorId) {
+                echo "<p class='error'>Story ID $storyId \"$title\" - Failed to get or create author</p>";
+                flushOutput();
+                continue;
+            }
+
+            // Create association
+            try {
+                $stmt = $db->prepare("INSERT INTO story_authors (story_id, author_id) VALUES (?, ?)");
+                $stmt->execute([$storyId, $authorId]);
+                $fixedCount++;
+                echo "<p class='success'>Story ID $storyId \"$title\" - Created association with Author ID $authorId</p>";
+                flushOutput();
+            } catch (Exception $e) {
+                echo "<p class='error'>Story ID $storyId \"$title\" - Error creating association: " . $e->getMessage() . "</p>";
+                flushOutput();
+            }
+        }
+
+        // Commit transaction
+        $db->commit();
+
+        echo "<h4>Story-Author Association Verification Complete</h4>";
+        echo "<p class='success'>Results:</p>";
+        echo "<ul>";
+        echo "<li>Total stories checked: $totalStories</li>";
+        echo "<li>Stories already linked to authors: $alreadyLinkedCount</li>";
+        echo "<li>Stories with no extractable author: $noAuthorCount</li>";
+        echo "<li>Stories fixed with new author associations: $fixedCount</li>";
+        echo "</ul>";
+        flushOutput();
+
+        return true;
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        echo "<p class='error'>Story-author verification failed: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return false;
+    }
+}
+
 // Set page variables for header
 $pageTitle = 'Import Tool';
 $currentPage = 'import';
@@ -1396,6 +1489,9 @@ require_once '../admin/includes/header.php';
                             <button type="submit" name="action" value="import" class="btn btn-primary">
                                 <i class="fas fa-file-import"></i> Start Import
                             </button>
+                            <button type="submit" name="action" value="fix_authors" class="btn btn-warning">
+                                <i class="fas fa-link"></i> Fix Story Authors
+                            </button>
                             <a href="optimize_image.php" class="btn btn-secondary">
                                 <i class="fas fa-image"></i> Optimize Media Files
                             </a>
@@ -1411,51 +1507,70 @@ require_once '../admin/includes/header.php';
                         </div>
                         <div class="card-body log-container" style="max-height: 500px; overflow-y: auto;">
                             <?php
-                            // Process the import action
-                            if (isset($_POST['action']) && $_POST['action'] === 'import') {
-                                // Get form data
-                                $contentType = $_POST['content_type'] ?? 'stories';
-                                $sourceType = $_POST['source_type'] ?? 'child';
-                                $cleanData = isset($_POST['clean_data']) && $_POST['clean_data'] == '1';
-                                $cleanMedia = isset($_POST['clean_media']) && $_POST['clean_media'] == '1';
-
-                                echo "<h4>Starting Import: $contentType ($sourceType)</h4>";
-                                flushOutput();
-
-                                // Clean media if requested
-                                if ($cleanMedia) {
-                                    echo "<h4>Cleaning Duplicate Media Records</h4>";
+                            // Process the form actions
+                            if (isset($_POST['action'])) {
+                                // Handle Fix Story Authors action
+                                if ($_POST['action'] === 'fix_authors') {
+                                    echo "<h3>Story-Author Association Repair Tool</h3>";
+                                    echo "<p>This tool will check all stories and ensure they are properly linked to authors.</p>";
                                     flushOutput();
 
-                                    $cleanMediaResult = cleanDuplicateMedia($db);
-                                    if (!$cleanMediaResult) {
-                                        echo "<p class='warning'>Media cleanup encountered issues but will continue with import.</p>";
+                                    $result = verifyAndFixStoryAuthors($db);
+
+                                    if ($result) {
+                                        echo "<p class='success'>Story-author association repair completed successfully.</p>";
+                                    } else {
+                                        echo "<p class='error'>Story-author association repair encountered errors.</p>";
+                                    }
+
+                                    echo "<p><a href='direct_import.php' class='btn btn-primary'>Return to Import Tool</a></p>";
+                                    flushOutput();
+                                }
+                                // Handle Import action
+                                else if ($_POST['action'] === 'import') {
+                                    // Get form data
+                                    $contentType = $_POST['content_type'] ?? 'stories';
+                                    $sourceType = $_POST['source_type'] ?? 'child';
+                                    $cleanData = isset($_POST['clean_data']) && $_POST['clean_data'] == '1';
+                                    $cleanMedia = isset($_POST['clean_media']) && $_POST['clean_media'] == '1';
+
+                                    echo "<h4>Starting Import: $contentType ($sourceType)</h4>";
+                                    flushOutput();
+
+                                    // Clean media if requested
+                                    if ($cleanMedia) {
+                                        echo "<h4>Cleaning Duplicate Media Records</h4>";
+                                        flushOutput();
+
+                                        $cleanMediaResult = cleanDuplicateMedia($db);
+                                        if (!$cleanMediaResult) {
+                                            echo "<p class='warning'>Media cleanup encountered issues but will continue with import.</p>";
+                                            flushOutput();
+                                        }
+                                    } else {
+                                        echo "<p class='info'>Skipping media cleanup as per user request</p>";
                                         flushOutput();
                                     }
-                                } else {
-                                    echo "<p class='info'>Skipping media cleanup as per user request</p>";
-                                    flushOutput();
-                                }
 
-                                // Clean data if requested
-                                if ($cleanData) {
-                                    echo "<h4>Cleaning Existing Data</h4>";
-                                    flushOutput();
+                                    // Clean data if requested
+                                    if ($cleanData) {
+                                        echo "<h4>Cleaning Existing Data</h4>";
+                                        flushOutput();
 
-                                    $cleanResult = cleanContentData($db, $contentType, $sourceType);
-                                    if (!$cleanResult) {
-                                        echo "<p class='error'>Failed to clean existing data. Import aborted.</p>";
-                                        echo "</div></div></div></div></div>";
-                                        require_once '../admin/includes/footer.php';
-                                        exit;
+                                        $cleanResult = cleanContentData($db, $contentType, $sourceType);
+                                        if (!$cleanResult) {
+                                            echo "<p class='error'>Failed to clean existing data. Import aborted.</p>";
+                                            echo "</div></div></div></div></div>";
+                                            require_once '../admin/includes/footer.php';
+                                            exit;
+                                        }
+                                    } else {
+                                        echo "<p class='info'>Skipping data cleaning as per user request</p>";
+                                        flushOutput();
                                     }
-                                } else {
-                                    echo "<p class='info'>Skipping data cleaning as per user request</p>";
-                                    flushOutput();
-                                }
 
-                                // Process WordPress export directory based on content type
-                                $wpDir = '';
+                                    // Process WordPress export directory based on content type
+                                    $wpDir = '';
 
                                 if ($contentType === 'stories' && $sourceType === 'child') {
                                     $wpDir = __DIR__ . '/../_wp migration/wp-md/custom/childrens-story';
@@ -1752,6 +1867,7 @@ require_once '../admin/includes/header.php';
                                 echo "<li>Verify the import results</li>";
                                 echo "</ol>";
                                 echo "<p>The import process may take several minutes to complete.</p>";
+                            }
                             }
                             ?>
                         </div>

@@ -1440,6 +1440,14 @@ function processBook($db, $bookDir) {
             echo "<p class='info'><strong>SERIES DEBUG:</strong> Value type: " . gettype($series) . ", Length: " . strlen($series) . ", Raw value: '" . htmlspecialchars($series) . "'</p>";
             flushOutput();
 
+            // Truncate series if it's too long (VARCHAR(255) limit)
+            if (strlen($series) > 255) {
+                $originalSeries = $series;
+                $series = substr($series, 0, 252) . '...';
+                echo "<p class='warning'><strong>SERIES TRUNCATED:</strong> Series value was too long (" . strlen($originalSeries) . " chars). Truncated to 255 chars.</p>";
+                flushOutput();
+            }
+
             $stmt->execute([
                 $directoryItemId,
                 $title,

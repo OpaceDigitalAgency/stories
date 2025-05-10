@@ -588,6 +588,39 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
 
     $variants = [];
 
+    // Check if $IMAGE_SIZES is defined and is an array
+    if (!isset($IMAGE_SIZES) || !is_array($IMAGE_SIZES) || empty($IMAGE_SIZES)) {
+        error_log("IMAGE_SIZES is not defined or is empty. Using default sizes.");
+        // Define default sizes
+        $IMAGE_SIZES = [
+            'original' => [
+                'width' => null,
+                'height' => null,
+                'crop' => false
+            ],
+            'thumbnail' => [
+                'width' => 150,
+                'height' => 150,
+                'crop' => true
+            ],
+            'small' => [
+                'width' => 300,
+                'height' => 300,
+                'crop' => false
+            ],
+            'medium' => [
+                'width' => 600,
+                'height' => 600,
+                'crop' => false
+            ],
+            'large' => [
+                'width' => 1200,
+                'height' => 1200,
+                'crop' => false
+            ]
+        ];
+    }
+
     // Create each size variant
     foreach ($IMAGE_SIZES as $size => $sizeConfig) {
         // Skip original size if not needed

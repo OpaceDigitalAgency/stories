@@ -256,7 +256,15 @@ require_once '../includes/header.php';
 
                     <div class="detail-item">
                         <strong>File Path:</strong>
-                        <?php echo htmlspecialchars($media['file_path']); ?>
+                        <?php
+                        // Clean up the file path for display
+                        $displayPath = $media['file_path'];
+                        if (strpos($displayPath, 'http') === 0) {
+                            // Clean up any instances of ../../ in the URL
+                            $displayPath = preg_replace('/(https?:\/\/[^\/]+)\/\.\.\/\.\.\//', '$1/', $displayPath);
+                        }
+                        echo htmlspecialchars($displayPath);
+                        ?>
                         <?php if (!$fileExists): ?>
                             <span class="text-danger">(File not found on server)</span>
                         <?php endif; ?>

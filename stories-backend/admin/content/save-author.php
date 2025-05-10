@@ -39,11 +39,30 @@ try {
 
     // Log form data for debugging
     error_log("Save author form data: " . print_r($_POST, true));
-    error_log("Avatar URL: " . $avatar_url);
+    error_log("Avatar URL from form: " . $avatar_url);
 
     // Check if image_updated flag is set
     $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
     error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
+
+    // If we have an ID, check if there's an existing avatar_url in the database
+    // This is to handle cases where the image was updated via AJAX but not reflected in the form
+    if ($id) {
+        try {
+            $checkStmt = $db->prepare("SELECT avatar_url FROM authors WHERE id = ?");
+            $checkStmt->execute([$id]);
+            $existingData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingData && !empty($existingData['avatar_url']) && empty($avatar_url)) {
+                // If we have an existing avatar_url in the database but not in the form,
+                // use the one from the database
+                $avatar_url = $existingData['avatar_url'];
+                error_log("Using existing avatar_url from database: " . $avatar_url);
+            }
+        } catch (Exception $e) {
+            error_log("Error checking existing avatar_url: " . $e->getMessage());
+        }
+    }
 
     // Validate required fields
     if (empty($name)) {

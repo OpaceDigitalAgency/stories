@@ -268,6 +268,31 @@ class ImageUploader {
     updatePreview(component, url, dimensions = '') {
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
+        const urlInput = component.querySelector('.image-url-input');
+
+        // Make sure the URL input is updated
+        if (urlInput) {
+            urlInput.value = url;
+
+            // Make sure the form knows the image has been updated
+            const form = component.closest('form');
+            if (form) {
+                // Add a hidden input to indicate the image was updated
+                let hiddenInput = form.querySelector('input[name="image_updated"]');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'image_updated';
+                    form.appendChild(hiddenInput);
+                }
+                hiddenInput.value = '1';
+
+                // Log for debugging
+                console.log('Form updated with image URL:', url);
+                console.log('Form element:', form);
+                console.log('URL input value:', urlInput.value);
+            }
+        }
 
         // Add has-image class to container
         previewContainer.classList.add('has-image');
@@ -305,6 +330,13 @@ class ImageUploader {
         infoDiv.appendChild(removeButton);
 
         preview.appendChild(infoDiv);
+
+        // Add a visible debug message
+        const debugMsg = document.createElement('div');
+        debugMsg.className = 'alert alert-info mt-2';
+        debugMsg.innerHTML = '<strong>Debug:</strong> Image URL set to: ' + url;
+        debugMsg.style.fontSize = '0.8rem';
+        preview.appendChild(debugMsg);
     }
 
     /**

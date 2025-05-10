@@ -119,14 +119,39 @@ try {
         $thumbnailUrl = $imageUrl;
     }
 
-    // Update the item in the database
-    $stmt = $db->prepare("UPDATE {$tableName} SET {$imageField} = ?, {$thumbnailField} = ? WHERE id = ?");
-    $stmt->execute([$imageUrl, $thumbnailUrl, $itemId]);
+    // Log the update query for debugging
+    error_log("Updating {$tableName} SET {$imageField} = '{$imageUrl}', {$thumbnailField} = '{$thumbnailUrl}' WHERE id = {$itemId}");
 
-    // Set success response
-    $response['success'] = true;
-    $response['message'] = 'Thumbnail updated successfully';
-    $response['thumbnail_url'] = $thumbnailUrl;
+    try {
+        // Update the item in the database
+        $stmt = $db->prepare("UPDATE {$tableName} SET {$imageField} = ?, {$thumbnailField} = ? WHERE id = ?");
+        $stmt->execute([$imageUrl, $thumbnailUrl, $itemId]);
+
+        // Check if the update was successful
+        $rowCount = $stmt->rowCount();
+        error_log("Update affected {$rowCount} rows");
+
+        // Verify the update by querying the database
+        $verifyStmt = $db->prepare("SELECT {$imageField}, {$thumbnailField} FROM {$tableName} WHERE id = ?");
+        $verifyStmt->execute([$itemId]);
+        $result = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("After update: " . print_r($result, true));
+
+        // Set success response
+        $response['success'] = true;
+        $response['message'] = "Thumbnail updated successfully ({$rowCount} rows affected)";
+        $response['thumbnail_url'] = $thumbnailUrl;
+        $response['debug'] = [
+            'table' => $tableName,
+            'field' => $imageField,
+            'id' => $itemId,
+            'rows_affected' => $rowCount,
+            'verification' => $result
+        ];
+    } catch (PDOException $pdoEx) {
+        error_log("Database error updating thumbnail: " . $pdoEx->getMessage());
+        throw new Exception("Database error: " . $pdoEx->getMessage());
+    }
 
 } catch (Exception $e) {
     $response['message'] = $e->getMessage();

@@ -40,8 +40,13 @@ function renderImageUploadComponent($fieldName, $currentValue = '', $label = 'Im
         <!-- Hidden input to store the image URL -->
         <input type="text" id="<?php echo $fieldName; ?>" name="<?php echo $fieldName; ?>"
                value="<?php echo htmlspecialchars($currentValue); ?>"
-               class="form-control image-url-input"
-               <?php echo $hasImage ? 'readonly' : ''; ?>>
+               class="form-control image-url-input">
+
+        <!-- Debug info -->
+        <div class="small text-muted mt-1">
+            Field name: <?php echo $fieldName; ?>,
+            Current value: <?php echo htmlspecialchars($currentValue); ?>
+        </div>
 
         <!-- Image preview area -->
         <div class="image-preview-container <?php echo $hasImage ? 'has-image' : ''; ?>">

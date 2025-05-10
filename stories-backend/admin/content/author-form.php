@@ -296,8 +296,7 @@ try {
                     echo '</div>';
                 }
 
-                // Add a hidden field to ensure the avatar URL is included in the form
-                echo '<input type="hidden" id="avatar_url_backup" name="avatar_url_backup" value="' . htmlspecialchars($avatarUrl) . '">';
+                // No need for a backup field
 
                 // Debug the avatar URL before rendering
                 error_log("Avatar URL being passed to renderImageUploadComponent: " . ($avatarUrl ?? 'NULL'));
@@ -666,67 +665,55 @@ try {
 
 <!-- Custom script removed - simplified approach -->
 
-<!-- Custom script to ensure image URL is properly transferred from preview to form -->
+<!-- Simple script to ensure image URL is properly saved -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Listen for form submission
-        const form = document.getElementById('author-form');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                // Get the avatar URL from the image upload component
-                const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
-                const avatarUrlBackup = document.getElementById('avatar_url_backup');
-
-                if (avatarUrlInput) {
-                    console.log('Form submission - Avatar URL:', avatarUrlInput.value);
-
-                    // If the avatar URL is empty but there's an image in the preview, try to get it from there
-                    if (!avatarUrlInput.value) {
-                        const previewImg = document.querySelector('.image-preview img');
-                        if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
-                            avatarUrlInput.value = previewImg.src;
-                            console.log('Using image from preview:', previewImg.src);
-                        } else if (avatarUrlBackup && avatarUrlBackup.value) {
-                            // If we still don't have a value, use the backup
-                            avatarUrlInput.value = avatarUrlBackup.value;
-                            console.log('Using backup avatar URL:', avatarUrlBackup.value);
-                        }
-                    }
-
-                    // Log the final form data
-                    console.log('Final avatar URL before submission:', avatarUrlInput.value);
-                }
-            });
-        }
-
-        // Listen for changes to the image preview
+        // Simple direct approach - when an image is selected, update the avatar_url field
         const imageUploadComponent = document.querySelector('.image-upload-component');
         if (imageUploadComponent) {
-            // Create a MutationObserver to watch for changes to the image preview
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                        // Check if there's an image in the preview
-                        const previewImg = imageUploadComponent.querySelector('.image-preview img');
-                        if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
-                            // Update the avatar URL input
+            // When the image preview changes, update the avatar_url field
+            imageUploadComponent.addEventListener('click', function(e) {
+                // Check if we clicked the "Select from Media Library" button
+                if (e.target.classList.contains('select-from-media') ||
+                    (e.target.parentElement && e.target.parentElement.classList.contains('select-from-media'))) {
+                    console.log('Media library button clicked');
+
+                    // Add a listener for the message from the media library
+                    window.addEventListener('message', function messageHandler(event) {
+                        if (event.data && event.data.type === 'media-selected') {
+                            const url = event.data.url;
+                            console.log('Media selected:', url);
+
+                            // Update the avatar_url field
                             const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
                             if (avatarUrlInput) {
-                                avatarUrlInput.value = previewImg.src;
-                                console.log('Image preview changed - Updated avatar URL:', previewImg.src);
+                                avatarUrlInput.value = url;
+                                console.log('Updated avatar_url field with:', url);
                             }
+
+                            // Remove this event listener to avoid duplicates
+                            window.removeEventListener('message', messageHandler);
+                        }
+                    });
+                }
+            });
+
+            // When the form is submitted, make sure the avatar_url field has the image URL
+            const form = document.getElementById('author-form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    // Get the image URL from the preview
+                    const previewImg = imageUploadComponent.querySelector('.image-preview img');
+                    if (previewImg && previewImg.src && previewImg.style.display !== 'none') {
+                        // Update the avatar_url field
+                        const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
+                        if (avatarUrlInput && (!avatarUrlInput.value || avatarUrlInput.value === '')) {
+                            avatarUrlInput.value = previewImg.src;
+                            console.log('Form submission - Updated avatar_url field with preview image:', previewImg.src);
                         }
                     }
                 });
-            });
-
-            // Start observing the image preview
-            observer.observe(imageUploadComponent, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['src', 'style']
-            });
+            }
         }
     });
 </script>

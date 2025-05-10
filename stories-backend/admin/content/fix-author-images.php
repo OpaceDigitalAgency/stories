@@ -1,117 +1,74 @@
 <?php
 /**
- * Fix Author Images
- * 
- * This script checks for authors with NULL avatar_url values and attempts to fix them
- * by looking for images in the media library that might match the author.
+ * Fix Author Images - SIMPLIFIED VERSION
+ *
+ * This script allows direct editing of author avatar URLs
  */
 
 // Include auth check
 require_once '../includes/auth-check.php';
 
-// Include header
+// Check if we have an author ID and image URL for direct update
+if (isset($_GET['id']) && isset($_GET['url'])) {
+    try {
+        // Connect to database
+        $db = new PDO(
+            "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+            $config['user'],
+            $config['password'],
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]
+        );
+
+        // Update the author's avatar_url directly
+        $stmt = $db->prepare("UPDATE authors SET avatar_url = ? WHERE id = ?");
+        $result = $stmt->execute([$_GET['url'], $_GET['id']]);
+
+        // Return JSON response
+        header('Content-Type: application/json');
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Author {$_GET['id']} updated with image URL: {$_GET['url']}"
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => "Failed to update author {$_GET['id']}"
+            ]);
+        }
+        exit;
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => "Error: " . $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
+// Include header for the main page view
 require_once '../includes/header.php';
 
-// Initialize variables
-$messages = [];
-$errors = [];
-$fixed = 0;
+// Connect to database
+$db = new PDO(
+    "mysql:host={$config['host']};dbname={$config['name']};charset={$config['charset']}",
+    $config['user'],
+    $config['password'],
+    [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false
+    ]
+);
 
-// Function to find potential images for an author
-function findPotentialAuthorImages($db, $authorName) {
-    $searchTerms = explode(' ', $authorName);
-    $potentialImages = [];
-    
-    // Search for images with the author's name in the filename
-    foreach ($searchTerms as $term) {
-        if (strlen($term) < 3) continue; // Skip short terms
-        
-        $stmt = $db->prepare("SELECT * FROM media WHERE filename LIKE ? OR alt_text LIKE ? ORDER BY created_at DESC LIMIT 5");
-        $searchTerm = '%' . $term . '%';
-        $stmt->execute([$searchTerm, $searchTerm]);
-        
-        while ($row = $stmt->fetch()) {
-            $potentialImages[$row['id']] = $row;
-        }
-    }
-    
-    return $potentialImages;
-}
-
-// Process form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        // Start transaction
-        $db->beginTransaction();
-        
-        if (isset($_POST['fix_all'])) {
-            // Get all authors with NULL avatar_url
-            $stmt = $db->query("SELECT * FROM authors WHERE avatar_url IS NULL OR avatar_url = ''");
-            $authors = $stmt->fetchAll();
-            
-            foreach ($authors as $author) {
-                // Find potential images
-                $potentialImages = findPotentialAuthorImages($db, $author['name']);
-                
-                if (!empty($potentialImages)) {
-                    // Use the first image found
-                    $image = reset($potentialImages);
-                    $imageUrl = $image['url'];
-                    
-                    // Update the author
-                    $updateStmt = $db->prepare("UPDATE authors SET avatar_url = ? WHERE id = ?");
-                    $updateStmt->execute([$imageUrl, $author['id']]);
-                    
-                    $messages[] = "Fixed author: {$author['name']} - Set avatar_url to: {$imageUrl}";
-                    $fixed++;
-                } else {
-                    $errors[] = "No matching images found for author: {$author['name']}";
-                }
-            }
-        } elseif (isset($_POST['manual_fix']) && isset($_POST['author_id']) && isset($_POST['image_url'])) {
-            // Manual fix for a specific author
-            $authorId = $_POST['author_id'];
-            $imageUrl = $_POST['image_url'];
-            
-            // Get author name for the message
-            $stmt = $db->prepare("SELECT name FROM authors WHERE id = ?");
-            $stmt->execute([$authorId]);
-            $authorName = $stmt->fetchColumn();
-            
-            // Update the author
-            $updateStmt = $db->prepare("UPDATE authors SET avatar_url = ? WHERE id = ?");
-            $updateStmt->execute([$imageUrl, $authorId]);
-            
-            $messages[] = "Manually fixed author: {$authorName} - Set avatar_url to: {$imageUrl}";
-            $fixed++;
-        }
-        
-        // Commit transaction
-        $db->commit();
-        
-        $messages[] = "Fixed {$fixed} authors.";
-        
-    } catch (Exception $e) {
-        // Rollback transaction on error
-        if (isset($db)) {
-            $db->rollBack();
-        }
-        
-        $errors[] = "Error: " . $e->getMessage();
-    }
-}
-
-// Get all authors with NULL avatar_url
-$stmt = $db->query("SELECT * FROM authors WHERE avatar_url IS NULL OR avatar_url = '' ORDER BY name");
-$authorsWithNullImages = $stmt->fetchAll();
-
-// Count total authors
-$stmt = $db->query("SELECT COUNT(*) FROM authors");
-$totalAuthors = $stmt->fetchColumn();
-
-// Count authors with NULL avatar_url
-$stmt = $db->query("SELECT COUNT(*) FROM authors WHERE avatar_url IS NULL OR avatar_url = ''");
-$authorsWithNullImagesCount = $stmt->fetchColumn();
+// Get all authors
+$stmt = $db->query("SELECT id, name, slug, avatar_url FROM authors ORDER BY name");
+$authors = $stmt->fetchAll();
 
 ?>
 
@@ -120,91 +77,105 @@ $authorsWithNullImagesCount = $stmt->fetchColumn();
         <div class="col-12">
             <div class="content-header">
                 <h1>Fix Author Images</h1>
-                <p class="text-muted">Fix authors with missing avatar images</p>
+                <p class="text-muted">Directly edit author avatar URLs</p>
             </div>
-            
-            <?php if (!empty($messages)): ?>
-                <div class="alert alert-success">
-                    <ul class="mb-0">
-                        <?php foreach ($messages as $message): ?>
-                            <li><?php echo htmlspecialchars($message); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($errors)): ?>
-                <div class="alert alert-danger">
-                    <ul class="mb-0">
-                        <?php foreach ($errors as $error): ?>
-                            <li><?php echo htmlspecialchars($error); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php endif; ?>
-            
-            <div class="card mb-4">
+
+            <div class="alert alert-info">
+                <strong>Instructions:</strong> Enter an image URL and click "Save" to update an author's avatar.
+                Or click "Set Default Avatar" to use the default avatar image.
+            </div>
+
+            <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Author Image Status</h2>
+                    <h2 class="card-title">All Authors</h2>
                 </div>
                 <div class="card-body">
-                    <p>Total authors: <?php echo $totalAuthors; ?></p>
-                    <p>Authors with missing images: <?php echo $authorsWithNullImagesCount; ?></p>
-                    
-                    <?php if ($authorsWithNullImagesCount > 0): ?>
-                        <form method="POST" action="">
-                            <button type="submit" name="fix_all" class="btn btn-primary">
-                                <i class="fas fa-magic"></i> Auto-Fix All Missing Images
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle"></i> All authors have images!
-                        </div>
-                    <?php endif; ?>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Current Image</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($authors as $author): ?>
+                                <tr>
+                                    <td><?php echo $author['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($author['name']); ?></td>
+                                    <td>
+                                        <?php if (!empty($author['avatar_url'])): ?>
+                                            <img src="<?php echo htmlspecialchars($author['avatar_url']); ?>" alt="Avatar" style="max-width: 100px; max-height: 100px;">
+                                            <div class="small text-muted"><?php echo htmlspecialchars($author['avatar_url']); ?></div>
+                                        <?php else: ?>
+                                            <span class="text-muted">No image</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control image-url-input" placeholder="Enter image URL" value="<?php echo htmlspecialchars($author['avatar_url'] ?? ''); ?>">
+                                            <button class="btn btn-primary save-image" data-author-id="<?php echo $author['id']; ?>">Save</button>
+                                        </div>
+                                        <a href="author-form.php?id=<?php echo $author['id']; ?>" class="btn btn-sm btn-secondary">Edit Author</a>
+                                        <button class="btn btn-sm btn-info set-default-avatar" data-author-id="<?php echo $author['id']; ?>">Set Default Avatar</button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            
-            <?php if (!empty($authorsWithNullImages)): ?>
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Authors with Missing Images</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($authorsWithNullImages as $author): ?>
-                                        <tr>
-                                            <td><?php echo $author['id']; ?></td>
-                                            <td><?php echo htmlspecialchars($author['name']); ?></td>
-                                            <td>
-                                                <form method="POST" action="" class="d-flex">
-                                                    <input type="hidden" name="author_id" value="<?php echo $author['id']; ?>">
-                                                    <input type="text" name="image_url" class="form-control form-control-sm me-2" placeholder="Enter image URL">
-                                                    <button type="submit" name="manual_fix" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-save"></i> Save
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
         </div>
     </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        // Handle save button click
+        $('.save-image').click(function() {
+            const authorId = $(this).data('author-id');
+            const imageUrl = $(this).closest('td').find('.image-url-input').val();
+
+            // Make AJAX request to update the author
+            $.ajax({
+                url: 'fix-author-images.php',
+                method: 'GET',
+                data: {
+                    id: authorId,
+                    url: imageUrl
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('Success: ' + response.message);
+                        // Reload the page to show the updated image
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error: Failed to communicate with the server');
+                }
+            });
+        });
+
+        // Handle set default avatar button click
+        $('.set-default-avatar').click(function() {
+            const authorId = $(this).data('author-id');
+            const defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
+
+            // Set the URL in the input field
+            $(this).closest('td').find('.image-url-input').val(defaultAvatarUrl);
+
+            // Trigger the save button click
+            $(this).closest('td').find('.save-image').click();
+        });
+    });
+</script>
 
 <?php
 // Include footer

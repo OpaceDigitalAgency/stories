@@ -38,11 +38,7 @@ try {
     $location = trim($_POST['location'] ?? '');
 
     // SIMPLIFIED APPROACH: Just use whatever is in the form
-    // If avatar_url is empty, check for backup
-    if (empty($avatar_url) && isset($_POST['avatar_url_backup']) && !empty($_POST['avatar_url_backup'])) {
-        $avatar_url = trim($_POST['avatar_url_backup']);
-        error_log("Using backup avatar URL: " . $avatar_url);
-    }
+    // No need for backup field logic
 
     // Fix for empty avatar_url that should be NULL in database
     if (empty($avatar_url)) {

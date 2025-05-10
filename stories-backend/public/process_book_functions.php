@@ -33,129 +33,152 @@ function pathToUrl($path) {
     return "$protocol://$host$relativePath";
 }
 
-/**
- * Convert a date string to MySQL format
- *
- * @param string|null $dateStr Date string
- * @return string|null MySQL formatted date or null
- */
-function convertToMySQLDate($dateStr) {
-    if (empty($dateStr)) {
-        return null;
-    }
-
-    // Store original for debugging
-    $originalDate = $dateStr;
-
-    // Clean up the date string
-    $dateStr = trim($dateStr);
-
-    // Case 1: Just a year (e.g., "1975", "1937")
-    if (preg_match('/^\d{4}$/', $dateStr)) {
-        return $dateStr . '-01-01'; // Add month and day
-    }
-
-    // Case 2: Year-month (e.g., "2003-05")
-    if (preg_match('/^(\d{4})-(\d{1,2})$/', $dateStr, $matches)) {
-        return $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
-    }
-
-    // Case 3: Month Year (e.g., "May 2003", "February 2012", "September 2013")
-    if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/i', $dateStr, $matches)) {
-        $month = $matches[1];
-        $year = $matches[2];
-
-        // Map of month names to numbers
-        $months = array(
-            'january' => '01', 'february' => '02', 'march' => '03',
-            'april' => '04', 'may' => '05', 'june' => '06',
-            'july' => '07', 'august' => '08', 'september' => '09',
-            'october' => '10', 'november' => '11', 'december' => '12'
-        );
-
-        $monthLower = strtolower($month);
-        if (isset($months[$monthLower])) {
-            return $year . '-' . $months[$monthLower] . '-01';
+// Check if convertToMySQLDate function already exists (defined in direct_import.php)
+if (!function_exists('convertToMySQLDate')) {
+    /**
+     * Convert a date string to MySQL format
+     *
+     * @param string|null $dateStr Date string
+     * @return string|null MySQL formatted date or null
+     */
+    function convertToMySQLDate($dateStr) {
+        if (empty($dateStr)) {
+            return null;
         }
 
-        // If month name not found in map, try strtotime as fallback
+        // Store original for debugging
+        $originalDate = $dateStr;
+
+        // Clean up the date string
+        $dateStr = trim($dateStr);
+
+        // Case 1: Just a year (e.g., "1975", "1937")
+        if (preg_match('/^\d{4}$/', $dateStr)) {
+            return $dateStr . '-01-01'; // Add month and day
+        }
+
+        // Case 2: Year-month (e.g., "2003-05")
+        if (preg_match('/^(\d{4})-(\d{1,2})$/', $dateStr, $matches)) {
+            return $matches[1] . '-' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '-01'; // Add day
+        }
+
+        // Case 3: Month Year (e.g., "May 2003", "February 2012", "September 2013")
+        if (preg_match('/^([a-zA-Z]+)\s+(\d{4})$/i', $dateStr, $matches)) {
+            $month = $matches[1];
+            $year = $matches[2];
+
+            // Map of month names to numbers
+            $months = array(
+                'january' => '01', 'february' => '02', 'march' => '03',
+                'april' => '04', 'may' => '05', 'june' => '06',
+                'july' => '07', 'august' => '08', 'september' => '09',
+                'october' => '10', 'november' => '11', 'december' => '12'
+            );
+
+            $monthLower = strtolower($month);
+            if (isset($months[$monthLower])) {
+                return $year . '-' . $months[$monthLower] . '-01';
+            }
+
+            // If month name not found in map, try strtotime as fallback
+            try {
+                $timestamp = strtotime("$month 1, $year");
+                if ($timestamp !== false) {
+                    return date('Y-m-d', $timestamp);
+                }
+            } catch (Exception $e) {
+                // Ignore and use default
+            }
+
+            // If all else fails, default to January of that year
+            return $year . '-01-01';
+        }
+
+        // Case 4: Already in YYYY-MM-DD format
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
+            // Validate the date
+            try {
+                $date = new DateTime($dateStr);
+                return $date->format('Y-m-d');
+            } catch (Exception $e) {
+                // Invalid date, try to extract just the year
+                if (preg_match('/(\d{4})/', $dateStr, $matches)) {
+                    return $matches[1] . '-01-01';
+                }
+                return null;
+            }
+        }
+
+        // Case 5: Try to extract month and year in various formats
+        if (preg_match('/([a-zA-Z]+)[^\d]*(\d{4})/i', $dateStr, $matches)) {
+            $month = $matches[1];
+            $year = $matches[2];
+
+            // Map of month names to numbers
+            $months = array(
+                'january' => '01', 'february' => '02', 'march' => '03',
+                'april' => '04', 'may' => '05', 'june' => '06',
+                'july' => '07', 'august' => '08', 'september' => '09',
+                'october' => '10', 'november' => '11', 'december' => '12',
+                // Add abbreviated months
+                'jan' => '01', 'feb' => '02', 'mar' => '03',
+                'apr' => '04', 'jun' => '06', 'jul' => '07',
+                'aug' => '08', 'sep' => '09', 'sept' => '09',
+                'oct' => '10', 'nov' => '11', 'dec' => '12'
+            );
+
+            $monthLower = strtolower($month);
+            if (isset($months[$monthLower])) {
+                return $year . '-' . $months[$monthLower] . '-01';
+            }
+        }
+
+        // Case 6: Just try to find a year as last resort
+        if (preg_match('/(\d{4})/', $dateStr, $matches)) {
+            $year = $matches[1];
+            return $year . '-01-01';
+        }
+
+        // Case 7: Other formats that PHP's strtotime can handle
         try {
-            $timestamp = strtotime("$month 1, $year");
+            $timestamp = strtotime($dateStr);
             if ($timestamp !== false) {
                 return date('Y-m-d', $timestamp);
             }
         } catch (Exception $e) {
-            // Ignore and use default
+            // Ignore and try next method
         }
 
-        // If all else fails, default to January of that year
-        return $year . '-01-01';
+        // If all else fails, return null
+        return null;
     }
-
-    // Case 4: Already in YYYY-MM-DD format
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
-        // Validate the date
-        try {
-            $date = new DateTime($dateStr);
-            return $date->format('Y-m-d');
-        } catch (Exception $e) {
-            // Invalid date, try to extract just the year
-            if (preg_match('/(\d{4})/', $dateStr, $matches)) {
-                return $matches[1] . '-01-01';
-            }
-            return null;
-        }
-    }
-
-    // Case 5: Try to extract month and year in various formats
-    if (preg_match('/([a-zA-Z]+)[^\d]*(\d{4})/i', $dateStr, $matches)) {
-        $month = $matches[1];
-        $year = $matches[2];
-
-        // Map of month names to numbers
-        $months = array(
-            'january' => '01', 'february' => '02', 'march' => '03',
-            'april' => '04', 'may' => '05', 'june' => '06',
-            'july' => '07', 'august' => '08', 'september' => '09',
-            'october' => '10', 'november' => '11', 'december' => '12',
-            // Add abbreviated months
-            'jan' => '01', 'feb' => '02', 'mar' => '03',
-            'apr' => '04', 'jun' => '06', 'jul' => '07',
-            'aug' => '08', 'sep' => '09', 'sept' => '09',
-            'oct' => '10', 'nov' => '11', 'dec' => '12'
-        );
-
-        $monthLower = strtolower($month);
-        if (isset($months[$monthLower])) {
-            return $year . '-' . $months[$monthLower] . '-01';
-        }
-    }
-
-    // Case 6: Just try to find a year as last resort
-    if (preg_match('/(\d{4})/', $dateStr, $matches)) {
-        $year = $matches[1];
-        return $year . '-01-01';
-    }
-
-    // Case 7: Other formats that PHP's strtotime can handle
-    try {
-        $timestamp = strtotime($dateStr);
-        if ($timestamp !== false) {
-            return date('Y-m-d', $timestamp);
-        }
-    } catch (Exception $e) {
-        // Ignore and try next method
-    }
-
-    // If all else fails, return null
-    return null;
 }
 
 /**
  * Legacy function for backward compatibility
+ *
+ * @param string|null $dateStr Date string
+ * @return string|null MySQL formatted date or null
  */
 function convertToMySQLDateOLD($dateStr) {
-    return convertToMySQLDate($dateStr);
+    // If the main function exists, use it
+    if (function_exists('convertToMySQLDate')) {
+        return convertToMySQLDate($dateStr);
+    }
+
+    // Otherwise, provide a simple implementation
+    if (empty($dateStr)) {
+        return null;
+    }
+
+    // Try to parse the date
+    $timestamp = strtotime($dateStr);
+    if ($timestamp === false) {
+        return null;
+    }
+
+    // Format as MySQL date
+    return date('Y-m-d', $timestamp);
 }
 
 /**

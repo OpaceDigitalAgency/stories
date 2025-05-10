@@ -57,9 +57,15 @@ try {
                 preg_match('/^\d+-\d+$/', $name) ||
                 preg_match('/^\d+\+$/', $name) ||
                 strpos($name, 'years') !== false ||
+                strpos($name, 'age') !== false ||
                 $name === 'teen' ||
                 $name === 'young adult' ||
-                $name === 'adult'
+                $name === 'adult' ||
+                $name === 'coming of age' ||
+                $name === '12+' ||
+                $name === '13+' ||
+                $name === '14+' ||
+                $name === '16+'
             );
         });
     }
@@ -356,22 +362,65 @@ require_once '../includes/header.php';
                                             <?php endforeach; ?>
                                         </select>
                                         <div class="tag-container" id="tag-container">
-                                            <?php if (isset($itemTags)): ?>
-                                                <?php foreach($itemTags as $tag): ?>
-                                                    <?php
-                                                        // Clean up tag name (remove ** prefix if present)
-                                                        $tagName = $tag['name'];
-                                                        if (strpos($tagName, '**') === 0) {
-                                                            $tagName = substr($tagName, 2);
-                                                        }
-                                                    ?>
+                                            <?php
+                                            // Get item tags if they exist
+                                            $itemTags = [];
+                                            if (isset($_GET['id'])) {
+                                                if ($db->query("SHOW TABLES LIKE 'directory_item_tags'")->rowCount() > 0) {
+                                                    $tagStmt = $db->prepare("
+                                                        SELECT t.id, t.name
+                                                        FROM tags t
+                                                        JOIN directory_item_tags dit ON t.id = dit.tag_id
+                                                        WHERE dit.directory_item_id = ?
+                                                    ");
+                                                    $tagStmt->execute([$_GET['id']]);
+                                                    $itemTags = $tagStmt->fetchAll();
+                                                } else if ($db->query("SHOW TABLES LIKE 'item_tags'")->rowCount() > 0) {
+                                                    $tagStmt = $db->prepare("
+                                                        SELECT t.id, t.name
+                                                        FROM tags t
+                                                        JOIN item_tags it ON t.id = it.tag_id
+                                                        WHERE it.item_id = ? AND it.item_type = 'directory_item'
+                                                    ");
+                                                    $tagStmt->execute([$_GET['id']]);
+                                                    $itemTags = $tagStmt->fetchAll();
+                                                }
+                                            }
+
+                                            if (!empty($itemTags)):
+                                                foreach($itemTags as $tag):
+                                                    // Clean up tag name (remove ** prefix if present)
+                                                    $tagName = $tag['name'];
+                                                    if (strpos($tagName, '**') === 0) {
+                                                        $tagName = substr($tagName, 2);
+                                                    }
+
+                                                    // Skip age-related tags
+                                                    $name = strtolower($tagName);
+                                                    if (preg_match('/^\d+-\d+$/', $name) ||
+                                                        preg_match('/^\d+\+$/', $name) ||
+                                                        strpos($name, 'years') !== false ||
+                                                        strpos($name, 'age') !== false ||
+                                                        $name === 'teen' ||
+                                                        $name === 'young adult' ||
+                                                        $name === 'adult' ||
+                                                        $name === 'coming of age' ||
+                                                        $name === '12+' ||
+                                                        $name === '13+' ||
+                                                        $name === '14+' ||
+                                                        $name === '16+') {
+                                                        continue;
+                                                    }
+                                            ?>
                                                     <span class="tag-badge" data-tag-id="<?php echo $tag['id']; ?>">
                                                         <?php echo htmlspecialchars($tagName); ?>
                                                         <i class="fas fa-times remove-tag"></i>
                                                         <input type="hidden" name="tags[]" value="<?php echo $tag['id']; ?>">
                                                     </span>
-                                                <?php endforeach; ?>
-                                            <?php endif; ?>
+                                            <?php
+                                                endforeach;
+                                            endif;
+                                            ?>
                                         </div>
                                     </div>
                                 </div>

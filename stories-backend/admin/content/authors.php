@@ -69,13 +69,59 @@ try {
         ? "(SELECT COUNT(*) FROM blog_posts WHERE author_id = a.id)"
         : "0";
 
-    // Get all authors with content counts
+    // Check if book_authors table exists
+    $hasBookAuthorsTable = false;
+    try {
+        $stmt = $db->query("SHOW TABLES LIKE 'book_authors'");
+        $hasBookAuthorsTable = $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table might not exist, ignore
+    }
+
+    // Default book count query
+    $bookCountQuery = "0";
+
+    if ($hasBookAuthorsTable) {
+        // Use the book_authors table if it exists
+        $bookCountQuery = "(SELECT COUNT(*) FROM book_authors ba WHERE ba.author_id = a.id)";
+    }
+
+    // Get filter parameters
+    $authorTypeFilter = isset($_GET['author_type']) ? $_GET['author_type'] : '';
+
+    // Get page and per_page parameters
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? max(1, min(100, intval($_GET['per_page']))) : 10;
+    $offset = ($page - 1) * $perPage;
+
+    // Build WHERE clause for filtering
+    $whereClause = "1=1"; // Always true condition to start
+    $params = [];
+
+    if (!empty($authorTypeFilter)) {
+        $whereClause .= " AND a.author_type = ?";
+        $params[] = $authorTypeFilter;
+    }
+
+    // Get total count with filters
+    $countQuery = "SELECT COUNT(*) FROM authors a WHERE $whereClause";
+    $countStmt = $db->prepare($countQuery);
+    $countStmt->execute($params);
+    $totalItems = $countStmt->fetchColumn();
+
+    // Get all authors with content counts and pagination
     $query = "SELECT a.*,
               $storyCountQuery as story_count,
-              $postCountQuery as post_count
+              $postCountQuery as post_count,
+              $bookCountQuery as book_count
               FROM authors a
-              ORDER BY a.name ASC";
-    $authors = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+              WHERE $whereClause
+              ORDER BY a.name ASC
+              LIMIT $offset, $perPage";
+
+    $stmt = $db->prepare($query);
+    $stmt->execute($params);
+    $authors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     error_log("Authors page error: " . $e->getMessage());
@@ -130,6 +176,34 @@ $extraHeadContent .= '
 // Include header
 require_once '../includes/header.php';
 
+// Add author type filter tabs
+?>
+<div class="premium-tabs mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link <?php echo empty($authorTypeFilter) ? 'active' : ''; ?>" href="authors.php">
+                All Authors
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo $authorTypeFilter === 'retail' ? 'active' : ''; ?>" href="authors.php?author_type=retail">
+                Retail/Book Authors
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo $authorTypeFilter === 'child' ? 'active' : ''; ?>" href="authors.php?author_type=child">
+                Child Authors
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo $authorTypeFilter === 'parent' ? 'active' : ''; ?>" href="authors.php?author_type=parent">
+                Parent Authors
+            </a>
+        </li>
+    </ul>
+</div>
+<?php
+
 // Include live search component
 include_once '../includes/live-search-component.php';
 if (function_exists('renderLiveSearchComponent')) {
@@ -158,15 +232,22 @@ if (function_exists('renderEnhancedTable')) {
         // Format the bio
         $bio = isset($author['bio']) ? substr($author['bio'], 0, 100) . (strlen($author['bio']) > 100 ? '...' : '') : '';
 
+        // Clean up author name - remove ** prefix if it exists
+        $authorName = $author['name'];
+        if (strpos($authorName, '**') === 0) {
+            $authorName = trim(str_replace('**', '', $authorName));
+        }
+
         // Add the item to the table data
         $tableData[] = [
             'id' => $author['id'],
             'image' => $avatarImage,
-            'name' => $author['name'],
+            'name' => $authorName,
             'email' => $author['email'] ?? '',
             'type' => ucfirst($author['author_type'] ?? 'retail'),
             'bio' => $bio,
             'stories' => $author['story_count'] ?? 0,
+            'books' => $author['book_count'] ?? 0,
             'posts' => $author['post_count'] ?? 0
         ];
     }
@@ -178,6 +259,7 @@ if (function_exists('renderEnhancedTable')) {
         'type' => 'Type',
         'bio' => 'Bio',
         'stories' => 'Stories',
+        'books' => 'Books',
         'posts' => 'Blog Posts'
     ];
 
@@ -198,8 +280,8 @@ if (function_exists('renderEnhancedTable')) {
             'thumbnailAltField' => 'name',
             'editableFields' => $editableFields,
             'bulkActions' => ['delete'],
-            'itemsPerPage' => 10,
-            'currentPage' => 1
+            'itemsPerPage' => $perPage,
+            'currentPage' => $page
         ]
     );
 } else {
@@ -213,6 +295,7 @@ if (function_exists('renderEnhancedTable')) {
             'author_type' => 'Type',
             'bio' => 'Bio',
             'story_count' => 'Stories',
+            'book_count' => 'Books',
             'post_count' => 'Blog Posts'
         ];
 
@@ -229,14 +312,21 @@ if (function_exists('renderEnhancedTable')) {
             $avatarImage = isset($author['avatar_url']) && !empty($author['avatar_url']) ? $author['avatar_url'] :
                          (isset($author['avatar']) && !empty($author['avatar']) ? $author['avatar'] : '');
 
+            // Clean up author name - remove ** prefix if it exists
+            $authorName = $author['name'];
+            if (strpos($authorName, '**') === 0) {
+                $authorName = trim(str_replace('**', '', $authorName));
+            }
+
             // Add to table data
             $tableData[] = [
                 'id' => $author['id'],
-                'name' => $author['name'] ?? '',
+                'name' => $authorName,
                 'email' => $author['email'] ?? '',
                 'author_type' => $authorType,
                 'bio' => $bio,
                 'story_count' => $author['story_count'] ?? 0,
+                'book_count' => $author['book_count'] ?? 0,
                 'post_count' => $author['post_count'] ?? 0,
                 'avatar' => $avatarImage
             ];
@@ -259,8 +349,8 @@ if (function_exists('renderEnhancedTable')) {
                 'thumbnailAltField' => 'name',
                 'editableFields' => $editableFields,
                 'bulkActions' => ['delete', 'notify'],
-                'itemsPerPage' => 10,
-                'currentPage' => 1
+                'itemsPerPage' => $perPage,
+                'currentPage' => $page
             ]
         );
     } else {
@@ -325,6 +415,12 @@ echo '<script>
         console.log("Found " + previewButtons.length + " author preview buttons");
     });
 </script>';
+
+// Include pagination component
+include_once '../includes/pagination-component.php';
+if (function_exists('renderPagination') && $totalItems > $perPage) {
+    renderPagination($totalItems, $perPage, $page);
+}
 
 // Include footer
 require_once '../includes/footer.php';

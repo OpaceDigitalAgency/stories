@@ -272,6 +272,18 @@ function processBook($db, $bookDir) {
         $isbn = isset($data['isbn']) ? $data['isbn'] : '';
         $isbn13 = isset($data['isbn13']) ? $data['isbn13'] : '';
 
+        // Special case: Extract author from title if it contains "by Author Name"
+        if (empty($author) && preg_match('/by\s+([^\/]+)$/i', $title, $match)) {
+            $author = trim($match[1]);
+            echo "<p class='success'>Extracted author from title: '$author'</p>";
+            flushOutput();
+
+            // Remove the "by Author Name" part from the title
+            $title = trim(preg_replace('/by\s+[^\/]+$/i', '', $title));
+            echo "<p class='info'>Updated title: '$title'</p>";
+            flushOutput();
+        }
+
         // Get publication date string from available sources
         $pubDateStr = null;
 
@@ -384,7 +396,8 @@ function processBook($db, $bookDir) {
                 '/\*\*Author:\*\*\s*(.*?)(?:\n|$)/i',
                 '/Author:\s*(.*?)(?:\n|$)/i',
                 '/By\s+(.*?)(?:\n|$)/i',
-                '/Written\s+by\s+(.*?)(?:\n|$)/i'
+                '/Written\s+by\s+(.*?)(?:\n|$)/i',
+                '/Book\s+Title:.*?\n\s*Author:\s*(.*?)(?:\n|$)/is'  // Match the specific format in The Money, Stan, Big Lauren and Me
             ];
 
             $authorFound = false;
@@ -522,7 +535,8 @@ function processBook($db, $bookDir) {
             '/Publisher:\s*(.*?)(?:\n|$)/i',
             '/\*\*Book\s+Publisher:\*\*\s*(.*?)(?:\n|$)/i',
             '/\*\*Publishing\s+House:\*\*\s*(.*?)(?:\n|$)/i',
-            '/Publishing\s+House:\s*(.*?)(?:\n|$)/i'
+            '/Publishing\s+House:\s*(.*?)(?:\n|$)/i',
+            '/This\s+edition\s+published\s+by:\s*(.*?)(?:\n|$)/i'  // Match the specific format in The Money, Stan, Big Lauren and Me
         ];
 
         $publisherFound = false;
@@ -670,7 +684,9 @@ function processBook($db, $bookDir) {
             }
         }
 
-        // Debug: Log the genre, series, and reading level from front matter
+        // Debug: Log the author, publisher, genre, series, and reading level
+        echo "<p class='info'>Author: " . ($author ? "'$author'" : "Not set") . "</p>";
+        echo "<p class='info'>Publisher: " . ($publisher ? "'$publisher'" : "Not set") . "</p>";
         echo "<p class='info'>Genre from front matter: " . ($genre ? "'$genre'" : "Not set") . "</p>";
         echo "<p class='info'>Series from front matter: " . ($series ? "'$series'" : "Not set") . "</p>";
         echo "<p class='info'>Reading level from front matter: " . ($readingLevel ? "'$readingLevel'" : "Not set") . "</p>";

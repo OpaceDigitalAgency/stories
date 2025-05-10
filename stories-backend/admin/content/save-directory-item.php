@@ -26,6 +26,9 @@ try {
     // Start transaction
     $db->beginTransaction();
 
+    // Log the entire POST data for debugging
+    error_log("Save directory item POST data: " . print_r($_POST, true));
+
     // Get form data
     $id = $_POST['id'] ?? null;
     $title = trim($_POST['title'] ?? '');
@@ -41,6 +44,26 @@ try {
     $published_at = $_POST['published_at'] ?? null;
     $cover_url = trim($_POST['cover_url'] ?? '');
     $type = trim($_POST['type'] ?? 'general');
+
+    // Check if we need to handle the image update
+    $image_updated = isset($_POST['image_updated']) && $_POST['image_updated'] === '1';
+    error_log("Image updated flag: " . ($image_updated ? 'YES' : 'NO'));
+
+    // If we have an ID and the image wasn't updated, get the existing cover_url from the database
+    if ($id && !$image_updated && empty($cover_url)) {
+        try {
+            $stmt = $db->prepare("SELECT cover_url FROM directory_items WHERE id = ?");
+            $stmt->execute([$id]);
+            $existingData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existingData && !empty($existingData['cover_url'])) {
+                $cover_url = $existingData['cover_url'];
+                error_log("Using existing cover_url from database: " . $cover_url);
+            }
+        } catch (Exception $e) {
+            error_log("Error checking existing cover_url: " . $e->getMessage());
+        }
+    }
 
     // Get book-specific data if applicable
     $bookData = [];

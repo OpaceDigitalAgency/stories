@@ -269,14 +269,23 @@ class ImageUploader {
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
         const urlInput = component.querySelector('.image-url-input');
+        const entityType = component.querySelector('.entity-type')?.value;
+        const entityId = component.querySelector('.entity-id')?.value;
+
+        console.log('updatePreview called for field:', urlInput ? urlInput.name : 'unknown');
+        console.log('New image URL:', url);
+        console.log('Entity type:', entityType, 'Entity ID:', entityId);
 
         // Make sure the URL input is updated
         if (urlInput) {
             urlInput.value = url;
+            console.log('Updated URL input value to:', url);
 
             // Make sure the form knows the image has been updated
             const form = component.closest('form');
             if (form) {
+                console.log('Found parent form:', form.id || 'unnamed form');
+
                 // Add a hidden input to indicate the image was updated
                 let hiddenInput = form.querySelector('input[name="image_updated"]');
                 if (!hiddenInput) {
@@ -284,14 +293,20 @@ class ImageUploader {
                     hiddenInput.type = 'hidden';
                     hiddenInput.name = 'image_updated';
                     form.appendChild(hiddenInput);
+                    console.log('Created new image_updated hidden input');
                 }
                 hiddenInput.value = '1';
+                console.log('Set image_updated flag to 1');
 
                 // Log for debugging
                 console.log('Form updated with image URL:', url);
                 console.log('Form element:', form);
                 console.log('URL input value:', urlInput.value);
+            } else {
+                console.log('No parent form found for this component');
             }
+        } else {
+            console.log('No URL input found in component');
         }
 
         // Add has-image class to container
@@ -347,28 +362,39 @@ class ImageUploader {
         const urlInput = component.querySelector('.image-url-input');
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
-        const entityType = component.querySelector('.entity-type').value;
-        const entityId = component.querySelector('.entity-id').value;
+        const entityType = component.querySelector('.entity-type')?.value;
+        const entityId = component.querySelector('.entity-id')?.value;
+
+        console.log('removeImage called for field:', urlInput ? urlInput.name : 'unknown');
+        console.log('Current URL value:', urlInput ? urlInput.value : 'no input');
 
         // Clear the URL input
-        urlInput.value = '';
-        urlInput.removeAttribute('readonly');
+        if (urlInput) {
+            urlInput.value = '';
+            urlInput.removeAttribute('readonly');
+        }
 
         // Remove has-image class from container
-        previewContainer.classList.remove('has-image');
+        if (previewContainer) {
+            previewContainer.classList.remove('has-image');
+        }
 
         // Reset preview
-        preview.innerHTML = `
-            <div class="placeholder">
-                <i class="fas fa-image"></i>
-                <span>No image selected</span>
-            </div>
-        `;
-        preview.classList.add('empty');
+        if (preview) {
+            preview.innerHTML = `
+                <div class="placeholder">
+                    <i class="fas fa-image"></i>
+                    <span>No image selected</span>
+                </div>
+            `;
+            preview.classList.add('empty');
+        }
 
         // If we're in a form, find the form and mark it as having unsaved changes
         const form = component.closest('form');
         if (form) {
+            console.log('Found parent form:', form.id || 'unnamed form');
+
             // Add a hidden input to indicate the image was updated
             let hiddenInput = form.querySelector('input[name="image_updated"]');
             if (!hiddenInput) {
@@ -376,13 +402,18 @@ class ImageUploader {
                 hiddenInput.type = 'hidden';
                 hiddenInput.name = 'image_updated';
                 form.appendChild(hiddenInput);
+                console.log('Created new image_updated hidden input');
             }
             hiddenInput.value = '1';
             console.log('Image removed - Updated form with image_updated=1');
+        } else {
+            console.log('No parent form found for this component');
         }
 
         // Update the database if we have an entity ID
         if (entityId && entityId !== '0') {
+            console.log('Updating database for entity type:', entityType, 'ID:', entityId);
+
             // Make an AJAX request to update the image URL to empty
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
@@ -393,21 +424,33 @@ class ImageUploader {
                 entityType: entityType,
                 entityId: entityId,
                 imageUrl: '',
-                fieldName: urlInput.name
+                fieldName: urlInput ? urlInput.name : 'unknown'
             });
 
             xhr.onload = function() {
+                console.log('AJAX response status:', xhr.status);
                 if (xhr.status === 200) {
                     try {
                         const response = JSON.parse(xhr.responseText);
                         console.log('Image removal response:', response);
                     } catch (e) {
                         console.error('Error parsing image removal response:', e);
+                        console.log('Raw response:', xhr.responseText);
                     }
+                } else {
+                    console.error('Error removing image, status:', xhr.status);
                 }
             };
 
-            xhr.send('item_type=' + encodeURIComponent(entityType) + '&item_id=' + encodeURIComponent(entityId) + '&image_url=');
+            xhr.onerror = function() {
+                console.error('Network error during image removal');
+            };
+
+            const requestData = 'item_type=' + encodeURIComponent(entityType) + '&item_id=' + encodeURIComponent(entityId) + '&image_url=';
+            console.log('Sending request data:', requestData);
+            xhr.send(requestData);
+        } else {
+            console.log('No entity ID found, skipping database update');
         }
     }
 
@@ -606,22 +649,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add form submission handler to ensure image URLs are properly submitted
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function(e) {
+            console.log('Form submission handler triggered for form:', form.id || 'unnamed form');
+
             // Find all image upload components in this form
             const components = form.querySelectorAll('.image-upload-component');
+            console.log(`Found ${components.length} image upload components in this form`);
 
             components.forEach(component => {
                 const urlInput = component.querySelector('.image-url-input');
+                const previewContainer = component.querySelector('.image-preview-container');
                 const previewImg = component.querySelector('.image-preview img');
 
-                // If the input is empty but there's an image in the preview, use that URL
-                if ((!urlInput.value || urlInput.value === '') && previewImg && previewImg.src && previewImg.style.display !== 'none') {
-                    urlInput.value = previewImg.src;
-                    console.log('Form submission - Updated empty image URL from preview:', previewImg.src);
-                }
+                console.log('Processing component with field:', urlInput ? urlInput.name : 'unknown');
+                console.log('Current URL value:', urlInput ? urlInput.value : 'no input');
+                console.log('Has preview container:', previewContainer ? 'yes' : 'no');
+                console.log('Has preview image:', previewImg ? 'yes' : 'no');
 
-                // Set the image_updated flag if we have a URL
-                if (urlInput.value && urlInput.value !== '') {
-                    // Add a hidden input to indicate the image was updated
+                // Check if we have a preview image
+                if (previewImg && previewImg.src && !previewImg.src.endsWith('placeholder.png') &&
+                    previewImg.style.display !== 'none' && previewContainer &&
+                    previewContainer.classList.contains('has-image')) {
+
+                    // If the input is empty but there's an image in the preview, use that URL
+                    if (!urlInput.value || urlInput.value === '') {
+                        urlInput.value = previewImg.src;
+                        console.log('Updated empty image URL from preview:', previewImg.src);
+                    }
+
+                    // Set the image_updated flag
                     let hiddenInput = form.querySelector('input[name="image_updated"]');
                     if (!hiddenInput) {
                         hiddenInput = document.createElement('input');
@@ -630,6 +685,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         form.appendChild(hiddenInput);
                     }
                     hiddenInput.value = '1';
+                    console.log('Set image_updated flag to 1');
+                } else if (urlInput && !urlInput.value) {
+                    // If we have no preview image and no URL, make sure the image_updated flag is set
+                    // This ensures that if the user removed an image, it stays removed
+                    let hiddenInput = form.querySelector('input[name="image_updated"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'image_updated';
+                        form.appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = '1';
+                    console.log('No image in preview, empty URL - set image_updated flag to 1');
                 }
             });
         });

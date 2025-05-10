@@ -637,20 +637,9 @@ class ImageUploader {
                 // Find the form by looking for the closest form element
                 let form = component.closest('form');
                 if (form) {
-                    // Set the image_updated field to 1
-                    let imageUpdatedField = form.querySelector('input[name="image_updated"]');
-                    if (!imageUpdatedField) {
-                        imageUpdatedField = document.getElementById('image_updated_field');
-                    }
+                    console.log('Found form, image URL updated to:', url);
 
-                    if (imageUpdatedField) {
-                        imageUpdatedField.value = '1';
-                        console.log('Set image_updated field to 1 after media selection');
-                    } else {
-                        console.log('Could not find image_updated field');
-                    }
-
-                    // Also update any backup fields if they exist
+                    // Update any backup fields if they exist (for backward compatibility)
                     const backupField = form.querySelector('#avatar_url_backup');
                     if (backupField) {
                         backupField.value = url;

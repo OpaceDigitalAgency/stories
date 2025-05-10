@@ -322,8 +322,6 @@ require_once '../includes/header.php';
     <div class="section-body">
         <form method="POST" action="save-story.php" class="content-form" id="story-form">
             <input type="hidden" name="id" value="<?php echo $story['id'] ?? ''; ?>">
-            <!-- Add a hidden field to track if the image was updated via AJAX -->
-            <input type="hidden" name="image_updated" value="0" id="image_updated_field">
 
             <!-- WordPress-like Layout -->
             <div class="wp-layout">

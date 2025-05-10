@@ -572,7 +572,7 @@ if (isset($_SESSION['error'])) {
 
 <div class="content-section mb-3">
     <div class="section-body">
-        <form method="POST" action="save-directory-item.php" class="content-form" id="directory-item-form">
+        <form method="POST" action="../content/save-directory-item.php" class="content-form" id="directory-item-form">
             <input type="hidden" name="id" value="<?php echo $item['id'] ?? ''; ?>">
             <input type="hidden" name="cover_url" value="<?php echo htmlspecialchars($item['cover_url'] ?? ''); ?>" id="cover_url_main">
 

@@ -97,6 +97,6 @@ $(document).ready(function() {
                 links[site] = url;
             }
         });
-        $('textarea[name="purchase_links"]').val(JSON.stringify(links));
+        $('textarea[name="book_purchase_links"]').val(JSON.stringify(links));
     }
 });

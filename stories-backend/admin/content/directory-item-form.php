@@ -290,8 +290,8 @@ require_once '../includes/header.php';
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label" for="category_id">Category <span class="text-danger">*</span></label>
-                                        <select id="category_id" name="category_id" class="form-control" required>
+                                        <label class="form-label" for="category_id">Category</label>
+                                        <select id="category_id" name="category_id" class="form-control">
                                             <option value="">Select Category</option>
                                             <?php foreach ($categories as $category): ?>
                                                 <option value="<?php echo $category['id']; ?>"
@@ -300,6 +300,7 @@ require_once '../includes/header.php';
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <small class="text-muted">Categories are being phased out. Please use tags instead.</small>
                                     </div>
                                 </div>
 
@@ -344,49 +345,7 @@ require_once '../includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Contact Information Card -->
-                    <div class="wp-card">
-                        <div class="wp-card-header">Contact Information</div>
-                        <div class="wp-card-body">
-                            <div class="form-row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="website_url">Website URL</label>
-                                        <input type="url" id="website_url" name="website_url" class="form-control"
-                                            value="<?php echo htmlspecialchars($item['website_url'] ?? ''); ?>"
-                                            placeholder="https://example.com">
-                                    </div>
-                                </div>
 
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="contact_email">Contact Email</label>
-                                        <input type="email" id="contact_email" name="contact_email" class="form-control"
-                                            value="<?php echo htmlspecialchars($item['contact_email'] ?? ''); ?>"
-                                            placeholder="contact@example.com">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="contact_phone">Contact Phone</label>
-                                        <input type="tel" id="contact_phone" name="contact_phone" class="form-control"
-                                            value="<?php echo htmlspecialchars($item['contact_phone'] ?? ''); ?>"
-                                            placeholder="+1 (123) 456-7890">
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="form-label" for="address">Address</label>
-                                        <textarea id="address" name="address" class="form-control" rows="2"><?php echo htmlspecialchars($item['address'] ?? ''); ?></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Book Information Card -->
                     <div class="wp-card book-fields" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'style="display:block"' : ''; ?>>
@@ -449,8 +408,22 @@ require_once '../includes/header.php';
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label" for="genre">Genre</label>
-                                        <input type="text" id="genre" name="book_genre" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['genre'] ?? ''); ?>">
+                                        <select id="genre" name="book_genre" class="form-control">
+                                            <option value="">Select Genre</option>
+                                            <option value="fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'fiction') ? 'selected' : ''; ?>>Fiction</option>
+                                            <option value="non-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'non-fiction') ? 'selected' : ''; ?>>Non-Fiction</option>
+                                            <option value="picture-book" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'picture-book') ? 'selected' : ''; ?>>Picture Book</option>
+                                            <option value="chapter-book" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'chapter-book') ? 'selected' : ''; ?>>Chapter Book</option>
+                                            <option value="middle-grade" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'middle-grade') ? 'selected' : ''; ?>>Middle Grade</option>
+                                            <option value="young-adult" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
+                                            <option value="fantasy" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'fantasy') ? 'selected' : ''; ?>>Fantasy</option>
+                                            <option value="science-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'science-fiction') ? 'selected' : ''; ?>>Science Fiction</option>
+                                            <option value="mystery" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'mystery') ? 'selected' : ''; ?>>Mystery</option>
+                                            <option value="adventure" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'adventure') ? 'selected' : ''; ?>>Adventure</option>
+                                            <option value="historical-fiction" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'historical-fiction') ? 'selected' : ''; ?>>Historical Fiction</option>
+                                            <option value="biography" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'biography') ? 'selected' : ''; ?>>Biography</option>
+                                            <option value="educational" <?php echo (isset($bookData['genre']) && $bookData['genre'] == 'educational') ? 'selected' : ''; ?>>Educational</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -467,25 +440,45 @@ require_once '../includes/header.php';
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="age_range">Age Range</label>
-                                        <input type="text" id="age_range" name="book_age_range" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['age_range'] ?? ''); ?>"
-                                            placeholder="7-10, 9-12, etc.">
+                                        <select id="age_range" name="book_age_range" class="form-control">
+                                            <option value="">Select Age Range</option>
+                                            <option value="0-3" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '0-3') ? 'selected' : ''; ?>>0-3 years</option>
+                                            <option value="3-5" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '3-5') ? 'selected' : ''; ?>>3-5 years</option>
+                                            <option value="5-7" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '5-7') ? 'selected' : ''; ?>>5-7 years</option>
+                                            <option value="7-9" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '7-9') ? 'selected' : ''; ?>>7-9 years</option>
+                                            <option value="9-12" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '9-12') ? 'selected' : ''; ?>>9-12 years</option>
+                                            <option value="12+" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == '12+') ? 'selected' : ''; ?>>12+ years</option>
+                                            <option value="teen" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'teen') ? 'selected' : ''; ?>>Teen</option>
+                                            <option value="young-adult" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
+                                            <option value="adult" <?php echo (isset($bookData['age_range']) && $bookData['age_range'] == 'adult') ? 'selected' : ''; ?>>Adult</option>
+                                        </select>
                                     </div>
                                 </div>
 
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label" for="reading_level">Reading Level</label>
-                                        <input type="text" id="reading_level" name="book_reading_level" class="form-control"
-                                            value="<?php echo htmlspecialchars($bookData['reading_level'] ?? ''); ?>">
+                                        <select id="reading_level" name="book_reading_level" class="form-control">
+                                            <option value="">Select Reading Level</option>
+                                            <option value="early-reader" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'early-reader') ? 'selected' : ''; ?>>Early Reader</option>
+                                            <option value="beginner" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'beginner') ? 'selected' : ''; ?>>Beginner</option>
+                                            <option value="intermediate" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'intermediate') ? 'selected' : ''; ?>>Intermediate</option>
+                                            <option value="advanced" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'advanced') ? 'selected' : ''; ?>>Advanced</option>
+                                            <option value="chapter-book" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'chapter-book') ? 'selected' : ''; ?>>Chapter Book</option>
+                                            <option value="middle-grade" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'middle-grade') ? 'selected' : ''; ?>>Middle Grade</option>
+                                            <option value="young-adult" <?php echo (isset($bookData['reading_level']) && $bookData['reading_level'] == 'young-adult') ? 'selected' : ''; ?>>Young Adult</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label" for="purchase_links">Purchase Links (JSON)</label>
-                                <textarea id="purchase_links" name="book_purchase_links" class="form-control" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
-                                <small class="text-muted">Format: {"amazon":"https://amazon.com/...", "goodreads":"..."}</small>
+                                <label class="form-label" for="purchase_links">Purchase Links</label>
+                                <div id="purchase-links-container">
+                                    <!-- Purchase links will be dynamically added here -->
+                                </div>
+                                <button type="button" id="add-purchase-link-btn" class="btn btn-sm btn-primary mt-2">Add Purchase Link</button>
+                                <textarea id="purchase_links" name="book_purchase_links" class="form-control d-none" rows="3"><?php echo htmlspecialchars($bookData['purchase_links'] ?? ''); ?></textarea>
                             </div>
                         </div>
                     </div>
@@ -553,6 +546,38 @@ require_once '../includes/header.php';
                         </div>
                     </div>
                     <?php endif; ?>
+
+                    <!-- Contact Information Card -->
+                    <div class="wp-card">
+                        <div class="wp-card-header">Contact Information</div>
+                        <div class="wp-card-body">
+                            <div class="form-group">
+                                <label class="form-label" for="website_url">Website URL</label>
+                                <input type="url" id="website_url" name="website_url" class="form-control"
+                                    value="<?php echo htmlspecialchars($item['website_url'] ?? ''); ?>"
+                                    placeholder="https://example.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="contact_email">Contact Email</label>
+                                <input type="email" id="contact_email" name="contact_email" class="form-control"
+                                    value="<?php echo htmlspecialchars($item['contact_email'] ?? ''); ?>"
+                                    placeholder="contact@example.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="contact_phone">Contact Phone</label>
+                                <input type="tel" id="contact_phone" name="contact_phone" class="form-control"
+                                    value="<?php echo htmlspecialchars($item['contact_phone'] ?? ''); ?>"
+                                    placeholder="+1 (123) 456-7890">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="address">Address</label>
+                                <textarea id="address" name="address" class="form-control" rows="2"><?php echo htmlspecialchars($item['address'] ?? ''); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -620,9 +645,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tagId = this.value;
                 const tagName = this.options[this.selectedIndex].text;
 
-                // Check if tag already exists
+                // Skip age range tags if this is a book
+                const isAgeRangeTag = tagName.match(/^\d+-\d+$/) || tagName.match(/^\d+\+$/) ||
+                                     tagName.toLowerCase().includes('years') ||
+                                     tagName.toLowerCase() === 'teen' ||
+                                     tagName.toLowerCase() === 'young adult';
+
+                const isBook = document.getElementById('type').value === 'book';
+
+                if (isBook && isAgeRangeTag) {
+                    alert('Please use the Age Range dropdown in the Book Information section instead of adding age range tags.');
+                    this.value = '';
+                    return;
+                }
+
+                // Check if tag already exists (case insensitive)
                 const existingTag = document.querySelector(`.tag-badge[data-tag-id="${tagId}"]`);
                 if (!existingTag) {
+                    // Check for similar tags with different formatting
+                    const similarTags = Array.from(tagContainer.querySelectorAll('.tag-badge'))
+                        .filter(badge => {
+                            const badgeText = badge.textContent.trim().replace(/\s+/g, ' ').toLowerCase();
+                            const newTagText = tagName.trim().replace(/\s+/g, ' ').toLowerCase();
+
+                            // Remove special characters for comparison
+                            const cleanBadgeText = badgeText.replace(/[^\w\s]/g, '');
+                            const cleanNewTagText = newTagText.replace(/[^\w\s]/g, '');
+
+                            return cleanBadgeText === cleanNewTagText ||
+                                   cleanBadgeText.includes(cleanNewTagText) ||
+                                   cleanNewTagText.includes(cleanBadgeText);
+                        });
+
+                    if (similarTags.length > 0) {
+                        if (!confirm(`A similar tag "${similarTags[0].textContent.trim()}" already exists. Do you still want to add "${tagName}"?`)) {
+                            this.value = '';
+                            return;
+                        }
+                    }
+
                     const tagBadge = document.createElement('span');
                     tagBadge.className = 'tag-badge';
                     tagBadge.setAttribute('data-tag-id', tagId);
@@ -633,6 +694,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
 
                     tagContainer.appendChild(tagBadge);
+                } else {
+                    alert(`Tag "${tagName}" is already added.`);
                 }
 
                 // Reset select
@@ -667,24 +730,85 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // JSON validation for purchase links
+    // Purchase links handling
     const purchaseLinksField = document.getElementById('purchase_links');
+    const purchaseLinksContainer = document.getElementById('purchase-links-container');
+    const addPurchaseLinkBtn = document.getElementById('add-purchase-link-btn');
 
-    if (purchaseLinksField) {
-        purchaseLinksField.addEventListener('blur', function() {
-            try {
-                if (this.value.trim()) {
-                    const parsed = JSON.parse(this.value);
-                    this.value = JSON.stringify(parsed, null, 2);
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
+    if (purchaseLinksField && purchaseLinksContainer && addPurchaseLinkBtn) {
+        // Initialize purchase links from JSON
+        try {
+            if (purchaseLinksField.value.trim()) {
+                const links = JSON.parse(purchaseLinksField.value);
+
+                // Create UI elements for each link
+                for (const [site, url] of Object.entries(links)) {
+                    addPurchaseLinkRow(site, url);
                 }
-            } catch (e) {
-                this.classList.remove('is-valid');
-                this.classList.add('is-invalid');
-                console.error('Invalid JSON format in purchase links:', e);
+            }
+        } catch (e) {
+            console.error('Error parsing purchase links JSON:', e);
+        }
+
+        // Add new purchase link
+        addPurchaseLinkBtn.addEventListener('click', function() {
+            addPurchaseLinkRow('', '');
+        });
+
+        // Event delegation for remove buttons
+        purchaseLinksContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-purchase-link')) {
+                e.target.closest('.purchase-link-row').remove();
+                updatePurchaseLinksJson();
             }
         });
+
+        // Update JSON when inputs change
+        purchaseLinksContainer.addEventListener('change', function(e) {
+            if (e.target.classList.contains('purchase-link-site') ||
+                e.target.classList.contains('purchase-link-url')) {
+                updatePurchaseLinksJson();
+            }
+        });
+    }
+
+    // Function to add a new purchase link row
+    function addPurchaseLinkRow(site, url) {
+        const row = document.createElement('div');
+        row.className = 'purchase-link-row mb-2';
+        row.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" class="form-control purchase-link-site"
+                           value="${site}" placeholder="e.g. amazon">
+                </div>
+                <div class="col-md-7">
+                    <input type="text" class="form-control purchase-link-url"
+                           value="${url}" placeholder="https://...">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-sm btn-danger remove-purchase-link">×</button>
+                </div>
+            </div>
+        `;
+        purchaseLinksContainer.appendChild(row);
+    }
+
+    // Function to update the hidden JSON field
+    function updatePurchaseLinksJson() {
+        const links = {};
+        const rows = purchaseLinksContainer.querySelectorAll('.purchase-link-row');
+
+        rows.forEach(row => {
+            const siteInput = row.querySelector('.purchase-link-site');
+            const urlInput = row.querySelector('.purchase-link-url');
+
+            if (siteInput && urlInput && siteInput.value.trim() && urlInput.value.trim()) {
+                links[siteInput.value.trim()] = urlInput.value.trim();
+            }
+        });
+
+        purchaseLinksField.value = JSON.stringify(links);
     }
 });
 </script>
@@ -722,102 +846,4 @@ document.addEventListener('DOMContentLoaded', function() {
 require_once '../includes/footer.php';
 ?>
 
-<!-- Add purchase links formatter script directly in the page for guaranteed loading -->
-<script>
-$(document).ready(function() {
-    console.log('Purchase links formatter inline loaded');
 
-    // Format purchase links from JSON to UI
-    // Look for the book purchase links field with various possible name attributes
-    var purchaseLinksField = $('textarea[name="book_purchase_links"], textarea[name="purchase_links"], textarea#purchase_links');
-
-    console.log('Purchase links field found:', purchaseLinksField.length);
-
-    if (purchaseLinksField.length) {
-        try {
-            var linksJson = purchaseLinksField.val();
-            if (linksJson) {
-                var links = JSON.parse(linksJson);
-                var linksHtml = '<div class="purchase-links-container">';
-
-                // Create input fields for each link
-                $.each(links, function(site, url) {
-                    linksHtml += '<div class="purchase-link-row mb-2">' +
-                        '<div class="row">' +
-                        '<div class="col-md-3">' +
-                        '<label>' + site.charAt(0).toUpperCase() + site.slice(1) + ':</label>' +
-                        '</div>' +
-                        '<div class="col-md-8">' +
-                        '<input type="text" class="form-control purchase-link-url" data-site="' + site + '" value="' + url + '">' +
-                        '</div>' +
-                        '<div class="col-md-1">' +
-                        '<button type="button" class="btn btn-sm btn-danger remove-link">×</button>' +
-                        '</div>' +
-                        '</div>' +
-                        '</div>';
-                });
-
-                // Add button to add new link
-                linksHtml += '<button type="button" class="btn btn-sm btn-primary mt-2" id="add-purchase-link">Add Link</button>';
-                linksHtml += '</div>';
-
-                // Replace the textarea with our custom UI
-                purchaseLinksField.after(linksHtml);
-                purchaseLinksField.hide();
-
-                // Update the hidden field when inputs change
-                updatePurchaseLinksJson();
-                $(document).on('change', '.purchase-link-url', updatePurchaseLinksJson);
-
-                // Add new link handler
-                $(document).on('click', '#add-purchase-link', function() {
-                    var newRow = '<div class="purchase-link-row mb-2">' +
-                        '<div class="row">' +
-                        '<div class="col-md-3">' +
-                        '<input type="text" class="form-control purchase-link-site" placeholder="e.g. amazon">' +
-                        '</div>' +
-                        '<div class="col-md-8">' +
-                        '<input type="text" class="form-control purchase-link-url" data-site="" placeholder="https://...">' +
-                        '</div>' +
-                        '<div class="col-md-1">' +
-                        '<button type="button" class="btn btn-sm btn-danger remove-link">×</button>' +
-                        '</div>' +
-                        '</div>' +
-                        '</div>';
-
-                    $('.purchase-links-container').find('#add-purchase-link').before(newRow);
-                });
-
-                // Remove link handler
-                $(document).on('click', '.remove-link', function() {
-                    $(this).closest('.purchase-link-row').remove();
-                    updatePurchaseLinksJson();
-                });
-
-                // Update site attribute when site name changes
-                $(document).on('change', '.purchase-link-site', function() {
-                    var siteInput = $(this);
-                    var urlInput = siteInput.closest('.row').find('.purchase-link-url');
-                    urlInput.attr('data-site', siteInput.val());
-                    updatePurchaseLinksJson();
-                });
-            }
-        } catch (e) {
-            console.error('Error parsing purchase links JSON:', e);
-        }
-    }
-
-    // Function to update the hidden JSON field
-    function updatePurchaseLinksJson() {
-        var links = {};
-        $('.purchase-link-url').each(function() {
-            var site = $(this).data('site');
-            var url = $(this).val();
-            if (site && url) {
-                links[site] = url;
-            }
-        });
-        $('textarea[name="book_purchase_links"]').val(JSON.stringify(links));
-    }
-});
-</script>

@@ -41,7 +41,7 @@ try {
     $published_at = $_POST['published_at'] ?? null;
     $cover_url = trim($_POST['cover_url'] ?? '');
     $type = trim($_POST['type'] ?? 'general');
-    
+
     // Get book-specific data if applicable
     $bookData = [];
     if ($type === 'book') {
@@ -246,6 +246,30 @@ try {
                 $bookData['genre'],
                 $bookData['series']
             ]);
+        }
+    }
+
+    // Process tags if provided
+    if (isset($_POST['tags']) && is_array($_POST['tags'])) {
+        // Check if item_tags table exists, create if not
+        $stmt = $db->query("SHOW TABLES LIKE 'item_tags'");
+        if ($stmt->rowCount() === 0) {
+            $db->exec("CREATE TABLE IF NOT EXISTS item_tags (
+                item_id INT NOT NULL,
+                tag_id INT NOT NULL,
+                item_type VARCHAR(50) NOT NULL,
+                PRIMARY KEY (item_id, tag_id, item_type)
+            )");
+        }
+
+        // Remove existing tags for this item
+        $stmt = $db->prepare("DELETE FROM item_tags WHERE item_id = ? AND item_type = 'directory_item'");
+        $stmt->execute([$id]);
+
+        // Add new tags
+        $stmt = $db->prepare("INSERT INTO item_tags (item_id, tag_id, item_type) VALUES (?, ?, 'directory_item')");
+        foreach ($_POST['tags'] as $tagId) {
+            $stmt->execute([$id, $tagId]);
         }
     }
 

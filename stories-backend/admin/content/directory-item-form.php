@@ -377,7 +377,13 @@ $extraHeadContent = '
 
     /* Book fields toggle */
     .book-fields {
-        /* Allow inline style to control visibility instead of CSS */
+        /* Ensure book fields are visible when they should be */
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Force visibility for book fields when type is book */
+    body.has-book-type .book-fields {
+        display: block !important;
     }
 
     /* Image preview styling */
@@ -630,7 +636,7 @@ if ($debug) {
 
 
                     <!-- Book Information Card -->
-                    <div class="wp-card book-fields" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'style="display:block"' : ''; ?>>
+                    <div class="wp-card book-fields" id="book-information-card" <?php echo (isset($item['type']) && $item['type'] == 'book') ? 'style="display:block"' : ''; ?>>
                         <div class="wp-card-header">Book Information</div>
                         <div class="wp-card-body">
                             <?php if (empty($bookData)): ?>
@@ -960,30 +966,43 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeSelect && bookFields) {
         // Set initial visibility based on current selection
         if (typeSelect.value === 'book') {
+            // Force display block and ensure it's applied immediately
             bookFields.style.display = 'block';
 
+            // Add a class to the body to force book fields visibility via CSS
+            document.body.classList.add('has-book-type');
+
+            // Log the current display state
+            console.log('Initial book fields display state:', bookFields.style.display);
+            console.log('Computed style display:', getComputedStyle(bookFields).display);
+            console.log('Body has class has-book-type:', document.body.classList.contains('has-book-type'));
+
+            // Force a reflow to ensure the style is applied
+            void bookFields.offsetWidth;
+
             // Initialize book form enhancements on page load if book type is selected
-            setTimeout(() => {
-                if (typeof initTagSelection === 'function') initTagSelection();
-                if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
-                if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
-                if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
-                if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
-                if (typeof initGenreDropdown === 'function') initGenreDropdown();
-                if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
-                if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
-                console.log('Book fields initialized on page load');
-            }, 100);
+            // We'll let the book-form-enhancements.js handle this now
         } else {
             bookFields.style.display = 'none';
+            document.body.classList.remove('has-book-type');
         }
 
         // Update visibility when selection changes
         typeSelect.addEventListener('change', function() {
             if (this.value === 'book') {
+                // Force display block
                 bookFields.style.display = 'block';
 
-                // Initialize book form enhancements when switching to book type
+                // Add a class to the body to force book fields visibility via CSS
+                document.body.classList.add('has-book-type');
+
+                // Force a reflow to ensure the style is applied
+                void bookFields.offsetWidth;
+
+                console.log('Changed to book type, display state:', bookFields.style.display);
+                console.log('Body has class has-book-type:', document.body.classList.contains('has-book-type'));
+
+                // Manually trigger initialization of book form enhancements
                 if (typeof initTagSelection === 'function') initTagSelection();
                 if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
                 if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
@@ -992,10 +1011,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof initGenreDropdown === 'function') initGenreDropdown();
                 if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
                 if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
-
-                console.log('Book fields initialized after type change');
             } else {
                 bookFields.style.display = 'none';
+                document.body.classList.remove('has-book-type');
             }
         });
     }
@@ -1179,6 +1197,52 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Include book form enhancements -->
 <link rel="stylesheet" href="../assets/css/book-form-enhancements.css">
 <script src="../assets/js/book-form-enhancements.js"></script>
+
+<!-- Force initialization of book fields if needed -->
+<script>
+// Add a backup initialization that runs after everything else
+window.addEventListener('load', function() {
+    // Check if we're on a book type and the fields aren't visible
+    const typeSelect = document.getElementById('type');
+    const bookFields = document.querySelector('.book-fields');
+
+    if (typeSelect && bookFields && typeSelect.value === 'book') {
+        console.log('Window load event: Ensuring book fields are visible');
+
+        // Force display block
+        bookFields.style.display = 'block';
+        document.body.classList.add('has-book-type');
+
+        // Force initialization of book form enhancements
+        if (typeof initTagSelection === 'function') initTagSelection();
+        if (typeof initAuthorDropdown === 'function') initAuthorDropdown();
+        if (typeof initSeriesDropdown === 'function') initSeriesDropdown();
+        if (typeof initPurchaseLinksManager === 'function') initPurchaseLinksManager();
+        if (typeof initAgeRangeDropdown === 'function') initAgeRangeDropdown();
+        if (typeof initGenreDropdown === 'function') initGenreDropdown();
+        if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
+        if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
+    }
+});
+
+// Add a final check that runs after a short delay
+setTimeout(function() {
+    const typeSelect = document.getElementById('type');
+    const bookFields = document.getElementById('book-information-card');
+
+    if (typeSelect && bookFields && typeSelect.value === 'book') {
+        console.log('Final check: Ensuring book fields are visible');
+
+        // Force display block with !important via inline style
+        bookFields.setAttribute('style', 'display: block !important');
+        document.body.classList.add('has-book-type');
+
+        // Log the current state
+        console.log('Book fields final display state:', bookFields.style.display);
+        console.log('Book fields computed style:', getComputedStyle(bookFields).display);
+    }
+}, 500);
+</script>
 
 <style>
 /* Image preview container styling */

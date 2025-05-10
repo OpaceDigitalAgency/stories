@@ -19,14 +19,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const bookFields = document.querySelector('.book-fields');
     const typeSelect = document.getElementById('type');
 
-    // Only initialize if we're on a page with book fields and either:
-    // 1. The book fields are visible (display != 'none')
-    // 2. The type select is set to 'book'
-    if (bookFields &&
-        (bookFields.style.display !== 'none' ||
-         (typeSelect && typeSelect.value === 'book'))) {
+    // Force initialization for book type regardless of display state
+    if (bookFields && typeSelect && typeSelect.value === 'book') {
+        console.log('Book type detected, initializing enhancements');
 
-        console.log('Initializing book form enhancements');
+        // Make sure book fields are visible
+        bookFields.style.display = 'block';
+
+        // Initialize all enhancements with a slight delay to ensure DOM is ready
+        setTimeout(() => {
+            initTagSelection();
+            initAuthorDropdown();
+            initSeriesDropdown();
+            initPurchaseLinksManager();
+            initAgeRangeDropdown();
+            initGenreDropdown();
+            initReadingLevelDropdown();
+            initPublisherDropdown();
+            console.log('Book form enhancements initialized');
+        }, 100);
+    } else if (bookFields && getComputedStyle(bookFields).display !== 'none') {
+        // If book fields are visible by computed style (not just inline style)
+        console.log('Book fields visible, initializing enhancements');
 
         // Initialize all enhancements
         initTagSelection();

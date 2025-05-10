@@ -299,6 +299,157 @@ function processBook($db, $bookDir) {
             $plotInfo = $data['summary'];
         }
 
+        // Extract data from markdown content sections
+        echo "<p class='info'>Extracting metadata from markdown content sections</p>";
+        echo "<p class='info'>Markdown content preview: " . substr(htmlspecialchars($markdownContent), 0, 300) . "...</p>";
+        flushOutput();
+
+        // Extract Book & Author Info section
+        $bookInfoPattern = '/#{1,3}\s*BOOK\s*&\s*AUTHOR\s*INFO.*?(?=#{1,3}|$)/is';
+        echo "<p class='info'>Searching for Book & Author Info section with pattern: " . htmlspecialchars($bookInfoPattern) . "</p>";
+        flushOutput();
+
+        if (preg_match($bookInfoPattern, $markdownContent, $bookInfoMatch)) {
+            $bookInfoContent = $bookInfoMatch[0];
+            echo "<p class='success'>Found Book & Author Info section: " . substr(htmlspecialchars($bookInfoContent), 0, 200) . "...</p>";
+            flushOutput();
+
+            // Extract Book Title
+            if (preg_match('/Book\s+Title:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookTitle = trim($match[1]);
+                echo "<p class='info'>Found book title in content: '$bookTitle'</p>";
+                flushOutput();
+                // Update title if found in content
+                if (!empty($bookTitle)) {
+                    $title = $bookTitle;
+                }
+            }
+
+            // Extract Book Author
+            if (preg_match('/Book\s+Author:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookAuthor = trim($match[1]);
+                echo "<p class='info'>Found book author in content: '$bookAuthor'</p>";
+                flushOutput();
+                if (!empty($bookAuthor)) {
+                    $author = $bookAuthor;
+                }
+            }
+
+            // Extract Book Series
+            if (preg_match('/Book\s+Series:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $series = trim($match[1]);
+                echo "<p class='info'>Found book series in content: '$series'</p>";
+                flushOutput();
+            }
+
+            // Extract Book Genre
+            if (preg_match('/Book\s+Genre:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $genre = trim($match[1]);
+                echo "<p class='info'>Found book genre in content: '$genre'</p>";
+                flushOutput();
+            }
+
+            // Extract Book Age Range
+            if (preg_match('/Book\s+Age\s+Range:?\s*(.*?)(?:\n|$)/i', $bookInfoContent, $match)) {
+                $bookAgeRange = trim($match[1]);
+                echo "<p class='info'>Found book age range in content: '$bookAgeRange'</p>";
+                flushOutput();
+                if (!empty($bookAgeRange)) {
+                    $ageRange = $bookAgeRange;
+                }
+            }
+        }
+
+        // Extract Plot section
+        if (preg_match('/#{1,3}\s*.*?PLOT.*?(?=#{1,3}|$)/is', $markdownContent, $plotMatch)) {
+            $plotContent = $plotMatch[0];
+            // Remove the heading
+            $plotContent = preg_replace('/#{1,3}\s*.*?PLOT.*?\n/is', '', $plotContent);
+            $plotInfo = trim($plotContent);
+            echo "<p class='info'>Found plot information in content section</p>";
+            flushOutput();
+        }
+
+        // Extract Publisher Information section
+        $publisherPattern = '/#{1,3}\s*PUBLISHER\s*INFO.*?(?=#{1,3}|$)/is';
+        echo "<p class='info'>Searching for Publisher Information section with pattern: " . htmlspecialchars($publisherPattern) . "</p>";
+        flushOutput();
+
+        if (preg_match($publisherPattern, $markdownContent, $publisherMatch)) {
+            $publisherContent = $publisherMatch[0];
+            echo "<p class='success'>Found Publisher Information section: " . substr(htmlspecialchars($publisherContent), 0, 200) . "...</p>";
+            flushOutput();
+        } else {
+            // Try alternative pattern
+            $altPublisherPattern = '/#{1,3}\s*PUBLISHER.*?(?=#{1,3}|$)/is';
+            echo "<p class='info'>Trying alternative pattern for Publisher section: " . htmlspecialchars($altPublisherPattern) . "</p>";
+            flushOutput();
+
+            if (preg_match($altPublisherPattern, $markdownContent, $publisherMatch)) {
+                $publisherContent = $publisherMatch[0];
+                echo "<p class='success'>Found Publisher section with alternative pattern: " . substr(htmlspecialchars($publisherContent), 0, 200) . "...</p>";
+                flushOutput();
+            } else {
+                echo "<p class='warning'>No Publisher Information section found in the content</p>";
+                flushOutput();
+                $publisherContent = $markdownContent; // Use the entire content as a fallback
+            }
+        }
+
+        // Extract Publisher name
+        if (preg_match('/published\s+by\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
+            $publisherName = trim($match[1]);
+            echo "<p class='info'>Found publisher in content: '$publisherName'</p>";
+            flushOutput();
+            if (!empty($publisherName)) {
+                $publisher = $publisherName;
+            }
+        }
+
+        // Extract First published date with improved pattern
+        if (preg_match('/First\s+published\s+(.*?)(?:\n|$)/i', $publisherContent, $match)) {
+            $publisherDate = trim($match[1]);
+            echo "<p class='info'>Found publication date in publisher info: '$publisherDate'</p>";
+            flushOutput();
+
+            if (empty($pubDateStr)) {
+                $pubDateStr = $publisherDate;
+                echo "<p class='success'>Using publication date from publisher info</p>";
+                flushOutput();
+            }
+        }
+
+        // Extract ISBN
+        if (preg_match('/ISBN.*?([0-9-]+)/i', $publisherContent, $match)) {
+            $extractedIsbn = trim($match[1]);
+            echo "<p class='info'>Found ISBN in publisher info: '$extractedIsbn'</p>";
+            flushOutput();
+
+            // Determine if it's ISBN-10 or ISBN-13 based on length
+            $cleanIsbn = preg_replace('/[^0-9]/', '', $extractedIsbn);
+            if (strlen($cleanIsbn) == 10) {
+                $isbn = $extractedIsbn;
+                echo "<p class='success'>Using ISBN-10 from publisher info</p>";
+            } elseif (strlen($cleanIsbn) == 13) {
+                $isbn13 = $extractedIsbn;
+                echo "<p class='success'>Using ISBN-13 from publisher info</p>";
+            }
+            flushOutput();
+        }
+
+        // Extract Page Count
+        if (preg_match('/(\d+)\s+pages/i', $publisherContent, $match)) {
+            $extractedPageCount = intval($match[1]);
+            echo "<p class='info'>Found page count in publisher info: $extractedPageCount</p>";
+            flushOutput();
+
+            if (empty($pageCount)) {
+                $pageCount = $extractedPageCount;
+                echo "<p class='success'>Using page count from publisher info</p>";
+                flushOutput();
+            }
+        }
+
         // Extract genre and series data
         $genre = isset($data['genre']) ? $data['genre'] : '';
         $series = isset($data['series']) ? $data['series'] : '';
@@ -772,8 +923,37 @@ function processBook($db, $bookDir) {
 
             // Convert publication date to MySQL format
             $publicationDate = $pubDateStr ?: null;
-            $formattedDate = convertToMySQLDate($publicationDate);
-            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+
+            // Ensure we have a valid date format
+            if ($publicationDate) {
+                if (function_exists('convertToMySQLDate')) {
+                    $formattedDate = convertToMySQLDate($publicationDate);
+                } else {
+                    // Fallback date conversion if function doesn't exist
+                    $timestamp = strtotime($publicationDate);
+                    $formattedDate = $timestamp ? date('Y-m-d', $timestamp) : null;
+                }
+                echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            } else {
+                $formattedDate = null;
+                echo "<p class='warning'>No publication date found to convert</p>";
+            }
+            flushOutput();
+
+            // Debug values before executing SQL
+            echo "<p class='info'>Book data to be updated:</p>";
+            echo "<ul>";
+            echo "<li>directory_item_id: $directoryItemId</li>";
+            echo "<li>isbn: $isbn</li>";
+            echo "<li>isbn13: $isbn13</li>";
+            echo "<li>author: $author</li>";
+            echo "<li>publisher: $publisher</li>";
+            echo "<li>publication_date: $formattedDate</li>";
+            echo "<li>page_count: $pageCount</li>";
+            echo "<li>age_range: $ageRange</li>";
+            echo "<li>reading_level: $readingLevel</li>";
+            echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "</ul>";
             flushOutput();
 
             $stmt->execute([
@@ -811,8 +991,37 @@ function processBook($db, $bookDir) {
 
             // Convert publication date to MySQL format
             $publicationDate = $pubDateStr ?: null;
-            $formattedDate = convertToMySQLDate($publicationDate);
-            echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+
+            // Ensure we have a valid date format
+            if ($publicationDate) {
+                if (function_exists('convertToMySQLDate')) {
+                    $formattedDate = convertToMySQLDate($publicationDate);
+                } else {
+                    // Fallback date conversion if function doesn't exist
+                    $timestamp = strtotime($publicationDate);
+                    $formattedDate = $timestamp ? date('Y-m-d', $timestamp) : null;
+                }
+                echo "<p class='info'>Converted to MySQL format: '$formattedDate'</p>";
+            } else {
+                $formattedDate = null;
+                echo "<p class='warning'>No publication date found to convert</p>";
+            }
+            flushOutput();
+
+            // Debug values before executing SQL
+            echo "<p class='info'>Book data to be inserted:</p>";
+            echo "<ul>";
+            echo "<li>directory_item_id: $directoryItemId</li>";
+            echo "<li>isbn: $isbn</li>";
+            echo "<li>isbn13: $isbn13</li>";
+            echo "<li>author: $author</li>";
+            echo "<li>publisher: $publisher</li>";
+            echo "<li>publication_date: $formattedDate</li>";
+            echo "<li>page_count: $pageCount</li>";
+            echo "<li>age_range: $ageRange</li>";
+            echo "<li>reading_level: $readingLevel</li>";
+            echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "</ul>";
             flushOutput();
 
             $stmt->execute([

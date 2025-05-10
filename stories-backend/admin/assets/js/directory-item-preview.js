@@ -5,6 +5,8 @@
  * by loading the direct preview handler.
  */
 
+// Check if DirectoryItemPreview is already defined to prevent duplicate declarations
+if (typeof DirectoryItemPreview === 'undefined') {
 class DirectoryItemPreview {
     constructor() {
         this.frontendBaseUrl = this.getFrontendBaseUrl();
@@ -213,9 +215,13 @@ class DirectoryItemPreview {
     }
 }
 
+} // Close the DirectoryItemPreview class
+
 // Initialize the directory item preview functionality when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Always create a new instance of DirectoryItemPreview
-    window.directoryItemPreview = new DirectoryItemPreview();
-    console.log('DirectoryItemPreview initialized');
+    // Only create a new instance if one doesn't already exist
+    if (!window.directoryItemPreview) {
+        window.directoryItemPreview = new DirectoryItemPreview();
+        console.log('DirectoryItemPreview initialized');
+    }
 });

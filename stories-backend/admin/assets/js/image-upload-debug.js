@@ -102,6 +102,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const forms = document.querySelectorAll('form');
     logDebug(`Found ${forms.length} forms`);
 
+    // Also look for the specific directory-item-form by ID
+    const directoryItemForm = document.getElementById('directory-item-form');
+    if (directoryItemForm) {
+        logDebug(`Found directory-item-form by ID`);
+
+        // Check for image_updated field
+        const imageUpdatedField = directoryItemForm.querySelector('input[name="image_updated"]');
+        if (imageUpdatedField) {
+            logDebug(`directory-item-form has image_updated field with value: ${imageUpdatedField.value}`);
+
+            // Add a direct event listener for the remove button
+            const removeButtons = document.querySelectorAll('.remove-image');
+            removeButtons.forEach((button, idx) => {
+                logDebug(`Adding click listener to remove button #${idx+1}`);
+                button.addEventListener('click', function() {
+                    logDebug(`Remove button #${idx+1} clicked`);
+                    imageUpdatedField.value = '1';
+                    logDebug(`Set image_updated to 1`);
+                });
+            });
+        } else {
+            logDebug(`directory-item-form does NOT have image_updated field`);
+        }
+    }
+
     forms.forEach((form, index) => {
         // Skip if not a real form element (e.g., if it's an input element)
         if (!(form instanceof HTMLFormElement)) {

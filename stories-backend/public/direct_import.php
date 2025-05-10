@@ -104,6 +104,93 @@ function flushOutput() {
     }
 }
 
+// Function to clean up duplicate media records
+function cleanDuplicateMedia($db) {
+    try {
+        // Begin transaction
+        $db->beginTransaction();
+
+        echo "<h4>Cleaning Duplicate Media Records</h4>";
+        flushOutput();
+
+        // Find duplicate media records based on filename
+        $stmt = $db->query("
+            SELECT filename, COUNT(*) as count, MIN(id) as keep_id
+            FROM media
+            GROUP BY filename
+            HAVING COUNT(*) > 1
+        ");
+
+        $duplicates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalDuplicates = count($duplicates);
+        $deletedCount = 0;
+
+        echo "<p class='info'>Found $totalDuplicates filenames with duplicate records</p>";
+        flushOutput();
+
+        foreach ($duplicates as $duplicate) {
+            $filename = $duplicate['filename'];
+            $keepId = $duplicate['keep_id'];
+
+            // Delete all duplicates except the one with the lowest ID
+            $deleteStmt = $db->prepare("
+                DELETE FROM media
+                WHERE filename = ? AND id != ?
+            ");
+
+            $deleteStmt->execute([$filename, $keepId]);
+            $deletedCount += $deleteStmt->rowCount();
+
+            echo "<p class='info'>Kept media ID $keepId for '$filename', deleted " . $deleteStmt->rowCount() . " duplicates</p>";
+            flushOutput();
+        }
+
+        // Find orphaned media records (not referenced by any content)
+        $orphanedStmt = $db->query("
+            SELECT m.id, m.filename
+            FROM media m
+            LEFT JOIN directory_items d ON m.file_path = d.cover_url
+            LEFT JOIN books b ON m.file_path = b.cover_image_url
+            LEFT JOIN stories s ON m.file_path = s.cover_url
+            WHERE d.id IS NULL AND b.directory_item_id IS NULL AND s.id IS NULL
+        ");
+
+        $orphaned = $orphanedStmt->fetchAll(PDO::FETCH_ASSOC);
+        $orphanedCount = count($orphaned);
+
+        echo "<p class='info'>Found $orphanedCount orphaned media records</p>";
+        flushOutput();
+
+        if ($orphanedCount > 0) {
+            $orphanedIds = array_column($orphaned, 'id');
+            $orphanedIdList = implode(',', $orphanedIds);
+
+            $deleteOrphanedStmt = $db->prepare("DELETE FROM media WHERE id IN ($orphanedIdList)");
+            $deleteOrphanedStmt->execute();
+            $deletedOrphanedCount = $deleteOrphanedStmt->rowCount();
+
+            echo "<p class='info'>Deleted $deletedOrphanedCount orphaned media records</p>";
+            flushOutput();
+
+            $deletedCount += $deletedOrphanedCount;
+        }
+
+        // Commit transaction
+        $db->commit();
+        echo "<p class='success'>Media cleanup complete. Deleted $deletedCount duplicate/orphaned records.</p>";
+        flushOutput();
+
+        return true;
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        echo "<p class='error'>Media cleanup failed: " . $e->getMessage() . "</p>";
+        flushOutput();
+        return false;
+    }
+}
+
 // Function to clean data for specific content type
 function cleanContentData($db, $contentType, $sourceType = null) {
     try {
@@ -883,6 +970,7 @@ function processStory($db, $storyDir) {
         // Use default cover image if no image is found
         $defaultCoverUrl = 'https://' . $_SERVER['HTTP_HOST'] . '/images/default-cover.svg';
         $coverUrl = $defaultCoverUrl; // Default
+        $mediaId = null;
 
         // Check for images in the story directory
         $imagesDir = "$storyDir/images";
@@ -890,45 +978,59 @@ function processStory($db, $storyDir) {
             $images = glob("$imagesDir/*.{jpg,jpeg,png,gif}", GLOB_BRACE);
             if (!empty($images)) {
                 // Use the first image as cover
-                $coverUrl = '/uploads/' . basename($images[0]);
+                $sourceImage = $images[0];
+                $filename = basename($sourceImage);
 
-                // Copy image to uploads directory
-                $uploadsDir = __DIR__ . '/../uploads';
-                if (!is_dir($uploadsDir)) {
-                    mkdir($uploadsDir, 0755, true);
-                }
+                // Check if this image already exists in media table
+                $stmt = $db->prepare("SELECT id, file_path FROM media WHERE filename = ? LIMIT 1");
+                $stmt->execute([$filename]);
+                $existingMedia = $stmt->fetch();
 
-                copy($images[0], $uploadsDir . '/' . basename($images[0]));
-                echo "<p class='success'>Used image: " . basename($images[0]) . " as cover</p>";
-                flushOutput();
-
-                // Always create a new media record for the image
-                $imagePath = '/uploads/' . basename($images[0]);
-                $fileSize = filesize($images[0]);
-                $fileType = mime_content_type($images[0]);
-
-                try {
-                    $stmt = $db->prepare("
-                        INSERT INTO media (
-                            filename, file_path, file_size, file_type,
-                            alt_text
-                        ) VALUES (?, ?, ?, ?, ?)
-                    ");
-
-                    $stmt->execute([
-                        basename($images[0]),
-                        $imagePath,
-                        $fileSize,
-                        $fileType,
-                        "Cover image for $title"
-                    ]);
-
-                    $mediaId = $db->lastInsertId();
-                    echo "<p class='success'>Added image to media table (ID: $mediaId)</p>";
+                if ($existingMedia) {
+                    // Use existing media record
+                    $coverUrl = $existingMedia['file_path'];
+                    $mediaId = $existingMedia['id'];
+                    echo "<p class='info'>Using existing media record (ID: $mediaId) for image: $filename</p>";
                     flushOutput();
-                } catch (Exception $e) {
-                    echo "<p class='warning'>Could not add image to media table: " . $e->getMessage() . "</p>";
+                } else {
+                    // Create new media record
+                    $uploadsDir = __DIR__ . '/../uploads';
+                    if (!is_dir($uploadsDir)) {
+                        mkdir($uploadsDir, 0755, true);
+                    }
+
+                    // Copy image to uploads directory
+                    copy($sourceImage, $uploadsDir . '/' . $filename);
+                    echo "<p class='success'>Copied image: " . $filename . " to uploads directory</p>";
                     flushOutput();
+
+                    $coverUrl = '/uploads/' . $filename;
+                    $fileSize = filesize($sourceImage);
+                    $fileType = mime_content_type($sourceImage);
+
+                    try {
+                        $stmt = $db->prepare("
+                            INSERT INTO media (
+                                filename, file_path, file_size, file_type,
+                                alt_text, created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                        ");
+
+                        $stmt->execute([
+                            $filename,
+                            $coverUrl,
+                            $fileSize,
+                            $fileType,
+                            "Cover image for $title"
+                        ]);
+
+                        $mediaId = $db->lastInsertId();
+                        echo "<p class='success'>Added image to media table (ID: $mediaId)</p>";
+                        flushOutput();
+                    } catch (Exception $e) {
+                        echo "<p class='warning'>Could not add image to media table: " . $e->getMessage() . "</p>";
+                        flushOutput();
+                    }
                 }
             }
         }
@@ -1185,6 +1287,15 @@ require_once '../admin/includes/header.php';
                             </div>
                         </div>
 
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="clean_media" id="clean-media" value="1">
+                                <label class="form-check-label" for="clean-media">
+                                    Clean duplicate media records (removes duplicate and orphaned media entries)
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <button type="submit" name="action" value="import" class="btn btn-primary">
                                 <i class="fas fa-file-import"></i> Start Import
@@ -1210,9 +1321,25 @@ require_once '../admin/includes/header.php';
                                 $contentType = $_POST['content_type'] ?? 'stories';
                                 $sourceType = $_POST['source_type'] ?? 'child';
                                 $cleanData = isset($_POST['clean_data']) && $_POST['clean_data'] == '1';
+                                $cleanMedia = isset($_POST['clean_media']) && $_POST['clean_media'] == '1';
 
                                 echo "<h4>Starting Import: $contentType ($sourceType)</h4>";
                                 flushOutput();
+
+                                // Clean media if requested
+                                if ($cleanMedia) {
+                                    echo "<h4>Cleaning Duplicate Media Records</h4>";
+                                    flushOutput();
+
+                                    $cleanMediaResult = cleanDuplicateMedia($db);
+                                    if (!$cleanMediaResult) {
+                                        echo "<p class='warning'>Media cleanup encountered issues but will continue with import.</p>";
+                                        flushOutput();
+                                    }
+                                } else {
+                                    echo "<p class='info'>Skipping media cleanup as per user request</p>";
+                                    flushOutput();
+                                }
 
                                 // Clean data if requested
                                 if ($cleanData) {

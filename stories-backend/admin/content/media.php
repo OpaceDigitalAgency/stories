@@ -222,6 +222,9 @@ $pageActions = '
 <button id="clean-duplicates-btn" class="btn btn-warning">
     <i class="fas fa-broom" aria-hidden="true"></i> Clean Duplicate Media
 </button>
+<button id="nuke-media-btn" class="btn btn-danger">
+    <i class="fas fa-bomb" aria-hidden="true"></i> Nuke Media Library
+</button>
 ';
 
 // Add custom CSS and JavaScript for media page
@@ -944,6 +947,54 @@ $(document).ready(function() {
                     });
 
                     // Show error message
+                    alert("Error: " + error);
+                }
+            });
+        }
+    });
+
+    // Handle Nuke Media Library button click
+    $("#nuke-media-btn").on("click", function() {
+        if (confirm("WARNING: This will delete ALL media records from the database. This action cannot be undone. Continue?")) {
+            const deleteFiles = confirm("Do you also want to delete the physical image files from the server?");
+
+            // Show loading indicator
+            $("#progressOverlay").css({
+                "visibility": "visible",
+                "opacity": "1"
+            });
+            $("#progressTitle").text("Nuking Media Library");
+            $("#progressMessage").text("Please wait while we delete all media records...");
+
+            // Make AJAX request to nuke media
+            $.ajax({
+                url: "../handlers/nuke-media.php",
+                type: "POST",
+                data: {
+                    delete_files: deleteFiles ? 1 : 0
+                },
+                dataType: "json",
+                success: function(response) {
+                    // Hide loading indicator
+                    $("#progressOverlay").css({
+                        "visibility": "hidden",
+                        "opacity": "0"
+                    });
+
+                    if (response.success) {
+                        alert("Media library nuked successfully. Deleted " + response.stats.records_deleted + " records and " + response.stats.files_deleted + " files.");
+                        location.reload();
+                    } else {
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Hide loading indicator
+                    $("#progressOverlay").css({
+                        "visibility": "hidden",
+                        "opacity": "0"
+                    });
+
                     alert("Error: " + error);
                 }
             });

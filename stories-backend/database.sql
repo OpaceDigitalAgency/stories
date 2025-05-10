@@ -37,6 +37,7 @@ CREATE TABLE authors (
     twitter VARCHAR(100),
     instagram VARCHAR(100),
     website VARCHAR(255),
+    type ENUM('author', 'publisher', 'book_author') NOT NULL DEFAULT 'author',
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -113,10 +114,15 @@ CREATE TABLE blog_post_authors (
 -- Create directory_items table
 CREATE TABLE directory_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    title VARCHAR(100) NOT NULL,
     description TEXT,
-    url VARCHAR(255) NOT NULL,
-    category VARCHAR(50) NOT NULL,
+    website_url VARCHAR(255) NOT NULL,
+    category_id INT NOT NULL DEFAULT 1,
+    type VARCHAR(50) NOT NULL DEFAULT 'link',
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    cover_url VARCHAR(255) DEFAULT NULL,
+    is_published TINYINT(1) NOT NULL DEFAULT 0,
+    published_at DATETIME DEFAULT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

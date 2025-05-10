@@ -78,80 +78,14 @@ function initAuthorDropdown() {
 }
 
 /**
- * Initialize series dropdown
+ * Initialize series field
+ *
+ * Note: Series is specific to each book, so we keep it as a text field
+ * rather than converting it to a dropdown.
  */
 function initSeriesDropdown() {
-    const seriesInput = document.getElementById('series');
-    if (!seriesInput) return;
-
-    // Get the parent element
-    const parentElement = seriesInput.parentElement;
-
-    // Create a new select element
-    const seriesSelect = document.createElement('select');
-    seriesSelect.id = 'series-select';
-    seriesSelect.className = 'form-control';
-    seriesSelect.name = 'book_series';
-
-    // Add a default option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Select a series or enter a new one';
-    seriesSelect.appendChild(defaultOption);
-
-    // Common series options
-    const seriesOptions = [
-        'Harry Potter',
-        'Percy Jackson',
-        'Chronicles of Narnia',
-        'Diary of a Wimpy Kid',
-        'The Hunger Games',
-        'A Series of Unfortunate Events',
-        'Magic Tree House',
-        'Wings of Fire',
-        'Goosebumps',
-        'Dork Diaries'
-    ];
-
-    // Add options to the select
-    seriesOptions.forEach(series => {
-        const option = document.createElement('option');
-        option.value = series;
-        option.text = series;
-        seriesSelect.appendChild(option);
-    });
-
-    // Create a hidden input to store the value
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.id = 'series';
-    hiddenInput.name = 'book_series';
-    hiddenInput.value = seriesInput.value;
-
-    // Replace the input with the select and hidden input
-    parentElement.replaceChild(seriesSelect, seriesInput);
-    parentElement.appendChild(hiddenInput);
-
-    // Set the selected option if there's a value
-    if (hiddenInput.value) {
-        // Check if the value exists in the options
-        const existingOption = Array.from(seriesSelect.options).find(option => option.value === hiddenInput.value);
-        if (existingOption) {
-            existingOption.selected = true;
-        } else {
-            // Add a new option for the current value
-            const newOption = document.createElement('option');
-            newOption.value = hiddenInput.value;
-            newOption.text = hiddenInput.value;
-            newOption.selected = true;
-            seriesSelect.appendChild(newOption);
-        }
-    }
-
-    // Add event listener to update the hidden input
-    seriesSelect.addEventListener('change', function() {
-        hiddenInput.value = this.value;
-    });
+    // No need to modify the series field as it should remain a text input
+    console.log('Series field kept as text input');
 }
 
 /**
@@ -291,27 +225,16 @@ function initPurchaseLinksManager() {
  * Initialize age range dropdown
  */
 function initAgeRangeDropdown() {
-    const ageRangeInput = document.getElementById('age_range');
-    if (!ageRangeInput) return;
+    const ageRangeSelect = document.getElementById('age_range');
+    if (!ageRangeSelect) return;
 
-    // Get the parent element
-    const parentElement = ageRangeInput.parentElement;
+    // Get the current value
+    const currentValue = ageRangeSelect.value;
 
-    // Create a new select element
-    const ageRangeSelect = document.createElement('select');
-    ageRangeSelect.id = 'age-range-select';
-    ageRangeSelect.className = 'form-control';
-    ageRangeSelect.name = 'book_age_range';
-
-    // Add a default option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Select an age range';
-    ageRangeSelect.appendChild(defaultOption);
-
-    // Common age range options
+    // Common age range options to add if they don't exist
     const ageRangeOptions = [
         '0-3',
+        '3-5',
         '4-6',
         '5-7',
         '6-8',
@@ -329,28 +252,34 @@ function initAgeRangeDropdown() {
         'All ages'
     ];
 
-    // Add options to the select
+    // Get existing options
+    const existingOptions = Array.from(ageRangeSelect.options).map(option => option.value.toLowerCase());
+
+    // Add missing options
     ageRangeOptions.forEach(ageRange => {
-        const option = document.createElement('option');
-        option.value = ageRange;
-        option.text = ageRange;
-        ageRangeSelect.appendChild(option);
+        if (!existingOptions.includes(ageRange.toLowerCase())) {
+            const option = document.createElement('option');
+            option.value = ageRange;
+            option.text = ageRange;
+            ageRangeSelect.appendChild(option);
+        }
     });
 
-    // Replace the input with the select
-    parentElement.replaceChild(ageRangeSelect, ageRangeInput);
-
     // Set the selected option if there's a value
-    if (ageRangeInput.value) {
+    if (currentValue) {
         // Check if the value exists in the options
-        const existingOption = Array.from(ageRangeSelect.options).find(option => option.value === ageRangeInput.value);
+        const existingOption = Array.from(ageRangeSelect.options).find(option =>
+            option.value.toLowerCase() === currentValue.toLowerCase() ||
+            option.text.toLowerCase() === currentValue.toLowerCase()
+        );
+
         if (existingOption) {
             existingOption.selected = true;
         } else {
             // Add a new option for the current value
             const newOption = document.createElement('option');
-            newOption.value = ageRangeInput.value;
-            newOption.text = ageRangeInput.value;
+            newOption.value = currentValue;
+            newOption.text = currentValue;
             newOption.selected = true;
             ageRangeSelect.appendChild(newOption);
         }
@@ -361,25 +290,13 @@ function initAgeRangeDropdown() {
  * Initialize genre dropdown
  */
 function initGenreDropdown() {
-    const genreInput = document.querySelector('input[name="book_genre"]');
-    if (!genreInput) return;
+    const genreSelect = document.getElementById('genre');
+    if (!genreSelect) return;
 
-    // Get the parent element
-    const parentElement = genreInput.parentElement;
+    // Get the current value
+    const currentValue = genreSelect.value;
 
-    // Create a new select element
-    const genreSelect = document.createElement('select');
-    genreSelect.id = 'genre-select';
-    genreSelect.className = 'form-control';
-    genreSelect.name = 'book_genre';
-
-    // Add a default option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Select a genre';
-    genreSelect.appendChild(defaultOption);
-
-    // Common genre options
+    // Common genre options to add if they don't exist
     const genreOptions = [
         'Adventure',
         'Fantasy',
@@ -400,28 +317,34 @@ function initGenreDropdown() {
         'Non-fiction'
     ];
 
-    // Add options to the select
+    // Get existing options
+    const existingOptions = Array.from(genreSelect.options).map(option => option.value.toLowerCase());
+
+    // Add missing options
     genreOptions.forEach(genre => {
-        const option = document.createElement('option');
-        option.value = genre;
-        option.text = genre;
-        genreSelect.appendChild(option);
+        if (!existingOptions.includes(genre.toLowerCase())) {
+            const option = document.createElement('option');
+            option.value = genre.toLowerCase().replace(/\s+/g, '-');
+            option.text = genre;
+            genreSelect.appendChild(option);
+        }
     });
 
-    // Replace the input with the select
-    parentElement.replaceChild(genreSelect, genreInput);
-
     // Set the selected option if there's a value
-    if (genreInput.value) {
+    if (currentValue) {
         // Check if the value exists in the options
-        const existingOption = Array.from(genreSelect.options).find(option => option.value === genreInput.value);
+        const existingOption = Array.from(genreSelect.options).find(option =>
+            option.value.toLowerCase() === currentValue.toLowerCase() ||
+            option.text.toLowerCase() === currentValue.toLowerCase()
+        );
+
         if (existingOption) {
             existingOption.selected = true;
         } else {
             // Add a new option for the current value
             const newOption = document.createElement('option');
-            newOption.value = genreInput.value;
-            newOption.text = genreInput.value;
+            newOption.value = currentValue;
+            newOption.text = currentValue.charAt(0).toUpperCase() + currentValue.slice(1).replace(/-/g, ' ');
             newOption.selected = true;
             genreSelect.appendChild(newOption);
         }
@@ -432,25 +355,13 @@ function initGenreDropdown() {
  * Initialize reading level dropdown
  */
 function initReadingLevelDropdown() {
-    const readingLevelInput = document.getElementById('reading_level');
-    if (!readingLevelInput) return;
+    const readingLevelSelect = document.getElementById('reading_level');
+    if (!readingLevelSelect) return;
 
-    // Get the parent element
-    const parentElement = readingLevelInput.parentElement;
+    // Get the current value
+    const currentValue = readingLevelSelect.value;
 
-    // Create a new select element
-    const readingLevelSelect = document.createElement('select');
-    readingLevelSelect.id = 'reading-level-select';
-    readingLevelSelect.className = 'form-control';
-    readingLevelSelect.name = 'book_reading_level';
-
-    // Add a default option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Select a reading level';
-    readingLevelSelect.appendChild(defaultOption);
-
-    // Common reading level options
+    // Common reading level options to add if they don't exist
     const readingLevelOptions = [
         'Early Reader',
         'First Reader',
@@ -463,6 +374,9 @@ function initReadingLevelDropdown() {
         'Level 3',
         'Level 4',
         'Level 5',
+        'Beginner',
+        'Intermediate',
+        'Advanced',
         'Lexile 200-300',
         'Lexile 300-400',
         'Lexile 400-500',
@@ -474,28 +388,34 @@ function initReadingLevelDropdown() {
         'Lexile 1000+'
     ];
 
-    // Add options to the select
+    // Get existing options
+    const existingOptions = Array.from(readingLevelSelect.options).map(option => option.value.toLowerCase());
+
+    // Add missing options
     readingLevelOptions.forEach(readingLevel => {
-        const option = document.createElement('option');
-        option.value = readingLevel;
-        option.text = readingLevel;
-        readingLevelSelect.appendChild(option);
+        if (!existingOptions.includes(readingLevel.toLowerCase())) {
+            const option = document.createElement('option');
+            option.value = readingLevel.toLowerCase().replace(/\s+/g, '-');
+            option.text = readingLevel;
+            readingLevelSelect.appendChild(option);
+        }
     });
 
-    // Replace the input with the select
-    parentElement.replaceChild(readingLevelSelect, readingLevelInput);
-
     // Set the selected option if there's a value
-    if (readingLevelInput.value) {
+    if (currentValue) {
         // Check if the value exists in the options
-        const existingOption = Array.from(readingLevelSelect.options).find(option => option.value === readingLevelInput.value);
+        const existingOption = Array.from(readingLevelSelect.options).find(option =>
+            option.value.toLowerCase() === currentValue.toLowerCase() ||
+            option.text.toLowerCase() === currentValue.toLowerCase()
+        );
+
         if (existingOption) {
             existingOption.selected = true;
         } else {
             // Add a new option for the current value
             const newOption = document.createElement('option');
-            newOption.value = readingLevelInput.value;
-            newOption.text = readingLevelInput.value;
+            newOption.value = currentValue;
+            newOption.text = currentValue.charAt(0).toUpperCase() + currentValue.slice(1).replace(/-/g, ' ');
             newOption.selected = true;
             readingLevelSelect.appendChild(newOption);
         }
@@ -506,25 +426,13 @@ function initReadingLevelDropdown() {
  * Initialize publisher dropdown
  */
 function initPublisherDropdown() {
-    const publisherInput = document.querySelector('input[name="book_publisher"]');
-    if (!publisherInput) return;
+    const publisherSelect = document.getElementById('publisher');
+    if (!publisherSelect) return;
 
-    // Get the parent element
-    const parentElement = publisherInput.parentElement;
+    // Get the current value
+    const currentValue = publisherSelect.value;
 
-    // Create a new select element
-    const publisherSelect = document.createElement('select');
-    publisherSelect.id = 'publisher-select';
-    publisherSelect.className = 'form-control';
-    publisherSelect.name = 'book_publisher';
-
-    // Add a default option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Select a publisher or enter a new one';
-    publisherSelect.appendChild(defaultOption);
-
-    // Common publisher options
+    // Common publisher options to add if they don't exist
     const publisherOptions = [
         'Penguin Random House',
         'HarperCollins',
@@ -548,43 +456,36 @@ function initPublisherDropdown() {
         'Barrington Stoke'
     ];
 
-    // Add options to the select
+    // Get existing options
+    const existingOptions = Array.from(publisherSelect.options).map(option => option.value.toLowerCase());
+
+    // Add missing options
     publisherOptions.forEach(publisher => {
-        const option = document.createElement('option');
-        option.value = publisher;
-        option.text = publisher;
-        publisherSelect.appendChild(option);
+        if (!existingOptions.includes(publisher.toLowerCase())) {
+            const option = document.createElement('option');
+            option.value = publisher;
+            option.text = publisher;
+            publisherSelect.appendChild(option);
+        }
     });
 
-    // Create a hidden input to store the value
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.id = 'publisher';
-    hiddenInput.name = 'book_publisher';
-    hiddenInput.value = publisherInput.value;
-
-    // Replace the input with the select and hidden input
-    parentElement.replaceChild(publisherSelect, publisherInput);
-    parentElement.appendChild(hiddenInput);
-
     // Set the selected option if there's a value
-    if (hiddenInput.value) {
+    if (currentValue && currentValue !== 'custom') {
         // Check if the value exists in the options
-        const existingOption = Array.from(publisherSelect.options).find(option => option.value === hiddenInput.value);
+        const existingOption = Array.from(publisherSelect.options).find(option =>
+            option.value.toLowerCase() === currentValue.toLowerCase() ||
+            option.text.toLowerCase() === currentValue.toLowerCase()
+        );
+
         if (existingOption) {
             existingOption.selected = true;
         } else {
             // Add a new option for the current value
             const newOption = document.createElement('option');
-            newOption.value = hiddenInput.value;
-            newOption.text = hiddenInput.value;
+            newOption.value = currentValue;
+            newOption.text = currentValue;
             newOption.selected = true;
             publisherSelect.appendChild(newOption);
         }
     }
-
-    // Add event listener to update the hidden input
-    publisherSelect.addEventListener('change', function() {
-        hiddenInput.value = this.value;
-    });
 }

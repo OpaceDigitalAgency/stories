@@ -463,7 +463,22 @@ try {
             const formData = new FormData();
             formData.append('media_file_file', file);
 
-            fetch('/stories-backend/admin/content/media.php', {
+            // Show progress overlay in parent window
+            if (window.parent && window.parent.document) {
+                const overlay = window.parent.document.getElementById("progressOverlay");
+                if (overlay) {
+                    const title = window.parent.document.getElementById("progressTitle");
+                    const message = window.parent.document.getElementById("progressMessage");
+
+                    if (title) title.textContent = "Uploading and Optimizing";
+                    if (message) message.textContent = "Please wait while we upload and optimize your image. This may take a few moments.";
+
+                    overlay.style.visibility = "visible";
+                    overlay.style.opacity = "1";
+                }
+            }
+
+            fetch('/admin/content/media.php', {
                 method: 'POST',
                 body: formData
             })
@@ -474,21 +489,61 @@ try {
                             // Try to parse as JSON
                             const json = JSON.parse(text);
                             if (json.success) {
+                                // Hide progress overlay in parent window
+                                if (window.parent && window.parent.document) {
+                                    const overlay = window.parent.document.getElementById("progressOverlay");
+                                    if (overlay) {
+                                        overlay.style.visibility = "hidden";
+                                        overlay.style.opacity = "0";
+                                    }
+                                }
                                 window.location.reload();
                             } else {
+                                // Hide progress overlay in parent window
+                                if (window.parent && window.parent.document) {
+                                    const overlay = window.parent.document.getElementById("progressOverlay");
+                                    if (overlay) {
+                                        overlay.style.visibility = "hidden";
+                                        overlay.style.opacity = "0";
+                                    }
+                                }
                                 alert(json.message || 'Upload failed. Please try again.');
                             }
                         } catch (e) {
+                            // Hide progress overlay in parent window
+                            if (window.parent && window.parent.document) {
+                                const overlay = window.parent.document.getElementById("progressOverlay");
+                                if (overlay) {
+                                    overlay.style.visibility = "hidden";
+                                    overlay.style.opacity = "0";
+                                }
+                            }
                             // If not JSON, just reload
                             window.location.reload();
                         }
                     });
                 } else {
+                    // Hide progress overlay in parent window
+                    if (window.parent && window.parent.document) {
+                        const overlay = window.parent.document.getElementById("progressOverlay");
+                        if (overlay) {
+                            overlay.style.visibility = "hidden";
+                            overlay.style.opacity = "0";
+                        }
+                    }
                     alert('Upload failed. Please try again.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                // Hide progress overlay in parent window
+                if (window.parent && window.parent.document) {
+                    const overlay = window.parent.document.getElementById("progressOverlay");
+                    if (overlay) {
+                        overlay.style.visibility = "hidden";
+                        overlay.style.opacity = "0";
+                    }
+                }
                 alert('Upload failed. Please try again.');
             });
         }

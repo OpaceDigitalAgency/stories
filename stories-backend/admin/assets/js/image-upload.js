@@ -155,10 +155,23 @@ class ImageUploader {
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
 
+        // Show the global progress overlay
+        const overlay = document.getElementById("progressOverlay");
+        if (overlay) {
+            const title = document.getElementById("progressTitle");
+            const message = document.getElementById("progressMessage");
+
+            if (title) title.textContent = "Uploading and Optimizing";
+            if (message) message.textContent = "Please wait while we upload and optimize your image. This may take a few moments.";
+
+            overlay.style.visibility = "visible";
+            overlay.style.opacity = "1";
+        }
+
         // Create AJAX request
         const xhr = new XMLHttpRequest();
         // Use absolute path to ensure it works from any admin page
-        xhr.open('POST', '/stories-backend/admin/handlers/upload-image.php', true);
+        xhr.open('POST', '/admin/handlers/upload-image.php', true);
 
         // Track upload progress
         xhr.upload.addEventListener('progress', (e) => {
@@ -186,18 +199,46 @@ class ImageUploader {
                         // Hide progress bar after a delay
                         setTimeout(() => {
                             progressContainer.style.display = 'none';
+
+                            // Hide the global progress overlay
+                            const overlay = document.getElementById("progressOverlay");
+                            if (overlay) {
+                                overlay.style.visibility = "hidden";
+                                overlay.style.opacity = "0";
+                            }
                         }, 1000);
                     } else {
                         alert('Error: ' + response.message);
                         progressContainer.style.display = 'none';
+
+                        // Hide the global progress overlay
+                        const overlay = document.getElementById("progressOverlay");
+                        if (overlay) {
+                            overlay.style.visibility = "hidden";
+                            overlay.style.opacity = "0";
+                        }
                     }
                 } catch (e) {
                     alert('Error parsing server response.');
                     progressContainer.style.display = 'none';
+
+                    // Hide the global progress overlay
+                    const overlay = document.getElementById("progressOverlay");
+                    if (overlay) {
+                        overlay.style.visibility = "hidden";
+                        overlay.style.opacity = "0";
+                    }
                 }
             } else {
                 alert('Upload failed. Please try again.');
                 progressContainer.style.display = 'none';
+
+                // Hide the global progress overlay
+                const overlay = document.getElementById("progressOverlay");
+                if (overlay) {
+                    overlay.style.visibility = "hidden";
+                    overlay.style.opacity = "0";
+                }
             }
         });
 
@@ -205,6 +246,13 @@ class ImageUploader {
         xhr.addEventListener('error', () => {
             alert('Upload failed. Please try again.');
             progressContainer.style.display = 'none';
+
+            // Hide the global progress overlay
+            const overlay = document.getElementById("progressOverlay");
+            if (overlay) {
+                overlay.style.visibility = "hidden";
+                overlay.style.opacity = "0";
+            }
         });
 
         // Send the request
@@ -369,7 +417,7 @@ class ImageUploader {
         // Create iframe to load media library
         const iframe = document.createElement('iframe');
         // Use absolute path to ensure it works from any admin page
-        iframe.src = '/stories-backend/admin/content/media-select.php';
+        iframe.src = '/admin/content/media-select.php';
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = 'none';
@@ -400,7 +448,7 @@ class ImageUploader {
                     // Make an AJAX request to update the thumbnail
                     const xhr = new XMLHttpRequest();
                     // Use absolute path to ensure it works from any admin page
-                    xhr.open('POST', '/stories-backend/admin/handlers/update-thumbnail.php', true);
+                    xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
                     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                     xhr.onload = function() {
                         if (xhr.status === 200) {

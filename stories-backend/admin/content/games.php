@@ -61,7 +61,7 @@ try {
                title,
                description,
                slug,
-               cover_url as image_url,
+               cover_url,
                featured,
                is_published,
                published_at,

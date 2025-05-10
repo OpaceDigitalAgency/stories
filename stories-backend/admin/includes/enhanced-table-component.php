@@ -76,7 +76,7 @@ function getTableDisplayUrl($filePath, $itemType = 'general') {
                         break;
                     case 'game':
                         $tableName = 'games';
-                        $thumbnailField = 'cover_image';
+                        $thumbnailField = 'cover_url';
                         break;
                     case 'ai_tool':
                         $tableName = 'ai_tools';

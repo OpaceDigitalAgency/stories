@@ -100,7 +100,7 @@ try {
                a.published_at,
                a.created_at,
                a.updated_at,
-               a.cover_url as image_url,
+               a.cover_url,
                c.name as category_name
         FROM ai_tools a
         LEFT JOIN ai_tool_categories c ON a.category_id = c.id

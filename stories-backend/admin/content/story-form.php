@@ -1059,6 +1059,9 @@ require_once '../includes/header.php';
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
 
+<!-- Include debug script -->
+<script src="../assets/js/image-upload-debug.js"></script>
+
 <!-- Include story preview script -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
 <script src="../assets/js/story-preview.js"></script>

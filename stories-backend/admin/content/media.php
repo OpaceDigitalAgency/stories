@@ -37,13 +37,28 @@ function getDisplayUrl($filePath) {
         return 'https://' . $_SERVER['HTTP_HOST'] . $filePath;
     }
 
+    // If it's a relative URL starting with ../
+    if (strpos($filePath, '../') === 0) {
+        $relativePath = substr($filePath, 2); // Remove the leading ..
+        return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
+    }
+
     // If it's a server path
     if (file_exists($filePath)) {
         $relativePath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $filePath);
         return 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
     }
 
-    return $filePath;
+    // For paths that don't exist but might be valid
+    if (strpos($filePath, 'uploads/') !== false) {
+        // Extract the path after 'uploads/'
+        $pattern = '/.*?(\/uploads\/.*)/i';
+        if (preg_match($pattern, $filePath, $matches)) {
+            return 'https://' . $_SERVER['HTTP_HOST'] . $matches[1];
+        }
+    }
+
+    return 'https://' . $_SERVER['HTTP_HOST'] . '/' . ltrim($filePath, '/');
 }
 
 // Initialize variables

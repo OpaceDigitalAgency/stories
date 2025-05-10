@@ -636,8 +636,8 @@ function createImageVariants($sourcePath, $destinationDir, $options = []) {
             // Ensure the relative path starts with a single slash
             $relativePath = '/' . ltrim($relativePath, '/');
 
-            // Use relative URLs instead of absolute URLs to avoid domain issues
-            $url = $relativePath;
+            // Create absolute URL
+            $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
 
             $variants[$size] = [
                 'path' => $variantPath,
@@ -718,7 +718,8 @@ function optimizeImageWithMetadata($sourcePath, $destinationDir, $options = []) 
         // Just return the original file info using a more reliable method
         $basePath = realpath(dirname(__FILE__) . '/../');
         $relativePath = str_replace($basePath, '', $sourcePath);
-        $url = '/' . ltrim($relativePath, '/');
+        $relativePath = '/' . ltrim($relativePath, '/');
+        $url = 'https://' . $_SERVER['HTTP_HOST'] . $relativePath;
 
         return [
             'path' => $sourcePath,

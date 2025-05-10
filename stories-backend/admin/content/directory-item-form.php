@@ -661,6 +661,9 @@ if ($debug) {
                                         <li>Age Range: <?php echo htmlspecialchars($bookData['age_range'] ?? 'Not set'); ?></li>
                                         <li>Reading Level: <?php echo htmlspecialchars($bookData['reading_level'] ?? 'Not set'); ?></li>
                                     </ul>
+                                    <script>
+                                        console.log('Debug Book Data:', <?php echo json_encode($bookData); ?>);
+                                    </script>
                                 </div>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -1200,6 +1203,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Force initialization of book fields if needed -->
 <script>
+// Add PHP data to JavaScript for direct access - make it globally available
+window.bookData = <?php echo json_encode($bookData ?? []); ?>;
+console.log('PHP Book Data:', window.bookData);
+
+// Function to directly set dropdown values - make it globally available
+window.setDropdownValue = function(selectId, value) {
+    if (!value) return;
+
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    console.log(`Setting ${selectId} to value: "${value}"`);
+
+    // First try exact match
+    let found = false;
+    for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === value) {
+            select.options[i].selected = true;
+            found = true;
+            console.log(`Found exact match for ${selectId}: ${value}`);
+            break;
+        }
+    }
+
+    // If no exact match, try case-insensitive match
+    if (!found) {
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.toLowerCase() === value.toLowerCase()) {
+                select.options[i].selected = true;
+                found = true;
+                console.log(`Found case-insensitive match for ${selectId}: ${value}`);
+                break;
+            }
+        }
+    }
+
+    // If still no match, add a new option
+    if (!found && value) {
+        console.log(`No match found for ${selectId}, adding new option: ${value}`);
+        const newOption = document.createElement('option');
+        newOption.value = value;
+        newOption.text = value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, ' ');
+        newOption.selected = true;
+        select.appendChild(newOption);
+    }
+}
+
 // Add a backup initialization that runs after everything else
 window.addEventListener('load', function() {
     // Check if we're on a book type and the fields aren't visible
@@ -1222,6 +1272,21 @@ window.addEventListener('load', function() {
         if (typeof initGenreDropdown === 'function') initGenreDropdown();
         if (typeof initReadingLevelDropdown === 'function') initReadingLevelDropdown();
         if (typeof initPublisherDropdown === 'function') initPublisherDropdown();
+
+        // Directly set dropdown values from PHP data
+        if (bookData) {
+            if (bookData.age_range) {
+                setDropdownValue('age_range', bookData.age_range);
+            }
+
+            if (bookData.genre) {
+                setDropdownValue('genre', bookData.genre);
+            }
+
+            if (bookData.reading_level) {
+                setDropdownValue('reading_level', bookData.reading_level);
+            }
+        }
     }
 });
 
@@ -1240,6 +1305,21 @@ setTimeout(function() {
         // Log the current state
         console.log('Book fields final display state:', bookFields.style.display);
         console.log('Book fields computed style:', getComputedStyle(bookFields).display);
+
+        // Directly set dropdown values again as a final check
+        if (bookData) {
+            if (bookData.age_range) {
+                setDropdownValue('age_range', bookData.age_range);
+            }
+
+            if (bookData.genre) {
+                setDropdownValue('genre', bookData.genre);
+            }
+
+            if (bookData.reading_level) {
+                setDropdownValue('reading_level', bookData.reading_level);
+            }
+        }
 
         // Ensure the form preserves the selected values
         const form = document.querySelector('form.content-form');

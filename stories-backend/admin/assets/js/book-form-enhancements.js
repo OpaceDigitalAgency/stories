@@ -37,6 +37,24 @@ document.addEventListener('DOMContentLoaded', function() {
             initReadingLevelDropdown();
             initPublisherDropdown();
             console.log('Book form enhancements initialized');
+
+            // Check if we have a global bookData variable from PHP
+            if (typeof window.bookData !== 'undefined') {
+                console.log('Found global bookData, applying values directly');
+
+                // Apply values directly after initialization
+                if (window.bookData.age_range && typeof window.setDropdownValue === 'function') {
+                    window.setDropdownValue('age_range', window.bookData.age_range);
+                }
+
+                if (window.bookData.genre && typeof window.setDropdownValue === 'function') {
+                    window.setDropdownValue('genre', window.bookData.genre);
+                }
+
+                if (window.bookData.reading_level && typeof window.setDropdownValue === 'function') {
+                    window.setDropdownValue('reading_level', window.bookData.reading_level);
+                }
+            }
         }, 100);
     } else if (bookFields && getComputedStyle(bookFields).display !== 'none') {
         // If book fields are visible by computed style (not just inline style)
@@ -51,6 +69,24 @@ document.addEventListener('DOMContentLoaded', function() {
         initGenreDropdown();
         initReadingLevelDropdown();
         initPublisherDropdown();
+
+        // Check if we have a global bookData variable from PHP
+        if (typeof window.bookData !== 'undefined') {
+            console.log('Found global bookData, applying values directly');
+
+            // Apply values directly after initialization
+            if (window.bookData.age_range && typeof window.setDropdownValue === 'function') {
+                window.setDropdownValue('age_range', window.bookData.age_range);
+            }
+
+            if (window.bookData.genre && typeof window.setDropdownValue === 'function') {
+                window.setDropdownValue('genre', window.bookData.genre);
+            }
+
+            if (window.bookData.reading_level && typeof window.setDropdownValue === 'function') {
+                window.setDropdownValue('reading_level', window.bookData.reading_level);
+            }
+        }
     } else {
         console.log('Book fields not visible or not a book type, skipping initialization');
     }

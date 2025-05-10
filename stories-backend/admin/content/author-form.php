@@ -212,41 +212,79 @@ try {
                             document.getElementById('set-default-avatar').addEventListener('click', function() {
                                 // Set a default avatar URL
                                 const defaultAvatarUrl = 'https://api.storiesfromtheweb.org/uploads/default-avatar.svg';
+                                console.log('Setting default avatar URL:', defaultAvatarUrl);
 
-                                // Make an AJAX request to update the avatar URL
-                                const xhr = new XMLHttpRequest();
-                                xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
-                                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                                // Set the value in the avatar_url field
+                                const avatarUrlField = document.querySelector('input[name="avatar_url"]');
+                                if (avatarUrlField) {
+                                    avatarUrlField.value = defaultAvatarUrl;
+                                    console.log('Set avatar_url field to:', defaultAvatarUrl);
+                                }
 
-                                xhr.onload = function() {
-                                    if (xhr.status === 200) {
-                                        try {
-                                            const response = JSON.parse(xhr.responseText);
-                                            console.log('Avatar update response:', response);
+                                // Set the value in the backup field
+                                const backupField = document.querySelector('input[name="avatar_url_backup"]');
+                                if (backupField) {
+                                    backupField.value = defaultAvatarUrl;
+                                    console.log('Set avatar_url_backup field to:', defaultAvatarUrl);
+                                }
 
-                                            if (response.success) {
-                                                alert('Default avatar set successfully!');
-                                                // Reload the page to see the changes
-                                                window.location.reload();
-                                            } else {
-                                                alert('Failed to set default avatar: ' + response.message);
-                                            }
-                                        } catch (e) {
-                                            console.error('Error parsing response:', e);
-                                            alert('Error setting default avatar');
-                                        }
-                                    } else {
-                                        alert('Error setting default avatar: ' + xhr.status);
+                                // Set the image_updated flag to 1
+                                const imageUpdatedField = document.getElementById('image_updated_field');
+                                if (imageUpdatedField) {
+                                    imageUpdatedField.value = '1';
+                                    console.log('Set image_updated field to 1');
+
+                                    // Add a visible notification that the flag was set
+                                    const notification = document.createElement('div');
+                                    notification.className = 'alert alert-info mt-2';
+                                    notification.innerHTML = '<strong>Debug:</strong> image_updated flag set to 1';
+                                    document.querySelector('.content-section').appendChild(notification);
+
+                                    // Remove the notification after 5 seconds
+                                    setTimeout(() => {
+                                        notification.remove();
+                                    }, 5000);
+                                } else {
+                                    console.log('Could not find image_updated_field');
+                                    alert('Error: Could not find image_updated_field. Please check the console for more information.');
+                                }
+
+                                // Update the preview image
+                                const previewContainer = document.querySelector('.image-preview-container');
+                                const preview = document.querySelector('.image-preview');
+
+                                if (preview) {
+                                    // Clear existing content
+                                    preview.innerHTML = '';
+                                    preview.classList.remove('empty');
+
+                                    // Create image element
+                                    const img = document.createElement('img');
+                                    img.src = defaultAvatarUrl;
+                                    img.alt = 'Preview';
+                                    preview.appendChild(img);
+
+                                    // Create info div with remove button
+                                    const infoDiv = document.createElement('div');
+                                    infoDiv.className = 'image-info';
+
+                                    const removeButton = document.createElement('button');
+                                    removeButton.type = 'button';
+                                    removeButton.className = 'btn btn-sm btn-danger remove-image';
+                                    removeButton.innerHTML = '<i class="fas fa-times"></i> Remove';
+                                    infoDiv.appendChild(removeButton);
+
+                                    preview.appendChild(infoDiv);
+
+                                    // Add has-image class to container
+                                    if (previewContainer) {
+                                        previewContainer.classList.add('has-image');
                                     }
-                                };
+                                }
 
-                                xhr.onerror = function() {
-                                    alert('Network error while setting default avatar');
-                                };
-
-                                // Send the request
-                                const data = 'item_type=author&item_id=<?php echo $author['id']; ?>&image_url=' + encodeURIComponent(defaultAvatarUrl);
-                                xhr.send(data);
+                                // Update the alert to show success
+                                this.closest('.alert').className = 'alert alert-success';
+                                this.closest('.alert').innerHTML = '<strong>Success:</strong> Default avatar set. Click Save to apply changes.';
                             });
                         </script>
                     </div>
@@ -274,7 +312,6 @@ try {
                 if (!$hasAvatar) {
                     echo '<div class="alert alert-warning">';
                     echo '<strong>Debug:</strong> No avatar URL set in author data. This author was likely imported using the direct_import.php script, which doesn\'t set avatar URLs.';
-                    echo '<div class="mt-2"><button type="button" class="btn btn-primary set-default-avatar">Set Default Avatar</button></div>';
                     echo '</div>';
                 } else {
                     echo '<div class="alert alert-info">';

@@ -505,8 +505,10 @@ if ($debug) {
 
 <div class="content-section mb-3">
     <div class="section-body">
-        <form method="POST" action="save-directory-item.php" class="content-form">
+        <form method="POST" action="save-directory-item.php" class="content-form" id="directory-item-form">
             <input type="hidden" name="id" value="<?php echo $item['id'] ?? ''; ?>">
+            <!-- Add a hidden field to track if the image was updated via AJAX -->
+            <input type="hidden" name="image_updated" value="0" id="image_updated_field">
 
             <div class="row">
                 <!-- Left Column - Basic Info and Settings -->

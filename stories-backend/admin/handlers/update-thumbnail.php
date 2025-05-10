@@ -24,13 +24,16 @@ $response = [
 
 try {
     // Check if required parameters are provided
-    if (!isset($_POST['item_type']) || !isset($_POST['item_id']) || !isset($_POST['image_url'])) {
+    if (!isset($_POST['item_type']) || !isset($_POST['item_id'])) {
         throw new Exception('Missing required parameters');
     }
 
     $itemType = $_POST['item_type'];
     $itemId = intval($_POST['item_id']);
-    $imageUrl = $_POST['image_url'];
+    $imageUrl = isset($_POST['image_url']) ? $_POST['image_url'] : '';
+
+    // Log the request for debugging
+    error_log("Update thumbnail request: Type: $itemType, ID: $itemId, URL: $imageUrl");
 
     // Validate item type
     $validItemTypes = ['story', 'post', 'author', 'game', 'ai_tool', 'directory_item'];

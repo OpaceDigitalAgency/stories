@@ -347,6 +347,8 @@ class ImageUploader {
         const urlInput = component.querySelector('.image-url-input');
         const previewContainer = component.querySelector('.image-preview-container');
         const preview = component.querySelector('.image-preview');
+        const entityType = component.querySelector('.entity-type').value;
+        const entityId = component.querySelector('.entity-id').value;
 
         // Clear the URL input
         urlInput.value = '';
@@ -363,6 +365,50 @@ class ImageUploader {
             </div>
         `;
         preview.classList.add('empty');
+
+        // If we're in a form, find the form and mark it as having unsaved changes
+        const form = component.closest('form');
+        if (form) {
+            // Add a hidden input to indicate the image was updated
+            let hiddenInput = form.querySelector('input[name="image_updated"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'image_updated';
+                form.appendChild(hiddenInput);
+            }
+            hiddenInput.value = '1';
+            console.log('Image removed - Updated form with image_updated=1');
+        }
+
+        // Update the database if we have an entity ID
+        if (entityId && entityId !== '0') {
+            // Make an AJAX request to update the image URL to empty
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/admin/handlers/update-thumbnail.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            // Log the data being sent
+            console.log('Removing image for:', {
+                entityType: entityType,
+                entityId: entityId,
+                imageUrl: '',
+                fieldName: urlInput.name
+            });
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        console.log('Image removal response:', response);
+                    } catch (e) {
+                        console.error('Error parsing image removal response:', e);
+                    }
+                }
+            };
+
+            xhr.send('item_type=' + encodeURIComponent(entityType) + '&item_id=' + encodeURIComponent(entityId) + '&image_url=');
+        }
     }
 
     /**
@@ -556,4 +602,36 @@ class ImageUploader {
 // Initialize the image uploader when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.imageUploader = new ImageUploader();
+
+    // Add form submission handler to ensure image URLs are properly submitted
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            // Find all image upload components in this form
+            const components = form.querySelectorAll('.image-upload-component');
+
+            components.forEach(component => {
+                const urlInput = component.querySelector('.image-url-input');
+                const previewImg = component.querySelector('.image-preview img');
+
+                // If the input is empty but there's an image in the preview, use that URL
+                if ((!urlInput.value || urlInput.value === '') && previewImg && previewImg.src && previewImg.style.display !== 'none') {
+                    urlInput.value = previewImg.src;
+                    console.log('Form submission - Updated empty image URL from preview:', previewImg.src);
+                }
+
+                // Set the image_updated flag if we have a URL
+                if (urlInput.value && urlInput.value !== '') {
+                    // Add a hidden input to indicate the image was updated
+                    let hiddenInput = form.querySelector('input[name="image_updated"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'image_updated';
+                        form.appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = '1';
+                }
+            });
+        });
+    });
 });

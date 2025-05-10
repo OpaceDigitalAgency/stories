@@ -307,19 +307,71 @@ try {
                         console.log("Default avatar detected in field, fixing display");
 
                         // Force the preview to show
-                        const previewImg = $("#avatar_url-preview");
-                        previewImg.attr("src", avatarUrl);
-                        previewImg.show();
+                        const previewImg = $(".image-preview img");
+                        if (previewImg.length) {
+                            previewImg.attr("src", avatarUrl);
+                            previewImg.show();
 
-                        // Hide the placeholder
-                        previewImg.closest(".image-preview").find(".placeholder").hide();
+                            // Hide the placeholder
+                            $(".image-preview .placeholder").hide();
 
-                        // Add has-image class to container
-                        $(".image-preview-container").addClass("has-image");
+                            // Add has-image class to container
+                            $(".image-preview-container").addClass("has-image");
 
-                        // Update the image preview to show the image
-                        const preview = previewImg.closest(".image-preview");
-                        preview.removeClass("empty");
+                            // Update the image preview to show the image
+                            $(".image-preview").removeClass("empty");
+                        } else {
+                            console.log("Preview image element not found, creating one");
+
+                            // Create the preview image if it doesn\'t exist
+                            const preview = $(".image-preview");
+                            if (preview.length) {
+                                // Clear existing content
+                                preview.empty();
+
+                                // Create image element
+                                const img = $("<img>").attr({
+                                    "src": avatarUrl,
+                                    "alt": "Preview"
+                                });
+                                preview.append(img);
+
+                                // Create info div with remove button
+                                const infoDiv = $("<div>").addClass("image-info");
+                                const removeBtn = $("<button>").attr({
+                                    "type": "button",
+                                    "class": "btn btn-sm btn-danger remove-image"
+                                }).html(\'<i class="fas fa-times"></i> Remove\');
+
+                                infoDiv.append(removeBtn);
+                                preview.append(infoDiv);
+
+                                // Add has-image class to container
+                                $(".image-preview-container").addClass("has-image");
+                                preview.removeClass("empty");
+
+                                // Add event listener to remove button
+                                removeBtn.on("click", function() {
+                                    // Clear the URL input
+                                    $("#avatar_url").val("");
+                                    $("#avatar_url_backup").val("");
+
+                                    // Reset the preview
+                                    preview.empty().addClass("empty").html(`
+                                        <div class="placeholder">
+                                            <i class="fas fa-image"></i>
+                                            <span>No image selected</span>
+                                        </div>
+                                    `);
+
+                                    // Remove has-image class from container
+                                    $(".image-preview-container").removeClass("has-image");
+
+                                    // Set the image_updated flag
+                                    $("#image_updated_field").val("1");
+                                });
+                            }
+                        }
                     }
 
                     // Set Default Avatar button handler
@@ -332,30 +384,97 @@ try {
                         $("#avatar_url_backup").val(defaultAvatarUrl);
 
                         // Update the preview image
-                        const previewImg = $("#avatar_url-preview");
-                        previewImg.attr("src", defaultAvatarUrl);
-                        previewImg.show();
+                        const previewImg = $(".image-preview img");
+                        if (previewImg.length) {
+                            previewImg.attr("src", defaultAvatarUrl);
+                            previewImg.show();
 
-                        // Hide the placeholder
-                        previewImg.closest(".image-preview").find(".placeholder").hide();
+                            // Hide the placeholder
+                            $(".image-preview .placeholder").hide();
+                        } else {
+                            // Create the preview image if it doesn\'t exist
+                            const preview = $(".image-preview");
+                            if (preview.length) {
+                                // Clear existing content
+                                preview.empty();
+
+                                // Create image element
+                                const img = $("<img>").attr({
+                                    "src": defaultAvatarUrl,
+                                    "alt": "Preview"
+                                });
+                                preview.append(img);
+
+                                // Create info div with remove button
+                                const infoDiv = $("<div>").addClass("image-info");
+                                const removeBtn = $("<button>").attr({
+                                    "type": "button",
+                                    "class": "btn btn-sm btn-danger remove-image"
+                                }).html(\'<i class="fas fa-times"></i> Remove\');
+
+                                infoDiv.append(removeBtn);
+                                preview.append(infoDiv);
+
+                                // Add event listener to remove button
+                                removeBtn.on("click", function() {
+                                    // Clear the URL input
+                                    $("#avatar_url").val("");
+                                    $("#avatar_url_backup").val("");
+
+                                    // Reset the preview
+                                    preview.empty().addClass("empty").html(`
+                                        <div class="placeholder">
+                                            <i class="fas fa-image"></i>
+                                            <span>No image selected</span>
+                                        </div>
+                                    `);
+
+                                    // Remove has-image class from container
+                                    $(".image-preview-container").removeClass("has-image");
+
+                                    // Set the image_updated flag
+                                    $("#image_updated_field").val("1");
+                                });
+                            }
+                        }
 
                         // Add has-image class to container
                         $(".image-preview-container").addClass("has-image");
 
                         // Update the image preview to show the image
-                        const preview = previewImg.closest(".image-preview");
-                        preview.removeClass("empty");
+                        $(".image-preview").removeClass("empty");
 
                         // Set the image_updated flag
-                        $("<input>").attr({
-                            type: "hidden",
-                            name: "image_updated",
-                            value: "1"
-                        }).appendTo("form");
+                        $("#image_updated_field").val("1");
 
                         // Update debug info
                         $(this).closest(".alert").removeClass("alert-warning").addClass("alert-success")
                             .html("<strong>Success:</strong> Default avatar set. Click Save to apply changes.");
+                    });
+
+                    // Add form submission handler to ensure avatar URL is properly submitted
+                    $("#author-form").on("submit", function(e) {
+                        console.log("Form submission handler triggered");
+
+                        // Check if we have an image in the preview
+                        const previewImg = $(".image-preview img");
+                        if (previewImg.length && previewImg.is(":visible")) {
+                            const imgSrc = previewImg.attr("src");
+                            console.log("Found visible preview image with src:", imgSrc);
+
+                            // If the avatar_url field is empty but we have an image, use the image src
+                            const avatarUrlField = $("#avatar_url");
+                            if (!avatarUrlField.val() && imgSrc) {
+                                avatarUrlField.val(imgSrc);
+                                console.log("Updated empty avatar_url field with preview image src");
+
+                                // Also update the backup field
+                                $("#avatar_url_backup").val(imgSrc);
+
+                                // Set the image_updated flag
+                                $("#image_updated_field").val("1");
+                            }
+                        }
                     });
                 });
                 </script>';
@@ -495,6 +614,29 @@ try {
             slugInput.addEventListener('input', function() {
                 slugInput._autoGenerated = false;
             });
+        }
+
+        // Add debug info to the page
+        console.log("Author form fix script loaded");
+
+        // Find the form element
+        const form = document.getElementById('author-form');
+        console.log("Form element by ID:", form);
+
+        // Find the image_updated field
+        const imageUpdatedField = document.getElementById('image_updated_field');
+        console.log("Image updated field by ID:", imageUpdatedField);
+
+        // Find the image upload component
+        const imageUploadComponent = document.querySelector('.image-upload-component');
+        if (imageUploadComponent) {
+            console.log("Image upload component found");
+        }
+
+        // Log the avatar URL
+        const avatarUrlInput = document.querySelector('input[name="avatar_url"]');
+        if (avatarUrlInput) {
+            console.log("Avatar URL on page load:", avatarUrlInput.value);
         }
     });
 </script>

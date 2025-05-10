@@ -43,9 +43,16 @@ try {
         error_log("Using backup avatar URL: " . $avatar_url);
     }
 
+    // Check if the avatar URL is the default avatar
+    $isDefaultAvatar = !empty($avatar_url) && strpos($avatar_url, 'default-avatar.svg') !== false;
+    if ($isDefaultAvatar) {
+        error_log("Default avatar detected: " . $avatar_url);
+    }
+
     // Fix for empty avatar_url that should be NULL in database
     if (empty($avatar_url)) {
         $avatar_url = null;
+        error_log("Empty avatar URL - setting to NULL in database");
     }
 
     // Log form data for debugging
@@ -86,7 +93,17 @@ try {
             error_log("Removing avatar image (setting to NULL)");
         } else {
             error_log("Updating avatar image to: " . $avatar_url);
+
+            // Force the image_updated flag to true if we have a non-empty avatar_url
+            $image_updated = true;
         }
+    }
+
+    // Special handling for default avatar
+    if ($isDefaultAvatar) {
+        // Always update the avatar_url if it's the default avatar
+        error_log("Default avatar detected, forcing update");
+        $image_updated = true;
     }
 
     // Always log the final avatar_url value that will be used

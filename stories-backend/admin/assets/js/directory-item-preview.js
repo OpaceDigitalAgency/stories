@@ -118,11 +118,6 @@ class DirectoryItemPreview {
                         <button class="lightbox-close">&times;</button>
                     </div>
                     <div class="lightbox-content">
-                        <div class="preview-actions">
-                            <a href="${url}" target="_blank" class="btn btn-primary btn-sm">
-                                <i class="fas fa-external-link-alt"></i> Open in New Tab
-                            </a>
-                        </div>
                         <div class="preview-iframe-container">
                             <iframe src="about:blank" frameborder="0" allowfullscreen></iframe>
                         </div>
@@ -143,12 +138,6 @@ class DirectoryItemPreview {
                     link.href = '../assets/css/story-preview.css'; // From content pages
                 }
                 document.head.appendChild(link);
-            }
-        } else {
-            // Update the "Open in New Tab" link
-            const openInTabLink = lightbox.querySelector('.preview-actions a');
-            if (openInTabLink) {
-                openInTabLink.href = url;
             }
         }
 

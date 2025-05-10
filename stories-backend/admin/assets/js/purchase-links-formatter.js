@@ -1,6 +1,6 @@
 /**
  * Purchase Links Formatter
- * 
+ *
  * This script provides a user-friendly interface for managing purchase links
  * for books in the directory item form.
  */
@@ -16,14 +16,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function initPurchaseLinksManager() {
     const purchaseLinksField = document.getElementById('purchase_links');
     const container = document.getElementById('purchase-links-container');
-    
+
     if (!purchaseLinksField || !container) {
         console.log('Purchase links elements not found');
         return;
     }
-    
+
     console.log('Initializing purchase links manager');
-    
+
     // Parse the current JSON value
     let purchaseLinks = {};
     try {
@@ -37,10 +37,10 @@ function initPurchaseLinksManager() {
         console.error('Error parsing purchase links JSON:', e);
         console.log('Raw value:', purchaseLinksField.value);
     }
-    
+
     // Render the current links
     renderPurchaseLinks();
-    
+
     // Add event listener for the add button
     const addButton = document.getElementById('add-purchase-link-btn');
     if (addButton) {
@@ -53,7 +53,7 @@ function initPurchaseLinksManager() {
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-labelledby', 'add-purchase-link-modal-title');
             modal.setAttribute('aria-hidden', 'true');
-            
+
             modal.innerHTML = `
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -69,10 +69,13 @@ function initPurchaseLinksManager() {
                                 <select id="store-name" class="form-control">
                                     <option value="">Select Store</option>
                                     <option value="amazon">Amazon</option>
+                                    <option value="goodreads">Goodreads</option>
                                     <option value="barnes_noble">Barnes & Noble</option>
                                     <option value="bookshop">Bookshop.org</option>
                                     <option value="waterstones">Waterstones</option>
-                                    <option value="goodreads">Goodreads</option>
+                                    <option value="google_books">Google Books</option>
+                                    <option value="apple_books">Apple Books</option>
+                                    <option value="kobo">Kobo</option>
                                     <option value="other">Other</option>
                                 </select>
                             </div>
@@ -92,16 +95,16 @@ function initPurchaseLinksManager() {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // Initialize the modal
             $(modal).modal('show');
-            
+
             // Handle custom store selection
             const storeSelect = document.getElementById('store-name');
             const customStoreContainer = document.getElementById('custom-store-container');
-            
+
             storeSelect.addEventListener('change', function() {
                 if (this.value === 'other') {
                     customStoreContainer.style.display = 'block';
@@ -109,38 +112,38 @@ function initPurchaseLinksManager() {
                     customStoreContainer.style.display = 'none';
                 }
             });
-            
+
             // Handle save button
             const saveButton = document.getElementById('save-purchase-link');
             saveButton.addEventListener('click', function() {
                 const storeSelect = document.getElementById('store-name');
                 const customStore = document.getElementById('custom-store');
                 const storeUrl = document.getElementById('store-url');
-                
+
                 let store = storeSelect.value;
                 if (store === 'other') {
                     store = customStore.value.trim();
                 }
-                
+
                 const url = storeUrl.value.trim();
-                
+
                 if (!store) {
                     alert('Please select or enter a store name');
                     return;
                 }
-                
+
                 if (!url) {
                     alert('Please enter a URL');
                     return;
                 }
-                
+
                 // Add the link
                 purchaseLinks[store] = url;
-                
+
                 // Update the field and render
                 updatePurchaseLinksField();
                 renderPurchaseLinks();
-                
+
                 // Close the modal
                 $(modal).modal('hide');
                 $(modal).on('hidden.bs.modal', function() {
@@ -149,16 +152,16 @@ function initPurchaseLinksManager() {
             });
         });
     }
-    
+
     // Function to render the purchase links
     function renderPurchaseLinks() {
         container.innerHTML = '';
-        
+
         if (Object.keys(purchaseLinks).length === 0) {
             container.innerHTML = '<p class="text-muted">No purchase links added yet.</p>';
             return;
         }
-        
+
         const table = document.createElement('table');
         table.className = 'table table-sm';
         table.innerHTML = `
@@ -171,14 +174,14 @@ function initPurchaseLinksManager() {
             </thead>
             <tbody></tbody>
         `;
-        
+
         const tbody = table.querySelector('tbody');
-        
+
         for (const [store, url] of Object.entries(purchaseLinks)) {
             const tr = document.createElement('tr');
-            
+
             const storeName = store.charAt(0).toUpperCase() + store.slice(1).replace('_', ' ');
-            
+
             tr.innerHTML = `
                 <td>${storeName}</td>
                 <td><a href="${url}" target="_blank">${url}</a></td>
@@ -188,12 +191,12 @@ function initPurchaseLinksManager() {
                     </button>
                 </td>
             `;
-            
+
             tbody.appendChild(tr);
         }
-        
+
         container.appendChild(table);
-        
+
         // Add event listeners for remove buttons
         const removeButtons = container.querySelectorAll('.remove-link');
         removeButtons.forEach(button => {
@@ -207,7 +210,7 @@ function initPurchaseLinksManager() {
             });
         });
     }
-    
+
     // Function to update the hidden field with the JSON
     function updatePurchaseLinksField() {
         purchaseLinksField.value = JSON.stringify(purchaseLinks);

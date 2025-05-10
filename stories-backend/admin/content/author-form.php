@@ -296,11 +296,36 @@ try {
                     $author['id'] ?? null
                 );
 
-                // Add JavaScript for the Set Default Avatar button
+                // Add JavaScript for the Set Default Avatar button and to fix avatar display
                 echo '<script>
                 $(document).ready(function() {
+                    // Fix for avatar display - check if we have a default avatar in the URL
+                    const avatarUrl = $("#avatar_url").val();
+                    console.log("Avatar URL on page load:", avatarUrl);
+
+                    if (avatarUrl && avatarUrl.includes("default-avatar.svg")) {
+                        console.log("Default avatar detected in field, fixing display");
+
+                        // Force the preview to show
+                        const previewImg = $("#avatar_url-preview");
+                        previewImg.attr("src", avatarUrl);
+                        previewImg.show();
+
+                        // Hide the placeholder
+                        previewImg.closest(".image-preview").find(".placeholder").hide();
+
+                        // Add has-image class to container
+                        $(".image-preview-container").addClass("has-image");
+
+                        // Update the image preview to show the image
+                        const preview = previewImg.closest(".image-preview");
+                        preview.removeClass("empty");
+                    }
+
+                    // Set Default Avatar button handler
                     $(".set-default-avatar").click(function() {
                         const defaultAvatarUrl = "https://api.storiesfromtheweb.org/uploads/default-avatar.svg";
+                        console.log("Setting default avatar URL:", defaultAvatarUrl);
 
                         // Set the value in both the visible and hidden fields
                         $("#avatar_url").val(defaultAvatarUrl);

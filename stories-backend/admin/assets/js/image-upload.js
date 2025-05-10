@@ -49,6 +49,38 @@ class ImageUploader {
         const entityType = component.querySelector('.entity-type').value;
         const entityId = component.querySelector('.entity-id').value;
 
+        // Special handling for avatar_url field with default avatar
+        if (urlInput && urlInput.name === 'avatar_url') {
+            const currentValue = urlInput.value;
+            console.log('Initializing avatar_url component with value:', currentValue);
+
+            if (currentValue && currentValue.includes('default-avatar.svg')) {
+                console.log('Default avatar detected in field, ensuring preview is visible');
+
+                // Force the preview to show
+                const previewImg = component.querySelector('.image-preview img');
+                if (previewImg) {
+                    previewImg.style.display = 'block';
+
+                    // Hide the placeholder
+                    const placeholder = component.querySelector('.placeholder');
+                    if (placeholder) {
+                        placeholder.style.display = 'none';
+                    }
+
+                    // Add has-image class to container
+                    if (previewContainer) {
+                        previewContainer.classList.add('has-image');
+                    }
+
+                    // Update the image preview to show the image
+                    if (preview) {
+                        preview.classList.remove('empty');
+                    }
+                }
+            }
+        }
+
         // Handle drag and drop
         if (dropzone) {
             dropzone.addEventListener('dragover', (e) => {

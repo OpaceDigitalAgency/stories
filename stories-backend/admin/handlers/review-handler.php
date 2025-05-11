@@ -175,7 +175,7 @@ function updateReview() {
         // Check if the review exists
         $checkStmt = $db->prepare("SELECT * FROM reviews WHERE id = ?");
         $checkStmt->execute([$reviewId]);
-        $reviewData = $checkStmt->fetch();
+        $reviewData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         $reviewExists = $reviewData !== false;
 
         // Debug the review data
@@ -265,7 +265,7 @@ function deleteReview() {
         // Check if the review exists - use a more lenient check that only looks at the review ID
         $checkStmt = $db->prepare("SELECT * FROM reviews WHERE id = ?");
         $checkStmt->execute([$reviewId]);
-        $reviewData = $checkStmt->fetch();
+        $reviewData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         $reviewExists = $reviewData !== false;
 
         // Debug the review data

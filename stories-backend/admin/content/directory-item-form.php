@@ -493,9 +493,8 @@ $extraHeadContent = '
 
                 formData.append("book_id", bookId);
 
-                if (editingReviewId) {
-                    formData.append("review_id", editingReviewId);
-                }
+                // The review_id is already in the form as a hidden field
+                // No need to append it separately
 
                 // AJAX request to save review
                 fetch("../handlers/review-handler.php", {
@@ -531,6 +530,7 @@ $extraHeadContent = '
             reviewForm.reset();
             editingReviewId = null;
             currentRating = 0;
+            document.getElementById("review_id").value = ""; // Clear the hidden review ID field
             document.getElementById("rating_normalised").value = "0";
             document.getElementById("original_rating").value = "";
             document.getElementById("review-form-title").textContent = "Add New Review";
@@ -566,6 +566,7 @@ $extraHeadContent = '
                     const reviewText = reviewItem.getAttribute("data-review-text");
 
                     // Populate form with review data
+                    document.getElementById("review_id").value = reviewId; // Set the hidden review ID field
                     document.getElementById("reviewer_name").value = reviewerName;
                     document.getElementById("reviewer_age").value = reviewerAge;
                     document.getElementById("source_id").value = sourceId;
@@ -629,7 +630,10 @@ $extraHeadContent = '
                         const formData = new FormData();
                         formData.append("action", "delete_review");
                         formData.append("review_id", reviewId);
+                        // Still send the book_id for reference, but the handler will use the review ID to find the correct review
                         formData.append("book_id", bookId);
+
+                        console.log("Sending delete request with review_id:", reviewId);
 
                         // AJAX request to delete review
                         fetch("../handlers/review-handler.php", {
@@ -1538,7 +1542,11 @@ if (isset($_SESSION['error'])) {
                                 <?php if ($reviewCount > 0): ?>
                                     <?php foreach ($reviews as $review): ?>
                                         <div class="review-item" id="review-<?php echo $review['id']; ?>"
-                                            data-reviewer-name="<?php echo htmlspecialchars($review['reviewer_name'] ?? ''); ?>"
+                                            data-reviewer-name="<?php
+                                                $reviewerName = $review['reviewer_name'] ?? '';
+                                                $reviewerName = preg_replace('/^\*\*/', '', $reviewerName);
+                                                echo htmlspecialchars($reviewerName);
+                                            ?>"
                                             data-reviewer-age="<?php echo htmlspecialchars($review['reviewer_age'] ?? ''); ?>"
                                             data-source-id="<?php echo htmlspecialchars($review['source_id'] ?? ''); ?>"
                                             data-review-date="<?php echo htmlspecialchars($review['review_date'] ?? ''); ?>"
@@ -1557,7 +1565,12 @@ if (isset($_SESSION['error'])) {
 
                                             <div class="review-header">
                                                 <div class="reviewer-info">
-                                                    <?php echo htmlspecialchars($review['reviewer_name'] ?? 'Anonymous'); ?>
+                                                    <?php
+                                                        // Remove asterisks from reviewer name if present
+                                                        $reviewerName = $review['reviewer_name'] ?? 'Anonymous';
+                                                        $reviewerName = preg_replace('/^\*\*/', '', $reviewerName);
+                                                        echo htmlspecialchars($reviewerName);
+                                                    ?>
                                                     <?php if (!empty($review['reviewer_age'])): ?>
                                                         <span class="reviewer-age">(Age <?php echo htmlspecialchars($review['reviewer_age']); ?>)</span>
                                                     <?php endif; ?>
@@ -1593,6 +1606,8 @@ if (isset($_SESSION['error'])) {
                             <div class="add-review-form">
                                 <h6 id="review-form-title">Add New Review</h6>
                                 <form id="review-form">
+                                    <!-- Hidden field for review ID when editing -->
+                                    <input type="hidden" id="review_id" name="review_id" value="">
                                     <div class="form-row">
                                         <div class="col-md-6">
                                             <div class="form-group">

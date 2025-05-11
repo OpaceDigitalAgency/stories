@@ -235,6 +235,140 @@ function extractReviewsFromDescription($description) {
         }
     }
 
+    // Pattern 4: Look for "**Reviewer: Name** Age: X Review: ... Indicative Rating: X/Y" format
+    if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^I]+)Indicative Rating:\s*(\d+(?:\.\d+)?)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 5: Look for markdown format reviews from the reading-book-reviews page
+    if (preg_match_all('/^## ([^\n]+)\n\n((?:\*\*Reviewer[^\n]+\n\n)+)/m', $description, $bookMatches, PREG_SET_ORDER)) {
+        foreach ($bookMatches as $bookMatch) {
+            $bookTitle = trim($bookMatch[1]);
+            $reviewsText = $bookMatch[2];
+
+            // Extract individual reviews for this book
+            if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $reviewsText, $reviewMatches, PREG_SET_ORDER)) {
+                foreach ($reviewMatches as $match) {
+                    $reviewerName = trim($match[1]);
+                    $reviewerAge = (int)$match[2];
+                    $reviewText = trim($match[3]);
+                    $ratingValue = (float)$match[4];
+                    $ratingScale = (float)$match[5];
+
+                    $reviews[] = [
+                        'reviewer_name' => $reviewerName,
+                        'reviewer_age' => $reviewerAge,
+                        'review_text' => $reviewText,
+                        'original_rating' => "{$ratingValue}/{$ratingScale}",
+                        'rating_value' => $ratingValue,
+                        'rating_scale' => $ratingScale,
+                        'rating_normalised' => $ratingValue / $ratingScale
+                    ];
+                }
+            }
+        }
+    }
+
+    // Pattern 6: Look for simple name, age, review format
+    if (preg_match_all('/([^,]+), aged (\d+): ([^\.]+(?:\.[^\.]+)*)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 7: Look for "Name, aged X: Review. Rating: Y/Z" format
+    if (preg_match_all('/([^,]+), aged (\d+): (.*?) Rating: (\d+(?:\.\d+)?)\/(\d+)/is', $description, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 8: Look for reviews in the format used in The Whizz Pop Chocolate Shop
+    if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $description, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 9: Look for reviews in the format "Name, aged X: Review text. Rating: Y/Z"
+    if (preg_match_all('/^([^,]+), aged (\d+): (.*?)(?:Rating:|rating:) (\d+(?:\.\d+)?)\/(\d+)/im', $description, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
     return $reviews;
 }
 

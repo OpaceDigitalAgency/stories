@@ -307,7 +307,7 @@ try {
                 $bookData['page_count'],
                 $bookData['age_range'],
                 $bookData['reading_level'],
-                $cover_url, // Use the directory item's cover_url for the book's cover_image_url
+                $cover_url, // Use the directory item's cover_url
                 $purchaseLinks,
                 $bookData['genre'],
                 $bookData['series'],
@@ -344,7 +344,7 @@ try {
                 $bookData['page_count'],
                 $bookData['age_range'],
                 $bookData['reading_level'],
-                $cover_url, // Use the directory item's cover_url for the book's cover_image_url
+                $cover_url, // Use the directory item's cover_url
                 $purchaseLinks,
                 $bookData['genre'],
                 $bookData['series']

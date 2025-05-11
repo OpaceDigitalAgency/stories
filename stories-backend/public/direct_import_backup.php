@@ -194,7 +194,7 @@ function processBook($db, $bookDir) {
         }
         
         // Process cover image and add to media table
-        $coverImageUrl = '';
+        $coverUrl = '';
         $mediaId = null;
         
         // Look for images in multiple potential locations
@@ -272,8 +272,8 @@ function processBook($db, $bookDir) {
             ]);
             
             $mediaId = $db->lastInsertId();
-            $coverImageUrl = $relativePath;
-            
+            $coverUrl = $relativePath;
+
             echo "<p class='success'>Added image: $imageName to media table (ID: $mediaId)</p>";
             flushOutput();
         }
@@ -345,7 +345,7 @@ function processBook($db, $bookDir) {
                 '',  // website_url
                 1,   // category_id (default to books category)
                 $slug,
-                $coverImageUrl,
+                $coverUrl,
                 $directoryItemId
             ]);
             
@@ -367,7 +367,7 @@ function processBook($db, $bookDir) {
                 '',  // website_url
                 1,   // category_id (default to books category)
                 $slug,
-                $coverImageUrl,
+                $coverUrl,
                 $now,
                 $now
             ]);
@@ -394,7 +394,7 @@ function processBook($db, $bookDir) {
                     page_count = ?,
                     age_range = ?,
                     reading_level = ?,
-                    cover_image_url = ?,
+                    cover_url = ?,
                     purchase_links = ?,
                     metadata = ?,
                     genre = ?,
@@ -418,7 +418,7 @@ function processBook($db, $bookDir) {
                 $pageCount,
                 $ageRange,
                 $readingLevel,
-                $coverImageUrl,
+                $coverUrl,
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,
@@ -433,7 +433,7 @@ function processBook($db, $bookDir) {
             $stmt = $db->prepare("
                 INSERT INTO books (
                     directory_item_id, isbn, isbn13, author, publisher, publication_date,
-                    page_count, age_range, reading_level, cover_image_url, purchase_links,
+                    page_count, age_range, reading_level, cover_url, purchase_links,
                     metadata, genre, series, created_at, updated_at
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?,
@@ -458,7 +458,7 @@ function processBook($db, $bookDir) {
                 $pageCount,
                 $ageRange,
                 $readingLevel,
-                $coverImageUrl,
+                $coverUrl,
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,

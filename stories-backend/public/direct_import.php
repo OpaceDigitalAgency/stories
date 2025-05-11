@@ -150,7 +150,7 @@ function cleanDuplicateMedia($db) {
             SELECT m.id, m.filename
             FROM media m
             LEFT JOIN directory_items d ON m.file_path = d.cover_url
-            LEFT JOIN books b ON m.file_path = b.cover_image_url
+            LEFT JOIN books b ON m.file_path = b.cover_url
             LEFT JOIN stories s ON m.file_path = s.cover_url
             WHERE d.id IS NULL AND b.directory_item_id IS NULL AND s.id IS NULL
         ");

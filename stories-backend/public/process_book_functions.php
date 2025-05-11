@@ -899,7 +899,7 @@ function processBook($db, $bookDir) {
         }
 
         // Process cover image and add to media table
-        $coverImageUrl = '';
+        $coverUrl = '';
         $mediaId = null;
 
         // Look for images in multiple potential locations
@@ -1135,8 +1135,8 @@ function processBook($db, $bookDir) {
                     flushOutput();
                 }
 
-                // Set the cover image URL
-                $coverImageUrl = $relativePath;
+                // Set the cover URL
+                $coverUrl = $relativePath;
             }
         } else {
             echo "<p class='warning'>No images found for book: $title</p>";
@@ -1237,7 +1237,7 @@ function processBook($db, $bookDir) {
                 1,   // category_id (default to books category)
                 $slug,
                 '',  // website_url
-                $coverImageUrl,
+                $coverUrl,
                 $now, // updated_at
                 $directoryItemId
             ]);
@@ -1261,7 +1261,7 @@ function processBook($db, $bookDir) {
                 1,   // category_id (default to books category)
                 $slug,
                 '',  // website_url
-                $coverImageUrl,
+                $coverUrl,
                 1,   // is_published
                 $now, // created_at
                 $now  // updated_at
@@ -1306,7 +1306,7 @@ function processBook($db, $bookDir) {
                     page_count = ?,
                     age_range = ?,
                     reading_level = ?,
-                    cover_image_url = ?,
+                    cover_url = ?,
                     purchase_links = ?,
                     metadata = ?,
                     genre = ?,
@@ -1350,7 +1350,7 @@ function processBook($db, $bookDir) {
             echo "<li>page_count: $pageCount</li>";
             echo "<li>age_range: $ageRange</li>";
             echo "<li>reading_level: $readingLevel</li>";
-            echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "<li>cover_url: $coverUrl</li>";
             echo "<li>genre: $genre</li>";
             echo "<li>series: " . (empty($series) ? "EMPTY" : "'$series'") . "</li>";
             echo "</ul>";
@@ -1370,7 +1370,7 @@ function processBook($db, $bookDir) {
                 $pageCount,
                 $ageRange,
                 $readingLevel,
-                $coverImageUrl,
+                $coverUrl,
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,
@@ -1385,7 +1385,7 @@ function processBook($db, $bookDir) {
             $stmt = $db->prepare("
                 INSERT INTO books (
                     directory_item_id, title, isbn, isbn13, author, publisher, publication_date,
-                    page_count, age_range, reading_level, cover_image_url, purchase_links,
+                    page_count, age_range, reading_level, cover_url, purchase_links,
                     metadata, genre, series
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?,
@@ -1430,7 +1430,7 @@ function processBook($db, $bookDir) {
             echo "<li>page_count: $pageCount</li>";
             echo "<li>age_range: $ageRange</li>";
             echo "<li>reading_level: $readingLevel</li>";
-            echo "<li>cover_image_url: $coverImageUrl</li>";
+            echo "<li>cover_url: $coverUrl</li>";
             echo "<li>genre: $genre</li>";
             echo "<li>series: " . (empty($series) ? "EMPTY" : "'$series'") . "</li>";
             echo "</ul>";
@@ -1459,7 +1459,7 @@ function processBook($db, $bookDir) {
                 $pageCount,
                 $ageRange,
                 $readingLevel,
-                $coverImageUrl,
+                $coverUrl,
                 json_encode($purchaseLinks),
                 json_encode($enhancedData),
                 $genre,

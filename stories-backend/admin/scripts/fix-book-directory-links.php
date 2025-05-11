@@ -96,7 +96,7 @@ try {
         } else {
             // Create a new book entry for this directory item
             $insertStmt = $db->prepare("
-                INSERT INTO books (directory_item_id, cover_image_url)
+                INSERT INTO books (directory_item_id, cover_url)
                 SELECT id, cover_url FROM directory_items WHERE id = ?
             ");
             $insertStmt->execute([$dirItem['id']]);

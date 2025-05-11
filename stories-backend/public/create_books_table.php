@@ -27,7 +27,7 @@ try {
         page_count INT,
         age_range VARCHAR(50),
         reading_level VARCHAR(50),
-        cover_image_url VARCHAR(255),
+        cover_url VARCHAR(255),
         purchase_links JSON,
         metadata JSON,
         genre VARCHAR(100),

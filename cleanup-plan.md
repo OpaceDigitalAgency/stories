@@ -80,19 +80,44 @@ git revert <commit-hash>
 - Archived 6 test/fix files from admin/content directory
 - All functionality (pagination, thumbnails, image upload) verified working before archiving
 
+## Deployment Notes
+Important steps for successful deployment:
+
+1. Before deploying:
+   - Manually create the target directory (api.storiesfromtheweb.org) if it doesn't exist
+   - This prevents connection issues with Git Version Control
+
+2. Then set up Git deployment:
+   - URL: https://github.com/OpaceDigitalAgency/stories
+   - Branch: main
+   - Path: /home/stories/api.storiesfromtheweb.org
+
+3. Use simple deployment config in .cpanel.yml:
+```yaml
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - /bin/cp -R stories-backend/* $DEPLOYPATH
+  git:
+    merge_strategy: --no-ff
+```
+
 ## Deployment Configuration Update
 To prevent archived files from being deployed to production, the deployment configuration has been updated:
 
-1. Changed from `cp -R` to `rsync` with exclude pattern
-2. Added `--exclude="_archive"` to exclude all _archive directories
-3. This ensures archived files remain in git history but don't get deployed
+1. Changed deployment to use `find` command to exclude _archive directories
+2. This ensures archived files remain in git history but don't get deployed
+3. Simplified approach that works with standard Unix tools
 
 The updated .cpanel.yml configuration:
 ```yaml
 deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
-    # Exclude _archive directories from deployment
-    - /usr/bin/rsync -av --exclude="_archive" stories-backend/* $DEPLOYPATH
+    # Copy all files except those in _archive directories
+    - /bin/cp -R `find stories-backend -type f -not -path "*/\_archive/*"` $DEPLOYPATH
   git:
     merge_strategy: --no-ff
+```
+
+Note: If deployment issues persist, try deleting and recreating the Git Version Control instance in cPanel.

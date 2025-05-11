@@ -407,6 +407,33 @@ function renderStarRating($rating, $maxRating = 5, $size = 'md') {
             background-color: #f0f0f0;
             border-radius: 8px;
         }
+        .review-actions {
+            position: relative;
+            top: 10px;
+            width: 100%;
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .review-actions button {
+            background: none;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 5px;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .review-actions .edit-review {
+            color: #007bff;
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        .review-actions .delete-review {
+            color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+        .review-actions button:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>

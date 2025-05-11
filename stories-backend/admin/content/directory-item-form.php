@@ -480,7 +480,19 @@ $extraHeadContent = '
 
                 const formData = new FormData(reviewForm);
                 formData.append("action", editingReviewId ? "update_review" : "add_review");
-                formData.append("book_id", document.getElementById("id").value);
+
+                // Get the book ID from the URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const bookId = urlParams.get("id");
+
+                if (!bookId) {
+                    console.error("Could not find book ID in URL");
+                    alert("Error: Could not find book ID");
+                    return;
+                }
+
+                formData.append("book_id", bookId);
+
                 if (editingReviewId) {
                     formData.append("review_id", editingReviewId);
                 }
@@ -598,15 +610,18 @@ $extraHeadContent = '
                 button.addEventListener("click", function() {
                     if (confirm("Are you sure you want to delete this review?")) {
                         const reviewId = this.getAttribute("data-id");
-                        const idElement = document.getElementById("id");
 
-                        if (!idElement) {
-                            console.error("Could not find element with id");
+                        // Get the book ID from the URL parameter
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const bookId = urlParams.get("id");
+
+                        if (!bookId) {
+                            console.error("Could not find book ID in URL");
                             alert("Error: Could not find book ID");
                             return;
                         }
 
-                        const bookId = idElement.value;
+                        console.log("Book ID from URL:", bookId);
 
                         console.log("Deleting review:", reviewId, "for book:", bookId);
 
@@ -1201,7 +1216,11 @@ if (isset($_SESSION['error'])) {
                                     This may happen if the book was imported but not properly linked to the directory item.
                                 </div>
                             <?php else: ?>
-                                <?php if ($debug): ?>
+                                <?php
+                                // Define debug variable at the top of the file
+                                $debug = false; // Set to true to enable debugging
+                                if ($debug):
+                                ?>
                                 <div class="alert alert-info">
                                     <strong>Book Data Found:</strong>
                                     <ul>

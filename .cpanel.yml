@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    - export DEPLOYPATH=/home/stories/repositories/stories/
     - /bin/cp -R stories-backend/* $DEPLOYPATH
   git:
     merge_strategy: --no-ff

@@ -624,12 +624,21 @@ $extraHeadContent = '
         }
 
         // Initialize review functionality when DOM is loaded
-        if (document.getElementById("reviews-section")) {
-            initStarRating();
-            setupReviewForm();
-            setupEditButtons();
-            setupDeleteButtons();
+        function initReviewFunctionality() {
+            if (document.getElementById("reviews-section")) {
+                console.log("Initializing review functionality");
+                initStarRating();
+                setupReviewForm();
+                setupEditButtons();
+                setupDeleteButtons();
+            }
         }
+
+        // Initialize immediately
+        initReviewFunctionality();
+
+        // Also initialize after a short delay to ensure all elements are loaded
+        setTimeout(initReviewFunctionality, 500);
     });
 </script>
 <style>
@@ -851,6 +860,8 @@ $extraHeadContent = '
         position: absolute;
         top: 10px;
         right: 10px;
+        display: flex;
+        z-index: 10;
     }
     .review-actions button {
         background: none;
@@ -858,12 +869,19 @@ $extraHeadContent = '
         font-size: 14px;
         cursor: pointer;
         margin-left: 5px;
+        padding: 3px 8px;
+        border-radius: 4px;
     }
     .review-actions .edit-review {
         color: #007bff;
+        background-color: rgba(0, 123, 255, 0.1);
     }
     .review-actions .delete-review {
         color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    .review-actions button:hover {
+        background-color: rgba(0, 0, 0, 0.1);
     }
     .add-review-form {
         margin-top: 15px;
@@ -1309,7 +1327,7 @@ if (isset($_SESSION['error'])) {
                                                 <option value="<?php echo htmlspecialchars($series); ?>">
                                             <?php endforeach; ?>
                                         </datalist>
-                                        <?php if ($debug): ?>
+                                        <?php if (isset($debug) && $debug): ?>
                                         <div class="mt-2 small text-muted">
                                             Series value from database: "<?php echo htmlspecialchars($bookData['series'] ?? 'Not set'); ?>"
                                         </div>

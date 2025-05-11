@@ -222,9 +222,14 @@ function migrateReviews($db) {
                     echo "<p class='info'>Main content preview: " . htmlspecialchars($mainContentPreview) . "...</p>";
                     migrateFlushOutput();
 
-                    // Try a more specific pattern for the book sections
-                    if (preg_match_all('/##\s+([^\n]+)\s*\n\s*(\*\*Reviewer(?:.+?\n)+?)(?=##|\Z)/s', $mainContent, $matches, PREG_SET_ORDER)) {
+                    // Try a more specific pattern for the book sections, excluding "Feedback Summary" sections
+                    if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)\s*\n\s*(\*\*Reviewer(?:.+?\n)+?)(?=##|\Z)/s', $mainContent, $matches, PREG_SET_ORDER)) {
                         echo "<p class='success'>Found " . count($matches) . " book sections after removing front matter</p>";
+
+                        // Debug output to show which book titles were found
+                        $bookTitles = array_map(function($match) { return $match[1]; }, $matches);
+                        echo "<p class='info'>Book titles found: " . implode(", ", $bookTitles) . "</p>";
+
                         migrateFlushOutput();
 
                         foreach ($matches as $match) {
@@ -328,8 +333,8 @@ function migrateReviews($db) {
                         echo "<p class='info'>Trying direct review extraction approach...</p>";
                         migrateFlushOutput();
 
-                        // Pattern to match: ## Book Title followed by reviewer info
-                        if (preg_match_all('/##\s+([^\n]+)\s*\n\s*\*\*Reviewer(?:[^*]+)\*\*\s*([^*]+)/s', $mainContent, $directMatches, PREG_SET_ORDER)) {
+                        // Pattern to match: ## Book Title (excluding Feedback Summary) followed by reviewer info
+                        if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)\s*\n\s*\*\*Reviewer(?:[^*]+)\*\*\s*([^*]+)/s', $mainContent, $directMatches, PREG_SET_ORDER)) {
                             echo "<p class='success'>Found " . count($directMatches) . " potential book reviews using direct approach</p>";
                             migrateFlushOutput();
 
@@ -446,8 +451,8 @@ function migrateReviews($db) {
                                 // Group reviews by book title if possible
                                 $reviewsByBook = [];
 
-                                // Try to find book titles in the content
-                                if (preg_match_all('/##\s+([^\n]+)/m', $mainContent, $bookTitleMatches)) {
+                                // Try to find book titles in the content (excluding Feedback Summary)
+                                if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)/m', $mainContent, $bookTitleMatches)) {
                                     $bookTitles = $bookTitleMatches[1];
                                     echo "<p class='info'>Found " . count($bookTitles) . " potential book titles</p>";
                                     migrateFlushOutput();

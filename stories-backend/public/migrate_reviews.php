@@ -260,30 +260,67 @@ function migrateReviews($db) {
 
                     // Match each book section to a book in the database
                     foreach ($bookSections as $title => $section) {
+                        // Clean the title for better matching
+                        $cleanTitle = preg_replace('/^##\s+/', '', $title); // Remove markdown heading
+                        $cleanTitle = trim($cleanTitle);
+
                         // Find the book in the database
                         $bookId = null;
                         $bookTitle = null;
+                        $bestMatchScore = 0;
+                        $bestMatchBook = null;
 
                         foreach ($allBooks as $book) {
-                            // Try exact match first
-                            if (strtolower(trim($book['title'])) === strtolower(trim($title))) {
+                            // Try exact match first (case insensitive)
+                            if (strtolower(trim($book['title'])) === strtolower($cleanTitle)) {
                                 $bookId = $book['id'];
                                 $bookTitle = $book['title'];
                                 break;
                             }
 
-                            // Then try contains match
-                            if (stripos($book['title'], $title) !== false || stripos($title, $book['title']) !== false) {
+                            // Try ISBN match if available
+                            if (!empty($book['isbn']) && stripos($cleanTitle, $book['isbn']) !== false) {
                                 $bookId = $book['id'];
                                 $bookTitle = $book['title'];
                                 break;
+                            }
+
+                            if (!empty($book['isbn13']) && stripos($cleanTitle, $book['isbn13']) !== false) {
+                                $bookId = $book['id'];
+                                $bookTitle = $book['title'];
+                                break;
+                            }
+
+                            // Try contains match (both ways)
+                            if (stripos($book['title'], $cleanTitle) !== false || stripos($cleanTitle, $book['title']) !== false) {
+                                $bookId = $book['id'];
+                                $bookTitle = $book['title'];
+                                break;
+                            }
+
+                            // Calculate similarity score
+                            $score = 0;
+                            similar_text(strtolower($book['title']), strtolower($cleanTitle), $score);
+
+                            // If score is better than previous best match, save it
+                            if ($score > $bestMatchScore && $score > 70) { // 70% similarity threshold
+                                $bestMatchScore = $score;
+                                $bestMatchBook = $book;
                             }
                         }
 
+                        // If no exact match but we have a good similarity match
+                        if (!$bookId && $bestMatchBook) {
+                            $bookId = $bestMatchBook['id'];
+                            $bookTitle = $bestMatchBook['title'];
+                            echo "<p class='info'>Found similar match for '$cleanTitle': '{$bestMatchBook['title']}' (similarity: $bestMatchScore%)</p>";
+                            migrateFlushOutput();
+                        }
+
                         if ($bookId) {
-                            $matches[] = [$title, $section, $bookId, $bookTitle];
+                            $matches[] = [$cleanTitle, $section, $bookId, $bookTitle];
                         } else {
-                            echo "<p class='warning'>No matching book found for title: $title</p>";
+                            echo "<p class='warning'>No matching book found for title: $cleanTitle</p>";
                             migrateFlushOutput();
                         }
                     }
@@ -838,6 +875,107 @@ function extractReviewsFromMarkdown($content) {
 
     // Pattern 7: Look for "Name, aged X: Text. Rating: Y/Z" format
     if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 8: Look for "Name, aged X\nReview: Text Rating: Y/Z" format (Moon Pie format)
+    if (preg_match_all('/([^,\n]+), aged (\d+)\s*\n\s*Review: "(.*?)" Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 9: Look for "Name, aged X: Review. Rating: Y/Z" format (The Whizz Pop Chocolate Shop format)
+    if (preg_match_all('/([^:\n]+): (.*?) Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerInfo = trim($match[1]);
+            $reviewText = trim($match[2]);
+            $ratingValue = (float)$match[3];
+            $ratingScale = (float)$match[4];
+
+            // Extract name and age from reviewer info
+            $reviewerName = $reviewerInfo;
+            $reviewerAge = null;
+
+            if (preg_match('/([^,]+), aged (\d+)/', $reviewerInfo, $infoMatch)) {
+                $reviewerName = trim($infoMatch[1]);
+                $reviewerAge = (int)$infoMatch[2];
+            }
+
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 10: Look for "**Name, aged X** Review: Text Rating: Y/Z" format (The Money, Stan, Big Lauren and Me format)
+    if (preg_match_all('/\*\*([^*]+), aged (\d+)\*\* Review: (.*?) Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 11: Look for "Name, aged X: Text Rating: Y/Z" format (The Whizz Pop Chocolate Shop format)
+    if (preg_match_all('/([^,\n]+), aged (\d+): (.*?) Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
             // Truncate reviewer name to 50 characters to avoid database errors

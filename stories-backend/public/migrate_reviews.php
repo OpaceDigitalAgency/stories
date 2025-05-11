@@ -615,6 +615,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -636,6 +638,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^\*]+)(?:Indicative\s*)?Rating:\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -657,6 +661,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/([^,]+), aged (\d+): (.*?)(?:Rating:|rating:) (\d+(?:\.\d+)?)\/(\d+)/is', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -678,6 +684,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -699,6 +707,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/\*\*Reviewer:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\.]+(?:\.[^\.]+)*)\.\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]) . '.';
             $ratingValue = (float)$match[4];
@@ -720,6 +730,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*Not provided\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = null;
             $reviewText = trim($match[2]);
             $ratingValue = (float)$match[3];
@@ -741,6 +753,8 @@ function extractReviewsFromMarkdown($content) {
     if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
+            // Truncate reviewer name to 50 characters to avoid database errors
+            $reviewerName = substr($reviewerName, 0, 50);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -781,26 +795,38 @@ function extractReviewsFromDescription($description) {
  */
 function updateBookAggregateValues($db, $bookId) {
     try {
-        // First, check if there are any reviews for this book
-        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = :book_id");
-        $checkStmt->execute([':book_id' => $bookId]);
-        $reviewCount = $checkStmt->fetchColumn();
+        // First, get the aggregate values directly
+        $aggregateStmt = $db->prepare("
+            SELECT
+                COUNT(*) as review_count,
+                AVG(rating_normalised) as average_rating,
+                MAX(rating_normalised) as highest_rating,
+                MIN(rating_normalised) as lowest_rating
+            FROM reviews
+            WHERE book_id = ?
+        ");
+        $aggregateStmt->execute([$bookId]);
+        $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($reviewCount > 0) {
+        // Update the book with the calculated values
+        if ($aggregateValues['review_count'] > 0) {
             // If there are reviews, update with calculated values
             $stmt = $db->prepare("
                 UPDATE directory_items
                 SET
-                    review_count = :review_count,
-                    average_rating = (SELECT AVG(rating_normalised) FROM reviews WHERE book_id = :book_id),
-                    highest_rating = (SELECT MAX(rating_normalised) FROM reviews WHERE book_id = :book_id),
-                    lowest_rating = (SELECT MIN(rating_normalised) FROM reviews WHERE book_id = :book_id)
-                WHERE id = :book_id
+                    review_count = ?,
+                    average_rating = ?,
+                    highest_rating = ?,
+                    lowest_rating = ?
+                WHERE id = ?
             ");
 
             $stmt->execute([
-                ':book_id' => $bookId,
-                ':review_count' => $reviewCount
+                $aggregateValues['review_count'],
+                $aggregateValues['average_rating'],
+                $aggregateValues['highest_rating'],
+                $aggregateValues['lowest_rating'],
+                $bookId
             ]);
         } else {
             // If no reviews, reset values
@@ -811,10 +837,10 @@ function updateBookAggregateValues($db, $bookId) {
                     average_rating = NULL,
                     highest_rating = NULL,
                     lowest_rating = NULL
-                WHERE id = :book_id
+                WHERE id = ?
             ");
 
-            $stmt->execute([':book_id' => $bookId]);
+            $stmt->execute([$bookId]);
         }
         echo "<p class='success'>Updated aggregate values for book ID: $bookId</p>";
         migrateFlushOutput();

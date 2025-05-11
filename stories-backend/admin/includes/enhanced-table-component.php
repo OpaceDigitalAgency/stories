@@ -717,26 +717,7 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
             </tbody>
         </table>
 
-        <?php if ($totalPages > 1): ?>
-            <div class="premium-pagination" style="padding: 1rem; border-top: 1px solid var(--premium-gray-200);">
-                <?php
-                // Get current URL parameters
-                $queryParams = $_GET;
-
-                // Function to generate page URL preserving other parameters
-                $getPageUrl = function($page) use ($queryParams) {
-                    $queryParams['page'] = $page;
-                    return '?' . http_build_query($queryParams);
-                };
-
-                for ($i = 1; $i <= $totalPages; $i++):
-                ?>
-                    <a href="<?php echo $getPageUrl($i); ?>" class="premium-pagination-item <?php echo $i === $options['currentPage'] ? 'active' : ''; ?>">
-                        <?php echo $i; ?>
-                    </a>
-                <?php endfor; ?>
-            </div>
-        <?php endif; ?>
+        <?php /* Pagination removed - using the pagination-component.php instead */ ?>
     </div>
 
     <script>

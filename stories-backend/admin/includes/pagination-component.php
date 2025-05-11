@@ -79,92 +79,97 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
             <?php echo $totalItems; ?> items
         </div>
 
-        <ul class="pagination">
-            <!-- First page link -->
-            <?php if ($currentPage > 1): ?>
-                <li class="page-item">
-                    <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="First page">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
-                </li>
-            <?php endif; ?>
-
-            <!-- Previous page link -->
-            <?php if ($currentPage > 1): ?>
-                <li class="page-item">
-                    <a class="page-link" href="<?php echo $getPageUrl($currentPage - 1); ?>" aria-label="Previous page">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&laquo;</span>
-                </li>
-            <?php endif; ?>
-
-            <!-- Page number links -->
-            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                <?php if ($i == $currentPage): ?>
-                    <li class="page-item active" aria-current="page">
-                        <span class="page-link"><?php echo $i; ?></span>
+        <div class="d-flex align-items-center justify-content-between">
+            <ul class="pagination mb-0">
+                <!-- First page link -->
+                <?php if ($currentPage > 1): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="First page">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
                     </li>
                 <?php else: ?>
-                    <li class="page-item">
-                        <a class="page-link" href="<?php echo $getPageUrl($i); ?>"><?php echo $i; ?></a>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
                     </li>
                 <?php endif; ?>
-            <?php endfor; ?>
 
-            <!-- Next page link -->
-            <?php if ($currentPage < $totalPages): ?>
-                <li class="page-item">
-                    <a class="page-link" href="<?php echo $getPageUrl($currentPage + 1); ?>" aria-label="Next page">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&raquo;</span>
-                </li>
-            <?php endif; ?>
+                <!-- Previous page link -->
+                <?php if ($currentPage > 1): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="<?php echo $getPageUrl($currentPage - 1); ?>" aria-label="Previous page">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                <?php else: ?>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
+                <?php endif; ?>
 
-            <!-- Last page link -->
-            <?php if ($currentPage < $totalPages): ?>
-                <li class="page-item">
-                    <a class="page-link" href="<?php echo $getPageUrl($totalPages); ?>" aria-label="Last page">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                    </a>
-                </li>
-            <?php else: ?>
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
-                </li>
-            <?php endif; ?>
-        </ul>
-
-        <!-- Items per page selector -->
-        <div class="items-per-page">
-            <form method="GET" action="<?php echo $currentUrl; ?>" class="d-flex align-items-center gap-2">
-                <!-- Preserve existing query parameters -->
-                <?php foreach ($queryParams as $key => $value): ?>
-                    <?php if ($key !== 'page' && $key !== 'per_page'): ?>
-                        <input type="hidden" name="<?php echo htmlspecialchars($key); ?>" value="<?php echo htmlspecialchars($value); ?>">
+                <!-- Page number links -->
+                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                    <?php if ($i == $currentPage): ?>
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link"><?php echo $i; ?></span>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $getPageUrl($i); ?>"><?php echo $i; ?></a>
+                        </li>
                     <?php endif; ?>
-                <?php endforeach; ?>
+                <?php endfor; ?>
 
-                <label for="per-page" class="form-label mb-0">Items per page:</label>
-                <select name="per_page" id="per-page" class="form-control form-control-sm" onchange="this.form.submit()">
-                    <?php foreach ([10, 25, 50, 100] as $option): ?>
-                        <option value="<?php echo $option; ?>" <?php echo $itemsPerPage == $option ? 'selected' : ''; ?>>
-                            <?php echo $option; ?>
-                        </option>
+                <!-- Next page link -->
+                <?php if ($currentPage < $totalPages): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="<?php echo $getPageUrl($currentPage + 1); ?>" aria-label="Next page">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                <?php else: ?>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
+                <?php endif; ?>
+
+                <!-- Last page link -->
+                <?php if ($currentPage < $totalPages): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="<?php echo $getPageUrl($totalPages); ?>" aria-label="Last page">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                <?php else: ?>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
+                    </li>
+                <?php endif; ?>
+            </ul>
+
+            <!-- Items per page selector -->
+            <div class="items-per-page">
+                <form method="GET" action="<?php echo $currentUrl; ?>" class="d-flex align-items-center gap-2">
+                    <!-- Preserve existing query parameters -->
+                    <?php foreach ($queryParams as $key => $value): ?>
+                        <?php if ($key !== 'page' && $key !== 'per_page'): ?>
+                            <input type="hidden" name="<?php echo htmlspecialchars($key); ?>" value="<?php echo htmlspecialchars($value); ?>">
+                        <?php endif; ?>
                     <?php endforeach; ?>
-                </select>
-            </form>
+
+                    <label for="per-page" class="form-label mb-0 me-2">Items per page:</label>
+                    <select name="per_page" id="per-page" class="form-control form-control-sm" onchange="this.form.submit()">
+                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                            <option value="<?php echo $option; ?>" <?php echo $itemsPerPage == $option ? 'selected' : ''; ?>>
+                                <?php echo $option; ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <option value="<?php echo $totalItems; ?>" <?php echo $itemsPerPage == $totalItems ? 'selected' : ''; ?>>
+                            Show All
+                        </option>
+                    </select>
+                </form>
+            </div>
         </div>
     </nav>
     <?php

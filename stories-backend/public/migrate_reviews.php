@@ -19,7 +19,8 @@ ini_set('implicit_flush', true);
 ob_implicit_flush(true);
 
 // Function to flush output buffer to ensure real-time progress display
-function flushOutput() {
+// Using a different name to avoid conflicts with direct_import.php
+function migrateFlushOutput() {
     if (ob_get_level() > 0) {
         ob_flush();
         flush();
@@ -45,7 +46,7 @@ function migrateReviews($db) {
         $db->beginTransaction();
 
         echo "<h3>Starting Review Migration</h3>";
-        flushOutput();
+        migrateFlushOutput();
 
         // Get all books with descriptions that might contain reviews
         $stmt = $db->prepare("
@@ -58,19 +59,19 @@ function migrateReviews($db) {
 
         $stats['total_books_processed'] = count($books);
         echo "<p class='info'>Found {$stats['total_books_processed']} books to process</p>";
-        flushOutput();
+        migrateFlushOutput();
 
         // Process each book
         foreach ($books as $book) {
             echo "<h4>Processing book: {$book['title']} (ID: {$book['id']})</h4>";
-            flushOutput();
+            migrateFlushOutput();
 
             $reviews = extractReviewsFromDescription($book['description']);
 
             if (!empty($reviews)) {
                 $stats['books_with_reviews']++;
                 echo "<p class='success'>Found " . count($reviews) . " reviews in description</p>";
-                flushOutput();
+                migrateFlushOutput();
 
                 foreach ($reviews as $review) {
                     try {
@@ -115,11 +116,11 @@ function migrateReviews($db) {
 
                         $stats['total_reviews_migrated']++;
                         echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
-                        flushOutput();
+                        migrateFlushOutput();
                     } catch (Exception $e) {
                         $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
                         echo "<p class='error'>Error inserting review: " . $e->getMessage() . "</p>";
-                        flushOutput();
+                        migrateFlushOutput();
                     }
                 }
 
@@ -127,7 +128,7 @@ function migrateReviews($db) {
                 updateBookAggregateValues($db, $book['id']);
             } else {
                 echo "<p class='info'>No reviews found in description</p>";
-                flushOutput();
+                migrateFlushOutput();
             }
         }
 
@@ -148,7 +149,7 @@ function migrateReviews($db) {
             echo "</ul>";
         }
 
-        flushOutput();
+        migrateFlushOutput();
 
         return $stats;
     } catch (Exception $e) {
@@ -157,7 +158,7 @@ function migrateReviews($db) {
         }
         $stats['errors'][] = "Migration failed: " . $e->getMessage();
         echo "<p class='error'>Migration failed: " . $e->getMessage() . "</p>";
-        flushOutput();
+        migrateFlushOutput();
         return $stats;
     }
 }
@@ -258,11 +259,11 @@ function updateBookAggregateValues($db, $bookId) {
 
         $stmt->execute([':book_id' => $bookId]);
         echo "<p class='success'>Updated aggregate values for book ID: $bookId</p>";
-        flushOutput();
+        migrateFlushOutput();
         return true;
     } catch (Exception $e) {
         echo "<p class='error'>Error updating aggregate values: " . $e->getMessage() . "</p>";
-        flushOutput();
+        migrateFlushOutput();
         return false;
     }
 }
@@ -285,7 +286,7 @@ function deleteAllReviews($db) {
         $db->beginTransaction();
 
         echo "<h3>Deleting All Reviews</h3>";
-        flushOutput();
+        migrateFlushOutput();
 
         // Get all books with reviews
         $stmt = $db->prepare("
@@ -296,7 +297,7 @@ function deleteAllReviews($db) {
         $bookIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         echo "<p class='info'>Found " . count($bookIds) . " books with reviews</p>";
-        flushOutput();
+        migrateFlushOutput();
 
         // Delete all reviews
         $stmt = $db->prepare("DELETE FROM reviews");
@@ -304,7 +305,7 @@ function deleteAllReviews($db) {
         $stats['reviews_deleted'] = $stmt->rowCount();
 
         echo "<p class='success'>Deleted {$stats['reviews_deleted']} reviews</p>";
-        flushOutput();
+        migrateFlushOutput();
 
         // Reset aggregate values for all books that had reviews
         foreach ($bookIds as $bookId) {
@@ -325,7 +326,7 @@ function deleteAllReviews($db) {
             if ($stmt->rowCount() > 0) {
                 $stats['books_updated']++;
                 echo "<p class='info'>Reset aggregate values for book ID: $bookId</p>";
-                flushOutput();
+                migrateFlushOutput();
             }
         }
 
@@ -335,7 +336,7 @@ function deleteAllReviews($db) {
         echo "<h3>Review Deletion Complete</h3>";
         echo "<p class='success'>Deleted {$stats['reviews_deleted']} reviews</p>";
         echo "<p class='success'>Reset aggregate values for {$stats['books_updated']} books</p>";
-        flushOutput();
+        migrateFlushOutput();
 
         return $stats;
     } catch (Exception $e) {
@@ -344,7 +345,7 @@ function deleteAllReviews($db) {
         }
         $stats['errors'][] = "Deletion failed: " . $e->getMessage();
         echo "<p class='error'>Deletion failed: " . $e->getMessage() . "</p>";
-        flushOutput();
+        migrateFlushOutput();
         return $stats;
     }
 }

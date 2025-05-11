@@ -82,121 +82,104 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
         </div>
 
         <div class="d-flex flex-wrap align-items-center justify-content-between" style="margin-top: 10px;">
+            <!-- Pagination links -->
             <div class="d-flex align-items-center">
-                <!-- Always show pagination links -->
-                <nav aria-label="Page navigation" class="items-per-page">
-                    <ul class="pagination mb-0">
-                        <!-- First page link -->
-                        <?php if ($itemsPerPage >= $totalItems): ?>
-                            <!-- When showing all items, provide links back to paginated view -->
+                <ul class="pagination mb-0">
+                    <!-- First page link -->
+                    <?php if ($currentPage > 1 && $itemsPerPage < $totalItems): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="First page">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="First page">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
+                    <!-- Previous page link -->
+                    <?php if ($currentPage > 1 && $itemsPerPage < $totalItems): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $getPageUrl($currentPage - 1); ?>" aria-label="Previous page">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="Previous page">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
+                    <!-- Page number links -->
+                    <?php if ($itemsPerPage < $totalItems): ?>
+                        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                            <?php if ($i == $currentPage): ?>
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link"><?php echo $i; ?></span>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="<?php echo $getPageUrl($i); ?>"><?php echo $i; ?></a>
+                                </li>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    <?php else: ?>
+                        <!-- When showing all items, show first few pages -->
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10">1</a>
+                        </li>
+                        <?php if ($totalPages > 1): ?>
                             <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="First page">
-                                    <span aria-hidden="true">&laquo;&laquo;</span>
-                                </a>
+                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10">2</a>
                             </li>
-                            <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="Previous page">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10">1</a>
-                            </li>
-                            <?php if ($totalPages > 1): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10">2</a>
-                                </li>
-                            <?php endif; ?>
-                            <?php if ($totalPages > 2): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $currentUrl; ?>?page=3&per_page=10">3</a>
-                                </li>
-                            <?php endif; ?>
-                            <?php if ($totalPages > 3): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10" aria-label="Next page">
-                                        <span aria-hidden="true">&raquo;</span>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $currentUrl; ?>?page=<?php echo $totalPages; ?>&per_page=10" aria-label="Last page">
-                                        <span aria-hidden="true">&raquo;&raquo;</span>
-                                    </a>
-                                </li>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <!-- Normal pagination when showing paginated results -->
-                            <?php if ($currentPage > 1): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="First page">
-                                        <span aria-hidden="true">&laquo;&laquo;</span>
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li class="page-item disabled">
-                                    <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
-                                </li>
-                            <?php endif; ?>
-
-                            <!-- Previous page link -->
-                            <?php if ($currentPage > 1): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $getPageUrl($currentPage - 1); ?>" aria-label="Previous page">
-                                        <span aria-hidden="true">&laquo;</span>
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li class="page-item disabled">
-                                    <span class="page-link" aria-hidden="true">&laquo;</span>
-                                </li>
-                            <?php endif; ?>
-
-                            <!-- Page number links -->
-                            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                <?php if ($i == $currentPage): ?>
-                                    <li class="page-item active" aria-current="page">
-                                        <span class="page-link"><?php echo $i; ?></span>
-                                    </li>
-                                <?php else: ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="<?php echo $getPageUrl($i); ?>"><?php echo $i; ?></a>
-                                    </li>
-                                <?php endif; ?>
-                            <?php endfor; ?>
-
-                            <!-- Next page link -->
-                            <?php if ($currentPage < $totalPages): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $getPageUrl($currentPage + 1); ?>" aria-label="Next page">
-                                        <span aria-hidden="true">&raquo;</span>
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li class="page-item disabled">
-                                    <span class="page-link" aria-hidden="true">&raquo;</span>
-                                </li>
-                            <?php endif; ?>
-
-                            <!-- Last page link -->
-                            <?php if ($currentPage < $totalPages): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="<?php echo $getPageUrl($totalPages); ?>" aria-label="Last page">
-                                        <span aria-hidden="true">&raquo;&raquo;</span>
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li class="page-item disabled">
-                                    <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
-                                </li>
-                            <?php endif; ?>
                         <?php endif; ?>
-                    </ul>
-                </nav>
+                        <?php if ($totalPages > 2): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=3&per_page=10">3</a>
+                            </li>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <!-- Next page link -->
+                    <?php if ($currentPage < $totalPages && $itemsPerPage < $totalItems): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $getPageUrl($currentPage + 1); ?>" aria-label="Next page">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10" aria-label="Next page">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
+                    <!-- Last page link -->
+                    <?php if ($currentPage < $totalPages && $itemsPerPage < $totalItems): ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $getPageUrl($totalPages); ?>" aria-label="Last page">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=<?php echo max(1, $totalPages); ?>&per_page=10" aria-label="Last page">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
             </div>
 
             <!-- Items per page selector -->
             <div class="items-per-page" style="margin-left: 10px;">
-                <form method="GET" action="<?php echo $currentUrl; ?>" class="d-flex align-items-center">
+                <form method="GET" action="<?php echo $currentUrl; ?>" class="d-flex align-items-center pagination-form">
                     <!-- Preserve existing query parameters -->
                     <?php foreach ($queryParams as $key => $value): ?>
                         <?php if ($key !== 'page' && $key !== 'per_page'): ?>
@@ -226,6 +209,19 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
         flex-direction: column;
         padding: 1rem;
         border-top: 1px solid #dee2e6;
+        margin-bottom: 0 !important;
+    }
+
+    /* Override the form padding-bottom that's causing alignment issues */
+    form .pagination-container {
+        padding-bottom: 1rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Specifically target the pagination form to override the global form padding */
+    form.pagination-form {
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
     }
 
     .pagination-info {
@@ -235,6 +231,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     .pagination {
         display: flex;
         align-items: center;
+        margin-bottom: 0 !important;
     }
 
     .pagination .page-link {
@@ -248,6 +245,11 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
 
     .items-per-page select {
         min-width: 120px;
+    }
+
+    /* Fix for the pagination container to ensure it's always visible */
+    .d-flex.flex-wrap.align-items-center.justify-content-between {
+        display: flex !important;
     }
 
     @media (min-width: 768px) {

@@ -58,6 +58,7 @@ function addReview() {
         $reviewerName = $_POST['reviewer_name'] ?? '';
         // Remove asterisks from reviewer name if present
         $reviewerName = preg_replace('/^\*\*/', '', $reviewerName);
+        $reviewerName = preg_replace('/\*\*.*$/', '', $reviewerName); // Also remove any trailing ** and text after it
         $reviewerAge = $_POST['reviewer_age'] ?? null;
         $sourceId = $_POST['source_id'] ?? 1; // Default to Stories from the Web
         $reviewDate = $_POST['review_date'] ?? date('Y-m-d');
@@ -147,6 +148,7 @@ function updateReview() {
         $reviewerName = $_POST['reviewer_name'] ?? '';
         // Remove asterisks from reviewer name if present
         $reviewerName = preg_replace('/^\*\*/', '', $reviewerName);
+        $reviewerName = preg_replace('/\*\*.*$/', '', $reviewerName); // Also remove any trailing ** and text after it
         $reviewerAge = $_POST['reviewer_age'] ?? null;
         $sourceId = $_POST['source_id'] ?? 1;
         $reviewDate = $_POST['review_date'] ?? date('Y-m-d');

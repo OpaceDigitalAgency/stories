@@ -2385,9 +2385,282 @@ setTimeout(function() {
 }
 </style>
 
+<!-- Reviews Management Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize review form functionality
+    initReviewForm();
+
+    // Initialize review actions (edit, delete)
+    initReviewActions();
+
+    // Initialize star rating functionality
+    initStarRating();
+});
+
+/**
+ * Initialize the review form functionality
+ */
+function initReviewForm() {
+    const reviewForm = document.getElementById('review-form');
+    const submitButton = document.getElementById('submit-review');
+    const cancelButton = document.getElementById('cancel-review');
+    const formTitle = document.getElementById('review-form-title');
+
+    if (!reviewForm) return;
+
+    // Handle form submission
+    reviewForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Get form data
+        const formData = new FormData(reviewForm);
+        const bookId = document.querySelector('input[name="id"]').value;
+        formData.append('book_id', bookId);
+
+        // Determine if this is an add or update action
+        const reviewId = document.getElementById('review_id').value;
+        const action = reviewId ? 'update_review' : 'add_review';
+        formData.append('action', action);
+
+        // Log the form data for debugging
+        console.log('Submitting review form with action:', action);
+        console.log('Review ID:', reviewId);
+        console.log('Book ID:', bookId);
+
+        // Send the request to the review handler
+        fetch('../handlers/review-handler.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Review response:', data);
+
+            if (data.success) {
+                // Show success message
+                alert(data.message);
+
+                // Reload the page to show the updated review
+                window.location.reload();
+            } else {
+                // Show error message
+                alert('Error: ' + (data.message || 'Failed to save review'));
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting review:', error);
+            alert('Error submitting review. Please try again.');
+        });
+    });
+
+    // Handle cancel button
+    if (cancelButton) {
+        cancelButton.addEventListener('click', function() {
+            // Reset the form
+            reviewForm.reset();
+
+            // Clear the review ID
+            document.getElementById('review_id').value = '';
+
+            // Reset the form title
+            formTitle.textContent = 'Add New Review';
+
+            // Reset the submit button text
+            submitButton.textContent = 'Add Review';
+
+            // Reset the star rating
+            resetStarRating();
+        });
+    }
+}
+
+/**
+ * Initialize review actions (edit, delete)
+ */
+function initReviewActions() {
+    // Edit review buttons
+    const editButtons = document.querySelectorAll('.edit-review');
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-id');
+            const reviewItem = document.getElementById('review-' + reviewId);
+
+            if (!reviewItem) return;
+
+            // Get review data from data attributes
+            const reviewerName = reviewItem.getAttribute('data-reviewer-name');
+            const reviewerAge = reviewItem.getAttribute('data-reviewer-age');
+            const sourceId = reviewItem.getAttribute('data-source-id');
+            const reviewDate = reviewItem.getAttribute('data-review-date');
+            const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
+            const originalRating = reviewItem.getAttribute('data-original-rating');
+            const reviewText = reviewItem.getAttribute('data-review-text');
+
+            // Populate the form
+            document.getElementById('review_id').value = reviewId;
+            document.getElementById('reviewer_name').value = reviewerName || '';
+            document.getElementById('reviewer_age').value = reviewerAge || '';
+            document.getElementById('source_id').value = sourceId || '1';
+            document.getElementById('review_date').value = reviewDate || '';
+            document.getElementById('rating_normalised').value = ratingNormalised || '0';
+            document.getElementById('original_rating').value = originalRating || '';
+            document.getElementById('review_text').value = reviewText || '';
+
+            // Update the form title
+            document.getElementById('review-form-title').textContent = 'Edit Review';
+
+            // Update the submit button text
+            document.getElementById('submit-review').textContent = 'Update Review';
+
+            // Update the star rating
+            updateStarRating(parseFloat(ratingNormalised) * 5);
+
+            // Scroll to the form
+            document.querySelector('.add-review-form').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    // Delete review buttons
+    const deleteButtons = document.querySelectorAll('.delete-review');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-id');
+            const bookId = document.querySelector('input[name="id"]').value;
+
+            if (!confirm('Are you sure you want to delete this review?')) return;
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('action', 'delete_review');
+            formData.append('review_id', reviewId);
+            formData.append('book_id', bookId);
+
+            // Send the request to the review handler
+            fetch('../handlers/review-handler.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Delete review response:', data);
+
+                if (data.success) {
+                    // Show success message
+                    alert(data.message);
+
+                    // Reload the page to show the updated reviews
+                    window.location.reload();
+                } else {
+                    // Show error message
+                    alert('Error: ' + (data.message || 'Failed to delete review'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting review:', error);
+                alert('Error deleting review. Please try again.');
+            });
+        });
+    });
+}
+
+/**
+ * Initialize star rating functionality
+ */
+function initStarRating() {
+    const stars = document.querySelectorAll('.rating-star');
+    const ratingValueDisplay = document.querySelector('.rating-value');
+    const ratingNormalisedInput = document.getElementById('rating_normalised');
+    const originalRatingInput = document.getElementById('original_rating');
+
+    if (!stars.length || !ratingValueDisplay || !ratingNormalisedInput) return;
+
+    // Set up star click events
+    stars.forEach((star, index) => {
+        star.addEventListener('click', function() {
+            const rating = index + 1;
+            updateStarRating(rating);
+
+            // Update hidden inputs
+            ratingNormalisedInput.value = (rating / 5).toFixed(2);
+            originalRatingInput.value = rating + '/5';
+        });
+
+        // Add hover effect
+        star.addEventListener('mouseenter', function() {
+            // Highlight this star and all previous stars
+            for (let i = 0; i <= index; i++) {
+                stars[i].style.color = '#ffc107'; // Yellow color
+            }
+
+            // Unhighlight all subsequent stars
+            for (let i = index + 1; i < stars.length; i++) {
+                stars[i].style.color = '#e0e0e0'; // Gray color
+            }
+        });
+    });
+
+    // Reset stars on mouse leave
+    const ratingInput = document.querySelector('.rating-input');
+    if (ratingInput) {
+        ratingInput.addEventListener('mouseleave', function() {
+            const currentRating = parseFloat(ratingNormalisedInput.value) * 5;
+            updateStarRating(currentRating);
+        });
+    }
+}
+
+/**
+ * Update the star rating display
+ * @param {number} rating - The rating value (1-5)
+ */
+function updateStarRating(rating) {
+    const stars = document.querySelectorAll('.rating-star');
+    const ratingValueDisplay = document.querySelector('.rating-value');
+
+    if (!stars.length || !ratingValueDisplay) return;
+
+    // Update stars
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.style.color = '#ffc107'; // Yellow color
+        } else {
+            star.style.color = '#e0e0e0'; // Gray color
+        }
+    });
+
+    // Update rating value display
+    ratingValueDisplay.textContent = rating.toFixed(1) + '/5';
+}
+
+/**
+ * Reset the star rating display
+ */
+function resetStarRating() {
+    const stars = document.querySelectorAll('.rating-star');
+    const ratingValueDisplay = document.querySelector('.rating-value');
+    const ratingNormalisedInput = document.getElementById('rating_normalised');
+    const originalRatingInput = document.getElementById('original_rating');
+
+    if (!stars.length || !ratingValueDisplay) return;
+
+    // Reset stars
+    stars.forEach(star => {
+        star.style.color = '#e0e0e0'; // Gray color
+    });
+
+    // Reset rating value display
+    ratingValueDisplay.textContent = '0/5';
+
+    // Reset hidden inputs
+    if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
+    if (originalRatingInput) originalRatingInput.value = '';
+}
+</script>
+
 <?php
 // Include footer
 require_once '../includes/footer.php';
 ?>
-
-

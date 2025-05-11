@@ -218,6 +218,9 @@ $pageActions = '
     <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
         <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
+    <a href="../scripts/clean-duplicate-reviews.php" class="premium-btn premium-btn-warning">
+        <i class="fas fa-broom" aria-hidden="true"></i> Clean Duplicate Reviews
+    </a>
 </div>
 ';
 

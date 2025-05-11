@@ -737,9 +737,6 @@ require_once '../includes/header.php';
 <!-- Include image upload script -->
 <script src="../assets/js/image-upload.js"></script>
 
-<!-- Include debug script -->
-<script src="../assets/js/image-upload-debug.js"></script>
-
 <!-- Script to sync the cover_url field with the main form -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {

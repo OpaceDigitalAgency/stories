@@ -218,7 +218,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
         margin-bottom: 0 !important;
     }
 
-    /* Specifically target the pagination form to override the global form padding */
+    /* Specifically target the pagination form to override the global form padding-bottom: 70px !important rule */
     form.pagination-form {
         padding-bottom: 0 !important;
         margin-bottom: 0 !important;

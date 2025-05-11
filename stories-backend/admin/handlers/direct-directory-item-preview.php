@@ -370,6 +370,8 @@ function renderStarRating($rating, $maxRating = 5, $size = 'md') {
             border-radius: 8px;
             margin-bottom: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
         }
         .review-header {
             display: flex;

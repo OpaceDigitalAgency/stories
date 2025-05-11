@@ -1581,7 +1581,13 @@ require_once '../admin/includes/header.php';
                                         echo "<p class='warning'>Review migration completed with some errors.</p>";
                                     } else {
                                         echo "<p class='success'>Review migration completed successfully.</p>";
-                                        echo "<p class='success'>Processed {$result['total_books_processed']} books, found reviews in {$result['books_with_reviews']} books, and migrated {$result['total_reviews_migrated']} reviews.</p>";
+
+                                        // Check if we're using the new migration approach (files) or old approach (books)
+                                        if (isset($result['total_files_processed'])) {
+                                            echo "<p class='success'>Processed {$result['total_files_processed']} files, found reviews for {$result['books_with_reviews']} books, and migrated {$result['total_reviews_migrated']} reviews.</p>";
+                                        } else {
+                                            echo "<p class='success'>Processed {$result['total_books_processed']} books, found reviews in {$result['books_with_reviews']} books, and migrated {$result['total_reviews_migrated']} reviews.</p>";
+                                        }
                                     }
 
                                     echo "<div class='mt-3'>";

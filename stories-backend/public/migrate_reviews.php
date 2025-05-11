@@ -103,8 +103,17 @@ function migrateReviews($db) {
                 continue;
             }
 
-            // Extract book sections with reviews
-            if (preg_match_all('/^## ([^\n]+)\n\n((?:.+\n)+?)(?:^##|\Z)/m', $content, $matches, PREG_SET_ORDER)) {
+            // Debug output to see the content
+            echo "<p class='info'>File content length: " . strlen($content) . " bytes</p>";
+            migrateFlushOutput();
+
+            // Show the first 200 characters to debug
+            $contentPreview = substr($content, 0, 200);
+            echo "<p class='info'>Content preview: " . htmlspecialchars($contentPreview) . "...</p>";
+            migrateFlushOutput();
+
+            // Extract book sections with reviews - more flexible pattern
+            if (preg_match_all('/^##\s+([^\n]+)\s*\n\s*((?:.+\n)+?)(?:^##|\Z)/m', $content, $matches, PREG_SET_ORDER)) {
                 foreach ($matches as $match) {
                     $bookTitle = trim($match[1]);
                     $reviewsSection = $match[2];
@@ -201,6 +210,115 @@ function migrateReviews($db) {
             } else {
                 echo "<p class='warning'>No book sections found in file</p>";
                 migrateFlushOutput();
+
+                // Try a different approach - look for markdown front matter and then sections
+                if (preg_match('/^---\s*\n.*?\n---\s*\n(.*)/s', $content, $contentMatch)) {
+                    $mainContent = $contentMatch[1];
+                    echo "<p class='info'>Found markdown front matter, trying to extract sections from main content</p>";
+                    migrateFlushOutput();
+
+                    if (preg_match_all('/^##\s+([^\n]+)\s*\n\s*((?:.+\n)+?)(?=^##|\Z)/m', $mainContent, $matches, PREG_SET_ORDER)) {
+                        echo "<p class='success'>Found " . count($matches) . " book sections after removing front matter</p>";
+                        migrateFlushOutput();
+
+                        foreach ($matches as $match) {
+                            $bookTitle = trim($match[1]);
+                            $reviewsSection = $match[2];
+
+                            echo "<h5>Found reviews for book: $bookTitle</h5>";
+                            migrateFlushOutput();
+
+                            // Find the book in the database
+                            $stmt = $db->prepare("
+                                SELECT id, title
+                                FROM directory_items
+                                WHERE type = 'book' AND title LIKE :title
+                            ");
+                            $stmt->execute([':title' => "%$bookTitle%"]);
+                            $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                            if (!$book) {
+                                $stats['books_not_found']++;
+                                echo "<p class='warning'>Book not found in database: $bookTitle</p>";
+                                migrateFlushOutput();
+                                continue;
+                            }
+
+                            $stats['books_with_reviews']++;
+                            echo "<p class='success'>Found book in database: {$book['title']} (ID: {$book['id']})</p>";
+                            migrateFlushOutput();
+
+                            // Extract individual reviews
+                            $reviews = extractReviewsFromMarkdown($reviewsSection);
+
+                            if (empty($reviews)) {
+                                echo "<p class='warning'>No reviews extracted from section</p>";
+                                migrateFlushOutput();
+                                continue;
+                            }
+
+                            echo "<p class='success'>Extracted " . count($reviews) . " reviews</p>";
+                            migrateFlushOutput();
+
+                            foreach ($reviews as $review) {
+                                try {
+                                    // Insert the review into the new system
+                                    $insertStmt = $db->prepare("
+                                        INSERT INTO reviews (
+                                            book_id,
+                                            source_id,
+                                            reviewer_name,
+                                            reviewer_age,
+                                            review_date,
+                                            original_rating,
+                                            rating_value,
+                                            rating_scale,
+                                            rating_normalised,
+                                            review_text
+                                        ) VALUES (
+                                            :book_id,
+                                            :source_id,
+                                            :reviewer_name,
+                                            :reviewer_age,
+                                            CURRENT_DATE,
+                                            :original_rating,
+                                            :rating_value,
+                                            :rating_scale,
+                                            :rating_normalised,
+                                            :review_text
+                                        )
+                                    ");
+
+                                    $insertStmt->execute([
+                                        ':book_id' => $book['id'],
+                                        ':source_id' => 1, // Stories from the Web source
+                                        ':reviewer_name' => $review['reviewer_name'],
+                                        ':reviewer_age' => $review['reviewer_age'],
+                                        ':original_rating' => $review['original_rating'],
+                                        ':rating_value' => $review['rating_value'],
+                                        ':rating_scale' => $review['rating_scale'],
+                                        ':rating_normalised' => $review['rating_normalised'],
+                                        ':review_text' => $review['review_text']
+                                    ]);
+
+                                    $stats['total_reviews_migrated']++;
+                                    echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                                    migrateFlushOutput();
+                                } catch (Exception $e) {
+                                    $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
+                                    echo "<p class='error'>Error inserting review: " . $e->getMessage() . "</p>";
+                                    migrateFlushOutput();
+                                }
+                            }
+
+                            // Update aggregate values for the book
+                            updateBookAggregateValues($db, $book['id']);
+                        }
+                    } else {
+                        echo "<p class='warning'>No book sections found after removing front matter</p>";
+                        migrateFlushOutput();
+                    }
+                }
             }
         }
 

@@ -173,15 +173,21 @@ function updateReview() {
         $ratingScale = 5;
 
         // Check if the review exists
-        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE id = ?");
+        $checkStmt = $db->prepare("SELECT * FROM reviews WHERE id = ?");
         $checkStmt->execute([$reviewId]);
-        $reviewExists = $checkStmt->fetchColumn() > 0;
+        $reviewData = $checkStmt->fetch();
+        $reviewExists = $reviewData !== false;
 
+        // Debug the review data
+        error_log("Review data: " . print_r($reviewData, true));
         error_log("Review exists: " . ($reviewExists ? 'Yes' : 'No'));
 
         if (!$reviewExists) {
             throw new Exception('Review not found.');
         }
+
+        // Store the actual book_id from the review data
+        $actualBookId = $reviewData['book_id'] ?? $bookId;
 
         // Update the review in the database - only use the review ID for the WHERE clause
         $stmt = $db->prepare("
@@ -211,6 +217,9 @@ function updateReview() {
         if ($rowsAffected === 0) {
             throw new Exception('Failed to update review. No rows affected.');
         }
+
+        // Use the actual book_id from the review data for updating ratings
+        $bookId = $actualBookId;
 
         // Update the book's average rating and review count
         updateBookRatings($bookId);
@@ -254,15 +263,22 @@ function deleteReview() {
         }
 
         // Check if the review exists - use a more lenient check that only looks at the review ID
-        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE id = ?");
+        $checkStmt = $db->prepare("SELECT * FROM reviews WHERE id = ?");
         $checkStmt->execute([$reviewId]);
-        $reviewExists = $checkStmt->fetchColumn() > 0;
+        $reviewData = $checkStmt->fetch();
+        $reviewExists = $reviewData !== false;
+
+        // Debug the review data
+        error_log("Review data: " . print_r($reviewData, true));
 
         error_log("Review exists: " . ($reviewExists ? 'Yes' : 'No'));
 
         if (!$reviewExists) {
             throw new Exception('Review not found.');
         }
+
+        // Store the book_id from the review data if it exists
+        $actualBookId = $reviewData['book_id'] ?? $bookId;
 
         // Delete the review from the database - only use the review ID for deletion
         $stmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
@@ -274,6 +290,9 @@ function deleteReview() {
         if ($rowsAffected === 0) {
             throw new Exception('Failed to delete review. No rows affected.');
         }
+
+        // Use the actual book_id from the review data for updating ratings
+        $bookId = $actualBookId;
 
         // Update the book's average rating and review count
         updateBookRatings($bookId);

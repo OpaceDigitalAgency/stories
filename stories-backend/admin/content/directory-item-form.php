@@ -479,7 +479,8 @@ $extraHeadContent = '
                 e.preventDefault();
 
                 const formData = new FormData(reviewForm);
-                formData.append("action", editingReviewId ? "update_review" : "add_review");
+                const reviewId = document.getElementById("review_id").value;
+                formData.append("action", reviewId ? "update_review" : "add_review");
 
                 // Get the book ID from the URL parameter
                 const urlParams = new URLSearchParams(window.location.search);

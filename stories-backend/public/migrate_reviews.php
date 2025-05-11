@@ -401,10 +401,13 @@ function migrateReviews($db) {
                                             )
                                         ");
 
+                                        // Truncate reviewer name to 50 characters to avoid database errors
+                                        $reviewerName = substr($review['reviewer_name'], 0, 50);
+
                                         $insertStmt->execute([
                                             ':book_id' => $book['id'],
                                             ':source_id' => 1, // Stories from the Web source
-                                            ':reviewer_name' => $review['reviewer_name'],
+                                            ':reviewer_name' => $reviewerName,
                                             ':reviewer_age' => $review['reviewer_age'],
                                             ':original_rating' => $review['original_rating'],
                                             ':rating_value' => $review['rating_value'],
@@ -521,10 +524,13 @@ function migrateReviews($db) {
                                                         )
                                                     ");
 
+                                                    // Truncate reviewer name to 50 characters to avoid database errors
+                                                    $reviewerName = substr($review['reviewer_name'], 0, 50);
+
                                                     $insertStmt->execute([
                                                         ':book_id' => $bookId,
                                                         ':source_id' => 1, // Stories from the Web source
-                                                        ':reviewer_name' => $review['reviewer_name'],
+                                                        ':reviewer_name' => $reviewerName,
                                                         ':reviewer_age' => $review['reviewer_age'],
                                                         ':original_rating' => $review['original_rating'],
                                                         ':rating_value' => $review['rating_value'],
@@ -775,17 +781,41 @@ function extractReviewsFromDescription($description) {
  */
 function updateBookAggregateValues($db, $bookId) {
     try {
-        $stmt = $db->prepare("
-            UPDATE directory_items
-            SET
-                review_count = (SELECT COUNT(*) FROM reviews WHERE book_id = :book_id),
-                average_rating = (SELECT AVG(rating_normalised) FROM reviews WHERE book_id = :book_id),
-                highest_rating = (SELECT MAX(rating_normalised) FROM reviews WHERE book_id = :book_id),
-                lowest_rating = (SELECT MIN(rating_normalised) FROM reviews WHERE book_id = :book_id)
-            WHERE id = :book_id
-        ");
+        // First, check if there are any reviews for this book
+        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = :book_id");
+        $checkStmt->execute([':book_id' => $bookId]);
+        $reviewCount = $checkStmt->fetchColumn();
 
-        $stmt->execute([':book_id' => $bookId]);
+        if ($reviewCount > 0) {
+            // If there are reviews, update with calculated values
+            $stmt = $db->prepare("
+                UPDATE directory_items
+                SET
+                    review_count = :review_count,
+                    average_rating = (SELECT AVG(rating_normalised) FROM reviews WHERE book_id = :book_id),
+                    highest_rating = (SELECT MAX(rating_normalised) FROM reviews WHERE book_id = :book_id),
+                    lowest_rating = (SELECT MIN(rating_normalised) FROM reviews WHERE book_id = :book_id)
+                WHERE id = :book_id
+            ");
+
+            $stmt->execute([
+                ':book_id' => $bookId,
+                ':review_count' => $reviewCount
+            ]);
+        } else {
+            // If no reviews, reset values
+            $stmt = $db->prepare("
+                UPDATE directory_items
+                SET
+                    review_count = 0,
+                    average_rating = NULL,
+                    highest_rating = NULL,
+                    lowest_rating = NULL
+                WHERE id = :book_id
+            ");
+
+            $stmt->execute([':book_id' => $bookId]);
+        }
         echo "<p class='success'>Updated aggregate values for book ID: $bookId</p>";
         migrateFlushOutput();
         return true;

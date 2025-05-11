@@ -1,7 +1,12 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/stories/repositories/stories/
-    - /bin/cp -R stories-backend/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org
+    # Create directories if they don't exist
+    - mkdir -p $DEPLOYPATH
+    # Copy files
+    - /bin/cp -R stories-backend/admin $DEPLOYPATH/admin
+    - /bin/cp -R stories-backend/api $DEPLOYPATH/api
+    - /bin/cp -R stories-backend/public $DEPLOYPATH/public
   git:
     merge_strategy: --no-ff

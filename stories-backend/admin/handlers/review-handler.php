@@ -1,7 +1,7 @@
 <?php
 /**
  * Review Handler
- * 
+ *
  * Handles AJAX requests for adding, editing, and deleting reviews.
  */
 
@@ -25,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Get the action from the request
 $action = $_POST['action'] ?? '';
 
+// Debug logging
+error_log("Review handler called with action: " . $action);
+error_log("POST data: " . print_r($_POST, true));
+
 // Handle different actions
 switch ($action) {
     case 'add_review':
@@ -47,7 +51,7 @@ switch ($action) {
  */
 function addReview() {
     global $db, $response;
-    
+
     try {
         // Get review data from the request
         $bookId = $_POST['book_id'] ?? null;
@@ -58,20 +62,20 @@ function addReview() {
         $originalRating = $_POST['original_rating'] ?? '';
         $ratingNormalised = $_POST['rating_normalised'] ?? 0;
         $reviewText = $_POST['review_text'] ?? '';
-        
+
         // Validate required fields
         if (empty($bookId)) {
             throw new Exception('Book ID is required.');
         }
-        
+
         if (empty($ratingNormalised)) {
             throw new Exception('Rating is required.');
         }
-        
+
         // Calculate rating value and scale
         $ratingValue = $ratingNormalised * 5;
         $ratingScale = 5;
-        
+
         // Insert the review into the database
         $stmt = $db->prepare("
             INSERT INTO reviews (
@@ -81,21 +85,21 @@ function addReview() {
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
         ");
-        
+
         $stmt->execute([
             $bookId, $sourceId, $reviewerName, $reviewerAge, $reviewDate,
             $originalRating, $ratingValue, $ratingScale, $ratingNormalised, $reviewText
         ]);
-        
+
         // Update the book's average rating and review count
         updateBookRatings($bookId);
-        
+
         $response['success'] = true;
         $response['message'] = 'Review added successfully.';
     } catch (Exception $e) {
         $response['message'] = 'Error adding review: ' . $e->getMessage();
     }
-    
+
     echo json_encode($response);
     exit;
 }
@@ -105,7 +109,7 @@ function addReview() {
  */
 function updateReview() {
     global $db, $response;
-    
+
     try {
         // Get review data from the request
         $reviewId = $_POST['review_id'] ?? null;
@@ -117,24 +121,24 @@ function updateReview() {
         $originalRating = $_POST['original_rating'] ?? '';
         $ratingNormalised = $_POST['rating_normalised'] ?? 0;
         $reviewText = $_POST['review_text'] ?? '';
-        
+
         // Validate required fields
         if (empty($reviewId)) {
             throw new Exception('Review ID is required.');
         }
-        
+
         if (empty($bookId)) {
             throw new Exception('Book ID is required.');
         }
-        
+
         if (empty($ratingNormalised)) {
             throw new Exception('Rating is required.');
         }
-        
+
         // Calculate rating value and scale
         $ratingValue = $ratingNormalised * 5;
         $ratingScale = 5;
-        
+
         // Update the review in the database
         $stmt = $db->prepare("
             UPDATE reviews SET
@@ -150,22 +154,22 @@ function updateReview() {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ? AND book_id = ?
         ");
-        
+
         $stmt->execute([
             $sourceId, $reviewerName, $reviewerAge, $reviewDate,
             $originalRating, $ratingValue, $ratingScale, $ratingNormalised, $reviewText,
             $reviewId, $bookId
         ]);
-        
+
         // Update the book's average rating and review count
         updateBookRatings($bookId);
-        
+
         $response['success'] = true;
         $response['message'] = 'Review updated successfully.';
     } catch (Exception $e) {
         $response['message'] = 'Error updating review: ' . $e->getMessage();
     }
-    
+
     echo json_encode($response);
     exit;
 }
@@ -175,34 +179,55 @@ function updateReview() {
  */
 function deleteReview() {
     global $db, $response;
-    
+
     try {
         // Get review data from the request
         $reviewId = $_POST['review_id'] ?? null;
         $bookId = $_POST['book_id'] ?? null;
-        
+
+        // Debug logging
+        error_log("Delete review function called");
+        error_log("Review ID: " . $reviewId);
+        error_log("Book ID: " . $bookId);
+
         // Validate required fields
         if (empty($reviewId)) {
             throw new Exception('Review ID is required.');
         }
-        
+
         if (empty($bookId)) {
             throw new Exception('Book ID is required.');
         }
-        
+
+        // Check if the review exists
+        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE id = ? AND book_id = ?");
+        $checkStmt->execute([$reviewId, $bookId]);
+        $reviewExists = $checkStmt->fetchColumn() > 0;
+
+        error_log("Review exists: " . ($reviewExists ? 'Yes' : 'No'));
+
+        if (!$reviewExists) {
+            throw new Exception('Review not found.');
+        }
+
         // Delete the review from the database
         $stmt = $db->prepare("DELETE FROM reviews WHERE id = ? AND book_id = ?");
         $stmt->execute([$reviewId, $bookId]);
-        
+
+        $rowsAffected = $stmt->rowCount();
+        error_log("Rows affected by delete: " . $rowsAffected);
+
         // Update the book's average rating and review count
         updateBookRatings($bookId);
-        
+
         $response['success'] = true;
         $response['message'] = 'Review deleted successfully.';
     } catch (Exception $e) {
+        error_log("Error in deleteReview: " . $e->getMessage());
         $response['message'] = 'Error deleting review: ' . $e->getMessage();
     }
-    
+
+    error_log("Delete response: " . json_encode($response));
     echo json_encode($response);
     exit;
 }
@@ -212,17 +237,17 @@ function deleteReview() {
  */
 function updateBookRatings($bookId) {
     global $db;
-    
+
     try {
         // Get all reviews for the book
         $stmt = $db->prepare("SELECT rating_normalised FROM reviews WHERE book_id = ?");
         $stmt->execute([$bookId]);
         $reviews = $stmt->fetchAll();
-        
+
         // Calculate average rating and review count
         $reviewCount = count($reviews);
         $averageRating = 0;
-        
+
         if ($reviewCount > 0) {
             $ratingSum = 0;
             foreach ($reviews as $review) {
@@ -230,7 +255,7 @@ function updateBookRatings($bookId) {
             }
             $averageRating = $ratingSum / $reviewCount;
         }
-        
+
         // Update the directory item with the new average rating and review count
         $stmt = $db->prepare("
             UPDATE directory_items SET

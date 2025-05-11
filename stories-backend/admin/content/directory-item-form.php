@@ -597,13 +597,18 @@ $extraHeadContent = '
                         const reviewId = this.getAttribute("data-id");
                         const bookId = document.getElementById("id").value;
 
+                        console.log("Deleting review:", reviewId, "for book:", bookId);
+
+                        // Create FormData object for the request
+                        const formData = new FormData();
+                        formData.append("action", "delete_review");
+                        formData.append("review_id", reviewId);
+                        formData.append("book_id", bookId);
+
                         // AJAX request to delete review
                         fetch("../handlers/review-handler.php", {
                             method: "POST",
-                            headers: {
-                                "Content-Type": "application/x-www-form-urlencoded",
-                            },
-                            body: "action=delete_review&review_id=" + reviewId + "&book_id=" + bookId
+                            body: formData
                         })
                         .then(response => response.json())
                         .then(data => {

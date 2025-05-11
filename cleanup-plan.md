@@ -79,3 +79,20 @@ git revert <commit-hash>
 - Archived 5 test/fix files from admin directory
 - Archived 6 test/fix files from admin/content directory
 - All functionality (pagination, thumbnails, image upload) verified working before archiving
+
+## Deployment Configuration Update
+To prevent archived files from being deployed to production, the deployment configuration has been updated:
+
+1. Changed from `cp -R` to `rsync` with exclude pattern
+2. Added `--exclude="_archive"` to exclude all _archive directories
+3. This ensures archived files remain in git history but don't get deployed
+
+The updated .cpanel.yml configuration:
+```yaml
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
+    # Exclude _archive directories from deployment
+    - /usr/bin/rsync -av --exclude="_archive" stories-backend/* $DEPLOYPATH
+  git:
+    merge_strategy: --no-ff

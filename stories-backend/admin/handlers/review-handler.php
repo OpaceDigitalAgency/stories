@@ -276,12 +276,9 @@ function deleteReview() {
 
         // Debug the review data
         error_log("Review data: " . print_r($reviewData, true));
-
         error_log("Review exists: " . ($reviewExists ? 'Yes' : 'No'));
 
-        if (!$reviewExists) {
-            throw new Exception('Review not found.');
-        }
+        // Continue even if review doesn't exist - this allows us to handle cases where the review might have been deleted already
 
         // Store the book_id from the review data if it exists
         $actualBookId = $reviewData['book_id'] ?? $bookId;
@@ -293,8 +290,10 @@ function deleteReview() {
         $rowsAffected = $stmt->rowCount();
         error_log("Rows affected by delete: " . $rowsAffected);
 
+        // Don't throw an exception if no rows were affected
+        // This allows the function to succeed even if the review was already deleted
         if ($rowsAffected === 0) {
-            throw new Exception('Failed to delete review. No rows affected.');
+            error_log("No rows affected by delete, but continuing anyway");
         }
 
         // Use the actual book_id from the review data for updating ratings

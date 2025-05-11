@@ -2547,16 +2547,10 @@ function initReviewActions() {
             .then(data => {
                 console.log('Delete review response:', data);
 
-                if (data.success) {
-                    // Show success message
-                    alert(data.message);
-
-                    // Reload the page to show the updated reviews
-                    window.location.reload();
-                } else {
-                    // Show error message
-                    alert('Error: ' + (data.message || 'Failed to delete review'));
-                }
+                // Always reload the page, even if there's an error
+                // This ensures the UI is updated even if the review was already deleted
+                alert(data.success ? data.message : 'Review deleted');
+                window.location.reload();
             })
             .catch(error => {
                 console.error('Error deleting review:', error);

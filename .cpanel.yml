@@ -2,8 +2,8 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/stories/api.storiesfromtheweb.org/
-    # Exclude _archive directories from deployment
-    - /usr/bin/rsync -av --exclude="_archive" stories-backend/* $DEPLOYPATH
+    # Copy all files except those in _archive directories
+    - /bin/cp -R `find stories-backend -type f -not -path "*/\_archive/*"` $DEPLOYPATH
   git:
     # Use no-ff merge strategy to avoid fast-forward issues
     merge_strategy: --no-ff

@@ -1213,10 +1213,13 @@ if (basename($_SERVER['SCRIPT_FILENAME']) == basename(__FILE__)) {
     else {
         echo '<div class="mb-4">';
         echo '<p>This tool will import reviews from WordPress markdown files and migrate them to the new review system.</p>';
-        echo '<div class="btn-group">';
+        echo '<div class="btn-group mb-2">';
         echo '<a href="migrate_reviews.php?action=migrate" class="btn btn-primary">Start Migration</a>';
         echo '<a href="migrate_reviews.php?action=delete" class="btn btn-danger">Delete All Reviews</a>';
         echo '<a href="direct_import.php" class="btn btn-secondary">Back to Import Tool</a>';
+        echo '</div>';
+        echo '<div class="mt-2">';
+        echo '<p><strong>Important:</strong> After importing reviews, run the <a href="../admin/scripts/post_import_cleanup.php" target="_blank" class="btn btn-warning btn-sm">Post-Import Cleanup</a> script to remove duplicate reviews and fix formatting issues.</p>';
         echo '</div>';
         echo '</div>';
 

@@ -1917,6 +1917,7 @@ require_once '../admin/includes/header.php';
                                             echo "</ul>";
 
                                             echo "<p>Check the <a href='/admin/directory'>Directory Admin</a> to verify the imported content.</p>";
+                                            echo "<p><strong>Important:</strong> If you imported reviews, run the <a href='/admin/scripts/post_import_cleanup.php' target='_blank' class='btn btn-warning btn-sm'>Post-Import Cleanup</a> script to remove duplicate reviews and fix formatting issues.</p>";
                                             flushOutput();
                                         }
                                     } else {

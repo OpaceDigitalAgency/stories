@@ -81,6 +81,25 @@ function addReview() {
             throw new Exception('Rating is required.');
         }
 
+        // Check if a review with the same reviewer name already exists for this book
+        $checkStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ? AND LOWER(TRIM(reviewer_name)) = LOWER(TRIM(?))");
+        $checkStmt->execute([$bookId, $reviewerName]);
+        $exists = $checkStmt->fetchColumn() > 0;
+
+        if ($exists) {
+            throw new Exception('A review by this reviewer already exists for this book. Please use the edit function instead.');
+        }
+
+        // Ensure rating_normalised is a valid float between 0 and 1
+        $ratingNormalised = floatval($ratingNormalised);
+        if ($ratingNormalised < 0) $ratingNormalised = 0;
+        if ($ratingNormalised > 1) $ratingNormalised = 1;
+
+        // Format review date if empty
+        if (empty($reviewDate)) {
+            $reviewDate = date('Y-m-d');
+        }
+
         // Calculate rating value and scale
         $ratingValue = $ratingNormalised * 5;
         $ratingScale = 5;
@@ -160,6 +179,8 @@ function updateReview() {
         error_log("Update review function called");
         error_log("Review ID: " . $reviewId);
         error_log("Book ID: " . $bookId);
+        error_log("Reviewer Name: " . $reviewerName);
+        error_log("Rating: " . $ratingNormalised);
 
         // Validate required fields
         if (empty($reviewId)) {
@@ -172,6 +193,16 @@ function updateReview() {
 
         if (empty($ratingNormalised)) {
             throw new Exception('Rating is required.');
+        }
+
+        // Ensure rating_normalised is a valid float between 0 and 1
+        $ratingNormalised = floatval($ratingNormalised);
+        if ($ratingNormalised < 0) $ratingNormalised = 0;
+        if ($ratingNormalised > 1) $ratingNormalised = 1;
+
+        // Format review date if empty
+        if (empty($reviewDate)) {
+            $reviewDate = date('Y-m-d');
         }
 
         // Calculate rating value and scale

@@ -222,8 +222,24 @@ function migrateReviews($db) {
                     echo "<p class='info'>Main content preview: " . htmlspecialchars($mainContentPreview) . "...</p>";
                     migrateFlushOutput();
 
-                    // Try a more specific pattern for the book sections, excluding "Feedback Summary" sections
-                    if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)\s*\n\s*(\*\*Reviewer(?:.+?\n)+?)(?=##|\Z)/s', $mainContent, $matches, PREG_SET_ORDER)) {
+                    // First, split the content by "## Feedback Summary" to separate book sections
+                    $bookSections = preg_split('/##\s+Feedback Summary.*?(?=##|\Z)/s', $mainContent);
+
+                    echo "<p class='info'>Split content into " . count($bookSections) . " potential book sections</p>";
+                    migrateFlushOutput();
+
+                    $matches = [];
+
+                    // Process each section to extract book title and reviews
+                    foreach ($bookSections as $section) {
+                        // Extract book title and reviews
+                        if (preg_match('/##\s+([^\n]+)\s*\n\s*(\*\*Reviewer(?:.+?\n)+)/s', $section, $sectionMatch)) {
+                            $matches[] = [$sectionMatch[1], $sectionMatch[2]];
+                        }
+                    }
+
+                    // If we found book sections
+                    if (!empty($matches)) {
                         echo "<p class='success'>Found " . count($matches) . " book sections after removing front matter</p>";
 
                         // Debug output to show which book titles were found
@@ -333,8 +349,24 @@ function migrateReviews($db) {
                         echo "<p class='info'>Trying direct review extraction approach...</p>";
                         migrateFlushOutput();
 
-                        // Pattern to match: ## Book Title (excluding Feedback Summary) followed by reviewer info
-                        if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)\s*\n\s*\*\*Reviewer(?:[^*]+)\*\*\s*([^*]+)/s', $mainContent, $directMatches, PREG_SET_ORDER)) {
+                        // First, split the content by "## Feedback Summary" to separate book sections
+                        $bookSections = preg_split('/##\s+Feedback Summary.*?(?=##|\Z)/s', $mainContent);
+
+                        echo "<p class='info'>Split content into " . count($bookSections) . " potential book sections for direct approach</p>";
+                        migrateFlushOutput();
+
+                        $directMatches = [];
+
+                        // Process each section to extract book title and reviews
+                        foreach ($bookSections as $section) {
+                            // Extract book title and a sample of the content for matching
+                            if (preg_match('/##\s+([^\n]+)\s*\n\s*\*\*Reviewer(?:[^*]+)\*\*\s*([^*]+)/s', $section, $sectionMatch)) {
+                                $directMatches[] = [$sectionMatch[1], $section]; // Store the book title and the entire section
+                            }
+                        }
+
+                        // If we found book sections
+                        if (!empty($directMatches)) {
                             echo "<p class='success'>Found " . count($directMatches) . " potential book reviews using direct approach</p>";
                             migrateFlushOutput();
 
@@ -451,9 +483,23 @@ function migrateReviews($db) {
                                 // Group reviews by book title if possible
                                 $reviewsByBook = [];
 
-                                // Try to find book titles in the content (excluding Feedback Summary)
-                                if (preg_match_all('/##\s+(?!Feedback Summary)([^\n]+)/m', $mainContent, $bookTitleMatches)) {
-                                    $bookTitles = $bookTitleMatches[1];
+                                // First, split the content by "## Feedback Summary" to separate book sections
+                                $bookSections = preg_split('/##\s+Feedback Summary.*?(?=##|\Z)/s', $mainContent);
+
+                                echo "<p class='info'>Split content into " . count($bookSections) . " potential book sections for last resort approach</p>";
+                                migrateFlushOutput();
+
+                                $bookTitles = [];
+
+                                // Extract book titles from each section
+                                foreach ($bookSections as $section) {
+                                    if (preg_match('/##\s+([^\n]+)/m', $section, $titleMatch)) {
+                                        $bookTitles[] = $titleMatch[1];
+                                    }
+                                }
+
+                                // If we found book titles
+                                if (!empty($bookTitles)) {
                                     echo "<p class='info'>Found " . count($bookTitles) . " potential book titles</p>";
                                     migrateFlushOutput();
 

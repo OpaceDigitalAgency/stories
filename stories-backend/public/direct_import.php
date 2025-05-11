@@ -20,6 +20,9 @@ require_once '../admin/includes/db-connect.php';
 // Include book processing functions
 require_once 'process_book_functions.php';
 
+// Include review migration functions
+require_once 'migrate_reviews.php';
+
 // Basic error handling and setup
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -1492,6 +1495,9 @@ require_once '../admin/includes/header.php';
                             <button type="submit" name="action" value="fix_authors" class="btn btn-warning">
                                 <i class="fas fa-link"></i> Fix Story Authors
                             </button>
+                            <button type="submit" name="action" value="migrate_reviews" class="btn btn-success">
+                                <i class="fas fa-star"></i> Migrate Reviews
+                            </button>
                             <a href="optimize_image.php" class="btn btn-secondary">
                                 <i class="fas fa-image"></i> Optimize Media Files
                             </a>
@@ -1521,6 +1527,23 @@ require_once '../admin/includes/header.php';
                                         echo "<p class='success'>Story-author association repair completed successfully.</p>";
                                     } else {
                                         echo "<p class='error'>Story-author association repair encountered errors.</p>";
+                                    }
+
+                                    echo "<p><a href='direct_import.php' class='btn btn-primary'>Return to Import Tool</a></p>";
+                                    flushOutput();
+                                }
+                                // Handle Migrate Reviews action
+                                else if ($_POST['action'] === 'migrate_reviews') {
+                                    echo "<h3>Review Migration Tool</h3>";
+                                    echo "<p>This tool will migrate legacy reviews from book descriptions to the new review system.</p>";
+                                    flushOutput();
+
+                                    $result = migrateReviews($db);
+
+                                    if (!empty($result['errors'])) {
+                                        echo "<p class='warning'>Review migration completed with some errors.</p>";
+                                    } else {
+                                        echo "<p class='success'>Review migration completed successfully.</p>";
                                     }
 
                                     echo "<p><a href='direct_import.php' class='btn btn-primary'>Return to Import Tool</a></p>";

@@ -584,7 +584,10 @@ $extraHeadContent = '
                     document.getElementById("submit-review").textContent = "Update Review";
 
                     // Scroll to form
-                    document.getElementById("review-form").scrollIntoView({ behavior: "smooth" });
+                    const reviewForm = document.getElementById("review-form");
+                    if (reviewForm) {
+                        reviewForm.scrollIntoView({ behavior: "smooth" });
+                    }
                 });
             });
         }
@@ -595,7 +598,15 @@ $extraHeadContent = '
                 button.addEventListener("click", function() {
                     if (confirm("Are you sure you want to delete this review?")) {
                         const reviewId = this.getAttribute("data-id");
-                        const bookId = document.getElementById("id").value;
+                        const idElement = document.getElementById("id");
+
+                        if (!idElement) {
+                            console.error("Could not find element with id");
+                            alert("Error: Could not find book ID");
+                            return;
+                        }
+
+                        const bookId = idElement.value;
 
                         console.log("Deleting review:", reviewId, "for book:", bookId);
 
@@ -862,11 +873,11 @@ $extraHeadContent = '
         border-radius: 6px;
     }
     .review-actions {
-        position: absolute;
+        position: relative;
         top: 10px;
-        right: 10px;
-        display: flex;
-        z-index: 10;
+        width: 100%;
+        text-align: right;
+        margin-bottom: 20px;
     }
     .review-actions button {
         background: none;

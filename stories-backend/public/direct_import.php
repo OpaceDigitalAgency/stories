@@ -1495,9 +1495,27 @@ require_once '../admin/includes/header.php';
                             <button type="submit" name="action" value="fix_authors" class="btn btn-warning">
                                 <i class="fas fa-link"></i> Fix Story Authors
                             </button>
-                            <button type="submit" name="action" value="migrate_reviews" class="btn btn-success">
-                                <i class="fas fa-star"></i> Migrate Reviews
-                            </button>
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-success dropdown-toggle" type="button" id="reviewMigrationDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-star"></i> Migrate Reviews
+                                </button>
+                                <div class="dropdown-menu p-3" aria-labelledby="reviewMigrationDropdown" style="min-width: 300px;">
+                                    <h6 class="dropdown-header">Review Migration Options</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="delete_reviews" id="delete-reviews" value="1">
+                                        <label class="form-check-label" for="delete-reviews">
+                                            Delete existing reviews before migration
+                                        </label>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <button type="submit" name="action" value="migrate_reviews" class="btn btn-success btn-sm btn-block">
+                                        Start Review Migration
+                                    </button>
+                                    <a href="migrate_reviews.php" class="btn btn-outline-secondary btn-sm btn-block">
+                                        Advanced Review Management
+                                    </a>
+                                </div>
+                            </div>
                             <a href="optimize_image.php" class="btn btn-secondary">
                                 <i class="fas fa-image"></i> Optimize Media Files
                             </a>
@@ -1538,15 +1556,38 @@ require_once '../admin/includes/header.php';
                                     echo "<p>This tool will migrate legacy reviews from book descriptions to the new review system.</p>";
                                     flushOutput();
 
+                                    // Check if delete action is requested
+                                    if (isset($_POST['delete_reviews']) && $_POST['delete_reviews'] === '1') {
+                                        echo "<h4>Deleting Existing Reviews</h4>";
+                                        echo "<p>Removing all existing reviews before migration...</p>";
+                                        flushOutput();
+
+                                        $deleteResult = deleteAllReviews($db);
+
+                                        if (!empty($deleteResult['errors'])) {
+                                            echo "<p class='warning'>Review deletion completed with some errors.</p>";
+                                        } else {
+                                            echo "<p class='success'>Successfully deleted {$deleteResult['reviews_deleted']} reviews and reset {$deleteResult['books_updated']} books.</p>";
+                                        }
+                                        flushOutput();
+                                    }
+
+                                    echo "<h4>Starting Review Migration</h4>";
+                                    flushOutput();
+
                                     $result = migrateReviews($db);
 
                                     if (!empty($result['errors'])) {
                                         echo "<p class='warning'>Review migration completed with some errors.</p>";
                                     } else {
                                         echo "<p class='success'>Review migration completed successfully.</p>";
+                                        echo "<p class='success'>Processed {$result['total_books_processed']} books, found reviews in {$result['books_with_reviews']} books, and migrated {$result['total_reviews_migrated']} reviews.</p>";
                                     }
 
-                                    echo "<p><a href='direct_import.php' class='btn btn-primary'>Return to Import Tool</a></p>";
+                                    echo "<div class='mt-3'>";
+                                    echo "<a href='direct_import.php' class='btn btn-primary'>Return to Import Tool</a> ";
+                                    echo "<a href='migrate_reviews.php' class='btn btn-info'>Go to Review Migration Tool</a>";
+                                    echo "</div>";
                                     flushOutput();
                                 }
                                 // Handle Import action

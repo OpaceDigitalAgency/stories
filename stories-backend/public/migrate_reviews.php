@@ -28,16 +28,17 @@ function migrateFlushOutput() {
 }
 
 /**
- * Migrate reviews from book descriptions to the new review system
+ * Migrate reviews from markdown files to the new review system
  *
  * @param PDO $db Database connection
  * @return array Status information about the migration
  */
 function migrateReviews($db) {
     $stats = [
-        'total_books_processed' => 0,
+        'total_files_processed' => 0,
         'total_reviews_migrated' => 0,
         'books_with_reviews' => 0,
+        'books_not_found' => 0,
         'errors' => []
     ];
 
@@ -45,89 +46,160 @@ function migrateReviews($db) {
         // Begin transaction
         $db->beginTransaction();
 
-        echo "<h3>Starting Review Migration</h3>";
+        echo "<h3>Starting Review Migration from Markdown Files</h3>";
         migrateFlushOutput();
 
-        // Get all books with descriptions that might contain reviews
-        $stmt = $db->prepare("
-            SELECT id, title, description
-            FROM directory_items
-            WHERE type = 'book' AND description IS NOT NULL
-        ");
-        $stmt->execute();
-        $books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Path to the WordPress migration markdown files
+        $reviewsPath = '../_wp migration/wp-md/pages/reading-book-reviews';
 
-        $stats['total_books_processed'] = count($books);
-        echo "<p class='info'>Found {$stats['total_books_processed']} books to process</p>";
+        // Check if the directory exists
+        if (!is_dir($reviewsPath)) {
+            $reviewsPath = '../../_wp migration/wp-md/pages/reading-book-reviews';
+            if (!is_dir($reviewsPath)) {
+                throw new Exception("Reviews directory not found at expected paths");
+            }
+        }
+
+        echo "<p class='info'>Looking for review files in: $reviewsPath</p>";
         migrateFlushOutput();
 
-        // Process each book
-        foreach ($books as $book) {
-            echo "<h4>Processing book: {$book['title']} (ID: {$book['id']})</h4>";
+        // Find all markdown files in the directory
+        $reviewFiles = glob("$reviewsPath/*.md");
+
+        if (empty($reviewFiles)) {
+            echo "<p class='warning'>No review files found in the directory</p>";
             migrateFlushOutput();
 
-            $reviews = extractReviewsFromDescription($book['description']);
+            // Try to find the reviews file in the parent directory
+            $reviewFiles = glob("$reviewsPath/../*.md");
+            $reviewFiles = array_filter($reviewFiles, function($file) {
+                return strpos(basename($file), 'review') !== false;
+            });
 
-            if (!empty($reviews)) {
-                $stats['books_with_reviews']++;
-                echo "<p class='success'>Found " . count($reviews) . " reviews in description</p>";
+            if (empty($reviewFiles)) {
+                throw new Exception("No review files found");
+            }
+
+            echo "<p class='info'>Found review files in parent directory: " . implode(", ", array_map('basename', $reviewFiles)) . "</p>";
+            migrateFlushOutput();
+        } else {
+            echo "<p class='info'>Found review files: " . implode(", ", array_map('basename', $reviewFiles)) . "</p>";
+            migrateFlushOutput();
+        }
+
+        $stats['total_files_processed'] = count($reviewFiles);
+
+        // Process each review file
+        foreach ($reviewFiles as $file) {
+            echo "<h4>Processing file: " . basename($file) . "</h4>";
+            migrateFlushOutput();
+
+            // Read the file content
+            $content = file_get_contents($file);
+            if ($content === false) {
+                $stats['errors'][] = "Failed to read file: $file";
+                echo "<p class='error'>Failed to read file: $file</p>";
                 migrateFlushOutput();
+                continue;
+            }
 
-                foreach ($reviews as $review) {
-                    try {
-                        // Insert the review into the new system
-                        $insertStmt = $db->prepare("
-                            INSERT INTO reviews (
-                                book_id,
-                                source_id,
-                                reviewer_name,
-                                reviewer_age,
-                                review_date,
-                                original_rating,
-                                rating_value,
-                                rating_scale,
-                                rating_normalised,
-                                review_text
-                            ) VALUES (
-                                :book_id,
-                                :source_id,
-                                :reviewer_name,
-                                :reviewer_age,
-                                CURRENT_DATE,
-                                :original_rating,
-                                :rating_value,
-                                :rating_scale,
-                                :rating_normalised,
-                                :review_text
-                            )
-                        ");
+            // Extract book sections with reviews
+            if (preg_match_all('/^## ([^\n]+)\n\n((?:.+\n)+?)(?:^##|\Z)/m', $content, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $bookTitle = trim($match[1]);
+                    $reviewsSection = $match[2];
 
-                        $insertStmt->execute([
-                            ':book_id' => $book['id'],
-                            ':source_id' => 1, // Stories from the Web source
-                            ':reviewer_name' => $review['reviewer_name'],
-                            ':reviewer_age' => $review['reviewer_age'],
-                            ':original_rating' => $review['original_rating'],
-                            ':rating_value' => $review['rating_value'],
-                            ':rating_scale' => $review['rating_scale'],
-                            ':rating_normalised' => $review['rating_normalised'],
-                            ':review_text' => $review['review_text']
-                        ]);
+                    echo "<h5>Found reviews for book: $bookTitle</h5>";
+                    migrateFlushOutput();
 
-                        $stats['total_reviews_migrated']++;
-                        echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                    // Find the book in the database
+                    $stmt = $db->prepare("
+                        SELECT id, title
+                        FROM directory_items
+                        WHERE type = 'book' AND title LIKE :title
+                    ");
+                    $stmt->execute([':title' => "%$bookTitle%"]);
+                    $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$book) {
+                        $stats['books_not_found']++;
+                        echo "<p class='warning'>Book not found in database: $bookTitle</p>";
                         migrateFlushOutput();
-                    } catch (Exception $e) {
-                        $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
-                        echo "<p class='error'>Error inserting review: " . $e->getMessage() . "</p>";
-                        migrateFlushOutput();
+                        continue;
                     }
-                }
 
-                // Update aggregate values for the book
-                updateBookAggregateValues($db, $book['id']);
+                    $stats['books_with_reviews']++;
+                    echo "<p class='success'>Found book in database: {$book['title']} (ID: {$book['id']})</p>";
+                    migrateFlushOutput();
+
+                    // Extract individual reviews
+                    $reviews = extractReviewsFromMarkdown($reviewsSection);
+
+                    if (empty($reviews)) {
+                        echo "<p class='warning'>No reviews extracted from section</p>";
+                        migrateFlushOutput();
+                        continue;
+                    }
+
+                    echo "<p class='success'>Extracted " . count($reviews) . " reviews</p>";
+                    migrateFlushOutput();
+
+                    foreach ($reviews as $review) {
+                        try {
+                            // Insert the review into the new system
+                            $insertStmt = $db->prepare("
+                                INSERT INTO reviews (
+                                    book_id,
+                                    source_id,
+                                    reviewer_name,
+                                    reviewer_age,
+                                    review_date,
+                                    original_rating,
+                                    rating_value,
+                                    rating_scale,
+                                    rating_normalised,
+                                    review_text
+                                ) VALUES (
+                                    :book_id,
+                                    :source_id,
+                                    :reviewer_name,
+                                    :reviewer_age,
+                                    CURRENT_DATE,
+                                    :original_rating,
+                                    :rating_value,
+                                    :rating_scale,
+                                    :rating_normalised,
+                                    :review_text
+                                )
+                            ");
+
+                            $insertStmt->execute([
+                                ':book_id' => $book['id'],
+                                ':source_id' => 1, // Stories from the Web source
+                                ':reviewer_name' => $review['reviewer_name'],
+                                ':reviewer_age' => $review['reviewer_age'],
+                                ':original_rating' => $review['original_rating'],
+                                ':rating_value' => $review['rating_value'],
+                                ':rating_scale' => $review['rating_scale'],
+                                ':rating_normalised' => $review['rating_normalised'],
+                                ':review_text' => $review['review_text']
+                            ]);
+
+                            $stats['total_reviews_migrated']++;
+                            echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                            migrateFlushOutput();
+                        } catch (Exception $e) {
+                            $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
+                            echo "<p class='error'>Error inserting review: " . $e->getMessage() . "</p>";
+                            migrateFlushOutput();
+                        }
+                    }
+
+                    // Update aggregate values for the book
+                    updateBookAggregateValues($db, $book['id']);
+                }
             } else {
-                echo "<p class='info'>No reviews found in description</p>";
+                echo "<p class='warning'>No book sections found in file</p>";
                 migrateFlushOutput();
             }
         }
@@ -136,8 +208,9 @@ function migrateReviews($db) {
         $db->commit();
 
         echo "<h3>Review Migration Complete</h3>";
-        echo "<p class='success'>Processed {$stats['total_books_processed']} books</p>";
-        echo "<p class='success'>Found reviews in {$stats['books_with_reviews']} books</p>";
+        echo "<p class='success'>Processed {$stats['total_files_processed']} files</p>";
+        echo "<p class='success'>Found reviews for {$stats['books_with_reviews']} books</p>";
+        echo "<p class='success'>Books not found in database: {$stats['books_not_found']}</p>";
         echo "<p class='success'>Migrated {$stats['total_reviews_migrated']} reviews</p>";
 
         if (!empty($stats['errors'])) {
@@ -164,16 +237,16 @@ function migrateReviews($db) {
 }
 
 /**
- * Extract reviews from a book description
+ * Extract reviews from markdown content
  *
- * @param string $description The book description
+ * @param string $content The markdown content containing reviews
  * @return array Array of extracted reviews
  */
-function extractReviewsFromDescription($description) {
+function extractReviewsFromMarkdown($content) {
     $reviews = [];
 
-    // Pattern 1: Look for "Reviewer Name: Reviewer Age: Review: Rating:" format
-    if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+    // Pattern 1: Look for "**Reviewer Name:** Name **Reviewer Age:** X **Review:** Text **Indicative Rating:** Y/Z" format
+    if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
             $reviewerAge = (int)$match[2];
@@ -193,8 +266,8 @@ function extractReviewsFromDescription($description) {
         }
     }
 
-    // Pattern 2: Look for "Reviewer: Name Age: X Review: ... Rating: X/Y" format
-    if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^\*]+)(?:Indicative\s*)?Rating:\s*(\d+)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+    // Pattern 2: Look for "**Reviewer: Name** Age: X Review: Text Rating: Y/Z" format
+    if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^\*]+)(?:Indicative\s*)?Rating:\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
             $reviewerAge = (int)$match[2];
@@ -214,8 +287,50 @@ function extractReviewsFromDescription($description) {
         }
     }
 
-    // Pattern 3: Look for "Children's Reviews" section with reviewer and age
-    if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^\.]+(?:\.[^\.]+)*)\.\s*Indicative Rating:\s*(\d+)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+    // Pattern 3: Look for "Name, aged X: Review. Rating: Y/Z" format (The Whizz Pop Chocolate Shop format)
+    if (preg_match_all('/([^,]+), aged (\d+): (.*?)(?:Rating:|rating:) (\d+(?:\.\d+)?)\/(\d+)/is', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 4: Look for "**Reviewer Name:** Name **Age:** X **Review:** Text **Indicative Rating:** Y/Z" format
+    if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $reviewerName = trim($match[1]);
+            $reviewerAge = (int)$match[2];
+            $reviewText = trim($match[3]);
+            $ratingValue = (float)$match[4];
+            $ratingScale = (float)$match[5];
+
+            $reviews[] = [
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => $reviewerAge,
+                'review_text' => $reviewText,
+                'original_rating' => "{$ratingValue}/{$ratingScale}",
+                'rating_value' => $ratingValue,
+                'rating_scale' => $ratingScale,
+                'rating_normalised' => $ratingValue / $ratingScale
+            ];
+        }
+    }
+
+    // Pattern 5: Look for "**Reviewer:** Name **Age:** X **Review:** Text. **Indicative Rating:** Y/Z" format
+    if (preg_match_all('/\*\*Reviewer:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\.]+(?:\.[^\.]+)*)\.\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
             $reviewerAge = (int)$match[2];
@@ -235,14 +350,14 @@ function extractReviewsFromDescription($description) {
         }
     }
 
-    // Pattern 4: Look for "**Reviewer: Name** Age: X Review: ... Indicative Rating: X/Y" format
-    if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^I]+)Indicative Rating:\s*(\d+(?:\.\d+)?)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
+    // Pattern 6: Look for "**Reviewer:** Name **Age:** Not provided **Review:** Text **Indicative Rating:** Y/Z" format
+    if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*Not provided\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
-            $reviewerAge = (int)$match[2];
-            $reviewText = trim($match[3]);
-            $ratingValue = (float)$match[4];
-            $ratingScale = (float)$match[5];
+            $reviewerAge = null;
+            $reviewText = trim($match[2]);
+            $ratingValue = (float)$match[3];
+            $ratingScale = (float)$match[4];
 
             $reviews[] = [
                 'reviewer_name' => $reviewerName,
@@ -256,100 +371,8 @@ function extractReviewsFromDescription($description) {
         }
     }
 
-    // Pattern 5: Look for markdown format reviews from the reading-book-reviews page
-    if (preg_match_all('/^## ([^\n]+)\n\n((?:\*\*Reviewer[^\n]+\n\n)+)/m', $description, $bookMatches, PREG_SET_ORDER)) {
-        foreach ($bookMatches as $bookMatch) {
-            $bookTitle = trim($bookMatch[1]);
-            $reviewsText = $bookMatch[2];
-
-            // Extract individual reviews for this book
-            if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $reviewsText, $reviewMatches, PREG_SET_ORDER)) {
-                foreach ($reviewMatches as $match) {
-                    $reviewerName = trim($match[1]);
-                    $reviewerAge = (int)$match[2];
-                    $reviewText = trim($match[3]);
-                    $ratingValue = (float)$match[4];
-                    $ratingScale = (float)$match[5];
-
-                    $reviews[] = [
-                        'reviewer_name' => $reviewerName,
-                        'reviewer_age' => $reviewerAge,
-                        'review_text' => $reviewText,
-                        'original_rating' => "{$ratingValue}/{$ratingScale}",
-                        'rating_value' => $ratingValue,
-                        'rating_scale' => $ratingScale,
-                        'rating_normalised' => $ratingValue / $ratingScale
-                    ];
-                }
-            }
-        }
-    }
-
-    // Pattern 6: Look for simple name, age, review format
-    if (preg_match_all('/([^,]+), aged (\d+): ([^\.]+(?:\.[^\.]+)*)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/i', $description, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            $reviewerAge = (int)$match[2];
-            $reviewText = trim($match[3]);
-            $ratingValue = (float)$match[4];
-            $ratingScale = (float)$match[5];
-
-            $reviews[] = [
-                'reviewer_name' => $reviewerName,
-                'reviewer_age' => $reviewerAge,
-                'review_text' => $reviewText,
-                'original_rating' => "{$ratingValue}/{$ratingScale}",
-                'rating_value' => $ratingValue,
-                'rating_scale' => $ratingScale,
-                'rating_normalised' => $ratingValue / $ratingScale
-            ];
-        }
-    }
-
-    // Pattern 7: Look for "Name, aged X: Review. Rating: Y/Z" format
-    if (preg_match_all('/([^,]+), aged (\d+): (.*?) Rating: (\d+(?:\.\d+)?)\/(\d+)/is', $description, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            $reviewerAge = (int)$match[2];
-            $reviewText = trim($match[3]);
-            $ratingValue = (float)$match[4];
-            $ratingScale = (float)$match[5];
-
-            $reviews[] = [
-                'reviewer_name' => $reviewerName,
-                'reviewer_age' => $reviewerAge,
-                'review_text' => $reviewText,
-                'original_rating' => "{$ratingValue}/{$ratingScale}",
-                'rating_value' => $ratingValue,
-                'rating_scale' => $ratingScale,
-                'rating_normalised' => $ratingValue / $ratingScale
-            ];
-        }
-    }
-
-    // Pattern 8: Look for reviews in the format used in The Whizz Pop Chocolate Shop
-    if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $description, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            $reviewerAge = (int)$match[2];
-            $reviewText = trim($match[3]);
-            $ratingValue = (float)$match[4];
-            $ratingScale = (float)$match[5];
-
-            $reviews[] = [
-                'reviewer_name' => $reviewerName,
-                'reviewer_age' => $reviewerAge,
-                'review_text' => $reviewText,
-                'original_rating' => "{$ratingValue}/{$ratingScale}",
-                'rating_value' => $ratingValue,
-                'rating_scale' => $ratingScale,
-                'rating_normalised' => $ratingValue / $ratingScale
-            ];
-        }
-    }
-
-    // Pattern 9: Look for reviews in the format "Name, aged X: Review text. Rating: Y/Z"
-    if (preg_match_all('/^([^,]+), aged (\d+): (.*?)(?:Rating:|rating:) (\d+(?:\.\d+)?)\/(\d+)/im', $description, $matches, PREG_SET_ORDER)) {
+    // Pattern 7: Look for "Name, aged X: Text. Rating: Y/Z" format
+    if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $reviewerName = trim($match[1]);
             $reviewerAge = (int)$match[2];
@@ -370,6 +393,17 @@ function extractReviewsFromDescription($description) {
     }
 
     return $reviews;
+}
+
+/**
+ * Extract reviews from a book description (legacy function, kept for compatibility)
+ *
+ * @param string $description The book description
+ * @return array Array of extracted reviews
+ */
+function extractReviewsFromDescription($description) {
+    // Use the new extractReviewsFromMarkdown function for consistency
+    return extractReviewsFromMarkdown($description);
 }
 
 /**
@@ -537,7 +571,7 @@ if (basename($_SERVER['SCRIPT_FILENAME']) == basename(__FILE__)) {
     // Default: show migration interface
     else {
         echo '<div class="mb-4">';
-        echo '<p>This tool will scan book descriptions for reviews and migrate them to the new review system.</p>';
+        echo '<p>This tool will import reviews from WordPress markdown files and migrate them to the new review system.</p>';
         echo '<div class="btn-group">';
         echo '<a href="migrate_reviews.php?action=migrate" class="btn btn-primary">Start Migration</a>';
         echo '<a href="migrate_reviews.php?action=delete" class="btn btn-danger">Delete All Reviews</a>';

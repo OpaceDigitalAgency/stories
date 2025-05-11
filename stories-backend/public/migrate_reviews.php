@@ -222,19 +222,69 @@ function migrateReviews($db) {
                     echo "<p class='info'>Main content preview: " . htmlspecialchars($mainContentPreview) . "...</p>";
                     migrateFlushOutput();
 
-                    // First, split the content by "## Feedback Summary" to separate book sections
-                    $bookSections = preg_split('/##\s+Feedback Summary.*?(?=##|\Z)/s', $mainContent);
+                    // Get a list of all book titles from the database
+                    $bookStmt = $db->prepare("
+                        SELECT id, title
+                        FROM directory_items
+                        WHERE type = 'book'
+                    ");
+                    $bookStmt->execute();
+                    $allBooks = $bookStmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    echo "<p class='info'>Split content into " . count($bookSections) . " potential book sections</p>";
+                    echo "<p class='info'>Found " . count($allBooks) . " books in the database</p>";
+                    migrateFlushOutput();
+
+                    // Extract all book titles from the markdown content
+                    preg_match_all('/##\s+([^\n]+)(?!\s+Feedback Summary)/m', $mainContent, $titleMatches);
+                    $markdownBookTitles = $titleMatches[1];
+
+                    echo "<p class='info'>Found " . count($markdownBookTitles) . " book titles in the markdown file</p>";
+                    if (!empty($markdownBookTitles)) {
+                        echo "<p class='info'>Book titles in markdown: " . implode(", ", array_slice($markdownBookTitles, 0, 5)) . (count($markdownBookTitles) > 5 ? "..." : "") . "</p>";
+                    }
+                    migrateFlushOutput();
+
+                    // Split the content by book titles
+                    $bookSections = [];
+                    foreach ($markdownBookTitles as $index => $title) {
+                        $pattern = '/##\s+' . preg_quote($title, '/') . '(.*?)(?=##\s+|$)/s';
+                        if (preg_match($pattern, $mainContent, $match)) {
+                            $bookSections[$title] = $match[0];
+                        }
+                    }
+
+                    echo "<p class='info'>Extracted " . count($bookSections) . " book sections</p>";
                     migrateFlushOutput();
 
                     $matches = [];
 
-                    // Process each section to extract book title and reviews
-                    foreach ($bookSections as $section) {
-                        // Extract book title and reviews
-                        if (preg_match('/##\s+([^\n]+)\s*\n\s*(\*\*Reviewer(?:.+?\n)+)/s', $section, $sectionMatch)) {
-                            $matches[] = [$sectionMatch[1], $sectionMatch[2]];
+                    // Match each book section to a book in the database
+                    foreach ($bookSections as $title => $section) {
+                        // Find the book in the database
+                        $bookId = null;
+                        $bookTitle = null;
+
+                        foreach ($allBooks as $book) {
+                            // Try exact match first
+                            if (strtolower(trim($book['title'])) === strtolower(trim($title))) {
+                                $bookId = $book['id'];
+                                $bookTitle = $book['title'];
+                                break;
+                            }
+
+                            // Then try contains match
+                            if (stripos($book['title'], $title) !== false || stripos($title, $book['title']) !== false) {
+                                $bookId = $book['id'];
+                                $bookTitle = $book['title'];
+                                break;
+                            }
+                        }
+
+                        if ($bookId) {
+                            $matches[] = [$title, $section, $bookId, $bookTitle];
+                        } else {
+                            echo "<p class='warning'>No matching book found for title: $title</p>";
+                            migrateFlushOutput();
                         }
                     }
 
@@ -249,30 +299,16 @@ function migrateReviews($db) {
                         migrateFlushOutput();
 
                         foreach ($matches as $match) {
-                            $bookTitle = trim($match[1]);
-                            $reviewsSection = $match[2];
+                            $bookTitle = trim($match[0]);
+                            $reviewsSection = $match[1];
+                            $bookId = $match[2];
+                            $dbBookTitle = $match[3];
 
                             echo "<h5>Found reviews for book: $bookTitle</h5>";
                             migrateFlushOutput();
 
-                            // Find the book in the database
-                            $stmt = $db->prepare("
-                                SELECT id, title
-                                FROM directory_items
-                                WHERE type = 'book' AND title LIKE :title
-                            ");
-                            $stmt->execute([':title' => "%$bookTitle%"]);
-                            $book = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                            if (!$book) {
-                                $stats['books_not_found']++;
-                                echo "<p class='warning'>Book not found in database: $bookTitle</p>";
-                                migrateFlushOutput();
-                                continue;
-                            }
-
                             $stats['books_with_reviews']++;
-                            echo "<p class='success'>Found book in database: {$book['title']} (ID: {$book['id']})</p>";
+                            echo "<p class='success'>Found book in database: {$dbBookTitle} (ID: {$bookId})</p>";
                             migrateFlushOutput();
 
                             // Extract individual reviews
@@ -317,7 +353,7 @@ function migrateReviews($db) {
                                     ");
 
                                     $insertStmt->execute([
-                                        ':book_id' => $book['id'],
+                                        ':book_id' => $bookId,
                                         ':source_id' => 1, // Stories from the Web source
                                         ':reviewer_name' => $review['reviewer_name'],
                                         ':reviewer_age' => $review['reviewer_age'],
@@ -332,14 +368,14 @@ function migrateReviews($db) {
                                     echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
                                     migrateFlushOutput();
                                 } catch (Exception $e) {
-                                    $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
+                                    $stats['errors'][] = "Error inserting review for book {$bookId}: " . $e->getMessage();
                                     echo "<p class='error'>Error inserting review: " . $e->getMessage() . "</p>";
                                     migrateFlushOutput();
                                 }
                             }
 
                             // Update aggregate values for the book
-                            updateBookAggregateValues($db, $book['id']);
+                            updateBookAggregateValues($db, $bookId);
                         }
                     } else {
                         echo "<p class='warning'>No book sections found after removing front matter</p>";

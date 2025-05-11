@@ -23,6 +23,9 @@ $item = null;
 $category = null;
 $error = null;
 $bookData = null;
+$reviews = [];
+$averageRating = 0;
+$reviewCount = 0;
 
 try {
     // Get directory item data
@@ -53,6 +56,29 @@ try {
                         // If parsing fails, keep it as a string
                         $bookData['purchase_links_array'] = [];
                     }
+                }
+
+                // Fetch reviews for this directory item
+                $reviewsStmt = $db->prepare("
+                    SELECT r.*, s.name as source_name
+                    FROM reviews r
+                    LEFT JOIN review_sources s ON r.source_id = s.id
+                    WHERE r.book_id = ?
+                    ORDER BY r.review_date DESC
+                ");
+                $reviewsStmt->execute([$itemId]);
+                $reviews = $reviewsStmt->fetchAll();
+
+                // Calculate average rating and review count
+                if (!empty($reviews)) {
+                    $reviewCount = count($reviews);
+                    $ratingSum = 0;
+
+                    foreach ($reviews as $review) {
+                        $ratingSum += $review['rating_normalised'];
+                    }
+
+                    $averageRating = $reviewCount > 0 ? $ratingSum / $reviewCount : 0;
                 }
             }
         } else {
@@ -117,6 +143,54 @@ function formatDate($date) {
     if ($timestamp === false) return $date;
 
     return date('F j, Y', $timestamp);
+}
+
+// Function to render star ratings
+function renderStarRating($rating, $maxRating = 5, $size = 'md') {
+    // Normalize rating to a scale of 0-5
+    $normalizedRating = $rating * $maxRating;
+
+    // Calculate full and half stars
+    $fullStars = floor($normalizedRating);
+    $halfStar = $normalizedRating - $fullStars >= 0.5;
+    $emptyStars = $maxRating - $fullStars - ($halfStar ? 1 : 0);
+
+    // Size classes
+    $sizeClasses = [
+        'sm' => 'width: 16px; height: 16px;',
+        'md' => 'width: 20px; height: 20px;',
+        'lg' => 'width: 24px; height: 24px;'
+    ];
+
+    $starStyle = $sizeClasses[$size] ?? $sizeClasses['md'];
+
+    $html = '<div class="star-rating" style="display: inline-flex; align-items: center;">';
+
+    // Full stars
+    for ($i = 0; $i < $fullStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    // Half star
+    if ($halfStar) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill-opacity="0.5"></path>
+            <path d="M12 17.27V2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"></path>
+        </svg>';
+    }
+
+    // Empty stars
+    for ($i = 0; $i < $emptyStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #e0e0e0;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
 }
 ?>
 <!DOCTYPE html>
@@ -259,6 +333,77 @@ function formatDate($date) {
             font-size: 12px;
             font-weight: 500;
             margin-right: 5px;
+        }
+        /* Reviews section styles */
+        .reviews-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9f7ff;
+            border-radius: 8px;
+        }
+        .reviews-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .reviews-summary {
+            display: flex;
+            align-items: center;
+        }
+        .average-rating {
+            font-size: 32px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .review-count {
+            color: #666;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .reviews-list {
+            margin-top: 20px;
+        }
+        .review-item {
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .reviewer-info {
+            font-weight: bold;
+        }
+        .reviewer-age {
+            color: #666;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .review-source {
+            color: #666;
+            font-size: 14px;
+        }
+        .review-date {
+            color: #666;
+            font-size: 14px;
+        }
+        .review-rating {
+            margin-bottom: 10px;
+        }
+        .review-text {
+            line-height: 1.6;
+        }
+        .no-reviews {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            background-color: #f0f0f0;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -411,6 +556,64 @@ function formatDate($date) {
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($item['type'] === 'book'): ?>
+            <!-- Reviews Section -->
+            <h3 class="section-title">Reviews</h3>
+            <div class="reviews-section">
+                <div class="reviews-header">
+                    <div class="reviews-summary">
+                        <?php if ($reviewCount > 0): ?>
+                            <div class="average-rating"><?php echo number_format($averageRating * 5, 1); ?></div>
+                            <div>
+                                <?php echo renderStarRating($averageRating, 5, 'md'); ?>
+                                <div class="review-count"><?php echo $reviewCount; ?> <?php echo $reviewCount === 1 ? 'review' : 'reviews'; ?></div>
+                            </div>
+                        <?php else: ?>
+                            <div>No reviews yet</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="reviews-list">
+                    <?php if ($reviewCount > 0): ?>
+                        <?php foreach ($reviews as $review): ?>
+                            <div class="review-item">
+                                <div class="review-header">
+                                    <div class="reviewer-info">
+                                        <?php echo htmlspecialchars($review['reviewer_name'] ?? 'Anonymous'); ?>
+                                        <?php if (!empty($review['reviewer_age'])): ?>
+                                            <span class="reviewer-age">(Age <?php echo htmlspecialchars($review['reviewer_age']); ?>)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div>
+                                        <?php if (!empty($review['source_name'])): ?>
+                                            <span class="review-source"><?php echo htmlspecialchars($review['source_name']); ?></span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($review['review_date'])): ?>
+                                            <span class="review-date"><?php echo formatDate($review['review_date']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="review-rating">
+                                    <?php echo renderStarRating($review['rating_normalised'], 5, 'sm'); ?>
+                                    <span style="margin-left: 10px; font-size: 14px; color: #666;">
+                                        <?php echo htmlspecialchars($review['original_rating'] ?? number_format($review['rating_normalised'] * 5, 1) . '/5'); ?>
+                                    </span>
+                                </div>
+                                <?php if (!empty($review['review_text'])): ?>
+                                    <div class="review-text"><?php echo nl2br(htmlspecialchars($review['review_text'])); ?></div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="no-reviews">
+                            <p>No reviews available for this book.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($item['website_url'])): ?>
             <div class="item-cta">

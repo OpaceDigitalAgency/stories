@@ -39,6 +39,9 @@ try {
     $error = null;
     $bookData = []; // Initialize book data
     $tags = [];
+    $reviews = []; // Initialize reviews array
+    $reviewCount = 0;
+    $averageRating = 0;
 
     // Get all categories
     $stmt = $db->query("SHOW TABLES LIKE 'directory_categories'");
@@ -289,6 +292,33 @@ try {
                         error_log("Error parsing purchase links JSON: " . $e->getMessage());
                     }
                 }
+
+                // Fetch reviews for this directory item
+                try {
+                    $reviewsStmt = $db->prepare("
+                        SELECT r.*, s.name as source_name
+                        FROM reviews r
+                        LEFT JOIN review_sources s ON r.source_id = s.id
+                        WHERE r.book_id = ?
+                        ORDER BY r.review_date DESC
+                    ");
+                    $reviewsStmt->execute([$_GET['id']]);
+                    $reviews = $reviewsStmt->fetchAll();
+
+                    // Calculate average rating and review count
+                    if (!empty($reviews)) {
+                        $reviewCount = count($reviews);
+                        $ratingSum = 0;
+
+                        foreach ($reviews as $review) {
+                            $ratingSum += $review['rating_normalised'];
+                        }
+
+                        $averageRating = $reviewCount > 0 ? $ratingSum / $reviewCount : 0;
+                    }
+                } catch (Exception $e) {
+                    error_log("Error fetching reviews: " . $e->getMessage());
+                }
             }
 
             // Get item tags if they exist
@@ -318,6 +348,65 @@ try {
     $error = "Error loading form data. Please try again.";
 }
 
+// Function to render star ratings
+function renderStarRating($rating, $maxRating = 5, $size = 'md') {
+    // Normalize rating to a scale of 0-5
+    $normalizedRating = $rating * $maxRating;
+
+    // Calculate full and half stars
+    $fullStars = floor($normalizedRating);
+    $halfStar = $normalizedRating - $fullStars >= 0.5;
+    $emptyStars = $maxRating - $fullStars - ($halfStar ? 1 : 0);
+
+    // Size classes
+    $sizeClasses = [
+        'sm' => 'width: 16px; height: 16px;',
+        'md' => 'width: 20px; height: 20px;',
+        'lg' => 'width: 24px; height: 24px;'
+    ];
+
+    $starStyle = $sizeClasses[$size] ?? $sizeClasses['md'];
+
+    $html = '<div class="star-rating" style="display: inline-flex; align-items: center;">';
+
+    // Full stars
+    for ($i = 0; $i < $fullStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    // Half star
+    if ($halfStar) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill-opacity="0.5"></path>
+            <path d="M12 17.27V2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"></path>
+        </svg>';
+    }
+
+    // Empty stars
+    for ($i = 0; $i < $emptyStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #e0e0e0; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+
+// Format date from MySQL date to readable format
+function formatDate($date) {
+    if (empty($date)) return '';
+
+    // Check if it's a valid date format
+    $timestamp = strtotime($date);
+    if ($timestamp === false) return $date;
+
+    return date('F j, Y', $timestamp);
+}
+
 // Page variables
 $pageTitle = isset($_GET['id']) ? 'Edit Directory Item' : 'Add Directory Item';
 $currentPage = 'directory';
@@ -328,6 +417,221 @@ $extraHeadContent = '
 <script src="../assets/js/purchase-links-formatter.js"></script>
 <!-- Include book form enhancements script -->
 <script src="../assets/js/book-form-enhancements.js"></script>
+<script>
+    // Reviews management JavaScript
+    document.addEventListener("DOMContentLoaded", function() {
+        // Variables for review management
+        let currentRating = 0;
+        let editingReviewId = null;
+
+        // Function to initialize star rating inputs
+        function initStarRating() {
+            const ratingStars = document.querySelectorAll(".rating-star");
+            const ratingValue = document.querySelector(".rating-value");
+
+            ratingStars.forEach((star, index) => {
+                star.addEventListener("click", () => {
+                    currentRating = (index + 1) / 5; // Normalize to 0-1 scale
+                    updateStarDisplay();
+                    if (ratingValue) {
+                        ratingValue.textContent = ((index + 1) + "/5");
+                    }
+                    document.getElementById("rating_normalised").value = currentRating;
+                    document.getElementById("original_rating").value = ((index + 1) + "/5");
+                });
+
+                star.addEventListener("mouseover", () => {
+                    // Highlight stars on hover
+                    ratingStars.forEach((s, i) => {
+                        if (i <= index) {
+                            s.style.color = "#FFD166";
+                        } else {
+                            s.style.color = "#e0e0e0";
+                        }
+                    });
+                });
+
+                star.addEventListener("mouseout", () => {
+                    // Reset to current rating when not hovering
+                    updateStarDisplay();
+                });
+            });
+
+            // Initialize star display
+            function updateStarDisplay() {
+                const starCount = Math.round(currentRating * 5);
+                ratingStars.forEach((star, index) => {
+                    if (index < starCount) {
+                        star.style.color = "#FFD166";
+                    } else {
+                        star.style.color = "#e0e0e0";
+                    }
+                });
+            }
+        }
+
+        // Function to handle review form submission
+        function setupReviewForm() {
+            const reviewForm = document.getElementById("review-form");
+            if (!reviewForm) return;
+
+            reviewForm.addEventListener("submit", function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(reviewForm);
+                formData.append("action", editingReviewId ? "update_review" : "add_review");
+                formData.append("book_id", document.getElementById("id").value);
+                if (editingReviewId) {
+                    formData.append("review_id", editingReviewId);
+                }
+
+                // AJAX request to save review
+                fetch("../handlers/review-handler.php", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload the page to show updated reviews
+                        window.location.reload();
+                    } else {
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred while saving the review.");
+                });
+            });
+
+            // Cancel button handler
+            document.getElementById("cancel-review").addEventListener("click", function() {
+                resetReviewForm();
+            });
+        }
+
+        // Function to reset the review form
+        function resetReviewForm() {
+            const reviewForm = document.getElementById("review-form");
+            if (!reviewForm) return;
+
+            reviewForm.reset();
+            editingReviewId = null;
+            currentRating = 0;
+            document.getElementById("rating_normalised").value = "0";
+            document.getElementById("original_rating").value = "";
+            document.getElementById("review-form-title").textContent = "Add New Review";
+            document.getElementById("submit-review").textContent = "Add Review";
+
+            // Reset star display
+            const ratingStars = document.querySelectorAll(".rating-star");
+            ratingStars.forEach(star => {
+                star.style.color = "#e0e0e0";
+            });
+
+            const ratingValue = document.querySelector(".rating-value");
+            if (ratingValue) {
+                ratingValue.textContent = "0/5";
+            }
+        }
+
+        // Function to handle edit review button clicks
+        function setupEditButtons() {
+            document.querySelectorAll(".edit-review").forEach(button => {
+                button.addEventListener("click", function() {
+                    const reviewId = this.getAttribute("data-id");
+                    editingReviewId = reviewId;
+
+                    // Get review data from hidden inputs
+                    const reviewItem = document.getElementById("review-" + reviewId);
+                    const reviewerName = reviewItem.getAttribute("data-reviewer-name");
+                    const reviewerAge = reviewItem.getAttribute("data-reviewer-age");
+                    const sourceId = reviewItem.getAttribute("data-source-id");
+                    const reviewDate = reviewItem.getAttribute("data-review-date");
+                    const ratingNormalised = parseFloat(reviewItem.getAttribute("data-rating-normalised"));
+                    const originalRating = reviewItem.getAttribute("data-original-rating");
+                    const reviewText = reviewItem.getAttribute("data-review-text");
+
+                    // Populate form with review data
+                    document.getElementById("reviewer_name").value = reviewerName;
+                    document.getElementById("reviewer_age").value = reviewerAge;
+                    document.getElementById("source_id").value = sourceId;
+                    document.getElementById("review_date").value = reviewDate;
+                    document.getElementById("rating_normalised").value = ratingNormalised;
+                    document.getElementById("original_rating").value = originalRating;
+                    document.getElementById("review_text").value = reviewText;
+
+                    // Update current rating and star display
+                    currentRating = ratingNormalised;
+                    const ratingStars = document.querySelectorAll(".rating-star");
+                    const starCount = Math.round(currentRating * 5);
+                    ratingStars.forEach((star, index) => {
+                        if (index < starCount) {
+                            star.style.color = "#FFD166";
+                        } else {
+                            star.style.color = "#e0e0e0";
+                        }
+                    });
+
+                    const ratingValue = document.querySelector(".rating-value");
+                    if (ratingValue) {
+                        ratingValue.textContent = originalRating || (Math.round(ratingNormalised * 5) + "/5");
+                    }
+
+                    // Update form title and button text
+                    document.getElementById("review-form-title").textContent = "Edit Review";
+                    document.getElementById("submit-review").textContent = "Update Review";
+
+                    // Scroll to form
+                    document.getElementById("review-form").scrollIntoView({ behavior: "smooth" });
+                });
+            });
+        }
+
+        // Function to handle delete review button clicks
+        function setupDeleteButtons() {
+            document.querySelectorAll(".delete-review").forEach(button => {
+                button.addEventListener("click", function() {
+                    if (confirm("Are you sure you want to delete this review?")) {
+                        const reviewId = this.getAttribute("data-id");
+                        const bookId = document.getElementById("id").value;
+
+                        // AJAX request to delete review
+                        fetch("../handlers/review-handler.php", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                            },
+                            body: "action=delete_review&review_id=" + reviewId + "&book_id=" + bookId
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Reload the page to show updated reviews
+                                window.location.reload();
+                            } else {
+                                alert("Error: " + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            alert("An error occurred while deleting the review.");
+                        });
+                    }
+                });
+            });
+        }
+
+        // Initialize review functionality when DOM is loaded
+        if (document.getElementById("reviews-section")) {
+            initStarRating();
+            setupReviewForm();
+            setupEditButtons();
+            setupDeleteButtons();
+        }
+    });
+</script>
 <style>
     /* Grid layout for space efficiency */
     .form-row {
@@ -470,6 +774,123 @@ $extraHeadContent = '
         .form-row > [class*="col-"] {
             width: 100%;
         }
+    }
+
+    /* Reviews section styles */
+    .reviews-section {
+        margin-top: 15px;
+    }
+    .reviews-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .reviews-summary {
+        display: flex;
+        align-items: center;
+    }
+    .average-rating {
+        font-size: 24px;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    .review-count {
+        color: #666;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+    .reviews-list {
+        margin-top: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .review-item {
+        padding: 12px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        border: 1px solid #e9ecef;
+        position: relative;
+    }
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .reviewer-info {
+        font-weight: bold;
+    }
+    .reviewer-age {
+        color: #666;
+        font-size: 14px;
+        font-weight: normal;
+    }
+    .review-source {
+        color: #666;
+        font-size: 14px;
+    }
+    .review-date {
+        color: #666;
+        font-size: 14px;
+    }
+    .review-rating {
+        margin-bottom: 8px;
+    }
+    .review-text {
+        line-height: 1.5;
+    }
+    .no-reviews {
+        padding: 15px;
+        text-align: center;
+        color: #666;
+        background-color: #f0f0f0;
+        border-radius: 6px;
+    }
+    .review-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .review-actions button {
+        background: none;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+        margin-left: 5px;
+    }
+    .review-actions .edit-review {
+        color: #007bff;
+    }
+    .review-actions .delete-review {
+        color: #dc3545;
+    }
+    .add-review-form {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+    .form-row-rating {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .form-row-rating label {
+        margin-right: 10px;
+        font-weight: 500;
+    }
+    .rating-input {
+        display: flex;
+        align-items: center;
+    }
+    .rating-input svg {
+        cursor: pointer;
+    }
+    .rating-value {
+        margin-left: 10px;
+        font-weight: bold;
     }
 </style>
 ';
@@ -1030,6 +1451,161 @@ if (isset($_SESSION['error'])) {
 
                         </div>
                     </div>
+
+                    <!-- Reviews Card (Only for Books) -->
+                    <?php if (isset($item['type']) && $item['type'] == 'book' && isset($item['id'])): ?>
+                    <div class="wp-card book-fields" id="reviews-section">
+                        <div class="wp-card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Reviews</h5>
+                            <div>
+                                <?php if ($reviewCount > 0): ?>
+                                    <span class="badge badge-primary"><?php echo $reviewCount; ?> <?php echo $reviewCount === 1 ? 'review' : 'reviews'; ?></span>
+                                    <span class="badge badge-success"><?php echo number_format($averageRating * 5, 1); ?>/5</span>
+                                <?php else: ?>
+                                    <span class="badge badge-secondary">No reviews</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="wp-card-body">
+                            <!-- Reviews Summary -->
+                            <?php if ($reviewCount > 0): ?>
+                                <div class="reviews-header">
+                                    <div class="reviews-summary">
+                                        <div class="average-rating"><?php echo number_format($averageRating * 5, 1); ?></div>
+                                        <div>
+                                            <?php echo renderStarRating($averageRating, 5, 'md'); ?>
+                                            <div class="review-count"><?php echo $reviewCount; ?> <?php echo $reviewCount === 1 ? 'review' : 'reviews'; ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Reviews List -->
+                            <div class="reviews-list">
+                                <?php if ($reviewCount > 0): ?>
+                                    <?php foreach ($reviews as $review): ?>
+                                        <div class="review-item" id="review-<?php echo $review['id']; ?>"
+                                            data-reviewer-name="<?php echo htmlspecialchars($review['reviewer_name'] ?? ''); ?>"
+                                            data-reviewer-age="<?php echo htmlspecialchars($review['reviewer_age'] ?? ''); ?>"
+                                            data-source-id="<?php echo htmlspecialchars($review['source_id'] ?? ''); ?>"
+                                            data-review-date="<?php echo htmlspecialchars($review['review_date'] ?? ''); ?>"
+                                            data-rating-normalised="<?php echo htmlspecialchars($review['rating_normalised'] ?? ''); ?>"
+                                            data-original-rating="<?php echo htmlspecialchars($review['original_rating'] ?? ''); ?>"
+                                            data-review-text="<?php echo htmlspecialchars($review['review_text'] ?? ''); ?>">
+
+                                            <div class="review-actions">
+                                                <button type="button" class="edit-review" data-id="<?php echo $review['id']; ?>">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button type="button" class="delete-review" data-id="<?php echo $review['id']; ?>">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+
+                                            <div class="review-header">
+                                                <div class="reviewer-info">
+                                                    <?php echo htmlspecialchars($review['reviewer_name'] ?? 'Anonymous'); ?>
+                                                    <?php if (!empty($review['reviewer_age'])): ?>
+                                                        <span class="reviewer-age">(Age <?php echo htmlspecialchars($review['reviewer_age']); ?>)</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div>
+                                                    <?php if (!empty($review['source_name'])): ?>
+                                                        <span class="review-source"><?php echo htmlspecialchars($review['source_name']); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($review['review_date'])): ?>
+                                                        <span class="review-date"><?php echo formatDate($review['review_date']); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="review-rating">
+                                                <?php echo renderStarRating($review['rating_normalised'], 5, 'sm'); ?>
+                                                <span style="margin-left: 10px; font-size: 14px; color: #666;">
+                                                    <?php echo htmlspecialchars($review['original_rating'] ?? number_format($review['rating_normalised'] * 5, 1) . '/5'); ?>
+                                                </span>
+                                            </div>
+                                            <?php if (!empty($review['review_text'])): ?>
+                                                <div class="review-text"><?php echo nl2br(htmlspecialchars($review['review_text'])); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="no-reviews">
+                                        <p>No reviews available for this book.</p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Add/Edit Review Form -->
+                            <div class="add-review-form">
+                                <h6 id="review-form-title">Add New Review</h6>
+                                <form id="review-form">
+                                    <div class="form-row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="reviewer_name">Reviewer Name</label>
+                                                <input type="text" class="form-control" id="reviewer_name" name="reviewer_name" maxlength="50">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label for="reviewer_age">Reviewer Age</label>
+                                                <input type="number" class="form-control" id="reviewer_age" name="reviewer_age" min="1" max="120">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label for="source_id">Source</label>
+                                                <select class="form-control" id="source_id" name="source_id">
+                                                    <option value="1">Stories from the Web</option>
+                                                    <option value="2">Goodreads</option>
+                                                    <option value="3">Amazon</option>
+                                                    <option value="4">Other</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="review_date">Review Date</label>
+                                                <input type="date" class="form-control" id="review_date" name="review_date">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Rating</label>
+                                                <div class="form-row-rating">
+                                                    <div class="rating-input">
+                                                        <?php for ($i = 0; $i < 5; $i++): ?>
+                                                            <svg class="rating-star" style="width: 24px; height: 24px; color: #e0e0e0; cursor: pointer; margin-right: 5px;" viewBox="0 0 24 24" fill="currentColor">
+                                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+                                                            </svg>
+                                                        <?php endfor; ?>
+                                                        <span class="rating-value">0/5</span>
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" id="rating_normalised" name="rating_normalised" value="0">
+                                                <input type="hidden" id="original_rating" name="original_rating" value="">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="review_text">Review Text</label>
+                                        <textarea class="form-control" id="review_text" name="review_text" rows="4"></textarea>
+                                    </div>
+
+                                    <div class="form-group text-right">
+                                        <button type="button" class="btn btn-secondary" id="cancel-review">Cancel</button>
+                                        <button type="submit" class="btn btn-primary" id="submit-review">Add Review</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Right Column - Image and Tags -->

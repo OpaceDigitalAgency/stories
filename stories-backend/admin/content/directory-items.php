@@ -20,6 +20,54 @@ error_reporting(E_ALL);
 $directory_items = [];
 $totalItems = 0;
 
+// Function to render star ratings
+function renderStarRating($rating, $maxRating = 5, $size = 'md') {
+    // Normalize rating to a scale of 0-5
+    $normalizedRating = $rating * $maxRating;
+
+    // Calculate full and half stars
+    $fullStars = floor($normalizedRating);
+    $halfStar = $normalizedRating - $fullStars >= 0.5;
+    $emptyStars = $maxRating - $fullStars - ($halfStar ? 1 : 0);
+
+    // Size classes
+    $sizeClasses = [
+        'sm' => 'width: 16px; height: 16px;',
+        'md' => 'width: 20px; height: 20px;',
+        'lg' => 'width: 24px; height: 24px;'
+    ];
+
+    $starStyle = $sizeClasses[$size] ?? $sizeClasses['md'];
+
+    $html = '<div class="star-rating" style="display: inline-flex; align-items: center;">';
+
+    // Full stars
+    for ($i = 0; $i < $fullStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    // Half star
+    if ($halfStar) {
+        $html .= '<svg style="' . $starStyle . ' color: #FFD166; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill-opacity="0.5"></path>
+            <path d="M12 17.27V2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"></path>
+        </svg>';
+    }
+
+    // Empty stars
+    for ($i = 0; $i < $emptyStars; $i++) {
+        $html .= '<svg style="' . $starStyle . ' color: #e0e0e0; margin-right: 2px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+        </svg>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+
 try {
     // Check if database connection is valid
     if (!$db) {
@@ -107,6 +155,9 @@ try {
                d.published_at,
                d.created_at,
                d.updated_at,
+               d.type,
+               d.average_rating,
+               d.review_count,
                c.name as category_name
         FROM directory_items d
         LEFT JOIN directory_categories c ON d.category_id = c.id
@@ -231,6 +282,18 @@ if (function_exists('renderEnhancedTable')) {
         $websiteUrl = !empty($item['website_url']) ?
             '<a href="' . htmlspecialchars($item['website_url']) . '" target="_blank">Visit</a>' : '-';
 
+        // Format the rating display for books
+        $ratingDisplay = '';
+        if ($item['type'] === 'book' && !empty($item['average_rating']) && !empty($item['review_count'])) {
+            $ratingDisplay = '<div style="display: flex; align-items: center;">';
+            $ratingDisplay .= renderStarRating($item['average_rating'], 5, 'sm');
+            $ratingDisplay .= '<span style="margin-left: 5px; font-size: 12px; color: #666;">(' .
+                              $item['review_count'] . ' ' . ($item['review_count'] == 1 ? 'review' : 'reviews') . ')</span>';
+            $ratingDisplay .= '</div>';
+        } else {
+            $ratingDisplay = '-';
+        }
+
         // Add the item to the table data
         $tableData[] = [
             'id' => $item['id'],
@@ -238,6 +301,8 @@ if (function_exists('renderEnhancedTable')) {
             'title' => $item['title'],
             'slug' => $item['slug'] ?? '',
             'category' => $item['category_name'] ?? 'None',
+            'type' => $item['type'] ?? 'general',
+            'rating' => $ratingDisplay,
             'website' => $websiteUrl,
             'featured' => $featured,
             'status' => $status,
@@ -254,6 +319,8 @@ if (function_exists('renderEnhancedTable')) {
         'title' => 'Title',
         'slug' => 'Slug',
         'category' => 'Category',
+        'type' => 'Type',
+        'rating' => 'Rating',
         'website' => 'Website',
         'featured' => 'Featured',
         'status' => 'Status',
@@ -278,7 +345,7 @@ if (function_exists('renderEnhancedTable')) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'totalItems' => $totalItems, // Pass the total items count from SQL query
-            'htmlFields' => ['website'], // Fields that should render HTML instead of escaping it
+            'htmlFields' => ['website', 'rating'], // Fields that should render HTML instead of escaping it
             'thumbnailField' => 'image', // Changed from 'cover_url' to 'image' to match the field name in tableData
             'thumbnailAltField' => 'title' // Use the title as alt text
         ]

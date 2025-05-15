@@ -258,6 +258,18 @@ if (function_exists('renderEnhancedTable')) {
         // Format the created date
         $createdDate = date('M j, Y', strtotime($story['created_at']));
 
+        // Format reviews information
+        $reviewsInfo = '';
+        if (isset($story['review_count']) && $story['review_count'] > 0) {
+            $rating = isset($story['average_rating']) ? round($story['average_rating'] * 5, 1) : 0;
+            $reviewsInfo = '<div class="rating-display">';
+            $reviewsInfo .= '<span class="rating-value">' . $rating . '/5</span> ';
+            $reviewsInfo .= '<span class="review-count">(' . $story['review_count'] . ' reviews)</span>';
+            $reviewsInfo .= '</div>';
+        } else {
+            $reviewsInfo = '<span class="no-reviews">No reviews</span>';
+        }
+
         // Add the item to the table data
         $tableData[] = [
             'id' => $story['id'],
@@ -265,6 +277,7 @@ if (function_exists('renderEnhancedTable')) {
             'title' => $story['title'],
             'author' => $story['author_name'] ?? 'Unknown',
             'status' => $status,
+            'reviews' => $reviewsInfo,
             'tags' => $story['tags'] ?? '',
             'created' => $createdDate
         ];
@@ -275,6 +288,7 @@ if (function_exists('renderEnhancedTable')) {
         'title' => 'Title',
         'author' => 'Author',
         'status' => 'Status',
+        'reviews' => 'Reviews',
         'tags' => 'Tags',
         'created' => 'Created'
     ];
@@ -318,6 +332,7 @@ if (function_exists('renderEnhancedTable')) {
             'thumbnailField' => 'image',
             'thumbnailAltField' => 'title',
             'editableFields' => $editableFields,
+            'htmlFields' => ['reviews', 'status'], // Fields that should render HTML
             'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
             'itemsPerPage' => $perPage,
             'currentPage' => $page,

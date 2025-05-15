@@ -2944,49 +2944,73 @@ function submitReviewForm() {
 function editReview(reviewId) {
     console.log('editReview function called with ID:', reviewId);
     
-    const reviewItem = document.getElementById('review-' + reviewId);
-    if (!reviewItem) {
-        console.error('Review item not found for ID:', reviewId);
-        return;
-    }
+    try {
+        const reviewItem = document.getElementById('review-' + reviewId);
+        console.log('Review item element:', reviewItem);
+        
+        if (!reviewItem) {
+            console.error('Review item not found for ID:', reviewId);
+            alert('Error: Review item not found for ID: ' + reviewId);
+            return;
+        }
 
-    // Get review data from data attributes
-    const reviewerName = reviewItem.getAttribute('data-reviewer-name');
-    const reviewerAge = reviewItem.getAttribute('data-reviewer-age');
-    const sourceId = reviewItem.getAttribute('data-source-id');
-    const reviewDate = reviewItem.getAttribute('data-review-date');
-    const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
-    const originalRating = reviewItem.getAttribute('data-original-rating');
-    const reviewText = reviewItem.getAttribute('data-review-text');
-    
-    // Reset the form first
-    const reviewForm = document.getElementById('review-form');
-    if (reviewForm) {
-        reviewForm.reset();
-    }
+        // Get review data from data attributes
+        console.log('Getting data attributes from review item');
+        const reviewerName = reviewItem.getAttribute('data-reviewer-name');
+        const reviewerAge = reviewItem.getAttribute('data-reviewer-age');
+        const sourceId = reviewItem.getAttribute('data-source-id');
+        const reviewDate = reviewItem.getAttribute('data-review-date');
+        const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
+        const originalRating = reviewItem.getAttribute('data-original-rating');
+        const reviewText = reviewItem.getAttribute('data-review-text');
+        
+        console.log('Data attributes retrieved:', {
+            reviewerName,
+            reviewerAge,
+            sourceId,
+            reviewDate,
+            ratingNormalised,
+            originalRating,
+            reviewText
+        });
+        
+        // Reset the form first
+        console.log('Resetting form');
+        const reviewForm = document.getElementById('review-form');
+        if (reviewForm) {
+            reviewForm.reset();
+        }
 
-    // Populate the form
-    document.getElementById('review_id').value = reviewId;
-    document.getElementById('reviewer_name').value = reviewerName || '';
-    document.getElementById('reviewer_age').value = reviewerAge || '';
-    document.getElementById('source_id').value = sourceId || '1';
-    document.getElementById('review_date').value = reviewDate || '';
-    document.getElementById('rating_normalised').value = ratingNormalised || '0';
-    document.getElementById('original_rating').value = originalRating || '';
-    document.getElementById('review_text').value = reviewText || '';
-    
-    // Update the form title in the modal
-    document.getElementById('review-form-modal-title').textContent = 'Edit Review';
-    
-    // Update the submit button text
-    document.getElementById('submit-review').textContent = 'Update Review';
-    
-    // Update the star rating
-    const starRating = parseFloat(ratingNormalised) * 5;
-    updateStarRating(starRating);
-    
-    // Show the modal
-    $('#review-form-modal').modal('show');
+        // Populate the form
+        console.log('Populating form fields');
+        document.getElementById('review_id').value = reviewId;
+        document.getElementById('reviewer_name').value = reviewerName || '';
+        document.getElementById('reviewer_age').value = reviewerAge || '';
+        document.getElementById('source_id').value = sourceId || '1';
+        document.getElementById('review_date').value = reviewDate || '';
+        document.getElementById('rating_normalised').value = ratingNormalised || '0';
+        document.getElementById('original_rating').value = originalRating || '';
+        document.getElementById('review_text').value = reviewText || '';
+        
+        // Update the form title in the modal
+        console.log('Updating form title and button text');
+        document.getElementById('review-form-modal-title').textContent = 'Edit Review';
+        
+        // Update the submit button text
+        document.getElementById('submit-review').textContent = 'Update Review';
+        
+        // Update the star rating
+        console.log('Updating star rating');
+        const starRating = parseFloat(ratingNormalised) * 5;
+        updateStarRating(starRating);
+        
+        // Show the modal
+        console.log('Showing modal');
+        $('#review-form-modal').modal('show');
+    } catch (error) {
+        console.error('Error in editReview function:', error);
+        alert('Error in editReview function: ' + error.message);
+    }
 }
 </script>
 

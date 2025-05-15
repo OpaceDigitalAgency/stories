@@ -2845,7 +2845,33 @@ $(document).ready(function() {
         $('#submit-review').text('Add Review');
         
         // Reset the star rating
-        resetStarRating();
+        function localResetStarRating() {
+            console.log('localResetStarRating called');
+            
+            const stars = document.querySelectorAll('.rating-star');
+            const ratingValueDisplay = document.querySelector('.rating-value');
+            const ratingNormalisedInput = document.getElementById('rating_normalised');
+            const originalRatingInput = document.getElementById('original_rating');
+            
+            if (!stars.length || !ratingValueDisplay) {
+                console.error('Missing stars or rating value display elements');
+                return;
+            }
+            
+            // Reset stars to gray
+            stars.forEach(star => {
+                star.style.color = '#e0e0e0';
+            });
+            
+            // Reset rating value display
+            ratingValueDisplay.textContent = '0/5';
+            
+            // Reset hidden inputs
+            if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
+            if (originalRatingInput) originalRatingInput.value = '';
+        }
+        
+        localResetStarRating();
         
         // Show the modal
         $('#review-form-modal').modal('show');
@@ -3002,7 +3028,43 @@ function editReview(reviewId) {
         // Update the star rating
         console.log('Updating star rating');
         const starRating = parseFloat(ratingNormalised) * 5;
-        updateStarRating(starRating);
+        
+        // Define a local updateStarRating function to avoid dependency issues
+        function localUpdateStarRating(rating) {
+            console.log('localUpdateStarRating called with rating:', rating);
+            
+            const stars = document.querySelectorAll('.rating-star');
+            const ratingValueDisplay = document.querySelector('.rating-value');
+            
+            if (!stars.length || !ratingValueDisplay) {
+                console.error('Missing stars or rating value display elements');
+                return;
+            }
+            
+            // Update stars
+            stars.forEach((star, index) => {
+                const highlighted = index < rating;
+                if (highlighted) {
+                    star.style.color = '#ffc107'; // Yellow color
+                } else {
+                    star.style.color = '#e0e0e0'; // Gray color
+                }
+            });
+            
+            // Update rating value display
+            const displayText = rating.toFixed(1) + '/5';
+            ratingValueDisplay.textContent = displayText;
+            
+            // Also update the hidden input field
+            const ratingNormalisedInput = document.getElementById('rating_normalised');
+            if (ratingNormalisedInput) {
+                const normalizedValue = (rating / 5).toFixed(2);
+                ratingNormalisedInput.value = normalizedValue;
+            }
+        }
+        
+        // Use the local function instead of the global one
+        localUpdateStarRating(starRating);
         
         // Show the modal
         console.log('Showing modal');

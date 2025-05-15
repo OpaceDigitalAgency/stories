@@ -39,8 +39,12 @@ function migrateReviews($db) {
         'total_reviews_migrated' => 0,
         'books_with_reviews' => 0,
         'books_not_found' => 0,
-        'errors' => []
+        'errors' => [],
+        'duplicates_skipped' => 0
     ];
+    
+    // Track processed reviewers to prevent duplicates within the same import
+    $processedReviewers = [];
 
     try {
         // Begin transaction
@@ -166,8 +170,23 @@ function migrateReviews($db) {
                             echo "<p class='info'>Processing review by '{$originalReviewerName}', normalized to '{$normalizedName}'</p>";
                             migrateFlushOutput();
                             
-                            // Check if a review with the same normalized reviewer name already exists for this book
-                            // This uses a more robust comparison that handles different spacing, case, etc.
+                            // First check if this reviewer name appears multiple times in the current batch of reviews
+                            $isDuplicate = false;
+                            foreach ($processedReviewers as $processedReviewer) {
+                                if ($processedReviewer['book_id'] == $book['id'] &&
+                                    strtolower(trim($processedReviewer['name'])) == $normalizedName) {
+                                    $isDuplicate = true;
+                                    break;
+                                }
+                            }
+                            
+                            if ($isDuplicate) {
+                                echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (found in current batch) for book '{$book['title']}'</p>";
+                                migrateFlushOutput();
+                                continue;
+                            }
+                            
+                            // Then check if a review with the same normalized reviewer name already exists in the database
                             $checkStmt = $db->prepare("
                                 SELECT id, reviewer_name FROM reviews
                                 WHERE book_id = ? AND
@@ -181,6 +200,12 @@ function migrateReviews($db) {
                                 migrateFlushOutput();
                                 continue;
                             }
+                            
+                            // Add this reviewer to the processed list to prevent duplicates within the same import
+                            $processedReviewers[] = [
+                                'book_id' => $book['id'],
+                                'name' => $reviewerName
+                            ];
                             
                             // Insert the review into the new system
                             $insertStmt = $db->prepare("
@@ -389,6 +414,56 @@ function migrateReviews($db) {
 
                             foreach ($reviews as $review) {
                                 try {
+                                    // Clean reviewer name - remove ALL asterisks and normalize
+                                    $originalReviewerName = $review['reviewer_name'];
+                                    $reviewerName = preg_replace('/\*\*/', '', $originalReviewerName); // Remove all ** sequences
+                                    $reviewerName = trim($reviewerName);
+                                    
+                                    // Normalize the reviewer name for comparison (remove extra spaces, lowercase)
+                                    $normalizedName = strtolower(trim(preg_replace('/\s+/', ' ', $reviewerName)));
+                                    
+                                    echo "<p class='info'>Processing review by '{$originalReviewerName}', normalized to '{$normalizedName}'</p>";
+                                    migrateFlushOutput();
+                                    
+                                    // First check if this reviewer name appears multiple times in the current batch of reviews
+                                    $isDuplicate = false;
+                                    foreach ($processedReviewers as $processedReviewer) {
+                                        if ($processedReviewer['book_id'] == $bookId &&
+                                            strtolower(trim($processedReviewer['name'])) == $normalizedName) {
+                                            $isDuplicate = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if ($isDuplicate) {
+                                        echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (found in current batch) for book ID: {$bookId}</p>";
+                                        migrateFlushOutput();
+                                        $stats['duplicates_skipped']++;
+                                        continue;
+                                    }
+                                    
+                                    // Then check if a review with the same normalized reviewer name already exists in the database
+                                    $checkStmt = $db->prepare("
+                                        SELECT id, reviewer_name FROM reviews
+                                        WHERE book_id = ? AND
+                                              LOWER(TRIM(REPLACE(REPLACE(reviewer_name, '**', ''), '  ', ' '))) = ?
+                                    ");
+                                    $checkStmt->execute([$bookId, $normalizedName]);
+                                    $existingReview = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                                    
+                                    if ($existingReview) {
+                                        echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (matches existing review by '{$existingReview['reviewer_name']}') for book ID: {$bookId}</p>";
+                                        migrateFlushOutput();
+                                        $stats['duplicates_skipped']++;
+                                        continue;
+                                    }
+                                    
+                                    // Add this reviewer to the processed list to prevent duplicates within the same import
+                                    $processedReviewers[] = [
+                                        'book_id' => $bookId,
+                                        'name' => $reviewerName
+                                    ];
+                                    
                                     // Insert the review into the new system
                                     $insertStmt = $db->prepare("
                                         INSERT INTO reviews (
@@ -419,7 +494,7 @@ function migrateReviews($db) {
                                     $insertStmt->execute([
                                         ':book_id' => $bookId,
                                         ':source_id' => 1, // Stories from the Web source
-                                        ':reviewer_name' => $review['reviewer_name'],
+                                        ':reviewer_name' => $reviewerName,
                                         ':reviewer_age' => $review['reviewer_age'],
                                         ':original_rating' => $review['original_rating'],
                                         ':rating_value' => $review['rating_value'],
@@ -429,7 +504,7 @@ function migrateReviews($db) {
                                     ]);
 
                                     $stats['total_reviews_migrated']++;
-                                    echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                                    echo "<p class='info'>Migrated review by {$reviewerName}, rating: {$review['original_rating']}</p>";
                                     migrateFlushOutput();
                                 } catch (Exception $e) {
                                     $stats['errors'][] = "Error inserting review for book {$bookId}: " . $e->getMessage();
@@ -511,6 +586,56 @@ function migrateReviews($db) {
 
                                 foreach ($reviews as $review) {
                                     try {
+                                        // Clean reviewer name - remove ALL asterisks and normalize
+                                        $originalReviewerName = $review['reviewer_name'];
+                                        $reviewerName = preg_replace('/\*\*/', '', $originalReviewerName); // Remove all ** sequences
+                                        $reviewerName = trim($reviewerName);
+                                        
+                                        // Normalize the reviewer name for comparison (remove extra spaces, lowercase)
+                                        $normalizedName = strtolower(trim(preg_replace('/\s+/', ' ', $reviewerName)));
+                                        
+                                        echo "<p class='info'>Processing review by '{$originalReviewerName}', normalized to '{$normalizedName}'</p>";
+                                        migrateFlushOutput();
+                                        
+                                        // First check if this reviewer name appears multiple times in the current batch of reviews
+                                        $isDuplicate = false;
+                                        foreach ($processedReviewers as $processedReviewer) {
+                                            if ($processedReviewer['book_id'] == $book['id'] &&
+                                                strtolower(trim($processedReviewer['name'])) == $normalizedName) {
+                                                $isDuplicate = true;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if ($isDuplicate) {
+                                            echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (found in current batch) for book '{$book['title']}'</p>";
+                                            migrateFlushOutput();
+                                            $stats['duplicates_skipped']++;
+                                            continue;
+                                        }
+                                        
+                                        // Then check if a review with the same normalized reviewer name already exists in the database
+                                        $checkStmt = $db->prepare("
+                                            SELECT id, reviewer_name FROM reviews
+                                            WHERE book_id = ? AND
+                                                  LOWER(TRIM(REPLACE(REPLACE(reviewer_name, '**', ''), '  ', ' '))) = ?
+                                        ");
+                                        $checkStmt->execute([$book['id'], $normalizedName]);
+                                        $existingReview = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                                        
+                                        if ($existingReview) {
+                                            echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (matches existing review by '{$existingReview['reviewer_name']}') for book '{$book['title']}'</p>";
+                                            migrateFlushOutput();
+                                            $stats['duplicates_skipped']++;
+                                            continue;
+                                        }
+                                        
+                                        // Add this reviewer to the processed list to prevent duplicates within the same import
+                                        $processedReviewers[] = [
+                                            'book_id' => $book['id'],
+                                            'name' => $reviewerName
+                                        ];
+                                        
                                         // Insert the review into the new system
                                         $insertStmt = $db->prepare("
                                             INSERT INTO reviews (
@@ -539,7 +664,7 @@ function migrateReviews($db) {
                                         ");
 
                                         // Truncate reviewer name to 50 characters to avoid database errors
-                                        $reviewerName = substr($review['reviewer_name'], 0, 50);
+                                        $reviewerName = substr($reviewerName, 0, 50);
 
                                         $insertStmt->execute([
                                             ':book_id' => $book['id'],
@@ -554,7 +679,7 @@ function migrateReviews($db) {
                                         ]);
 
                                         $stats['total_reviews_migrated']++;
-                                        echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                                        echo "<p class='info'>Migrated review by {$reviewerName}, rating: {$review['original_rating']}</p>";
                                         migrateFlushOutput();
                                     } catch (Exception $e) {
                                         $stats['errors'][] = "Error inserting review for book {$book['id']}: " . $e->getMessage();
@@ -648,6 +773,56 @@ function migrateReviews($db) {
 
                                             foreach ($bookData['reviews'] as $review) {
                                                 try {
+                                                    // Clean reviewer name - remove ALL asterisks and normalize
+                                                    $originalReviewerName = $review['reviewer_name'];
+                                                    $reviewerName = preg_replace('/\*\*/', '', $originalReviewerName); // Remove all ** sequences
+                                                    $reviewerName = trim($reviewerName);
+                                                    
+                                                    // Normalize the reviewer name for comparison (remove extra spaces, lowercase)
+                                                    $normalizedName = strtolower(trim(preg_replace('/\s+/', ' ', $reviewerName)));
+                                                    
+                                                    echo "<p class='info'>Processing review by '{$originalReviewerName}', normalized to '{$normalizedName}'</p>";
+                                                    migrateFlushOutput();
+                                                    
+                                                    // First check if this reviewer name appears multiple times in the current batch of reviews
+                                                    $isDuplicate = false;
+                                                    foreach ($processedReviewers as $processedReviewer) {
+                                                        if ($processedReviewer['book_id'] == $bookId &&
+                                                            strtolower(trim($processedReviewer['name'])) == $normalizedName) {
+                                                            $isDuplicate = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    
+                                                    if ($isDuplicate) {
+                                                        echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (found in current batch) for book ID: {$bookId}</p>";
+                                                        migrateFlushOutput();
+                                                        $stats['duplicates_skipped']++;
+                                                        continue;
+                                                    }
+                                                    
+                                                    // Then check if a review with the same normalized reviewer name already exists in the database
+                                                    $checkStmt = $db->prepare("
+                                                        SELECT id, reviewer_name FROM reviews
+                                                        WHERE book_id = ? AND
+                                                              LOWER(TRIM(REPLACE(REPLACE(reviewer_name, '**', ''), '  ', ' '))) = ?
+                                                    ");
+                                                    $checkStmt->execute([$bookId, $normalizedName]);
+                                                    $existingReview = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                                                    
+                                                    if ($existingReview) {
+                                                        echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (matches existing review by '{$existingReview['reviewer_name']}') for book ID: {$bookId}</p>";
+                                                        migrateFlushOutput();
+                                                        $stats['duplicates_skipped']++;
+                                                        continue;
+                                                    }
+                                                    
+                                                    // Add this reviewer to the processed list to prevent duplicates within the same import
+                                                    $processedReviewers[] = [
+                                                        'book_id' => $bookId,
+                                                        'name' => $reviewerName
+                                                    ];
+                                                    
                                                     // Insert the review into the new system
                                                     $insertStmt = $db->prepare("
                                                         INSERT INTO reviews (
@@ -676,7 +851,7 @@ function migrateReviews($db) {
                                                     ");
 
                                                     // Truncate reviewer name to 50 characters to avoid database errors
-                                                    $reviewerName = substr($review['reviewer_name'], 0, 50);
+                                                    $reviewerName = substr($reviewerName, 0, 50);
 
                                                     $insertStmt->execute([
                                                         ':book_id' => $bookId,
@@ -691,7 +866,7 @@ function migrateReviews($db) {
                                                     ]);
 
                                                     $stats['total_reviews_migrated']++;
-                                                    echo "<p class='info'>Migrated review by {$review['reviewer_name']}, rating: {$review['original_rating']}</p>";
+                                                    echo "<p class='info'>Migrated review by {$reviewerName}, rating: {$review['original_rating']}</p>";
                                                     migrateFlushOutput();
                                                 } catch (Exception $e) {
                                                     $stats['errors'][] = "Error inserting review for book $bookId: " . $e->getMessage();
@@ -729,6 +904,7 @@ function migrateReviews($db) {
         echo "<p class='success'>Found reviews for {$stats['books_with_reviews']} books</p>";
         echo "<p class='success'>Books not found in database: {$stats['books_not_found']}</p>";
         echo "<p class='success'>Migrated {$stats['total_reviews_migrated']} reviews</p>";
+        echo "<p class='success'>Skipped {$stats['duplicates_skipped']} duplicate reviews</p>";
 
         if (!empty($stats['errors'])) {
             echo "<h4>Errors:</h4>";

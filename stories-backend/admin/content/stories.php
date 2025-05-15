@@ -86,7 +86,7 @@ try {
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
 
-        // Get stories with pagination - include author information through story_authors
+        // Get stories with pagination - simplified query without GROUP BY
         $query = "
             SELECT s.id,
                    s.title,
@@ -105,26 +105,9 @@ try {
                    s.is_ai_enhanced,
                    s.cover_url,
                    s.created_at,
-                   s.updated_at,
-                   (SELECT GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ')
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = s.id) as author_names,
-                   (SELECT GROUP_CONCAT(DISTINCT a.id SEPARATOR ',')
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = s.id) as author_ids,
-                   (SELECT GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ')
-                    FROM story_tags st
-                    JOIN tags t ON st.tag_id = t.id
-                    WHERE st.story_id = s.id) as tag_names
+                   s.updated_at
            FROM stories s
             $whereClause
-            GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
-                     s.featured, s.average_rating, s.review_count,
-                     s.estimated_reading_time, s.is_sponsored, s.age_group,
-                     s.needs_moderation, s.is_self_published, s.is_ai_enhanced,
-                     s.cover_url, s.created_at, s.updated_at
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
@@ -146,47 +129,52 @@ try {
         }
         echo '</div>';
 
-        // Process the stories and their authors
-        $stories = [];
-        foreach ($allStories as $story) {
-            // Split author names and IDs into arrays
-            $authorNames = $story['author_names'] ? explode(',', $story['author_names']) : [];
-            $authorIds = $story['author_ids'] ? explode(',', $story['author_ids']) : [];
-
-            // Format author name for display
-            $story['author_name'] = $authorNames ? implode(', ', $authorNames) : 'Unknown';
-            $story['author_id'] = $authorIds ? $authorIds[0] : null; // Keep first author ID for compatibility
-
-            // Remove the concatenated fields from display
-            unset($story['author_names']);
-            unset($story['author_ids']);
-
-            $stories[] = $story;
-        }
-
-        // Get tags for each story
-        foreach ($stories as $index => $storyItem) {
-
-            // Get tags for the story
+        // Process the stories - get authors and tags separately
+        $stories = $allStories;
+        
+        // Get authors for each story
+        foreach ($stories as $index => $story) {
             try {
+                // Get author information
+                $stmt = $db->prepare("
+                    SELECT GROUP_CONCAT(a.name SEPARATOR ', ') as author_name,
+                           GROUP_CONCAT(a.id SEPARATOR ',') as author_id
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = ?
+                ");
+                $stmt->execute([$story['id']]);
+                $authorInfo = $stmt->fetch();
+                
+                if ($authorInfo && isset($authorInfo['author_name'])) {
+                    $stories[$index]['author_name'] = $authorInfo['author_name'];
+                    $stories[$index]['author_id'] = $authorInfo['author_id'];
+                } else {
+                    $stories[$index]['author_name'] = 'Unknown';
+                    $stories[$index]['author_id'] = null;
+                }
+                
+                // Get tags for the story
                 $stmt = $db->prepare("
                     SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
                     FROM story_tags st
                     JOIN tags t ON st.tag_id = t.id
                     WHERE st.story_id = ?
                 ");
-                $stmt->execute([$storyItem['id']]);
+                $stmt->execute([$story['id']]);
                 $tags = $stmt->fetch();
-
+                
                 if ($tags && isset($tags['tags'])) {
                     $stories[$index]['tags'] = $tags['tags'];
                 } else {
                     $stories[$index]['tags'] = '';
                 }
             } catch (Exception $e) {
+                $stories[$index]['author_name'] = 'Unknown';
+                $stories[$index]['author_id'] = null;
                 $stories[$index]['tags'] = '';
+                error_log("Error getting author/tags for story {$story['id']}: " . $e->getMessage());
             }
-
         }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());

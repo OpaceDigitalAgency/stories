@@ -131,6 +131,20 @@ try {
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $allStories = $stmt->fetchAll();
+        
+        // Debug output
+        echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">';
+        echo '<h4>Debug Information</h4>';
+        echo '<p>Query executed: ' . htmlspecialchars($query) . '</p>';
+        echo '<p>Parameters: ' . htmlspecialchars(print_r($params, true)) . '</p>';
+        echo '<p>Total items: ' . $totalItems . '</p>';
+        echo '<p>Number of stories returned: ' . count($allStories) . '</p>';
+        if (count($allStories) > 0) {
+            echo '<p>First story: ' . htmlspecialchars(print_r($allStories[0], true)) . '</p>';
+        } else {
+            echo '<p>No stories returned from query.</p>';
+        }
+        echo '</div>';
 
         // Process the stories and their authors
         $stories = [];

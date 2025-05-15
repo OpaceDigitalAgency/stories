@@ -155,21 +155,29 @@ function migrateReviews($db) {
 
                     foreach ($reviews as $review) {
                         try {
-                            // Clean reviewer name - remove any asterisks
-                            $reviewerName = preg_replace('/^\*\*/', '', $review['reviewer_name']);
-                            $reviewerName = preg_replace('/\*\*$/', '', $reviewerName);
+                            // Clean reviewer name - remove ALL asterisks and normalize
+                            $originalReviewerName = $review['reviewer_name'];
+                            $reviewerName = preg_replace('/\*\*/', '', $originalReviewerName); // Remove all ** sequences
                             $reviewerName = trim($reviewerName);
                             
-                            // Check if a review with the same reviewer name already exists for this book
-                            $checkStmt = $db->prepare("
-                                SELECT COUNT(*) FROM reviews
-                                WHERE book_id = ? AND LOWER(TRIM(reviewer_name)) = LOWER(?)
-                            ");
-                            $checkStmt->execute([$book['id'], $reviewerName]);
-                            $exists = $checkStmt->fetchColumn() > 0;
+                            // Normalize the reviewer name for comparison (remove extra spaces, lowercase)
+                            $normalizedName = strtolower(trim(preg_replace('/\s+/', ' ', $reviewerName)));
                             
-                            if ($exists) {
-                                echo "<p class='warning'>Skipping duplicate review by {$reviewerName} for book {$book['title']}</p>";
+                            echo "<p class='info'>Processing review by '{$originalReviewerName}', normalized to '{$normalizedName}'</p>";
+                            migrateFlushOutput();
+                            
+                            // Check if a review with the same normalized reviewer name already exists for this book
+                            // This uses a more robust comparison that handles different spacing, case, etc.
+                            $checkStmt = $db->prepare("
+                                SELECT id, reviewer_name FROM reviews
+                                WHERE book_id = ? AND
+                                      LOWER(TRIM(REPLACE(REPLACE(reviewer_name, '**', ''), '  ', ' '))) = ?
+                            ");
+                            $checkStmt->execute([$book['id'], $normalizedName]);
+                            $existingReview = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($existingReview) {
+                                echo "<p class='warning'>Skipping duplicate review by '{$reviewerName}' (matches existing review by '{$existingReview['reviewer_name']}') for book '{$book['title']}'</p>";
                                 migrateFlushOutput();
                                 continue;
                             }
@@ -753,13 +761,22 @@ function migrateReviews($db) {
  */
 function extractReviewsFromMarkdown($content) {
     $reviews = [];
+    
+    // Helper function to clean reviewer names
+    $cleanReviewerName = function($name) {
+        // Remove all asterisks from the name
+        $name = preg_replace('/\*\*/', '', $name);
+        // Trim whitespace
+        $name = trim($name);
+        // Truncate to 50 characters
+        $name = substr($name, 0, 50);
+        return $name;
+    };
 
     // Pattern 1: Look for "**Reviewer Name:** Name **Reviewer Age:** X **Review:** Text **Indicative Rating:** Y/Z" format
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*(?:Reviewer\s*)?Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -780,9 +797,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 2: Look for "**Reviewer: Name** Age: X Review: Text Rating: Y/Z" format
     if (preg_match_all('/\*\*Reviewer:\s*([^\*]+)\*\*\s*Age:\s*(\d+)\s*Review:\s*([^\*]+)(?:Indicative\s*)?Rating:\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -803,9 +818,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 3: Look for "Name, aged X: Review. Rating: Y/Z" format (The Whizz Pop Chocolate Shop format)
     if (preg_match_all('/([^,]+), aged (\d+): (.*?)(?:Rating:|rating:) (\d+(?:\.\d+)?)\/(\d+)/is', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -826,9 +839,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 4: Look for "**Reviewer Name:** Name **Age:** X **Review:** Text **Indicative Rating:** Y/Z" format
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -849,9 +860,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 5: Look for "**Reviewer:** Name **Age:** X **Review:** Text. **Indicative Rating:** Y/Z" format
     if (preg_match_all('/\*\*Reviewer:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*(\d+)\s*\*\*Review:\*\*\s*([^\.]+(?:\.[^\.]+)*)\.\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]) . '.';
             $ratingValue = (float)$match[4];
@@ -872,9 +881,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 6: Look for "**Reviewer:** Name **Age:** Not provided **Review:** Text **Indicative Rating:** Y/Z" format
     if (preg_match_all('/\*\*Reviewer(?:\s*Name)?:\*\*\s*([^\*]+)\s*\*\*Age:\*\*\s*Not provided\s*\*\*Review:\*\*\s*([^\*]+)\s*\*\*Indicative Rating:\*\*\s*(\d+(?:\.\d+)?)\/(\d+)/i', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = null;
             $reviewText = trim($match[2]);
             $ratingValue = (float)$match[3];
@@ -895,9 +902,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 7: Look for "Name, aged X: Text. Rating: Y/Z" format
     if (preg_match_all('/([^,]+), aged (\d+): (.*?)\. Rating: (\d+(?:\.\d+)?)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -918,9 +923,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 8: Look for "Name, aged X\nReview: Text Rating: Y/Z" format (Moon Pie format)
     if (preg_match_all('/([^,\n]+), aged (\d+)\s*\n\s*Review: "(.*?)" Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -951,12 +954,11 @@ function extractReviewsFromMarkdown($content) {
             $reviewerAge = null;
 
             if (preg_match('/([^,]+), aged (\d+)/', $reviewerInfo, $infoMatch)) {
-                $reviewerName = trim($infoMatch[1]);
+                $reviewerName = $cleanReviewerName($infoMatch[1]);
                 $reviewerAge = (int)$infoMatch[2];
+            } else {
+                $reviewerName = $cleanReviewerName($reviewerName);
             }
-
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
 
             $reviews[] = [
                 'reviewer_name' => $reviewerName,
@@ -973,9 +975,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 10: Look for "**Name, aged X** Review: Text Rating: Y/Z" format (The Money, Stan, Big Lauren and Me format)
     if (preg_match_all('/\*\*([^*]+), aged (\d+)\*\* Review: (.*?) Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];
@@ -996,9 +996,7 @@ function extractReviewsFromMarkdown($content) {
     // Pattern 11: Look for "Name, aged X: Text Rating: Y/Z" format (The Whizz Pop Chocolate Shop format)
     if (preg_match_all('/([^,\n]+), aged (\d+): (.*?) Rating: (\d+)\/(\d+)/s', $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
-            $reviewerName = trim($match[1]);
-            // Truncate reviewer name to 50 characters to avoid database errors
-            $reviewerName = substr($reviewerName, 0, 50);
+            $reviewerName = $cleanReviewerName($match[1]);
             $reviewerAge = (int)$match[2];
             $reviewText = trim($match[3]);
             $ratingValue = (float)$match[4];

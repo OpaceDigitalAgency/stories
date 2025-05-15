@@ -2494,32 +2494,7 @@ function submitReviewForm() {
  * Initialize review actions (edit, delete)
  */
 function initReviewActions() {
-    // Add New Review button
-    const addNewReviewBtn = document.getElementById('add-new-review-btn');
-    if (addNewReviewBtn) {
-        addNewReviewBtn.addEventListener('click', function() {
-            // Reset the form
-            const reviewForm = document.getElementById('review-form');
-            if (reviewForm) {
-                reviewForm.reset();
-            }
-            
-            // Clear the review ID
-            document.getElementById('review_id').value = '';
-            
-            // Reset the form title
-            document.getElementById('review-form-modal-title').textContent = 'Add New Review';
-            
-            // Reset the submit button text
-            document.getElementById('submit-review').textContent = 'Add Review';
-            
-            // Reset the star rating
-            resetStarRating();
-            
-            // Show the modal
-            $('#review-form-modal').modal('show');
-        });
-    }
+    // Add New Review button is handled by jQuery in the modal script
 
     // Edit review buttons
     const editButtons = document.querySelectorAll('.edit-review');
@@ -2700,34 +2675,6 @@ function initStarRating() {
  * Update the star rating display
  * @param {number} rating - The rating value (1-5)
  */
-/**
- * Reset the star rating to 0
- */
-function resetStarRating() {
-    console.log('resetStarRating called');
-    
-    const stars = document.querySelectorAll('.rating-star');
-    const ratingValueDisplay = document.querySelector('.rating-value');
-    const ratingNormalisedInput = document.getElementById('rating_normalised');
-    const originalRatingInput = document.getElementById('original_rating');
-
-    if (!stars.length || !ratingValueDisplay) {
-        console.error('Missing stars or rating value display elements');
-        return;
-    }
-
-    // Reset stars to gray
-    stars.forEach(star => {
-        star.style.color = '#e0e0e0';
-    });
-
-    // Reset rating value display
-    ratingValueDisplay.textContent = '0/5';
-
-    // Reset hidden inputs
-    if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
-    if (originalRatingInput) originalRatingInput.value = '';
-}
 
 /**
  * Update the star rating display

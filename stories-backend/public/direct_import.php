@@ -30,9 +30,9 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Function to check if a column exists in a table
-function columnExists($pdo, $table, $column) {
+function columnExists($db, $table, $column) {
     try {
-        $stmt = $pdo->prepare("SHOW COLUMNS FROM $table LIKE ?");
+        $stmt = $db->prepare("SHOW COLUMNS FROM $table LIKE ?");
         $stmt->execute([$column]);
         return $stmt->rowCount() > 0;
     } catch (Exception $e) {
@@ -42,11 +42,11 @@ function columnExists($pdo, $table, $column) {
 
 // Function to process a story (renamed from processBook to avoid conflict)
 function processStory($title, $content, $author_name, $author_age = null, $author_location = null, $tags = [], $cover_image = null, $excerpt = '') {
-    global $pdo;
+    global $db; // Changed from $pdo to $db to match the variable name in db-connect.php
     
     try {
         // Start a transaction
-        $pdo->beginTransaction();
+        $db->beginTransaction();
         
         // Debug output
         echo "Importing: $title<br>";
@@ -93,7 +93,7 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
         echo "\"$author_slug\"<br><br>";
         
         // Check if author exists
-        $stmt = $pdo->prepare("SELECT id FROM authors WHERE slug = ?");
+        $stmt = $db->prepare("SELECT id FROM authors WHERE slug = ?");
         $stmt->execute([$author_slug]);
         $author = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -111,9 +111,9 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
             $avatar_url = '../uploads/default-avatar.png';
             
             // Insert new author
-            $stmt = $pdo->prepare("INSERT INTO authors (name, slug, age, location, avatar_url) VALUES (?, ?, ?, ?, ?)");
+            $stmt = $db->prepare("INSERT INTO authors (name, slug, age, location, avatar_url) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$author_name, $author_slug, $author_age, $author_location, $avatar_url]);
-            $author_id = $pdo->lastInsertId();
+            $author_id = $db->lastInsertId();
             
             echo "AUTHOR CREATED:<br>";
             echo "\"$author_name\" with ID: $author_id<br><br>";
@@ -127,7 +127,7 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
         if ($cover_image) {
             // Check if the image already exists in the media table
             $image_filename = basename($cover_image);
-            $stmt = $pdo->prepare("SELECT id, file_path FROM media WHERE file_name = ?");
+            $stmt = $db->prepare("SELECT id, file_path FROM media WHERE file_name = ?");
             $stmt->execute([$image_filename]);
             $media = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -137,9 +137,9 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
             } else {
                 // Insert new media record
                 $file_path = '../uploads/' . $image_filename;
-                $stmt = $pdo->prepare("INSERT INTO media (file_name, file_path, file_type, upload_date) VALUES (?, ?, ?, NOW())");
+                $stmt = $db->prepare("INSERT INTO media (file_name, file_path, file_type, upload_date) VALUES (?, ?, ?, NOW())");
                 $stmt->execute([$image_filename, $file_path, 'image/png']);
-                $media_id = $pdo->lastInsertId();
+                $media_id = $db->lastInsertId();
                 $cover_url = $file_path;
                 echo "Created new media record (ID: $media_id) for image: $image_filename<br><br>";
             }
@@ -163,14 +163,14 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
         $slug = createSlug($title);
         
         // Check if story exists
-        $stmt = $pdo->prepare("SELECT id FROM stories WHERE slug = ?");
+        $stmt = $db->prepare("SELECT id FROM stories WHERE slug = ?");
         $stmt->execute([$slug]);
         $existing_story = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($existing_story) {
             // Update existing story
             // FIXED: Removed allow_reviews from the SQL query
-            $stmt = $pdo->prepare("UPDATE stories SET 
+            $stmt = $db->prepare("UPDATE stories SET 
                 title = ?, 
                 content = ?, 
                 author_id = ?, 
@@ -189,7 +189,7 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
             
             // Process tags for existing story
             // First remove existing tags
-            $stmt = $pdo->prepare("DELETE FROM story_tags WHERE story_id = ?");
+            $stmt = $db->prepare("DELETE FROM story_tags WHERE story_id = ?");
             $stmt->execute([$existing_story['id']]);
             
             // Add new tags
@@ -197,31 +197,31 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
                 $tag_slug = createSlug($tag_name);
                 
                 // Check if tag exists
-                $stmt = $pdo->prepare("SELECT id FROM tags WHERE slug = ?");
+                $stmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
                 $stmt->execute([$tag_slug]);
                 $tag = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if (!$tag) {
                     // Create new tag
-                    $stmt = $pdo->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                    $stmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
                     $stmt->execute([$tag_name, $tag_slug]);
-                    $tag_id = $pdo->lastInsertId();
+                    $tag_id = $db->lastInsertId();
                 } else {
                     $tag_id = $tag['id'];
                 }
                 
                 // Link tag to story
-                $stmt = $pdo->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+                $stmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
                 $stmt->execute([$existing_story['id'], $tag_id]);
             }
             
             echo "Updated existing story: $title (ID: {$existing_story['id']})<br><br>";
-            $pdo->commit();
+            $db->commit();
             return ['status' => 'updated', 'id' => $existing_story['id']];
         } else {
             // Insert new story
             // FIXED: Removed allow_reviews from the SQL query
-            $stmt = $pdo->prepare("INSERT INTO stories (
+            $stmt = $db->prepare("INSERT INTO stories (
                 title, 
                 slug, 
                 content, 
@@ -239,38 +239,38 @@ function processStory($title, $content, $author_name, $author_age = null, $autho
                 $excerpt, 
                 $cover_url
             ]);
-            $story_id = $pdo->lastInsertId();
+            $story_id = $db->lastInsertId();
             
             // Process tags for new story
             foreach ($tags as $tag_name) {
                 $tag_slug = createSlug($tag_name);
                 
                 // Check if tag exists
-                $stmt = $pdo->prepare("SELECT id FROM tags WHERE slug = ?");
+                $stmt = $db->prepare("SELECT id FROM tags WHERE slug = ?");
                 $stmt->execute([$tag_slug]);
                 $tag = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if (!$tag) {
                     // Create new tag
-                    $stmt = $pdo->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
+                    $stmt = $db->prepare("INSERT INTO tags (name, slug) VALUES (?, ?)");
                     $stmt->execute([$tag_name, $tag_slug]);
-                    $tag_id = $pdo->lastInsertId();
+                    $tag_id = $db->lastInsertId();
                 } else {
                     $tag_id = $tag['id'];
                 }
                 
                 // Link tag to story
-                $stmt = $pdo->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
+                $stmt = $db->prepare("INSERT INTO story_tags (story_id, tag_id) VALUES (?, ?)");
                 $stmt->execute([$story_id, $tag_id]);
             }
             
             echo "Created new story: $title (ID: $story_id)<br><br>";
-            $pdo->commit();
+            $db->commit();
             return ['status' => 'created', 'id' => $story_id];
         }
     } catch (Exception $e) {
         // Roll back the transaction
-        $pdo->rollBack();
+        $db->rollBack();
         echo "Transaction rolled back<br><br>";
         echo "Error processing story: " . $e->getMessage() . "<br><br>";
         return ['status' => 'error', 'message' => $e->getMessage()];

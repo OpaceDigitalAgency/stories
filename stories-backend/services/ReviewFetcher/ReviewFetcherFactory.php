@@ -1,7 +1,7 @@
 <?php
 /**
  * Review Fetcher Factory
- * 
+ *
  * This class creates and manages review fetcher instances.
  */
 
@@ -14,27 +14,27 @@ class ReviewFetcherFactory {
      * @var PDO Database connection
      */
     private $db;
-    
+
     /**
      * @var array Review sources from the database
      */
     private $sources = [];
-    
+
     /**
      * @var array Fetcher instances
      */
     private $fetchers = [];
-    
+
     /**
      * Constructor
-     * 
+     *
      * @param PDO $db Database connection
      */
     public function __construct(PDO $db) {
         $this->db = $db;
         $this->loadSources();
     }
-    
+
     /**
      * Load review sources from the database
      */
@@ -47,19 +47,19 @@ class ReviewFetcherFactory {
             $this->sources = [];
         }
     }
-    
+
     /**
      * Get all review sources
-     * 
+     *
      * @return array Array of review sources
      */
     public function getSources(): array {
         return $this->sources;
     }
-    
+
     /**
      * Get a review fetcher by source ID
-     * 
+     *
      * @param int $sourceId The source ID
      * @return ReviewFetcherInterface|null The review fetcher or null if not found
      */
@@ -68,7 +68,7 @@ class ReviewFetcherFactory {
         if (isset($this->fetchers[$sourceId])) {
             return $this->fetchers[$sourceId];
         }
-        
+
         // Find the source
         $source = null;
         foreach ($this->sources as $s) {
@@ -77,76 +77,82 @@ class ReviewFetcherFactory {
                 break;
             }
         }
-        
+
         if (!$source) {
             return null;
         }
-        
+
         // Create the appropriate fetcher based on the source name
         $fetcher = null;
-        
+
         switch (strtolower($source['name'])) {
             case 'google books':
                 $fetcher = new GoogleBooksReviewFetcher($this->db, $sourceId);
                 break;
-                
+
             case 'open library':
                 $fetcher = new OpenLibraryReviewFetcher($this->db, $sourceId);
                 break;
-                
+
             case 'goodreads':
                 $fetcher = new GoodreadsReviewFetcher($this->db, $sourceId);
                 break;
-                
+
             case 'amazon':
                 $fetcher = new AmazonReviewFetcher($this->db, $sourceId);
                 break;
-                
+
             default:
                 // Unknown source
                 return null;
         }
-        
+
         // Cache the fetcher
         $this->fetchers[$sourceId] = $fetcher;
-        
+
         return $fetcher;
     }
-    
+
     /**
      * Get all available fetchers
-     * 
+     *
      * @return array Array of review fetchers
      */
     public function getAllFetchers(): array {
         $fetchers = [];
-        
+
         foreach ($this->sources as $source) {
             // Skip internal sources
             if (!$source['is_third_party']) {
                 continue;
             }
-            
+
             $fetcher = $this->getFetcher($source['id']);
             if ($fetcher && $fetcher->isConfigured()) {
                 $fetchers[] = $fetcher;
             }
         }
-        
+
         return $fetchers;
     }
-    
+
     /**
      * Fetch reviews for a book from all available sources
-     * 
+     *
      * @param string $isbn The ISBN of the book
      * @param array $sourceIds Optional array of source IDs to use (default: all)
      * @param int $limit Maximum number of reviews per source
-     * @return array Array of reviews from all sources
+     * @param bool $logErrors Whether to log errors (default: true)
+     * @return array Array of reviews from all sources and any errors encountered
      */
-    public function fetchReviewsFromAllSources(string $isbn, array $sourceIds = [], int $limit = 5): array {
-        $allReviews = [];
-        
+    public function fetchReviewsFromAllSources(string $isbn, array $sourceIds = [], int $limit = 5, bool $logErrors = true): array {
+        $result = [
+            'reviews' => [],
+            'errors' => [],
+            'sources_attempted' => 0,
+            'sources_successful' => 0
+        ];
+
         // Get fetchers to use
         $fetchers = [];
         if (empty($sourceIds)) {
@@ -161,17 +167,50 @@ class ReviewFetcherFactory {
                 }
             }
         }
-        
+
         // Fetch reviews from each source
         foreach ($fetchers as $fetcher) {
+            $result['sources_attempted']++;
+            $sourceName = $fetcher->getSourceName();
+
             try {
                 $reviews = $fetcher->fetchReviewsByISBN($isbn, $limit);
-                $allReviews = array_merge($allReviews, $reviews);
+
+                if (!empty($reviews)) {
+                    $result['reviews'] = array_merge($result['reviews'], $reviews);
+                    $result['sources_successful']++;
+                } else {
+                    $errorMessage = $fetcher->getLastError() ?: "No reviews found";
+                    $result['errors'][$sourceName] = $errorMessage;
+
+                    if ($logErrors) {
+                        error_log("No reviews found from {$sourceName} for ISBN {$isbn}: {$errorMessage}");
+                    }
+                }
             } catch (\Exception $e) {
-                error_log("Error fetching reviews from {$fetcher->getSourceName()}: " . $e->getMessage());
+                $errorMessage = $e->getMessage();
+                $result['errors'][$sourceName] = $errorMessage;
+
+                if ($logErrors) {
+                    error_log("Error fetching reviews from {$sourceName} for ISBN {$isbn}: {$errorMessage}");
+                }
             }
         }
-        
-        return $allReviews;
+
+        return $result;
+    }
+
+    /**
+     * Fetch reviews for a book from all available sources (legacy method)
+     *
+     * @param string $isbn The ISBN of the book
+     * @param array $sourceIds Optional array of source IDs to use (default: all)
+     * @param int $limit Maximum number of reviews per source
+     * @return array Array of reviews from all sources
+     * @deprecated Use fetchReviewsFromAllSources() instead
+     */
+    public function fetchReviews(string $isbn, array $sourceIds = [], int $limit = 5): array {
+        $result = $this->fetchReviewsFromAllSources($isbn, $sourceIds, $limit);
+        return $result['reviews'];
     }
 }

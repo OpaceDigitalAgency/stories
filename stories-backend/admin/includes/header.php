@@ -543,6 +543,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $isContentDir ? 'directory-items.php' : $contentPrefix . 'directory-items.php'; ?>" class="dropdown-item <?php echo $currentPage === 'directory' ? 'active' : ''; ?>">
                                 <i class="fas fa-folder" aria-hidden="true"></i> Directory
                             </a>
+                            <a href="<?php echo $isContentDir ? 'reviews.php' : $contentPrefix . 'reviews.php'; ?>" class="dropdown-item <?php echo $currentPage === 'reviews' ? 'active' : ''; ?>">
+                                <i class="fas fa-star" aria-hidden="true"></i> Reviews
+                            </a>
                             <a href="<?php echo $isContentDir ? 'ai-tools.php' : $contentPrefix . 'ai-tools.php'; ?>" class="dropdown-item <?php echo $currentPage === 'ai-tools' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Tools
                             </a>

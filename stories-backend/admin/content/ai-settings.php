@@ -22,6 +22,14 @@ $usage = ['total_generations' => 0, 'total_cost' => 0];
 $availableModels = [];
 $promptTemplates = [];
 $refreshModels = isset($_GET['refresh_models']) && $_GET['refresh_models'] === '1';
+$activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
+
+// Review AI settings
+$reviewAiSettings = [
+    'default_model' => 'gpt-4o',
+    'enable_ai_analysis' => true,
+    'reviews_per_page' => 10
+];
 
 // Function to fetch available models from OpenAI
 function fetchAvailableModels($apiKey) {
@@ -94,7 +102,7 @@ function fetchAvailableModels($apiKey) {
 
 try {
     // Check if required tables exist
-    $requiredTables = ['ai_providers', 'ai_generations', 'ai_usage', 'ai_prompt_templates'];
+    $requiredTables = ['ai_providers', 'ai_generations', 'ai_usage', 'ai_prompt_templates', 'settings'];
     $missingTables = [];
 
     foreach ($requiredTables as $table) {
@@ -106,6 +114,27 @@ try {
 
     if (!empty($missingTables)) {
         throw new Exception("Required tables do not exist: " . implode(', ', $missingTables) . ". Please run setup_ai_tables.php first.");
+    }
+
+    // Get review AI settings
+    $reviewSettingsQuery = $db->prepare("
+        SELECT setting_name, setting_value
+        FROM settings
+        WHERE setting_name IN ('ai_default_model', 'enable_ai_analysis', 'reviews_per_page')
+    ");
+    $reviewSettingsQuery->execute();
+    $reviewSettings = $reviewSettingsQuery->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    if (isset($reviewSettings['ai_default_model'])) {
+        $reviewAiSettings['default_model'] = $reviewSettings['ai_default_model'];
+    }
+
+    if (isset($reviewSettings['enable_ai_analysis'])) {
+        $reviewAiSettings['enable_ai_analysis'] = (bool)$reviewSettings['enable_ai_analysis'];
+    }
+
+    if (isset($reviewSettings['reviews_per_page'])) {
+        $reviewAiSettings['reviews_per_page'] = (int)$reviewSettings['reviews_per_page'];
     }
 
     // Check if OpenAI provider exists, create if not
@@ -181,6 +210,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([json_encode($config)]);
             $_SESSION['success'] = 'OpenAI settings updated successfully';
+            $activeTab = 'general';
+        } elseif (isset($_POST['update_review_ai_settings'])) {
+            // Update review AI settings
+            $db->beginTransaction();
+
+            try {
+                // Update AI default model
+                $defaultModel = $_POST['ai_default_model'];
+                updateSetting($db, 'ai_default_model', $defaultModel, 'ai');
+
+                // Update enable AI analysis
+                $enableAiAnalysis = isset($_POST['enable_ai_analysis']) ? 1 : 0;
+                updateSetting($db, 'enable_ai_analysis', $enableAiAnalysis, 'reviews');
+
+                // Update reviews per page
+                $reviewsPerPage = (int)$_POST['reviews_per_page'];
+                updateSetting($db, 'reviews_per_page', $reviewsPerPage, 'reviews', true);
+
+                $db->commit();
+                $_SESSION['success'] = 'Review AI settings updated successfully';
+                $activeTab = 'reviews';
+
+                // Update local settings
+                $reviewAiSettings['default_model'] = $defaultModel;
+                $reviewAiSettings['enable_ai_analysis'] = (bool)$enableAiAnalysis;
+                $reviewAiSettings['reviews_per_page'] = $reviewsPerPage;
+            } catch (Exception $e) {
+                $db->rollBack();
+                throw $e;
+            }
         } elseif (isset($_POST['add_template'])) {
             // Add new prompt template
             $stmt = $db->prepare("
@@ -232,6 +291,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// Helper function to update a setting
+function updateSetting($db, $settingName, $settingValue, $settingGroup, $isPublic = false) {
+    // Check if the setting exists
+    $checkStmt = $db->prepare("SELECT COUNT(*) FROM settings WHERE setting_name = ?");
+    $checkStmt->execute([$settingName]);
+    $settingExists = $checkStmt->fetchColumn() > 0;
+
+    if ($settingExists) {
+        // Update existing setting
+        $stmt = $db->prepare("
+            UPDATE settings
+            SET setting_value = ?, updated_at = NOW()
+            WHERE setting_name = ?
+        ");
+        $stmt->execute([$settingValue, $settingName]);
+    } else {
+        // Insert new setting
+        $stmt = $db->prepare("
+            INSERT INTO settings (setting_name, setting_value, setting_group, is_public)
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([$settingName, $settingValue, $settingGroup, $isPublic ? 1 : 0]);
+    }
+}
+
 // Set page variables for header
 $pageTitle = 'AI Settings';
 $currentPage = 'ai-settings';
@@ -279,30 +363,74 @@ if ($refreshModels) {
 
 <div class="content-section">
     <div class="section-body">
-        <!-- Usage Overview -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Usage Overview (Last 30 Days)</h3>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col">
-                        <h4>Total Generations</h4>
-                        <p class="h2"><?php echo number_format($usage['total_generations']); ?></p>
+        <!-- Tabs for different settings sections -->
+        <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link <?php echo $activeTab === 'general' ? 'active' : ''; ?>"
+                   id="general-tab"
+                   data-toggle="tab"
+                   href="#general-settings"
+                   role="tab"
+                   aria-controls="general-settings"
+                   aria-selected="<?php echo $activeTab === 'general' ? 'true' : 'false'; ?>">
+                    <i class="fas fa-cog"></i> General
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $activeTab === 'reviews' ? 'active' : ''; ?>"
+                   id="reviews-tab"
+                   data-toggle="tab"
+                   href="#reviews-settings"
+                   role="tab"
+                   aria-controls="reviews-settings"
+                   aria-selected="<?php echo $activeTab === 'reviews' ? 'true' : 'false'; ?>">
+                    <i class="fas fa-star"></i> Reviews
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $activeTab === 'templates' ? 'active' : ''; ?>"
+                   id="templates-tab"
+                   data-toggle="tab"
+                   href="#templates-settings"
+                   role="tab"
+                   aria-controls="templates-settings"
+                   aria-selected="<?php echo $activeTab === 'templates' ? 'true' : 'false'; ?>">
+                    <i class="fas fa-file-alt"></i> Templates
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="settingsTabContent">
+            <!-- General Settings Tab -->
+            <div class="tab-pane fade <?php echo $activeTab === 'general' ? 'show active' : ''; ?>"
+                 id="general-settings"
+                 role="tabpanel"
+                 aria-labelledby="general-tab">
+
+                <!-- Usage Overview -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Usage Overview (Last 30 Days)</h3>
                     </div>
-                    <div class="col">
-                        <h4>Total Cost</h4>
-                        <p class="h2">$<?php echo number_format($usage['total_cost'], 2); ?></p>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col">
+                                <h4>Total Generations</h4>
+                                <p class="h2"><?php echo number_format($usage['total_generations']); ?></p>
+                            </div>
+                            <div class="col">
+                                <h4>Total Cost</h4>
+                                <p class="h2">$<?php echo number_format($usage['total_cost'], 2); ?></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- OpenAI Settings -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>OpenAI Settings</h3>
-            </div>
+                <!-- OpenAI Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>OpenAI Settings</h3>
+                    </div>
             <div class="card-body">
                 <?php
                 // Display last refresh time
@@ -411,51 +539,109 @@ if ($refreshModels) {
             </div>
         </div>
 
-        <!-- Prompt Templates -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>AI Prompt Templates</h3>
-                <div class="btn-group">
-                    <a href="/add-default-prompt-templates.php" class="btn btn-success">
-                        <i class="fas fa-sync"></i> Add Default Templates
-                    </a>
-                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTemplateModal">
-                        <i class="fas fa-plus"></i> Add Template
-                    </button>
+            </div>
+
+            <!-- Reviews Settings Tab -->
+            <div class="tab-pane fade <?php echo $activeTab === 'reviews' ? 'show active' : ''; ?>"
+                 id="reviews-settings"
+                 role="tabpanel"
+                 aria-labelledby="reviews-tab">
+
+                <!-- Review AI Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Review AI Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" class="settings-form">
+                            <div class="form-group">
+                                <label for="ai_default_model">Default AI Model for Review Analysis</label>
+                                <select class="form-control" id="ai_default_model" name="ai_default_model">
+                                    <option value="gpt-4.1" <?php echo $reviewAiSettings['default_model'] === 'gpt-4.1' ? 'selected' : ''; ?>>GPT-4.1 (Latest)</option>
+                                    <option value="gpt-4o" <?php echo $reviewAiSettings['default_model'] === 'gpt-4o' ? 'selected' : ''; ?>>GPT-4o (Balanced)</option>
+                                    <option value="o4-mini" <?php echo $reviewAiSettings['default_model'] === 'o4-mini' ? 'selected' : ''; ?>>o4-mini (Fast)</option>
+                                    <option value="o3" <?php echo $reviewAiSettings['default_model'] === 'o3' ? 'selected' : ''; ?>>o3 (Powerful)</option>
+                                    <option value="o3-mini" <?php echo $reviewAiSettings['default_model'] === 'o3-mini' ? 'selected' : ''; ?>>o3-mini (Balanced)</option>
+                                    <option value="gpt-3.5-turbo" <?php echo $reviewAiSettings['default_model'] === 'gpt-3.5-turbo' ? 'selected' : ''; ?>>GPT-3.5 Turbo (Economical)</option>
+                                </select>
+                                <small class="form-text text-muted">Select the AI model to use for review analysis. GPT-4 models provide better analysis but cost more.</small>
+                            </div>
+
+                            <div class="form-check mt-3">
+                                <input type="checkbox" class="form-check-input" id="enable_ai_analysis" name="enable_ai_analysis" value="1" <?php echo $reviewAiSettings['enable_ai_analysis'] ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="enable_ai_analysis">Enable AI Analysis</label>
+                                <small class="form-text text-muted d-block">When enabled, reviews will be analyzed by AI to identify age-related content and generate summaries.</small>
+                            </div>
+
+                            <h4 class="mt-4">Display Settings</h4>
+                            <div class="form-group">
+                                <label for="reviews_per_page">Reviews Per Page</label>
+                                <input type="number" class="form-control" id="reviews_per_page" name="reviews_per_page" value="<?php echo (int)$reviewAiSettings['reviews_per_page']; ?>" min="1" max="100">
+                                <small class="form-text text-muted">Number of reviews to display per page on the frontend.</small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" name="update_review_ai_settings" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Review AI Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">
-                    Prompt templates are used to generate dynamic prompts for AI image and text generation.
-                    They can include variables that will be replaced with actual content when used.
-                </p>
 
-                <ul class="nav nav-tabs" id="templateTabs" role="tablist">
-                    <?php
-                    $contentTypes = [
-                        'story' => 'Stories',
-                        'blog_post' => 'Blog Posts',
-                        'author' => 'Authors',
-                        'game' => 'Games',
-                        'ai_tool' => 'AI Tools',
-                        'directory' => 'Directory',
-                        'general' => 'General'
-                    ];
+            <!-- Templates Tab -->
+            <div class="tab-pane fade <?php echo $activeTab === 'templates' ? 'show active' : ''; ?>"
+                 id="templates-settings"
+                 role="tabpanel"
+                 aria-labelledby="templates-tab">
 
-                    $first = true;
-                    foreach ($contentTypes as $type => $label): ?>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $first ? 'active' : ''; ?>"
-                               id="<?php echo $type; ?>-tab"
-                               data-toggle="tab"
-                               href="#<?php echo $type; ?>-templates"
-                               role="tab">
-                                <?php echo $label; ?>
+                <!-- Prompt Templates -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3>AI Prompt Templates</h3>
+                        <div class="btn-group">
+                            <a href="/add-default-prompt-templates.php" class="btn btn-success">
+                                <i class="fas fa-sync"></i> Add Default Templates
                             </a>
-                        </li>
-                        <?php $first = false; ?>
-                    <?php endforeach; ?>
-                </ul>
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTemplateModal">
+                                <i class="fas fa-plus"></i> Add Template
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Prompt templates are used to generate dynamic prompts for AI image and text generation.
+                            They can include variables that will be replaced with actual content when used.
+                        </p>
+
+                        <ul class="nav nav-tabs" id="templateTabs" role="tablist">
+                            <?php
+                            $contentTypes = [
+                                'story' => 'Stories',
+                                'blog_post' => 'Blog Posts',
+                                'author' => 'Authors',
+                                'game' => 'Games',
+                                'ai_tool' => 'AI Tools',
+                                'directory' => 'Directory',
+                                'general' => 'General',
+                                'review' => 'Reviews'
+                            ];
+
+                            $first = true;
+                            foreach ($contentTypes as $type => $label): ?>
+                                <li class="nav-item">
+                                    <a class="nav-link <?php echo $first ? 'active' : ''; ?>"
+                                       id="<?php echo $type; ?>-tab"
+                                       data-toggle="tab"
+                                       href="#<?php echo $type; ?>-templates"
+                                       role="tab">
+                                        <?php echo $label; ?>
+                                    </a>
+                                </li>
+                                <?php $first = false; ?>
+                            <?php endforeach; ?>
+                        </ul>
 
                 <div class="tab-content mt-3" id="templateTabContent">
                     <?php

@@ -86,7 +86,7 @@ try {
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
 
-        // Get stories with pagination - simplified query with author and tags
+        // Get stories with pagination - include author information through story_authors
         $query = "
             SELECT s.id,
                    s.title,
@@ -106,23 +106,74 @@ try {
                    s.cover_url,
                    s.created_at,
                    s.updated_at,
-                   a.name as author_name,
-                   a.id as author_id,
-                   (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+                   (SELECT GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ')
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = s.id) as author_names,
+                   (SELECT GROUP_CONCAT(DISTINCT a.id SEPARATOR ',')
+                    FROM story_authors sa
+                    JOIN authors a ON sa.author_id = a.id
+                    WHERE sa.story_id = s.id) as author_ids,
+                   (SELECT GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ')
                     FROM story_tags st
                     JOIN tags t ON st.tag_id = t.id
-                    WHERE st.story_id = s.id) as tags
-            FROM stories s
-            LEFT JOIN story_authors sa ON s.id = sa.story_id
-            LEFT JOIN authors a ON sa.author_id = a.id
+                    WHERE st.story_id = s.id) as tag_names
+           FROM stories s
             $whereClause
+            GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
+                     s.featured, s.average_rating, s.review_count,
+                     s.estimated_reading_time, s.is_sponsored, s.age_group,
+                     s.needs_moderation, s.is_self_published, s.is_ai_enhanced,
+                     s.cover_url, s.created_at, s.updated_at
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
         $stmt = $db->prepare($query);
         $stmt->execute($params);
-        $stories = $stmt->fetchAll();
+        $allStories = $stmt->fetchAll();
 
+        // Process the stories and their authors
+        $stories = [];
+        foreach ($allStories as $story) {
+            // Split author names and IDs into arrays
+            $authorNames = $story['author_names'] ? explode(',', $story['author_names']) : [];
+            $authorIds = $story['author_ids'] ? explode(',', $story['author_ids']) : [];
+
+            // Format author name for display
+            $story['author_name'] = $authorNames ? implode(', ', $authorNames) : 'Unknown';
+            $story['author_id'] = $authorIds ? $authorIds[0] : null; // Keep first author ID for compatibility
+
+            // Remove the concatenated fields from display
+            unset($story['author_names']);
+            unset($story['author_ids']);
+
+            $stories[] = $story;
+        }
+
+        // Get tags for each story
+        foreach ($stories as $index => $storyItem) {
+
+            // Get tags for the story
+            try {
+                $stmt = $db->prepare("
+                    SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
+                    FROM story_tags st
+                    JOIN tags t ON st.tag_id = t.id
+                    WHERE st.story_id = ?
+                ");
+                $stmt->execute([$storyItem['id']]);
+                $tags = $stmt->fetch();
+
+                if ($tags && isset($tags['tags'])) {
+                    $stories[$index]['tags'] = $tags['tags'];
+                } else {
+                    $stories[$index]['tags'] = '';
+                }
+            } catch (Exception $e) {
+                $stories[$index]['tags'] = '';
+            }
+
+        }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());
         $stories = [];
@@ -157,8 +208,9 @@ $extraHeadContent = '
 <script src="../assets/js/live-search.js"></script>
 <!-- Add Inline Editing JS -->
 <script src="../assets/js/inline-editing.js"></script>
-<!-- Add Story Preview CSS -->
+<!-- Add Story Preview CSS and JS -->
 <link rel="stylesheet" href="../assets/css/story-preview.css">
+<script src="../assets/js/story-preview.js"></script>
 ';
 
 $pageActions = '
@@ -216,7 +268,6 @@ if (function_exists('renderLiveSearchComponent')) {
 
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
-
 
 // Include enhanced table component
 require_once __DIR__ . '/../includes/enhanced-table-component.php';

@@ -190,41 +190,53 @@ Configuration for automating the entire pipeline.
 
 ## Implementation Plan
 
-### Phase 1: Third-Party Review Fetcher
-- Implement the fetcher interface
-- Create Google Books API integration
-- Create Open Library API integration
-- Add matching logic for ISBNs and titles
+### Phase 1: Third-Party Review Fetcher ✅
+- Implement the fetcher interface ✅
+- Create Google Books API integration ✅
+- Create Open Library API integration ✅
+- Create Amazon review scraper ✅
+- Create Goodreads review scraper ✅
+- Add matching logic for ISBNs and titles ✅
 
-### Phase 2: Nightly Import Job
-- Create the update_reviews.php script
-- Implement duplicate detection
-- Add logging and error handling
-- Test with a small batch of books
+### Phase 2: Admin Interface for Reviews ✅
+- Create Reviews tab in Book Import Tool ✅
+- Implement pagination for books and reviews ✅
+- Add filtering options for reviews ✅
+- Add bulk actions for reviews ✅
+- Create review edit form ✅
+- Add review deletion functionality ✅
 
-### Phase 3: AI Enrichment
-- Set up OpenAI integration
-- Implement content analysis
-- Create summary generation
-- Build the age suitability report
+### Phase 3: Review Scraping Process ✅
+- Create book-import-scrape.php script ✅
+- Implement duplicate detection ✅
+- Add logging and error handling ✅
+- Add progress tracking ✅
+- Test with real books ✅
 
-### Phase 4: Frontend Updates
+### Phase 4: AI Enrichment
+- Set up OpenAI integration ✅
+- Implement content analysis ✅
+- Create summary generation ✅
+- Build the age suitability report ✅
+- Add AI analysis to review management ✅
+
+### Phase 5: Frontend Updates
 - Enhance the ReviewSection component
 - Implement faceted filters
 - Add AI summary display
 - Create detailed review pages
 
-### Phase 5: JSON-LD and SEO
+### Phase 6: JSON-LD and SEO
 - Create the ReviewJsonLd component
 - Implement on book detail pages
 - Test with Google's structured data testing tool
 
-### Phase 6: Author Images
+### Phase 7: Author Images
 - Implement the AuthorImageFetcher service
 - Create the image optimization pipeline
 - Update author records
 
-### Phase 7: Cron Jobs
+### Phase 8: Cron Jobs
 - Configure all scheduled tasks
 - Set up logging and monitoring
 - Test the entire pipeline
@@ -419,7 +431,7 @@ interface ReviewFetcherInterface {
      * @return array Array of review data
      */
     public function fetchReviewsByISBN(string $isbn): array;
-    
+
     /**
      * Match book data from an external source to our database
      *
@@ -441,26 +453,26 @@ namespace Services\ReviewFetcher;
 class GoogleBooksReviewFetcher implements ReviewFetcherInterface {
     private $apiKey;
     private $db;
-    
+
     public function __construct(\PDO $db, string $apiKey) {
         $this->db = $db;
         $this->apiKey = $apiKey;
     }
-    
+
     public function fetchReviewsByISBN(string $isbn): array {
         // Fetch from Google Books API
         $url = "https://www.googleapis.com/books/v1/volumes?q=isbn:{$isbn}&key={$this->apiKey}";
         $response = json_decode(file_get_contents($url), true);
-        
+
         $reviews = [];
         if (!empty($response['items'])) {
             $bookData = $response['items'][0]['volumeInfo'];
-            
+
             // Extract ratings information
             if (isset($bookData['averageRating']) && isset($bookData['ratingsCount'])) {
                 $averageRating = $bookData['averageRating'];
                 $ratingsCount = $bookData['ratingsCount'];
-                
+
                 // Create a synthetic review representing the aggregate
                 $reviews[] = [
                     'source_id' => 2, // Google Books source ID
@@ -483,7 +495,7 @@ class GoogleBooksReviewFetcher implements ReviewFetcherInterface {
                     ])
                 ];
             }
-            
+
             // Extract textual reviews if available
             if (isset($bookData['reviews'])) {
                 foreach ($bookData['reviews'] as $review) {
@@ -505,10 +517,10 @@ class GoogleBooksReviewFetcher implements ReviewFetcherInterface {
                 }
             }
         }
-        
+
         return $reviews;
     }
-    
+
     public function matchBookToDatabase(array $bookData): ?int {
         // Match by ISBN
         if (!empty($bookData['industryIdentifiers'])) {
@@ -521,19 +533,19 @@ class GoogleBooksReviewFetcher implements ReviewFetcherInterface {
                     ");
                     $stmt->execute([$isbn, $isbn]);
                     $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-                    
+
                     if ($result) {
                         return $result['id'];
                     }
                 }
             }
         }
-        
+
         // Match by title and author
         if (!empty($bookData['title']) && !empty($bookData['authors'][0])) {
             $title = $bookData['title'];
             $author = $bookData['authors'][0];
-            
+
             $stmt = $this->db->prepare("
                 SELECT di.id
                 FROM directory_items di
@@ -542,12 +554,12 @@ class GoogleBooksReviewFetcher implements ReviewFetcherInterface {
             ");
             $stmt->execute(["%{$title}%", "%{$author}%"]);
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-            
+
             if ($result) {
                 return $result['id'];
             }
         }
-        
+
         return null;
     }
 }
@@ -564,28 +576,28 @@ namespace Services\AI;
 class ReviewAnalyzer {
     private $openaiClient;
     private $db;
-    
+
     public function __construct(\PDO $db, $openaiApiKey) {
         $this->db = $db;
         $this->openaiClient = new \OpenAI\Client($openaiApiKey);
     }
-    
+
     public function analyzeReview(int $reviewId): array {
         // Get the review
         $stmt = $this->db->prepare("SELECT * FROM reviews WHERE id = ?");
         $stmt->execute([$reviewId]);
         $review = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         if (!$review) {
             throw new \Exception("Review not found");
         }
-        
+
         // Analyze for age suitability and content flags
         $analysis = $this->performContentAnalysis($review['review_text']);
-        
+
         // Generate AI summary
         $summary = $this->generateSummary($review['review_text']);
-        
+
         // Update the review with the analysis results
         $stmt = $this->db->prepare("
             UPDATE reviews
@@ -596,10 +608,10 @@ class ReviewAnalyzer {
                 metadata = JSON_SET(COALESCE(metadata, '{}'), '$.ai_analysis', ?)
             WHERE id = ?
         ");
-        
+
         $contentFlagsJson = json_encode($analysis['content_flags']);
         $analysisJson = json_encode($analysis);
-        
+
         $stmt->execute([
             $summary,
             $analysis['suitability_score'],
@@ -607,30 +619,30 @@ class ReviewAnalyzer {
             $analysisJson,
             $reviewId
         ]);
-        
+
         return [
             'review_id' => $reviewId,
             'summary' => $summary,
             'analysis' => $analysis
         ];
     }
-    
+
     private function performContentAnalysis(string $text): array {
         // Use OpenAI to analyze the text
         $prompt = "Analyze the following book review for age suitability and content flags.
                   Identify any language or themes that might be unsuitable for young readers.
                   Assign a suitability score from 0 to 10, where 10 is completely suitable for all ages.
                   List any content flags such as: violence, scary content, mature themes, harsh language, etc.
-                  
+
                   Review text: {$text}
-                  
+
                   Format your response as JSON with the following structure:
                   {
                     \"suitability_score\": number,
                     \"content_flags\": [string],
                     \"reasoning\": string
                   }";
-        
+
         $response = $this->openaiClient->chat()->create([
             'model' => 'gpt-4o',
             'messages' => [
@@ -639,18 +651,18 @@ class ReviewAnalyzer {
             ],
             'response_format' => ['type' => 'json_object']
         ]);
-        
+
         return json_decode($response->choices[0]->message->content, true);
     }
-    
+
     private function generateSummary(string $text): string {
         // Use OpenAI to generate a concise summary
         $prompt = "Summarize the following book review in a concise, helpful way that captures the key points and sentiment:
-                  
+
                   {$text}
-                  
+
                   Keep the summary under 100 words.";
-        
+
         $response = $this->openaiClient->chat()->create([
             'model' => 'gpt-4o',
             'messages' => [
@@ -658,7 +670,7 @@ class ReviewAnalyzer {
                 ['role' => 'user', 'content' => $prompt]
             ]
         ]);
-        
+
         return trim($response->choices[0]->message->content);
     }
 }
@@ -701,33 +713,33 @@ $booksUpdated = 0;
 
 foreach ($books as $book) {
     echo "Processing book: {$book['title']} (ID: {$book['id']})\n";
-    
+
     // Try each ISBN
     $isbns = array_filter([$book['isbn13'], $book['isbn']]);
-    
+
     if (empty($isbns)) {
         echo "  No ISBN available, skipping\n";
         continue;
     }
-    
+
     foreach ($isbns as $isbn) {
         echo "  Trying ISBN: $isbn\n";
-        
+
         // Try each fetcher
         foreach ($fetchers as $fetcher) {
             $fetcherName = get_class($fetcher);
             echo "    Using fetcher: $fetcherName\n";
-            
+
             try {
                 $reviews = $fetcher->fetchReviewsByISBN($isbn);
-                
+
                 if (empty($reviews)) {
                     echo "    No reviews found\n";
                     continue;
                 }
-                
+
                 echo "    Found " . count($reviews) . " reviews\n";
-                
+
                 // Import reviews
                 foreach ($reviews as $review) {
                     // Check for duplicates
@@ -740,12 +752,12 @@ foreach ($books as $book) {
                         $review['source_id'],
                         $review['reviewer_name']
                     ]);
-                    
+
                     if ($checkStmt->fetch()) {
                         echo "    Skipping duplicate review by {$review['reviewer_name']}\n";
                         continue;
                     }
-                    
+
                     // Insert review
                     $insertStmt = $db->prepare("
                         INSERT INTO reviews (
@@ -774,7 +786,7 @@ foreach ($books as $book) {
                             :metadata
                         )
                     ");
-                    
+
                     $insertStmt->execute([
                         ':book_id' => $book['id'],
                         ':source_id' => $review['source_id'],
@@ -788,15 +800,15 @@ foreach ($books as $book) {
                         ':review_text' => $review['review_text'],
                         ':metadata' => $review['metadata']
                     ]);
-                    
+
                     $reviewsImported++;
                     echo "    Imported review by {$review['reviewer_name']}\n";
                 }
-                
+
                 // Update aggregate values
                 updateBookAggregateValues($db, $book['id']);
                 $booksUpdated++;
-                
+
                 // Break after first successful fetcher
                 break 2;
             } catch (Exception $e) {
@@ -822,7 +834,7 @@ function updateBookAggregateValues($db, $bookId) {
     ");
     $aggregateStmt->execute([$bookId]);
     $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
-    
+
     // Update the book
     if ($aggregateValues['review_count'] > 0) {
         $stmt = $db->prepare("
@@ -834,7 +846,7 @@ function updateBookAggregateValues($db, $bookId) {
                 lowest_rating = ?
             WHERE id = ?
         ");
-        
+
         $stmt->execute([
             $aggregateValues['review_count'],
             $aggregateValues['average_rating'],
@@ -842,7 +854,7 @@ function updateBookAggregateValues($db, $bookId) {
             $aggregateValues['lowest_rating'],
             $bookId
         ]);
-        
+
         echo "  Updated aggregate values for book ID: $bookId\n";
     }
 }

@@ -577,6 +577,9 @@ $siteName = get_config('site.name', 'Stories From The Web');
                             <a href="<?php echo $isContentDir ? 'ai-settings.php' : $contentPrefix . 'ai-settings.php'; ?>" class="dropdown-item <?php echo $currentPage === 'ai-settings' ? 'active' : ''; ?>">
                                 <i class="fas fa-robot" aria-hidden="true"></i> AI Settings
                             </a>
+                            <a href="<?php echo $isContentDir ? 'book-import-tool.php' : $contentPrefix . 'book-import-tool.php'; ?>" class="dropdown-item <?php echo $currentPage === 'book-import-tool' ? 'active' : ''; ?>">
+                                <i class="fas fa-book-reader" aria-hidden="true"></i> Book Import Tool
+                            </a>
                             <?php if ($isPublicDir): ?>
                             <a href="../public/direct_import.php" class="dropdown-item <?php echo $currentPage === 'import' ? 'active' : ''; ?>">
                                 <i class="fas fa-file-import" aria-hidden="true"></i> Imports

@@ -1608,74 +1608,9 @@ if (isset($_SESSION['error'])) {
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Add/Edit Review Form -->
-                            <div class="add-review-form">
-                                <h6 id="review-form-title">Add New Review</h6>
-                                <form id="review-form">
-                                    <!-- Hidden field for review ID when editing -->
-                                    <input type="hidden" id="review_id" name="review_id" value="">
-                                    <div class="form-row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="reviewer_name">Reviewer Name</label>
-                                                <input type="text" class="form-control" id="reviewer_name" name="reviewer_name" maxlength="50">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label for="reviewer_age">Reviewer Age</label>
-                                                <input type="number" class="form-control" id="reviewer_age" name="reviewer_age" min="1" max="120">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label for="source_id">Source</label>
-                                                <select class="form-control" id="source_id" name="source_id">
-                                                    <option value="1">Stories from the Web</option>
-                                                    <option value="2">Goodreads</option>
-                                                    <option value="3">Amazon</option>
-                                                    <option value="4">Other</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="review_date">Review Date</label>
-                                                <input type="date" class="form-control" id="review_date" name="review_date">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Rating</label>
-                                                <div class="form-row-rating">
-                                                    <div class="rating-input">
-                                                        <?php for ($i = 0; $i < 5; $i++): ?>
-                                                            <svg class="rating-star" style="width: 24px; height: 24px; color: #e0e0e0; cursor: pointer; margin-right: 5px;" viewBox="0 0 24 24" fill="currentColor">
-                                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
-                                                            </svg>
-                                                        <?php endfor; ?>
-                                                        <span class="rating-value">0/5</span>
-                                                    </div>
-                                                </div>
-                                                <input type="hidden" id="rating_normalised" name="rating_normalised" value="0">
-                                                <input type="hidden" id="original_rating" name="original_rating" value="">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="review_text">Review Text</label>
-                                        <textarea class="form-control" id="review_text" name="review_text" rows="4"></textarea>
-                                    </div>
-
-                                    <div class="form-group text-right">
-                                        <button type="button" class="btn btn-secondary" id="cancel-review">Cancel</button>
-                                        <button type="submit" class="btn btn-primary" id="submit-review">Add Review</button>
-                                    </div>
-                                </form>
+                            <!-- Placeholder for review form - actual form moved outside main form -->
+                            <div class="add-review-form-placeholder" id="review-form-placeholder">
+                                <p>Review form will appear here when you click "Add New Review" or "Edit"</p>
                             </div>
                         </div>
                     </div>
@@ -2410,89 +2345,123 @@ function initReviewForm() {
     const reviewForm = document.getElementById('review-form');
     const submitButton = document.getElementById('submit-review');
     const cancelButton = document.getElementById('cancel-review');
-    const formTitle = document.getElementById('review-form-title');
-
+    
     if (!reviewForm) return;
 
-    // Handle form submission
-    reviewForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Get form data
-        const formData = new FormData(reviewForm);
-        
-        // Get the book ID from the URL parameter or input field
-        let bookId;
-        const urlParams = new URLSearchParams(window.location.search);
-        const idFromUrl = urlParams.get('id');
-        const idFromInput = document.querySelector('input[name="id"]')?.value;
-        
-        bookId = idFromUrl || idFromInput;
-        
-        if (!bookId) {
-            console.error('Could not find book ID from URL or input field');
-            alert('Error: Could not find book ID. Please try again.');
-            return;
-        }
-        
-        console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
-        formData.append('book_id', bookId);
-
-        // Determine if this is an add or update action
-        const reviewId = document.getElementById('review_id').value;
-        const action = reviewId ? 'update_review' : 'add_review';
-        formData.append('action', action);
-
-        // Log the form data for debugging
-        console.log('Submitting review form with action:', action);
-        console.log('Review ID:', reviewId);
-        console.log('Book ID:', bookId);
-        
-        // Log all form data
-        console.log('Form data:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
-        
-        // Send the request to the review handler
-        fetch('../handlers/review-handler.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json().catch(err => {
-                console.error('Error parsing JSON response:', err);
-                throw new Error('Invalid JSON response from server');
-            });
-        })
-        .then(data => {
-            console.log('Review response:', data);
-
-            if (data.success) {
-                // Show success message
-                alert(data.message);
-                
-                // Don't reload the page automatically, let the user inspect the console
-                if (confirm('Review saved successfully. Reload page to see changes?')) {
-                    // Only reload if user confirms
-                    window.location.href = window.location.href;
-                }
-            } else {
-                // Show error message
-                console.error('Error from server:', data.message || 'Unknown error');
-                alert('Error: ' + (data.message || 'Failed to save review'));
-            }
-        })
-        .catch(error => {
-            console.error('Error submitting review:', error);
-            alert('Error submitting review: ' + error.message);
+    // Handle submit button click
+    if (submitButton) {
+        submitButton.addEventListener('click', function() {
+            submitReviewForm();
         });
+    }
+
+    // Handle cancel button
+    if (cancelButton) {
+        cancelButton.addEventListener('click', function() {
+            // Reset the form
+            reviewForm.reset();
+
+            // Clear the review ID
+            document.getElementById('review_id').value = '';
+
+            // Reset the form title
+            document.getElementById('review-form-modal-title').textContent = 'Add New Review';
+
+            // Reset the submit button text
+            submitButton.textContent = 'Add Review';
+
+            // Reset the star rating
+            resetStarRating();
+            
+            // Hide the modal
+            $('#review-form-modal').modal('hide');
+        });
+    }
+}
+
+// Function to submit the review form
+function submitReviewForm() {
+    const reviewForm = document.getElementById('review-form');
+    if (!reviewForm) return;
+    
+    // Get form data
+    const formData = new FormData(reviewForm);
+        
+    // Get the book ID from the URL parameter or input field
+    let bookId;
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+    const idFromInput = document.querySelector('input[name="id"]')?.value;
+    
+    bookId = idFromUrl || idFromInput;
+    
+    if (!bookId) {
+        console.error('Could not find book ID from URL or input field');
+        alert('Error: Could not find book ID. Please try again.');
+        return;
+    }
+    
+    console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
+    formData.append('book_id', bookId);
+
+    // Determine if this is an add or update action
+    const reviewId = document.getElementById('review_id').value;
+    const action = reviewId ? 'update_review' : 'add_review';
+    formData.append('action', action);
+
+    // Log the form data for debugging
+    console.log('Submitting review form with action:', action);
+    console.log('Review ID:', reviewId);
+    console.log('Book ID:', bookId);
+    
+    // Log all form data
+    console.log('Form data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    // Send the request to the review handler
+    fetch('../handlers/review-handler.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json().catch(err => {
+            console.error('Error parsing JSON response:', err);
+            throw new Error('Invalid JSON response from server');
+        });
+    })
+    .then(data => {
+        console.log('Review response:', data);
+
+        if (data.success) {
+            // Show success message
+            alert(data.message);
+            
+            // Hide the modal
+            $('#review-form-modal').modal('hide');
+            
+            // Don't reload the page automatically, let the user inspect the console
+            if (confirm('Review saved successfully. Reload page to see changes?')) {
+                // Only reload if user confirms
+                window.location.href = window.location.href;
+            }
+        } else {
+            // Show error message
+            console.error('Error from server:', data.message || 'Unknown error');
+            alert('Error: ' + (data.message || 'Failed to save review'));
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting review:', error);
+        alert('Error submitting review: ' + error.message);
+    });
     });
 
     // Handle cancel button
@@ -2534,7 +2503,7 @@ function initReviewActions() {
             document.getElementById('review_id').value = '';
             
             // Reset the form title
-            document.getElementById('review-form-title').textContent = 'Add New Review';
+            document.getElementById('review-form-modal-title').textContent = 'Add New Review';
             
             // Reset the submit button text
             document.getElementById('submit-review').textContent = 'Add Review';
@@ -2542,8 +2511,8 @@ function initReviewActions() {
             // Reset the star rating
             resetStarRating();
             
-            // Scroll to the form
-            document.querySelector('.add-review-form').scrollIntoView({ behavior: 'smooth' });
+            // Show the modal
+            $('#review-form-modal').modal('show');
         });
     }
 
@@ -2582,6 +2551,12 @@ function initReviewActions() {
                 reviewText
             });
 
+            // Reset the form first
+            const reviewForm = document.getElementById('review-form');
+            if (reviewForm) {
+                reviewForm.reset();
+            }
+
             // Populate the form
             try {
                 console.log('Attempting to populate form fields...');
@@ -2615,8 +2590,8 @@ function initReviewActions() {
                 console.error('Error populating form:', error);
             }
 
-            // Update the form title
-            document.getElementById('review-form-title').textContent = 'Edit Review';
+            // Update the form title in the modal
+            document.getElementById('review-form-modal-title').textContent = 'Edit Review';
 
             // Update the submit button text
             document.getElementById('submit-review').textContent = 'Update Review';
@@ -2627,8 +2602,8 @@ function initReviewActions() {
             console.log('Calculated star rating (0-5 scale):', starRating);
             updateStarRating(starRating);
 
-            // Scroll to the form
-            document.querySelector('.add-review-form').scrollIntoView({ behavior: 'smooth' });
+            // Show the modal
+            $('#review-form-modal').modal('show');
         });
     });
 
@@ -2784,6 +2759,200 @@ function resetStarRating() {
     // Reset hidden inputs
     if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
     if (originalRatingInput) originalRatingInput.value = '';
+}
+</script>
+
+<!-- Review Form (moved outside main form to prevent nesting issues) -->
+<div class="modal fade" id="review-form-modal" tabindex="-1" role="dialog" aria-labelledby="review-form-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="review-form-modal-title">Add/Edit Review</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="review-form">
+                    <!-- Hidden field for review ID when editing -->
+                    <input type="hidden" id="review_id" name="review_id" value="">
+                    <div class="form-row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="reviewer_name">Reviewer Name</label>
+                                <input type="text" class="form-control" id="reviewer_name" name="reviewer_name" maxlength="50">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="reviewer_age">Reviewer Age</label>
+                                <input type="number" class="form-control" id="reviewer_age" name="reviewer_age" min="1" max="120">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="source_id">Source</label>
+                                <select class="form-control" id="source_id" name="source_id">
+                                    <option value="1">Stories from the Web</option>
+                                    <option value="2">Goodreads</option>
+                                    <option value="3">Amazon</option>
+                                    <option value="4">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="review_date">Review Date</label>
+                                <input type="date" class="form-control" id="review_date" name="review_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Rating</label>
+                                <div class="form-row-rating">
+                                    <div class="rating-input">
+                                        <?php for ($i = 0; $i < 5; $i++): ?>
+                                            <svg class="rating-star" style="width: 24px; height: 24px; color: #e0e0e0; cursor: pointer; margin-right: 5px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+                                            </svg>
+                                        <?php endfor; ?>
+                                        <span class="rating-value">0/5</span>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="rating_normalised" name="rating_normalised" value="0">
+                                <input type="hidden" id="original_rating" name="original_rating" value="">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="review_text">Review Text</label>
+                        <textarea class="form-control" id="review_text" name="review_text" rows="4"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancel-review">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit-review">Add Review</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update the review form handling to use the modal
+$(document).ready(function() {
+    // Show modal when "Add New Review" is clicked
+    $('#add-new-review-btn').on('click', function() {
+        // Reset the form
+        $('#review-form')[0].reset();
+        
+        // Clear the review ID
+        $('#review_id').val('');
+        
+        // Reset the form title
+        $('#review-form-modal-title').text('Add New Review');
+        
+        // Reset the submit button text
+        $('#submit-review').text('Add Review');
+        
+        // Reset the star rating
+        resetStarRating();
+        
+        // Show the modal
+        $('#review-form-modal').modal('show');
+    });
+    
+    // Handle form submission via the submit button
+    $('#submit-review').on('click', function() {
+        // Trigger the form submission handler
+        submitReviewForm();
+    });
+});
+
+// Function to submit the review form
+function submitReviewForm() {
+    // Get form data
+    const formData = new FormData(document.getElementById('review-form'));
+    
+    // Get the book ID from the URL parameter or input field
+    let bookId;
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+    const idFromInput = document.querySelector('input[name="id"]')?.value;
+    
+    bookId = idFromUrl || idFromInput;
+    
+    if (!bookId) {
+        console.error('Could not find book ID from URL or input field');
+        alert('Error: Could not find book ID. Please try again.');
+        return;
+    }
+    
+    console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
+    formData.append('book_id', bookId);
+
+    // Determine if this is an add or update action
+    const reviewId = document.getElementById('review_id').value;
+    const action = reviewId ? 'update_review' : 'add_review';
+    formData.append('action', action);
+
+    // Log the form data for debugging
+    console.log('Submitting review form with action:', action);
+    console.log('Review ID:', reviewId);
+    console.log('Book ID:', bookId);
+    
+    // Log all form data
+    console.log('Form data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    // Send the request to the review handler
+    fetch('../handlers/review-handler.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json().catch(err => {
+            console.error('Error parsing JSON response:', err);
+            throw new Error('Invalid JSON response from server');
+        });
+    })
+    .then(data => {
+        console.log('Review response:', data);
+
+        if (data.success) {
+            // Show success message
+            alert(data.message);
+            
+            // Close the modal
+            $('#review-form-modal').modal('hide');
+            
+            // Don't reload the page automatically, let the user inspect the console
+            if (confirm('Review saved successfully. Reload page to see changes?')) {
+                // Only reload if user confirms
+                window.location.href = window.location.href;
+            }
+        } else {
+            // Show error message
+            console.error('Error from server:', data.message || 'Unknown error');
+            alert('Error: ' + (data.message || 'Failed to save review'));
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting review:', error);
+        alert('Error submitting review: ' + error.message);
+    });
 }
 </script>
 

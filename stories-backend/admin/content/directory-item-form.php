@@ -1515,13 +1515,18 @@ if (isset($_SESSION['error'])) {
                     <div class="wp-card book-fields" id="reviews-section">
                         <div class="wp-card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Reviews</h5>
-                            <div>
-                                <?php if ($reviewCount > 0): ?>
-                                    <span class="badge badge-primary"><?php echo $reviewCount; ?> <?php echo $reviewCount === 1 ? 'review' : 'reviews'; ?></span>
-                                    <span class="badge badge-success"><?php echo number_format($averageRating * 5, 1); ?>/5</span>
-                                <?php else: ?>
-                                    <span class="badge badge-secondary">No reviews</span>
-                                <?php endif; ?>
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-sm btn-primary mr-2" id="add-new-review-btn">
+                                    <i class="fas fa-plus"></i> Add New Review
+                                </button>
+                                <div>
+                                    <?php if ($reviewCount > 0): ?>
+                                        <span class="badge badge-primary"><?php echo $reviewCount; ?> <?php echo $reviewCount === 1 ? 'review' : 'reviews'; ?></span>
+                                        <span class="badge badge-success"><?php echo number_format($averageRating * 5, 1); ?>/5</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary">No reviews</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                         <div class="wp-card-body">
@@ -2479,15 +2484,48 @@ function initReviewForm() {
  * Initialize review actions (edit, delete)
  */
 function initReviewActions() {
+    // Add New Review button
+    const addNewReviewBtn = document.getElementById('add-new-review-btn');
+    if (addNewReviewBtn) {
+        addNewReviewBtn.addEventListener('click', function() {
+            // Reset the form
+            const reviewForm = document.getElementById('review-form');
+            if (reviewForm) {
+                reviewForm.reset();
+            }
+            
+            // Clear the review ID
+            document.getElementById('review_id').value = '';
+            
+            // Reset the form title
+            document.getElementById('review-form-title').textContent = 'Add New Review';
+            
+            // Reset the submit button text
+            document.getElementById('submit-review').textContent = 'Add Review';
+            
+            // Reset the star rating
+            resetStarRating();
+            
+            // Scroll to the form
+            document.querySelector('.add-review-form').scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
     // Edit review buttons
     const editButtons = document.querySelectorAll('.edit-review');
 
     editButtons.forEach(button => {
         button.addEventListener('click', function() {
             const reviewId = this.getAttribute('data-id');
+            console.log('Edit button clicked for review ID:', reviewId);
+            
             const reviewItem = document.getElementById('review-' + reviewId);
+            console.log('Review item element:', reviewItem);
 
-            if (!reviewItem) return;
+            if (!reviewItem) {
+                console.error('Review item not found for ID:', reviewId);
+                return;
+            }
 
             // Get review data from data attributes
             const reviewerName = reviewItem.getAttribute('data-reviewer-name');
@@ -2497,6 +2535,16 @@ function initReviewActions() {
             const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
             const originalRating = reviewItem.getAttribute('data-original-rating');
             const reviewText = reviewItem.getAttribute('data-review-text');
+            
+            console.log('Review data from attributes:', {
+                reviewerName,
+                reviewerAge,
+                sourceId,
+                reviewDate,
+                ratingNormalised,
+                originalRating,
+                reviewText
+            });
 
             // Populate the form
             document.getElementById('review_id').value = reviewId;

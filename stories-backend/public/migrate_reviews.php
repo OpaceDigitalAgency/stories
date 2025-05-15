@@ -155,6 +155,25 @@ function migrateReviews($db) {
 
                     foreach ($reviews as $review) {
                         try {
+                            // Clean reviewer name - remove any asterisks
+                            $reviewerName = preg_replace('/^\*\*/', '', $review['reviewer_name']);
+                            $reviewerName = preg_replace('/\*\*$/', '', $reviewerName);
+                            $reviewerName = trim($reviewerName);
+                            
+                            // Check if a review with the same reviewer name already exists for this book
+                            $checkStmt = $db->prepare("
+                                SELECT COUNT(*) FROM reviews
+                                WHERE book_id = ? AND LOWER(TRIM(reviewer_name)) = LOWER(?)
+                            ");
+                            $checkStmt->execute([$book['id'], $reviewerName]);
+                            $exists = $checkStmt->fetchColumn() > 0;
+                            
+                            if ($exists) {
+                                echo "<p class='warning'>Skipping duplicate review by {$reviewerName} for book {$book['title']}</p>";
+                                migrateFlushOutput();
+                                continue;
+                            }
+                            
                             // Insert the review into the new system
                             $insertStmt = $db->prepare("
                                 INSERT INTO reviews (
@@ -185,7 +204,7 @@ function migrateReviews($db) {
                             $insertStmt->execute([
                                 ':book_id' => $book['id'],
                                 ':source_id' => 1, // Stories from the Web source
-                                ':reviewer_name' => $review['reviewer_name'],
+                                ':reviewer_name' => $reviewerName,
                                 ':reviewer_age' => $review['reviewer_age'],
                                 ':original_rating' => $review['original_rating'],
                                 ':rating_value' => $review['rating_value'],

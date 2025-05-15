@@ -2420,7 +2420,22 @@ function initReviewForm() {
 
         // Get form data
         const formData = new FormData(reviewForm);
-        const bookId = document.querySelector('input[name="id"]').value;
+        
+        // Get the book ID from the URL parameter or input field
+        let bookId;
+        const urlParams = new URLSearchParams(window.location.search);
+        const idFromUrl = urlParams.get('id');
+        const idFromInput = document.querySelector('input[name="id"]')?.value;
+        
+        bookId = idFromUrl || idFromInput;
+        
+        if (!bookId) {
+            console.error('Could not find book ID from URL or input field');
+            alert('Error: Could not find book ID. Please try again.');
+            return;
+        }
+        
+        console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
         formData.append('book_id', bookId);
 
         // Determine if this is an add or update action
@@ -2432,13 +2447,25 @@ function initReviewForm() {
         console.log('Submitting review form with action:', action);
         console.log('Review ID:', reviewId);
         console.log('Book ID:', bookId);
-
+        
+        // Log all form data
+        console.log('Form data:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+        
         // Send the request to the review handler
         fetch('../handlers/review-handler.php', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log('Review response:', data);
 
@@ -2446,16 +2473,18 @@ function initReviewForm() {
                 // Show success message
                 alert(data.message);
 
-                // Reload the page to show the updated review
-                window.location.reload();
+                // Reload the current page to show the updated review
+                // Use window.location.href to ensure we stay on the same page
+                window.location.href = window.location.href;
             } else {
                 // Show error message
+                console.error('Error from server:', data.message || 'Unknown error');
                 alert('Error: ' + (data.message || 'Failed to save review'));
             }
         })
         .catch(error => {
             console.error('Error submitting review:', error);
-            alert('Error submitting review. Please try again.');
+            alert('Error submitting review: ' + error.message);
         });
     });
 

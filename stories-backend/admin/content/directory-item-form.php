@@ -2461,10 +2461,15 @@ function initReviewForm() {
         })
         .then(response => {
             console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            return response.json();
+            return response.json().catch(err => {
+                console.error('Error parsing JSON response:', err);
+                throw new Error('Invalid JSON response from server');
+            });
         })
         .then(data => {
             console.log('Review response:', data);
@@ -2472,10 +2477,12 @@ function initReviewForm() {
             if (data.success) {
                 // Show success message
                 alert(data.message);
-
-                // Reload the current page to show the updated review
-                // Use window.location.href to ensure we stay on the same page
-                window.location.href = window.location.href;
+                
+                // Don't reload the page automatically, let the user inspect the console
+                if (confirm('Review saved successfully. Reload page to see changes?')) {
+                    // Only reload if user confirms
+                    window.location.href = window.location.href;
+                }
             } else {
                 // Show error message
                 console.error('Error from server:', data.message || 'Unknown error');
@@ -2576,14 +2583,37 @@ function initReviewActions() {
             });
 
             // Populate the form
-            document.getElementById('review_id').value = reviewId;
-            document.getElementById('reviewer_name').value = reviewerName || '';
-            document.getElementById('reviewer_age').value = reviewerAge || '';
-            document.getElementById('source_id').value = sourceId || '1';
-            document.getElementById('review_date').value = reviewDate || '';
-            document.getElementById('rating_normalised').value = ratingNormalised || '0';
-            document.getElementById('original_rating').value = originalRating || '';
-            document.getElementById('review_text').value = reviewText || '';
+            try {
+                console.log('Attempting to populate form fields...');
+                
+                document.getElementById('review_id').value = reviewId;
+                console.log('Set review_id to:', reviewId);
+                
+                document.getElementById('reviewer_name').value = reviewerName || '';
+                console.log('Set reviewer_name to:', reviewerName || '');
+                
+                document.getElementById('reviewer_age').value = reviewerAge || '';
+                console.log('Set reviewer_age to:', reviewerAge || '');
+                
+                document.getElementById('source_id').value = sourceId || '1';
+                console.log('Set source_id to:', sourceId || '1');
+                
+                document.getElementById('review_date').value = reviewDate || '';
+                console.log('Set review_date to:', reviewDate || '');
+                
+                document.getElementById('rating_normalised').value = ratingNormalised || '0';
+                console.log('Set rating_normalised to:', ratingNormalised || '0');
+                
+                document.getElementById('original_rating').value = originalRating || '';
+                console.log('Set original_rating to:', originalRating || '');
+                
+                document.getElementById('review_text').value = reviewText || '';
+                console.log('Set review_text to:', reviewText || '');
+                
+                console.log('Form populated successfully');
+            } catch (error) {
+                console.error('Error populating form:', error);
+            }
 
             // Update the form title
             document.getElementById('review-form-title').textContent = 'Edit Review';
@@ -2592,7 +2622,10 @@ function initReviewActions() {
             document.getElementById('submit-review').textContent = 'Update Review';
 
             // Update the star rating
-            updateStarRating(parseFloat(ratingNormalised) * 5);
+            console.log('Calling updateStarRating with normalized rating:', ratingNormalised);
+            const starRating = parseFloat(ratingNormalised) * 5;
+            console.log('Calculated star rating (0-5 scale):', starRating);
+            updateStarRating(starRating);
 
             // Scroll to the form
             document.querySelector('.add-review-form').scrollIntoView({ behavior: 'smooth' });
@@ -2688,14 +2721,25 @@ function initStarRating() {
  * @param {number} rating - The rating value (1-5)
  */
 function updateStarRating(rating) {
+    console.log('updateStarRating called with rating:', rating);
+    
     const stars = document.querySelectorAll('.rating-star');
+    console.log('Found stars elements:', stars.length);
+    
     const ratingValueDisplay = document.querySelector('.rating-value');
+    console.log('Found rating value display:', ratingValueDisplay);
 
-    if (!stars.length || !ratingValueDisplay) return;
+    if (!stars.length || !ratingValueDisplay) {
+        console.error('Missing stars or rating value display elements');
+        return;
+    }
 
     // Update stars
     stars.forEach((star, index) => {
-        if (index < rating) {
+        const highlighted = index < rating;
+        console.log(`Star ${index+1}: ${highlighted ? 'highlighted' : 'not highlighted'}`);
+        
+        if (highlighted) {
             star.style.color = '#ffc107'; // Yellow color
         } else {
             star.style.color = '#e0e0e0'; // Gray color
@@ -2703,7 +2747,19 @@ function updateStarRating(rating) {
     });
 
     // Update rating value display
-    ratingValueDisplay.textContent = rating.toFixed(1) + '/5';
+    const displayText = rating.toFixed(1) + '/5';
+    console.log('Setting rating display text to:', displayText);
+    ratingValueDisplay.textContent = displayText;
+    
+    // Also update the hidden input field
+    const ratingNormalisedInput = document.getElementById('rating_normalised');
+    if (ratingNormalisedInput) {
+        const normalizedValue = (rating / 5).toFixed(2);
+        console.log('Setting normalized rating value to:', normalizedValue);
+        ratingNormalisedInput.value = normalizedValue;
+    } else {
+        console.error('Could not find rating_normalised input field');
+    }
 }
 
 /**

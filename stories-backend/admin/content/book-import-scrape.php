@@ -66,11 +66,8 @@ try {
     error_log("Error getting OpenAI API key: " . $e->getMessage());
 }
 
-// Create the review analyzer if we have an API key
-$reviewAnalyzer = null;
-if (!empty($openaiApiKey)) {
-    $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($openaiApiKey, 'gpt-4-turbo');
-}
+// Create the review analyzer
+$reviewAnalyzer = new \Services\AI\ReviewAnalyzer($db);
 
 // Function to update book aggregate values
 function updateBookAggregateValues($db, $bookId) {
@@ -260,6 +257,13 @@ header('Content-Type: text/html; charset=utf-8');
 
                         // Get reviews using the review fetcher
                         $reviews = [];
+
+                        // Skip sources that don't have fetchers implemented yet
+                        if ($sourceName == 'School Library Journal' || $sourceName == 'Kirkus Reviews') {
+                            echo "<p class='warning'>No fetcher available for source ID: $sourceId</p>";
+                            flushOutput();
+                            continue;
+                        }
 
                         // Get the appropriate fetcher for this source
                         $fetcher = $reviewFetcherFactory->getFetcher($sourceId);

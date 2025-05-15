@@ -42,16 +42,52 @@ $message = '';
 $messageType = '';
 
 try {
-    // Get all books from the database
+    // Initialize pagination variables for books
+    $bookPage = isset($_GET['book_page']) ? max(1, intval($_GET['book_page'])) : 1;
+    $booksPerPage = 20;
+    $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
+
+    // Build query conditions for books
+    $bookConditions = ["di.type = 'book'"];
+    $bookParams = [];
+
+    if (!empty($bookSearch)) {
+        $bookConditions[] = "(di.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ? OR b.isbn13 LIKE ?)";
+        $searchParam = "%$bookSearch%";
+        $bookParams[] = $searchParam;
+        $bookParams[] = $searchParam;
+        $bookParams[] = $searchParam;
+        $bookParams[] = $searchParam;
+    }
+
+    $bookWhereClause = implode(" AND ", $bookConditions);
+
+    // Count total books
+    $bookCountQuery = "
+        SELECT COUNT(*)
+        FROM directory_items di
+        JOIN books b ON di.id = b.directory_item_id
+        WHERE $bookWhereClause
+    ";
+    $bookCountStmt = $db->prepare($bookCountQuery);
+    $bookCountStmt->execute($bookParams);
+    $totalBooks = $bookCountStmt->fetchColumn();
+
+    // Calculate pagination
+    $totalBookPages = ceil($totalBooks / $booksPerPage);
+    $bookOffset = ($bookPage - 1) * $booksPerPage;
+
+    // Get books with pagination
     $booksStmt = $db->prepare("
         SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
                b.isbn, b.isbn13, b.author, b.publisher
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
-        WHERE di.type = 'book'
+        WHERE $bookWhereClause
         ORDER BY di.title ASC
+        LIMIT $booksPerPage OFFSET $bookOffset
     ");
-    $booksStmt->execute();
+    $booksStmt->execute($bookParams);
     $books = $booksStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get all review sources
@@ -151,6 +187,11 @@ require_once '../includes/header.php';
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" id="reviews-tab" data-toggle="tab" href="#reviews" role="tab">
+                                <i class="fas fa-star"></i> Reviews
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" id="sources-tab" data-toggle="tab" href="#sources" role="tab">
                                 <i class="fas fa-database"></i> Review Sources
                             </a>
@@ -173,58 +214,137 @@ require_once '../includes/header.php';
                             <h4>Existing Books</h4>
                             <p>View books already imported and scrape reviews for them.</p>
 
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Title</th>
-                                            <th>Author</th>
-                                            <th>ISBN</th>
-                                            <th>Reviews</th>
-                                            <th>Rating</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if (empty($books)): ?>
-                                            <tr>
-                                                <td colspan="6" class="text-center">No books found. Import some books first.</td>
-                                            </tr>
-                                        <?php else: ?>
-                                            <?php foreach ($books as $book): ?>
+                            <!-- Search Form -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>Search Books</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="get" class="row g-3">
+                                        <div class="col-md-8">
+                                            <label for="book_search" class="form-label">Search</label>
+                                            <input type="text" class="form-control" id="book_search" name="book_search" value="<?php echo htmlspecialchars($bookSearch); ?>" placeholder="Search by title, author, or ISBN...">
+                                        </div>
+                                        <div class="col-md-4 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-search"></i> Search
+                                            </button>
+                                            <a href="book-import-tool.php" class="btn btn-secondary ml-2">
+                                                <i class="fas fa-times"></i> Clear
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5>Books (<?php echo number_format($totalBooks); ?>)</h5>
+                                    <div>
+                                        <span class="text-muted">Page <?php echo $bookPage; ?> of <?php echo $totalBookPages; ?></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
                                                 <tr>
-                                                    <td><?php echo htmlspecialchars($book['title']); ?></td>
-                                                    <td><?php echo htmlspecialchars($book['author']); ?></td>
-                                                    <td>
-                                                        <?php
-                                                        echo !empty($book['isbn13'])
-                                                            ? htmlspecialchars($book['isbn13'])
-                                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
-                                                        ?>
-                                                    </td>
-                                                    <td><?php echo (int)$book['review_count']; ?></td>
-                                                    <td>
-                                                        <?php
-                                                        if (!empty($book['average_rating'])) {
-                                                            $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
-                                                            echo number_format($stars, 1) . ' / 5';
-                                                        } else {
-                                                            echo 'N/A';
-                                                        }
-                                                        ?>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-primary scrape-reviews-btn"
-                                                                data-book-id="<?php echo $book['id']; ?>"
-                                                                data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
-                                                            <i class="fas fa-sync"></i> Scrape Reviews
-                                                        </button>
-                                                    </td>
+                                                    <th>Title</th>
+                                                    <th>Author</th>
+                                                    <th>ISBN</th>
+                                                    <th>Reviews</th>
+                                                    <th>Rating</th>
+                                                    <th>Actions</th>
                                                 </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (empty($books)): ?>
+                                                    <tr>
+                                                        <td colspan="6" class="text-center">No books found. Import some books first.</td>
+                                                    </tr>
+                                                <?php else: ?>
+                                                    <?php foreach ($books as $book): ?>
+                                                        <tr>
+                                                            <td><?php echo htmlspecialchars($book['title']); ?></td>
+                                                            <td><?php echo htmlspecialchars($book['author']); ?></td>
+                                                            <td>
+                                                                <?php
+                                                                echo !empty($book['isbn13'])
+                                                                    ? htmlspecialchars($book['isbn13'])
+                                                                    : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
+                                                                ?>
+                                                            </td>
+                                                            <td><?php echo (int)$book['review_count']; ?></td>
+                                                            <td>
+                                                                <?php
+                                                                if (!empty($book['average_rating'])) {
+                                                                    $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
+                                                                    echo number_format($stars, 1) . ' / 5';
+                                                                } else {
+                                                                    echo 'N/A';
+                                                                }
+                                                                ?>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-primary scrape-reviews-btn"
+                                                                        data-book-id="<?php echo $book['id']; ?>"
+                                                                        data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
+                                                                    <i class="fas fa-sync"></i> Scrape Reviews
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Pagination -->
+                                    <?php if ($totalBookPages > 1): ?>
+                                        <nav aria-label="Page navigation" class="mt-4">
+                                            <ul class="pagination justify-content-center">
+                                                <?php if ($bookPage > 1): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?book_page=1<?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
+                                                            First
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?book_page=<?php echo $bookPage - 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
+                                                            Previous
+                                                        </a>
+                                                    </li>
+                                                <?php endif; ?>
+
+                                                <?php
+                                                $startBookPage = max(1, $bookPage - 2);
+                                                $endBookPage = min($totalBookPages, $bookPage + 2);
+
+                                                for ($i = $startBookPage; $i <= $endBookPage; $i++):
+                                                ?>
+                                                    <li class="page-item <?php echo $i === $bookPage ? 'active' : ''; ?>">
+                                                        <a class="page-link" href="?book_page=<?php echo $i; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
+                                                            <?php echo $i; ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endfor; ?>
+
+                                                <?php if ($bookPage < $totalBookPages): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?book_page=<?php echo $bookPage + 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
+                                                            Next
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?book_page=<?php echo $totalBookPages; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
+                                                            Last
+                                                        </a>
+                                                    </li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        </nav>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
 
@@ -383,6 +503,274 @@ require_once '../includes/header.php';
                                     <i class="fas fa-play"></i> Start Batch Process
                                 </button>
                             </form>
+                        </div>
+
+                        <!-- Reviews Tab -->
+                        <div class="tab-pane fade" id="reviews" role="tabpanel">
+                            <h4>Reviews Management</h4>
+                            <p>Manage book reviews from various sources.</p>
+
+                            <?php
+                            // Initialize reviews variables
+                            $reviewPage = isset($_GET['review_page']) ? max(1, intval($_GET['review_page'])) : 1;
+                            $reviewsPerPage = 20;
+                            $reviewSearch = isset($_GET['review_search']) ? trim($_GET['review_search']) : '';
+                            $reviewSourceFilter = isset($_GET['review_source']) ? intval($_GET['review_source']) : 0;
+                            $reviewBookFilter = isset($_GET['review_book_id']) ? intval($_GET['review_book_id']) : 0;
+                            $reviewRatingFilter = isset($_GET['review_rating']) ? floatval($_GET['review_rating']) : 0;
+
+                            // Build query conditions for reviews
+                            $reviewConditions = [];
+                            $reviewParams = [];
+
+                            if (!empty($reviewSearch)) {
+                                $reviewConditions[] = "(r.reviewer_name LIKE ? OR r.review_text LIKE ? OR d.title LIKE ?)";
+                                $searchParam = "%$reviewSearch%";
+                                $reviewParams[] = $searchParam;
+                                $reviewParams[] = $searchParam;
+                                $reviewParams[] = $searchParam;
+                            }
+
+                            if ($reviewSourceFilter > 0) {
+                                $reviewConditions[] = "r.source_id = ?";
+                                $reviewParams[] = $reviewSourceFilter;
+                            }
+
+                            if ($reviewBookFilter > 0) {
+                                $reviewConditions[] = "r.book_id = ?";
+                                $reviewParams[] = $reviewBookFilter;
+                            }
+
+                            if ($reviewRatingFilter > 0) {
+                                $reviewConditions[] = "r.rating_normalised >= ?";
+                                $reviewParams[] = $reviewRatingFilter / 5; // Convert to 0-1 scale
+                            }
+
+                            $reviewWhereClause = !empty($reviewConditions) ? "WHERE " . implode(" AND ", $reviewConditions) : "";
+
+                            // Count total reviews
+                            $reviewCountQuery = "
+                                SELECT COUNT(*)
+                                FROM reviews r
+                                LEFT JOIN directory_items d ON r.book_id = d.id
+                                LEFT JOIN review_sources s ON r.source_id = s.id
+                                $reviewWhereClause
+                            ";
+                            $reviewCountStmt = $db->prepare($reviewCountQuery);
+                            $reviewCountStmt->execute($reviewParams);
+                            $totalReviews = $reviewCountStmt->fetchColumn();
+
+                            // Calculate pagination
+                            $totalReviewPages = ceil($totalReviews / $reviewsPerPage);
+                            $reviewOffset = ($reviewPage - 1) * $reviewsPerPage;
+
+                            // Get reviews
+                            $reviewQuery = "
+                                SELECT r.*, d.title as book_title, s.name as source_name, s.is_third_party
+                                FROM reviews r
+                                LEFT JOIN directory_items d ON r.book_id = d.id
+                                LEFT JOIN review_sources s ON r.source_id = s.id
+                                $reviewWhereClause
+                                ORDER BY r.created_at DESC
+                                LIMIT $reviewsPerPage OFFSET $reviewOffset
+                            ";
+                            $reviewStmt = $db->prepare($reviewQuery);
+                            $reviewStmt->execute($reviewParams);
+                            $reviews = $reviewStmt->fetchAll();
+                            ?>
+
+                            <!-- Filters -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>Filters</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="get" class="row g-3" id="review-filter-form">
+                                        <input type="hidden" name="tab" value="reviews">
+                                        <div class="col-md-4">
+                                            <label for="review_search" class="form-label">Search</label>
+                                            <input type="text" class="form-control" id="review_search" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>" placeholder="Search reviews...">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="review_source" class="form-label">Source</label>
+                                            <select class="form-control" id="review_source" name="review_source">
+                                                <option value="0">All Sources</option>
+                                                <?php foreach ($reviewSources as $source): ?>
+                                                    <option value="<?php echo $source['id']; ?>" <?php echo $reviewSourceFilter == $source['id'] ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($source['name']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="review_book_id" class="form-label">Book</label>
+                                            <select class="form-control" id="review_book_id" name="review_book_id">
+                                                <option value="0">All Books</option>
+                                                <?php foreach ($books as $book): ?>
+                                                    <option value="<?php echo $book['id']; ?>" <?php echo $reviewBookFilter == $book['id'] ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($book['title']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="review_rating" class="form-label">Min Rating</label>
+                                            <select class="form-control" id="review_rating" name="review_rating">
+                                                <option value="0" <?php echo $reviewRatingFilter == 0 ? 'selected' : ''; ?>>Any Rating</option>
+                                                <option value="1" <?php echo $reviewRatingFilter == 1 ? 'selected' : ''; ?>>★ (1+)</option>
+                                                <option value="2" <?php echo $reviewRatingFilter == 2 ? 'selected' : ''; ?>>★★ (2+)</option>
+                                                <option value="3" <?php echo $reviewRatingFilter == 3 ? 'selected' : ''; ?>>★★★ (3+)</option>
+                                                <option value="4" <?php echo $reviewRatingFilter == 4 ? 'selected' : ''; ?>>★★★★ (4+)</option>
+                                                <option value="5" <?php echo $reviewRatingFilter == 5 ? 'selected' : ''; ?>>★★★★★ (5)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-filter"></i> Apply Filters
+                                            </button>
+                                            <a href="book-import-tool.php?tab=reviews" class="btn btn-secondary">
+                                                <i class="fas fa-times"></i> Clear Filters
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Reviews Table -->
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5>Reviews (<?php echo number_format($totalReviews); ?>)</h5>
+                                    <div>
+                                        <span class="text-muted">Page <?php echo $reviewPage; ?> of <?php echo $totalReviewPages; ?></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" id="reviews-form" action="review-bulk-actions.php">
+                                        <div class="bulk-actions mb-3">
+                                            <div class="d-flex gap-2">
+                                                <select class="form-control w-auto" name="bulk_action" id="bulk-action">
+                                                    <option value="">Bulk Actions</option>
+                                                    <option value="delete">Delete</option>
+                                                    <option value="analyze">Analyze with AI</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-primary" id="apply-bulk-action">Apply</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th width="30">
+                                                            <input type="checkbox" id="select-all">
+                                                        </th>
+                                                        <th>Book</th>
+                                                        <th>Reviewer</th>
+                                                        <th>Rating</th>
+                                                        <th>Source</th>
+                                                        <th>Date</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php if (empty($reviews)): ?>
+                                                        <tr>
+                                                            <td colspan="7" class="text-center">No reviews found.</td>
+                                                        </tr>
+                                                    <?php else: ?>
+                                                        <?php foreach ($reviews as $review): ?>
+                                                            <tr>
+                                                                <td>
+                                                                    <input type="checkbox" name="selected_reviews[]" value="<?php echo $review['id']; ?>" class="review-checkbox">
+                                                                </td>
+                                                                <td>
+                                                                    <a href="directory-item-form.php?id=<?php echo $review['book_id']; ?>">
+                                                                        <?php echo htmlspecialchars($review['book_title']); ?>
+                                                                    </a>
+                                                                </td>
+                                                                <td><?php echo htmlspecialchars($review['reviewer_name']); ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    $stars = round($review['rating_normalised'] * 5);
+                                                                    echo str_repeat('★', $stars) . str_repeat('☆', 5 - $stars);
+                                                                    echo ' (' . $review['original_rating'] . ')';
+                                                                    ?>
+                                                                </td>
+                                                                <td>
+                                                                    <?php echo htmlspecialchars($review['source_name']); ?>
+                                                                    <?php if ($review['is_third_party']): ?>
+                                                                        <span class="badge badge-info">External</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td><?php echo $review['review_date']; ?></td>
+                                                                <td>
+                                                                    <div class="btn-group">
+                                                                        <button type="button" class="btn btn-sm btn-info view-review" data-id="<?php echo $review['id']; ?>">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </button>
+                                                                        <a href="edit-review.php?id=<?php echo $review['id']; ?>" class="btn btn-sm btn-primary">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-sm btn-danger delete-review" data-id="<?php echo $review['id']; ?>">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </form>
+
+                                    <!-- Pagination -->
+                                    <?php if ($totalReviewPages > 1): ?>
+                                        <nav aria-label="Page navigation" class="mt-4">
+                                            <ul class="pagination justify-content-center">
+                                                <?php if ($reviewPage > 1): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?tab=reviews&review_page=1<?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
+                                                            First
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage - 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
+                                                            Previous
+                                                        </a>
+                                                    </li>
+                                                <?php endif; ?>
+
+                                                <?php
+                                                $startPage = max(1, $reviewPage - 2);
+                                                $endPage = min($totalReviewPages, $reviewPage + 2);
+
+                                                for ($i = $startPage; $i <= $endPage; $i++):
+                                                ?>
+                                                    <li class="page-item <?php echo $i === $reviewPage ? 'active' : ''; ?>">
+                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $i; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
+                                                            <?php echo $i; ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endfor; ?>
+
+                                                <?php if ($reviewPage < $totalReviewPages): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage + 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
+                                                            Next
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $totalReviewPages; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
+                                                            Last
+                                                        </a>
+                                                    </li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        </nav>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- AI Analysis Tab -->

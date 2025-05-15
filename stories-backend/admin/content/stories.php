@@ -96,7 +96,6 @@ try {
                    s.is_published,
                    s.featured,
                    s.average_rating,
-                   s.allow_reviews,
                    s.review_count,
                    s.estimated_reading_time,
                    s.is_sponsored,
@@ -122,7 +121,7 @@ try {
            FROM stories s
             $whereClause
             GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
-                     s.featured, s.average_rating, s.allow_reviews, s.review_count,
+                     s.featured, s.average_rating, s.review_count,
                      s.estimated_reading_time, s.is_sponsored, s.age_group,
                      s.needs_moderation, s.is_self_published, s.is_ai_enhanced,
                      s.cover_url, s.created_at, s.updated_at

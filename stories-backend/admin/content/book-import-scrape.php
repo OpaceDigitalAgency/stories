@@ -1,7 +1,7 @@
 <?php
 /**
  * Book Import Scrape
- * 
+ *
  * This script handles the scraping of reviews for books from various sources.
  * It can be called directly from the book-import-tool.php page or as a follow-up
  * to the book-import-process.php script.
@@ -12,6 +12,18 @@ require_once '../includes/auth-check.php';
 
 // Include database connection
 require_once '../includes/db-connect.php';
+
+// Include the review fetcher services
+require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
+require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';
+require_once '../../services/ReviewFetcher/GoogleBooksReviewFetcher.php';
+require_once '../../services/ReviewFetcher/OpenLibraryReviewFetcher.php';
+require_once '../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
+require_once '../../services/ReviewFetcher/AmazonReviewFetcher.php';
+require_once '../../services/ReviewFetcher/ReviewFetcherFactory.php';
+
+// Include the AI review analyzer
+require_once '../../services/AI/ReviewAnalyzer.php';
 
 // Set up error handling
 ini_set('display_errors', 1);
@@ -29,196 +41,35 @@ function flushOutput() {
     }
 }
 
-// Function to normalize rating to 0-1 scale
-function normalizeRating($value, $scale) {
-    if (empty($value) || empty($scale) || $scale == 0) {
-        return null;
-    }
-    return min(1, max(0, $value / $scale));
-}
-
 // Function to check if a review already exists
 function reviewExists($db, $bookId, $sourceId, $reviewerName) {
     $stmt = $db->prepare("
         SELECT id FROM reviews
-        WHERE book_id = ? AND source_id = ? AND 
+        WHERE book_id = ? AND source_id = ? AND
               LOWER(TRIM(REPLACE(reviewer_name, '**', ''))) = LOWER(TRIM(?))
     ");
     $stmt->execute([$bookId, $sourceId, $reviewerName]);
     return $stmt->fetch();
 }
 
-// Function to scrape reviews from Google Books
-function scrapeGoogleBooksReviews($bookId, $isbn, $isbn13) {
-    // In a real implementation, this would call the Google Books API
-    // For now, we'll return sample data
-    $reviews = [];
-    
-    // Use ISBN13 if available, otherwise use ISBN
-    $isbnToUse = !empty($isbn13) ? $isbn13 : $isbn;
-    
-    if (empty($isbnToUse)) {
-        return $reviews;
-    }
-    
-    // Simulate API delay
-    sleep(1);
-    
-    // Sample reviews
-    $reviews[] = [
-        'source_id' => 2, // Google Books source ID
-        'reviewer_name' => 'Google Books Reviewer 1',
-        'reviewer_age' => null,
-        'review_date' => date('Y-m-d'),
-        'original_rating' => '4/5',
-        'rating_value' => 4,
-        'rating_scale' => 5,
-        'rating_normalised' => 0.8,
-        'review_text' => "This is a sample review from Google Books. The book was engaging and well-written. I particularly enjoyed the character development and plot twists. Would recommend to others who enjoy this genre.",
-        'metadata' => json_encode([
-            'review_id' => 'gb_' . uniqid(),
-            'review_url' => "https://books.google.com/books?id=$isbnToUse"
-        ])
-    ];
-    
-    $reviews[] = [
-        'source_id' => 2, // Google Books source ID
-        'reviewer_name' => 'Google Books Reviewer 2',
-        'reviewer_age' => null,
-        'review_date' => date('Y-m-d', strtotime('-2 days')),
-        'original_rating' => '5/5',
-        'rating_value' => 5,
-        'rating_scale' => 5,
-        'rating_normalised' => 1.0,
-        'review_text' => "Excellent book for children! My kids loved it and asked to read it again and again. The illustrations are beautiful and the story has good moral lessons. Perfect for ages 6-8.",
-        'metadata' => json_encode([
-            'review_id' => 'gb_' . uniqid(),
-            'review_url' => "https://books.google.com/books?id=$isbnToUse"
-        ])
-    ];
-    
-    return $reviews;
+// Create the review fetcher factory
+$reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
+
+// Get OpenAI API key from settings
+$openaiApiKey = '';
+try {
+    $settingsStmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_name = 'openai_api_key'");
+    $settingsStmt->execute();
+    $openaiApiKey = $settingsStmt->fetchColumn();
+} catch (Exception $e) {
+    // If we can't get the API key, we'll just skip AI analysis
+    error_log("Error getting OpenAI API key: " . $e->getMessage());
 }
 
-// Function to scrape reviews from Open Library
-function scrapeOpenLibraryReviews($bookId, $isbn, $isbn13) {
-    // Similar to Google Books function, but for Open Library
-    $reviews = [];
-    
-    // Use ISBN13 if available, otherwise use ISBN
-    $isbnToUse = !empty($isbn13) ? $isbn13 : $isbn;
-    
-    if (empty($isbnToUse)) {
-        return $reviews;
-    }
-    
-    // Simulate API delay
-    sleep(1);
-    
-    // Sample reviews
-    $reviews[] = [
-        'source_id' => 3, // Open Library source ID
-        'reviewer_name' => 'Open Library Reviewer',
-        'reviewer_age' => null,
-        'review_date' => date('Y-m-d', strtotime('-5 days')),
-        'original_rating' => '4.5/5',
-        'rating_value' => 4.5,
-        'rating_scale' => 5,
-        'rating_normalised' => 0.9,
-        'review_text' => "A wonderful book that captures the imagination. The story is well-paced and suitable for the target age group. My child found it very engaging and we had great discussions about the themes presented.",
-        'metadata' => json_encode([
-            'review_id' => 'ol_' . uniqid(),
-            'review_url' => "https://openlibrary.org/isbn/$isbnToUse"
-        ])
-    ];
-    
-    return $reviews;
-}
-
-// Function to scrape reviews from Goodreads
-function scrapeGoodreadsReviews($bookId, $isbn, $isbn13) {
-    // Similar to previous functions, but for Goodreads
-    $reviews = [];
-    
-    // Use ISBN13 if available, otherwise use ISBN
-    $isbnToUse = !empty($isbn13) ? $isbn13 : $isbn;
-    
-    if (empty($isbnToUse)) {
-        return $reviews;
-    }
-    
-    // Simulate API delay
-    sleep(1);
-    
-    // Sample reviews
-    $reviews[] = [
-        'source_id' => 4, // Goodreads source ID
-        'reviewer_name' => 'Goodreads Reviewer 1',
-        'reviewer_age' => null,
-        'review_date' => date('Y-m-d', strtotime('-10 days')),
-        'original_rating' => '4/5',
-        'rating_value' => 4,
-        'rating_scale' => 5,
-        'rating_normalised' => 0.8,
-        'review_text' => "I read this to my 7-year-old daughter and she absolutely loved it. The story teaches important lessons about friendship and courage. The vocabulary is appropriate for early readers but still engaging for adults reading along.",
-        'metadata' => json_encode([
-            'review_id' => 'gr_' . uniqid(),
-            'review_url' => "https://www.goodreads.com/book/isbn/$isbnToUse"
-        ])
-    ];
-    
-    $reviews[] = [
-        'source_id' => 4, // Goodreads source ID
-        'reviewer_name' => 'Goodreads Reviewer 2',
-        'reviewer_age' => 9,
-        'review_date' => date('Y-m-d', strtotime('-15 days')),
-        'original_rating' => '3/5',
-        'rating_value' => 3,
-        'rating_scale' => 5,
-        'rating_normalised' => 0.6,
-        'review_text' => "I'm 9 years old and I liked this book. Some parts were scary but it was exciting. I wish there were more pictures. My favorite character was the dog because he was brave and funny.",
-        'metadata' => json_encode([
-            'review_id' => 'gr_' . uniqid(),
-            'review_url' => "https://www.goodreads.com/book/isbn/$isbnToUse"
-        ])
-    ];
-    
-    return $reviews;
-}
-
-// Function to scrape reviews from Amazon
-function scrapeAmazonReviews($bookId, $isbn, $isbn13) {
-    // Similar to previous functions, but for Amazon
-    $reviews = [];
-    
-    // Use ISBN13 if available, otherwise use ISBN
-    $isbnToUse = !empty($isbn13) ? $isbn13 : $isbn;
-    
-    if (empty($isbnToUse)) {
-        return $reviews;
-    }
-    
-    // Simulate API delay
-    sleep(1);
-    
-    // Sample reviews
-    $reviews[] = [
-        'source_id' => 5, // Amazon source ID
-        'reviewer_name' => 'Amazon Customer',
-        'reviewer_age' => null,
-        'review_date' => date('Y-m-d', strtotime('-20 days')),
-        'original_rating' => '5/5',
-        'rating_value' => 5,
-        'rating_scale' => 5,
-        'rating_normalised' => 1.0,
-        'review_text' => "Purchased this for my 8-year-old nephew who is a reluctant reader. He finished it in two days and immediately asked for more books in the series! The story is engaging with just the right amount of humor and adventure. Highly recommended for elementary school children.",
-        'metadata' => json_encode([
-            'review_id' => 'amzn_' . uniqid(),
-            'review_url' => "https://www.amazon.com/dp/$isbnToUse"
-        ])
-    ];
-    
-    return $reviews;
+// Create the review analyzer if we have an API key
+$reviewAnalyzer = null;
+if (!empty($openaiApiKey)) {
+    $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($openaiApiKey, 'gpt-4-turbo');
 }
 
 // Function to update book aggregate values
@@ -235,7 +86,7 @@ function updateBookAggregateValues($db, $bookId) {
     ");
     $aggregateStmt->execute([$bookId]);
     $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
-    
+
     // Update the directory item
     if ($aggregateValues['review_count'] > 0) {
         $stmt = $db->prepare("
@@ -247,7 +98,7 @@ function updateBookAggregateValues($db, $bookId) {
                 lowest_rating = ?
             WHERE id = ?
         ");
-        
+
         $stmt->execute([
             $aggregateValues['review_count'],
             $aggregateValues['average_rating'],
@@ -255,10 +106,10 @@ function updateBookAggregateValues($db, $bookId) {
             $aggregateValues['lowest_rating'],
             $bookId
         ]);
-        
+
         return true;
     }
-    
+
     return false;
 }
 
@@ -305,11 +156,11 @@ header('Content-Type: text/html; charset=utf-8');
 <body>
     <div class="container mt-4">
         <h1>Book Review Scraping</h1>
-        
+
         <div class="progress-container">
             <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
         </div>
-        
+
         <div class="log-container" id="logContainer">
             <p class="info">Starting review scraping process...</p>
             <?php
@@ -317,14 +168,14 @@ header('Content-Type: text/html; charset=utf-8');
             try {
                 // Get book IDs to process
                 $bookIds = [];
-                
+
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Single book from form submission
                     $bookId = $_POST['book_id'] ?? 0;
                     if ($bookId > 0) {
                         $bookIds[] = $bookId;
                     }
-                    
+
                     // Get selected sources
                     $sources = $_POST['sources'] ?? [];
                     $runAiAnalysis = isset($_POST['run_ai_analysis']) && $_POST['run_ai_analysis'] == 1;
@@ -334,29 +185,29 @@ header('Content-Type: text/html; charset=utf-8');
                         $bookIds = explode(',', $_GET['books']);
                         $bookIds = array_filter($bookIds, 'is_numeric');
                     }
-                    
+
                     // Default to all sources
                     $sourcesStmt = $db->prepare("
                         SELECT id FROM review_sources WHERE is_third_party = 1
                     ");
                     $sourcesStmt->execute();
                     $sources = $sourcesStmt->fetchAll(PDO::FETCH_COLUMN);
-                    
+
                     $runAiAnalysis = isset($_GET['ai']) && $_GET['ai'] == 1;
                 }
-                
+
                 if (empty($bookIds)) {
                     echo "<p class='error'>No books specified for review scraping</p>";
                     echo "<p><a href='book-import-tool.php' class='btn btn-primary'>Return to Book Import Tool</a></p>";
                     exit;
                 }
-                
+
                 if (empty($sources)) {
                     echo "<p class='error'>No sources specified for review scraping</p>";
                     echo "<p><a href='book-import-tool.php' class='btn btn-primary'>Return to Book Import Tool</a></p>";
                     exit;
                 }
-                
+
                 // Get book details
                 $placeholders = implode(',', array_fill(0, count($bookIds), '?'));
                 $booksStmt = $db->prepare("
@@ -367,22 +218,22 @@ header('Content-Type: text/html; charset=utf-8');
                 ");
                 $booksStmt->execute($bookIds);
                 $books = $booksStmt->fetchAll(PDO::FETCH_ASSOC);
-                
+
                 if (empty($books)) {
                     echo "<p class='error'>No valid books found with the specified IDs</p>";
                     echo "<p><a href='book-import-tool.php' class='btn btn-primary'>Return to Book Import Tool</a></p>";
                     exit;
                 }
-                
+
                 echo "<p class='info'>Found " . count($books) . " books to scrape reviews for</p>";
                 echo "<p class='info'>Using " . count($sources) . " review sources</p>";
                 flushOutput();
-                
+
                 // Process each book
                 $totalBooks = count($books);
                 $totalReviewsImported = 0;
                 $totalReviewsSkipped = 0;
-                
+
                 foreach ($books as $index => $book) {
                     $progress = round(($index / $totalBooks) * 100);
                     echo "<script>
@@ -390,52 +241,72 @@ header('Content-Type: text/html; charset=utf-8');
                         document.getElementById('progressBar').innerText = '$progress%';
                     </script>";
                     flushOutput();
-                    
+
                     echo "<h3>Processing book " . ($index + 1) . " of $totalBooks: {$book['title']}</h3>";
                     flushOutput();
-                    
+
                     $bookReviewsImported = 0;
                     $bookReviewsSkipped = 0;
-                    
+
                     // Process each source
                     foreach ($sources as $sourceId) {
                         // Get source name
                         $sourceStmt = $db->prepare("SELECT name FROM review_sources WHERE id = ?");
                         $sourceStmt->execute([$sourceId]);
                         $sourceName = $sourceStmt->fetchColumn();
-                        
+
                         echo "<p class='info'>Scraping reviews from source: $sourceName</p>";
                         flushOutput();
-                        
-                        // Get reviews based on source
+
+                        // Get reviews using the review fetcher
                         $reviews = [];
-                        
-                        switch ($sourceId) {
-                            case 2: // Google Books
-                                $reviews = scrapeGoogleBooksReviews($book['id'], $book['isbn'], $book['isbn13']);
-                                break;
-                                
-                            case 3: // Open Library
-                                $reviews = scrapeOpenLibraryReviews($book['id'], $book['isbn'], $book['isbn13']);
-                                break;
-                                
-                            case 4: // Goodreads
-                                $reviews = scrapeGoodreadsReviews($book['id'], $book['isbn'], $book['isbn13']);
-                                break;
-                                
-                            case 5: // Amazon
-                                $reviews = scrapeAmazonReviews($book['id'], $book['isbn'], $book['isbn13']);
-                                break;
-                                
-                            default:
-                                echo "<p class='warning'>Unknown source ID: $sourceId</p>";
+
+                        // Get the appropriate fetcher for this source
+                        $fetcher = $reviewFetcherFactory->getFetcher($sourceId);
+
+                        if (!$fetcher) {
+                            echo "<p class='warning'>No fetcher available for source ID: $sourceId</p>";
+                            flushOutput();
+                            continue;
+                        }
+
+                        // Check if the fetcher is configured correctly
+                        if (!$fetcher->isConfigured()) {
+                            echo "<p class='warning'>Fetcher for {$sourceName} is not configured correctly</p>";
+                            flushOutput();
+                            continue;
+                        }
+
+                        // Use ISBN13 if available, otherwise use ISBN
+                        $isbnToUse = !empty($book['isbn13']) ? $book['isbn13'] : $book['isbn'];
+
+                        if (empty($isbnToUse)) {
+                            echo "<p class='warning'>No ISBN available for book: {$book['title']}</p>";
+                            flushOutput();
+                            continue;
+                        }
+
+                        try {
+                            // Fetch reviews from the source
+                            $reviews = $fetcher->fetchReviewsByISBN($isbnToUse, 10);
+
+                            if (empty($reviews)) {
+                                echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
+                                if ($fetcher->getLastError()) {
+                                    echo "<p class='error'>Error: " . $fetcher->getLastError() . "</p>";
+                                }
                                 flushOutput();
                                 continue;
+                            }
+                        } catch (Exception $e) {
+                            echo "<p class='error'>Error fetching reviews from {$sourceName}: " . $e->getMessage() . "</p>";
+                            flushOutput();
+                            continue;
                         }
-                        
+
                         echo "<p class='info'>Found " . count($reviews) . " reviews from $sourceName</p>";
                         flushOutput();
-                        
+
                         // Import reviews
                         foreach ($reviews as $review) {
                             // Check for duplicates
@@ -445,7 +316,7 @@ header('Content-Type: text/html; charset=utf-8');
                                 $bookReviewsSkipped++;
                                 continue;
                             }
-                            
+
                             try {
                                 // Insert the review
                                 $stmt = $db->prepare("
@@ -479,7 +350,7 @@ header('Content-Type: text/html; charset=utf-8');
                                         NOW()
                                     )
                                 ");
-                                
+
                                 $stmt->execute([
                                     ':book_id' => $book['id'],
                                     ':source_id' => $review['source_id'],
@@ -493,7 +364,7 @@ header('Content-Type: text/html; charset=utf-8');
                                     ':review_text' => $review['review_text'],
                                     ':metadata' => $review['metadata']
                                 ]);
-                                
+
                                 echo "<p class='success'>Imported review by {$review['reviewer_name']}</p>";
                                 flushOutput();
                                 $bookReviewsImported++;
@@ -503,7 +374,7 @@ header('Content-Type: text/html; charset=utf-8');
                             }
                         }
                     }
-                    
+
                     // Update aggregate values
                     if ($bookReviewsImported > 0) {
                         if (updateBookAggregateValues($db, $book['id'])) {
@@ -513,27 +384,27 @@ header('Content-Type: text/html; charset=utf-8');
                         }
                         flushOutput();
                     }
-                    
+
                     echo "<p class='info'>Book summary: Imported $bookReviewsImported reviews, skipped $bookReviewsSkipped duplicates</p>";
                     flushOutput();
-                    
+
                     $totalReviewsImported += $bookReviewsImported;
                     $totalReviewsSkipped += $bookReviewsSkipped;
                 }
-                
+
                 // Update progress to 100%
                 echo "<script>
                     document.getElementById('progressBar').style.width = '100%';
                     document.getElementById('progressBar').innerText = '100%';
                 </script>";
                 flushOutput();
-                
+
                 // Summary
                 echo "<h3>Scraping Summary</h3>";
                 echo "<p>Total books processed: $totalBooks</p>";
                 echo "<p>Total reviews imported: $totalReviewsImported</p>";
                 echo "<p>Total duplicates skipped: $totalReviewsSkipped</p>";
-                
+
                 if ($runAiAnalysis && $totalReviewsImported > 0) {
                     echo "<p class='info'>Redirecting to AI analysis for imported reviews...</p>";
                     echo "<script>
@@ -551,12 +422,12 @@ header('Content-Type: text/html; charset=utf-8');
             ?>
         </div>
     </div>
-    
+
     <script>
         // Auto-scroll to bottom of log container
         const logContainer = document.getElementById('logContainer');
         logContainer.scrollTop = logContainer.scrollHeight;
-        
+
         // Set up interval to auto-scroll
         setInterval(function() {
             logContainer.scrollTop = logContainer.scrollHeight;

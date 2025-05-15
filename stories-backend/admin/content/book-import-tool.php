@@ -20,6 +20,18 @@ require_once '../includes/db-connect.php';
 // Include admin functions
 require_once '../includes/admin-functions.php';
 
+// Include the review fetcher services
+require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
+require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';
+require_once '../../services/ReviewFetcher/GoogleBooksReviewFetcher.php';
+require_once '../../services/ReviewFetcher/OpenLibraryReviewFetcher.php';
+require_once '../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
+require_once '../../services/ReviewFetcher/AmazonReviewFetcher.php';
+require_once '../../services/ReviewFetcher/ReviewFetcherFactory.php';
+
+// Include the AI review analyzer
+require_once '../../services/AI/ReviewAnalyzer.php';
+
 // Set page variables for header
 $pageTitle = 'Book Import Tool';
 $currentPage = 'book-import-tool';
@@ -32,7 +44,7 @@ $messageType = '';
 try {
     // Get all books from the database
     $booksStmt = $db->prepare("
-        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, 
+        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
                b.isbn, b.isbn13, b.author, b.publisher
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
@@ -41,7 +53,7 @@ try {
     ");
     $booksStmt->execute();
     $books = $booksStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Get all review sources
     $sourcesStmt = $db->prepare("
         SELECT id, name, url, is_third_party
@@ -50,11 +62,11 @@ try {
     ");
     $sourcesStmt->execute();
     $reviewSources = $sourcesStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // If no review sources exist, create default ones
     if (empty($reviewSources)) {
         $db->beginTransaction();
-        
+
         // Create default review sources
         $defaultSources = [
             ['Stories from the Web', 'https://storiesfromtheweb.org', 0],
@@ -63,26 +75,26 @@ try {
             ['Goodreads', 'https://goodreads.com', 1],
             ['Amazon', 'https://amazon.com', 1]
         ];
-        
+
         $insertStmt = $db->prepare("
             INSERT INTO review_sources (name, url, is_third_party, created_at, updated_at)
             VALUES (?, ?, ?, NOW(), NOW())
         ");
-        
+
         foreach ($defaultSources as $source) {
             $insertStmt->execute($source);
         }
-        
+
         $db->commit();
-        
+
         // Fetch the newly created sources
         $sourcesStmt->execute();
         $reviewSources = $sourcesStmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $message = 'Default review sources created successfully.';
         $messageType = 'success';
     }
-    
+
     // Get all authors
     $authorsStmt = $db->prepare("
         SELECT id, name
@@ -92,7 +104,7 @@ try {
     ");
     $authorsStmt->execute();
     $authors = $authorsStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Get all publishers
     $publishersStmt = $db->prepare("
         SELECT id, name
@@ -102,7 +114,7 @@ try {
     ");
     $publishersStmt->execute();
     $publishers = $publishersStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
 } catch (Exception $e) {
     $message = 'Error: ' . $e->getMessage();
     $messageType = 'danger';
@@ -120,7 +132,7 @@ require_once '../includes/header.php';
                     <?php echo $message; ?>
                 </div>
             <?php endif; ?>
-            
+
             <div class="card mb-4">
                 <div class="card-header">
                     <h3>Book Import Tool</h3>
@@ -154,13 +166,13 @@ require_once '../includes/header.php';
                             </a>
                         </li>
                     </ul>
-                    
+
                     <div class="tab-content p-3" id="importTabsContent">
                         <!-- Existing Books Tab -->
                         <div class="tab-pane fade show active" id="existing" role="tabpanel">
                             <h4>Existing Books</h4>
                             <p>View books already imported and scrape reviews for them.</p>
-                            
+
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
@@ -184,15 +196,15 @@ require_once '../includes/header.php';
                                                     <td><?php echo htmlspecialchars($book['title']); ?></td>
                                                     <td><?php echo htmlspecialchars($book['author']); ?></td>
                                                     <td>
-                                                        <?php 
-                                                        echo !empty($book['isbn13']) 
-                                                            ? htmlspecialchars($book['isbn13']) 
-                                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A'); 
+                                                        <?php
+                                                        echo !empty($book['isbn13'])
+                                                            ? htmlspecialchars($book['isbn13'])
+                                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
                                                         ?>
                                                     </td>
                                                     <td><?php echo (int)$book['review_count']; ?></td>
                                                     <td>
-                                                        <?php 
+                                                        <?php
                                                         if (!empty($book['average_rating'])) {
                                                             $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
                                                             echo number_format($stars, 1) . ' / 5';
@@ -202,7 +214,7 @@ require_once '../includes/header.php';
                                                         ?>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-primary scrape-reviews-btn" 
+                                                        <button class="btn btn-sm btn-primary scrape-reviews-btn"
                                                                 data-book-id="<?php echo $book['id']; ?>"
                                                                 data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
                                                             <i class="fas fa-sync"></i> Scrape Reviews
@@ -215,12 +227,12 @@ require_once '../includes/header.php';
                                 </table>
                             </div>
                         </div>
-                        
+
                         <!-- Import New Books Tab -->
                         <div class="tab-pane fade" id="import" role="tabpanel">
                             <h4>Import New Books</h4>
                             <p>Import new books by author, publisher, year, age, etc.</p>
-                            
+
                             <form id="importForm" method="post" action="book-import-process.php">
                                 <div class="form-group">
                                     <label for="importType">Import Type</label>
@@ -232,7 +244,7 @@ require_once '../includes/header.php';
                                         <option value="isbn">By ISBN List</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group import-author">
                                     <label for="authorId">Select Author</label>
                                     <select class="form-control" id="authorId" name="author_id">
@@ -241,7 +253,7 @@ require_once '../includes/header.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group import-publisher" style="display: none;">
                                     <label for="publisherId">Select Publisher</label>
                                     <select class="form-control" id="publisherId" name="publisher_id">
@@ -250,12 +262,12 @@ require_once '../includes/header.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group import-year" style="display: none;">
                                     <label for="year">Publication Year</label>
                                     <input type="number" class="form-control" id="year" name="year" min="1900" max="<?php echo date('Y'); ?>" value="<?php echo date('Y'); ?>">
                                 </div>
-                                
+
                                 <div class="form-group import-age" style="display: none;">
                                     <label for="ageRange">Age Range</label>
                                     <select class="form-control" id="ageRange" name="age_range">
@@ -265,36 +277,36 @@ require_once '../includes/header.php';
                                         <option value="13+">13+ years</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group import-isbn" style="display: none;">
                                     <label for="isbnList">ISBN List (one per line)</label>
                                     <textarea class="form-control" id="isbnList" name="isbn_list" rows="5" placeholder="Enter ISBNs, one per line"></textarea>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="limit">Limit Results</label>
                                     <input type="number" class="form-control" id="limit" name="limit" min="1" max="100" value="10">
                                     <small class="form-text text-muted">Maximum number of books to import in one batch</small>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <div class="custom-control custom-checkbox">
                                         <input type="checkbox" class="custom-control-input" id="scrapeReviews" name="scrape_reviews" value="1" checked>
                                         <label class="custom-control-label" for="scrapeReviews">Automatically scrape reviews after import</label>
                                     </div>
                                 </div>
-                                
+
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-file-import"></i> Start Import
                                 </button>
                             </form>
                         </div>
-                        
+
                         <!-- Review Sources Tab -->
                         <div class="tab-pane fade" id="sources" role="tabpanel">
                             <h4>Review Sources</h4>
                             <p>Manage sources for scraping book reviews.</p>
-                            
+
                             <div class="table-responsive mb-3">
                                 <table class="table table-striped">
                                     <thead>
@@ -312,7 +324,7 @@ require_once '../includes/header.php';
                                                 <td><?php echo htmlspecialchars($source['url']); ?></td>
                                                 <td><?php echo $source['is_third_party'] ? 'Third-party' : 'Internal'; ?></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-primary edit-source-btn" 
+                                                    <button class="btn btn-sm btn-primary edit-source-btn"
                                                             data-source-id="<?php echo $source['id']; ?>"
                                                             data-source-name="<?php echo htmlspecialchars($source['name']); ?>"
                                                             data-source-url="<?php echo htmlspecialchars($source['url']); ?>"
@@ -325,17 +337,17 @@ require_once '../includes/header.php';
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             <button class="btn btn-success" id="addSourceBtn">
                                 <i class="fas fa-plus"></i> Add New Source
                             </button>
                         </div>
-                        
+
                         <!-- Batch Processing Tab -->
                         <div class="tab-pane fade" id="batch" role="tabpanel">
                             <h4>Batch Processing</h4>
                             <p>Configure and run batch imports for books and reviews.</p>
-                            
+
                             <form id="batchForm" method="post" action="book-import-batch.php">
                                 <div class="form-group">
                                     <label for="batchType">Batch Type</label>
@@ -346,19 +358,19 @@ require_once '../includes/header.php';
                                         <option value="fetch_images">Fetch Author/Publisher Images</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="batchSize">Batch Size</label>
                                     <input type="number" class="form-control" id="batchSize" name="batch_size" min="1" max="100" value="10">
                                     <small class="form-text text-muted">Number of items to process in each batch</small>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="batchDelay">Delay Between Batches (seconds)</label>
                                     <input type="number" class="form-control" id="batchDelay" name="batch_delay" min="0" max="60" value="5">
                                     <small class="form-text text-muted">Delay between batches to prevent rate limiting</small>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <div class="custom-control custom-checkbox">
                                         <input type="checkbox" class="custom-control-input" id="runAsCron" name="run_as_cron" value="1">
@@ -366,18 +378,18 @@ require_once '../includes/header.php';
                                     </div>
                                     <small class="form-text text-muted">If checked, this will generate a cron command you can use to automate this task</small>
                                 </div>
-                                
+
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-play"></i> Start Batch Process
                                 </button>
                             </form>
                         </div>
-                        
+
                         <!-- AI Analysis Tab -->
                         <div class="tab-pane fade" id="ai" role="tabpanel">
                             <h4>AI Analysis</h4>
                             <p>Run AI analysis on reviews to find age-related content and generate summaries.</p>
-                            
+
                             <form id="aiForm" method="post" action="book-import-ai.php">
                                 <div class="form-group">
                                     <label for="analysisType">Analysis Type</label>
@@ -387,7 +399,7 @@ require_once '../includes/header.php';
                                         <option value="review_summary">Generate Review Summaries</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="bookSelection">Book Selection</label>
                                     <select class="form-control" id="bookSelection" name="book_selection">
@@ -396,7 +408,7 @@ require_once '../includes/header.php';
                                         <option value="specific">Specific Books</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="form-group book-specific" style="display: none;">
                                     <label for="specificBooks">Select Books</label>
                                     <select class="form-control" id="specificBooks" name="specific_books[]" multiple>
@@ -406,7 +418,7 @@ require_once '../includes/header.php';
                                     </select>
                                     <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple books</small>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="aiModel">AI Model</label>
                                     <select class="form-control" id="aiModel" name="ai_model">
@@ -415,7 +427,7 @@ require_once '../includes/header.php';
                                         <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                                     </select>
                                 </div>
-                                
+
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-robot"></i> Start AI Analysis
                                 </button>
@@ -441,17 +453,17 @@ require_once '../includes/header.php';
             <div class="modal-body">
                 <form id="sourceForm" method="post" action="book-import-source.php">
                     <input type="hidden" id="sourceId" name="source_id" value="">
-                    
+
                     <div class="form-group">
                         <label for="sourceName">Source Name</label>
                         <input type="text" class="form-control" id="sourceName" name="source_name" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="sourceUrl">Source URL</label>
                         <input type="url" class="form-control" id="sourceUrl" name="source_url" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="isThirdParty" name="is_third_party" value="1">
@@ -481,7 +493,7 @@ require_once '../includes/header.php';
             <div class="modal-body">
                 <form id="scrapeForm" method="post" action="book-import-scrape.php">
                     <input type="hidden" id="scrapeBookId" name="book_id" value="">
-                    
+
                     <div class="form-group">
                         <label for="scrapeSources">Select Sources</label>
                         <select class="form-control" id="scrapeSources" name="sources[]" multiple required>
@@ -493,7 +505,7 @@ require_once '../includes/header.php';
                         </select>
                         <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple sources</small>
                     </div>
-                    
+
                     <div class="form-group">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="runAiAnalysis" name="run_ai_analysis" value="1">
@@ -518,7 +530,7 @@ $(document).ready(function() {
         $('.import-author, .import-publisher, .import-year, .import-age, .import-isbn').hide();
         $(`.import-${type}`).show();
     });
-    
+
     // Book Selection Change Handler
     $('#bookSelection').change(function() {
         const selection = $(this).val();
@@ -528,7 +540,7 @@ $(document).ready(function() {
             $('.book-specific').hide();
         }
     });
-    
+
     // Add Source Button
     $('#addSourceBtn').click(function() {
         $('#sourceModalLabel').text('Add Review Source');
@@ -538,7 +550,7 @@ $(document).ready(function() {
         $('#isThirdParty').prop('checked', true);
         $('#sourceModal').modal('show');
     });
-    
+
     // Edit Source Button
     $('.edit-source-btn').click(function() {
         $('#sourceModalLabel').text('Edit Review Source');
@@ -548,22 +560,22 @@ $(document).ready(function() {
         $('#isThirdParty').prop('checked', $(this).data('source-type') == 1);
         $('#sourceModal').modal('show');
     });
-    
+
     // Save Source Button
     $('#saveSourceBtn').click(function() {
         $('#sourceForm').submit();
     });
-    
+
     // Scrape Reviews Button
     $('.scrape-reviews-btn').click(function() {
         const bookId = $(this).data('book-id');
         const bookTitle = $(this).data('book-title');
-        
+
         $('#scrapeModalLabel').text(`Scrape Reviews for: ${bookTitle}`);
         $('#scrapeBookId').val(bookId);
         $('#scrapeModal').modal('show');
     });
-    
+
     // Start Scrape Button
     $('#startScrapeBtn').click(function() {
         $('#scrapeForm').submit();

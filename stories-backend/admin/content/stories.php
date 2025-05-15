@@ -86,7 +86,7 @@ try {
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
 
-        // Get stories with pagination - simplified query without GROUP BY
+        // Get stories with pagination - simplified query with author and tags
         $query = "
             SELECT s.id,
                    s.title,
@@ -105,113 +105,24 @@ try {
                    s.is_ai_enhanced,
                    s.cover_url,
                    s.created_at,
-                   s.updated_at
-           FROM stories s
+                   s.updated_at,
+                   a.name as author_name,
+                   a.id as author_id,
+                   (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+                    FROM story_tags st
+                    JOIN tags t ON st.tag_id = t.id
+                    WHERE st.story_id = s.id) as tags
+            FROM stories s
+            LEFT JOIN story_authors sa ON s.id = sa.story_id
+            LEFT JOIN authors a ON sa.author_id = a.id
             $whereClause
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
         $stmt = $db->prepare($query);
         $stmt->execute($params);
-        $allStories = $stmt->fetchAll();
-        
-        // More detailed debug output
-        echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; overflow: auto; max-height: 500px;">';
-        echo '<h4>Debug Information</h4>';
-        
-        // Check if stories table exists and has data
-        $tableCheck = $db->query("SHOW TABLES LIKE 'stories'")->rowCount();
-        echo '<p>Stories table exists: ' . ($tableCheck > 0 ? 'Yes' : 'No') . '</p>';
-        
-        if ($tableCheck > 0) {
-            $countCheck = $db->query("SELECT COUNT(*) FROM stories")->fetchColumn();
-            echo '<p>Total stories in database: ' . $countCheck . '</p>';
-            
-            // Check story_authors table
-            $authorTableCheck = $db->query("SHOW TABLES LIKE 'story_authors'")->rowCount();
-            echo '<p>Story_authors table exists: ' . ($authorTableCheck > 0 ? 'Yes' : 'No') . '</p>';
-            
-            if ($authorTableCheck > 0) {
-                $authorCountCheck = $db->query("SELECT COUNT(*) FROM story_authors")->fetchColumn();
-                echo '<p>Total entries in story_authors table: ' . $authorCountCheck . '</p>';
-            }
-            
-            // Check for any stories with specific fields
-            $sampleStory = $db->query("SELECT id, title, content, created_at FROM stories LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-            if ($sampleStory) {
-                echo '<p>Sample story found:</p>';
-                echo '<pre>' . htmlspecialchars(print_r($sampleStory, true)) . '</pre>';
-            } else {
-                echo '<p>No sample story found.</p>';
-            }
-        }
-        
-        echo '<p>Query executed: ' . htmlspecialchars($query) . '</p>';
-        echo '<p>Parameters: ' . htmlspecialchars(print_r($params, true)) . '</p>';
-        echo '<p>Total items from count query: ' . $totalItems . '</p>';
-        echo '<p>Number of stories returned from main query: ' . count($allStories) . '</p>';
-        
-        if (count($allStories) > 0) {
-            echo '<p>First story from query result: </p>';
-            echo '<pre>' . htmlspecialchars(print_r($allStories[0], true)) . '</pre>';
-        } else {
-            echo '<p>No stories returned from query.</p>';
-        }
-        
-        // Check if there's a mismatch between count and actual results
-        if ($totalItems > 0 && count($allStories) === 0) {
-            echo '<p style="color: red; font-weight: bold;">WARNING: Count query returns ' . $totalItems . ' items but main query returns 0 items!</p>';
-        }
-        
-        echo '</div>';
+        $stories = $stmt->fetchAll();
 
-        // Process the stories - get authors and tags separately
-        $stories = $allStories;
-        
-        // Get authors for each story
-        foreach ($stories as $index => $story) {
-            try {
-                // Get author information
-                $stmt = $db->prepare("
-                    SELECT GROUP_CONCAT(a.name SEPARATOR ', ') as author_name,
-                           GROUP_CONCAT(a.id SEPARATOR ',') as author_id
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = ?
-                ");
-                $stmt->execute([$story['id']]);
-                $authorInfo = $stmt->fetch();
-                
-                if ($authorInfo && isset($authorInfo['author_name'])) {
-                    $stories[$index]['author_name'] = $authorInfo['author_name'];
-                    $stories[$index]['author_id'] = $authorInfo['author_id'];
-                } else {
-                    $stories[$index]['author_name'] = 'Unknown';
-                    $stories[$index]['author_id'] = null;
-                }
-                
-                // Get tags for the story
-                $stmt = $db->prepare("
-                    SELECT GROUP_CONCAT(t.name ORDER BY t.name ASC SEPARATOR ', ') as tags
-                    FROM story_tags st
-                    JOIN tags t ON st.tag_id = t.id
-                    WHERE st.story_id = ?
-                ");
-                $stmt->execute([$story['id']]);
-                $tags = $stmt->fetch();
-                
-                if ($tags && isset($tags['tags'])) {
-                    $stories[$index]['tags'] = $tags['tags'];
-                } else {
-                    $stories[$index]['tags'] = '';
-                }
-            } catch (Exception $e) {
-                $stories[$index]['author_name'] = 'Unknown';
-                $stories[$index]['author_id'] = null;
-                $stories[$index]['tags'] = '';
-                error_log("Error getting author/tags for story {$story['id']}: " . $e->getMessage());
-            }
-        }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());
         $stories = [];
@@ -306,45 +217,6 @@ if (function_exists('renderLiveSearchComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Add direct SQL query to fetch stories
-echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">';
-echo '<h4>Direct SQL Query Results</h4>';
-
-try {
-    // Direct query to get stories
-    $directQuery = "SELECT s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
-                   s.created_at, s.updated_at, s.cover_url, s.source_type
-                   FROM stories s
-                   ORDER BY s.created_at DESC
-                   LIMIT 10";
-    $stmt = $db->query($directQuery);
-    $directStories = $stmt->fetchAll();
-    
-    echo '<p>Direct query found ' . count($directStories) . ' stories</p>';
-    
-    if (count($directStories) > 0) {
-        echo '<table class="table table-striped table-bordered">';
-        echo '<thead><tr><th>ID</th><th>Title</th><th>Source Type</th><th>Created</th></tr></thead>';
-        echo '<tbody>';
-        
-        foreach ($directStories as $story) {
-            echo '<tr>';
-            echo '<td>' . $story['id'] . '</td>';
-            echo '<td>' . htmlspecialchars($story['title']) . '</td>';
-            echo '<td>' . htmlspecialchars($story['source_type'] ?? 'N/A') . '</td>';
-            echo '<td>' . date('M j, Y', strtotime($story['created_at'])) . '</td>';
-            echo '</tr>';
-        }
-        
-        echo '</tbody></table>';
-    } else {
-        echo '<p>No stories found with direct query.</p>';
-    }
-} catch (Exception $e) {
-    echo '<p>Error with direct query: ' . $e->getMessage() . '</p>';
-}
-
-echo '</div>';
 
 // Include enhanced table component
 require_once __DIR__ . '/../includes/enhanced-table-component.php';

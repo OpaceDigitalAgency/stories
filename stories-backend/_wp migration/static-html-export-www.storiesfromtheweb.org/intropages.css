@@ -1,0 +1,359 @@
+@charset "utf-8";
+body {
+	background-color: #f4eafb;
+	margin: 0pt auto;
+	position: relative;
+	width: 940px;
+	background-repeat: no-repeat;
+	background-position: top center;
+	text-align: center;
+	font-weight: bold;
+}
+#reviewbook{
+	padding:3px;
+	border:1px #803AF1 solid;
+	font-size:17px;
+}
+.writinggallerytitle {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: .9em;
+	background-color: #FFF;
+	padding: 20px;
+	width: 75%;
+	border-radius: 10px;
+	text-align: left;
+}
+.suggestionsBox {
+	position: absolute;
+	left: -15px;
+	top:50px;
+	margin: 26px 0px 0px 0px;
+	width: 165px;
+	padding:0px;
+	background-color: #310873;
+	border-top: 3px solid #803AF1;
+	color: #fff;
+}
+.suggestionsList {
+	margin: 0px;
+	padding: 0px;
+}
+.suggestionsList ul li {
+	list-style:none;
+	margin: 0px;
+	padding: 6px;
+	border-bottom:1px dotted #666;
+	cursor: pointer;
+}
+.suggestionsList ul a:link {
+	color:#FFFFFF;
+}
+.suggestionsList ul a:visited {
+	color:#FFFFFF;
+}
+.suggestionsList ul li:hover {
+	background-color: #C8AAF9;
+	color:#000;
+}
+#reviewauthor{
+	padding:3px;
+	border:1px #803AF1 solid;
+	font-size:17px;
+}
+.authorsuggestionsBox {
+	position: absolute;
+	left: -15px;
+	top:350px;
+	margin: 26px 0px 0px 0px;
+	width: 165px;
+	padding:0px;
+	background-color: #310873;
+	border-top: 3px solid #803AF1;
+	color: #fff;
+}
+.authorsuggestionsList {
+	margin: 0px;
+	padding: 0px;
+}
+.authorsuggestionsList ul li {
+	list-style:none;
+	margin: 0px;
+	padding: 6px;
+	border-bottom:1px dotted #666;
+	cursor: pointer;
+}
+.authorsuggestionsList ul a:link {
+	color:#FFFFFF;
+}
+.authorsuggestionsList ul a:visited {
+	color:#FFFFFF;
+}
+.authorsuggestionsList ul li:hover {
+	background-color: #C8AAF9;
+	color:#000;
+}
+ul {
+	font-family:Tahoma, Geneva, sans-serif;
+	font-size:11px;
+	color:#310873;
+	padding:0;
+	margin:0;
+}
+
+.load{
+background-image:url(Front%20Images/searchboxloader.gif);
+background-position:right;
+background-repeat:no-repeat;
+}
+.authorload{
+background-image:url(Front%20Images/searchboxloader.gif);
+background-position:right;
+background-repeat:no-repeat;
+}
+
+#suggest {
+	position:relative;
+}
+.comment-body {
+	margin-bottom: 10px;
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 1em;
+	color: #FFF;
+	width: 700px;
+	text-align: left;
+}
+.review-comments .comment-body .top {
+    background-image: url("Front%20Images/reviewcommentstop.png");
+    background-position: left top;
+    background-repeat: no-repeat;
+    height: 17px;
+}
+.review-comments .comment-body .mid {
+	background: none repeat scroll 0 0 #310873;
+	line-height: 17px;
+	overflow: hidden;
+	padding: 5px 15px;
+	color: #C8AAF9;
+}
+	
+.review-comments .comment-body .bot {
+    background-image: url("Front%20Images/reviewcommentsbottom.png");
+    background-position: left top;
+    background-repeat: no-repeat;
+    height: 20px;
+}
+.BookInfo {
+color: #F2F0F7;
+}
+.Monster {
+	background-image: url(Front%20Images/Morris.png);
+	background-repeat: no-repeat;
+}
+.ABlack {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	color: #2F0575;
+}
+a:link {
+	text-decoration: none;
+	font-family: Tahoma, Geneva, sans-serif
+	color: #429cbe;
+}
+a img {
+      border: 0px;
+}
+a:visited {
+	text-decoration: underline;
+	color: #429cbe;
+}
+a {
+outline: none;
+}
+a:hover {
+	text-decoration: underline;
+	color: #429cbe;
+}
+a:active, a:focus {
+	border: none;
+	outline: 0;
+	text-decoration: none;
+	font-weight:bold;
+}
+#apDiv2 {
+	position:absolute;
+	width:200px;
+	height:115px;
+	z-index:1;
+	top: 497px;
+	left: -156px;
+	overflow: visible;
+}
+div.ic_myCarousel, div.ic_myCarousel2 {
+	margin: 20px auto 0 auto;
+	clear:right;
+}
+.ic_myCarousel .ic_button {
+	float: left;
+	height: 20px;
+	line-height: 20px;
+	margin: 0 4px 0 8px;
+	width: 20px;
+	border: 1px solid #eee;
+
+}
+.ic_myCarousel2 .ic_button {
+	float: left;
+	height: 20px;
+	line-height: 20px;
+	margin: 0 4px 0 8px;
+	width: 20px;
+	border: 1px solid #eee;
+	
+}
+.ic_thumbnails {
+	display: inline-block;
+	font: bold 14px Arial, sans-serif;
+	color:#F00
+}
+/*div.ic_myCarousel .infiniteCarousel {
+	-moz-border-radius: 20px;
+	border-radius: 20px;
+	box-shadow: 0px 0px 8px #333;
+}
+div.ic_myCarousel2 .infiniteCarousel {
+	-moz-border-radius: 20px;
+	border-radius: 20px;
+	box-shadow: 0px 0px 8px #333;
+}*/
+
+
+/* keep this after the ic_button code for proper border coloring */		
+.ic_myCarousel .ic_active  {
+	background: #fff;
+	border: 1px solid #faa;
+}
+.ic_caption {
+	opacity: 1;
+
+	font-size: 16px;
+	font-family: arial;
+	padding: 4px 8px;
+	width: inherit
+	
+}
+
+div p {
+    color: #333333;
+    font-family: Tahoma, Geneva, sans-serif;
+    font-size: 18px;
+    text-shadow: 0 1px 1px #C9C9C9;
+}
+.options {
+	font-size: 16px;
+}
+#apDiv1 {
+	position:absolute;
+	width:200px;
+	height:115px;
+	z-index:2;
+}
+fieldset {
+	font-size: 1em;
+	font-weight: bold;
+	color: #343440;
+	/*background-color: #000000;*/
+	margin:0px;
+	padding:10px;
+	width: 450px;
+	border: none;
+	text-align: left;
+}
+
+
+fieldset#reviewdetails input {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 0.9em;
+	font-weight: normal;
+	color: #000000;
+	background-color: #FFFFE1;
+	padding: 4px;
+	width: 400px;
+	
+}
+
+fieldset#characterdetails input {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 1.5em;
+	font-weight: bold;
+	width: 50px;
+	color: #FFF;
+	background-color: #000;
+	border: none;
+}
+
+fieldset#reviewdetails ul {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 0.9em;
+	font-weight: normal;
+	color: #000000;
+	
+}
+
+
+fieldset#reviewdetails textarea  {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 0.9em;
+	font-weight: normal;
+	color: #000000;
+	background-color: #FFFFE1;
+	padding: 4px;
+	width: 400px;
+	
+}
+
+
+fieldset#reviewvisitordetails input {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 0.9em;
+	font-weight: normal;
+	color: #000000;
+	background-color: #FFFFE1;
+	padding: 4px;
+	width: 400px;
+}
+
+input.btn {
+  color: #00008B;
+  background-color: #ADD8E6;
+  border: 1px outset #00008B;
+}
+input.radiobtn {
+	color: #13C8F7;
+	background-color: #FFFFE1;
+	padding: 4px;
+	width: 30px;
+	border: 1px solid #13C8F7;
+}
+legend {
+	font-weight: bold;
+	color: #223344;
+	background-color: #000000;
+	padding-top: 3px;
+	padding-right: 10px;
+	padding-bottom: 3px;
+	padding-left: 10px;
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 1em;
+	
+}
+.pagecontent {
+	padding-top: 5px;
+	padding-right: 10px;
+	padding-bottom: 5px;
+	padding-left: 50px;
+}
+#nice {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 14px;
+	color: #F93;
+}

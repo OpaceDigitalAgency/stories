@@ -115,18 +115,54 @@ try {
         $stmt->execute($params);
         $allStories = $stmt->fetchAll();
         
-        // Debug output
-        echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">';
+        // More detailed debug output
+        echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; overflow: auto; max-height: 500px;">';
         echo '<h4>Debug Information</h4>';
+        
+        // Check if stories table exists and has data
+        $tableCheck = $db->query("SHOW TABLES LIKE 'stories'")->rowCount();
+        echo '<p>Stories table exists: ' . ($tableCheck > 0 ? 'Yes' : 'No') . '</p>';
+        
+        if ($tableCheck > 0) {
+            $countCheck = $db->query("SELECT COUNT(*) FROM stories")->fetchColumn();
+            echo '<p>Total stories in database: ' . $countCheck . '</p>';
+            
+            // Check story_authors table
+            $authorTableCheck = $db->query("SHOW TABLES LIKE 'story_authors'")->rowCount();
+            echo '<p>Story_authors table exists: ' . ($authorTableCheck > 0 ? 'Yes' : 'No') . '</p>';
+            
+            if ($authorTableCheck > 0) {
+                $authorCountCheck = $db->query("SELECT COUNT(*) FROM story_authors")->fetchColumn();
+                echo '<p>Total entries in story_authors table: ' . $authorCountCheck . '</p>';
+            }
+            
+            // Check for any stories with specific fields
+            $sampleStory = $db->query("SELECT id, title, content, created_at FROM stories LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            if ($sampleStory) {
+                echo '<p>Sample story found:</p>';
+                echo '<pre>' . htmlspecialchars(print_r($sampleStory, true)) . '</pre>';
+            } else {
+                echo '<p>No sample story found.</p>';
+            }
+        }
+        
         echo '<p>Query executed: ' . htmlspecialchars($query) . '</p>';
         echo '<p>Parameters: ' . htmlspecialchars(print_r($params, true)) . '</p>';
-        echo '<p>Total items: ' . $totalItems . '</p>';
-        echo '<p>Number of stories returned: ' . count($allStories) . '</p>';
+        echo '<p>Total items from count query: ' . $totalItems . '</p>';
+        echo '<p>Number of stories returned from main query: ' . count($allStories) . '</p>';
+        
         if (count($allStories) > 0) {
-            echo '<p>First story: ' . htmlspecialchars(print_r($allStories[0], true)) . '</p>';
+            echo '<p>First story from query result: </p>';
+            echo '<pre>' . htmlspecialchars(print_r($allStories[0], true)) . '</pre>';
         } else {
             echo '<p>No stories returned from query.</p>';
         }
+        
+        // Check if there's a mismatch between count and actual results
+        if ($totalItems > 0 && count($allStories) === 0) {
+            echo '<p style="color: red; font-weight: bold;">WARNING: Count query returns ' . $totalItems . ' items but main query returns 0 items!</p>';
+        }
+        
         echo '</div>';
 
         // Process the stories - get authors and tags separately

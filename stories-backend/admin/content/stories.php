@@ -306,6 +306,46 @@ if (function_exists('renderLiveSearchComponent')) {
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
+// Add direct SQL query to fetch stories
+echo '<div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">';
+echo '<h4>Direct SQL Query Results</h4>';
+
+try {
+    // Direct query to get stories
+    $directQuery = "SELECT s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
+                   s.created_at, s.updated_at, s.cover_url, s.source_type
+                   FROM stories s
+                   ORDER BY s.created_at DESC
+                   LIMIT 10";
+    $stmt = $db->query($directQuery);
+    $directStories = $stmt->fetchAll();
+    
+    echo '<p>Direct query found ' . count($directStories) . ' stories</p>';
+    
+    if (count($directStories) > 0) {
+        echo '<table class="table table-striped table-bordered">';
+        echo '<thead><tr><th>ID</th><th>Title</th><th>Source Type</th><th>Created</th></tr></thead>';
+        echo '<tbody>';
+        
+        foreach ($directStories as $story) {
+            echo '<tr>';
+            echo '<td>' . $story['id'] . '</td>';
+            echo '<td>' . htmlspecialchars($story['title']) . '</td>';
+            echo '<td>' . htmlspecialchars($story['source_type'] ?? 'N/A') . '</td>';
+            echo '<td>' . date('M j, Y', strtotime($story['created_at'])) . '</td>';
+            echo '</tr>';
+        }
+        
+        echo '</tbody></table>';
+    } else {
+        echo '<p>No stories found with direct query.</p>';
+    }
+} catch (Exception $e) {
+    echo '<p>Error with direct query: ' . $e->getMessage() . '</p>';
+}
+
+echo '</div>';
+
 // Include enhanced table component
 require_once __DIR__ . '/../includes/enhanced-table-component.php';
 if (function_exists('renderEnhancedTable')) {

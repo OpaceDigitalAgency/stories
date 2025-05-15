@@ -534,7 +534,7 @@ $extraHeadContent = '
             document.getElementById("review_id").value = ""; // Clear the hidden review ID field
             document.getElementById("rating_normalised").value = "0";
             document.getElementById("original_rating").value = "";
-            document.getElementById("review-form-title").textContent = "Add New Review";
+            document.getElementById("review-form-modal-title").textContent = "Add New Review";
             document.getElementById("submit-review").textContent = "Add Review";
 
             // Reset star display
@@ -594,7 +594,7 @@ $extraHeadContent = '
                     }
 
                     // Update form title and button text
-                    document.getElementById("review-form-title").textContent = "Edit Review";
+                    document.getElementById("review-form-modal-title").textContent = "Edit Review";
                     document.getElementById("submit-review").textContent = "Update Review";
 
                     // Scroll to form
@@ -1610,7 +1610,12 @@ if (isset($_SESSION['error'])) {
 
                             <!-- Placeholder for review form - actual form moved outside main form -->
                             <div class="add-review-form-placeholder" id="review-form-placeholder">
-                                <p>Review form will appear here when you click "Add New Review" or "Edit"</p>
+                                <div class="text-center p-4">
+                                    <p>The review form now appears in a popup window for better usability.</p>
+                                    <button type="button" class="btn btn-primary" onclick="$('#review-form-modal').modal('show')">
+                                        <i class="fas fa-plus"></i> Open Review Form
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2689,6 +2694,39 @@ function initStarRating() {
             updateStarRating(currentRating);
         });
     }
+}
+
+/**
+ * Update the star rating display
+ * @param {number} rating - The rating value (1-5)
+ */
+/**
+ * Reset the star rating to 0
+ */
+function resetStarRating() {
+    console.log('resetStarRating called');
+    
+    const stars = document.querySelectorAll('.rating-star');
+    const ratingValueDisplay = document.querySelector('.rating-value');
+    const ratingNormalisedInput = document.getElementById('rating_normalised');
+    const originalRatingInput = document.getElementById('original_rating');
+
+    if (!stars.length || !ratingValueDisplay) {
+        console.error('Missing stars or rating value display elements');
+        return;
+    }
+
+    // Reset stars to gray
+    stars.forEach(star => {
+        star.style.color = '#e0e0e0';
+    });
+
+    // Reset rating value display
+    ratingValueDisplay.textContent = '0/5';
+
+    // Reset hidden inputs
+    if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
+    if (originalRatingInput) originalRatingInput.value = '';
 }
 
 /**

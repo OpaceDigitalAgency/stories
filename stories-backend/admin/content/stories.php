@@ -16,29 +16,108 @@ require_once '../includes/auth-check.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 try {
 
-    // Check if stories table exists and has the correct structure
-    $requiredTables = ['stories', 'authors', 'story_authors', 'story_tags'];
-    foreach ($requiredTables as $table) {
-        $stmt = $db->query("SHOW TABLES LIKE '$table'");
-        if ($stmt->rowCount() === 0) {
-            throw new Exception("Required table '$table' does not exist");
+    // Check if stories table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'stories'");
+    if ($stmt->rowCount() === 0) {
+        // Create stories table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS stories (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )");
+
+        // Log this important information
+        error_log("Stories table did not exist and was created");
+    }
+
+    // Check if stories table has any data
+    $countStories = $db->query("SELECT COUNT(*) FROM stories")->fetchColumn();
+    error_log("Number of stories in database: " . $countStories);
+
+    // If no stories, create a sample story for testing
+    if ($countStories == 0) {
+        error_log("No stories found in database, creating a sample story");
+
+        // First check if we have any authors
+        $authorCount = $db->query("SELECT COUNT(*) FROM authors")->fetchColumn();
+        $authorId = null;
+
+        if ($authorCount > 0) {
+            // Get the first author
+            $authorId = $db->query("SELECT id FROM authors LIMIT 1")->fetchColumn();
+        } else {
+            // Create a sample author
+            $db->exec("INSERT INTO authors (name, slug, bio, created_at, updated_at)
+                      VALUES ('Sample Author', 'sample-author', 'This is a sample author', NOW(), NOW())");
+            $authorId = $db->lastInsertId();
+        }
+
+        // Create a sample story
+        $db->exec("INSERT INTO stories (title, content, created_at, updated_at)
+                  VALUES ('Sample Story', 'This is a sample story content.', NOW(), NOW())");
+        $storyId = $db->lastInsertId();
+
+        // Link the story to the author
+        if ($authorId) {
+            $db->exec("INSERT INTO story_authors (story_id, author_id) VALUES ($storyId, $authorId)");
         }
     }
 
-    // Get stories table structure
+    // Check if story_tags table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_tags'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_tags table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_tags (
+            story_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (story_id, tag_id)
+        )");
+        error_log("story_tags table did not exist and was created");
+    }
+
+    // Check if story_authors table exists
+    $stmt = $db->query("SHOW TABLES LIKE 'story_authors'");
+    if ($stmt->rowCount() === 0) {
+        // Create story_authors table if it doesn't exist
+        $db->exec("CREATE TABLE IF NOT EXISTS story_authors (
+            story_id INT NOT NULL,
+            author_id INT NOT NULL,
+            PRIMARY KEY (story_id, author_id)
+        )");
+        error_log("story_authors table did not exist and was created");
+
+        // Check if we have stories with author_id column
+        if (in_array('author_id', $columns)) {
+            // Migrate data from author_id column to junction table
+            $stories = $db->query("SELECT id, author_id FROM stories WHERE author_id IS NOT NULL")->fetchAll();
+            foreach ($stories as $story) {
+                $db->exec("INSERT IGNORE INTO story_authors (story_id, author_id) VALUES ({$story['id']}, {$story['author_id']})");
+            }
+            error_log("Migrated " . count($stories) . " stories with author_id to story_authors junction table");
+        }
+    }
+
+    // Get all columns from stories table
     $columns = [];
     $stmt = $db->query("DESCRIBE stories");
     while ($row = $stmt->fetch()) {
         $columns[] = $row['Field'];
     }
-    // Verify required columns exist
-    $requiredColumns = ['id', 'title', 'content', 'created_at', 'updated_at'];
-    foreach ($requiredColumns as $column) {
-        if (!in_array($column, $columns)) {
-            throw new Exception("Required column '$column' missing from stories table");
-        }
+
+    // Determine the join condition based on available columns
+    $joinCondition = "1=0"; // Default to no join if neither column exists
+    if (in_array('author_id', $columns)) {
+        $joinCondition = "s.author_id = a.id";
+    } elseif (in_array('author', $columns)) {
+        $joinCondition = "s.author = a.name";
     }
 
     // Get search parameters
@@ -71,6 +150,9 @@ try {
             }
         }
 
+        // Log the query for debugging
+        error_log("Search parameters: " . json_encode(['search' => $search, 'searchField' => $searchField]));
+
         // Get total count for pagination
         $countQuery = "
             SELECT COUNT(DISTINCT s.id)
@@ -83,54 +165,30 @@ try {
         $stmt->execute($params);
         $totalItems = $stmt->fetchColumn();
 
+        error_log("Total stories found: $totalItems");
+
         // Calculate offset for pagination
         $offset = ($page - 1) * $perPage;
 
         // Get stories with pagination - include author information through story_authors
         $query = "
-            SELECT s.id,
-                   s.title,
-                   s.content,
-                   s.excerpt,
-                   s.slug,
-                   s.is_published,
-                   s.featured,
-                   s.average_rating,
-                   s.review_count,
-                   s.estimated_reading_time,
-                   s.is_sponsored,
-                   s.age_group,
-                   s.needs_moderation,
-                   s.is_self_published,
-                   s.is_ai_enhanced,
-                   s.cover_url,
-                   s.created_at,
-                   s.updated_at,
-                   (SELECT GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ')
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = s.id) as author_names,
-                   (SELECT GROUP_CONCAT(DISTINCT a.id SEPARATOR ',')
-                    FROM story_authors sa
-                    JOIN authors a ON sa.author_id = a.id
-                    WHERE sa.story_id = s.id) as author_ids,
-                   (SELECT GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ')
-                    FROM story_tags st
-                    JOIN tags t ON st.tag_id = t.id
-                    WHERE st.story_id = s.id) as tag_names
-           FROM stories s
+            SELECT s.*,
+                   GROUP_CONCAT(DISTINCT a.name) as author_names,
+                   GROUP_CONCAT(DISTINCT a.id) as author_ids
+            FROM stories s
+            LEFT JOIN story_authors sa ON s.id = sa.story_id
+            LEFT JOIN authors a ON sa.author_id = a.id
             $whereClause
-            GROUP BY s.id, s.title, s.content, s.excerpt, s.slug, s.is_published,
-                     s.featured, s.average_rating, s.review_count,
-                     s.estimated_reading_time, s.is_sponsored, s.age_group,
-                     s.needs_moderation, s.is_self_published, s.is_ai_enhanced,
-                     s.cover_url, s.created_at, s.updated_at
+            GROUP BY s.id
             ORDER BY s.created_at DESC
             LIMIT $offset, $perPage
         ";
+        error_log("Stories query: $query");
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $allStories = $stmt->fetchAll();
+
+        error_log("Number of stories fetched: " . count($allStories));
 
         // Process the stories and their authors
         $stories = [];
@@ -138,17 +196,20 @@ try {
             // Split author names and IDs into arrays
             $authorNames = $story['author_names'] ? explode(',', $story['author_names']) : [];
             $authorIds = $story['author_ids'] ? explode(',', $story['author_ids']) : [];
-
+            
             // Format author name for display
             $story['author_name'] = $authorNames ? implode(', ', $authorNames) : 'Unknown';
             $story['author_id'] = $authorIds ? $authorIds[0] : null; // Keep first author ID for compatibility
-
+            
             // Remove the concatenated fields from display
             unset($story['author_names']);
             unset($story['author_ids']);
-
+            
             $stories[] = $story;
+            error_log("Processed story ID: " . $story['id'] . ", Authors: " . $story['author_name']);
         }
+
+        error_log("Number of stories processed: " . count($stories));
 
         // Get tags for each story
         foreach ($stories as $index => $storyItem) {
@@ -170,9 +231,12 @@ try {
                     $stories[$index]['tags'] = '';
                 }
             } catch (Exception $e) {
+                error_log("Error fetching tags for story ID " . $storyItem['id'] . ": " . $e->getMessage());
                 $stories[$index]['tags'] = '';
             }
 
+            // Debug log for author information
+            error_log("Story ID: " . $storyItem['id'] . ", Author ID: " . ($stories[$index]['author_id'] ?? 'null') . ", Author Name: " . ($stories[$index]['author_name'] ?? 'null'));
         }
     } catch (Exception $e) {
         error_log("Error fetching stories: " . $e->getMessage());
@@ -199,229 +263,102 @@ if (isset($_SESSION['error'])) {
 $pageTitle = 'Stories';
 $currentPage = 'stories';
 $pageDescription = 'Manage all your stories from here.';
-
-// Add extra head content for premium features
-$extraHeadContent = '
-<!-- Add Premium Admin CSS -->
-<link rel="stylesheet" href="../assets/css/premium-admin.css">
-<!-- Add Live Search JS -->
-<script src="../assets/js/live-search.js"></script>
-<!-- Add Inline Editing JS -->
-<script src="../assets/js/inline-editing.js"></script>
-<!-- Add Story Preview CSS and JS -->
-<link rel="stylesheet" href="../assets/css/story-preview.css">
-<script src="../assets/js/story-preview.js"></script>
-';
-
 $pageActions = '
-<div class="premium-flex premium-gap-2">
-    <a href="story-form.php" class="premium-btn premium-btn-success">
+<form method="GET" action="story-form.php">
+    <button type="submit" class="btn btn-success">
         <i class="fas fa-plus" aria-hidden="true"></i> Add New Story
-    </a>
-    <button onclick="window.location.reload()" class="premium-btn premium-btn-secondary">
-        <i class="fas fa-sync" aria-hidden="true"></i> Refresh
     </button>
-    <button onclick="window.location.href=\'?debug=1\'" class="premium-btn premium-btn-info">
-        <i class="fas fa-bug" aria-hidden="true"></i> Debug Mode
-    </button>
-</div>
+</form>
 ';
 
 // Include header
 require_once '../includes/header.php';
 
-// Display any database connection errors
-if (!$db) {
-    echo '<div class="alert alert-danger" role="alert">';
-    echo '<h4 class="alert-heading"><i class="fas fa-database"></i> Database Connection Error</h4>';
-    echo '<p>Could not connect to the database. Please check your configuration.</p>';
-    echo '</div>';
+// Include search component
+include_once '../includes/search-component.php';
+if (function_exists('renderSearchComponent')) {
+    renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
 }
 
-// Display any errors prominently
-if (isset($error)) {
-    echo '<div class="alert alert-danger" role="alert">';
-    echo '<h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Error Loading Stories</h4>';
-    echo '<p>' . htmlspecialchars($error) . '</p>';
-    echo '<hr>';
-    echo '<p class="mb-0">Please check the error logs for more details or contact support.</p>';
-    echo '</div>';
-}
-
-// Include live search component
-include_once '../includes/live-search-component.php';
-if (function_exists('renderLiveSearchComponent')) {
-    renderLiveSearchComponent('stories', ['title', 'content', 'author', 'tags'], 'stories-table');
-} else {
-    // Fallback to predictive search component
-    include_once '../includes/predictive-search-component.php';
-    if (function_exists('renderPredictiveSearchComponent')) {
-        renderPredictiveSearchComponent('stories', ['title', 'content', 'author', 'tags']);
-    } else {
-        // Fallback to regular search component
-        include_once '../includes/search-component.php';
-        if (function_exists('renderSearchComponent')) {
-            renderSearchComponent('stories', ['title', 'content', 'author', 'tags']);
-        }
-    }
+// Include bulk actions component
+include_once '../includes/bulk-actions-component.php';
+if (function_exists('renderBulkActionsComponent')) {
+    renderBulkActionsComponent('stories', ['delete', 'publish', 'unpublish', 'feature', 'unfeature']);
 }
 
 // Include status indicator component
 include_once '../includes/status-indicator-component.php';
 
-// Include enhanced table component
-require_once __DIR__ . '/../includes/enhanced-table-component.php';
-if (function_exists('renderEnhancedTable')) {
-    // Prepare data for the enhanced table
-    $tableData = [];
-    foreach ($stories as $story) {
-        // Format the status
-        $status = isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
-        if (isset($story['needs_moderation']) && $story['needs_moderation']) {
-            $status .= ' (Needs Moderation)';
-        }
-
-        // Format the created date
-        $createdDate = date('M j, Y', strtotime($story['created_at']));
-
-        // Add the item to the table data
-        $tableData[] = [
-            'id' => $story['id'],
-            'image' => $story['cover_url'] ?? '../assets/images/default-cover.jpg',
-            'title' => $story['title'],
-            'author' => $story['author_name'] ?? 'Unknown',
-            'status' => $status,
-            'tags' => $story['tags'] ?? '',
-            'created' => $createdDate
-        ];
-    }
-
-    // Define columns for the table
+// Include table component
+include_once '../includes/table-component.php';
+if (function_exists('renderTable')) {
+    // Define columns
     $columns = [
+        'id' => 'ID',
         'title' => 'Title',
-        'author' => 'Author',
+        'author_name' => 'Author',
         'status' => 'Status',
         'tags' => 'Tags',
-        'created' => 'Created'
+        'created_at' => 'Created'
     ];
 
-    // Define which fields are editable inline
-    $editableFields = ['title', 'tags'];
+    // Define custom formatters
+    $customFormatters = [
+        'title' => function($story, $key) {
+            $output = '<div class="item-title">';
+            $output .= htmlspecialchars($story['title']);
 
-    // Custom action renderer for stories
-    $customActionRenderer = function($item) {
-        $html = '<div class="premium-table-actions">';
-
-        // View button - uses the story preview lightbox
-        $html .= '<button type="button" class="premium-btn premium-btn-info premium-btn-sm story-preview-btn" data-story-id="' . htmlspecialchars($item['id']) . '" title="Preview">';
-        $html .= '<i class="fas fa-eye"></i>';
-        $html .= '</button>';
-
-        // Edit button - goes to story-form.php
-        $html .= '<a href="story-form.php?id=' . htmlspecialchars($item['id']) . '" class="premium-btn premium-btn-primary premium-btn-sm">';
-        $html .= '<i class="fas fa-edit"></i>';
-        $html .= '</a>';
-
-        // Delete button
-        $html .= '<button type="button" class="premium-btn premium-btn-danger premium-btn-sm delete-item-btn" data-id="' . htmlspecialchars($item['id']) . '" title="Delete">';
-        $html .= '<i class="fas fa-trash"></i>';
-        $html .= '</button>';
-
-        $html .= '</div>';
-        return $html;
-    };
-
-    // Render the enhanced table
-    renderEnhancedTable(
-        $tableData,
-        $columns,
-        'story', // This must match a key in the $tableMap array in update-field.php
-        'stories-table',
-        [
-            'showCheckboxes' => true,
-            'showActions' => true,
-            'actions' => ['view', 'edit', 'delete'],
-            'thumbnailField' => 'image',
-            'thumbnailAltField' => 'title',
-            'editableFields' => $editableFields,
-            'bulkActions' => ['delete', 'publish', 'unpublish', 'feature', 'unfeature'],
-            'itemsPerPage' => $perPage,
-            'currentPage' => $page,
-            'totalItems' => $totalItems, // Pass the total items count from SQL query
-            'customActionRenderer' => $customActionRenderer // Add custom action renderer
-        ]
-    );
-} else {
-    // Fallback to the original table component
-    include_once '../includes/table-component.php';
-    if (function_exists('renderTable')) {
-        // Define columns
-        $columns = [
-            'id' => 'ID',
-            'title' => 'Title',
-            'author_name' => 'Author',
-            'status' => 'Status',
-            'tags' => 'Tags',
-            'created_at' => 'Created'
-        ];
-
-        // Define custom formatters
-        $customFormatters = [
-            'title' => function($story, $key) {
-                $output = '<div class="item-title">';
-                $output .= htmlspecialchars($story['title']);
-
-                if (isset($story['featured']) && $story['featured']) {
-                    $output .= ' <span class="featured-badge" title="Featured story" aria-label="Featured story">';
-                    $output .= '<i class="fas fa-star" aria-hidden="true"></i>';
-                    $output .= '</span>';
-                }
-
-                $output .= '</div>';
-
-                return $output;
-            },
-            'author_name' => function($story, $key) {
-                return htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown');
-            },
-            'status' => function($story, $key) {
-                $output = '';
-                if (function_exists('getPublishedStatusIndicator')) {
-                    $output .= getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
-                } else {
-                    $output .= isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
-                }
-
-                if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
-                    $output .= '<br>' . getModerationStatusIndicator(true);
-                }
-
-                return $output;
-            },
-            'created_at' => function($story, $key) {
-                $output = '<div>' . date('M j, Y', strtotime($story['created_at'])) . '</div>';
-                $output .= '<div class="text-muted">Updated: ' . date('M j, Y', strtotime($story['updated_at'])) . '</div>';
-                return $output;
+            if (isset($story['featured']) && $story['featured']) {
+                $output .= ' <span class="featured-badge" title="Featured story" aria-label="Featured story">';
+                $output .= '<i class="fas fa-star" aria-hidden="true"></i>';
+                $output .= '</span>';
             }
-        ];
 
-        // Render the table
-        renderTable($stories, $columns, [
-            'content_type' => 'stories',
-            'name_field' => 'title',
-            'empty_message' => 'No stories found. Add your first story!',
-            'custom_formatters' => $customFormatters,
-            'view_url' => 'javascript:void(0);',
-            'view_onclick' => 'if(window.storyPreview) window.storyPreview.loadStoryPreview("{id}"); return false;',
-            'edit_url' => 'story-form.php?id={id}',
-            'delete_url' => 'delete-story.php'
-        ]);
-    }
+            $output .= '</div>';
+            $output .= '<div class="item-excerpt">';
+            $output .= htmlspecialchars(substr($story['content'], 0, 100) . '...');
+            $output .= '</div>';
+
+            return $output;
+        },
+        'author_name' => function($story, $key) {
+            return htmlspecialchars($story['author_name'] ?? $story['author'] ?? 'Unknown');
+        },
+        'status' => function($story, $key) {
+            $output = '';
+            if (function_exists('getPublishedStatusIndicator')) {
+                $output .= getPublishedStatusIndicator(isset($story['is_published']) ? $story['is_published'] : false);
+            } else {
+                $output .= isset($story['is_published']) && $story['is_published'] ? 'Published' : 'Draft';
+            }
+
+            if (isset($story['needs_moderation']) && $story['needs_moderation'] && function_exists('getModerationStatusIndicator')) {
+                $output .= '<br>' . getModerationStatusIndicator(true);
+            }
+
+            return $output;
+        },
+        'created_at' => function($story, $key) {
+            $output = '<div>' . date('M j, Y', strtotime($story['created_at'])) . '</div>';
+            $output .= '<div class="text-muted">Updated: ' . date('M j, Y', strtotime($story['updated_at'])) . '</div>';
+            return $output;
+        }
+    ];
+
+    // Render the table
+    renderTable($stories, $columns, [
+        'content_type' => 'stories',
+        'name_field' => 'title',
+        'empty_message' => 'No stories found. Add your first story!',
+        'custom_formatters' => $customFormatters
+    ]);
 }
 
-// Include pagination component if needed
+// Include pagination component
 include_once '../includes/pagination-component.php';
-if (function_exists('renderPagination') && $totalItems > $perPage) {
+if (function_exists('renderPagination')) {
+    // Use the total items from the query for accurate pagination
+    // $totalItems is already set from the count query
     renderPagination($totalItems, $perPage, $page);
 }
 

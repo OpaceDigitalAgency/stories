@@ -40,8 +40,8 @@ function columnExists($pdo, $table, $column) {
     }
 }
 
-// Function to process a book/story
-function processBook($title, $content, $author_name, $author_age = null, $author_location = null, $tags = [], $cover_image = null, $excerpt = '') {
+// Function to process a story (renamed from processBook to avoid conflict)
+function processStory($title, $content, $author_name, $author_age = null, $author_location = null, $tags = [], $cover_image = null, $excerpt = '') {
     global $pdo;
     
     try {
@@ -297,7 +297,7 @@ $sample_stories = [
 
 // Process each sample story
 foreach ($sample_stories as $story) {
-    $result = processBook(
+    $result = processStory(
         $story['title'],
         $story['content'],
         '', // Author name will be extracted from title

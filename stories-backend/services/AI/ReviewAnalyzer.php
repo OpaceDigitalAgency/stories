@@ -84,6 +84,15 @@ class ReviewAnalyzer {
     }
 
     /**
+     * Get the API key
+     *
+     * @return string The API key
+     */
+    public function getApiKey(): string {
+        return $this->apiKey;
+    }
+
+    /**
      * Set the OpenAI model to use
      *
      * @param string $model The model name

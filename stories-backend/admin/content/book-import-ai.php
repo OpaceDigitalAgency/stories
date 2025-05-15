@@ -42,10 +42,24 @@ try {
     error_log("Error getting OpenAI API key: " . $e->getMessage());
 }
 
-// Create the review analyzer if we have an API key
+// Create the review analyzer
 $reviewAnalyzer = null;
-if (!empty($openaiApiKey)) {
-    $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($openaiApiKey, 'gpt-4-turbo');
+try {
+    // First try to create with database connection
+    $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($db);
+
+    // If we don't have an API key from the database, but we got one from settings
+    if (empty($reviewAnalyzer->getApiKey()) && !empty($openaiApiKey)) {
+        // Create with explicit API key
+        $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($openaiApiKey, 'gpt-4o');
+    }
+} catch (Exception $e) {
+    error_log("Error creating ReviewAnalyzer: " . $e->getMessage());
+
+    // Fallback to creating with API key if we have one
+    if (!empty($openaiApiKey)) {
+        $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($openaiApiKey, 'gpt-4o');
+    }
 }
 
 // Function to analyze review for age suitability

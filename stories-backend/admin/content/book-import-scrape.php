@@ -288,15 +288,35 @@ header('Content-Type: text/html; charset=utf-8');
 
                         try {
                             // Fetch reviews from the source
-                            $reviews = $fetcher->fetchReviewsByISBN($isbnToUse, 10);
+                            $result = $fetcher->fetchReviewsByISBN($isbnToUse, 10);
 
-                            if (empty($reviews)) {
-                                echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
-                                if ($fetcher->getLastError()) {
-                                    echo "<p class='error'>Error: " . $fetcher->getLastError() . "</p>";
+                            // Check if we got a structured result (new format) or just an array of reviews (old format)
+                            if (is_array($result) && isset($result['reviews'])) {
+                                // New format with structured result
+                                $reviews = $result['reviews'];
+
+                                if (empty($reviews)) {
+                                    echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
+                                    if (isset($result['errors'][$sourceName])) {
+                                        echo "<p class='error'>Error: " . $result['errors'][$sourceName] . "</p>";
+                                    } elseif ($fetcher->getLastError()) {
+                                        echo "<p class='error'>Error: " . $fetcher->getLastError() . "</p>";
+                                    }
+                                    flushOutput();
+                                    continue;
                                 }
-                                flushOutput();
-                                continue;
+                            } else {
+                                // Old format with just an array of reviews
+                                $reviews = $result;
+
+                                if (empty($reviews)) {
+                                    echo "<p class='warning'>No reviews found from {$sourceName} for ISBN: $isbnToUse</p>";
+                                    if ($fetcher->getLastError()) {
+                                        echo "<p class='error'>Error: " . $fetcher->getLastError() . "</p>";
+                                    }
+                                    flushOutput();
+                                    continue;
+                                }
                             }
                         } catch (Exception $e) {
                             echo "<p class='error'>Error fetching reviews from {$sourceName}: " . $e->getMessage() . "</p>";

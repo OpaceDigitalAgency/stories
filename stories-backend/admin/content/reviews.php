@@ -1,7 +1,7 @@
 <?php
 /**
  * Reviews Management
- * 
+ *
  * This page allows administrators to manage book reviews.
  */
 
@@ -14,8 +14,7 @@ require_once '../includes/db-connect.php';
 // Include admin functions
 require_once '../includes/admin-functions.php';
 
-// Include pagination functions
-require_once '../includes/pagination.php';
+// Pagination is handled directly in this file
 
 // Set up error handling
 ini_set('display_errors', 1);
@@ -35,18 +34,18 @@ $errorMessage = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_action'])) {
     $selectedIds = isset($_POST['selected_reviews']) ? $_POST['selected_reviews'] : [];
     $action = $_POST['bulk_action'];
-    
+
     if (!empty($selectedIds)) {
         try {
             $db->beginTransaction();
-            
+
             switch ($action) {
                 case 'delete':
                     // Delete selected reviews
                     $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
                     $stmt = $db->prepare("DELETE FROM reviews WHERE id IN ($placeholders)");
                     $stmt->execute($selectedIds);
-                    
+
                     // Update book ratings
                     $bookIds = [];
                     $bookStmt = $db->prepare("SELECT DISTINCT book_id FROM reviews WHERE id IN ($placeholders)");
@@ -54,35 +53,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_action'])) {
                     while ($row = $bookStmt->fetch()) {
                         $bookIds[] = $row['book_id'];
                     }
-                    
+
                     foreach ($bookIds as $bookId) {
                         updateBookRatings($db, $bookId);
                     }
-                    
+
                     $successMessage = count($selectedIds) . ' reviews deleted successfully.';
                     break;
-                    
+
                 case 'analyze':
                     // Analyze selected reviews with AI
                     require_once '../../services/AI/ReviewAnalyzer.php';
                     $analyzer = new \Services\AI\ReviewAnalyzer($db);
-                    
+
                     $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
                     $stmt = $db->prepare("SELECT * FROM reviews WHERE id IN ($placeholders)");
                     $stmt->execute($selectedIds);
                     $reviews = $stmt->fetchAll();
-                    
+
                     $analyzedCount = 0;
                     foreach ($reviews as $review) {
                         if ($analyzer->analyzeReview($review['id'])) {
                             $analyzedCount++;
                         }
                     }
-                    
+
                     $successMessage = "$analyzedCount reviews analyzed successfully.";
                     break;
             }
-            
+
             $db->commit();
         } catch (Exception $e) {
             $db->rollBack();
@@ -97,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_action'])) {
 function updateBookRatings($db, $bookId) {
     $stmt = $db->prepare("
         UPDATE directory_items d
-        SET 
+        SET
             d.average_rating = (
                 SELECT AVG(r.rating_normalised)
                 FROM reviews r
@@ -154,7 +153,7 @@ $whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : 
 
 // Count total reviews
 $countQuery = "
-    SELECT COUNT(*) 
+    SELECT COUNT(*)
     FROM reviews r
     LEFT JOIN directory_items d ON r.book_id = d.id
     LEFT JOIN review_sources s ON r.source_id = s.id
@@ -188,7 +187,7 @@ $sources = $sourcesStmt->fetchAll();
 
 // Get books for filter
 $booksStmt = $db->query("
-    SELECT d.id, d.title 
+    SELECT d.id, d.title
     FROM directory_items d
     WHERE EXISTS (SELECT 1 FROM reviews r WHERE r.book_id = d.id)
     ORDER BY d.title
@@ -223,13 +222,13 @@ require_once '../includes/header.php';
                 <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($successMessage); ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (!empty($errorMessage)): ?>
             <div class="alert alert-danger" role="alert">
                 <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errorMessage); ?>
             </div>
         <?php endif; ?>
-        
+
         <!-- Filters -->
         <div class="card mb-4">
             <div class="card-header">
@@ -285,7 +284,7 @@ require_once '../includes/header.php';
                 </form>
             </div>
         </div>
-        
+
         <!-- Reviews Table -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -306,7 +305,7 @@ require_once '../includes/header.php';
                             <button type="submit" class="btn btn-primary" id="apply-bulk-action">Apply</button>
                         </div>
                     </div>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -340,7 +339,7 @@ require_once '../includes/header.php';
                                             </td>
                                             <td><?php echo htmlspecialchars($review['reviewer_name']); ?></td>
                                             <td>
-                                                <?php 
+                                                <?php
                                                 $stars = round($review['rating_normalised'] * 5);
                                                 echo str_repeat('★', $stars) . str_repeat('☆', 5 - $stars);
                                                 echo ' (' . $review['original_rating'] . ')';
@@ -373,7 +372,7 @@ require_once '../includes/header.php';
                         </table>
                     </div>
                 </form>
-                
+
                 <!-- Pagination -->
                 <?php if ($totalPages > 1): ?>
                     <nav aria-label="Page navigation" class="mt-4">
@@ -390,11 +389,11 @@ require_once '../includes/header.php';
                                     </a>
                                 </li>
                             <?php endif; ?>
-                            
+
                             <?php
                             $startPage = max(1, $page - 2);
                             $endPage = min($totalPages, $page + 2);
-                            
+
                             for ($i = $startPage; $i <= $endPage; $i++):
                             ?>
                                 <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
@@ -403,7 +402,7 @@ require_once '../includes/header.php';
                                     </a>
                                 </li>
                             <?php endfor; ?>
-                            
+
                             <?php if ($page < $totalPages): ?>
                                 <li class="page-item">
                                     <a class="page-link" href="?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo $sourceFilter > 0 ? '&source=' . $sourceFilter : ''; ?><?php echo $bookFilter > 0 ? '&book_id=' . $bookFilter : ''; ?><?php echo $ratingFilter > 0 ? '&rating=' . $ratingFilter : ''; ?>">
@@ -453,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Select all checkbox
     const selectAllCheckbox = document.getElementById('select-all');
     const reviewCheckboxes = document.querySelectorAll('.review-checkbox');
-    
+
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
             reviewCheckboxes.forEach(checkbox => {
@@ -461,29 +460,29 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Bulk action confirmation
     const reviewsForm = document.getElementById('reviews-form');
     const bulkActionSelect = document.getElementById('bulk-action');
     const applyBulkActionButton = document.getElementById('apply-bulk-action');
-    
+
     if (reviewsForm && bulkActionSelect && applyBulkActionButton) {
         reviewsForm.addEventListener('submit', function(e) {
             const selectedAction = bulkActionSelect.value;
             const selectedReviews = document.querySelectorAll('.review-checkbox:checked');
-            
+
             if (!selectedAction) {
                 e.preventDefault();
                 alert('Please select an action.');
                 return;
             }
-            
+
             if (selectedReviews.length === 0) {
                 e.preventDefault();
                 alert('Please select at least one review.');
                 return;
             }
-            
+
             if (selectedAction === 'delete') {
                 if (!confirm('Are you sure you want to delete the selected reviews? This action cannot be undone.')) {
                     e.preventDefault();
@@ -491,16 +490,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // View review details
     const viewButtons = document.querySelectorAll('.view-review');
     const reviewModal = document.getElementById('reviewModal');
     const reviewModalBody = document.getElementById('reviewModalBody');
-    
+
     viewButtons.forEach(button => {
         button.addEventListener('click', function() {
             const reviewId = this.getAttribute('data-id');
-            
+
             // Show loading spinner
             reviewModalBody.innerHTML = `
                 <div class="text-center">
@@ -509,10 +508,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            
+
             // Show modal
             $('#reviewModal').modal('show');
-            
+
             // Fetch review details
             fetch(`../handlers/get-review.php?id=${reviewId}`)
                 .then(response => response.json())
@@ -520,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         const review = data.review;
                         const stars = '★'.repeat(Math.round(review.rating_normalised * 5)) + '☆'.repeat(5 - Math.round(review.rating_normalised * 5));
-                        
+
                         reviewModalBody.innerHTML = `
                             <div class="review-details">
                                 <h4>${review.book_title}</h4>
@@ -563,30 +562,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     });
-    
+
     // Delete review
     const deleteButtons = document.querySelectorAll('.delete-review');
-    
+
     deleteButtons.forEach(button => {
         button.addEventListener('click', function() {
             const reviewId = this.getAttribute('data-id');
-            
+
             if (confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
                 // Create a form to submit the delete request
                 const form = document.createElement('form');
                 form.method = 'post';
                 form.action = 'reviews.php';
-                
+
                 const actionInput = document.createElement('input');
                 actionInput.type = 'hidden';
                 actionInput.name = 'bulk_action';
                 actionInput.value = 'delete';
-                
+
                 const reviewInput = document.createElement('input');
                 reviewInput.type = 'hidden';
                 reviewInput.name = 'selected_reviews[]';
                 reviewInput.value = reviewId;
-                
+
                 form.appendChild(actionInput);
                 form.appendChild(reviewInput);
                 document.body.appendChild(form);

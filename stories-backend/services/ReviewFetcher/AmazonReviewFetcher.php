@@ -25,12 +25,21 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     /** @var string Single, persistent cookie jar */
     protected string $cookieFile;
 
+    /** @var string Outscraper API key */
+    protected string $outscraperApiKey;
+
+    /** @var bool Whether to use Outscraper API */
+    protected bool $useOutscraper = true;
+
     public function __construct(PDO $db, int $sourceId)
     {
         parent::__construct($db, $sourceId, 'Amazon');
 
         // Associates tag
         $this->affiliateTag = getenv('AMAZON_ASSOCIATE_TAG') ?: 'storiesfro0f0-20';
+
+        // Outscraper API key
+        $this->outscraperApiKey = getenv('OUTSCRAPER_API_KEY') ?: 'NTNjYjkxMTUwOWI3NDBlYzg2MmI5NzY2ZTYxNDYxMTl8ZmVjODc2ZDI5ZA';
 
         // Optional override from settings
         $stmt = $db->prepare(
@@ -82,10 +91,24 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             return [];
         }
 
-        // 4) Scrape real reviews
+        // 4) Try Outscraper API first if enabled
+        $reviews = [];
+        if ($this->useOutscraper) {
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying Outscraper API for ASIN {$asin}");
+            $reviews = $this->fetchReviewsWithOutscraper($asin, $limit);
+
+            if (!empty($reviews)) {
+                $this->logToFile("{$this->dbgDir}/scrape-log.txt", "✅ Successfully fetched " . count($reviews) . " reviews with Outscraper");
+                return $reviews;
+            }
+
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ Outscraper returned no reviews, falling back to direct scraping");
+        }
+
+        // 5) Fallback to direct scraping if Outscraper failed or is disabled
         $reviews = $this->scrapeReviews($asin, $limit);
 
-        // 5) If none found, fallback to aggregate “average” review
+        // 6) If none found, fallback to aggregate “average” review
         if (empty($reviews)) {
             $agg = $this->getAggregateRating($asin);
             if ($agg) {
@@ -810,6 +833,130 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $this->logToFile($logFile, "✅ Final unique reviews: " . count($uniqueReviews));
 
         return $uniqueReviews;
+    }
+
+    /**
+     * Fetch reviews using Outscraper API
+     */
+    protected function fetchReviewsWithOutscraper(string $asin, int $limit): array
+    {
+        $logFile = "{$this->dbgDir}/outscraper-log.txt";
+        $this->logToFile($logFile, "🚀 Starting Outscraper request for ASIN {$asin}");
+
+        // Determine Amazon domain code from domain
+        $domainCode = 'com';
+        if (strpos($this->domain, 'amazon.co.uk') !== false) {
+            $domainCode = 'co.uk';
+        } elseif (strpos($this->domain, 'amazon.ca') !== false) {
+            $domainCode = 'ca';
+        } elseif (strpos($this->domain, 'amazon.de') !== false) {
+            $domainCode = 'de';
+        }
+
+        // Prepare API request
+        $apiUrl = "https://api.outscraper.com/api/v1/amazon/reviews";
+        $params = [
+            'query' => $asin,
+            'domain' => $domainCode,
+            'limit' => $limit,
+            'async' => false,
+            'pages_per_asin' => 1
+        ];
+
+        $headers = [
+            "X-API-KEY: {$this->outscraperApiKey}",
+            'Accept: application/json',
+            'Content-Type: application/json'
+        ];
+
+        // Log request details
+        $this->logToFile($logFile, "📡 API Request: " . json_encode($params));
+
+        // Make the request
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Save raw response for debugging
+        file_put_contents("{$this->dbgDir}/outscraper-{$asin}-response.json", $response ?: "EMPTY RESPONSE");
+
+        // Check for errors
+        if ($httpCode !== 200 || !$response) {
+            $this->logToFile($logFile, "❌ API Error: HTTP {$httpCode}");
+            return [];
+        }
+
+        // Parse response
+        $data = json_decode($response, true);
+        if (!isset($data['data']) || empty($data['data'])) {
+            $this->logToFile($logFile, "⚠️ No data in API response");
+            return [];
+        }
+
+        // Process reviews
+        $reviews = [];
+        foreach ($data['data'] as $item) {
+            if (!isset($item['reviews']) || empty($item['reviews'])) {
+                continue;
+            }
+
+            // Get product info
+            $productTitle = $item['title'] ?? '';
+            $productUrl = $item['url'] ?? '';
+            $this->logToFile($logFile, "📚 Product: {$productTitle}");
+
+            // Process each review
+            foreach ($item['reviews'] as $review) {
+                // Skip if missing essential data
+                if (!isset($review['rating']) || !isset($review['review_text'])) {
+                    continue;
+                }
+
+                $rating = (float)$review['rating'];
+                $reviewerName = $review['reviewer_name'] ?? 'Anonymous';
+                $reviewDate = $review['review_date'] ?? date('Y-m-d');
+                $reviewText = $review['review_text'] ?? '';
+
+                // Convert date format if needed
+                if (preg_match('/^[A-Za-z]+ \d+, \d{4}$/', $reviewDate)) {
+                    $timestamp = strtotime($reviewDate);
+                    if ($timestamp) {
+                        $reviewDate = date('Y-m-d', $timestamp);
+                    }
+                }
+
+                $this->logToFile($logFile, "👤 Review by {$reviewerName}: {$rating}/5");
+
+                // Add to reviews array
+                $reviews[] = [
+                    'source_id'         => $this->sourceId,
+                    'reviewer_name'     => $reviewerName,
+                    'review_date'       => $reviewDate,
+                    'original_rating'   => "{$rating}/5",
+                    'rating_value'      => $rating,
+                    'rating_scale'      => 5,
+                    'rating_normalised' => $this->normalizeRating($rating, 5),
+                    'review_text'       => $reviewText,
+                    'metadata'          => json_encode([
+                        'asin'          => $asin,
+                        'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
+                        'product_title' => $productTitle,
+                        'product_url'   => $productUrl,
+                        'source'        => 'Outscraper API'
+                    ]),
+                ];
+            }
+        }
+
+        $this->logToFile($logFile, "✅ Processed " . count($reviews) . " reviews from Outscraper");
+        return $reviews;
     }
 
     /**

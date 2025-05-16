@@ -21,6 +21,13 @@
   - Updated ReviewFetcherFactory to support all review sources
   - Added better error handling for CAPTCHA detection and other common issues
 
+- Enhanced API integration for review fetchers:
+  - Updated GoogleBooksReviewFetcher to use the Google Books API directly instead of scraping HTML
+  - Improved OpenLibraryReviewFetcher to use the Open Library JSON API for book data
+  - Added rich metadata extraction from both APIs
+  - Implemented better review text generation with book details, descriptions, and categories
+  - Added fallback mechanisms when no reviews are available
+
 ## 2025-05-06
 - Fixed image upload to update both featured image and cover_url fields:
   - Identified issue where image uploads were only updating the featured image field but not the hidden cover_url field

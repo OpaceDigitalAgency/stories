@@ -81,12 +81,23 @@ A modular service that fetches reviews from external APIs and websites.
 - `stories-backend/services/ReviewFetcher/ReviewFetcherInterface.php`
 - `stories-backend/services/ReviewFetcher/GoogleBooksReviewFetcher.php`
 - `stories-backend/services/ReviewFetcher/OpenLibraryReviewFetcher.php`
+- `stories-backend/services/ReviewFetcher/AmazonReviewFetcher.php`
+- `stories-backend/services/ReviewFetcher/GoodreadsReviewFetcher.php`
+- `stories-backend/services/ReviewFetcher/KirkusReviewsFetcher.php`
+- `stories-backend/services/ReviewFetcher/SLJReviewFetcher.php`
+- `stories-backend/services/ReviewFetcher/StoriesReviewFetcher.php`
 
 **Functionality:**
 - Fetch reviews by ISBN from multiple sources
 - Match books to our database
 - Normalize ratings to our standard scale
 - Handle different API formats and response structures
+
+**API Integrations:**
+- **Google Books API**: Fetches book data and ratings via `https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}`
+- **Open Library API**: Retrieves book metadata via `https://openlibrary.org/api/books?bibkeys=ISBN:{ISBN}&format=json&jscmd=data`
+- **Internet Archive API**: Gets reviews for books with Open Library IDs
+- **Web Scraping**: For sources without APIs (Amazon, Goodreads, Kirkus, SLJ)
 
 ```php
 // Example interface

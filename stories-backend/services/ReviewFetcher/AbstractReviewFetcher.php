@@ -145,37 +145,75 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
         // Log the request
         $this->logToFile($logFile, "🌐 Making request to: {$url}");
 
-        // Throttle requests to avoid being blocked
+        // Enhanced throttling to avoid being blocked
         if ($throttle) {
-            // Random delay between 1-3 seconds
-            $delay = rand(1000000, 3000000);
+            // Use a more variable delay pattern
+            // For Amazon and other sites with strong anti-scraping, use longer delays
+            if (stripos($url, 'amazon') !== false) {
+                // Amazon: Random delay between 2-5 seconds
+                $delay = rand(2000000, 5000000);
+            } else {
+                // Other sites: Random delay between 1-3 seconds
+                $delay = rand(1000000, 3000000);
+            }
+
+            // Add some jitter to make the pattern less predictable
+            $jitter = rand(-500000, 500000);
+            $delay = max(500000, $delay + $jitter);
+
             $delaySeconds = $delay / 1000000;
             $this->logToFile($logFile, "⏱️ Throttling request for {$delaySeconds} seconds");
             usleep($delay);
+
+            // Add a small chance of a longer pause (simulates human behavior)
+            if (rand(1, 20) === 1) {  // 5% chance
+                $longPause = rand(3, 8);
+                $this->logToFile($logFile, "🕒 Adding a longer pause of {$longPause} seconds (simulating human behavior)");
+                sleep($longPause);
+            }
         }
 
         $ch = curl_init($url);
 
-        // Modern User-Agent strings
+        // Expanded list of modern User-Agent strings
         $userAgents = [
+            // Desktop browsers
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+            // Mobile browsers
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (iPad; CPU OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
         ];
 
         // Select a random user agent
         $userAgent = $userAgents[array_rand($userAgents)];
         $this->logToFile($logFile, "🧩 Using User-Agent: {$userAgent}");
 
-        // Set default options
+        // Set default options with improved anti-detection measures
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_USERAGENT => $userAgent,
             CURLOPT_ENCODING => '', // Accept all encodings
+            CURLOPT_SSL_VERIFYPEER => true, // Verify SSL certificates
+            CURLOPT_SSL_VERIFYHOST => 2,    // Verify hostname
+            CURLOPT_MAXREDIRS => 5,         // Maximum number of redirects to follow
+            CURLOPT_AUTOREFERER => true,    // Set referer on redirect
+            CURLOPT_CONNECTTIMEOUT => 15,   // Connection timeout
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1, // Use HTTP/1.1
+
+            // Randomize the order of headers to avoid fingerprinting
             CURLOPT_HTTPHEADER => [
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                 'Accept-Language: en-US,en;q=0.9',
@@ -185,10 +223,13 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
                 'Sec-Fetch-Mode: navigate',
                 'Sec-Fetch-Site: none',
                 'Sec-Fetch-User: ?1',
-                'Cache-Control: max-age=0'
+                'Cache-Control: max-age=0',
+                'Accept-Encoding: gzip, deflate, br'
             ],
-            CURLOPT_COOKIEJAR => $debugDir . '/cookies.txt',
-            CURLOPT_COOKIEFILE => $debugDir . '/cookies.txt',
+
+            // Use a unique cookie file for each request to avoid tracking
+            CURLOPT_COOKIEJAR => "{$debugDir}/cookies-" . time() . '-' . rand(1000, 9999) . '.txt',
+            CURLOPT_COOKIEFILE => "{$debugDir}/cookies-" . time() . '-' . rand(1000, 9999) . '.txt',
         ]);
 
         // Add custom options
@@ -227,11 +268,19 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
             return false;
         }
 
-        // Check for CAPTCHA or robot check pages
+        // Check for CAPTCHA or robot check pages - more comprehensive detection
         if (stripos($response, 'captcha') !== false ||
             stripos($response, 'robot check') !== false ||
             stripos($response, 'security challenge') !== false ||
-            stripos($response, 'verify you are a human') !== false) {
+            stripos($response, 'verify you are a human') !== false ||
+            stripos($response, 'type the characters') !== false ||
+            stripos($response, 'enter the characters') !== false ||
+            stripos($response, 'automated access') !== false ||
+            stripos($response, 'suspicious activity') !== false ||
+            stripos($response, 'unusual traffic') !== false ||
+            (stripos($response, 'sorry') !== false && stripos($response, 'temporary issue') !== false) ||
+            (strlen($response) < 5000 && stripos($response, 'amazon') !== false && stripos($response, 'please') !== false)) {
+
             $this->lastError = "CAPTCHA or robot check detected. Try again later or use a different IP address.";
             $this->logToFile($logFile, "⚠️ CAPTCHA or robot check detected!");
 
@@ -247,6 +296,18 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
             file_put_contents($captchaFile, $response);
             chmod($captchaFile, 0666);
             $this->logToFile($logFile, "📄 Saved CAPTCHA page to {$captchaFile}");
+
+            return false;
+        }
+
+        // Check for empty or very small responses (likely blocked)
+        if (strlen($response) < 1000) {
+            $this->lastError = "Response too small, likely blocked or empty page.";
+            $this->logToFile($logFile, "⚠️ Response too small: " . strlen($response) . " bytes");
+
+            $emptyFile = $debugDir . '/empty-response-' . time() . '.html';
+            file_put_contents($emptyFile, $response);
+            chmod($emptyFile, 0666);
 
             return false;
         }

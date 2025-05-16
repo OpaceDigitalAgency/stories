@@ -325,117 +325,217 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
      */
     private function parseReviewsFromHTML(string $html, string $asin): array {
         $reviews = [];
+        $debugDir = __DIR__ . '/debug';
+        $logFile = $debugDir . '/amazon-parse-debug.txt';
 
-        // Extract review blocks with more flexible regex
-        if (preg_match_all('/<div[^>]+data-hook="review"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $html, $reviewBlocks, PREG_SET_ORDER)) {
-            foreach ($reviewBlocks as $block) {
-                $reviewHtml = $block[0];
+        // Save the HTML for detailed debugging
+        $debugFile = "{$debugDir}/amazon-parse-debug-{$asin}-" . time() . ".html";
+        file_put_contents($debugFile, $html);
+        $this->logToFile($logFile, "Saved HTML for parsing to {$debugFile}");
 
-                // Extract reviewer name
-                $reviewerName = 'Amazon Customer';
-                if (preg_match('/<span[^>]*class="a-profile-name"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
-                    $reviewerName = trim($matches[1]);
-                }
+        // Check for CAPTCHA or robot check
+        if (stripos($html, 'captcha') !== false ||
+            stripos($html, 'robot check') !== false ||
+            stripos($html, 'security challenge') !== false ||
+            stripos($html, 'verify you are a human') !== false ||
+            stripos($html, 'type the characters') !== false) {
+            $this->lastError = "Amazon is showing a CAPTCHA or robot check page. Try again later.";
+            $this->logToFile($logFile, "⚠️ CAPTCHA detected in review page");
+            return [];
+        }
 
-                // Extract rating with multiple patterns
-                $rating = 0;
-                // Pattern 1: data-hook="review-star-rating"
-                if (preg_match('/data-hook="review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
-                    $rating = (float)$matches[1];
-                }
-                // Pattern 2: a-icon-star with span
-                else if (preg_match('/<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i', $reviewHtml, $matches)) {
-                    $rating = (float)$matches[1];
-                }
-                // Pattern 3: a-icon-alt
-                else if (preg_match('/class="a-icon-alt">([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
-                    $rating = (float)$matches[1];
-                }
-                // Pattern 4: data-hook="cmps-review-star-rating"
-                else if (preg_match('/data-hook="cmps-review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
-                    $rating = (float)$matches[1];
-                }
+        // Check for login page
+        if (stripos($html, 'Sign in') !== false &&
+            (stripos($html, 'Email or mobile phone number') !== false ||
+             stripos($html, 'Password') !== false)) {
+            $this->lastError = "Amazon is asking for login. Cannot scrape reviews.";
+            $this->logToFile($logFile, "⚠️ Login page detected");
+            return [];
+        }
 
-                // Extract review title
-                $reviewTitle = '';
-                // Pattern 1: data-hook="review-title" in a tag
-                if (preg_match('/<a[^>]*data-hook="review-title"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
-                    $reviewTitle = trim($matches[1]);
-                }
-                // Pattern 2: data-hook="review-title" in span tag
-                else if (preg_match('/<span[^>]*data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
-                    $reviewTitle = trim($matches[1]);
-                }
-                // Pattern 3: a-size-base review-title
-                else if (preg_match('/<span[^>]*class="a-size-base review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
-                    $reviewTitle = trim($matches[1]);
-                }
+        // Try multiple patterns for review blocks to handle different Amazon layouts
 
-                // Extract review text
-                $reviewText = '';
-                // Pattern 1: data-hook="review-body" in span
-                if (preg_match('/<span[^>]*data-hook="review-body"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
-                    $reviewText = trim(strip_tags($matches[1]));
-                }
-                // Pattern 2: data-hook="review-body" in div
-                else if (preg_match('/<div[^>]*data-hook="review-body"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
-                    $reviewText = trim(strip_tags($matches[1]));
-                }
-                // Pattern 3: review-data in div
-                else if (preg_match('/<div[^>]*class="[^"]*review-data[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
-                    $reviewText = trim(strip_tags($matches[1]));
-                }
+        // Pattern 1: Standard review blocks with data-hook="review"
+        $reviewBlocks = [];
+        if (preg_match_all('/<div[^>]+data-hook="review"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $html, $matches)) {
+            $reviewBlocks = $matches[0];
+            $this->logToFile($logFile, "Found " . count($reviewBlocks) . " reviews using pattern 1");
+        }
 
-                // Extract review date
-                $reviewDate = null;
-                // Pattern 1: data-hook="review-date"
-                if (preg_match('/<span[^>]*data-hook="review-date"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
-                    $dateStr = trim($matches[1]);
-                    if (preg_match('/on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $dateStr, $dateMatches)) {
-                        $timestamp = strtotime($dateMatches[1]);
-                        if ($timestamp) {
-                            $reviewDate = date('Y-m-d', $timestamp);
-                        }
+        // Pattern 2: Alternative review blocks with review container
+        if (empty($reviewBlocks) && preg_match_all('/<div[^>]+id="customer_review-[^"]*"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $html, $matches)) {
+            $reviewBlocks = $matches[0];
+            $this->logToFile($logFile, "Found " . count($reviewBlocks) . " reviews using pattern 2");
+        }
+
+        // Pattern 3: Mobile site review blocks
+        if (empty($reviewBlocks) && preg_match_all('/<div[^>]+class="[^"]*review[^"]*"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $html, $matches)) {
+            $reviewBlocks = $matches[0];
+            $this->logToFile($logFile, "Found " . count($reviewBlocks) . " reviews using pattern 3");
+        }
+
+        // Process each review block
+        foreach ($reviewBlocks as $reviewHtml) {
+            // Extract reviewer name with multiple patterns
+            $reviewerName = 'Amazon Customer';
+
+            // Pattern 1: Standard profile name
+            if (preg_match('/<span[^>]*class="a-profile-name"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            }
+            // Pattern 2: Alternative profile name
+            else if (preg_match('/<div[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)<\/div>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            }
+            // Pattern 3: Link-based profile name
+            else if (preg_match('/<a[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            }
+
+            // Extract rating with multiple patterns
+            $rating = 0;
+
+            // Pattern 1: data-hook="review-star-rating"
+            if (preg_match('/data-hook="review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Pattern 2: a-icon-star with span
+            else if (preg_match('/<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Pattern 3: a-icon-alt
+            else if (preg_match('/class="a-icon-alt">([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Pattern 4: data-hook="cmps-review-star-rating"
+            else if (preg_match('/data-hook="cmps-review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Pattern 5: aria-label with stars
+            else if (preg_match('/aria-label="([0-9.]+) out of 5 stars"/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Pattern 6: star rating in text
+            else if (preg_match('/([0-9]\.?[0-9]?) out of 5 stars/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+
+            // Extract review title with multiple patterns
+            $reviewTitle = '';
+
+            // Pattern 1: data-hook="review-title" in a tag
+            if (preg_match('/<a[^>]*data-hook="review-title"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewTitle = trim($matches[1]);
+            }
+            // Pattern 2: data-hook="review-title" in span tag
+            else if (preg_match('/<span[^>]*data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $reviewTitle = trim($matches[1]);
+            }
+            // Pattern 3: a-size-base review-title
+            else if (preg_match('/<span[^>]*class="a-size-base review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $reviewTitle = trim($matches[1]);
+            }
+            // Pattern 4: review-title class
+            else if (preg_match('/<[^>]*class="[^"]*review-title[^"]*"[^>]*>([^<]+)<\/[^>]*>/i', $reviewHtml, $matches)) {
+                $reviewTitle = trim($matches[1]);
+            }
+            // Pattern 5: review title with data-hook
+            else if (preg_match('/<[^>]*data-hook="review-title"[^>]*>([^<]+)<\/[^>]*>/i', $reviewHtml, $matches)) {
+                $reviewTitle = trim($matches[1]);
+            }
+
+            // Extract review text with multiple patterns
+            $reviewText = '';
+
+            // Pattern 1: data-hook="review-body" in span
+            if (preg_match('/<span[^>]*data-hook="review-body"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 2: data-hook="review-body" in div
+            else if (preg_match('/<div[^>]*data-hook="review-body"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 3: review-data in div
+            else if (preg_match('/<div[^>]*class="[^"]*review-data[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 4: review-text class
+            else if (preg_match('/<div[^>]*class="[^"]*review-text[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 5: review content with any tag
+            else if (preg_match('/<[^>]*data-hook="review-body"[^>]*>(.*?)<\/[^>]*>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+
+            // Extract review date with multiple patterns
+            $reviewDate = null;
+
+            // Pattern 1: data-hook="review-date"
+            if (preg_match('/<span[^>]*data-hook="review-date"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $dateStr = trim($matches[1]);
+                if (preg_match('/on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $dateStr, $dateMatches)) {
+                    $timestamp = strtotime($dateMatches[1]);
+                    if ($timestamp) {
+                        $reviewDate = date('Y-m-d', $timestamp);
                     }
                 }
-
-                // Skip reviews without text or rating
-                if (empty($reviewText) || $rating == 0) {
-                    continue;
-                }
-
-                // Combine title and text if both exist
-                if (!empty($reviewTitle)) {
-                    $reviewText = $reviewTitle . ": " . $reviewText;
-                }
-
-                // Create the affiliate URL
-                $affiliateUrl = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
-
-                $reviews[] = [
-                    'source_id' => $this->sourceId,
-                    'reviewer_name' => $reviewerName,
-                    'reviewer_age' => null,
-                    'review_date' => $reviewDate ?: date('Y-m-d'),
-                    'original_rating' => "{$rating}/5",
-                    'rating_value' => $rating,
-                    'rating_scale' => 5,
-                    'rating_normalised' => $this->normalizeRating($rating, 5),
-                    'review_text' => $this->cleanText($reviewText),
-                    'metadata' => json_encode([
-                        'asin' => $asin,
-                        'review_url' => "https://{$this->domain}/product-reviews/{$asin}",
-                        'affiliate_url' => $affiliateUrl,
-                        'is_synthetic' => false
-                    ])
-                ];
             }
+            // Pattern 2: review-date class
+            else if (preg_match('/<span[^>]*class="[^"]*review-date[^"]*"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $dateStr = trim($matches[1]);
+                if (preg_match('/on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $dateStr, $dateMatches)) {
+                    $timestamp = strtotime($dateMatches[1]);
+                    if ($timestamp) {
+                        $reviewDate = date('Y-m-d', $timestamp);
+                    }
+                }
+            }
+            // Pattern 3: date with any format
+            else if (preg_match('/Reviewed\s+in\s+[^<]+on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $reviewHtml, $matches)) {
+                $timestamp = strtotime($matches[1]);
+                if ($timestamp) {
+                    $reviewDate = date('Y-m-d', $timestamp);
+                }
+            }
+
+            // Skip reviews without text or rating
+            if (empty($reviewText) || $rating == 0) {
+                $this->logToFile($logFile, "Skipping review - missing text or rating. Text: " . substr($reviewText, 0, 30) . "... Rating: {$rating}");
+                continue;
+            }
+
+            // Combine title and text if both exist
+            if (!empty($reviewTitle)) {
+                $reviewText = $reviewTitle . ": " . $reviewText;
+            }
+
+            // Create the affiliate URL
+            $affiliateUrl = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+
+            $reviews[] = [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => null,
+                'review_date' => $reviewDate ?: date('Y-m-d'),
+                'original_rating' => "{$rating}/5",
+                'rating_value' => $rating,
+                'rating_scale' => 5,
+                'rating_normalised' => $this->normalizeRating($rating, 5),
+                'review_text' => $this->cleanText($reviewText),
+                'metadata' => json_encode([
+                    'asin' => $asin,
+                    'review_url' => "https://{$this->domain}/product-reviews/{$asin}",
+                    'affiliate_url' => $affiliateUrl,
+                    'is_synthetic' => false
+                ])
+            ];
+
+            $this->logToFile($logFile, "Added review from {$reviewerName}, rating: {$rating}, text: " . substr($reviewText, 0, 50) . "...");
         }
 
-        // If no reviews found but we can see we're on a CAPTCHA page, set a specific error
-        if (empty($reviews) && (strpos($html, 'captcha') !== false || strpos($html, 'robot check') !== false)) {
-            $this->lastError = "Amazon is showing a CAPTCHA or robot check page. Try again later.";
-        }
+        // Log the results
+        $this->logToFile($logFile, "Parsed " . count($reviews) . " reviews for ASIN {$asin}");
 
         return $reviews;
     }
@@ -677,6 +777,11 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
     private function scrapeReviews(string $reviewsUrl, int $limit): array {
         error_log("▶️ ENTER scrapeReviews(reviewsUrl={$reviewsUrl}, limit={$limit})");
 
+        // Set up logging
+        $debugDir = __DIR__ . '/debug';
+        $logFile = $debugDir . '/amazon-scrape-log.txt';
+        $this->logToFile($logFile, "Starting review scrape for source: Amazon");
+
         // Extract ASIN from URL
         $asin = '';
         if (preg_match('/\/product-reviews\/([A-Z0-9]{10})/', $reviewsUrl, $matches)) {
@@ -686,104 +791,180 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
         if (empty($asin)) {
             $this->lastError = "Invalid reviews URL: {$reviewsUrl}";
             error_log("❌ ERROR: {$this->lastError}");
+            $this->logToFile($logFile, "❌ ERROR: Invalid reviews URL: {$reviewsUrl}");
             return [];
         }
 
         error_log("Using ASIN: {$asin} for reviews");
+        $this->logToFile($logFile, "Using ASIN: {$asin} for reviews");
 
         // Create debug directory if it doesn't exist
-        $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
-            mkdir($debugDir, 0755, true);
+            mkdir($debugDir, 0777, true);
+            chmod($debugDir, 0777);
         }
+
+        // First, try to get aggregate rating from product page
+        $aggregateReview = $this->getAggregateRating($asin);
 
         // Fetch reviews page by page
         $reviews = [];
         $page = 1;
         $maxPages = 3; // Limit to 3 pages to avoid being blocked
+        $captchaDetected = false;
+        $retryCount = 0;
+        $maxRetries = 2;
 
-        while ($page <= $maxPages && count($reviews) < $limit) {
+        while ($page <= $maxPages && count($reviews) < $limit && !$captchaDetected && $retryCount <= $maxRetries) {
             $pageUrl = $reviewsUrl . "?pageNumber={$page}";
 
             // Log the request
-            error_log("🔍 REQ AMZ [{$asin}][p{$page}]: {$pageUrl}");
+            $this->logToFile($logFile, "🔍 REQ AMZ [{$asin}][p{$page}]: {$pageUrl}");
 
-            // Add a random delay to avoid being blocked
-            $delay = rand(1000000, 3000000); // 1-3 seconds
+            // Add a random delay to avoid being blocked - longer delay between pages
+            $delay = rand(2000000, 5000000); // 2-5 seconds
             $delaySeconds = $delay / 1000000;
-            error_log("Waiting {$delaySeconds} seconds before request");
+            $this->logToFile($logFile, "Waiting {$delaySeconds} seconds before request");
             usleep($delay);
+
+            // Rotate user agents for each request
+            $userAgents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1',
+                'Mozilla/5.0 (iPad; CPU OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
+            ];
+            $userAgent = $userAgents[array_rand($userAgents)];
 
             // Make the request with specific headers for Amazon
             $options = [
+                CURLOPT_USERAGENT => $userAgent,
                 CURLOPT_HTTPHEADER => [
                     'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language: en-US,en;q=0.9',
                     'Referer: https://' . $this->domain,
                     'DNT: 1',
                     'Connection: keep-alive',
-                    'Upgrade-Insecure-Requests: 1'
-                ]
+                    'Upgrade-Insecure-Requests: 1',
+                    'Cache-Control: max-age=0',
+                    'Sec-Fetch-Dest: document',
+                    'Sec-Fetch-Mode: navigate',
+                    'Sec-Fetch-Site: none',
+                    'Sec-Fetch-User: ?1'
+                ],
+                // Add a longer timeout
+                CURLOPT_TIMEOUT => 30,
+                // Use a different cookie file for each request to avoid tracking
+                CURLOPT_COOKIEJAR => $debugDir . '/cookies-' . time() . '-' . rand(1000, 9999) . '.txt',
+                CURLOPT_COOKIEFILE => $debugDir . '/cookies-' . time() . '-' . rand(1000, 9999) . '.txt'
             ];
 
             $response = $this->makeRequest($pageUrl, $options);
 
             if ($response === false) {
-                error_log("❌ Failed to fetch page {$page}: {$this->lastError}");
+                $this->logToFile($logFile, "❌ Failed to fetch page {$page}: {$this->lastError}");
+
+                // If CAPTCHA detected, set flag and break
+                if (strpos($this->lastError, "CAPTCHA") !== false || strpos($this->lastError, "robot check") !== false) {
+                    $captchaDetected = true;
+                    $this->logToFile($logFile, "❌ CAPTCHA detected, stopping pagination");
+                    break;
+                }
+
+                // Retry logic
+                $retryCount++;
+                if ($retryCount <= $maxRetries) {
+                    $this->logToFile($logFile, "Retrying page {$page} (attempt {$retryCount} of {$maxRetries})");
+                    // Add a longer delay before retry
+                    sleep(rand(3, 6));
+                    continue;
+                }
+
                 // If we already have some reviews, return them
                 if (!empty($reviews)) {
-                    error_log("Returning " . count($reviews) . " reviews collected so far");
+                    $this->logToFile($logFile, "Returning " . count($reviews) . " reviews collected so far");
                     break;
                 }
 
                 $this->lastError = "Failed to fetch reviews from Amazon (page {$page})";
-                error_log("❌ ERROR: {$this->lastError}");
+                $this->logToFile($logFile, "❌ ERROR: {$this->lastError}");
+
+                // If we have an aggregate review, return that instead of empty array
+                if ($aggregateReview !== null) {
+                    $this->logToFile($logFile, "Returning aggregate review only due to fetch failure");
+                    return [$aggregateReview];
+                }
+
                 return [];
             }
 
+            // Reset retry count on successful request
+            $retryCount = 0;
+
             // Save the HTML for debugging
-            $htmlFile = "{$debugDir}/amazon-{$asin}-page{$page}.html";
+            $htmlFile = "{$debugDir}/amazon-{$asin}-page{$page}-" . time() . ".html";
             file_put_contents($htmlFile, $response);
-            error_log("📄 Saved HTML to {$htmlFile} (size: " . strlen($response) . " bytes)");
+            chmod($htmlFile, 0666);
+            $this->logToFile($logFile, "📄 Saved HTML to {$htmlFile} (size: " . strlen($response) . " bytes)");
 
             // Check for CAPTCHA or robot check
-            if (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false) {
-                error_log("⚠️ CAPTCHA or robot check detected on page {$page}");
-                file_put_contents("{$debugDir}/amazon-CAPTCHA-{$asin}-page{$page}.html", $response);
+            if (stripos($response, 'captcha') !== false ||
+                stripos($response, 'robot check') !== false ||
+                stripos($response, 'security challenge') !== false) {
+                $this->logToFile($logFile, "⚠️ CAPTCHA or robot check detected on page {$page}");
+                $captchaFile = "{$debugDir}/amazon-CAPTCHA-{$asin}-page{$page}-" . time() . ".html";
+                file_put_contents($captchaFile, $response);
+                chmod($captchaFile, 0666);
+                $captchaDetected = true;
+                break;
             }
 
             // Parse the reviews from this page
-            error_log("▶️ ENTER parseReviewsFromHTML, HTML length=" . strlen($response));
+            $this->logToFile($logFile, "▶️ ENTER parseReviewsFromHTML, HTML length=" . strlen($response));
             $pageReviews = $this->parseReviewsFromHTML($response, $asin);
-            error_log("FOUND " . count($pageReviews) . " reviews for {$asin} on page {$page}");
+            $this->logToFile($logFile, "FOUND " . count($pageReviews) . " reviews for {$asin} on page {$page}");
 
             // Log snippets of the first few reviews
             foreach (array_slice($pageReviews, 0, 3) as $i => $review) {
                 $snippet = mb_substr($review['review_text'], 0, 80);
-                error_log("SNIPPET {$i}: {$snippet}…");
+                $this->logToFile($logFile, "SNIPPET {$i}: {$snippet}…");
             }
 
             if (empty($pageReviews)) {
-                error_log("No reviews found on page {$page}, stopping pagination");
+                $this->logToFile($logFile, "No reviews found on page {$page}, stopping pagination");
                 // No more reviews on this page
                 break;
             }
 
             // Add the reviews from this page
             $reviews = array_merge($reviews, $pageReviews);
-            error_log("Total reviews collected so far: " . count($reviews));
+            $this->logToFile($logFile, "Total reviews collected so far: " . count($reviews));
 
             // Move to the next page
             $page++;
+
+            // Add a longer delay between pages to avoid being blocked
+            $betweenPagesDelay = rand(3, 6);
+            $this->logToFile($logFile, "Waiting {$betweenPagesDelay} seconds between pages");
+            sleep($betweenPagesDelay);
+        }
+
+        // If we have no reviews but have an aggregate review, use that
+        if (empty($reviews) && $aggregateReview !== null) {
+            $this->logToFile($logFile, "No individual reviews found, using aggregate review only");
+            $reviews = [$aggregateReview];
         }
 
         // Limit the number of reviews
         if (count($reviews) > $limit) {
-            error_log("Limiting reviews from " . count($reviews) . " to {$limit}");
+            $this->logToFile($logFile, "Limiting reviews from " . count($reviews) . " to {$limit}");
             $reviews = array_slice($reviews, 0, $limit);
         }
 
-        error_log("Returning " . count($reviews) . " reviews total");
+        $this->logToFile($logFile, "Returning " . count($reviews) . " reviews total");
         return $reviews;
     }
 

@@ -174,70 +174,61 @@ protected function makeRequest(string $url, array $options = [], bool $throttle 
 
 
 
-
+/* TEST 2 */
 
 protected function scrapeReviews(string $asin, int $limit): array
 {
-    $reviews  = [];
-    $page     = 1;
-    $logFile  = "{$this->dbgDir}/scrape-log.txt";
+    $reviews = [];
+    $page    = 1;
+    $logFile = "{$this->dbgDir}/scrape-log.txt";
 
+    // ← Add this block to “warm up” your session
+    $this->logToFile($logFile, "🌐 Pre-fetching product page to set cookies");
+    $productHtml = $this->makeRequest("https://{$this->domain}/dp/{$asin}");
+    file_put_contents("{$this->dbgDir}/amazon-{$asin}-product-raw.html", $productHtml);
+
+    // Now proceed to AJAX loop…
     $this->logToFile($logFile, "▶️ Starting AJAX scrape for ASIN {$asin}, limit={$limit}");
-
     while (count($reviews) < $limit) {
         $ajaxUrl = sprintf(
-          'https://%s/hz/reviews-render/ajax/reviews/get?asin=%s&pageNumber=%d&reviewerType=all_reviews&formatType=current_format',
-          $this->domain, $asin, $page
+            'https://%s/hz/reviews-render/ajax/reviews/get?asin=%s&pageNumber=%d&reviewerType=all_reviews&formatType=current_format',
+            $this->domain, $asin, $page
         );
         $this->logToFile($logFile, "🌐 Fetching AJAX page {$page}: {$ajaxUrl}");
-
-        // request JSON
         $raw = $this->makeRequest($ajaxUrl, [
-          CURLOPT_HTTPHEADER => [
-            'Accept: application/json, text/javascript, */*; q=0.01',
-            'X-Requested-With: XMLHttpRequest',
-          ]
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json, text/javascript, */*; q=0.01',
+                'X-Requested-With: XMLHttpRequest',
+                'Referer: https://' . $this->domain . '/dp/' . $asin,
+            ]
         ]);
-
-        // **Write the raw JSON** (so you can inspect it directly)
-        file_put_contents(
-          "{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-raw.html",
-          $raw
-        );
+        file_put_contents("{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-raw.json", $raw);
 
         if (! $raw) {
-          $this->logToFile($logFile, "❌ Empty AJAX response, stopping");
-          break;
+            $this->logToFile($logFile, "❌ Empty AJAX response, stopping");
+            break;
         }
-
         $payload = json_decode($raw, true);
         if (! isset($payload['html'])) {
-          $this->logToFile($logFile, "⚠️ No “html” in JSON, stopping");
-          break;
+            $this->logToFile($logFile, "⚠️ Invalid JSON or missing HTML, stopping");
+            break;
         }
 
-        // **Write the extracted HTML fragment** so it appears in your UI
-        file_put_contents(
-          "{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-fragment.html",
-          $payload['html']
-        );
-        $this->logToFile($logFile, "✔️ Saved fragment for page {$page}");
-
-        // Parse it
-        $pageReviews = $this->parseReviewsWithRegex($payload['html'], $asin);
+        $fragment = $payload['html'];
+        file_put_contents("{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-fragment.html", $fragment);
+        $pageReviews = $this->parseReviewsWithRegex($fragment, $asin);
+        $this->logToFile($logFile, "✔️ Parsed " . count($pageReviews)
+            . " reviews from AJAX fragment page {$page}");
         if (empty($pageReviews)) {
-          $this->logToFile($logFile, "⚠️ No reviews parsed, stopping pagination");
-          break;
+            break;
         }
-
-        $this->logToFile($logFile, "✔️ Parsed " . count($pageReviews) . " reviews on page {$page}");
         $reviews = array_merge($reviews, $pageReviews);
         $page++;
     }
 
-    $this->logToFile($logFile, "✅ Finished AJAX scrape—total " . count($reviews));
     return array_slice($reviews, 0, $limit);
 }
+
 
 
 

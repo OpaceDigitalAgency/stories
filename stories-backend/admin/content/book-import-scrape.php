@@ -13,7 +13,7 @@ $currentPage = 'book-import-tool';
 $pageDescription = 'Scrape reviews for books from various sources';
 
 // Include the header
-require_once '../includes/auth.php';
+require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
 // Include database connection
@@ -284,12 +284,21 @@ header('Content-Type: text/html; charset=utf-8');
 
                         // Set up error log capture
                         $logFile = __DIR__ . '/../../services/ReviewFetcher/debug/scrape-log.txt';
-                        if (!is_dir(dirname($logFile))) {
-                            mkdir(dirname($logFile), 0755, true);
+                        $debugDir = dirname($logFile);
+
+                        // Create debug directory with proper permissions
+                        if (!is_dir($debugDir)) {
+                            mkdir($debugDir, 0777, true);
                         }
+
+                        // Make sure the directory is readable and writable
+                        chmod($debugDir, 0777);
 
                         // Clear the log file
                         file_put_contents($logFile, "Starting review scrape for source: {$sourceName}\n");
+
+                        // Make sure the file is readable and writable
+                        chmod($logFile, 0666);
 
                         // Get the appropriate fetcher for this source
                         echo "<div class='debug-log'>";

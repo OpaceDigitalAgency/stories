@@ -29,6 +29,9 @@ chmod($debugDir, 0777);
 $fileName = isset($_GET['file']) ? basename($_GET['file']) : '';
 $filePath = $debugDir . '/' . $fileName;
 
+// Create a direct URL to the file
+$directUrl = '/services/ReviewFetcher/debug/' . $fileName;
+
 // Check if the file exists
 $fileExists = file_exists($filePath) && is_file($filePath);
 $fileContent = '';
@@ -66,6 +69,9 @@ $pageActions = '
     ' . ($fileExists ? '
     <a href="?file=' . urlencode($fileName) . '&download=1" class="btn btn-success">
         <i class="fas fa-download"></i> Download File
+    </a>
+    <a href="' . $directUrl . '" target="_blank" class="btn btn-info">
+        <i class="fas fa-external-link-alt"></i> Direct Link
     </a>
     <a href="debug-logs.php?delete=' . urlencode($fileName) . '" class="btn btn-danger" onclick="return confirm(\'Are you sure you want to delete this file?\');">
         <i class="fas fa-trash"></i> Delete File

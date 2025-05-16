@@ -11,7 +11,7 @@ $currentPage = 'debug-logs';
 $pageDescription = 'View debug logs and HTML files for review fetchers';
 
 // Include the header
-require_once '../includes/auth.php';
+require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
 // Define the debug directory

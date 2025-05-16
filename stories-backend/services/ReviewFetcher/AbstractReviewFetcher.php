@@ -136,10 +136,11 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
 
         // Create debug directory with proper permissions
         if (!is_dir($debugDir)) {
-            mkdir($debugDir, 0755, true);
-            // Make sure the directory is readable and writable by the web server
-            chmod($debugDir, 0777);
+            mkdir($debugDir, 0777, true);
         }
+
+        // Make sure the directory is readable and writable by the web server
+        chmod($debugDir, 0777);
 
         // Log the request
         $this->logToFile($logFile, "🌐 Making request to: {$url}");
@@ -237,10 +238,14 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
             // Save the CAPTCHA page for debugging
             $debugDir = __DIR__ . '/debug';
             if (!is_dir($debugDir)) {
-                mkdir($debugDir, 0755, true);
+                mkdir($debugDir, 0777, true);
             }
+            // Make sure the directory is readable and writable
+            chmod($debugDir, 0777);
+
             $captchaFile = $debugDir . '/captcha-' . time() . '.html';
             file_put_contents($captchaFile, $response);
+            chmod($captchaFile, 0666);
             $this->logToFile($logFile, "📄 Saved CAPTCHA page to {$captchaFile}");
 
             return false;
@@ -260,8 +265,22 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
         $timestamp = date('Y-m-d H:i:s');
         $logMessage = "[{$timestamp}] {$message}\n";
 
+        // Create directory if it doesn't exist
+        $logDir = dirname($file);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0777, true);
+        }
+
+        // Make sure the directory is readable and writable
+        chmod($logDir, 0777);
+
         // Append to the log file
         file_put_contents($file, $logMessage, FILE_APPEND);
+
+        // Make sure the file is readable and writable
+        if (file_exists($file)) {
+            chmod($file, 0666);
+        }
 
         // Also log to error_log for server logs
         error_log($message);

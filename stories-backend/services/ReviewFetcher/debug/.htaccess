@@ -1,0 +1,16 @@
+# Allow access to debug files
+Options +Indexes
+Order allow,deny
+Allow from all
+
+<FilesMatch "\.(log|txt|html)$">
+    Order allow,deny
+    Allow from all
+    Require all granted
+</FilesMatch>
+
+# Disable PHP execution in this directory
+<FilesMatch "\.php$">
+    Order deny,allow
+    Deny from all
+</FilesMatch>

@@ -17,6 +17,14 @@ require_once '../includes/header.php';
 // Define the debug directory
 $debugDir = dirname(dirname(dirname(__FILE__))) . '/services/ReviewFetcher/debug';
 
+// Create the debug directory if it doesn't exist
+if (!is_dir($debugDir)) {
+    mkdir($debugDir, 0777, true);
+}
+
+// Make sure the directory is readable and writable
+chmod($debugDir, 0777);
+
 // Get the file name from the query string
 $fileName = isset($_GET['file']) ? basename($_GET['file']) : '';
 $filePath = $debugDir . '/' . $fileName;
@@ -31,10 +39,10 @@ $fileDate = '';
 if ($fileExists) {
     $fileSize = filesize($filePath);
     $fileDate = date('Y-m-d H:i:s', filemtime($filePath));
-    
+
     // Determine file type
     $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    
+
     if ($extension === 'html') {
         $fileType = 'HTML';
         // For HTML files, we'll display the source code
@@ -93,7 +101,7 @@ if (isset($_GET['download']) && $_GET['download'] == 1 && $fileExists) {
                 </h5>
                 <?php echo $pageActions; ?>
             </div>
-            
+
             <?php if ($fileExists): ?>
                 <div class="card-body">
                     <div class="alert alert-info">
@@ -101,7 +109,7 @@ if (isset($_GET['download']) && $_GET['download'] == 1 && $fileExists) {
                         <strong>Size:</strong> <?php echo number_format($fileSize / 1024, 2); ?> KB |
                         <strong>Modified:</strong> <?php echo $fileDate; ?>
                     </div>
-                    
+
                     <div class="file-content">
                         <?php if ($fileType === 'HTML'): ?>
                             <pre class="bg-light p-3 border rounded" style="max-height: 600px; overflow-y: auto;"><?php echo $fileContent; ?></pre>

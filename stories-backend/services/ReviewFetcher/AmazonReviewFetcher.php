@@ -400,15 +400,25 @@ protected function makeRequest(string $url, array $options = [], bool $throttle 
         return $reviews;
     }
 
+
+
     /**
-     * Append a timestamped line to a debug file.
-     */
-    private function logToFile(string $file, string $line): void
-    {
-        file_put_contents(
-            $file,
-            date('[Y-m-d H:i:s] ') . $line . PHP_EOL,
-            FILE_APPEND
-        );
-    }
+ * Append a timestamped line to a debug file.
+ *
+ * @param string $file Full path to the debug file.
+ * @param string $line The text to append.
+ * @return void
+ */
+protected function logToFile(string $file, string $line): void
+{
+    file_put_contents(
+        $file,
+        date('[Y-m-d H:i:s] ') . $line . PHP_EOL,
+        FILE_APPEND
+    );
+}
+
+
+
+
 }

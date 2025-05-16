@@ -108,7 +108,7 @@ private function convertISBNtoASIN(string $isbn): ?string
 
     private function getAggregateRating(string $asin): ?array
     {
-        $url = "https://{$this->domain}/product-reviews/{$asin}/?pageNumber=1";
+        $url = "https://{$this->domain}/product-reviews/{$asin}?pageNumber=1";
         $html = $this->makeRequest($url);
         if (!$html) {
             return null;
@@ -150,7 +150,7 @@ private function convertISBNtoASIN(string $isbn): ?string
         $reviews = [];
         $page = 1;
         while (count($reviews) < $limit) {
-            $url = "https://{$this->domain}/product-reviews/{$asin}/?pageNumber={$page}";
+            $url = "https://{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
             $html = $this->makeRequest($url);
             if (!$html) {
                 break;
@@ -158,7 +158,7 @@ private function convertISBNtoASIN(string $isbn): ?string
             // detect CAPTCHA
             if (preg_match('/captcha|robot check/i', $html)) {
                 // try mobile fallback
-                $url = "https://{$this->domain}/gp/aw/review-listing/{$asin}/?pageNumber={$page}";
+                $url = "https://{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}";
                 $html = $this->makeRequest($url);
                 if (!$html || preg_match('/captcha|robot check/i', $html)) {
                     break;

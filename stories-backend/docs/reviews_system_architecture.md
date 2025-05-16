@@ -226,6 +226,7 @@ Configuration for automating the entire pipeline.
 - Improve Amazon review scraping with enhanced CAPTCHA detection ✅
 - Update HTML parsing patterns for current Amazon structure ✅
 - Implement robust request throttling and user agent rotation ✅
+- Optimize Amazon review scraper for cPanel environment ✅
 
 ### Phase 4: AI Enrichment
 - Set up OpenAI integration ✅
@@ -379,6 +380,18 @@ Sophisticated error handling ensures maximum data extraction:
 - Graceful degradation to return partial data when complete scraping fails
 - Preservation of already-collected reviews when pagination is interrupted
 - Comprehensive logging for debugging and improvement
+
+### 6. Enhanced HTTP Client for cPanel Environment
+
+For sites with anti-bot measures like Amazon, the system employs enhanced HTTP client techniques optimized for cPanel environments:
+
+- Uses multiple user agent rotation with realistic browser fingerprints
+- Implements sophisticated request throttling with variable delays
+- Employs multiple fallback strategies when encountering CAPTCHAs or login pages
+- Uses persistent cookies to maintain sessions across requests
+- Implements robust pattern matching to extract data from various page formats
+- Provides comprehensive logging and debugging capabilities
+- Saves raw HTML responses for analysis and pattern improvement
 
 These techniques allow the system to reliably extract review data even from sources with strong anti-scraping measures, while being respectful of the source websites by limiting request frequency and volume.
 

@@ -125,7 +125,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     /**
      * Make an HTTP request with persistent cookies & sensible headers.
      */
-    private function makeRequest(string $url): ?string
+    protected function makeRequest(string $url): ?string
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [

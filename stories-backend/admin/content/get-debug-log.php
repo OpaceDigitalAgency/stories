@@ -1,19 +1,12 @@
 <?php
 /**
  * Get Debug Log
- * 
+ *
  * This script returns the contents of the debug log file for a specific source.
  */
 
-// Include necessary files
-require_once '../includes/auth.php';
-
-// Check if the user is logged in
-if (!isLoggedIn()) {
-    header('HTTP/1.1 403 Forbidden');
-    echo "Access denied";
-    exit;
-}
+// Include auth check
+require_once '../includes/auth-check.php';
 
 // Get the source ID
 $sourceId = isset($_GET['source_id']) ? (int)$_GET['source_id'] : 0;
@@ -27,8 +20,11 @@ if (!file_exists($logFile)) {
     exit;
 }
 
-// Read the log file
-$logContent = file_get_contents($logFile);
+// Read the last 100 lines of the log file
+$lines = file($logFile);
+$lines = array_slice($lines, -100);
 
-// Return the log content
-echo htmlspecialchars($logContent);
+// Output the lines
+foreach ($lines as $line) {
+    echo htmlspecialchars($line);
+}

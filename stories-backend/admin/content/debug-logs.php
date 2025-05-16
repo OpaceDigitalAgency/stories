@@ -19,8 +19,11 @@ $debugDir = dirname(dirname(dirname(__FILE__))) . '/services/ReviewFetcher/debug
 
 // Create the debug directory if it doesn't exist
 if (!is_dir($debugDir)) {
-    mkdir($debugDir, 0755, true);
+    mkdir($debugDir, 0777, true);
 }
+
+// Make sure the directory is writable
+chmod($debugDir, 0777);
 
 // Handle file deletion
 if (isset($_GET['delete']) && !empty($_GET['delete'])) {
@@ -108,7 +111,7 @@ $pageActions = '
                                             $fileName = basename($file);
                                             $fileSize = filesize($file);
                                             $fileDate = date('Y-m-d H:i:s', filemtime($file));
-                                            $fileUrl = '/services/ReviewFetcher/debug/' . $fileName;
+                                            $fileUrl = 'view-debug-file.php?file=' . urlencode($fileName);
                                             ?>
                                             <div class="list-group-item">
                                                 <div class="d-flex justify-content-between align-items-center">
@@ -156,7 +159,7 @@ $pageActions = '
                                             $fileName = basename($file);
                                             $fileSize = filesize($file);
                                             $fileDate = date('Y-m-d H:i:s', filemtime($file));
-                                            $fileUrl = '/services/ReviewFetcher/debug/' . $fileName;
+                                            $fileUrl = 'view-debug-file.php?file=' . urlencode($fileName);
                                             ?>
                                             <div class="list-group-item">
                                                 <div class="d-flex justify-content-between align-items-center">

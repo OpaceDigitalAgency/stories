@@ -787,5 +787,27 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
         return $reviews;
     }
 
+    /**
+     * Log a message to a file
+     *
+     * @param string $logFile The path to the log file
+     * @param string $message The message to log
+     * @return void
+     */
+    private function logToFile(string $logFile, string $message): void {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[{$timestamp}] {$message}" . PHP_EOL;
 
+        // Create directory if it doesn't exist
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0777, true);
+        }
+
+        // Append to log file
+        file_put_contents($logFile, $logMessage, FILE_APPEND);
+
+        // Also log to error_log for server logs
+        error_log($message);
+    }
 }

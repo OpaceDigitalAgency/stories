@@ -7,8 +7,14 @@
  * to the book-import-process.php script.
  */
 
-// Include auth check
-require_once '../includes/auth-check.php';
+// Set page title and current page
+$pageTitle = 'Book Review Scraping';
+$currentPage = 'book-import-tool';
+$pageDescription = 'Scrape reviews for books from various sources';
+
+// Include the header
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 
 // Include database connection
 require_once '../includes/db-connect.php';
@@ -116,63 +122,67 @@ function updateBookAggregateValues($db, $bookId) {
 // Main processing logic
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Review Scraping</title>
-    <link rel="stylesheet" href="../assets/css/enhanced-admin.css">
-    <style>
-        .progress-container {
-            margin: 20px 0;
-            background-color: #f1f1f1;
-            border-radius: 5px;
-            overflow: hidden;
-            border: 2px solid #ddd;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .progress-bar {
-            height: 40px;
-            background-color: #4CAF50;
-            background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
-            background-size: 40px 40px;
-            text-align: center;
-            line-height: 40px;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-            transition: width 0.5s;
-            animation: progress-bar-stripes 2s linear infinite;
-        }
-        @keyframes progress-bar-stripes {
-            from { background-position: 40px 0; }
-            to { background-position: 0 0; }
-        }
-        .log-container {
-            max-height: 400px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .success { color: green; }
-        .warning { color: orange; }
-        .error { color: red; }
-        .info { color: blue; }
-    </style>
-</head>
-<body>
-    <div class="container mt-4">
-        <h1>Book Review Scraping</h1>
+<style>
+    .progress-container {
+        margin: 20px 0;
+        background-color: #f1f1f1;
+        border-radius: 5px;
+        overflow: hidden;
+        border: 2px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .progress-bar {
+        height: 40px;
+        background-color: #4CAF50;
+        background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
+        background-size: 40px 40px;
+        text-align: center;
+        line-height: 40px;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        transition: width 0.5s;
+        animation: progress-bar-stripes 2s linear infinite;
+    }
+    @keyframes progress-bar-stripes {
+        from { background-position: 40px 0; }
+        to { background-position: 0 0; }
+    }
+    .log-container {
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+    .success { color: green; }
+    .warning { color: orange; }
+    .error { color: red; }
+    .info { color: blue; }
+</style>
 
-        <div class="progress-container">
-            <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
-        </div>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Book Review Scraping</h5>
+                <div class="btn-group">
+                    <a href="book-import-tool.php" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Import Tool
+                    </a>
+                    <a href="debug-logs.php" class="btn btn-info">
+                        <i class="fas fa-file-alt"></i> View Debug Logs
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+                </div>
 
-        <div class="log-container" id="logContainer">
+                <div class="log-container" id="logContainer">
             <p class="info">Starting review scraping process...</p>
             <?php
             // Process the request
@@ -500,18 +510,24 @@ header('Content-Type: text/html; charset=utf-8');
                 echo "<p><a href='book-import-tool.php' class='btn btn-primary'>Return to Book Import Tool</a></p>";
             }
             ?>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // Auto-scroll to bottom of log container
-        const logContainer = document.getElementById('logContainer');
+<?php
+// Include the footer
+require_once '../includes/footer.php';
+?>
+
+<script>
+    // Auto-scroll to bottom of log container
+    const logContainer = document.getElementById('logContainer');
+    logContainer.scrollTop = logContainer.scrollHeight;
+
+    // Set up interval to auto-scroll
+    setInterval(function() {
         logContainer.scrollTop = logContainer.scrollHeight;
-
-        // Set up interval to auto-scroll
-        setInterval(function() {
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }, 500);
-    </script>
-</body>
-</html>
+    }, 500);
+</script>

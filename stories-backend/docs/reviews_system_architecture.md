@@ -97,7 +97,7 @@ A modular service that fetches reviews from external APIs and websites.
 - **Google Books API**: Fetches book data and ratings via `https://www.googleapis.com/books/v1/volumes?q=isbn:{ISBN}`
 - **Open Library API**: Retrieves book metadata via `https://openlibrary.org/api/books?bibkeys=ISBN:{ISBN}&format=json&jscmd=data`
 - **Internet Archive API**: Gets reviews for books with Open Library IDs
-- **Web Scraping**: For sources without APIs (Amazon, Goodreads, Kirkus, SLJ)
+- **Web Scraping**: For sources without APIs (Amazon, Goodreads, Kirkus, SLJ) using advanced anti-detection techniques
 
 ```php
 // Example interface
@@ -223,6 +223,9 @@ Configuration for automating the entire pipeline.
 - Add logging and error handling ✅
 - Add progress tracking ✅
 - Test with real books ✅
+- Improve Amazon review scraping with enhanced CAPTCHA detection ✅
+- Update HTML parsing patterns for current Amazon structure ✅
+- Implement robust request throttling and user agent rotation ✅
 
 ### Phase 4: AI Enrichment
 - Set up OpenAI integration ✅
@@ -327,6 +330,57 @@ sequenceDiagram
     DB->>Web: Return filtered reviews
     Web->>Web: Display with faceted navigation
 ```
+
+## Advanced Web Scraping Techniques
+
+The system employs sophisticated web scraping techniques to extract reviews from sources that don't provide public APIs, particularly Amazon. These techniques include:
+
+### 1. Enhanced CAPTCHA Detection
+
+The Amazon review scraper includes comprehensive CAPTCHA and anti-bot detection:
+
+- Multiple pattern matching for various CAPTCHA and security challenge pages
+- Detection of login redirects and handling of partial data extraction
+- Identification of unusual response patterns (small responses, unexpected content)
+- Saving of CAPTCHA pages for debugging and analysis
+
+### 2. Request Throttling and Randomization
+
+To avoid triggering anti-scraping measures:
+
+- Variable delays between requests (2-5 seconds for Amazon, 1-3 seconds for other sources)
+- Random jitter added to delays to create non-predictable patterns
+- Occasional longer pauses (3-8 seconds) to simulate human behavior
+- Different delay patterns for different sites based on their anti-scraping sensitivity
+
+### 3. Browser Fingerprint Randomization
+
+Each request uses different browser fingerprints:
+
+- Rotation among 14+ modern user agent strings (desktop and mobile)
+- Randomized HTTP header ordering
+- Unique cookie files for each request to prevent tracking
+- Varied referrer and connection settings
+
+### 4. Robust HTML Parsing
+
+The system uses multiple pattern-matching approaches for each data element:
+
+- Multiple regex patterns for review blocks to handle different page layouts
+- Alternative patterns for extracting reviewer names, ratings, dates, and text
+- Fallback to aggregate ratings when individual reviews can't be accessed
+- Detailed logging of parsing results for debugging
+
+### 5. Error Handling and Recovery
+
+Sophisticated error handling ensures maximum data extraction:
+
+- Retry logic with increasing delays for temporary failures
+- Graceful degradation to return partial data when complete scraping fails
+- Preservation of already-collected reviews when pagination is interrupted
+- Comprehensive logging for debugging and improvement
+
+These techniques allow the system to reliably extract review data even from sources with strong anti-scraping measures, while being respectful of the source websites by limiting request frequency and volume.
 
 ## Conclusion
 

@@ -12,6 +12,14 @@
   - Created review-bulk-actions.php for handling batch operations
   - Added detailed logging and progress tracking for review operations
   - Updated reviews_system_architecture.md to document all changes
+  - Created REVIEW_SYSTEM_README.md with detailed developer documentation
+
+- Fixed review scraping functionality:
+  - Improved regex patterns in AmazonReviewFetcher and GoodreadsReviewFetcher to handle different HTML structures
+  - Added multiple pattern matching to handle different attribute orders and layouts
+  - Created missing fetcher classes: KirkusReviewsFetcher, SLJReviewFetcher, and StoriesReviewFetcher
+  - Updated ReviewFetcherFactory to support all review sources
+  - Added better error handling for CAPTCHA detection and other common issues
 
 ## 2025-05-06
 - Fixed image upload to update both featured image and cover_url fields:

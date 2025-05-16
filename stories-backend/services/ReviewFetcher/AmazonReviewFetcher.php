@@ -175,21 +175,21 @@ protected function makeRequest(string $url, array $options = [], bool $throttle 
 
 
 /**
- * Scrape up to $limit reviews using Amazon’s AJAX endpoint
- * (bypasses the login gate on /product-reviews/ pages).
+ * Scrape up to $limit reviews using Amazon’s AJAX endpoint,
+ * decoding the JSON payload to get the HTML fragment.
  */
 protected function scrapeReviews(string $asin, int $limit): array
 {
     $reviews       = [];
     $page          = 1;
     $logFile       = "{$this->dbgDir}/scrape-log.txt";
-    $this->logToFile($logFile, "▶️ Starting AJAX scrape for ASIN {$asin}, limit={$limit}");
+    $this->logToFile($logFile, "▶️ Starting AJAX scrape (JSON) for ASIN {$asin}, limit={$limit}");
 
     while (count($reviews) < $limit) {
         // Build the AJAX URL
         $ajaxUrl = sprintf(
-            'https://%s/hz/reviews-render/ajax/reviews/get' .
-            '?asin=%s&pageNumber=%d&reviewerType=all_reviews&formatType=current_format',
+            'https://%s/hz/reviews-render/ajax/reviews/get'
+          . '?asin=%s&pageNumber=%d&reviewerType=all_reviews&formatType=current_format',
             $this->domain,
             $asin,
             $page
@@ -197,28 +197,45 @@ protected function scrapeReviews(string $asin, int $limit): array
 
         $this->logToFile($logFile, "🌐 Fetching AJAX page {$page}: {$ajaxUrl}");
 
-        // Send X-Requested-With header so Amazon serves JSON/HTML fragment
-        $html = $this->makeRequest($ajaxUrl, [
+        // Request with X-Requested-With
+        $raw = $this->makeRequest($ajaxUrl, [
             CURLOPT_HTTPHEADER => [
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept: application/json, text/javascript, */*; q=0.01',
                 'Accept-Language: en-GB,en;q=0.9',
                 'Referer: https://' . $this->domain . '/dp/' . $asin,
                 'X-Requested-With: XMLHttpRequest',
             ]
         ]);
 
-        // Always dump raw AJAX response for debugging
-        file_put_contents("{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-raw.html", $html);
+        // Dump raw JSON for inspection
+        file_put_contents(
+            "{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-raw.json",
+            $raw
+        );
 
-        if (! $html) {
+        if (! $raw) {
             $this->logToFile($logFile, "❌ Empty AJAX response, stopping");
             break;
         }
 
-        // Parse out the reviews from the HTML fragment
-        $pageReviews = $this->parseReviewsWithRegex($html, $asin);
+        // Decode JSON
+        $payload = json_decode($raw, true);
+        if (! is_array($payload) || ! isset($payload['html'])) {
+            $this->logToFile($logFile, "⚠️ Invalid JSON or missing ‘html’ field");
+            break;
+        }
+
+        $htmlFragment = $payload['html'];
+        // Dump the extracted HTML fragment too
+        file_put_contents(
+            "{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-fragment.html",
+            $htmlFragment
+        );
+
+        // Parse out the reviews from that fragment
+        $pageReviews = $this->parseReviewsWithRegex($htmlFragment, $asin);
         $found       = count($pageReviews);
-        $this->logToFile($logFile, "✔️ Parsed {$found} reviews from AJAX page {$page}");
+        $this->logToFile($logFile, "✔️ Parsed {$found} reviews from AJAX fragment page {$page}");
 
         if ($found === 0) {
             break;
@@ -228,9 +245,13 @@ protected function scrapeReviews(string $asin, int $limit): array
         $page++;
     }
 
-    $this->logToFile($logFile, "✅ Finished AJAX scrape—total reviews: " . count($reviews));
+    $this->logToFile(
+        $logFile,
+        "✅ Finished AJAX scrape—total reviews collected: " . count($reviews)
+    );
     return array_slice($reviews, 0, $limit);
 }
+
 
 
 

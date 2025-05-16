@@ -99,7 +99,24 @@ class ReviewFetcherFactory {
                 break;
 
             case 'amazon':
-                $fetcher = new AmazonReviewFetcher($this->db, $sourceId);
+                // Try to use the headless fetcher first, fall back to regular fetcher if it fails
+                try {
+                    // Check if the required classes are available
+                    if (class_exists('Services\\HeadlessBrowser\\HeadlessBrowserService') &&
+                        class_exists('Facebook\\WebDriver\\Chrome\\ChromeOptions')) {
+                        $fetcher = new AmazonHeadlessFetcher($this->db, $sourceId);
+
+                        // Log success
+                        error_log("Using headless Amazon fetcher for better review extraction");
+                    } else {
+                        // Required classes not available, use regular fetcher
+                        error_log("Headless browser dependencies not available, using regular Amazon fetcher");
+                        $fetcher = new AmazonReviewFetcher($this->db, $sourceId);
+                    }
+                } catch (\Exception $e) {
+                    error_log("Failed to initialize headless Amazon fetcher: " . $e->getMessage());
+                    $fetcher = new AmazonReviewFetcher($this->db, $sourceId);
+                }
                 break;
 
             case 'kirkus reviews':

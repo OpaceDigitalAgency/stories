@@ -4,11 +4,16 @@
     "type": "project",
     "require": {
         "php": ">=7.4",
-        "firebase/php-jwt": "^6.0"
+        "firebase/php-jwt": "^6.0",
+        "php-webdriver/webdriver": "^1.14",
+        "symfony/process": "^5.4",
+        "symfony/dom-crawler": "^5.4",
+        "symfony/css-selector": "^5.4"
     },
     "autoload": {
         "psr-4": {
-            "StoriesAPI\\": "api/v1/"
+            "StoriesAPI\\": "api/v1/",
+            "Services\\": "services/"
         }
     },
     "config": {

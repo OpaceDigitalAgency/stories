@@ -241,10 +241,14 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
+        // Debug: Save the raw HTML to a file for inspection
+        // Uncomment this line to debug
+        // file_put_contents(__DIR__ . '/amazon_reviews_debug.html', substr($response, 0, 50000));
+
         $reviews = [];
 
-        // Extract review blocks
-        if (preg_match_all('/<div data-hook="review"[^>]*>(.*?)<\/div>\s*<\/div>\s*<\/div>/is', $response, $reviewBlocks, PREG_SET_ORDER)) {
+        // Extract review blocks with more flexible regex
+        if (preg_match_all('/<div[^>]+data-hook="review"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $response, $reviewBlocks, PREG_SET_ORDER)) {
             foreach ($reviewBlocks as $index => $block) {
                 if ($index >= $limit) {
                     break;
@@ -252,33 +256,46 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
 
                 $reviewHtml = $block[0];
 
-                // Extract reviewer name
+                // Extract reviewer name with more flexible regex
                 $reviewerName = 'Amazon Customer';
-                if (preg_match('/<span class="a-profile-name">([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                if (preg_match('/<span[^>]*class="a-profile-name"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $reviewerName = trim($matches[1]);
                 }
 
-                // Extract rating
+                // Extract rating with multiple patterns to handle different formats
                 $rating = 0;
+                // Try the old format first
                 if (preg_match('/data-hook="review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
                     $rating = (float)$matches[1];
                 }
+                // Try the newer format with i tags
+                else if (preg_match('/<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i', $reviewHtml, $matches)) {
+                    $rating = (float)$matches[1];
+                }
+                // Try another common format
+                else if (preg_match('/class="a-icon-alt">([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
+                    $rating = (float)$matches[1];
+                }
 
-                // Extract review title
+                // Extract review title with more flexible regex
                 $reviewTitle = '';
-                if (preg_match('/data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                if (preg_match('/<a[^>]*data-hook="review-title"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                    $reviewTitle = trim($matches[1]);
+                } else if (preg_match('/<span[^>]*data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $reviewTitle = trim($matches[1]);
                 }
 
-                // Extract review text
+                // Extract review text with more flexible regex
                 $reviewText = '';
-                if (preg_match('/data-hook="review-body"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                if (preg_match('/<span[^>]*data-hook="review-body"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                    $reviewText = trim(strip_tags($matches[1]));
+                } else if (preg_match('/<div[^>]*data-hook="review-body"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                     $reviewText = trim(strip_tags($matches[1]));
                 }
 
-                // Extract review date
+                // Extract review date with more flexible regex
                 $reviewDate = null;
-                if (preg_match('/data-hook="review-date"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                if (preg_match('/<span[^>]*data-hook="review-date"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $dateStr = trim($matches[1]);
                     if (preg_match('/on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $dateStr, $dateMatches)) {
                         $timestamp = strtotime($dateMatches[1]);
@@ -314,6 +331,11 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                     ])
                 ];
             }
+        }
+
+        // If no reviews found but we can see we're on a CAPTCHA page, set a specific error
+        if (empty($reviews) && (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false)) {
+            $this->lastError = "Amazon is showing a CAPTCHA or robot check page. Try again later.";
         }
 
         return $reviews;

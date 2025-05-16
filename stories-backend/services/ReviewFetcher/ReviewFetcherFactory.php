@@ -102,6 +102,18 @@ class ReviewFetcherFactory {
                 $fetcher = new AmazonReviewFetcher($this->db, $sourceId);
                 break;
 
+            case 'kirkus reviews':
+                $fetcher = new KirkusReviewsFetcher($this->db, $sourceId);
+                break;
+
+            case 'school library journal':
+                $fetcher = new SLJReviewFetcher($this->db, $sourceId);
+                break;
+
+            case 'stories from the web':
+                $fetcher = new StoriesReviewFetcher($this->db, $sourceId);
+                break;
+
             default:
                 // Unknown source
                 return null;

@@ -124,9 +124,27 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             return null;
         }
 
-        // Extract the book URL from the search results
-        if (preg_match('/<a class="bookTitle" href="([^"]+)"/i', $response, $matches)) {
+        // Debug: Save the raw HTML to a file for inspection
+        // Uncomment this line to debug
+        // file_put_contents(__DIR__ . '/goodreads_search_debug.html', substr($response, 0, 50000));
+
+        // Extract the book URL from the search results with more flexible regex
+        // This handles different attribute orders and additional attributes
+        if (preg_match('/<a[^>]+class="bookTitle"[^>]*href="([^"]+)"/i', $response, $matches)) {
             return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+        }
+
+        // Try alternative patterns
+        if (preg_match('/<a[^>]+href="([^"]+)"[^>]*class="bookTitle"/i', $response, $matches)) {
+            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+        }
+
+        // Try another common pattern
+        if (preg_match('/<a[^>]+href="\/book\/show\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            // Extract the URL from the match
+            if (preg_match('/href="([^"]+)"/i', $matches[0], $urlMatch)) {
+                return 'https://www.goodreads.com' . html_entity_decode($urlMatch[1]);
+            }
         }
 
         return null;
@@ -228,66 +246,135 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
+        // Debug: Save the raw HTML to a file for inspection
+        // Uncomment this line to debug
+        // file_put_contents(__DIR__ . '/goodreads_reviews_debug.html', substr($response, 0, 50000));
+
         $reviews = [];
 
-        // Extract review blocks
-        if (preg_match_all('/<div class="review"[^>]*id="review_(\d+)".*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/is', $response, $reviewBlocks, PREG_SET_ORDER)) {
-            foreach ($reviewBlocks as $index => $block) {
-                if ($index >= $limit) {
-                    break;
-                }
+        // Try multiple patterns for review blocks to handle different Goodreads layouts
+        $reviewBlocks = [];
 
-                $reviewId = $block[1];
-                $reviewHtml = $block[0];
+        // Pattern 1: Classic review layout
+        if (preg_match_all('/<div class="review"[^>]*id="review_(\d+)".*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches, PREG_SET_ORDER)) {
+            $reviewBlocks = array_merge($reviewBlocks, $matches);
+        }
 
-                // Extract reviewer name
-                $reviewerName = 'Goodreads User';
-                if (preg_match('/<a class="user"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
-                    $reviewerName = trim($matches[1]);
-                }
+        // Pattern 2: Alternative review layout
+        if (preg_match_all('/<div[^>]+class="[^"]*review[^"]*"[^>]*id="review_(\d+)".*?<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches, PREG_SET_ORDER)) {
+            $reviewBlocks = array_merge($reviewBlocks, $matches);
+        }
 
-                // Extract rating
-                $rating = 0;
-                if (preg_match('/<span class="static-stars"[^>]*title="([^"]+)"/i', $reviewHtml, $matches)) {
-                    if (preg_match('/(\d+)/', $matches[1], $ratingMatch)) {
-                        $rating = (int)$ratingMatch[1];
-                    }
-                }
+        // Pattern 3: Newer review layout
+        if (preg_match_all('/<article[^>]+class="[^"]*review[^"]*"[^>]*id="review_(\d+)".*?<\/article>/is', $response, $matches, PREG_SET_ORDER)) {
+            $reviewBlocks = array_merge($reviewBlocks, $matches);
+        }
 
-                // Extract review text
-                $reviewText = '';
-                if (preg_match('/<div class="reviewText"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
-                    $reviewText = trim(strip_tags($matches[1]));
-                }
-
-                // Extract review date
-                $reviewDate = null;
-                if (preg_match('/<a class="reviewDate"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
-                    $reviewDate = $this->formatDate($matches[1]);
-                }
-
-                // Skip reviews without text or rating
-                if (empty($reviewText) || $rating == 0) {
-                    continue;
-                }
-
-                $reviews[] = [
-                    'source_id' => $this->sourceId,
-                    'reviewer_name' => $reviewerName,
-                    'reviewer_age' => null,
-                    'review_date' => $reviewDate,
-                    'original_rating' => "{$rating}/5",
-                    'rating_value' => (float)$rating,
-                    'rating_scale' => 5,
-                    'rating_normalised' => $this->normalizeRating((float)$rating, 5),
-                    'review_text' => $this->cleanText($reviewText),
-                    'metadata' => json_encode([
-                        'review_id' => $reviewId,
-                        'review_url' => "{$reviewsUrl}#{$reviewId}",
-                        'is_synthetic' => false
-                    ])
-                ];
+        // Process the review blocks
+        foreach ($reviewBlocks as $index => $block) {
+            if ($index >= $limit) {
+                break;
             }
+
+            $reviewId = $block[1];
+            $reviewHtml = $block[0];
+
+            // Extract reviewer name with multiple patterns
+            $reviewerName = 'Goodreads User';
+            if (preg_match('/<a class="user"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            } else if (preg_match('/<a[^>]+class="[^"]*reviewer[^"]*"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            } else if (preg_match('/<span[^>]+class="[^"]*reviewer[^"]*"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            }
+
+            // Extract rating with multiple patterns
+            $rating = 0;
+            // Pattern 1: Classic static stars
+            if (preg_match('/<span class="static-stars"[^>]*title="([^"]+)"/i', $reviewHtml, $matches)) {
+                if (preg_match('/(\d+)/', $matches[1], $ratingMatch)) {
+                    $rating = (int)$ratingMatch[1];
+                }
+            }
+            // Pattern 2: Rating value in data attribute
+            else if (preg_match('/<span[^>]+data-rating="([1-5])"/i', $reviewHtml, $matches)) {
+                $rating = (int)$matches[1];
+            }
+            // Pattern 3: Stars in class name
+            else if (preg_match('/<span class="[^"]*p10[^"]*"[^>]*>/i', $reviewHtml)) {
+                $rating = 5;
+            } else if (preg_match('/<span class="[^"]*p8[^"]*"[^>]*>/i', $reviewHtml)) {
+                $rating = 4;
+            } else if (preg_match('/<span class="[^"]*p6[^"]*"[^>]*>/i', $reviewHtml)) {
+                $rating = 3;
+            } else if (preg_match('/<span class="[^"]*p4[^"]*"[^>]*>/i', $reviewHtml)) {
+                $rating = 2;
+            } else if (preg_match('/<span class="[^"]*p2[^"]*"[^>]*>/i', $reviewHtml)) {
+                $rating = 1;
+            }
+
+            // Extract review text with multiple patterns
+            $reviewText = '';
+            // Pattern 1: Classic review text
+            if (preg_match('/<div class="reviewText"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 2: Alternative review text
+            else if (preg_match('/<div[^>]+class="[^"]*reviewText[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Pattern 3: Review content in newer layout
+            else if (preg_match('/<div[^>]+class="[^"]*reviewContent[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+
+            // Extract review date with multiple patterns
+            $reviewDate = null;
+            // Pattern 1: Classic review date
+            if (preg_match('/<a class="reviewDate"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewDate = $this->formatDate($matches[1]);
+            }
+            // Pattern 2: Date in time tag
+            else if (preg_match('/<time[^>]*datetime="([^"]+)"[^>]*>/i', $reviewHtml, $matches)) {
+                $reviewDate = substr($matches[1], 0, 10); // Extract YYYY-MM-DD
+            }
+            // Pattern 3: Date in span
+            else if (preg_match('/<span[^>]+class="[^"]*reviewDate[^"]*"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                $reviewDate = $this->formatDate($matches[1]);
+            }
+
+            // Use current date if no date found
+            if (empty($reviewDate)) {
+                $reviewDate = date('Y-m-d');
+            }
+
+            // Skip reviews without text or rating
+            if (empty($reviewText) || $rating == 0) {
+                continue;
+            }
+
+            $reviews[] = [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => $reviewerName,
+                'reviewer_age' => null,
+                'review_date' => $reviewDate,
+                'original_rating' => "{$rating}/5",
+                'rating_value' => (float)$rating,
+                'rating_scale' => 5,
+                'rating_normalised' => $this->normalizeRating((float)$rating, 5),
+                'review_text' => $this->cleanText($reviewText),
+                'metadata' => json_encode([
+                    'review_id' => $reviewId,
+                    'review_url' => "{$reviewsUrl}#{$reviewId}",
+                    'is_synthetic' => false
+                ])
+            ];
+        }
+
+        // If no reviews found but we can see we're on a CAPTCHA page, set a specific error
+        if (empty($reviews) && (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false)) {
+            $this->lastError = "Goodreads is showing a CAPTCHA or robot check page. Try again later.";
         }
 
         return $reviews;

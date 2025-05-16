@@ -258,13 +258,6 @@ header('Content-Type: text/html; charset=utf-8');
                         // Get reviews using the review fetcher
                         $reviews = [];
 
-                        // Skip sources that don't have fetchers implemented yet
-                        if ($sourceName == 'School Library Journal' || $sourceName == 'Kirkus Reviews') {
-                            echo "<p class='warning'>No fetcher available for source ID: $sourceId</p>";
-                            flushOutput();
-                            continue;
-                        }
-
                         // Get the appropriate fetcher for this source
                         $fetcher = $reviewFetcherFactory->getFetcher($sourceId);
 

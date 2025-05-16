@@ -12,6 +12,16 @@ use PDO;
 
 class AmazonReviewFetcher extends AbstractReviewFetcher {
     /**
+     * @var string Amazon Associate Tag for affiliate links
+     */
+    private $affiliateTag;
+
+    /**
+     * @var string Amazon domain to use (default: amazon.co.uk)
+     */
+    private $domain = 'amazon.co.uk';
+
+    /**
      * Constructor
      *
      * @param PDO $db Database connection
@@ -19,6 +29,15 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
      */
     public function __construct(PDO $db, int $sourceId) {
         parent::__construct($db, $sourceId, 'Amazon');
+
+        // Get affiliate tag from environment or settings
+        $this->affiliateTag = getenv('AMAZON_ASSOCIATE_TAG') ?: 'storiesfro0f0-20';
+
+        // Try to get domain from settings
+        $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_name = 'amazon_domain'");
+        if ($stmt && $stmt->execute() && ($domain = $stmt->fetchColumn())) {
+            $this->domain = $domain;
+        }
     }
 
     /**
@@ -108,37 +127,104 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
     }
 
     /**
+     * Find the Amazon ASIN by ISBN
+     *
+     * @param string $isbn The ISBN to search for
+     * @return string|null The ASIN or null if not found
+     */
+    private function findAsinByISBN(string $isbn): ?string {
+        // First, try direct conversion from ISBN to ASIN
+        $asin = $this->convertISBNtoASIN($isbn);
+
+        // If we have an ASIN, verify it exists on Amazon
+        if (!empty($asin)) {
+            $productUrl = "https://{$this->domain}/dp/{$asin}";
+            $response = $this->makeRequest($productUrl);
+
+            // If we get a valid response and it's not a "product not found" page
+            if ($response !== false &&
+                strpos($response, 'Page Not Found') === false &&
+                strpos($response, 'We couldn\'t find that page') === false) {
+                return $asin;
+            }
+        }
+
+        // If direct conversion failed, try searching Amazon
+        $searchUrl = "https://{$this->domain}/s?k={$isbn}&i=stripbooks";
+        $response = $this->makeRequest($searchUrl);
+
+        if ($response === false) {
+            return null;
+        }
+
+        // Save the search results for debugging
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+        file_put_contents("{$debugDir}/amazon-search-{$isbn}.html", $response);
+
+        // Try to extract ASIN from search results
+        if (preg_match('/\/dp\/([A-Z0-9]{10})(?:[\/\?]|$)/i', $response, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert ISBN to ASIN
+     *
+     * @param string $isbn The ISBN to convert
+     * @return string|null The ASIN or null if conversion failed
+     */
+    private function convertISBNtoASIN(string $isbn): ?string {
+        // Remove hyphens and spaces
+        $isbn = preg_replace('/[^0-9X]/i', '', $isbn);
+
+        // If it's already a 10-digit ISBN, it's likely the ASIN
+        if (strlen($isbn) == 10) {
+            return $isbn;
+        }
+
+        // If it's a 13-digit ISBN starting with 978, convert to ISBN-10/ASIN
+        if (strlen($isbn) == 13 && substr($isbn, 0, 3) == '978') {
+            // Extract the middle 9 digits
+            $digits = substr($isbn, 3, 9);
+
+            // Calculate the check digit
+            $sum = 0;
+            for ($i = 0; $i < 9; $i++) {
+                $sum += (int)$digits[$i] * (10 - $i);
+            }
+            $checkDigit = 11 - ($sum % 11);
+
+            if ($checkDigit == 10) {
+                $checkDigit = 'X';
+            } elseif ($checkDigit == 11) {
+                $checkDigit = '0';
+            }
+
+            return $digits . $checkDigit;
+        }
+
+        return null;
+    }
+
+    /**
      * Find the Amazon product URL by ISBN
      *
      * @param string $isbn The ISBN to search for
      * @return string|null The product URL or null if not found
      */
     private function findProductUrl(string $isbn): ?string {
-        // Note: Direct Amazon scraping is challenging due to anti-scraping measures
-        // For a real implementation, consider using a third-party API or service
+        $asin = $this->findAsinByISBN($isbn);
 
-        // For now, we'll use a direct URL format that sometimes works
-        $asin = $isbn;
-        if (strlen($isbn) == 13 && substr($isbn, 0, 3) == '978') {
-            // Convert ISBN-13 to ASIN (which is essentially ISBN-10)
-            $asin = substr($isbn, 3, 9);
-
-            // Calculate the check digit
-            $sum = 0;
-            for ($i = 0; $i < 9; $i++) {
-                $sum += (int)$asin[$i] * (10 - $i);
-            }
-            $checkDigit = 11 - ($sum % 11);
-            if ($checkDigit == 10) {
-                $checkDigit = 'X';
-            } elseif ($checkDigit == 11) {
-                $checkDigit = '0';
-            }
-            $asin .= $checkDigit;
+        if (empty($asin)) {
+            return null;
         }
 
-        // Return the direct product URL
-        return "https://www.amazon.com/dp/{$asin}";
+        return "https://{$this->domain}/dp/{$asin}";
     }
 
     /**
@@ -223,78 +309,82 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
             $asin = $matches[1];
         }
 
-        return "https://www.amazon.com/product-reviews/{$asin}";
+        return "https://{$this->domain}/product-reviews/{$asin}";
     }
 
     /**
-     * Scrape reviews from Amazon
+     * Parse reviews from HTML
      *
-     * @param string $reviewsUrl The reviews URL
-     * @param int $limit Maximum number of reviews to fetch
+     * @param string $html The HTML content
+     * @param string $asin The Amazon ASIN
      * @return array Array of review data
      */
-    private function scrapeReviews(string $reviewsUrl, int $limit): array {
-        // Make a request to the reviews page
-        $response = $this->makeRequest($reviewsUrl);
-
-        if ($response === false) {
-            return [];
-        }
-
-        // Debug: Save the raw HTML to a file for inspection
-        // Uncomment this line to debug
-        // file_put_contents(__DIR__ . '/amazon_reviews_debug.html', substr($response, 0, 50000));
-
+    private function parseReviewsFromHTML(string $html, string $asin): array {
         $reviews = [];
 
         // Extract review blocks with more flexible regex
-        if (preg_match_all('/<div[^>]+data-hook="review"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $response, $reviewBlocks, PREG_SET_ORDER)) {
-            foreach ($reviewBlocks as $index => $block) {
-                if ($index >= $limit) {
-                    break;
-                }
-
+        if (preg_match_all('/<div[^>]+data-hook="review"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i', $html, $reviewBlocks, PREG_SET_ORDER)) {
+            foreach ($reviewBlocks as $block) {
                 $reviewHtml = $block[0];
 
-                // Extract reviewer name with more flexible regex
+                // Extract reviewer name
                 $reviewerName = 'Amazon Customer';
                 if (preg_match('/<span[^>]*class="a-profile-name"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $reviewerName = trim($matches[1]);
                 }
 
-                // Extract rating with multiple patterns to handle different formats
+                // Extract rating with multiple patterns
                 $rating = 0;
-                // Try the old format first
+                // Pattern 1: data-hook="review-star-rating"
                 if (preg_match('/data-hook="review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
                     $rating = (float)$matches[1];
                 }
-                // Try the newer format with i tags
+                // Pattern 2: a-icon-star with span
                 else if (preg_match('/<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i', $reviewHtml, $matches)) {
                     $rating = (float)$matches[1];
                 }
-                // Try another common format
+                // Pattern 3: a-icon-alt
                 else if (preg_match('/class="a-icon-alt">([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
                     $rating = (float)$matches[1];
                 }
+                // Pattern 4: data-hook="cmps-review-star-rating"
+                else if (preg_match('/data-hook="cmps-review-star-rating"[^>]*>([0-9.]+) out of 5 stars<\/span>/i', $reviewHtml, $matches)) {
+                    $rating = (float)$matches[1];
+                }
 
-                // Extract review title with more flexible regex
+                // Extract review title
                 $reviewTitle = '';
+                // Pattern 1: data-hook="review-title" in a tag
                 if (preg_match('/<a[^>]*data-hook="review-title"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
                     $reviewTitle = trim($matches[1]);
-                } else if (preg_match('/<span[^>]*data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                }
+                // Pattern 2: data-hook="review-title" in span tag
+                else if (preg_match('/<span[^>]*data-hook="review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
+                    $reviewTitle = trim($matches[1]);
+                }
+                // Pattern 3: a-size-base review-title
+                else if (preg_match('/<span[^>]*class="a-size-base review-title"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $reviewTitle = trim($matches[1]);
                 }
 
-                // Extract review text with more flexible regex
+                // Extract review text
                 $reviewText = '';
+                // Pattern 1: data-hook="review-body" in span
                 if (preg_match('/<span[^>]*data-hook="review-body"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
                     $reviewText = trim(strip_tags($matches[1]));
-                } else if (preg_match('/<div[^>]*data-hook="review-body"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                }
+                // Pattern 2: data-hook="review-body" in div
+                else if (preg_match('/<div[^>]*data-hook="review-body"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                    $reviewText = trim(strip_tags($matches[1]));
+                }
+                // Pattern 3: review-data in div
+                else if (preg_match('/<div[^>]*class="[^"]*review-data[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                     $reviewText = trim(strip_tags($matches[1]));
                 }
 
-                // Extract review date with more flexible regex
+                // Extract review date
                 $reviewDate = null;
+                // Pattern 1: data-hook="review-date"
                 if (preg_match('/<span[^>]*data-hook="review-date"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                     $dateStr = trim($matches[1]);
                     if (preg_match('/on\s+([A-Za-z]+\s+\d+,\s+\d{4})/i', $dateStr, $dateMatches)) {
@@ -315,6 +405,9 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                     $reviewText = $reviewTitle . ": " . $reviewText;
                 }
 
+                // Create the affiliate URL
+                $affiliateUrl = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+
                 $reviews[] = [
                     'source_id' => $this->sourceId,
                     'reviewer_name' => $reviewerName,
@@ -326,7 +419,9 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                     'rating_normalised' => $this->normalizeRating($rating, 5),
                     'review_text' => $this->cleanText($reviewText),
                     'metadata' => json_encode([
-                        'review_url' => $reviewsUrl,
+                        'asin' => $asin,
+                        'review_url' => "https://{$this->domain}/product-reviews/{$asin}",
+                        'affiliate_url' => $affiliateUrl,
                         'is_synthetic' => false
                     ])
                 ];
@@ -334,8 +429,137 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
         }
 
         // If no reviews found but we can see we're on a CAPTCHA page, set a specific error
-        if (empty($reviews) && (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false)) {
+        if (empty($reviews) && (strpos($html, 'captcha') !== false || strpos($html, 'robot check') !== false)) {
             $this->lastError = "Amazon is showing a CAPTCHA or robot check page. Try again later.";
+        }
+
+        return $reviews;
+    }
+
+    /**
+     * Get aggregate rating for a product
+     *
+     * @param string $asin The Amazon ASIN
+     * @return array|null The aggregate review data or null if not found
+     */
+    private function getAggregateRating(string $asin): ?array {
+        $productUrl = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+
+        // Make the request
+        $response = $this->makeRequest($productUrl);
+
+        if ($response === false) {
+            return null;
+        }
+
+        // Save the HTML for debugging
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+        file_put_contents("{$debugDir}/amazon-product-{$asin}.html", $response);
+
+        // Extract product title
+        $title = "Book with ASIN {$asin}";
+        if (preg_match('/<span id="productTitle"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
+            $title = trim($matches[1]);
+        }
+
+        // Extract author
+        $author = "Unknown Author";
+        if (preg_match('/<a[^>]*id="bylineInfo"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $author = trim($matches[1]);
+        } else if (preg_match('/<span[^>]*class="author[^"]*"[^>]*>.*?<a[^>]*>([^<]+)<\/a>/is', $response, $matches)) {
+            $author = trim($matches[1]);
+        }
+
+        // Extract average rating
+        $averageRating = 0;
+        if (preg_match('/class="a-icon-alt">([0-9.]+) out of 5 stars<\/span>/i', $response, $matches)) {
+            $averageRating = (float)$matches[1];
+        }
+
+        // Extract ratings count
+        $ratingsCount = 0;
+        if (preg_match('/class="a-size-base"[^>]*>([0-9,]+) ratings<\/span>/i', $response, $matches)) {
+            $ratingsCount = (int)str_replace(',', '', $matches[1]);
+        }
+
+        // If we don't have a rating, return null
+        if ($averageRating == 0) {
+            return null;
+        }
+
+        // Create the review text
+        $reviewText = "{$title} by {$author} has an average rating of {$averageRating}/5 based on {$ratingsCount} ratings on Amazon.";
+
+        // Add publisher info if available
+        if (preg_match('/Publisher\s*:\s*([^;]+);\s*([^(]+)\s*\(([^)]+)\)/i', $response, $matches)) {
+            $publisher = trim($matches[1]);
+            $publicationDate = trim($matches[3]);
+            $reviewText .= "\n\nPublisher: {$publisher} ({$publicationDate})";
+        }
+
+        return [
+            'source_id' => $this->sourceId,
+            'reviewer_name' => "Amazon Aggregate",
+            'reviewer_age' => null,
+            'review_date' => date('Y-m-d'),
+            'original_rating' => "{$averageRating}/5",
+            'rating_value' => $averageRating,
+            'rating_scale' => 5,
+            'rating_normalised' => $this->normalizeRating($averageRating, 5),
+            'review_text' => $reviewText,
+            'metadata' => json_encode([
+                'asin' => $asin,
+                'product_url' => $productUrl,
+                'affiliate_url' => $productUrl,
+                'is_synthetic' => false,
+                'is_aggregate' => true,
+                'ratings_count' => $ratingsCount
+            ])
+        ];
+    }
+
+    /**
+     * Scrape reviews from Amazon
+     *
+     * @param string $reviewsUrl The reviews URL
+     * @param int $limit Maximum number of reviews to fetch
+     * @return array Array of review data
+     */
+    private function scrapeReviews(string $reviewsUrl, int $limit): array {
+        // Extract ASIN from URL
+        $asin = '';
+        if (preg_match('/\/product-reviews\/([A-Z0-9]{10})/', $reviewsUrl, $matches)) {
+            $asin = $matches[1];
+        }
+
+        if (empty($asin)) {
+            $this->lastError = "Invalid reviews URL: {$reviewsUrl}";
+            return [];
+        }
+
+        // Make a request to the reviews page
+        $response = $this->makeRequest($reviewsUrl);
+
+        if ($response === false) {
+            return [];
+        }
+
+        // Debug: Save the raw HTML to a file for inspection
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+        file_put_contents("{$debugDir}/amazon_reviews_{$asin}.html", $response);
+
+        // Parse the reviews from the HTML
+        $reviews = $this->parseReviewsFromHTML($response, $asin);
+
+        // Limit the number of reviews
+        if (count($reviews) > $limit) {
+            $reviews = array_slice($reviews, 0, $limit);
         }
 
         return $reviews;

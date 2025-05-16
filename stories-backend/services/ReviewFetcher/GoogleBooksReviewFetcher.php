@@ -114,10 +114,13 @@ class GoogleBooksReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of review data
      */
     private function fetchReviewsForVolume(string $volumeId, int $limit): array {
-        // Note: Google Books API doesn't provide a direct way to fetch user reviews
-        // We'll use a workaround by scraping the Google Books web page
+        // Get the volume details from the API
+        $url = "{$this->apiBaseUrl}/volumes/{$volumeId}";
 
-        $url = "https://books.google.com/books?id={$volumeId}&printsec=frontcover&source=gbs_ge_summary_r&cad=0";
+        // Add API key if available
+        if (!empty($this->apiKey)) {
+            $url .= "?key={$this->apiKey}";
+        }
 
         $response = $this->makeRequest($url);
 
@@ -125,27 +128,19 @@ class GoogleBooksReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
-        // Extract reviews from the HTML
-        $reviews = $this->extractReviewsFromHTML($response, $volumeId, $limit);
+        // Parse the response
+        $volumeData = json_decode($response, true);
 
-        return $reviews;
-    }
+        if (empty($volumeData) || !isset($volumeData['volumeInfo'])) {
+            return [];
+        }
 
-    /**
-     * Extract reviews from HTML
-     *
-     * @param string $html The HTML content
-     * @param string $volumeId The Google Books volume ID
-     * @param int $limit Maximum number of reviews to extract
-     * @return array Array of review data
-     */
-    private function extractReviewsFromHTML(string $html, string $volumeId, int $limit): array {
         $reviews = [];
 
-        // Extract aggregate rating
-        if (preg_match('/"aggregateRating":\s*{[^}]*"ratingValue":\s*([0-9.]+)[^}]*"ratingCount":\s*([0-9]+)/s', $html, $matches)) {
-            $averageRating = (float)$matches[1];
-            $ratingCount = (int)$matches[2];
+        // Check if we have ratings
+        if (isset($volumeData['volumeInfo']['averageRating']) && isset($volumeData['volumeInfo']['ratingsCount'])) {
+            $averageRating = (float)$volumeData['volumeInfo']['averageRating'];
+            $ratingCount = (int)$volumeData['volumeInfo']['ratingsCount'];
 
             // Only proceed if we have ratings
             if ($ratingCount > 0) {
@@ -159,79 +154,83 @@ class GoogleBooksReviewFetcher extends AbstractReviewFetcher {
                     'rating_value' => $averageRating,
                     'rating_scale' => 5,
                     'rating_normalised' => $this->normalizeRating($averageRating, 5),
-                    'review_text' => "This book has an average rating of {$averageRating}/5 based on {$ratingCount} ratings on Google Books.",
+                    'review_text' => $this->generateReviewText($volumeData, $averageRating, $ratingCount),
                     'metadata' => json_encode([
                         'volume_id' => $volumeId,
-                        'review_url' => "https://books.google.com/books?id={$volumeId}",
+                        'review_url' => $volumeData['volumeInfo']['infoLink'] ?? "https://books.google.com/books?id={$volumeId}",
                         'is_synthetic' => false,
                         'is_aggregate' => true,
-                        'ratings_count' => $ratingCount
+                        'ratings_count' => $ratingCount,
+                        'volume_info' => $this->extractVolumeInfo($volumeData)
                     ])
                 ];
             }
         }
 
-        // Try to extract actual reviews if available
-        if (preg_match_all('/<div class="review">(.*?)<\/div>/s', $html, $reviewMatches)) {
-            foreach ($reviewMatches[1] as $reviewHtml) {
-                // Extract reviewer name
-                $reviewerName = "Google Books User";
-                if (preg_match('/<span class="reviewer">(.*?)<\/span>/s', $reviewHtml, $nameMatch)) {
-                    $reviewerName = strip_tags($nameMatch[1]);
-                }
+        return $reviews;
+    }
 
-                // Extract rating
-                $rating = 0;
-                if (preg_match('/(\d) stars/i', $reviewHtml, $ratingMatch)) {
-                    $rating = (int)$ratingMatch[1];
-                } elseif (preg_match('/(\d)\/5/i', $reviewHtml, $ratingMatch)) {
-                    $rating = (int)$ratingMatch[1];
-                }
+    /**
+     * Generate review text based on volume data
+     *
+     * @param array $volumeData The volume data from Google Books API
+     * @param float $averageRating The average rating
+     * @param int $ratingCount The number of ratings
+     * @return string The generated review text
+     */
+    private function generateReviewText(array $volumeData, float $averageRating, int $ratingCount): string {
+        $volumeInfo = $volumeData['volumeInfo'] ?? [];
+        $title = $volumeInfo['title'] ?? 'This book';
+        $authors = isset($volumeInfo['authors']) ? implode(', ', $volumeInfo['authors']) : 'Unknown author';
 
-                // Extract review text
-                $reviewText = "";
-                if (preg_match('/<span class="reviewText">(.*?)<\/span>/s', $reviewHtml, $textMatch)) {
-                    $reviewText = strip_tags($textMatch[1]);
-                }
+        $text = "{$title} by {$authors} has an average rating of {$averageRating}/5 based on {$ratingCount} ratings on Google Books.";
 
-                // Extract date
-                $reviewDate = date('Y-m-d');
-                if (preg_match('/<span class="reviewDate">(.*?)<\/span>/s', $reviewHtml, $dateMatch)) {
-                    $dateStr = strip_tags($dateMatch[1]);
-                    $timestamp = strtotime($dateStr);
-                    if ($timestamp) {
-                        $reviewDate = date('Y-m-d', $timestamp);
-                    }
-                }
-
-                // Only add if we have a rating
-                if ($rating > 0) {
-                    $reviews[] = [
-                        'source_id' => $this->sourceId,
-                        'reviewer_name' => $reviewerName,
-                        'reviewer_age' => null,
-                        'review_date' => $reviewDate,
-                        'original_rating' => "{$rating}/5",
-                        'rating_value' => $rating,
-                        'rating_scale' => 5,
-                        'rating_normalised' => $this->normalizeRating($rating, 5),
-                        'review_text' => $reviewText,
-                        'metadata' => json_encode([
-                            'volume_id' => $volumeId,
-                            'review_url' => "https://books.google.com/books?id={$volumeId}",
-                            'is_synthetic' => false
-                        ])
-                    ];
-
-                    // Limit the number of reviews
-                    if (count($reviews) >= $limit) {
-                        break;
-                    }
-                }
+        // Add description if available
+        if (!empty($volumeInfo['description'])) {
+            $description = $volumeInfo['description'];
+            // Truncate description if too long
+            if (strlen($description) > 500) {
+                $description = substr($description, 0, 500) . '...';
             }
+            $text .= "\n\nDescription: {$description}";
         }
 
-        return $reviews;
+        // Add categories if available
+        if (!empty($volumeInfo['categories'])) {
+            $categories = implode(', ', $volumeInfo['categories']);
+            $text .= "\n\nCategories: {$categories}";
+        }
+
+        return $text;
+    }
+
+    /**
+     * Extract relevant volume information
+     *
+     * @param array $volumeData The volume data from Google Books API
+     * @return array The extracted volume information
+     */
+    private function extractVolumeInfo(array $volumeData): array {
+        $volumeInfo = $volumeData['volumeInfo'] ?? [];
+
+        return [
+            'title' => $volumeInfo['title'] ?? '',
+            'subtitle' => $volumeInfo['subtitle'] ?? '',
+            'authors' => $volumeInfo['authors'] ?? [],
+            'publisher' => $volumeInfo['publisher'] ?? '',
+            'publishedDate' => $volumeInfo['publishedDate'] ?? '',
+            'description' => $volumeInfo['description'] ?? '',
+            'pageCount' => $volumeInfo['pageCount'] ?? null,
+            'categories' => $volumeInfo['categories'] ?? [],
+            'averageRating' => $volumeInfo['averageRating'] ?? null,
+            'ratingsCount' => $volumeInfo['ratingsCount'] ?? 0,
+            'maturityRating' => $volumeInfo['maturityRating'] ?? '',
+            'language' => $volumeInfo['language'] ?? '',
+            'imageLinks' => $volumeInfo['imageLinks'] ?? [],
+            'previewLink' => $volumeInfo['previewLink'] ?? '',
+            'infoLink' => $volumeInfo['infoLink'] ?? '',
+            'canonicalVolumeLink' => $volumeInfo['canonicalVolumeLink'] ?? ''
+        ];
     }
 
 

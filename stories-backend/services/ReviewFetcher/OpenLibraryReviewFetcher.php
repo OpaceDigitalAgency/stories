@@ -101,39 +101,33 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
-        // Get the Internet Archive ID
-        $iaId = $this->getInternetArchiveId($olid);
+        // Get the Open Library work data
+        $workData = $this->getOpenLibraryWorkData($olid);
 
-        if (empty($iaId)) {
-            // No Internet Archive ID, return empty array
-            $this->lastError = "No Internet Archive ID found for Open Library ID: $olid";
+        if (empty($workData)) {
+            $this->lastError = "Failed to get Open Library work data for ID: $olid";
             return [];
         }
 
-        // Fetch reviews from Internet Archive
-        $reviews = $this->fetchReviewsFromInternetArchive($iaId, $limit);
+        // Generate reviews from the Open Library data
+        $reviews = $this->generateReviewsFromOpenLibraryData($workData, $limit);
 
-        // If no reviews found, add an aggregate rating if available
-        if (empty($reviews) && !empty($bookData['ratings_average'])) {
-            $averageRating = $bookData['ratings_average'];
-            $ratingCount = $bookData['ratings_count'] ?? 0;
-
+        // If we have no reviews, create a basic one from the book data
+        if (empty($reviews)) {
             $reviews[] = [
                 'source_id' => $this->sourceId,
-                'reviewer_name' => "Open Library Aggregate",
+                'reviewer_name' => "Open Library",
                 'reviewer_age' => null,
                 'review_date' => date('Y-m-d'),
-                'original_rating' => "{$averageRating}/5",
-                'rating_value' => $averageRating,
-                'rating_scale' => 5,
-                'rating_normalised' => $this->normalizeRating($averageRating, 5),
-                'review_text' => "This book has an average rating of {$averageRating}/5 based on {$ratingCount} ratings on Open Library.",
+                'original_rating' => "N/A",
+                'rating_value' => null,
+                'rating_scale' => null,
+                'rating_normalised' => null,
+                'review_text' => $this->generateBasicReviewText($bookData),
                 'metadata' => json_encode([
-                    'ia_id' => $iaId,
+                    'olid' => $olid,
                     'book_url' => $bookData['url'] ?? '',
-                    'is_synthetic' => false,
-                    'is_aggregate' => true,
-                    'ratings_count' => $ratingCount
+                    'is_synthetic' => true
                 ])
             ];
         }
@@ -153,6 +147,7 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
                 }, $bookData['subjects'] ?? []),
                 'cover_url' => $bookData['cover']['large'] ?? $bookData['cover']['medium'] ?? $bookData['cover']['small'] ?? '',
                 'url' => $bookData['url'] ?? '',
+                'isbn' => $isbnToUse
             ];
         }
 
@@ -160,14 +155,68 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
     }
 
     /**
-     * Get the Internet Archive ID for an Open Library ID
+     * Generate a basic review text from book data
+     *
+     * @param array $bookData The book data from Open Library API
+     * @return string The generated review text
+     */
+    private function generateBasicReviewText(array $bookData): string {
+        $title = $bookData['title'] ?? 'This book';
+
+        // Get authors
+        $authors = array_map(function($author) {
+            return $author['name'] ?? '';
+        }, $bookData['authors'] ?? []);
+        $authorText = !empty($authors) ? implode(', ', $authors) : 'Unknown author';
+
+        // Start with basic info
+        $text = "{$title} by {$authorText} is available on Open Library.";
+
+        // Add description if available
+        if (!empty($bookData['notes'])) {
+            $notes = $bookData['notes'];
+            // Truncate if too long
+            if (strlen($notes) > 500) {
+                $notes = substr($notes, 0, 500) . '...';
+            }
+            $text .= "\n\nNotes: {$notes}";
+        }
+
+        // Add subjects if available
+        if (!empty($bookData['subjects'])) {
+            $subjects = array_map(function($subject) {
+                return $subject['name'] ?? '';
+            }, $bookData['subjects'] ?? []);
+            $subjects = array_slice($subjects, 0, 10); // Limit to 10 subjects
+            $subjectText = implode(', ', $subjects);
+            $text .= "\n\nSubjects: {$subjectText}";
+        }
+
+        // Add publication info
+        if (!empty($bookData['publish_date'])) {
+            $text .= "\n\nPublished: {$bookData['publish_date']}";
+        }
+
+        if (!empty($bookData['publishers'])) {
+            $publishers = array_map(function($publisher) {
+                return $publisher['name'] ?? '';
+            }, $bookData['publishers'] ?? []);
+            $publisherText = implode(', ', $publishers);
+            $text .= " by {$publisherText}";
+        }
+
+        return $text;
+    }
+
+    /**
+     * Get the Open Library work ID and additional data for a book
      *
      * @param string $olid The Open Library ID
-     * @return string|null The Internet Archive ID or null if not found
+     * @return array|null The Open Library work data or null if not found
      */
-    private function getInternetArchiveId(string $olid): ?string {
-        // Build the API URL
-        $url = "https://openlibrary.org/works/$olid.json";
+    private function getOpenLibraryWorkData(string $olid): ?array {
+        // Build the API URL for the edition
+        $url = "https://openlibrary.org/books/$olid.json";
 
         // Make the request
         $response = $this->makeRequest($url);
@@ -177,14 +226,157 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
         }
 
         // Parse the response
-        $data = json_decode($response, true);
+        $editionData = json_decode($response, true);
 
-        // Check for Internet Archive ID
-        if (!empty($data['ocaid'])) {
-            return $data['ocaid'];
+        // Check if we have a works reference
+        if (empty($editionData['works'][0]['key'])) {
+            return null;
         }
 
-        return null;
+        // Get the work ID
+        $workKey = $editionData['works'][0]['key'];
+        $workId = str_replace('/works/', '', $workKey);
+
+        // Get the work data
+        $workUrl = "https://openlibrary.org/works/$workId.json";
+        $workResponse = $this->makeRequest($workUrl);
+
+        if ($workResponse === false) {
+            return null;
+        }
+
+        // Parse the work data
+        $workData = json_decode($workResponse, true);
+
+        // Combine relevant data
+        return [
+            'edition' => $editionData,
+            'work' => $workData,
+            'work_id' => $workId,
+            'ia_id' => $editionData['ocaid'] ?? null
+        ];
+    }
+
+    /**
+     * Generate reviews from Open Library data
+     *
+     * @param array $bookData The book data from Open Library API
+     * @param int $limit Maximum number of reviews to generate
+     * @return array Array of review data
+     */
+    private function generateReviewsFromOpenLibraryData(array $bookData, int $limit): array {
+        $reviews = [];
+
+        // Extract edition data
+        $edition = $bookData['edition'] ?? [];
+        $work = $bookData['work'] ?? [];
+
+        // Check if we have ratings
+        $hasRatings = isset($work['ratings_average']) && isset($work['ratings_count']);
+        $averageRating = $hasRatings ? (float)$work['ratings_average'] : 0;
+        $ratingCount = $hasRatings ? (int)$work['ratings_count'] : 0;
+
+        // If we have ratings, create an aggregate review
+        if ($hasRatings && $ratingCount > 0) {
+            // Normalize the rating to 0-5 scale if needed
+            $normalizedRating = $averageRating;
+            if ($averageRating > 5) {
+                $normalizedRating = $averageRating / 2; // Assuming it's on a 10-point scale
+            }
+
+            $reviews[] = [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => "Open Library Aggregate",
+                'reviewer_age' => null,
+                'review_date' => date('Y-m-d'),
+                'original_rating' => "{$averageRating}/5",
+                'rating_value' => $normalizedRating,
+                'rating_scale' => 5,
+                'rating_normalised' => $this->normalizeRating($normalizedRating, 5),
+                'review_text' => $this->generateReviewText($bookData),
+                'metadata' => json_encode([
+                    'work_id' => $bookData['work_id'] ?? '',
+                    'ia_id' => $bookData['ia_id'] ?? '',
+                    'book_url' => "https://openlibrary.org" . ($edition['key'] ?? ''),
+                    'is_synthetic' => false,
+                    'is_aggregate' => true,
+                    'ratings_count' => $ratingCount
+                ])
+            ];
+        }
+
+        // If we have an Internet Archive ID, try to get reviews from there
+        if (!empty($bookData['ia_id'])) {
+            $iaReviews = $this->fetchReviewsFromInternetArchive($bookData['ia_id'], $limit - count($reviews));
+            $reviews = array_merge($reviews, $iaReviews);
+        }
+
+        return $reviews;
+    }
+
+    /**
+     * Generate review text based on Open Library data
+     *
+     * @param array $bookData The book data from Open Library API
+     * @return string The generated review text
+     */
+    private function generateReviewText(array $bookData): string {
+        $edition = $bookData['edition'] ?? [];
+        $work = $bookData['work'] ?? [];
+
+        $title = $edition['title'] ?? $work['title'] ?? 'This book';
+
+        // Get authors
+        $authors = [];
+        if (!empty($edition['authors'])) {
+            foreach ($edition['authors'] as $author) {
+                if (isset($author['name'])) {
+                    $authors[] = $author['name'];
+                }
+            }
+        }
+        $authorText = !empty($authors) ? implode(', ', $authors) : 'Unknown author';
+
+        // Start with basic info
+        $text = "{$title} by {$authorText}";
+
+        // Add ratings if available
+        if (isset($work['ratings_average']) && isset($work['ratings_count'])) {
+            $averageRating = (float)$work['ratings_average'];
+            $ratingCount = (int)$work['ratings_count'];
+            $text .= " has an average rating of {$averageRating}/5 based on {$ratingCount} ratings on Open Library.";
+        } else {
+            $text .= " is available on Open Library.";
+        }
+
+        // Add description if available
+        if (!empty($work['description'])) {
+            $description = is_array($work['description']) ? ($work['description']['value'] ?? '') : $work['description'];
+            // Truncate description if too long
+            if (strlen($description) > 500) {
+                $description = substr($description, 0, 500) . '...';
+            }
+            $text .= "\n\nDescription: {$description}";
+        }
+
+        // Add subjects if available
+        if (!empty($work['subjects'])) {
+            $subjects = array_slice($work['subjects'], 0, 10); // Limit to 10 subjects
+            $subjectText = implode(', ', $subjects);
+            $text .= "\n\nSubjects: {$subjectText}";
+        }
+
+        // Add publication info
+        if (!empty($edition['publish_date'])) {
+            $text .= "\n\nPublished: {$edition['publish_date']}";
+        }
+
+        if (!empty($edition['publishers'])) {
+            $publishers = is_array($edition['publishers']) ? implode(', ', $edition['publishers']) : $edition['publishers'];
+            $text .= " by {$publishers}";
+        }
+
+        return $text;
     }
 
     /**

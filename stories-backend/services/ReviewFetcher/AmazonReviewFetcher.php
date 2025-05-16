@@ -10,7 +10,7 @@
 namespace Services\ReviewFetcher;
 
 use PDO;
-use Services\Outscraper\OutscraperClient;
+use Exception;
 
 class AmazonReviewFetcher extends AbstractReviewFetcher
 {
@@ -837,7 +837,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Fetch reviews using Outscraper API with our custom client
+     * Fetch reviews using Outscraper API directly
      */
     protected function fetchReviewsWithOutscraper(string $asin, int $limit): array
     {
@@ -854,30 +854,60 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $domainCode = 'de';
         }
 
-        // Create Outscraper client
-        $client = new OutscraperClient($this->outscraperApiKey);
+        // Prepare API request
+        $apiUrl = "https://api.outscraper.com/api/v1/amazon/reviews";
 
         // Prepare request parameters
         $params = [
+            'query' => $asin,
             'domain' => $domainCode,
             'limit' => $limit,
             'async' => false,
-            'pages_per_asin' => 2, // Get more reviews
-            'include_html' => false // We don't need HTML content
+            'pages_per_asin' => 2 // Get more reviews
         ];
 
         // Log request details
         $this->logToFile($logFile, "📡 API Request: ASIN={$asin}, domain={$domainCode}, limit={$limit}");
 
         try {
-            // Make the request using our client
-            $data = $client->amazonReviews($asin, $params);
+            // Set up headers with API key
+            $headers = [
+                "X-API-KEY: {$this->outscraperApiKey}",
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'Client: PHP Custom'
+            ];
+
+            // Make the request
+            $ch = curl_init($apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 120); // 2 minutes timeout
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if (curl_errno($ch)) {
+                throw new Exception('cURL error: ' . curl_error($ch));
+            }
+
+            curl_close($ch);
 
             // Save raw response for debugging
-            file_put_contents(
-                "{$this->dbgDir}/outscraper-{$asin}-response.json",
-                json_encode($data, JSON_PRETTY_PRINT)
-            );
+            file_put_contents("{$this->dbgDir}/outscraper-{$asin}-response.json", $response ?: "EMPTY RESPONSE");
+
+            // Check for errors
+            if ($httpCode !== 200) {
+                throw new Exception("API error: HTTP code {$httpCode}");
+            }
+
+            // Parse response
+            $data = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception('JSON decode error: ' . json_last_error_msg());
+            }
 
             if (!isset($data['data']) || empty($data['data'])) {
                 $this->logToFile($logFile, "⚠️ No data in API response");
@@ -942,7 +972,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $this->logToFile($logFile, "✅ Processed " . count($reviews) . " reviews from Outscraper");
             return $reviews;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log any errors
             $this->logToFile($logFile, "❌ Outscraper API Error: " . $e->getMessage());
             file_put_contents("{$this->dbgDir}/outscraper-{$asin}-error.txt", $e->getMessage());

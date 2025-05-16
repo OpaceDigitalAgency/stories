@@ -283,7 +283,10 @@ header('Content-Type: text/html; charset=utf-8');
 
                         // Get the appropriate fetcher for this source
                         echo "<div class='debug-log'>";
+                        echo "<div class='d-flex justify-content-between align-items-center'>";
                         echo "<h3>Debug Log for {$sourceName}</h3>";
+                        echo "<a href='debug-logs.php' class='btn btn-info btn-sm'><i class='fas fa-file-alt'></i> View All Debug Logs</a>";
+                        echo "</div>";
                         echo "<pre id='debug-output-{$sourceId}' style='max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border: 1px solid #ddd;'>";
                         echo "Initializing fetcher for source: {$sourceName} (ID: {$sourceId})\n";
                         echo "</pre>";

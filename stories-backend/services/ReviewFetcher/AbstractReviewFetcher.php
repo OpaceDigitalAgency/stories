@@ -131,9 +131,14 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
      */
     protected function makeRequest(string $url, array $options = [], bool $throttle = true): string|false {
         // Set up error log file
-        $logFile = __DIR__ . '/debug/scrape-log.txt';
-        if (!is_dir(dirname($logFile))) {
-            mkdir(dirname($logFile), 0755, true);
+        $debugDir = __DIR__ . '/debug';
+        $logFile = $debugDir . '/scrape-log.txt';
+
+        // Create debug directory with proper permissions
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+            // Make sure the directory is readable and writable by the web server
+            chmod($debugDir, 0777);
         }
 
         // Log the request
@@ -181,8 +186,8 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
                 'Sec-Fetch-User: ?1',
                 'Cache-Control: max-age=0'
             ],
-            CURLOPT_COOKIEJAR => __DIR__ . '/debug/cookies.txt',
-            CURLOPT_COOKIEFILE => __DIR__ . '/debug/cookies.txt',
+            CURLOPT_COOKIEJAR => $debugDir . '/cookies.txt',
+            CURLOPT_COOKIEFILE => $debugDir . '/cookies.txt',
         ]);
 
         // Add custom options

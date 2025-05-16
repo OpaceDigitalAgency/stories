@@ -1,7 +1,7 @@
 <?php
 /**
  * Debug Logs
- * 
+ *
  * This page displays debug logs and HTML files for review fetchers.
  */
 
@@ -11,8 +11,8 @@ $currentPage = 'debug-logs';
 $pageDescription = 'View debug logs and HTML files for review fetchers';
 
 // Include the header
-include '../includes/auth.php';
-include '../includes/header.php';
+require_once '../includes/auth.php';
+require_once '../includes/header.php';
 
 // Define the debug directory
 $debugDir = dirname(dirname(dirname(__FILE__))) . '/services/ReviewFetcher/debug';
@@ -26,7 +26,7 @@ if (!is_dir($debugDir)) {
 if (isset($_GET['delete']) && !empty($_GET['delete'])) {
     $fileName = basename($_GET['delete']);
     $filePath = $debugDir . '/' . $fileName;
-    
+
     if (file_exists($filePath) && is_file($filePath)) {
         unlink($filePath);
         echo '<div class="alert alert-success">File deleted: ' . htmlspecialchars($fileName) . '</div>';
@@ -39,14 +39,14 @@ if (isset($_GET['delete']) && !empty($_GET['delete'])) {
 if (isset($_GET['clear_all']) && $_GET['clear_all'] === 'yes') {
     $files = glob($debugDir . '/*');
     $count = 0;
-    
+
     foreach ($files as $file) {
         if (is_file($file)) {
             unlink($file);
             $count++;
         }
     }
-    
+
     echo '<div class="alert alert-success">' . $count . ' files deleted from the debug directory.</div>';
 }
 
@@ -87,11 +87,11 @@ $pageActions = '
             </div>
             <div class="card-body">
                 <p>This page displays debug logs and HTML files for review fetchers. These files are useful for diagnosing issues with the review fetching process.</p>
-                
+
                 <div class="alert alert-info">
                     <strong>Debug Directory:</strong> <?php echo htmlspecialchars($debugDir); ?>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -114,12 +114,12 @@ $pageActions = '
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <h5 class="mb-1">
-                                                            <i class="fas fa-file-alt text-primary"></i> 
+                                                            <i class="fas fa-file-alt text-primary"></i>
                                                             <?php echo htmlspecialchars($fileName); ?>
                                                         </h5>
                                                         <p class="mb-1 text-muted">
                                                             <small>
-                                                                Size: <?php echo number_format($fileSize / 1024, 2); ?> KB | 
+                                                                Size: <?php echo number_format($fileSize / 1024, 2); ?> KB |
                                                                 Modified: <?php echo $fileDate; ?>
                                                             </small>
                                                         </p>
@@ -140,7 +140,7 @@ $pageActions = '
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header bg-info text-white">
@@ -162,12 +162,12 @@ $pageActions = '
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <h5 class="mb-1">
-                                                            <i class="fas fa-file-code text-info"></i> 
+                                                            <i class="fas fa-file-code text-info"></i>
                                                             <?php echo htmlspecialchars($fileName); ?>
                                                         </h5>
                                                         <p class="mb-1 text-muted">
                                                             <small>
-                                                                Size: <?php echo number_format($fileSize / 1024, 2); ?> KB | 
+                                                                Size: <?php echo number_format($fileSize / 1024, 2); ?> KB |
                                                                 Modified: <?php echo $fileDate; ?>
                                                             </small>
                                                         </p>
@@ -196,5 +196,5 @@ $pageActions = '
 
 <?php
 // Include the footer
-include '../includes/footer.php';
+require_once '../includes/footer.php';
 ?>

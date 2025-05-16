@@ -56,6 +56,38 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         return $reviews;
     }
 
+
+
+/**
+ * Convert a cleaned ISBN to an ASIN (ISBN-10).
+ */
+private function convertISBNtoASIN(string $isbn): ?string
+{
+    $clean = preg_replace('/[^0-9X]/i','',$isbn);
+    // If it's already 10 chars assume ASIN
+    if (strlen($clean) === 10) {
+        return $clean;
+    }
+    // If it's a 13-digit ISBN-13 starting 978, build ISBN-10
+    if (strlen($clean) === 13 && strpos($clean, '978') === 0) {
+        $digits = substr($clean, 3, 9);
+        $sum = 0;
+        for ($i = 0; $i < 9; $i++) {
+            $sum += ((int)$digits[$i]) * (10 - $i);
+        }
+        $check = 11 - ($sum % 11);
+        if ($check === 10) $check = 'X';
+        elseif ($check === 11) $check = 0;
+        return $digits . $check;
+    }
+    return null;
+}
+
+
+
+
+
+
     private function findProductUrl(string $isbn): ?string
     {
         $asin = $this->convertISBNtoASIN($isbn);

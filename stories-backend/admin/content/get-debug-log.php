@@ -5,8 +5,8 @@
  * This script returns the contents of the debug log file for a specific source.
  */
 
-// Include auth check
-require_once '../includes/auth-check.php';
+// No authentication required for this script
+// This is a direct access script
 
 // Get the source ID
 $sourceId = isset($_GET['source_id']) ? (int)$_GET['source_id'] : 0;

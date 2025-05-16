@@ -11,7 +11,7 @@ $currentPage = 'debug-logs';
 $pageDescription = 'View the contents of a debug file';
 
 // Include the header
-require_once '../includes/auth.php';
+require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
 // Define the debug directory
@@ -30,7 +30,7 @@ $fileName = isset($_GET['file']) ? basename($_GET['file']) : '';
 $filePath = $debugDir . '/' . $fileName;
 
 // Create a direct URL to the file
-$directUrl = '/services/ReviewFetcher/debug/' . $fileName;
+$directUrl = 'direct-log-view.php?file=' . urlencode($fileName);
 
 // Check if the file exists
 $fileExists = file_exists($filePath) && is_file($filePath);

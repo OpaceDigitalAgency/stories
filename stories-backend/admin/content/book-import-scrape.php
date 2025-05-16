@@ -120,7 +120,7 @@ function updateBookAggregateValues($db, $bookId) {
 }
 
 // Main processing logic
-header('Content-Type: text/html; charset=utf-8');
+// Note: We're not setting the content type header here because the header is already included
 ?>
 <style>
     .progress-container {

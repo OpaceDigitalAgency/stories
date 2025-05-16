@@ -111,7 +111,7 @@ $pageActions = '
                                             $fileName = basename($file);
                                             $fileSize = filesize($file);
                                             $fileDate = date('Y-m-d H:i:s', filemtime($file));
-                                            $fileUrl = 'view-debug-file.php?file=' . urlencode($fileName);
+                                            $fileUrl = 'direct-log-view.php?file=' . urlencode($fileName);
                                             ?>
                                             <div class="list-group-item">
                                                 <div class="d-flex justify-content-between align-items-center">
@@ -159,7 +159,7 @@ $pageActions = '
                                             $fileName = basename($file);
                                             $fileSize = filesize($file);
                                             $fileDate = date('Y-m-d H:i:s', filemtime($file));
-                                            $fileUrl = 'view-debug-file.php?file=' . urlencode($fileName);
+                                            $fileUrl = 'direct-log-view.php?file=' . urlencode($fileName);
                                             ?>
                                             <div class="list-group-item">
                                                 <div class="d-flex justify-content-between align-items-center">

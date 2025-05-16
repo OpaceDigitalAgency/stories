@@ -1,7 +1,7 @@
 <?php
 /**
  * Check Fetchers
- * 
+ *
  * This page allows testing of review fetchers with specific ISBNs.
  */
 
@@ -11,7 +11,7 @@ $currentPage = 'check-fetchers';
 $pageDescription = 'Test review fetchers with specific ISBNs';
 
 // Include the header
-require_once '../includes/auth.php';
+require_once '../includes/auth-check.php';
 require_once '../includes/header.php';
 
 // Include the review fetcher factory
@@ -49,7 +49,7 @@ $sourceId = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn']) && isset($_POST['source_id'])) {
     $isbn = trim($_POST['isbn']);
     $sourceId = (int)$_POST['source_id'];
-    
+
     if (empty($isbn)) {
         $results['error'] = 'Please enter an ISBN';
     } else {
@@ -61,13 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn']) && isset($_PO
                 break;
             }
         }
-        
+
         // Log the request
         file_put_contents($logFile, "\n\n=== Testing {$sourceName} fetcher with ISBN: {$isbn} ===\n", FILE_APPEND);
-        
+
         // Get the fetcher
         $fetcher = $reviewFetcherFactory->getFetcher($sourceId);
-        
+
         if (!$fetcher) {
             $results['error'] = "No fetcher available for source ID: {$sourceId}";
             file_put_contents($logFile, "ERROR: {$results['error']}\n", FILE_APPEND);
@@ -77,11 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn']) && isset($_PO
             $reviews = $fetcher->fetchReviewsByISBN($isbn, 5);
             $endTime = microtime(true);
             $executionTime = round($endTime - $startTime, 2);
-            
+
             // Log the results
             file_put_contents($logFile, "Execution time: {$executionTime} seconds\n", FILE_APPEND);
             file_put_contents($logFile, "Found " . count($reviews) . " reviews\n", FILE_APPEND);
-            
+
             if (empty($reviews)) {
                 $results['error'] = "No reviews found. Error: " . $fetcher->getLastError();
                 file_put_contents($logFile, "ERROR: {$results['error']}\n", FILE_APPEND);
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['isbn']) && isset($_PO
                 $results['reviews'] = $reviews;
                 $results['execution_time'] = $executionTime;
                 $results['count'] = count($reviews);
-                
+
                 // Log review details
                 foreach ($reviews as $index => $review) {
                     file_put_contents($logFile, "\nReview #" . ($index + 1) . ":\n", FILE_APPEND);
@@ -129,7 +129,7 @@ $pageActions = '
             </div>
             <div class="card-body">
                 <p>Use this form to test review fetchers with specific ISBNs. This will help diagnose issues with the review fetching process.</p>
-                
+
                 <form method="post" action="" class="mb-4">
                     <div class="form-row">
                         <div class="form-group col-md-4">
@@ -137,7 +137,7 @@ $pageActions = '
                             <input type="text" class="form-control" id="isbn" name="isbn" value="<?php echo htmlspecialchars($isbn); ?>" placeholder="Enter ISBN-10 or ISBN-13" required>
                             <small class="form-text text-muted">Example: 9780545010221 or 0545010225</small>
                         </div>
-                        
+
                         <div class="form-group col-md-4">
                             <label for="source_id">Review Source</label>
                             <select class="form-control" id="source_id" name="source_id" required>
@@ -149,7 +149,7 @@ $pageActions = '
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
+
                         <div class="form-group col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search"></i> Test Fetcher
@@ -157,7 +157,7 @@ $pageActions = '
                         </div>
                     </div>
                 </form>
-                
+
                 <?php if (isset($results['error'])): ?>
                     <div class="alert alert-danger">
                         <strong>Error:</strong> <?php echo htmlspecialchars($results['error']); ?>
@@ -166,7 +166,7 @@ $pageActions = '
                     <div class="alert alert-success">
                         <strong>Success!</strong> Found <?php echo $results['count']; ?> reviews in <?php echo $results['execution_time']; ?> seconds.
                     </div>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped">
                             <thead class="thead-dark">
@@ -193,7 +193,7 @@ $pageActions = '
                                         </td>
                                         <td><?php echo htmlspecialchars($review['review_date']); ?></td>
                                         <td>
-                                            <?php 
+                                            <?php
                                             $text = $review['review_text'];
                                             if (strlen($text) > 200) {
                                                 echo htmlspecialchars(substr($text, 0, 200)) . '...';
@@ -208,7 +208,7 @@ $pageActions = '
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="alert alert-info mt-3">
                         <strong>Debug Information:</strong> Check the <a href="debug-logs.php" class="alert-link">debug logs</a> for more details.
                     </div>

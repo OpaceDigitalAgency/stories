@@ -568,7 +568,8 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
 
             // Add a random delay to avoid being blocked
             $delay = rand(1000000, 3000000); // 1-3 seconds
-            error_log("Waiting {$delay/1000000} seconds before request");
+            $delaySeconds = $delay / 1000000;
+            error_log("Waiting {$delaySeconds} seconds before request");
             usleep($delay);
 
             // Make the request with specific headers for Amazon

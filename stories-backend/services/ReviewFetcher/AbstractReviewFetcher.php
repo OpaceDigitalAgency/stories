@@ -143,7 +143,8 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
         if ($throttle) {
             // Random delay between 1-3 seconds
             $delay = rand(1000000, 3000000);
-            $this->logToFile($logFile, "⏱️ Throttling request for " . ($delay/1000000) . " seconds");
+            $delaySeconds = $delay / 1000000;
+            $this->logToFile($logFile, "⏱️ Throttling request for {$delaySeconds} seconds");
             usleep($delay);
         }
 

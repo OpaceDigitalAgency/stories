@@ -568,6 +568,86 @@ $siteName = get_config('site.name', 'Stories From The Web');
                         </div>
                     </div>
 
+                    <!-- Debug Dropdown -->
+                    <div class="dropdown mx-1">
+                        <button type="button" class="nav-link dropdown-toggle <?php echo in_array($currentPage, ['debug-logs', 'check-fetchers']) ? 'active' : ''; ?>" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bug" aria-hidden="true"></i> Debug
+                        </button>
+                        <div class="dropdown-menu">
+                            <?php
+                            // Check if debug directory exists and has files
+                            $debugDir = dirname(dirname(dirname(__FILE__))) . '/services/ReviewFetcher/debug';
+                            if (is_dir($debugDir)) {
+                                $htmlFiles = glob($debugDir . '/*.html');
+                                $logFiles = glob($debugDir . '/*.log') + glob($debugDir . '/*.txt');
+
+                                if (!empty($htmlFiles)) {
+                                    echo '<h6 class="dropdown-header">HTML Debug Files</h6>';
+
+                                    // Sort files by modification time (newest first)
+                                    usort($htmlFiles, function($a, $b) {
+                                        return filemtime($b) - filemtime($a);
+                                    });
+
+                                    // Show the 3 most recent HTML files
+                                    $count = 0;
+                                    foreach ($htmlFiles as $file) {
+                                        if ($count >= 3) break;
+
+                                        $fileName = basename($file);
+                                        $fileUrl = '/services/ReviewFetcher/debug/' . $fileName;
+                                        $fileDate = date('Y-m-d H:i', filemtime($file));
+
+                                        echo '<a class="dropdown-item" href="' . $fileUrl . '" target="_blank">';
+                                        echo '<i class="fas fa-file-code"></i> ' . $fileName;
+                                        echo '<small class="text-muted d-block">' . $fileDate . '</small>';
+                                        echo '</a>';
+
+                                        $count++;
+                                    }
+                                }
+
+                                if (!empty($logFiles)) {
+                                    echo '<div class="dropdown-divider"></div>';
+                                    echo '<h6 class="dropdown-header">Log Files</h6>';
+
+                                    // Sort files by modification time (newest first)
+                                    usort($logFiles, function($a, $b) {
+                                        return filemtime($b) - filemtime($a);
+                                    });
+
+                                    // Show the 2 most recent log files
+                                    $count = 0;
+                                    foreach ($logFiles as $file) {
+                                        if ($count >= 2) break;
+
+                                        $fileName = basename($file);
+                                        $fileUrl = '/services/ReviewFetcher/debug/' . $fileName;
+                                        $fileDate = date('Y-m-d H:i', filemtime($file));
+
+                                        echo '<a class="dropdown-item" href="' . $fileUrl . '" target="_blank">';
+                                        echo '<i class="fas fa-file-alt"></i> ' . $fileName;
+                                        echo '<small class="text-muted d-block">' . $fileDate . '</small>';
+                                        echo '</a>';
+
+                                        $count++;
+                                    }
+                                }
+
+                                echo '<div class="dropdown-divider"></div>';
+                            }
+                            ?>
+
+                            <a href="<?php echo $isContentDir ? 'debug-logs.php' : $contentPrefix . 'debug-logs.php'; ?>" class="dropdown-item <?php echo $currentPage === 'debug-logs' ? 'active' : ''; ?>">
+                                <i class="fas fa-file-alt" aria-hidden="true"></i> View All Debug Logs
+                            </a>
+
+                            <a href="<?php echo $isContentDir ? 'check-fetchers.php' : $contentPrefix . 'check-fetchers.php'; ?>" class="dropdown-item <?php echo $currentPage === 'check-fetchers' ? 'active' : ''; ?>">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i> Check Fetchers
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Settings Dropdown -->
                     <div class="dropdown mx-1">
                         <button type="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false">

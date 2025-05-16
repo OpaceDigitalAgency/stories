@@ -112,24 +112,10 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
         // Generate reviews from the Open Library data
         $reviews = $this->generateReviewsFromOpenLibraryData($workData, $limit);
 
-        // If we have no reviews, create a basic one from the book data
+        // If we have no reviews, return an empty array
         if (empty($reviews)) {
-            $reviews[] = [
-                'source_id' => $this->sourceId,
-                'reviewer_name' => "Open Library",
-                'reviewer_age' => null,
-                'review_date' => date('Y-m-d'),
-                'original_rating' => "N/A",
-                'rating_value' => null,
-                'rating_scale' => null,
-                'rating_normalised' => null,
-                'review_text' => $this->generateBasicReviewText($bookData),
-                'metadata' => json_encode([
-                    'olid' => $olid,
-                    'book_url' => $bookData['url'] ?? '',
-                    'is_synthetic' => true
-                ])
-            ];
+            $this->lastError = "No reviews found for this book on Open Library or Internet Archive";
+            return [];
         }
 
         // Add book metadata to each review
@@ -414,7 +400,13 @@ class OpenLibraryReviewFetcher extends AbstractReviewFetcher {
             }
 
             // Skip reviews without text or stars
-            if (empty($review['reviewtext']) || !isset($review['stars'])) {
+            if (empty($review['reviewtext']) || !isset($review['stars']) || empty($review['stars'])) {
+                continue;
+            }
+
+            // Ensure stars is a valid number
+            $stars = (float)$review['stars'];
+            if ($stars <= 0) {
                 continue;
             }
 

@@ -126,25 +126,42 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Debug: Save the raw HTML to a file for inspection
         // Uncomment this line to debug
-        // file_put_contents(__DIR__ . '/goodreads_search_debug.html', substr($response, 0, 50000));
+        file_put_contents(__DIR__ . '/goodreads_search_debug.html', substr($response, 0, 50000));
 
-        // Extract the book URL from the search results with more flexible regex
-        // This handles different attribute orders and additional attributes
-        if (preg_match('/<a[^>]+class="bookTitle"[^>]*href="([^"]+)"/i', $response, $matches)) {
+        // Try multiple patterns to find book URLs in the current Goodreads HTML structure
+
+        // Pattern 1: Modern Goodreads layout with data-testid
+        if (preg_match('/<a[^>]+data-testid="bookTitle"[^>]+href="([^"]+)"/i', $response, $matches)) {
             return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
         }
 
-        // Try alternative patterns
-        if (preg_match('/<a[^>]+href="([^"]+)"[^>]*class="bookTitle"/i', $response, $matches)) {
+        // Pattern 2: Book cover link with ISBN in URL
+        if (preg_match('/<a[^>]+href="([^"]*\/book\/show\/[^"]*' . preg_quote($isbn, '/') . '[^"]*)"/i', $response, $matches)) {
             return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
         }
 
-        // Try another common pattern
-        if (preg_match('/<a[^>]+href="\/book\/show\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            // Extract the URL from the match
-            if (preg_match('/href="([^"]+)"/i', $matches[0], $urlMatch)) {
-                return 'https://www.goodreads.com' . html_entity_decode($urlMatch[1]);
+        // Pattern 3: Any book show link in search results
+        if (preg_match('/<a[^>]+href="(\/book\/show\/[^"]+)"[^>]*>/i', $response, $matches)) {
+            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+        }
+
+        // Pattern 4: Title link with any class
+        if (preg_match('/<a[^>]+class="[^"]*Title[^"]*"[^>]+href="([^"]+)"/i', $response, $matches)) {
+            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+        }
+
+        // Pattern 5: Any link to a book page
+        if (preg_match_all('/<a[^>]+href="([^"]*\/book\/show\/[^"]+)"[^>]*>/i', $response, $matches)) {
+            // Return the first match
+            if (!empty($matches[1][0])) {
+                return 'https://www.goodreads.com' . html_entity_decode($matches[1][0]);
             }
+        }
+
+        // If we still can't find a book URL, try a different approach
+        // Look for any book show link with text content
+        if (preg_match('/<a[^>]+href="(\/book\/show\/[^"]+)"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
         }
 
         return null;

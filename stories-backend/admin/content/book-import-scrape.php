@@ -382,16 +382,26 @@ header('Content-Type: text/html; charset=utf-8');
                                     )
                                 ");
 
+                                // Ensure we have valid values for required fields
+                                $ratingValue = $review['rating_value'] ?? 0;
+                                $ratingScale = $review['rating_scale'] ?? 5;
+                                $ratingNormalised = $review['rating_normalised'] ?? 0;
+
+                                // If rating_value is null but we have a normalised rating, calculate a value
+                                if (empty($ratingValue) && !empty($ratingNormalised) && !empty($ratingScale)) {
+                                    $ratingValue = $ratingNormalised * $ratingScale;
+                                }
+
                                 $stmt->execute([
                                     ':book_id' => $book['id'],
                                     ':source_id' => $review['source_id'],
                                     ':reviewer_name' => $review['reviewer_name'],
                                     ':reviewer_age' => $review['reviewer_age'],
                                     ':review_date' => $review['review_date'],
-                                    ':original_rating' => $review['original_rating'],
-                                    ':rating_value' => $review['rating_value'],
-                                    ':rating_scale' => $review['rating_scale'],
-                                    ':rating_normalised' => $review['rating_normalised'],
+                                    ':original_rating' => $review['original_rating'] ?? 'N/A',
+                                    ':rating_value' => $ratingValue,
+                                    ':rating_scale' => $ratingScale,
+                                    ':rating_normalised' => $ratingNormalised,
                                     ':review_text' => $review['review_text'],
                                     ':metadata' => $review['metadata']
                                 ]);

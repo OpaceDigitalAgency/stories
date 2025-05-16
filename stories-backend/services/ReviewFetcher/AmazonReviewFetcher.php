@@ -122,8 +122,8 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         while (count($reviews) < $limit) {
             // Build the desktop or mobile reviews URL
             $url = $useMobileSite
-                ? "https://{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}"
-                : "https://{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
+                ? "https://www.{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}"
+                : "https://www.{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
 
             // Fetch HTML
             $html = $this->makeRequest($url);
@@ -161,7 +161,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
      */
     private function getAggregateRating(string $asin): ?array
     {
-        $url  = "https://{$this->domain}/product-reviews/{$asin}?pageNumber=1";
+        $url  = "https://www.{$this->domain}/product-reviews/{$asin}?pageNumber=1";
         $html = $this->makeRequest($url);
         if (! $html) {
             return null;
@@ -201,7 +201,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             'metadata'          => json_encode([
                 'asin'          => $asin,
                 'review_url'    => $url,
-                'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
+                'affiliate_url' => "https://www.{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
                 'is_aggregate'  => true,
                 'ratings_count' => $count,
             ]),
@@ -214,7 +214,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     private function parseReviewsWithRegex(string $html, string $asin): array
     {
         $reviews = [];
-        $pattern = '/<div[^>]+data-hook="review"[^>]*>(.*?)<\/div>\s*<\/div>/is';
+        $pattern = '/<div[^>]+data-hook="review"[^>]*>(.*?)<\/div>\s*<\/div>(?:\s*<\/div>)?/is';
 
         if (preg_match_all($pattern, $html, $blocks, PREG_SET_ORDER)) {
             foreach ($blocks as $blk) {
@@ -269,7 +269,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                 }
 
                 // Affiliate link
-                $link = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+                $link = "https://www.{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
 
                 $reviews[] = [
                     'source_id'         => $this->sourceId,

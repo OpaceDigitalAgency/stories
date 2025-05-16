@@ -122,37 +122,56 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         return null;
     }
 
-    /**
-     * Make an HTTP request with persistent cookies & sensible headers.
-     */
-    protected function makeRequest(string $url): ?string
-    {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 5,
-            CURLOPT_TIMEOUT        => 30,
-            CURLOPT_COOKIEJAR      => $this->cookieFile,
-            CURLOPT_COOKIEFILE     => $this->cookieFile,
-            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                                     . ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                                     . ' Chrome/120.0.0.0 Safari/537.36',
-            CURLOPT_HTTPHEADER     => [
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language: en-GB,en;q=0.9',
-                'Referer: https://' . $this->domain . '/',
-                'DNT: 1',
-                'Connection: keep-alive',
-                'Upgrade-Insecure-Requests: 1',
-                'Cache-Control: max-age=0'
-            ],
-        ]);
 
-        $html = curl_exec($ch);
-        curl_close($ch);
-        return $html === false ? null : $html;
-    }
+
+
+    /**
+ * Override makeRequest to match parent signature and use persistent cookies.
+ *
+ * @param string $url The URL to fetch.
+ * @param array $options Optional cURL options to merge.
+ * @param bool $throttle Whether to apply any throttle (unused).
+ * @return string|false The response HTML or false on failure.
+ */
+protected function makeRequest(string $url, array $options = [], bool $throttle = true): string|false
+{
+    // Initialize cURL
+    $ch = curl_init($url);
+
+    // Default cURL options
+    $defaultOpts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 5,
+        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_COOKIEJAR      => $this->cookieFile,
+        CURLOPT_COOKIEFILE     => $this->cookieFile,
+        CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                                 . ' AppleWebKit/537.36 (KHTML, like Gecko)'
+                                 . ' Chrome/120.0.0.0 Safari/537.36',
+        CURLOPT_HTTPHEADER     => [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language: en-GB,en;q=0.9',
+            'Referer: https://' . $this->domain . '/',
+            'DNT: 1',
+            'Connection: keep-alive',
+            'Upgrade-Insecure-Requests: 1',
+            'Cache-Control: max-age=0',
+        ],
+    ];
+
+    // Merge any user-supplied options (user-supplied keys override defaults)
+    curl_setopt_array($ch, $options + $defaultOpts);
+
+    // Execute request
+    $html = curl_exec($ch);
+    curl_close($ch);
+
+    return $html === false ? false : $html;
+}
+
+
+
 
     /**
      * Scrape up to $limit review pages, with a mobile fallback if blocked.

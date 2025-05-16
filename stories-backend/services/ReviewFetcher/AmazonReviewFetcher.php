@@ -2,8 +2,9 @@
 /**
  * Amazon Review Fetcher
  *
- * Fetches real user reviews from Amazon's public review pages,
- * and falls back to an aggregate "average" review if needed.
+ * Fetches real user reviews from Amazon’s public review pages,
+ * falls back to an aggregate “average” review, and writes
+ * all raw HTML & debug logs into services/ReviewFetcher/debug.
  */
 
 namespace Services\ReviewFetcher;
@@ -15,28 +16,42 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     /** @var string Your Amazon Associates tag */
     private string $affiliateTag;
 
-    /** @var string Which Amazon domain to use */
-    private string $domain = 'amazon.co.uk';
+    /** @var string Always include “www.” */
+    private string $domain = 'www.amazon.co.uk';
+
+    /** @var string Path to debug folder */
+    private string $dbgDir;
+
+    /** @var string Single, persistent cookie jar */
+    private string $cookieFile;
 
     public function __construct(PDO $db, int $sourceId)
     {
         parent::__construct($db, $sourceId, 'Amazon');
+
         $this->affiliateTag = getenv('AMAZON_ASSOCIATE_TAG') ?: 'storiesfro0f0-20';
 
-        // Optional override from settings table
-        $stmt = $db->prepare("
-            SELECT setting_value
-            FROM settings
-            WHERE setting_name = 'amazon_domain'
-        ");
+        // Optional override from settings
+        $stmt = $db->prepare(
+            "SELECT setting_value
+               FROM settings
+              WHERE setting_name = 'amazon_domain'"
+        );
         if ($stmt->execute() && ($d = $stmt->fetchColumn())) {
-            $this->domain = $d;
+            // Ensure it starts with www.
+            $this->domain = preg_match('/^www\./', $d) ? $d : 'www.' . $d;
         }
 
-        // Ensure debug directory exists
-        $dbg = __DIR__ . '/debug';
-        if (!is_dir($dbg)) {
-            mkdir($dbg, 0755, true);
+        // Prepare debug directory
+        $this->dbgDir = __DIR__ . '/debug';
+        if (! is_dir($this->dbgDir)) {
+            mkdir($this->dbgDir, 0755, true);
+        }
+
+        // Use one cookie file for the entire scraping session
+        $this->cookieFile = "{$this->dbgDir}/amazon-cookies.txt";
+        if (! file_exists($this->cookieFile)) {
+            touch($this->cookieFile);
         }
     }
 
@@ -46,17 +61,17 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Main entry: fetch up to $limit reviews for $isbn.
+     * Fetch up to $limit reviews for a given ISBN.
      */
     public function fetchReviewsByISBN(string $isbn, int $limit = 10): array
     {
-        // 1) Clean ISBN string
+        // 1. Clean ISBN
         $clean = preg_replace('/[^0-9X]/i', '', $isbn);
 
-        // 2) Convert to ISBN-10 / ASIN
+        // 2. Try ISBN→ASIN (ISBN-10)
         $asin = $this->convertISBNtoASIN($clean);
 
-        // 3) If conversion failed, fallback to standardizeISBN()
+        // 3. Fallback to parent helper if needed
         if (! $asin) {
             $data = $this->standardizeISBN($isbn);
             $asin = $data['isbn'] ?: $data['isbn13'] ?? null;
@@ -67,14 +82,14 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             return [];
         }
 
-        // 4) Scrape individual reviews
+        // 4. Scrape real reviews
         $reviews = $this->scrapeReviews($asin, $limit);
 
-        // 5) If none found, get an aggregate "average" review
+        // 5. If none found, fallback to aggregate “average” review
         if (empty($reviews)) {
             $agg = $this->getAggregateRating($asin);
             if ($agg) {
-                $reviews = [ $agg ];
+                $reviews = [$agg];
             }
         }
 
@@ -82,28 +97,25 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Convert ISBN-10 or ISBN-13 (starting with 978) into the ASIN (ISBN-10).
+     * Convert ISBN-10 or ISBN-13→ASIN (ISBN-10).
      */
     private function convertISBNtoASIN(string $isbn): ?string
     {
-        // If already 10 chars, assume it's the ASIN
+        // Already 10 chars?
         if (strlen($isbn) === 10) {
             return $isbn;
         }
 
-        // If 13-digit starting 978, compute ISBN-10
+        // ISBN-13 starting 978 → compute ISBN-10
         if (strlen($isbn) === 13 && substr($isbn, 0, 3) === '978') {
             $digits = substr($isbn, 3, 9);
-            $sum = 0;
+            $sum    = 0;
             for ($i = 0; $i < 9; $i++) {
                 $sum += ((int)$digits[$i]) * (10 - $i);
             }
             $check = 11 - ($sum % 11);
-            if ($check === 10) {
-                $check = 'X';
-            } elseif ($check === 11) {
-                $check = '0';
-            }
+            if ($check === 10)      $check = 'X';
+            elseif ($check === 11)  $check = '0';
             return $digits . $check;
         }
 
@@ -111,40 +123,89 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Scrape up to $limit reviews page by page.
+     * Make an HTTP request with persistent cookies & sensible headers.
+     */
+    private function makeRequest(string $url): ?string
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 5,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_COOKIEJAR      => $this->cookieFile,
+            CURLOPT_COOKIEFILE     => $this->cookieFile,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                                     . ' AppleWebKit/537.36 (KHTML, like Gecko)'
+                                     . ' Chrome/120.0.0.0 Safari/537.36',
+            CURLOPT_HTTPHEADER     => [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: en-GB,en;q=0.9',
+                'Referer: https://' . $this->domain . '/',
+                'DNT: 1',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1',
+                'Cache-Control: max-age=0'
+            ],
+        ]);
+
+        $html = curl_exec($ch);
+        curl_close($ch);
+        return $html === false ? null : $html;
+    }
+
+    /**
+     * Scrape up to $limit review pages, with a mobile fallback if blocked.
      */
     private function scrapeReviews(string $asin, int $limit): array
     {
         $reviews       = [];
         $page          = 1;
         $useMobileSite = false;
+        $logFile       = "{$this->dbgDir}/scrape-log.txt";
+
+        $this->logToFile($logFile, "▶️ Starting scrape for ASIN {$asin}, limit={$limit}");
 
         while (count($reviews) < $limit) {
-            // Build the desktop or mobile reviews URL
+            // Desktop vs mobile listing
             $url = $useMobileSite
-                ? "https://www.{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}"
-                : "https://www.{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
+                 ? "https://{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}"
+                 : "https://{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
 
-            // Fetch HTML
+            $this->logToFile($logFile, "🌐 Fetching page {$page}: {$url}");
             $html = $this->makeRequest($url);
+
+            // Always dump raw HTML
+            file_put_contents(
+                "{$this->dbgDir}/amazon-{$asin}-page{$page}-raw.html",
+                $html
+            );
+
             if (! $html) {
+                $this->logToFile($logFile, "❌ Empty response—stopping.");
                 break;
             }
 
-            // Detect CAPTCHA/robot check
+            // CAPTCHA or robot check?
             if (preg_match('/captcha|robot check/i', $html)) {
+                $this->logToFile($logFile, "⚠️ Bot block detected on "
+                                        . ($useMobileSite ? 'mobile' : 'desktop'));
                 if (! $useMobileSite) {
-                    // Try the mobile review page next
                     $useMobileSite = true;
                     continue;
                 }
-                // Still blocked on mobile → abort
                 break;
             }
 
-            // Parse out real individual review blocks
+            // Parse real reviews
             $pageReviews = $this->parseReviewsWithRegex($html, $asin);
-            if (empty($pageReviews)) {
+            $found       = count($pageReviews);
+            $this->logToFile(
+                $logFile,
+                "✔️ Parsed {$found} reviews on page {$page}"
+            );
+
+            if ($found === 0) {
                 break;
             }
 
@@ -152,22 +213,35 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $page++;
         }
 
-        // Trim to limit
+        $this->logToFile(
+            $logFile,
+            "✅ Finished—collected " . count($reviews) . " reviews."
+        );
+
         return array_slice($reviews, 0, $limit);
     }
 
     /**
-     * If no real reviews, parse an aggregate average review.
+     * Fallback: pull average rating & count from the same first page.
      */
     private function getAggregateRating(string $asin): ?array
     {
-        $url  = "https://www.{$this->domain}/product-reviews/{$asin}?pageNumber=1";
-        $html = $this->makeRequest($url);
+        $url     = "https://{$this->domain}/product-reviews/{$asin}?pageNumber=1";
+        $html    = $this->makeRequest($url);
+        $logFile = "{$this->dbgDir}/scrape-log.txt";
+
+        $this->logToFile($logFile, "📊 Fetching aggregate from {$url}");
+        file_put_contents(
+            "{$this->dbgDir}/amazon-{$asin}-aggregate-raw.html",
+            $html
+        );
+
         if (! $html) {
+            $this->logToFile($logFile, "❌ No HTML for aggregate—giving up");
             return null;
         }
 
-        // Extract average rating: <span data-hook="acr-average">4.5 out of 5 stars</span>
+        // Extract average
         $avg = null;
         if (preg_match(
             '/data-hook="acr-average"[^>]*>\s*([\d.]+)\s+out of 5 stars/i',
@@ -176,18 +250,24 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $avg = (float)$m[1];
         }
 
-        // Extract total ratings: <span data-hook="acr-secondary-review-count">123 ratings</span>
+        // Extract count
         $count = 0;
         if (preg_match(
             '/data-hook="acr-secondary-review-count"[^>]*>\s*([\d,]+)\s+ratings?/i',
             $html, $m
         )) {
-            $count = (int)str_replace(',', '', $m[1]);
+            $count = (int) str_replace(',', '', $m[1]);
         }
 
         if ($avg === null) {
+            $this->logToFile($logFile, "❌ Could not parse aggregate rating");
             return null;
         }
+
+        $this->logToFile(
+            $logFile,
+            "✔️ Aggregate rating {$avg}/5 from {$count} reviews"
+        );
 
         return [
             'source_id'         => $this->sourceId,
@@ -201,7 +281,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             'metadata'          => json_encode([
                 'asin'          => $asin,
                 'review_url'    => $url,
-                'affiliate_url' => "https://www.{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
+                'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
                 'is_aggregate'  => true,
                 'ratings_count' => $count,
             ]),
@@ -209,15 +289,22 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Regex‐based parser for individual review blocks.
+     * Simple regex parser for <div data-hook="review"> blocks.
      */
     private function parseReviewsWithRegex(string $html, string $asin): array
     {
         $reviews = [];
+        $logFile = "{$this->dbgDir}/parse-debug.txt";
+
+        $this->logToFile($logFile, "🔍 Running regex parse for ASIN {$asin}");
         $pattern = '/<div[^>]+data-hook="review"[^>]*>(.*?)<\/div>\s*<\/div>(?:\s*<\/div>)?/is';
 
         if (preg_match_all($pattern, $html, $blocks, PREG_SET_ORDER)) {
-            foreach ($blocks as $blk) {
+            $this->logToFile(
+                $logFile,
+                "✔️ Found " . count($blocks) . " review blocks"
+            );
+            foreach ($blocks as $i => $blk) {
                 $b = $blk[1];
 
                 // Reviewer name
@@ -232,31 +319,27 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                     continue;
                 }
 
-                // Rating e.g. “4.0 out of 5 stars”
+                // Rating
                 $rating = 0.0;
-                if (preg_match(
-                    '/([\d.]+)\s+out of 5 stars/i',
-                    $b, $m
-                )) {
+                if (preg_match('/([\d.]+)\s+out of 5 stars/i', $b, $m)) {
                     $rating = (float)$m[1];
                 }
                 if ($rating <= 0) {
                     continue;
                 }
 
-                // Review date
+                // Date
                 $date = date('Y-m-d');
                 if (preg_match(
                     '/data-hook="review-date"[^>]*>([^<]+)<\/span>/i',
                     $b, $m
                 )) {
-                    $ts = strtotime(trim($m[1]));
-                    if ($ts) {
+                    if ($ts = strtotime(trim($m[1]))) {
                         $date = date('Y-m-d', $ts);
                     }
                 }
 
-                // Review text
+                // Text
                 $text = '';
                 if (preg_match(
                     '/<span[^>]+data-hook="review-body"[^>]*>(.*?)<\/span>/is',
@@ -269,7 +352,12 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                 }
 
                 // Affiliate link
-                $link = "https://www.{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+                $link = "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}";
+
+                $this->logToFile(
+                    $logFile,
+                    "SNIPPET {$i}: “" . mb_substr($text, 0, 60) . "…”"
+                );
 
                 $reviews[] = [
                     'source_id'         => $this->sourceId,
@@ -286,8 +374,22 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                     ]),
                 ];
             }
+        } else {
+            $this->logToFile($logFile, "⚠️ Regex parse found 0 blocks");
         }
 
         return $reviews;
+    }
+
+    /**
+     * Append a timestamped line to a debug file.
+     */
+    private function logToFile(string $file, string $line): void
+    {
+        file_put_contents(
+            $file,
+            date('[Y-m-d H:i:s] ') . $line . PHP_EOL,
+            FILE_APPEND
+        );
     }
 }

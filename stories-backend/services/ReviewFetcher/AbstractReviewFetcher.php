@@ -130,10 +130,21 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
      * @return string|false The response body or false on failure
      */
     protected function makeRequest(string $url, array $options = [], bool $throttle = true): string|false {
+        // Set up error log file
+        $logFile = __DIR__ . '/debug/scrape-log.txt';
+        if (!is_dir(dirname($logFile))) {
+            mkdir(dirname($logFile), 0755, true);
+        }
+
+        // Log the request
+        $this->logToFile($logFile, "🌐 Making request to: {$url}");
+
         // Throttle requests to avoid being blocked
         if ($throttle) {
             // Random delay between 1-3 seconds
-            usleep(rand(1000000, 3000000));
+            $delay = rand(1000000, 3000000);
+            $this->logToFile($logFile, "⏱️ Throttling request for " . ($delay/1000000) . " seconds");
+            usleep($delay);
         }
 
         $ch = curl_init($url);
@@ -147,12 +158,16 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
             'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1'
         ];
 
+        // Select a random user agent
+        $userAgent = $userAgents[array_rand($userAgents)];
+        $this->logToFile($logFile, "🧩 Using User-Agent: {$userAgent}");
+
         // Set default options
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_TIMEOUT => 30,
-            CURLOPT_USERAGENT => $userAgents[array_rand($userAgents)],
+            CURLOPT_USERAGENT => $userAgent,
             CURLOPT_ENCODING => '', // Accept all encodings
             CURLOPT_HTTPHEADER => [
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -165,8 +180,8 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
                 'Sec-Fetch-User: ?1',
                 'Cache-Control: max-age=0'
             ],
-            CURLOPT_COOKIEJAR => '/tmp/cookies.txt',
-            CURLOPT_COOKIEFILE => '/tmp/cookies.txt',
+            CURLOPT_COOKIEJAR => __DIR__ . '/debug/cookies.txt',
+            CURLOPT_COOKIEFILE => __DIR__ . '/debug/cookies.txt',
         ]);
 
         // Add custom options
@@ -175,17 +190,25 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
         }
 
         // Execute the request
+        $this->logToFile($logFile, "⏳ Executing request...");
         $response = curl_exec($ch);
 
         // Check for errors
         if ($response === false) {
-            $this->lastError = curl_error($ch);
+            $error = curl_error($ch);
+            $this->lastError = $error;
+            $this->logToFile($logFile, "❌ cURL Error: {$error}");
             curl_close($ch);
             return false;
         }
 
-        // Get HTTP status code
+        // Get HTTP status code and other info
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $totalTime = curl_getinfo($ch, CURLINFO_TOTAL_TIME);
+        $size = curl_getinfo($ch, CURLINFO_SIZE_DOWNLOAD);
+
+        $this->logToFile($logFile, "✅ Request completed in {$totalTime}s, Status: {$statusCode}, Size: {$size} bytes, Type: {$contentType}");
 
         // Close the connection
         curl_close($ch);
@@ -193,6 +216,7 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
         // Check for HTTP errors
         if ($statusCode >= 400) {
             $this->lastError = "HTTP Error: $statusCode";
+            $this->logToFile($logFile, "❌ HTTP Error: {$statusCode}");
             return false;
         }
 
@@ -202,10 +226,39 @@ abstract class AbstractReviewFetcher implements ReviewFetcherInterface {
             stripos($response, 'security challenge') !== false ||
             stripos($response, 'verify you are a human') !== false) {
             $this->lastError = "CAPTCHA or robot check detected. Try again later or use a different IP address.";
+            $this->logToFile($logFile, "⚠️ CAPTCHA or robot check detected!");
+
+            // Save the CAPTCHA page for debugging
+            $debugDir = __DIR__ . '/debug';
+            if (!is_dir($debugDir)) {
+                mkdir($debugDir, 0755, true);
+            }
+            $captchaFile = $debugDir . '/captcha-' . time() . '.html';
+            file_put_contents($captchaFile, $response);
+            $this->logToFile($logFile, "📄 Saved CAPTCHA page to {$captchaFile}");
+
             return false;
         }
 
         return $response;
+    }
+
+    /**
+     * Log a message to a file
+     *
+     * @param string $file The file to log to
+     * @param string $message The message to log
+     * @return void
+     */
+    protected function logToFile(string $file, string $message): void {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[{$timestamp}] {$message}\n";
+
+        // Append to the log file
+        file_put_contents($file, $logMessage, FILE_APPEND);
+
+        // Also log to error_log for server logs
+        error_log($message);
     }
 
     /**

@@ -10,6 +10,10 @@ namespace Services\ReviewFetcher;
 
 use PDO;
 
+// Set up error logging
+ini_set('error_log', __DIR__ . '/debug/amazon-debug.log');
+ini_set('log_errors', 'On');
+
 class AmazonReviewFetcher extends AbstractReviewFetcher {
     /**
      * @var string Amazon Associate Tag for affiliate links
@@ -529,6 +533,8 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of review data
      */
     private function scrapeReviews(string $reviewsUrl, int $limit): array {
+        error_log("▶️ ENTER scrapeReviews(reviewsUrl={$reviewsUrl}, limit={$limit})");
+
         // Extract ASIN from URL
         $asin = '';
         if (preg_match('/\/product-reviews\/([A-Z0-9]{10})/', $reviewsUrl, $matches)) {
@@ -537,31 +543,104 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
 
         if (empty($asin)) {
             $this->lastError = "Invalid reviews URL: {$reviewsUrl}";
+            error_log("❌ ERROR: {$this->lastError}");
             return [];
         }
 
-        // Make a request to the reviews page
-        $response = $this->makeRequest($reviewsUrl);
+        error_log("Using ASIN: {$asin} for reviews");
 
-        if ($response === false) {
-            return [];
-        }
-
-        // Debug: Save the raw HTML to a file for inspection
+        // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
             mkdir($debugDir, 0755, true);
         }
-        file_put_contents("{$debugDir}/amazon_reviews_{$asin}.html", $response);
 
-        // Parse the reviews from the HTML
-        $reviews = $this->parseReviewsFromHTML($response, $asin);
+        // Fetch reviews page by page
+        $reviews = [];
+        $page = 1;
+        $maxPages = 3; // Limit to 3 pages to avoid being blocked
+
+        while ($page <= $maxPages && count($reviews) < $limit) {
+            $pageUrl = $reviewsUrl . "?pageNumber={$page}";
+
+            // Log the request
+            error_log("🔍 REQ AMZ [{$asin}][p{$page}]: {$pageUrl}");
+
+            // Add a random delay to avoid being blocked
+            $delay = rand(1000000, 3000000); // 1-3 seconds
+            error_log("Waiting {$delay/1000000} seconds before request");
+            usleep($delay);
+
+            // Make the request with specific headers for Amazon
+            $options = [
+                CURLOPT_HTTPHEADER => [
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Accept-Language: en-US,en;q=0.9',
+                    'Referer: https://' . $this->domain,
+                    'DNT: 1',
+                    'Connection: keep-alive',
+                    'Upgrade-Insecure-Requests: 1'
+                ]
+            ];
+
+            $response = $this->makeRequest($pageUrl, $options);
+
+            if ($response === false) {
+                error_log("❌ Failed to fetch page {$page}: {$this->lastError}");
+                // If we already have some reviews, return them
+                if (!empty($reviews)) {
+                    error_log("Returning " . count($reviews) . " reviews collected so far");
+                    break;
+                }
+
+                $this->lastError = "Failed to fetch reviews from Amazon (page {$page})";
+                error_log("❌ ERROR: {$this->lastError}");
+                return [];
+            }
+
+            // Save the HTML for debugging
+            $htmlFile = "{$debugDir}/amazon-{$asin}-page{$page}.html";
+            file_put_contents($htmlFile, $response);
+            error_log("📄 Saved HTML to {$htmlFile} (size: " . strlen($response) . " bytes)");
+
+            // Check for CAPTCHA or robot check
+            if (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false) {
+                error_log("⚠️ CAPTCHA or robot check detected on page {$page}");
+                file_put_contents("{$debugDir}/amazon-CAPTCHA-{$asin}-page{$page}.html", $response);
+            }
+
+            // Parse the reviews from this page
+            error_log("▶️ ENTER parseReviewsFromHTML, HTML length=" . strlen($response));
+            $pageReviews = $this->parseReviewsFromHTML($response, $asin);
+            error_log("FOUND " . count($pageReviews) . " reviews for {$asin} on page {$page}");
+
+            // Log snippets of the first few reviews
+            foreach (array_slice($pageReviews, 0, 3) as $i => $review) {
+                $snippet = mb_substr($review['review_text'], 0, 80);
+                error_log("SNIPPET {$i}: {$snippet}…");
+            }
+
+            if (empty($pageReviews)) {
+                error_log("No reviews found on page {$page}, stopping pagination");
+                // No more reviews on this page
+                break;
+            }
+
+            // Add the reviews from this page
+            $reviews = array_merge($reviews, $pageReviews);
+            error_log("Total reviews collected so far: " . count($reviews));
+
+            // Move to the next page
+            $page++;
+        }
 
         // Limit the number of reviews
         if (count($reviews) > $limit) {
+            error_log("Limiting reviews from " . count($reviews) . " to {$limit}");
             $reviews = array_slice($reviews, 0, $limit);
         }
 
+        error_log("Returning " . count($reviews) . " reviews total");
         return $reviews;
     }
 

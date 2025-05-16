@@ -272,7 +272,43 @@ header('Content-Type: text/html; charset=utf-8');
                         // Get reviews using the review fetcher
                         $reviews = [];
 
+                        // Set up error log capture
+                        $logFile = __DIR__ . '/../../services/ReviewFetcher/debug/scrape-log.txt';
+                        if (!is_dir(dirname($logFile))) {
+                            mkdir(dirname($logFile), 0755, true);
+                        }
+
+                        // Clear the log file
+                        file_put_contents($logFile, "Starting review scrape for source: {$sourceName}\n");
+
                         // Get the appropriate fetcher for this source
+                        echo "<div class='debug-log'>";
+                        echo "<h3>Debug Log for {$sourceName}</h3>";
+                        echo "<pre id='debug-output-{$sourceId}' style='max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border: 1px solid #ddd;'>";
+                        echo "Initializing fetcher for source: {$sourceName} (ID: {$sourceId})\n";
+                        echo "</pre>";
+                        echo "</div>";
+
+                        // Add JavaScript to update the debug log
+                        echo "<script>
+                            function updateDebugLog_{$sourceId}() {
+                                fetch('get-debug-log.php?source_id={$sourceId}')
+                                    .then(response => response.text())
+                                    .then(data => {
+                                        document.getElementById('debug-output-{$sourceId}').innerHTML = data;
+                                        document.getElementById('debug-output-{$sourceId}').scrollTop = document.getElementById('debug-output-{$sourceId}').scrollHeight;
+                                    });
+                            }
+
+                            // Update every 2 seconds
+                            const debugInterval_{$sourceId} = setInterval(updateDebugLog_{$sourceId}, 2000);
+
+                            // Stop after 5 minutes to prevent infinite polling
+                            setTimeout(() => clearInterval(debugInterval_{$sourceId}), 300000);
+                        </script>";
+
+                        flushOutput();
+
                         $fetcher = $reviewFetcherFactory->getFetcher($sourceId);
 
                         if (!$fetcher) {

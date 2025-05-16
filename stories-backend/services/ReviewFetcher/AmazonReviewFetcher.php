@@ -92,8 +92,19 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
-        // Get reviews URL
-        $reviewsUrl = $this->getReviewsUrl($productUrl);
+        // Extract ASIN from product URL
+        $asin = '';
+        if (preg_match('/\/dp\/([A-Z0-9]{10})/', $productUrl, $matches)) {
+            $asin = $matches[1];
+        }
+
+        if (empty($asin)) {
+            $this->lastError = "Failed to extract ASIN from product URL";
+            return [];
+        }
+
+        // Get reviews URL (using the direct ASIN)
+        $reviewsUrl = $this->getReviewsUrl($asin);
 
         // Fetch reviews
         $reviews = $this->scrapeReviews($reviewsUrl, $limit);
@@ -303,17 +314,27 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
     /**
      * Get the reviews URL for a product
      *
-     * @param string $productUrl The product URL
+     * @param string $productUrl The product URL or ASIN
+     * @param bool $useMobileSite Whether to use the mobile site URL (fallback for CAPTCHA issues)
+     * @param int $page Page number
      * @return string The reviews URL
      */
-    private function getReviewsUrl(string $productUrl): string {
-        // Extract ASIN from URL
+    private function getReviewsUrl(string $productUrl, bool $useMobileSite = false, int $page = 1): string {
+        // Extract ASIN from URL or use directly if it's already an ASIN
         $asin = '';
         if (preg_match('/\/dp\/([A-Z0-9]{10})/', $productUrl, $matches)) {
             $asin = $matches[1];
+        } elseif (preg_match('/^[A-Z0-9]{10}$/', $productUrl)) {
+            $asin = $productUrl;
         }
 
-        return "https://{$this->domain}/product-reviews/{$asin}";
+        if ($useMobileSite) {
+            // Mobile site format: https://www.amazon.co.uk/gp/aw/review-listing/ASIN/?pageNumber=1
+            return "https://www.{$this->domain}/gp/aw/review-listing/{$asin}/?pageNumber={$page}";
+        } else {
+            // Desktop format: https://www.amazon.co.uk/product-reviews/ASIN/?pageNumber=1
+            return "https://www.{$this->domain}/product-reviews/{$asin}/?pageNumber={$page}";
+        }
     }
 
     /**
@@ -386,6 +407,24 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                     if (!empty($altMatches3)) {
                         $blockMatches = $altMatches3;
                         $this->logToFile($logFile, "Found " . count($blockMatches) . " review blocks using alternative pattern 3");
+                    } else {
+                        // Alternative pattern 4: Mobile site specific pattern
+                        $altPattern4 = '/<div[^>]+id="[^"]*customer-review-[^"]*"[^>]*>(.*?)<\/div>\s*<\/div>/is';
+                        preg_match_all($altPattern4, $html, $altMatches4, PREG_SET_ORDER);
+
+                        if (!empty($altMatches4)) {
+                            $blockMatches = $altMatches4;
+                            $this->logToFile($logFile, "Found " . count($blockMatches) . " review blocks using mobile site pattern");
+                        } else {
+                            // Alternative pattern 5: Another mobile site pattern
+                            $altPattern5 = '/<div[^>]+class="[^"]*mobile-review[^"]*"[^>]*>(.*?)<\/div>/is';
+                            preg_match_all($altPattern5, $html, $altMatches5, PREG_SET_ORDER);
+
+                            if (!empty($altMatches5)) {
+                                $blockMatches = $altMatches5;
+                                $this->logToFile($logFile, "Found " . count($blockMatches) . " review blocks using alternative mobile pattern");
+                            }
+                        }
                     }
                 }
             }
@@ -777,9 +816,12 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
         $retryCount = 0;
         $maxRetries = 3; // Increased max retries
         $backoffFactor = 1; // For exponential backoff
+        $useMobileSite = false; // Start with desktop site
+        $persistentCookieFile = $debugDir . '/amazon-persistent-cookies-' . time() . '.txt';
 
         while ($page <= $maxPages && count($reviews) < $limit && !$captchaDetected) {
-            $pageUrl = "https://{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
+            // Get the appropriate URL (desktop or mobile)
+            $pageUrl = $this->getReviewsUrl($asin, $useMobileSite, $page);
 
             // Log the request
             $this->logToFile($logFile, "🔍 REQ AMZ [{$asin}][p{$page}]: {$pageUrl}");
@@ -814,16 +856,13 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
             $userAgent = $userAgents[array_rand($userAgents)];
             $this->logToFile($logFile, "Using User-Agent: " . substr($userAgent, 0, 30) . "...");
 
-            // Generate a unique cookie file for this request
-            $cookieFile = $debugDir . '/cookies-' . time() . '-' . rand(1000, 9999) . '.txt';
-
             // Make the request with specific headers for Amazon
             $options = [
                 CURLOPT_USERAGENT => $userAgent,
                 CURLOPT_HTTPHEADER => [
                     'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language: en-US,en;q=0.9',
-                    'Referer: https://' . $this->domain,
+                    'Referer: https://www.' . $this->domain,
                     'DNT: 1',
                     'Connection: keep-alive',
                     'Upgrade-Insecure-Requests: 1',
@@ -836,9 +875,9 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                 ],
                 // Add a longer timeout
                 CURLOPT_TIMEOUT => 30,
-                // Use a different cookie file for each request to avoid tracking
-                CURLOPT_COOKIEJAR => $cookieFile,
-                CURLOPT_COOKIEFILE => $cookieFile,
+                // Use persistent cookies to maintain session
+                CURLOPT_COOKIEJAR => $persistentCookieFile,
+                CURLOPT_COOKIEFILE => $persistentCookieFile,
                 // Follow redirects
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS => 5
@@ -849,13 +888,21 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
             if ($response === false) {
                 $this->logToFile($logFile, "❌ Failed to fetch page {$page}: {$this->lastError}");
 
-                // If CAPTCHA detected, set flag and break
+                // If CAPTCHA detected, try mobile site if not already using it
                 if (strpos($this->lastError, "CAPTCHA") !== false ||
                     strpos($this->lastError, "robot check") !== false ||
                     strpos($this->lastError, "security challenge") !== false) {
-                    $captchaDetected = true;
-                    $this->logToFile($logFile, "❌ CAPTCHA detected, stopping pagination");
-                    break;
+
+                    if (!$useMobileSite) {
+                        $useMobileSite = true;
+                        $this->logToFile($logFile, "⚠️ CAPTCHA detected, switching to mobile site");
+                        $retryCount = 0; // Reset retry count for mobile site
+                        continue;
+                    } else {
+                        $captchaDetected = true;
+                        $this->logToFile($logFile, "❌ CAPTCHA detected on mobile site too, stopping pagination");
+                        break;
+                    }
                 }
 
                 // Retry with exponential backoff
@@ -903,12 +950,23 @@ class AmazonReviewFetcher extends AbstractReviewFetcher {
                 stripos($response, 'security challenge') !== false ||
                 stripos($response, 'We just need to make sure you\'re not a robot') !== false ||
                 stripos($response, 'Sign in to see your comments') !== false) {
+
                 $this->logToFile($logFile, "⚠️ CAPTCHA or robot check detected on page {$page}");
                 $captchaFile = "{$debugDir}/amazon-CAPTCHA-{$asin}-page{$page}-" . time() . ".html";
                 file_put_contents($captchaFile, $response);
                 chmod($captchaFile, 0666);
-                $captchaDetected = true;
-                break;
+
+                // Try mobile site if not already using it
+                if (!$useMobileSite) {
+                    $useMobileSite = true;
+                    $this->logToFile($logFile, "⚠️ Switching to mobile site due to CAPTCHA");
+                    $retryCount = 0; // Reset retry count for mobile site
+                    continue;
+                } else {
+                    $captchaDetected = true;
+                    $this->logToFile($logFile, "❌ CAPTCHA detected on mobile site too, stopping pagination");
+                    break;
+                }
             }
 
             // Parse the reviews from this page

@@ -173,72 +173,70 @@ protected function makeRequest(string $url, array $options = [], bool $throttle 
 
 
 
-    /**
-     * Scrape up to $limit review pages, with a mobile fallback if blocked.
-     */
-    private function scrapeReviews(string $asin, int $limit): array
-    {
-        $reviews       = [];
-        $page          = 1;
-        $useMobileSite = false;
-        $logFile       = "{$this->dbgDir}/scrape-log.txt";
 
-        $this->logToFile($logFile, "▶️ Starting scrape for ASIN {$asin}, limit={$limit}");
+/**
+ * Scrape up to $limit reviews using Amazon’s AJAX endpoint
+ * (bypasses the login gate on /product-reviews/ pages).
+ */
+protected function scrapeReviews(string $asin, int $limit): array
+{
+    $reviews       = [];
+    $page          = 1;
+    $logFile       = "{$this->dbgDir}/scrape-log.txt";
+    $this->logToFile($logFile, "▶️ Starting AJAX scrape for ASIN {$asin}, limit={$limit}");
 
-        while (count($reviews) < $limit) {
-            // Desktop vs mobile listing
-            $url = $useMobileSite
-                 ? "https://{$this->domain}/gp/aw/review-listing/{$asin}?pageNumber={$page}"
-                 : "https://{$this->domain}/product-reviews/{$asin}?pageNumber={$page}";
-
-            $this->logToFile($logFile, "🌐 Fetching page {$page}: {$url}");
-            $html = $this->makeRequest($url);
-
-            // Always dump raw HTML
-            file_put_contents(
-                "{$this->dbgDir}/amazon-{$asin}-page{$page}-raw.html",
-                $html
-            );
-
-            if (! $html) {
-                $this->logToFile($logFile, "❌ Empty response—stopping.");
-                break;
-            }
-
-            // CAPTCHA or robot check?
-            if (preg_match('/captcha|robot check/i', $html)) {
-                $this->logToFile($logFile, "⚠️ Bot block detected on "
-                                        . ($useMobileSite ? 'mobile' : 'desktop'));
-                if (! $useMobileSite) {
-                    $useMobileSite = true;
-                    continue;
-                }
-                break;
-            }
-
-            // Parse real reviews
-            $pageReviews = $this->parseReviewsWithRegex($html, $asin);
-            $found       = count($pageReviews);
-            $this->logToFile(
-                $logFile,
-                "✔️ Parsed {$found} reviews on page {$page}"
-            );
-
-            if ($found === 0) {
-                break;
-            }
-
-            $reviews = array_merge($reviews, $pageReviews);
-            $page++;
-        }
-
-        $this->logToFile(
-            $logFile,
-            "✅ Finished—collected " . count($reviews) . " reviews."
+    while (count($reviews) < $limit) {
+        // Build the AJAX URL
+        $ajaxUrl = sprintf(
+            'https://%s/hz/reviews-render/ajax/reviews/get' .
+            '?asin=%s&pageNumber=%d&reviewerType=all_reviews&formatType=current_format',
+            $this->domain,
+            $asin,
+            $page
         );
 
-        return array_slice($reviews, 0, $limit);
+        $this->logToFile($logFile, "🌐 Fetching AJAX page {$page}: {$ajaxUrl}");
+
+        // Send X-Requested-With header so Amazon serves JSON/HTML fragment
+        $html = $this->makeRequest($ajaxUrl, [
+            CURLOPT_HTTPHEADER => [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: en-GB,en;q=0.9',
+                'Referer: https://' . $this->domain . '/dp/' . $asin,
+                'X-Requested-With: XMLHttpRequest',
+            ]
+        ]);
+
+        // Always dump raw AJAX response for debugging
+        file_put_contents("{$this->dbgDir}/amazon-{$asin}-ajax-page{$page}-raw.html", $html);
+
+        if (! $html) {
+            $this->logToFile($logFile, "❌ Empty AJAX response, stopping");
+            break;
+        }
+
+        // Parse out the reviews from the HTML fragment
+        $pageReviews = $this->parseReviewsWithRegex($html, $asin);
+        $found       = count($pageReviews);
+        $this->logToFile($logFile, "✔️ Parsed {$found} reviews from AJAX page {$page}");
+
+        if ($found === 0) {
+            break;
+        }
+
+        $reviews = array_merge($reviews, $pageReviews);
+        $page++;
     }
+
+    $this->logToFile($logFile, "✅ Finished AJAX scrape—total reviews: " . count($reviews));
+    return array_slice($reviews, 0, $limit);
+}
+
+
+
+
+
+
 
     /**
      * Fallback: pull average rating & count from the same first page.

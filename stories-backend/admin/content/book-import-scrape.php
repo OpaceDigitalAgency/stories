@@ -20,6 +20,9 @@ require_once '../../services/ReviewFetcher/GoogleBooksReviewFetcher.php';
 require_once '../../services/ReviewFetcher/OpenLibraryReviewFetcher.php';
 require_once '../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
 require_once '../../services/ReviewFetcher/AmazonReviewFetcher.php';
+require_once '../../services/ReviewFetcher/KirkusReviewsFetcher.php';
+require_once '../../services/ReviewFetcher/SLJReviewFetcher.php';
+require_once '../../services/ReviewFetcher/StoriesReviewFetcher.php';
 require_once '../../services/ReviewFetcher/ReviewFetcherFactory.php';
 
 // Include the AI review analyzer
@@ -126,14 +129,25 @@ header('Content-Type: text/html; charset=utf-8');
             background-color: #f1f1f1;
             border-radius: 5px;
             overflow: hidden;
+            border: 2px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .progress-bar {
-            height: 30px;
+            height: 40px;
             background-color: #4CAF50;
+            background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
+            background-size: 40px 40px;
             text-align: center;
-            line-height: 30px;
+            line-height: 40px;
             color: white;
-            transition: width 0.3s;
+            font-weight: bold;
+            font-size: 16px;
+            transition: width 0.5s;
+            animation: progress-bar-stripes 2s linear infinite;
+        }
+        @keyframes progress-bar-stripes {
+            from { background-position: 40px 0; }
+            to { background-position: 0 0; }
         }
         .log-container {
             max-height: 400px;

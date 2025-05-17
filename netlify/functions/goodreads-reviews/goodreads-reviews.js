@@ -1,4 +1,4 @@
-const chromium = require('@sparticuz/chromium');
+const chromium = require('chrome-aws-lambda');
 const puppeteer = require('puppeteer-core');
 
 // Main handler function
@@ -28,38 +28,16 @@ exports.handler = async (event, context) => {
     console.log(`Starting Goodreads scraping for URL: ${goodreadsUrl}`);
     console.log(`Requested limit: ${limit}, Max pages: ${maxPages}`);
 
-    // Launch browser with more robust error handling
-    try {
-      console.log("Launching browser with Chromium");
-      browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: true,
-        ignoreHTTPSErrors: true,
-      });
-      console.log("Browser launched successfully");
-    } catch (error) {
-      console.log("Error launching browser:", error.message);
-      console.log("Attempting fallback launch method");
-
-      // Fallback to a more basic configuration
-      browser = await puppeteer.launch({
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
-        ],
-        headless: true,
-        ignoreHTTPSErrors: true,
-      });
-      console.log("Browser launched with fallback method");
-    }
+    // Launch browser
+    console.log("Launching browser with chrome-aws-lambda");
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+    console.log("Browser launched successfully");
 
     // Create a new page
     const page = await browser.newPage();

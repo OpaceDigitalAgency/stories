@@ -1,0 +1,21 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+data/
+browser-data/
+
+# Dependency directories
+node_modules/
+
+# dotenv environment variable files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache files
+.cache/

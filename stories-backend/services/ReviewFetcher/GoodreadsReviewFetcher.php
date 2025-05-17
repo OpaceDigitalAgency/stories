@@ -381,26 +381,104 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Scraping reviews from URL: {$reviewsUrl}");
 
-        // Make the request
-        $response = $this->makeRequest($reviewsUrl);
+        $reviews = [];
+        $page = 1;
+        $maxPages = min(3, ceil($limit / 10)); // Limit to 3 pages maximum to avoid rate limiting
 
-        if ($response === false) {
+        // First, try to extract the aggregate rating from the first page
+        $firstPageResponse = $this->makeRequest($reviewsUrl);
+
+        if ($firstPageResponse === false) {
             $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to make request to Goodreads reviews page");
             return [];
         }
 
         // Debug: Save the raw HTML to a file for inspection
-        file_put_contents($debugDir . '/goodreads_reviews_debug.html', substr($response, 0, 500000));
+        file_put_contents($debugDir . '/goodreads_reviews_debug.html', substr($firstPageResponse, 0, 500000));
         $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved reviews HTML to debug file");
 
-        $reviews = [];
-
-        // First, try to extract the aggregate rating
-        $aggregateRating = $this->extractAggregateRating($response, $reviewsUrl);
+        // Extract aggregate rating from the first page
+        $aggregateRating = $this->extractAggregateRating($firstPageResponse, $reviewsUrl);
         if ($aggregateRating) {
             $reviews[] = $aggregateRating;
             $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted aggregate rating: {$aggregateRating['rating_value']}/5");
         }
+
+        // Process the first page
+        $firstPageReviews = $this->extractReviewsFromHtml($firstPageResponse, $reviewsUrl, $debugDir);
+        $reviews = array_merge($reviews, $firstPageReviews);
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted " . count($firstPageReviews) . " reviews from page 1");
+
+        // Check if we need more reviews and if there are pagination links
+        if (count($reviews) < $limit && $page < $maxPages) {
+            // Look for pagination links
+            if (preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Next<\/a>/i', $firstPageResponse, $matches) ||
+                preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $firstPageResponse, $matches)) {
+
+                $nextPageUrl = html_entity_decode($matches[1]);
+                if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
+                    // Convert relative URL to absolute
+                    $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
+                }
+
+                $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Found next page URL: {$nextPageUrl}");
+
+                // Fetch additional pages
+                while (count($reviews) < $limit && $page < $maxPages) {
+                    $page++;
+
+                    // Add a longer pause between page requests
+                    sleep(rand(3, 5));
+
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching page {$page}");
+                    $pageResponse = $this->makeRequest($nextPageUrl);
+
+                    if ($pageResponse === false) {
+                        $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to fetch page {$page}");
+                        break;
+                    }
+
+                    // Save this page's HTML for debugging
+                    file_put_contents($debugDir . "/goodreads_reviews_page{$page}_debug.html", substr($pageResponse, 0, 500000));
+
+                    // Process this page
+                    $pageReviews = $this->extractReviewsFromHtml($pageResponse, $reviewsUrl, $debugDir);
+                    $reviews = array_merge($reviews, $pageReviews);
+
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted " . count($pageReviews) . " reviews from page {$page}");
+
+                    // Look for next page link
+                    if (preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Next<\/a>/i', $pageResponse, $matches) ||
+                        preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $pageResponse, $matches)) {
+
+                        $nextPageUrl = html_entity_decode($matches[1]);
+                        if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
+                            // Convert relative URL to absolute
+                            $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
+                        }
+                    } else {
+                        // No more pages
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Limit the number of reviews to the requested limit
+        return array_slice($reviews, 0, $limit);
+    }
+
+    /**
+     * Extract reviews from HTML content
+     *
+     * @param string $response The HTML response
+     * @param string $reviewsUrl The reviews URL
+     * @param string $debugDir The debug directory
+     * @return array Array of reviews
+     */
+    private function extractReviewsFromHtml(string $response, string $reviewsUrl, string $debugDir): array {
+        $reviews = [];
 
         // Try multiple patterns for review blocks to handle different Goodreads layouts
         $reviewBlocks = [];
@@ -457,9 +535,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Process the review blocks
         foreach ($reviewBlocks as $index => $block) {
-            if (count($reviews) >= $limit) {
-                break;
-            }
+            // No need to limit here as we'll limit in the parent method
 
             $reviewId = $block[1];
             $reviewHtml = $block[0];
@@ -654,17 +730,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $this->logToFile($debugDir . '/goodreads-log.txt', "❌ CAPTCHA or robot check detected");
         }
 
-        // If we still have no reviews, check if we can extract an aggregate rating
-        if (empty($reviews) && !$aggregateRating) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ No individual reviews found, trying to extract aggregate rating");
-            $aggregateRating = $this->extractAggregateRating($response, $reviewsUrl);
-            if ($aggregateRating) {
-                $reviews[] = $aggregateRating;
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Added aggregate rating as fallback");
-            }
-        }
-
-        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Total reviews extracted: " . count($reviews));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Total reviews extracted from this page: " . count($reviews));
         return $reviews;
     }
 

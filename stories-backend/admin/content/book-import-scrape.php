@@ -389,6 +389,12 @@ function updateBookAggregateValues($db, $bookId) {
                                     continue;
                                 }
                             }
+
+                            // Check if we got more than 30 reviews (indicating VPS scraper success)
+                            if (count($reviews) > 30 && (strtolower($sourceName) === 'goodreads' || strtolower($sourceName) === 'amazon')) {
+                                echo "<p class='success'><strong>🚀 [VPS-Scraper-Success]</strong> Found " . count($reviews) . " reviews using Puppeteer-based Headless Browser</p>";
+                                flushOutput();
+                            }
                         } catch (Exception $e) {
                             echo "<p class='error'>Error fetching reviews from {$sourceName}: " . $e->getMessage() . "</p>";
                             flushOutput();

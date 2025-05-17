@@ -908,15 +908,38 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         curl_setopt($ch, CURLOPT_URL, "{$this->vpsHeadlessBrowserUrl}/health");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        $verbose = fopen('php://temp', 'w+');
+        curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
         $healthResponse = curl_exec($ch);
         $healthHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Get verbose information
+        rewind($verbose);
+        $verboseLog = stream_get_contents($verbose);
+        fclose($verbose);
+
+        // Log the verbose output
+        $this->logToFile("{$debugDir}/scrape-log.txt", "🔍 CURL Verbose Log:\n{$verboseLog}");
+
         curl_close($ch);
 
         if ($healthHttpCode !== 200) {
             $this->logToFile("{$debugDir}/scrape-log.txt", "⚠️ VPS Headless Browser API is not reachable: HTTP {$healthHttpCode}");
+            $this->logToFile("{$debugDir}/scrape-log.txt", "⚠️ Response: {$healthResponse}");
             error_log("⚠️⚠️⚠️ VPS SCRAPER NOT REACHABLE - CHECK CONNECTION TO {$this->vpsHeadlessBrowserUrl} ⚠️⚠️⚠️");
+
+            // Try to ping the server
+            $pingResult = shell_exec("ping -c 1 -W 2 37.27.31.107");
+            $this->logToFile("{$debugDir}/scrape-log.txt", "🔍 Ping Result:\n{$pingResult}");
+
+            // Try to telnet to the port
+            $telnetResult = shell_exec("timeout 2 bash -c '</dev/tcp/37.27.31.107/3000' && echo 'Port is open' || echo 'Port is closed'");
+            $this->logToFile("{$debugDir}/scrape-log.txt", "🔍 Telnet Result: {$telnetResult}");
         } else {
             $this->logToFile("{$debugDir}/scrape-log.txt", "✅ VPS Headless Browser API is reachable");
+            $this->logToFile("{$debugDir}/scrape-log.txt", "✅ Health Response: {$healthResponse}");
         }
 
         // Request more reviews than needed to ensure we get enough

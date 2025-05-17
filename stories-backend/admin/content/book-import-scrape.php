@@ -200,6 +200,7 @@ function updateBookAggregateValues($db, $bookId) {
                     // Get selected sources
                     $sources = $_POST['sources'] ?? [];
                     $runAiAnalysis = isset($_POST['run_ai_analysis']) && $_POST['run_ai_analysis'] == 1;
+                    $forceRefresh = isset($_POST['force_refresh']) && $_POST['force_refresh'] == 1;
                 } else if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     // Multiple books from URL parameter
                     if (isset($_GET['books'])) {
@@ -215,6 +216,7 @@ function updateBookAggregateValues($db, $bookId) {
                     $sources = $sourcesStmt->fetchAll(PDO::FETCH_COLUMN);
 
                     $runAiAnalysis = isset($_GET['ai']) && $_GET['ai'] == 1;
+                    $forceRefresh = isset($_GET['force']) && $_GET['force'] == 1;
                 }
 
                 if (empty($bookIds)) {
@@ -398,12 +400,20 @@ function updateBookAggregateValues($db, $bookId) {
 
                         // Import reviews
                         foreach ($reviews as $review) {
-                            // Check for duplicates
-                            if (reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'])) {
+                            // Check for duplicates, but allow force refresh to override
+                            if (!$forceRefresh && reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'])) {
                                 echo "<p class='warning'>Skipping duplicate review by {$review['reviewer_name']}</p>";
                                 flushOutput();
                                 $bookReviewsSkipped++;
                                 continue;
+                            }
+
+                            // If force refresh is enabled and the review exists, delete the old one first
+                            if ($forceRefresh && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
+                                $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
+                                $deleteStmt->execute([$existingReview['id']]);
+                                echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
+                                flushOutput();
                             }
 
                             try {

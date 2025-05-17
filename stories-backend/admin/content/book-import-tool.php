@@ -900,6 +900,14 @@ require_once '../includes/header.php';
                             <label class="custom-control-label" for="runAiAnalysis">Run AI analysis after scraping</label>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="forceRefresh" name="force_refresh" value="1">
+                            <label class="custom-control-label" for="forceRefresh">Force refresh (replace existing reviews)</label>
+                        </div>
+                        <small class="form-text text-muted">Enable this to replace existing reviews instead of skipping duplicates.</small>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">

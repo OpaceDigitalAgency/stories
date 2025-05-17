@@ -531,22 +531,44 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Log the Puppeteer URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");
 
+        // Create debug directory if it doesn't exist
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0777, true);
+        }
+
+        // Start a new log file for this session
+        $logFile = $debugDir . '/goodreads-puppeteer-log.txt';
+        file_put_contents($logFile, "=== Starting Puppeteer scraping session at " . date('Y-m-d H:i:s') . " ===\n");
+        $this->logToFile($logFile, "🔍 Target URL: {$reviewsUrl}");
+        $this->logToFile($logFile, "🔗 Puppeteer function URL: {$puppeteerUrl}");
+
         // Check if the function exists by making a test request
         try {
+            $this->logToFile($logFile, "🧪 Testing Puppeteer function availability...");
             $testCh = curl_init($puppeteerUrl);
             curl_setopt($testCh, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($testCh, CURLOPT_NOBODY, true);
+            curl_setopt($testCh, CURLOPT_NOBODY, false); // Get the full response for better debugging
             curl_setopt($testCh, CURLOPT_TIMEOUT, 5);
-            curl_exec($testCh);
+            $testResponse = curl_exec($testCh);
             $httpCode = curl_getinfo($testCh, CURLINFO_HTTP_CODE);
+            $error = curl_error($testCh);
             curl_close($testCh);
 
+            $this->logToFile($logFile, "📊 Test response code: {$httpCode}");
+            if (!empty($error)) {
+                $this->logToFile($logFile, "⚠️ cURL error: {$error}");
+            }
+
+            if ($testResponse) {
+                $this->logToFile($logFile, "📄 Test response body: " . substr($testResponse, 0, 500) . "...");
+            }
+
             if ($httpCode >= 400) {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
+                $this->logToFile($logFile, "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
                 return [];
             }
         } catch (\Exception $e) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Error checking Puppeteer function: " . $e->getMessage());
+            $this->logToFile($logFile, "❌ Error checking Puppeteer function: " . $e->getMessage());
             return [];
         }
 
@@ -558,6 +580,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         ];
 
         // Set up cURL options
+        $this->logToFile($logFile, "🚀 Preparing to send request to Puppeteer function");
+        $this->logToFile($logFile, "📦 Request data: " . json_encode($requestData));
+
         $ch = curl_init($puppeteerUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -566,42 +591,66 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             'Content-Type: application/json',
             'Accept: application/json'
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+        curl_setopt($ch, CURLOPT_TIMEOUT, 90); // 90 second timeout
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // 10 second connection timeout
 
         // Execute the request
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 Sending request to Puppeteer function");
+        $this->logToFile($logFile, "🚀 Sending request to Puppeteer function");
+        $startTime = microtime(true);
         $response = curl_exec($ch);
+        $endTime = microtime(true);
+        $executionTime = round($endTime - $startTime, 2);
+
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+        $info = curl_getinfo($ch);
         curl_close($ch);
+
+        $this->logToFile($logFile, "⏱️ Request completed in {$executionTime} seconds");
+        $this->logToFile($logFile, "📊 HTTP status code: {$httpCode}");
+
+        if (!empty($info)) {
+            $this->logToFile($logFile, "ℹ️ Request info: " . json_encode($info));
+        }
 
         // Check for errors
         if ($response === false) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ cURL error: {$error}");
+            $this->logToFile($logFile, "❌ cURL error: {$error}");
             return [];
         }
 
         if ($httpCode !== 200) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ HTTP error: {$httpCode}");
-            $this->logToFile($debugDir . '/goodreads-log.txt', "Response: " . substr($response, 0, 1000));
+            $this->logToFile($logFile, "❌ HTTP error: {$httpCode}");
+            $this->logToFile($logFile, "📄 Response: " . substr($response, 0, 1000));
             return [];
         }
 
         // Save the raw response for debugging
-        file_put_contents($debugDir . '/puppeteer_response.json', $response);
+        $responseFile = $debugDir . '/puppeteer_response_' . time() . '.json';
+        file_put_contents($responseFile, $response);
+        $this->logToFile($logFile, "💾 Saved response to {$responseFile}");
 
         // Parse the response
+        $this->logToFile($logFile, "🔍 Parsing JSON response");
         $data = json_decode($response, true);
 
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logToFile($logFile, "❌ JSON parse error: " . json_last_error_msg());
+            $this->logToFile($logFile, "📄 Raw response: " . substr($response, 0, 500));
+            return [];
+        }
+
         if (!isset($data['reviews']) || !is_array($data['reviews'])) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Invalid response format from Puppeteer function");
+            $this->logToFile($logFile, "❌ Invalid response format from Puppeteer function");
+            $this->logToFile($logFile, "📄 Response structure: " . json_encode(array_keys($data)));
             return [];
         }
 
         $reviews = $data['reviews'];
         $totalReviews = $data['total'] ?? count($reviews);
+        $bookTitle = $data['book_title'] ?? 'Unknown';
 
-        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched {$totalReviews} reviews using Puppeteer (returning " . count($reviews) . ")");
+        $this->logToFile($logFile, "✅ Successfully fetched {$totalReviews} reviews for book '{$bookTitle}' using Puppeteer");
 
         return $reviews;
     }

@@ -1,7 +1,7 @@
 <?php
 /**
  * VPS Status Checker
- * 
+ *
  * This script performs a comprehensive check of the VPS server status
  * and provides detailed diagnostics about connectivity issues.
  */
@@ -84,6 +84,22 @@ echo "Note: This requires SSH access to the VPS server.\n";
 echo "To check PM2 status, run the following command on the VPS:\n";
 echo "  ssh root@{$vpsIp} 'pm2 status'\n\n";
 
+// Check server.js configuration
+echo "Server Configuration Check:\n";
+echo "------------------------\n";
+echo "To check if the server is configured to listen on all interfaces, run:\n";
+echo "  ssh root@{$vpsIp} 'cat /opt/book-scraper/stories-backend/services/HeadlessBrowser/server.js | grep \"app.listen\"'\n";
+echo "It should show: app.listen(3000, '0.0.0.0', () => ...\n";
+echo "If it shows: app.listen(3000, 'localhost', () => ... then it's only listening on localhost!\n\n";
+
+// Check if the server is actually listening on all interfaces
+echo "Network Listening Check:\n";
+echo "---------------------\n";
+echo "To check if the server is actually listening on all interfaces, run:\n";
+echo "  ssh root@{$vpsIp} 'netstat -tulpn | grep 3000'\n";
+echo "It should show: tcp 0 0 0.0.0.0:3000 0.0.0.0:* LISTEN\n";
+echo "If it shows: tcp 0 0 127.0.0.1:3000 0.0.0.0:* LISTEN then it's only listening on localhost!\n\n";
+
 // Check if the server is behind a firewall
 echo "Firewall Check:\n";
 echo "--------------\n";
@@ -105,12 +121,12 @@ if ($httpCode === 0) {
     echo "   - The port is open and not blocked by a firewall\n";
     echo "   - The server's IP address is correct\n";
     echo "   - The server's network allows incoming connections\n\n";
-    
+
     echo "2. Try restarting the scraper service on the VPS:\n";
     echo "   ssh root@{$vpsIp}\n";
     echo "   cd /opt/book-scraper\n";
     echo "   pm2 restart all\n\n";
-    
+
     echo "3. Check the logs on the VPS:\n";
     echo "   ssh root@{$vpsIp}\n";
     echo "   cd /opt/book-scraper\n";

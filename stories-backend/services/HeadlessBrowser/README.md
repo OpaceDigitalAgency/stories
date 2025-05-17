@@ -61,7 +61,7 @@ This service is deployed on a Hetzner VPS with automatic deployment:
 - **IP Address**: 37.27.31.107
 - **Process Manager**: PM2 (process name: `review-scraper`)
 - **Auto-Deploy**: Enabled via git-auto-deploy (listening on port 8080)
-- **Last Deployment**: Updated on `date +"%Y-%m-%d %H:%M:%S"` to test webhook
+- **Last Deployment**: Updated on `date +"%Y-%m-%d %H:%M:%S"` to test webhook again
 
 ### Automatic Deployment
 

@@ -844,14 +844,50 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $logFile = "{$this->dbgDir}/outscraper-log.txt";
         $this->logToFile($logFile, "🚀 Starting Outscraper request for ASIN {$asin}");
 
-        // Determine Amazon domain code from domain
+        // IMPORTANT: Outscraper only supports amazon.com for reviews
+        // Always use 'com' domain for Outscraper regardless of the site's domain
         $domainCode = 'com';
+
+        // Log original domain for reference
+        $originalDomain = 'com';
         if (strpos($this->domain, 'amazon.co.uk') !== false) {
-            $domainCode = 'co.uk';
+            $originalDomain = 'co.uk';
         } elseif (strpos($this->domain, 'amazon.ca') !== false) {
-            $domainCode = 'ca';
+            $originalDomain = 'ca';
         } elseif (strpos($this->domain, 'amazon.de') !== false) {
-            $domainCode = 'de';
+            $originalDomain = 'de';
+        }
+
+        $this->logToFile($logFile, "🌍 Original domain: {$originalDomain}, using {$domainCode} for Outscraper (only supported domain)");
+
+        // Check if the book exists on amazon.com
+        $this->logToFile($logFile, "🔍 Checking if book exists on amazon.com: https://www.amazon.com/dp/{$asin}");
+        $checkUrl = "https://www.amazon.com/dp/{$asin}";
+        $checkHtml = $this->makeRequest($checkUrl, [], false);
+
+        // Save the check response for debugging
+        file_put_contents("{$this->dbgDir}/outscraper-{$asin}-check.html", $checkHtml ?: "EMPTY RESPONSE");
+
+        // Check if the product exists on amazon.com
+        $productExists = false;
+        if ($checkHtml) {
+            // Check for product title or price indicators
+            $productExists = preg_match('/<span id="productTitle"|<span class="a-price"|<div id="dp-container"/i', $checkHtml);
+            // Check for "page not found" indicators
+            $notFound = preg_match('/page you requested could not be found|we couldn\'t find that page|404 error/i', $checkHtml);
+
+            if ($productExists) {
+                $this->logToFile($logFile, "✅ Product found on amazon.com");
+            } elseif ($notFound) {
+                $this->logToFile($logFile, "❌ Product not found on amazon.com");
+                return []; // Early return if product doesn't exist
+            } else {
+                $this->logToFile($logFile, "⚠️ Couldn't determine if product exists (likely a CAPTCHA or login page)");
+                // Continue anyway as a best effort
+            }
+        } else {
+            $this->logToFile($logFile, "⚠️ Couldn't check if product exists on amazon.com (empty response)");
+            // Continue anyway as a best effort
         }
 
         // Log request details
@@ -866,7 +902,6 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
 
             // Enable detailed debugging
             $this->logToFile($logFile, "🔑 Using API key: {$this->outscraperApiKey}");
-            $this->logToFile($logFile, "🌐 Using domain: {$domainCode}");
             $this->logToFile($logFile, "📊 Requesting {$limit} reviews with 'newest' sorting");
 
             // Make the request using the SDK
@@ -939,7 +974,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                             'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
                             'product_title' => $productTitle,
                             'product_url'   => $productUrl,
-                            'source'        => 'Outscraper SDK'
+                            'source'        => 'Outscraper SDK (amazon.com)'
                         ]),
                     ];
                 }

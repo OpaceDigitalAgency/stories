@@ -187,6 +187,39 @@ class ReviewFetcherFactory {
         if (empty($sourceIds)) {
             // Use all available fetchers
             $fetchers = $this->getAllFetchers();
+
+            // Reorder fetchers to prioritize Goodreads over Amazon
+            $reorderedFetchers = [];
+            $goodreadsFetcher = null;
+            $amazonFetcher = null;
+
+            foreach ($fetchers as $fetcher) {
+                $sourceName = $fetcher->getSourceName();
+                if ($sourceName === 'Goodreads') {
+                    $goodreadsFetcher = $fetcher;
+                } else if ($sourceName === 'Amazon') {
+                    $amazonFetcher = $fetcher;
+                } else {
+                    $reorderedFetchers[] = $fetcher;
+                }
+            }
+
+            // Add Goodreads first, then other sources, then Amazon last
+            if ($goodreadsFetcher) {
+                array_unshift($reorderedFetchers, $goodreadsFetcher);
+            }
+
+            if ($amazonFetcher) {
+                $reorderedFetchers[] = $amazonFetcher;
+            }
+
+            $fetchers = $reorderedFetchers;
+
+            // Log the order of fetchers
+            if ($logErrors) {
+                $fetcherNames = array_map(function($f) { return $f->getSourceName(); }, $fetchers);
+                error_log("Fetcher order for ISBN {$isbn}: " . implode(', ', $fetcherNames));
+            }
         } else {
             // Use only specified fetchers
             foreach ($sourceIds as $sourceId) {
@@ -202,12 +235,28 @@ class ReviewFetcherFactory {
             $result['sources_attempted']++;
             $sourceName = $fetcher->getSourceName();
 
+            // Skip Amazon if we already have reviews from Goodreads
+            if ($sourceName === 'Amazon' && $result['sources_successful'] > 0 && !empty($result['reviews'])) {
+                if ($logErrors) {
+                    error_log("Skipping Amazon reviews for ISBN {$isbn} because we already have reviews from other sources");
+                }
+                continue;
+            }
+
             try {
+                if ($logErrors) {
+                    error_log("Attempting to fetch reviews from {$sourceName} for ISBN {$isbn}");
+                }
+
                 $reviews = $fetcher->fetchReviewsByISBN($isbn, $limit);
 
                 if (!empty($reviews)) {
                     $result['reviews'] = array_merge($result['reviews'], $reviews);
                     $result['sources_successful']++;
+
+                    if ($logErrors) {
+                        error_log("Successfully fetched " . count($reviews) . " reviews from {$sourceName} for ISBN {$isbn}");
+                    }
                 } else {
                     $errorMessage = $fetcher->getLastError() ?: "No reviews found";
                     $result['errors'][$sourceName] = $errorMessage;

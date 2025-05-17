@@ -114,6 +114,17 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return string|null The book URL or null if not found
      */
     private function findBookUrl(string $isbn): ?string {
+        // First, try to get the Goodreads ID from OpenLibrary
+        $goodreadsId = $this->getGoodreadsIdFromOpenLibrary($isbn);
+
+        if ($goodreadsId) {
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "✅ Found Goodreads ID {$goodreadsId} from OpenLibrary for ISBN {$isbn}");
+            return "https://www.goodreads.com/book/show/{$goodreadsId}";
+        }
+
+        $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "⚠️ No Goodreads ID found in OpenLibrary for ISBN {$isbn}, falling back to search");
+
+        // If OpenLibrary doesn't have the Goodreads ID, fall back to search
         // Build the search URL
         $searchUrl = "https://www.goodreads.com/search?q={$isbn}";
 
@@ -121,50 +132,157 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $response = $this->makeRequest($searchUrl);
 
         if ($response === false) {
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "❌ Failed to make request to Goodreads search for ISBN {$isbn}");
             return null;
         }
 
+        // Create debug directory if it doesn't exist
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
         // Debug: Save the raw HTML to a file for inspection
-        // Uncomment this line to debug
-        file_put_contents(__DIR__ . '/goodreads_search_debug.html', substr($response, 0, 50000));
+        file_put_contents($debugDir . '/goodreads_search_debug.html', substr($response, 0, 50000));
 
         // Try multiple patterns to find book URLs in the current Goodreads HTML structure
 
         // Pattern 1: Modern Goodreads layout with data-testid
         if (preg_match('/<a[^>]+data-testid="bookTitle"[^>]+href="([^"]+)"/i', $response, $matches)) {
-            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $url = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 1 (data-testid): {$url}");
+            return $url;
         }
 
         // Pattern 2: Book cover link with ISBN in URL
         if (preg_match('/<a[^>]+href="([^"]*\/book\/show\/[^"]*' . preg_quote($isbn, '/') . '[^"]*)"/i', $response, $matches)) {
-            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $url = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 2 (ISBN in URL): {$url}");
+            return $url;
         }
 
         // Pattern 3: Any book show link in search results
         if (preg_match('/<a[^>]+href="(\/book\/show\/[^"]+)"[^>]*>/i', $response, $matches)) {
-            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $url = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 3 (book show link): {$url}");
+            return $url;
         }
 
         // Pattern 4: Title link with any class
         if (preg_match('/<a[^>]+class="[^"]*Title[^"]*"[^>]+href="([^"]+)"/i', $response, $matches)) {
-            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $url = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 4 (title link): {$url}");
+            return $url;
         }
 
         // Pattern 5: Any link to a book page
         if (preg_match_all('/<a[^>]+href="([^"]*\/book\/show\/[^"]+)"[^>]*>/i', $response, $matches)) {
             // Return the first match
             if (!empty($matches[1][0])) {
-                return 'https://www.goodreads.com' . html_entity_decode($matches[1][0]);
+                $url = 'https://www.goodreads.com' . html_entity_decode($matches[1][0]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 5 (any book page link): {$url}");
+                return $url;
             }
         }
 
         // If we still can't find a book URL, try a different approach
         // Look for any book show link with text content
         if (preg_match('/<a[^>]+href="(\/book\/show\/[^"]+)"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
-            return 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $url = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 6 (book show link with text): {$url}");
+            return $url;
         }
 
+        $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No book URL found for ISBN {$isbn} using any pattern");
         return null;
+    }
+
+    /**
+     * Get Goodreads ID from OpenLibrary
+     *
+     * @param string $isbn The ISBN to search for
+     * @return string|null The Goodreads ID or null if not found
+     */
+    private function getGoodreadsIdFromOpenLibrary(string $isbn): ?string {
+        // Create debug directory if it doesn't exist
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Looking up Goodreads ID from OpenLibrary for ISBN {$isbn}");
+
+        // Build the OpenLibrary API URL
+        $url = "https://openlibrary.org/isbn/{$isbn}.json";
+
+        // Make the request
+        $response = $this->makeRequest($url);
+
+        if ($response === false) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to make request to OpenLibrary for ISBN {$isbn}");
+            return null;
+        }
+
+        // Save the raw response for debugging
+        file_put_contents($debugDir . "/openlibrary_{$isbn}_response.json", $response);
+
+        // Parse the response
+        $data = json_decode($response, true);
+
+        // Check if we have Goodreads identifiers
+        if (isset($data['identifiers']['goodreads']) && !empty($data['identifiers']['goodreads'])) {
+            $goodreadsId = $data['identifiers']['goodreads'][0];
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found Goodreads ID {$goodreadsId} in OpenLibrary response");
+            return $goodreadsId;
+        }
+
+        // If we don't have direct Goodreads identifiers, try to get the work ID and check that
+        if (isset($data['works']) && !empty($data['works'])) {
+            $workKey = $data['works'][0]['key'];
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Found work key {$workKey}, checking for Goodreads ID");
+
+            // Get the work data
+            $workUrl = "https://openlibrary.org{$workKey}.json";
+            $workResponse = $this->makeRequest($workUrl);
+
+            if ($workResponse !== false) {
+                // Save the raw response for debugging
+                file_put_contents($debugDir . "/openlibrary_work_{$workKey}_response.json", $workResponse);
+
+                // Parse the response
+                $workData = json_decode($workResponse, true);
+
+                // Check if we have Goodreads identifiers in the work data
+                if (isset($workData['identifiers']['goodreads']) && !empty($workData['identifiers']['goodreads'])) {
+                    $goodreadsId = $workData['identifiers']['goodreads'][0];
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found Goodreads ID {$goodreadsId} in work data");
+                    return $goodreadsId;
+                }
+            }
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No Goodreads ID found in OpenLibrary data for ISBN {$isbn}");
+        return null;
+    }
+
+    /**
+     * Log a message to a file
+     *
+     * @param string $file The file to log to
+     * @param string $message The message to log
+     */
+    private function logToFile(string $file, string $message): void {
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents(
+            $file,
+            "[{$timestamp}] {$message}" . PHP_EOL,
+            FILE_APPEND
+        );
     }
 
     /**

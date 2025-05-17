@@ -378,7 +378,34 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Scraping reviews from URL: {$reviewsUrl}");
 
-        // First try to use Puppeteer for better results (especially for books with many reviews)
+        // First try to use the VPS-based Headless Browser service
+        $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit);
+
+        if (!empty($vpsReviews)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched " . count($vpsReviews) . " reviews using VPS Headless Browser");
+
+            // If we have an aggregate rating from the VPS, store it separately
+            foreach ($vpsReviews as $key => $review) {
+                if (isset($review['metadata'])) {
+                    $metadata = json_decode($review['metadata'], true);
+                    if (isset($metadata['is_aggregate']) && $metadata['is_aggregate']) {
+                        $this->aggregateRating = $review;
+                        unset($vpsReviews[$key]);
+                        break;
+                    }
+                }
+            }
+
+            // Reindex the array after potentially removing the aggregate rating
+            $vpsReviews = array_values($vpsReviews);
+
+            // Limit the number of reviews to the requested limit
+            return array_slice($vpsReviews, 0, $limit);
+        }
+
+        // If VPS Headless Browser fails, try Puppeteer for better results (especially for books with many reviews)
+        $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS Headless Browser failed or returned no results, trying Puppeteer");
+
         $puppeteerReviews = $this->fetchReviewsWithPuppeteer($reviewsUrl, $limit);
 
         if (!empty($puppeteerReviews)) {
@@ -403,8 +430,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             return array_slice($puppeteerReviews, 0, $limit);
         }
 
-        // If Puppeteer fails, fall back to regex-based scraping
-        $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Puppeteer scraping failed or returned no results, falling back to regex-based scraping");
+        // If both VPS and Puppeteer fail, fall back to regex-based scraping
+        $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Both VPS and Puppeteer scraping failed or returned no results, falling back to regex-based scraping");
 
         $reviews = [];
         $page = 1;
@@ -989,5 +1016,91 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ No aggregate rating found");
         return null;
+    }
+
+    /**
+     * Fetch reviews using the VPS-based Headless Browser service
+     *
+     * @param string $goodreadsUrl The URL of the Goodreads book page
+     * @param int $limit Maximum number of reviews to return
+     * @return array Array of reviews
+     */
+    private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit): array {
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🤖 Attempting to fetch reviews using VPS Headless Browser for URL: {$goodreadsUrl}");
+
+        // Use the VPS IP address as the default if environment variable is not set
+        $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
+
+        // Log the API URL for debugging
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
+
+        // Build the request URL
+        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$limit}";
+
+        // Make the request
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "x-api-key: {$apiKey}"
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Save the response for debugging
+        file_put_contents($debugDir . '/goodreads-vps-response.json', $response);
+
+        if ($httpCode >= 400) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ VPS Headless Browser API error: HTTP {$httpCode}");
+            return [];
+        }
+
+        // Parse the response
+        $data = json_decode($response, true);
+
+        if (!$data || !isset($data['reviews']) || empty($data['reviews'])) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No reviews found in VPS Headless Browser response");
+            return [];
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($data['reviews']) . " reviews using VPS Headless Browser");
+
+        // Process the reviews to match our expected format
+        $reviews = [];
+        foreach ($data['reviews'] as $review) {
+            // Skip reviews without text or rating
+            if (empty($review['review_text']) || !isset($review['rating'])) {
+                continue;
+            }
+
+            // Convert the review to our format
+            $reviews[] = [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => $review['reviewer_name'] ?? 'Goodreads User',
+                'reviewer_age' => null,
+                'review_date' => $review['review_date'] ?? date('Y-m-d'),
+                'original_rating' => "{$review['rating']}/5",
+                'rating_value' => $review['rating'],
+                'rating_scale' => 5,
+                'rating_normalised' => $review['rating_normalised'] ?? $this->normalizeRating($review['rating'], 5),
+                'review_text' => $review['review_text'],
+                'metadata' => $review['metadata'] ?? json_encode([
+                    'book_url' => $goodreadsUrl,
+                    'is_synthetic' => false,
+                    'is_aggregate' => isset($review['metadata']) && strpos($review['metadata'], 'is_aggregate') !== false
+                ])
+            ];
+        }
+
+        return $reviews;
     }
 }

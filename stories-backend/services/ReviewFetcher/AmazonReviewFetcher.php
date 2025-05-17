@@ -38,6 +38,15 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     /** @var string Remote Puppeteer API URL */
     protected string $remotePuppeteerUrl;
 
+    /** @var bool Whether to use VPS Headless Browser API */
+    protected bool $useVpsHeadlessBrowser = true;
+
+    /** @var string VPS Headless Browser API URL */
+    protected string $vpsHeadlessBrowserUrl;
+
+    /** @var string VPS Headless Browser API Key */
+    protected string $vpsHeadlessBrowserApiKey;
+
     public function __construct(PDO $db, int $sourceId)
     {
         parent::__construct($db, $sourceId, 'Amazon');
@@ -50,6 +59,10 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
 
         // Remote Puppeteer API URL
         $this->remotePuppeteerUrl = getenv('REMOTE_PUPPETEER_URL') ?: 'https://storiesfromtheweb.netlify.app/.netlify/functions/amazon-reviews';
+
+        // VPS Headless Browser API URL and key
+        $this->vpsHeadlessBrowserUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+        $this->vpsHeadlessBrowserApiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
 
         // Optional override from settings
         $stmt = $db->prepare(
@@ -101,8 +114,21 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             return [];
         }
 
-        // 4) Try Remote Puppeteer API first if enabled
+        // 4) Try VPS Headless Browser API first if enabled
         $reviews = [];
+        if ($this->useVpsHeadlessBrowser) {
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying VPS Headless Browser API for ASIN {$asin}");
+            $reviews = $this->fetchReviewsWithHeadlessBrowser($asin, $limit);
+
+            if (!empty($reviews)) {
+                $this->logToFile("{$this->dbgDir}/scrape-log.txt", "✅ Successfully fetched " . count($reviews) . " reviews with VPS Headless Browser");
+                return $reviews;
+            }
+
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ VPS Headless Browser returned no reviews, falling back to Remote Puppeteer");
+        }
+
+        // 5) Try Remote Puppeteer API if VPS Headless Browser failed or is disabled
         if ($this->useRemotePuppeteer) {
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying Remote Puppeteer API for ASIN {$asin}");
             $reviews = $this->fetchReviewsWithRemotePuppeteer($asin, $limit);
@@ -115,7 +141,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ Remote Puppeteer returned no reviews, falling back to Outscraper");
         }
 
-        // 5) Try Outscraper API if Remote Puppeteer failed or is disabled
+        // 6) Try Outscraper API if both VPS and Remote Puppeteer failed or are disabled
         if ($this->useOutscraper) {
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying Outscraper API for ASIN {$asin}");
             $reviews = $this->fetchReviewsWithOutscraper($asin, $limit);
@@ -128,10 +154,10 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ Outscraper returned no reviews, falling back to direct scraping");
         }
 
-        // 6) Fallback to direct scraping if both Remote Puppeteer and Outscraper failed or are disabled
+        // 7) Fallback to direct scraping if all API methods failed or are disabled
         $reviews = $this->scrapeReviews($asin, $limit);
 
-        // 7) If none found, fallback to aggregate “average” review
+        // 8) If none found, fallback to aggregate “average” review
         if (empty($reviews)) {
             $agg = $this->getAggregateRating($asin);
             if ($agg) {
@@ -856,6 +882,88 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $this->logToFile($logFile, "✅ Final unique reviews: " . count($uniqueReviews));
 
         return $uniqueReviews;
+    }
+
+    /**
+     * Fetch reviews using VPS Headless Browser service
+     *
+     * @param string $asin Amazon ASIN
+     * @param int $limit Maximum number of reviews to return
+     * @return array Array of reviews
+     */
+    private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit): array
+    {
+        $debugDir = $this->dbgDir;
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile("{$debugDir}/scrape-log.txt", "🤖 Attempting to fetch reviews using VPS Headless Browser for ASIN: {$asin}");
+
+        // Build the request URL
+        $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$limit}";
+
+        // Make the request
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "x-api-key: {$this->vpsHeadlessBrowserApiKey}"
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Save the response for debugging
+        file_put_contents("{$debugDir}/amazon-vps-response-{$asin}.json", $response);
+
+        if ($httpCode >= 400) {
+            $this->logToFile("{$debugDir}/scrape-log.txt", "❌ VPS Headless Browser API error: HTTP {$httpCode}");
+            return [];
+        }
+
+        // Parse the response
+        $data = json_decode($response, true);
+
+        if (!$data || !isset($data['reviews']) || empty($data['reviews'])) {
+            $this->logToFile("{$debugDir}/scrape-log.txt", "❌ No reviews found in VPS Headless Browser response");
+            return [];
+        }
+
+        $this->logToFile("{$debugDir}/scrape-log.txt", "✅ Found " . count($data['reviews']) . " reviews using VPS Headless Browser");
+
+        // Process the reviews to match our expected format
+        $reviews = [];
+        foreach ($data['reviews'] as $review) {
+            // Skip reviews without text or rating
+            if (empty($review['review_text']) || !isset($review['rating_value'])) {
+                continue;
+            }
+
+            // Convert the review to our format
+            $reviews[] = [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => $review['reviewer_name'] ?? 'Amazon Customer',
+                'reviewer_age' => null,
+                'review_date' => $review['review_date'] ?? date('Y-m-d'),
+                'original_rating' => $review['original_rating'] ?? "{$review['rating_value']}/5",
+                'rating_value' => $review['rating_value'],
+                'rating_scale' => 5,
+                'rating_normalised' => $review['rating_normalised'] ?? $this->normalizeRating($review['rating_value'], 5),
+                'review_text' => $review['review_text'],
+                'metadata' => $review['metadata'] ?? json_encode([
+                    'asin' => $asin,
+                    'review_url' => "https://{$this->domain}/product-reviews/{$asin}",
+                    'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
+                    'is_synthetic' => false,
+                    'is_aggregate' => isset($review['metadata']) && strpos($review['metadata'], 'is_aggregate') !== false
+                ])
+            ];
+        }
+
+        return $reviews;
     }
 
     /**

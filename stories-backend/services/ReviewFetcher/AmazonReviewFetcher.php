@@ -837,7 +837,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     }
 
     /**
-     * Fetch reviews using Outscraper API directly
+     * Fetch reviews using Outscraper SDK
      */
     protected function fetchReviewsWithOutscraper(string $asin, int $limit): array
     {
@@ -854,70 +854,43 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $domainCode = 'de';
         }
 
-        // Prepare API request
-        $apiUrl = "https://api.outscraper.com/api/v1/amazon/reviews";
-
-        // Prepare request parameters
-        $params = [
-            'query' => $asin,
-            'domain' => $domainCode,
-            'limit' => $limit,
-            'async' => false,
-            'pages_per_asin' => 2 // Get more reviews
-        ];
-
         // Log request details
         $this->logToFile($logFile, "📡 API Request: ASIN={$asin}, domain={$domainCode}, limit={$limit}");
 
         try {
-            // Set up headers with API key
-            $headers = [
-                "X-API-KEY: {$this->outscraperApiKey}",
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Client: PHP Custom'
-            ];
+            // Include the Outscraper SDK
+            require_once __DIR__ . '/../Outscraper/sdk/init.php';
 
-            // Make the request
-            $ch = curl_init($apiUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 120); // 2 minutes timeout
+            // Create Outscraper client with API key
+            $client = new \OutscraperClient($this->outscraperApiKey);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            // Enable detailed debugging
+            $this->logToFile($logFile, "🔑 Using API key: {$this->outscraperApiKey}");
+            $this->logToFile($logFile, "🌐 Using domain: {$domainCode}");
+            $this->logToFile($logFile, "📊 Requesting {$limit} reviews with 'newest' sorting");
 
-            if (curl_errno($ch)) {
-                throw new Exception('cURL error: ' . curl_error($ch));
-            }
-
-            curl_close($ch);
+            // Make the request using the SDK
+            $data = $client->amazon_reviews($asin, $limit, 'newest', $domainCode);
 
             // Save raw response for debugging
-            file_put_contents("{$this->dbgDir}/outscraper-{$asin}-response.json", $response ?: "EMPTY RESPONSE");
+            file_put_contents(
+                "{$this->dbgDir}/outscraper-{$asin}-response.json",
+                json_encode($data, JSON_PRETTY_PRINT)
+            );
 
-            // Check for errors
-            if ($httpCode !== 200) {
-                throw new Exception("API error: HTTP code {$httpCode}");
-            }
+            // Debug the response
+            $this->logToFile($logFile, "📦 Response received: " . json_encode(array_keys($data)));
 
-            // Parse response
-            $data = json_decode($response, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception('JSON decode error: ' . json_last_error_msg());
-            }
-
-            if (!isset($data['data']) || empty($data['data'])) {
-                $this->logToFile($logFile, "⚠️ No data in API response");
+            if (empty($data)) {
+                $this->logToFile($logFile, "⚠️ Empty response from Outscraper API");
                 return [];
             }
 
             // Process reviews
             $reviews = [];
-            foreach ($data['data'] as $item) {
+            foreach ($data as $item) {
                 if (!isset($item['reviews']) || empty($item['reviews'])) {
+                    $this->logToFile($logFile, "⚠️ No reviews found in item: " . json_encode(array_keys($item)));
                     continue;
                 }
 
@@ -925,11 +898,14 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                 $productTitle = $item['title'] ?? '';
                 $productUrl = $item['url'] ?? '';
                 $this->logToFile($logFile, "📚 Product: {$productTitle}");
+                $this->logToFile($logFile, "🔗 URL: {$productUrl}");
+                $this->logToFile($logFile, "⭐ Found " . count($item['reviews']) . " reviews");
 
                 // Process each review
                 foreach ($item['reviews'] as $review) {
                     // Skip if missing essential data
                     if (!isset($review['rating']) || !isset($review['review_text'])) {
+                        $this->logToFile($logFile, "⚠️ Skipping review with missing data: " . json_encode(array_keys($review)));
                         continue;
                     }
 
@@ -963,7 +939,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
                             'affiliate_url' => "https://{$this->domain}/dp/{$asin}?tag={$this->affiliateTag}",
                             'product_title' => $productTitle,
                             'product_url'   => $productUrl,
-                            'source'        => 'Outscraper API'
+                            'source'        => 'Outscraper SDK'
                         ]),
                     ];
                 }
@@ -975,7 +951,8 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         } catch (Exception $e) {
             // Log any errors
             $this->logToFile($logFile, "❌ Outscraper API Error: " . $e->getMessage());
-            file_put_contents("{$this->dbgDir}/outscraper-{$asin}-error.txt", $e->getMessage());
+            $this->logToFile($logFile, "📋 Error trace: " . $e->getTraceAsString());
+            file_put_contents("{$this->dbgDir}/outscraper-{$asin}-error.txt", $e->getMessage() . "\n\n" . $e->getTraceAsString());
             return [];
         }
     }

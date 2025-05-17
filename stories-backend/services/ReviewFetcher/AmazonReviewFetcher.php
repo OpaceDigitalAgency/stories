@@ -32,6 +32,12 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
     /** @var bool Whether to use Outscraper API */
     protected bool $useOutscraper = true;
 
+    /** @var bool Whether to use Remote Puppeteer API */
+    protected bool $useRemotePuppeteer = true;
+
+    /** @var string Remote Puppeteer API URL */
+    protected string $remotePuppeteerUrl;
+
     public function __construct(PDO $db, int $sourceId)
     {
         parent::__construct($db, $sourceId, 'Amazon');
@@ -41,6 +47,9 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
 
         // Outscraper API key
         $this->outscraperApiKey = getenv('OUTSCRAPER_API_KEY') ?: 'NTNjYjkxMTUwOWI3NDBlYzg2MmI5NzY2ZTYxNDYxMTl8ZmVjODc2ZDI5ZA';
+
+        // Remote Puppeteer API URL
+        $this->remotePuppeteerUrl = getenv('REMOTE_PUPPETEER_URL') ?: 'https://storiesfromtheweb.netlify.app/.netlify/functions/amazon-reviews';
 
         // Optional override from settings
         $stmt = $db->prepare(
@@ -92,8 +101,21 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             return [];
         }
 
-        // 4) Try Outscraper API first if enabled
+        // 4) Try Remote Puppeteer API first if enabled
         $reviews = [];
+        if ($this->useRemotePuppeteer) {
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying Remote Puppeteer API for ASIN {$asin}");
+            $reviews = $this->fetchReviewsWithRemotePuppeteer($asin, $limit);
+
+            if (!empty($reviews)) {
+                $this->logToFile("{$this->dbgDir}/scrape-log.txt", "✅ Successfully fetched " . count($reviews) . " reviews with Remote Puppeteer");
+                return $reviews;
+            }
+
+            $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ Remote Puppeteer returned no reviews, falling back to Outscraper");
+        }
+
+        // 5) Try Outscraper API if Remote Puppeteer failed or is disabled
         if ($this->useOutscraper) {
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying Outscraper API for ASIN {$asin}");
             $reviews = $this->fetchReviewsWithOutscraper($asin, $limit);
@@ -106,10 +128,10 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "⚠️ Outscraper returned no reviews, falling back to direct scraping");
         }
 
-        // 5) Fallback to direct scraping if Outscraper failed or is disabled
+        // 6) Fallback to direct scraping if both Remote Puppeteer and Outscraper failed or are disabled
         $reviews = $this->scrapeReviews($asin, $limit);
 
-        // 6) If none found, fallback to aggregate “average” review
+        // 7) If none found, fallback to aggregate “average” review
         if (empty($reviews)) {
             $agg = $this->getAggregateRating($asin);
             if ($agg) {
@@ -834,6 +856,94 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $this->logToFile($logFile, "✅ Final unique reviews: " . count($uniqueReviews));
 
         return $uniqueReviews;
+    }
+
+    /**
+     * Fetch reviews using Remote Puppeteer API
+     *
+     * @param string $asin Amazon ASIN
+     * @param int $limit Maximum number of reviews to fetch
+     * @return array Array of reviews
+     */
+    protected function fetchReviewsWithRemotePuppeteer(string $asin, int $limit): array
+    {
+        $logFile = "{$this->dbgDir}/scrape-log.txt";
+        $this->logToFile($logFile, "🤖 Fetching reviews with Remote Puppeteer API for ASIN {$asin}");
+
+        try {
+            // Prepare request data
+            $data = [
+                'asin' => $asin,
+                'limit' => $limit,
+                'domain' => $this->domain
+            ];
+
+            // Initialize cURL session
+            $ch = curl_init($this->remotePuppeteerUrl);
+
+            // Set cURL options
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($data),
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Accept: application/json'
+                ],
+                CURLOPT_TIMEOUT => 60, // 60 seconds timeout
+                CURLOPT_CONNECTTIMEOUT => 10
+            ]);
+
+            // Execute cURL request
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            // Save raw response for debugging
+            file_put_contents(
+                "{$this->dbgDir}/remote-puppeteer-{$asin}-response.json",
+                $response ?: "EMPTY RESPONSE"
+            );
+
+            // Check for errors
+            if ($response === false) {
+                $error = curl_error($ch);
+                $this->logToFile($logFile, "❌ cURL error: {$error}");
+                curl_close($ch);
+                return [];
+            }
+
+            curl_close($ch);
+
+            // Check HTTP status code
+            if ($httpCode !== 200) {
+                $this->logToFile($logFile, "❌ HTTP error: {$httpCode}");
+                return [];
+            }
+
+            // Parse JSON response
+            $data = json_decode($response, true);
+
+            // Check for error in response
+            if (isset($data['error'])) {
+                $this->logToFile($logFile, "❌ API error: {$data['error']}");
+                return [];
+            }
+
+            // Check if reviews exist
+            if (!isset($data['reviews']) || !is_array($data['reviews'])) {
+                $this->logToFile($logFile, "❌ No reviews found in response");
+                return [];
+            }
+
+            $reviews = $data['reviews'];
+            $this->logToFile($logFile, "✅ Successfully fetched " . count($reviews) . " reviews with Remote Puppeteer");
+
+            return $reviews;
+
+        } catch (Exception $e) {
+            $this->logToFile($logFile, "❌ Exception: {$e->getMessage()}");
+            return [];
+        }
     }
 
     /**

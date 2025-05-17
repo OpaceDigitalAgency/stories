@@ -1,0 +1,10 @@
+{
+  "name": "amazon-reviews-scraper",
+  "version": "1.0.0",
+  "description": "Serverless function to scrape Amazon reviews using Puppeteer",
+  "main": "amazon-reviews.js",
+  "dependencies": {
+    "@sparticuz/chromium": "^113.0.1",
+    "puppeteer-core": "^19.7.0"
+  }
+}

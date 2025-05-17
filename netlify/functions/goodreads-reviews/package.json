@@ -5,6 +5,7 @@
   "main": "goodreads-reviews.js",
   "dependencies": {
     "@sparticuz/chromium": "^113.0.1",
-    "puppeteer-core": "^19.7.0"
+    "puppeteer-core": "^19.7.0",
+    "chrome-aws-lambda": "^10.1.0"
   }
 }

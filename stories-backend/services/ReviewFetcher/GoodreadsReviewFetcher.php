@@ -42,7 +42,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param int $limit Maximum number of reviews to fetch
      * @return array Array of review data
      */
-    public function fetchReviewsByISBN(string $isbn, int $limit = 10): array {
+    public function fetchReviewsByISBN(string $isbn, int $limit = 100): array {
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
 
@@ -411,8 +411,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Calculate how many pages we need based on the limit
         // Goodreads typically shows 10-30 reviews per page
         // We'll use a conservative estimate of 10 reviews per page
-        // Cap at 5 pages to avoid excessive scraping
-        $maxPages = min(5, ceil($limit / 10));
+        // Cap at 10 pages to avoid excessive scraping
+        $maxPages = min(10, ceil($limit / 10));
 
         // First, try to extract the aggregate rating from the first page
         $firstPageResponse = $this->makeRequest($reviewsUrl);
@@ -531,13 +531,6 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Log the Puppeteer URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");
 
-        // For now, let's skip the Puppeteer approach until we confirm it's working
-        // This will force it to use the regex-based approach which is more reliable
-        if (true) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Temporarily skipping Puppeteer approach while Netlify function is being deployed");
-            return [];
-        }
-
         // Check if the function exists by making a test request
         try {
             $testCh = curl_init($puppeteerUrl);
@@ -561,7 +554,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $requestData = [
             'goodreadsUrl' => $reviewsUrl,
             'limit' => $limit,
-            'maxPages' => 10 // Allow up to 10 pages to get more reviews
+            'maxPages' => 20 // Allow up to 20 pages to get more reviews
         ];
 
         // Set up cURL options

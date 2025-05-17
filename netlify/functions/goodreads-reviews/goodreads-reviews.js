@@ -1,4 +1,4 @@
-const chromium = require('chrome-aws-lambda');
+const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
 // Main handler function
@@ -10,154 +10,206 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Method Not Allowed' }),
     };
   }
-  
+
   let browser = null;
-  
+
   try {
     // Parse request body
     const body = JSON.parse(event.body);
     const { goodreadsUrl, limit = 50, maxPages = 10 } = body;
-    
+
     if (!goodreadsUrl) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Goodreads URL is required' }),
       };
     }
-    
+
     console.log(`Starting Goodreads scraping for URL: ${goodreadsUrl}`);
     console.log(`Requested limit: ${limit}, Max pages: ${maxPages}`);
-    
+
     // Launch browser
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      executablePath: await chromium.executablePath(),
+      headless: true,
       ignoreHTTPSErrors: true,
     });
-    
+
     // Create a new page
     const page = await browser.newPage();
-    
+
     // Set a realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    
+
     // Navigate to the Goodreads reviews page
     console.log(`Navigating to: ${goodreadsUrl}`);
     await page.goto(goodreadsUrl, { waitUntil: 'networkidle2', timeout: 10000 });
-    
+
     // Extract the book title for reference
     let bookTitle = await page.evaluate(() => {
       const titleElement = document.querySelector('h1.Text__title1');
       return titleElement ? titleElement.innerText.trim() : 'Unknown Book';
     });
-    
+
     console.log(`Book title: ${bookTitle}`);
-    
+
     // Extract aggregate rating
     const aggregateRating = await extractAggregateRating(page);
-    
+
     // Initialize reviews array
     let reviews = [];
-    
+
     // Extract initial reviews
     console.log('Extracting initial reviews...');
     let initialReviews = await extractReviews(page);
     reviews = [...reviews, ...initialReviews];
     console.log(`Found ${initialReviews.length} reviews on first page`);
-    
+
     // Click "Show more reviews" button and extract more reviews
     let currentPage = 1;
     let hasMoreReviews = true;
-    
-    while (reviews.length < limit && currentPage < maxPages && hasMoreReviews) {
-      try {
-        // Look for "Show more reviews" button
-        const showMoreButton = await page.evaluate(() => {
-          // Try different selectors for the "Show more" button
-          const selectors = [
-            'button[data-testid="loadMore"]',
-            'button.Button--secondary:not([disabled])',
-            'a.next_page',
-            'a[href*="page="]',
-            'button:contains("Show more reviews")',
-            'a:contains("Show more reviews")'
-          ];
-          
-          for (const selector of selectors) {
-            const button = document.querySelector(selector);
-            if (button && button.offsetParent !== null) {
-              return true;
-            }
+
+    // Try to find pagination links first
+    const hasPagination = await page.evaluate(() => {
+      return document.querySelector('a.next_page') !== null ||
+             document.querySelector('a[href*="page="]') !== null;
+    });
+
+    console.log(`Pagination links found: ${hasPagination}`);
+
+    // If we have pagination links, use them for better reliability
+    if (hasPagination) {
+      while (reviews.length < limit && currentPage < maxPages && hasMoreReviews) {
+        try {
+          // Look for pagination links
+          const nextPageUrl = await page.evaluate(() => {
+            const nextPageLink = document.querySelector('a.next_page') ||
+                                document.querySelector('a[href*="page="]');
+            return nextPageLink ? nextPageLink.href : null;
+          });
+
+          if (!nextPageUrl) {
+            console.log('No more pagination links found');
+            hasMoreReviews = false;
+            break;
           }
-          return false;
-        });
-        
-        if (!showMoreButton) {
-          console.log('No more "Show more reviews" button found');
+
+          // Navigate to the next page
+          currentPage++;
+          console.log(`Navigating to page ${currentPage}: ${nextPageUrl}`);
+          await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 10000 });
+
+          // Extract reviews from the new page
+          console.log(`Extracting reviews from page ${currentPage}...`);
+          const newReviews = await extractReviews(page);
+
+          // Check if we got new reviews
+          if (newReviews.length === 0) {
+            console.log('No new reviews found, stopping pagination');
+            hasMoreReviews = false;
+            break;
+          }
+
+          // Add new reviews to the collection
+          reviews = [...reviews, ...newReviews];
+          console.log(`Total reviews collected: ${reviews.length}`);
+
+          // Add a small delay between pages to avoid rate limiting
+          await page.waitForTimeout(1500);
+        } catch (err) {
+          console.log(`Error navigating to next page: ${err.message}`);
           hasMoreReviews = false;
           break;
         }
-        
-        // Click the button
-        console.log('Clicking "Show more reviews" button...');
-        await page.evaluate(() => {
-          const selectors = [
-            'button[data-testid="loadMore"]',
-            'button.Button--secondary:not([disabled])',
-            'a.next_page',
-            'a[href*="page="]',
-            'button:contains("Show more reviews")',
-            'a:contains("Show more reviews")'
-          ];
-          
-          for (const selector of selectors) {
-            const button = document.querySelector(selector);
-            if (button && button.offsetParent !== null) {
-              button.click();
-              return;
+      }
+    } else {
+      // Fall back to clicking "Show more reviews" button
+      while (reviews.length < limit && currentPage < maxPages && hasMoreReviews) {
+        try {
+          // Look for "Show more reviews" button
+          const showMoreButton = await page.evaluate(() => {
+            // Try different selectors for the "Show more" button
+            const selectors = [
+              'button[data-testid="loadMore"]',
+              'button.Button--secondary:not([disabled])',
+              'button:contains("Show more reviews")',
+              'a:contains("Show more reviews")'
+            ];
+
+            for (const selector of selectors) {
+              const button = document.querySelector(selector);
+              if (button && button.offsetParent !== null) {
+                return true;
+              }
             }
+            return false;
+          });
+
+          if (!showMoreButton) {
+            console.log('No more "Show more reviews" button found');
+            hasMoreReviews = false;
+            break;
           }
-        });
-        
-        // Wait for new reviews to load
-        await page.waitForTimeout(2000);
-        
-        // Extract reviews from the updated page
-        currentPage++;
-        console.log(`Extracting reviews from page ${currentPage}...`);
-        const newReviews = await extractReviews(page);
-        
-        // Check if we got new reviews
-        if (newReviews.length === 0) {
-          console.log('No new reviews found, stopping pagination');
+
+          // Click the button
+          console.log('Clicking "Show more reviews" button...');
+          await page.evaluate(() => {
+            const selectors = [
+              'button[data-testid="loadMore"]',
+              'button.Button--secondary:not([disabled])',
+              'button:contains("Show more reviews")',
+              'a:contains("Show more reviews")'
+            ];
+
+            for (const selector of selectors) {
+              const button = document.querySelector(selector);
+              if (button && button.offsetParent !== null) {
+                button.click();
+                return;
+              }
+            }
+          });
+
+          // Wait for new reviews to load
+          await page.waitForTimeout(3000);
+
+          // Extract reviews from the updated page
+          currentPage++;
+          console.log(`Extracting reviews from page ${currentPage}...`);
+          const newReviews = await extractReviews(page);
+
+          // Check if we got new reviews
+          if (newReviews.length === 0) {
+            console.log('No new reviews found, stopping pagination');
+            hasMoreReviews = false;
+            break;
+          }
+
+          // Add new reviews to the collection
+          reviews = [...reviews, ...newReviews];
+          console.log(`Total reviews collected: ${reviews.length}`);
+
+          // Add a small delay between pages to avoid rate limiting
+          await page.waitForTimeout(1500);
+        } catch (err) {
+          console.log(`Error loading more reviews: ${err.message}`);
           hasMoreReviews = false;
           break;
         }
-        
-        // Add new reviews to the collection
-        reviews = [...reviews, ...newReviews];
-        console.log(`Total reviews collected: ${reviews.length}`);
-        
-        // Add a small delay between pages to avoid rate limiting
-        await page.waitForTimeout(1000);
-      } catch (err) {
-        console.log(`Error loading more reviews: ${err.message}`);
-        hasMoreReviews = false;
-        break;
       }
     }
-    
+
     // If we have an aggregate rating, add it to the beginning of the reviews array
     if (aggregateRating) {
       reviews.unshift(aggregateRating);
     }
-    
+
     // Return reviews (limited to requested amount)
     return {
       statusCode: 200,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         reviews: reviews.slice(0, limit),
         total: reviews.length,
         book_title: bookTitle
@@ -180,7 +232,7 @@ exports.handler = async (event, context) => {
 async function extractReviews(page) {
   return await page.evaluate(() => {
     const reviews = [];
-    
+
     // Try multiple selectors for review containers
     const reviewSelectors = [
       'article.ReviewCard',
@@ -189,9 +241,9 @@ async function extractReviews(page) {
       'article[class*="review"][id^="review_"]',
       'div.ReviewsList__item'
     ];
-    
+
     let reviewElements = [];
-    
+
     // Try each selector
     for (const selector of reviewSelectors) {
       const elements = document.querySelectorAll(selector);
@@ -200,13 +252,13 @@ async function extractReviews(page) {
         break;
       }
     }
-    
+
     // Process each review element
     reviewElements.forEach(reviewElement => {
       try {
         // Extract reviewer name
         let reviewerName = 'Goodreads User';
-        
+
         // Try different selectors for reviewer name
         const nameSelectors = [
           'a[data-testid="user-profile-link"]',
@@ -215,7 +267,7 @@ async function extractReviews(page) {
           'span[class*="reviewer"]',
           'div.ReviewCard__profile a'
         ];
-        
+
         for (const selector of nameSelectors) {
           const nameElement = reviewElement.querySelector(selector);
           if (nameElement && nameElement.textContent.trim()) {
@@ -223,16 +275,16 @@ async function extractReviews(page) {
             break;
           }
         }
-        
+
         // If still generic, generate a unique name
         if (reviewerName === 'Goodreads User') {
           const uniqueId = Math.random().toString(36).substring(2, 10);
           reviewerName = `Goodreads User #${uniqueId}`;
         }
-        
+
         // Extract rating
         let rating = 0;
-        
+
         // Try different selectors for rating
         const ratingSelectors = [
           'span[aria-label*="Rating"]',
@@ -245,7 +297,7 @@ async function extractReviews(page) {
           'span[class*="p4"]',
           'span[class*="p2"]'
         ];
-        
+
         for (const selector of ratingSelectors) {
           const ratingElement = reviewElement.querySelector(selector);
           if (ratingElement) {
@@ -282,10 +334,10 @@ async function extractReviews(page) {
             }
           }
         }
-        
+
         // Extract review text
         let reviewText = '';
-        
+
         // Try different selectors for review text
         const textSelectors = [
           'div.TruncatedContent__text--large',
@@ -297,7 +349,7 @@ async function extractReviews(page) {
           'div[class*="reviewText"]',
           'div[class*="reviewContent"]'
         ];
-        
+
         for (const selector of textSelectors) {
           const textElement = reviewElement.querySelector(selector);
           if (textElement && textElement.textContent.trim()) {
@@ -305,10 +357,10 @@ async function extractReviews(page) {
             break;
           }
         }
-        
+
         // Extract review date
         let reviewDate = null;
-        
+
         // Try different selectors for review date
         const dateSelectors = [
           'div[data-testid="reviewDate"]',
@@ -316,7 +368,7 @@ async function extractReviews(page) {
           'time[datetime]',
           'span[class*="reviewDate"]'
         ];
-        
+
         for (const selector of dateSelectors) {
           const dateElement = reviewElement.querySelector(selector);
           if (dateElement) {
@@ -330,18 +382,18 @@ async function extractReviews(page) {
             }
           }
         }
-        
+
         // Use current date if no date found
         if (!reviewDate) {
           const now = new Date();
           reviewDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
-        
+
         // Skip reviews without text or rating
         if (!reviewText || rating === 0) {
           return;
         }
-        
+
         // Get review ID
         let reviewId = '';
         if (reviewElement.id && reviewElement.id.startsWith('review_')) {
@@ -349,7 +401,7 @@ async function extractReviews(page) {
         } else {
           reviewId = `modern_${Math.random().toString(36).substring(2, 15)}`;
         }
-        
+
         // Add review to collection
         reviews.push({
           source_id: 1, // Goodreads source ID
@@ -370,7 +422,7 @@ async function extractReviews(page) {
         console.log(`Error extracting review: ${err.message}`);
       }
     });
-    
+
     return reviews;
   });
 }
@@ -382,19 +434,19 @@ async function extractAggregateRating(page) {
       let rating = 0;
       let ratingCount = 0;
       let reviewCount = 0;
-      
+
       // Try modern layout
       const ratingElement = document.querySelector('div.RatingStatistics__rating');
       if (ratingElement && ratingElement.textContent) {
         rating = parseFloat(ratingElement.textContent.trim());
-        
+
         // Try to get ratings count
         const ratingsCountElement = document.querySelector('span[data-testid="ratingsCount"]');
         if (ratingsCountElement) {
           const text = ratingsCountElement.textContent.trim();
           ratingCount = parseInt(text.replace(/[^0-9]/g, ''));
         }
-        
+
         // Try to get reviews count
         const reviewsCountElement = document.querySelector('span[data-testid="reviewsCount"]');
         if (reviewsCountElement) {
@@ -406,13 +458,13 @@ async function extractAggregateRating(page) {
         const ratingValueElement = document.querySelector('span[itemprop="ratingValue"]');
         if (ratingValueElement) {
           rating = parseFloat(ratingValueElement.textContent.trim());
-          
+
           // Try to get ratings count
           const ratingCountElement = document.querySelector('meta[itemprop="ratingCount"]');
           if (ratingCountElement) {
             ratingCount = parseInt(ratingCountElement.getAttribute('content'));
           }
-          
+
           // Try to get reviews count
           const reviewCountElement = document.querySelector('meta[itemprop="reviewCount"]');
           if (reviewCountElement) {
@@ -420,7 +472,7 @@ async function extractAggregateRating(page) {
           }
         }
       }
-      
+
       if (rating > 0) {
         return {
           source_id: 1, // Goodreads source ID
@@ -440,7 +492,7 @@ async function extractAggregateRating(page) {
           })
         };
       }
-      
+
       return null;
     });
   } catch (err) {

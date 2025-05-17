@@ -11,6 +11,7 @@ namespace Services\ReviewFetcher;
 use PDO;
 
 class GoodreadsReviewFetcher extends AbstractReviewFetcher {
+    protected $aggregateRating = null; // Store aggregate rating separately
     /**
      * Constructor
      *
@@ -397,10 +398,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         file_put_contents($debugDir . '/goodreads_reviews_debug.html', substr($firstPageResponse, 0, 500000));
         $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved reviews HTML to debug file");
 
-        // Extract aggregate rating from the first page
+        // Extract aggregate rating from the first page (for logging purposes only)
         $aggregateRating = $this->extractAggregateRating($firstPageResponse, $reviewsUrl);
         if ($aggregateRating) {
-            $reviews[] = $aggregateRating;
+            // Store the aggregate rating separately, don't add to reviews array
+            $this->aggregateRating = $aggregateRating;
             $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted aggregate rating: {$aggregateRating['rating_value']}/5");
         }
 

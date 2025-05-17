@@ -32,50 +32,72 @@ function flushOutput() {
 
 // Function to update book aggregate values
 function updateBookAggregateValues($db, $bookId) {
-    // Get aggregate values
-    $aggregateStmt = $db->prepare("
-        SELECT
-            COUNT(*) as review_count,
-            AVG(rating_normalised) as average_rating,
-            MAX(rating_normalised) as highest_rating,
-            MIN(rating_normalised) as lowest_rating
-        FROM reviews
-        WHERE book_id = ? AND rating_normalised IS NOT NULL
-    ");
-    $aggregateStmt->execute([$bookId]);
-    $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
+    // Count the reviews for this book
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
+    $countStmt->execute([$bookId]);
+    $reviewCount = $countStmt->fetchColumn();
 
-    // Log the aggregate values for debugging
-    error_log("Book ID {$bookId} - New aggregate values: " .
-        "Count: {$aggregateValues['review_count']}, " .
-        "Avg: {$aggregateValues['average_rating']}, " .
-        "Max: {$aggregateValues['highest_rating']}, " .
-        "Min: {$aggregateValues['lowest_rating']}");
+    // If there are no reviews, reset all values to 0
+    if ($reviewCount == 0) {
+        error_log("Book ID {$bookId} - No reviews found, resetting all values to 0");
 
-    // Always update the directory item, even if review_count is 0
-    $stmt = $db->prepare("
-        UPDATE directory_items
-        SET
-            review_count = ?,
-            average_rating = ?,
-            highest_rating = ?,
-            lowest_rating = ?
-        WHERE id = ?
-    ");
+        $stmt = $db->prepare("
+            UPDATE directory_items
+            SET
+                review_count = 0,
+                average_rating = 0,
+                highest_rating = 0,
+                lowest_rating = 0
+            WHERE id = ?
+        ");
 
-    // Handle null values properly
-    $reviewCount = $aggregateValues['review_count'] ?? 0;
-    $avgRating = $aggregateValues['average_rating'] !== null ? $aggregateValues['average_rating'] : 0;
-    $highestRating = $aggregateValues['highest_rating'] !== null ? $aggregateValues['highest_rating'] : 0;
-    $lowestRating = $aggregateValues['lowest_rating'] !== null ? $aggregateValues['lowest_rating'] : 0;
+        $stmt->execute([$bookId]);
+    } else {
+        // Get aggregate values
+        $aggregateStmt = $db->prepare("
+            SELECT
+                COUNT(*) as review_count,
+                AVG(rating_normalised) as average_rating,
+                MAX(rating_normalised) as highest_rating,
+                MIN(rating_normalised) as lowest_rating
+            FROM reviews
+            WHERE book_id = ? AND rating_normalised IS NOT NULL
+        ");
+        $aggregateStmt->execute([$bookId]);
+        $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt->execute([
-        $reviewCount,
-        $avgRating,
-        $highestRating,
-        $lowestRating,
-        $bookId
-    ]);
+        // Log the aggregate values for debugging
+        error_log("Book ID {$bookId} - New aggregate values: " .
+            "Count: {$aggregateValues['review_count']}, " .
+            "Avg: {$aggregateValues['average_rating']}, " .
+            "Max: {$aggregateValues['highest_rating']}, " .
+            "Min: {$aggregateValues['lowest_rating']}");
+
+        // Update the directory item
+        $stmt = $db->prepare("
+            UPDATE directory_items
+            SET
+                review_count = ?,
+                average_rating = ?,
+                highest_rating = ?,
+                lowest_rating = ?
+            WHERE id = ?
+        ");
+
+        // Handle null values properly
+        $reviewCount = $aggregateValues['review_count'] ?? 0;
+        $avgRating = $aggregateValues['average_rating'] !== null ? $aggregateValues['average_rating'] : 0;
+        $highestRating = $aggregateValues['highest_rating'] !== null ? $aggregateValues['highest_rating'] : 0;
+        $lowestRating = $aggregateValues['lowest_rating'] !== null ? $aggregateValues['lowest_rating'] : 0;
+
+        $stmt->execute([
+            $reviewCount,
+            $avgRating,
+            $highestRating,
+            $lowestRating,
+            $bookId
+        ]);
+    }
 
     // Verify the update
     $verifyStmt = $db->prepare("

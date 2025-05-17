@@ -526,9 +526,24 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "🤖 Attempting to fetch reviews using Puppeteer for URL: {$reviewsUrl}");
 
         // Get the Netlify function URL from environment variable or use default
-        $puppeteerUrl = getenv('GOODREADS_PUPPETEER_URL') ?: 'https://storiesfromtheweb.netlify.app/.netlify/functions/goodreads-reviews';
+        $puppeteerUrl = getenv('GOODREADS_PUPPETEER_URL') ?: 'https://stories-from-the-web.netlify.app/.netlify/functions/goodreads-reviews';
 
+        // Log the Puppeteer URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");
+
+        // Check if the function exists by making a test request
+        $testCh = curl_init($puppeteerUrl);
+        curl_setopt($testCh, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($testCh, CURLOPT_NOBODY, true);
+        curl_setopt($testCh, CURLOPT_TIMEOUT, 5);
+        curl_exec($testCh);
+        $httpCode = curl_getinfo($testCh, CURLINFO_HTTP_CODE);
+        curl_close($testCh);
+
+        if ($httpCode >= 400) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
+            return [];
+        }
 
         // Prepare the request data
         $requestData = [

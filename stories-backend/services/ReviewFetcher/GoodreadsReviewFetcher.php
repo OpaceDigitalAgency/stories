@@ -531,17 +531,29 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Log the Puppeteer URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");
 
-        // Check if the function exists by making a test request
-        $testCh = curl_init($puppeteerUrl);
-        curl_setopt($testCh, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($testCh, CURLOPT_NOBODY, true);
-        curl_setopt($testCh, CURLOPT_TIMEOUT, 5);
-        curl_exec($testCh);
-        $httpCode = curl_getinfo($testCh, CURLINFO_HTTP_CODE);
-        curl_close($testCh);
+        // For now, let's skip the Puppeteer approach until we confirm it's working
+        // This will force it to use the regex-based approach which is more reliable
+        if (true) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Temporarily skipping Puppeteer approach while Netlify function is being deployed");
+            return [];
+        }
 
-        if ($httpCode >= 400) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
+        // Check if the function exists by making a test request
+        try {
+            $testCh = curl_init($puppeteerUrl);
+            curl_setopt($testCh, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($testCh, CURLOPT_NOBODY, true);
+            curl_setopt($testCh, CURLOPT_TIMEOUT, 5);
+            curl_exec($testCh);
+            $httpCode = curl_getinfo($testCh, CURLINFO_HTTP_CODE);
+            curl_close($testCh);
+
+            if ($httpCode >= 400) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
+                return [];
+            }
+        } catch (\Exception $e) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Error checking Puppeteer function: " . $e->getMessage());
             return [];
         }
 

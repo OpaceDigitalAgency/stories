@@ -3,11 +3,17 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
+
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@sparticuz/chromium", "puppeteer-core"]
+  external_node_modules = ["chrome-aws-lambda", "puppeteer-core"]
 
 [functions.amazon-reviews]
+  timeout = 60
+
+[functions.goodreads-reviews]
   timeout = 60
 
 [[headers]]

@@ -11,7 +11,10 @@ namespace Services\ReviewFetcher;
 use PDO;
 
 class GoodreadsReviewFetcher extends AbstractReviewFetcher {
+    protected $sourceId = 1; // Goodreads source ID
+    protected $lastError = null;
     protected $aggregateRating = null; // Store aggregate rating separately
+
     /**
      * Constructor
      *
@@ -279,13 +282,6 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     }
 
     /**
-     * Log a message to a file (implementation from parent class)
-     *
-     * This method is already defined in the parent class with protected access,
-     * so we don't need to redefine it here.
-     */
-
-    /**
      * Get book details from Goodreads
      *
      * @param string $bookUrl The book URL
@@ -369,9 +365,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     /**
      * Scrape reviews from Goodreads
      *
-     * @param string $reviewsUrl The reviews URL
-     * @param int $limit Maximum number of reviews to fetch
-     * @return array Array of review data
+     * @param string $reviewsUrl The URL to scrape reviews from
+     * @param int $limit Maximum number of reviews to return
+     * @return array Array of reviews
      */
     private function scrapeReviews(string $reviewsUrl, int $limit): array {
         // Create debug directory if it doesn't exist
@@ -481,6 +477,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                             // No more pages
                             break;
                         }
+                    }
                 }
             }
         }
@@ -497,7 +494,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param string $debugDir The debug directory
      * @return array Array of reviews
      */
-    private function extractReviewsFromHtml(string $response, string $reviewsUrl, string $debugDir): array {
+    protected function extractReviewsFromHtml(string $response, string $reviewsUrl, string $debugDir): array {
         $reviews = [];
 
         // Try multiple patterns for review blocks to handle different Goodreads layouts
@@ -824,6 +821,4 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ No aggregate rating found");
         return null;
     }
-
-
 }

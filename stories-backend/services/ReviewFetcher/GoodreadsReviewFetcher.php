@@ -526,7 +526,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "🤖 Attempting to fetch reviews using Puppeteer for URL: {$reviewsUrl}");
 
         // Get the Netlify function URL from environment variable or use default
-        $puppeteerUrl = getenv('GOODREADS_PUPPETEER_URL') ?: 'https://stories-from-the-web.netlify.app/.netlify/functions/goodreads-reviews';
+        $puppeteerUrl = getenv('GOODREADS_PUPPETEER_URL') ?: 'https://storiesfromtheweb.netlify.app/.netlify/functions/goodreads-reviews';
 
         // Log the Puppeteer URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");

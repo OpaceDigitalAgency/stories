@@ -470,17 +470,38 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Extract reviewer name with multiple patterns
             $reviewerName = 'Goodreads User';
 
-            // Modern pattern: User link with data-testid
-            if (preg_match('/<a[^>]*data-testid="user-profile-link"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+            // Modern pattern: ReviewCard aria-label (contains reviewer name)
+            if (preg_match('/aria-label="Review by ([^"]+)"/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from aria-label: {$reviewerName}");
+            }
+            // Modern pattern: User link with data-testid
+            else if (preg_match('/<a[^>]*data-testid="user-profile-link"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from user-profile-link: {$reviewerName}");
+            }
+            // Modern pattern: ReviewCard__profile section
+            else if (preg_match('/<div class="ReviewCard__profile">.*?<a[^>]*>([^<]+)<\/a>/is', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from ReviewCard__profile: {$reviewerName}");
             }
             // Classic patterns
             else if (preg_match('/<a class="user"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from user class: {$reviewerName}");
             } else if (preg_match('/<a[^>]+class="[^"]*reviewer[^"]*"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from reviewer class: {$reviewerName}");
             } else if (preg_match('/<span[^>]+class="[^"]*reviewer[^"]*"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found reviewer name from reviewer span: {$reviewerName}");
+            }
+
+            // If we still have a generic name, generate a unique one based on the review content
+            if ($reviewerName === 'Goodreads User') {
+                $uniqueId = substr(md5($reviewHtml), 0, 8);
+                $reviewerName = "Goodreads User #{$uniqueId}";
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Using generated unique name: {$reviewerName}");
             }
 
             // Extract rating with multiple patterns
@@ -522,31 +543,60 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Extract review text with multiple patterns
             $reviewText = '';
 
-            // Modern pattern: ReviewText with data-testid
-            if (preg_match('/<div[^>]*data-testid="reviewText"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+            // Debug the review text extraction
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Extracting review text for block {$index}");
+
+            // Modern pattern: TruncatedContent structure with div.TruncatedContent__text--large
+            if (preg_match('/<div[^>]*class="TruncatedContent__text--large[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using TruncatedContent__text--large pattern");
+            }
+            // Modern pattern: TruncatedContent structure with contentContainer
+            else if (preg_match('/<div[^>]*class="TruncatedContent__text[^"]*"[^>]*data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using TruncatedContent with contentContainer pattern");
+            }
+            // Modern pattern: Formatted span inside TruncatedContent
+            else if (preg_match('/<div[^>]*class="TruncatedContent[^"]*"[^>]*>.*?<span[^>]*class="Formatted"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using Formatted span inside TruncatedContent pattern");
+            }
+            // Modern pattern: ReviewText with data-testid
+            else if (preg_match('/<div[^>]*data-testid="reviewText"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using reviewText data-testid pattern");
             }
             // Modern pattern: Review content in Formatted section (span class="Formatted")
             else if (preg_match('/<span[^>]*class="Formatted"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using span.Formatted pattern");
             }
             // Modern pattern: Review content in Formatted section (div class="Formatted")
             else if (preg_match('/<div[^>]*class="Formatted"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
-            }
-            // Modern pattern: TruncatedContent__text with contentContainer
-            else if (preg_match('/<div[^>]*class="TruncatedContent__text[^"]*"[^>]*data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
-                $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using div.Formatted pattern");
             }
             // Classic patterns
             else if (preg_match('/<div class="reviewText"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using classic reviewText with span pattern");
             }
             else if (preg_match('/<div[^>]+class="[^"]*reviewText[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using classic reviewText pattern");
             }
             else if (preg_match('/<div[^>]+class="[^"]*reviewContent[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using classic reviewContent pattern");
+            }
+
+            // If we still don't have review text, try a more aggressive approach
+            if (empty($reviewText)) {
+                // Try to find any content in a Formatted element
+                if (preg_match_all('/<[^>]*class="Formatted"[^>]*>(.*?)<\/[^>]*>/is', $reviewHtml, $matches)) {
+                    $reviewText = trim(strip_tags(implode(' ', $matches[1])));
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review text using aggressive Formatted pattern");
+                }
             }
 
             // Extract review date with multiple patterns

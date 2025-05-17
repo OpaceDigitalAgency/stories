@@ -74,6 +74,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $reviewsUrl = rtrim($reviewsUrl, '/'); // Remove trailing slash if present
         $reviewsUrl = $reviewsUrl . "/reviews"; // Add reviews path
 
+        // Log the reviews URL for debugging
+        $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "📚 Reviews URL: {$reviewsUrl}");
+
         // Fetch reviews
         $reviews = $this->scrapeReviews($reviewsUrl, $limit);
 
@@ -398,9 +401,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Try multiple patterns for review blocks to handle different Goodreads layouts
         $reviewBlocks = [];
 
-        // Pattern 1: Modern Goodreads layout with ReviewCard components
-        if (preg_match_all('/<div[^>]*class="ReviewCard[^"]*"[^>]*>.*?<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches)) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 1 (ReviewCard)");
+        // Pattern 1: Modern Goodreads layout with ReviewCard components (article tag)
+        if (preg_match_all('/<article[^>]*class="ReviewCard"[^>]*>.*?<\/article>/is', $response, $matches)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 1 (ReviewCard article)");
             $reviewBlocks = array_merge($reviewBlocks, array_map(function($block) {
                 return ['0' => $block, '1' => 'modern_' . md5($block)];
             }, $matches[0]));
@@ -427,8 +430,19 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Pattern 5: Community Reviews section with ReviewsList
         if (preg_match('/<div[^>]*id="CommunityReviews"[^>]*>(.*?)<\/div>\s*<\/div>\s*<\/div>/is', $response, $communityMatch)) {
             $communitySection = $communityMatch[1];
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found CommunityReviews section");
+
+            // Try to find ReviewsList items
             if (preg_match_all('/<div[^>]*class="ReviewsList__item[^"]*"[^>]*>(.*?)<\/div>\s*<\/div>\s*<\/div>/is', $communitySection, $matches)) {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 5 (ReviewsList)");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 5a (ReviewsList__item)");
+                $reviewBlocks = array_merge($reviewBlocks, array_map(function($block) {
+                    return ['0' => $block, '1' => 'modern_' . md5($block)];
+                }, $matches[0]));
+            }
+
+            // Try to find ReviewCard articles within CommunityReviews
+            if (preg_match_all('/<article[^>]*class="ReviewCard"[^>]*>.*?<\/article>/is', $communitySection, $matches)) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 5b (CommunityReviews > ReviewCard)");
                 $reviewBlocks = array_merge($reviewBlocks, array_map(function($block) {
                     return ['0' => $block, '1' => 'modern_' . md5($block)];
                 }, $matches[0]));
@@ -508,8 +522,16 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             if (preg_match('/<div[^>]*data-testid="reviewText"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
             }
-            // Modern pattern: Review content in Formatted section
+            // Modern pattern: Review content in Formatted section (span class="Formatted")
+            else if (preg_match('/<span[^>]*class="Formatted"[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Modern pattern: Review content in Formatted section (div class="Formatted")
             else if (preg_match('/<div[^>]*class="Formatted"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Modern pattern: TruncatedContent__text with contentContainer
+            else if (preg_match('/<div[^>]*class="TruncatedContent__text[^"]*"[^>]*data-testid="contentContainer"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
             }
             // Classic patterns

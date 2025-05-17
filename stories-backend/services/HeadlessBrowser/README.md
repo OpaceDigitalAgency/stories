@@ -235,3 +235,4 @@ private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit): arra
     return $data['reviews'] ?? [];
 }
 ```
+**Deployment test: Sat May 17 15:44:32 BST 2025**

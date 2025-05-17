@@ -1048,6 +1048,25 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
         $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
 
+        // Log additional debug information
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Debug: Checking if VPS scraper is reachable");
+
+        // Test if the VPS is reachable
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "{$apiUrl}/health");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
+        $healthResponse = curl_exec($ch);
+        $healthHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($healthHttpCode !== 200) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS Headless Browser API is not reachable: HTTP {$healthHttpCode}");
+            error_log("⚠️⚠️⚠️ VPS SCRAPER NOT REACHABLE - CHECK CONNECTION TO {$apiUrl} ⚠️⚠️⚠️");
+        } else {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ VPS Headless Browser API is reachable");
+        }
+
         // Log the API URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
 

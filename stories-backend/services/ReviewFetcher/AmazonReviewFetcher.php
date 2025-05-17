@@ -900,6 +900,25 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
 
         $this->logToFile("{$debugDir}/scrape-log.txt", "📦 [VPS-Scraper-Amazon] Attempting to fetch reviews using Puppeteer with full page JS evaluation for ASIN: {$asin}");
 
+        // Log additional debug information
+        $this->logToFile("{$debugDir}/scrape-log.txt", "🔍 Debug: Checking if VPS scraper is reachable");
+
+        // Test if the VPS is reachable
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "{$this->vpsHeadlessBrowserUrl}/health");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
+        $healthResponse = curl_exec($ch);
+        $healthHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($healthHttpCode !== 200) {
+            $this->logToFile("{$debugDir}/scrape-log.txt", "⚠️ VPS Headless Browser API is not reachable: HTTP {$healthHttpCode}");
+            error_log("⚠️⚠️⚠️ VPS SCRAPER NOT REACHABLE - CHECK CONNECTION TO {$this->vpsHeadlessBrowserUrl} ⚠️⚠️⚠️");
+        } else {
+            $this->logToFile("{$debugDir}/scrape-log.txt", "✅ VPS Headless Browser API is reachable");
+        }
+
         // Request more reviews than needed to ensure we get enough
         $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
 

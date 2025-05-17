@@ -29,16 +29,9 @@ require_once __DIR__ . '/../services/ReviewFetcher/StoriesReviewFetcher.php';
 require_once __DIR__ . '/../services/ReviewFetcher/ReviewFetcherFactory.php';
 
 // Include database connection
-$dbConfig = require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/includes/db-connect.php';
 
 try {
-    // Create PDO connection
-    $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']};charset=utf8mb4";
-    $db = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
 
     // Get ISBN from command line arguments
     $isbn = $argv[1] ?? null;

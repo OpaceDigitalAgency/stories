@@ -53,6 +53,32 @@ pm2 save
 pm2 startup
 ```
 
+## Production Deployment
+
+This service is deployed on a Hetzner VPS with automatic deployment:
+
+- **Server**: Hetzner Cloud VPS (4GB RAM, 2 vCPU)
+- **IP Address**: 37.27.31.107
+- **Process Manager**: PM2 (process name: `review-scraper`)
+- **Auto-Deploy**: Enabled via git-auto-deploy (listening on port 8080)
+
+### Automatic Deployment
+
+When changes are pushed to the main branch, the server automatically:
+1. Pulls the latest changes from GitHub
+2. Runs `npm install` in the HeadlessBrowser directory
+3. Restarts the PM2 process
+
+### API Endpoints
+
+The production API is available at:
+- Base URL: `http://37.27.31.107:3000`
+- Health check: `http://37.27.31.107:3000/health`
+- Goodreads scraper: `http://37.27.31.107:3000/scrape/goodreads`
+- Amazon scraper: `http://37.27.31.107:3000/scrape/amazon`
+
+**Note**: API key authentication is required for all endpoints except health check.
+
 ## How It Works
 
 The headless browser service:
@@ -152,14 +178,16 @@ Example PHP integration:
 ```php
 // In GoodreadsReviewFetcher.php
 private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit): array {
-    $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://localhost:3000';
-    $apiKey = getenv('HEADLESS_BROWSER_API_KEY');
+    // Use the VPS IP address as the default if environment variable is not set
+    $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+    $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
 
     $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$limit}";
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "x-api-key: {$apiKey}"
     ]);
@@ -170,6 +198,35 @@ private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limi
 
     if ($httpCode >= 400) {
         $this->logToFile($this->dbgDir . '/goodreads-log.txt', "❌ Headless browser API error: HTTP {$httpCode}");
+        return [];
+    }
+
+    $data = json_decode($response, true);
+    return $data['reviews'] ?? [];
+}
+
+// In AmazonReviewFetcher.php
+private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit): array {
+    // Use the VPS IP address as the default if environment variable is not set
+    $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+    $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
+
+    $url = "{$apiUrl}/scrape/amazon?asin={$asin}&limit={$limit}";
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "x-api-key: {$apiKey}"
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode >= 400) {
+        $this->logToFile($this->dbgDir . '/scrape-log.txt', "❌ Headless browser API error: HTTP {$httpCode}");
         return [];
     }
 

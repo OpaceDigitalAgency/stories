@@ -332,13 +332,114 @@ sequenceDiagram
     Web->>Web: Display with faceted navigation
 ```
 
+## Review Scraping Journey and Challenges
+
+Our journey to build a robust review scraping system has involved multiple approaches and iterations as we've encountered increasingly sophisticated anti-scraping measures from major platforms.
+
+### Evolution of Our Scraping Approach
+
+#### Phase 1: Direct PHP Scraping (Limited Success)
+Initially, we implemented direct PHP-based scraping using cURL:
+- Simple HTTP requests with randomized user agents
+- Basic regex pattern matching for HTML parsing
+- Worked initially but quickly encountered limitations
+
+#### Phase 2: Enhanced PHP Scraping with Anti-Detection (Partial Success)
+We improved our approach with:
+- Sophisticated user agent rotation
+- Cookie persistence
+- Delayed requests with randomization
+- Multiple fallback strategies
+- This worked for a while but eventually hit roadblocks
+
+#### Phase 3: Netlify Serverless Functions with Puppeteer (Mixed Results)
+To overcome limitations, we implemented:
+- Serverless functions on Netlify using Puppeteer
+- Browser automation to handle JavaScript-rendered content
+- Worked better for Goodreads but still faced issues:
+  - 250MB size limit for Netlify functions (Puppeteer is large)
+  - Execution time limits
+  - Amazon's forced login walls
+  - Goodreads' "Show more reviews" JavaScript buttons
+
+#### Phase 4: Third-Party API Services (Outscraper) (Limited Success)
+We tried using Outscraper's API:
+- Implemented with API key: `NTNjYjkxMTUwOWI3NDBlYzg2MmI5NzY2ZTYxNDYxMTl8ZmVjODc2ZDI5ZA`
+- Initially worked for some Goodreads scraping
+- Limited results (typically only 30 reviews per book)
+- No official Amazon endpoint despite claims
+
+### Current Challenges
+
+#### Amazon Challenges
+- **Forced Login Walls**: Amazon now redirects to login pages for most review access attempts
+- **CAPTCHA Detection**: Sophisticated bot detection triggers CAPTCHAs frequently
+- **Dynamic HTML Structure**: Frequent changes to page structure break regex patterns
+- **IP Blocking**: Repeated requests from the same IP get blocked
+
+#### Goodreads Challenges
+- **JavaScript Pagination**: "Show more reviews" buttons require JavaScript execution
+- **Limited Initial Load**: Only 10-30 reviews load in the initial HTML
+- **Dynamic Content**: Modern React-based interface makes scraping difficult
+- **Inconsistent HTML Structure**: Multiple page layouts require different parsing strategies
+
+### VPS-Based Solution Plan
+
+After evaluating all options, we've determined that a dedicated VPS running Puppeteer/Playwright is the most effective solution:
+
+#### 1. VPS Setup (Hetzner Cloud Recommended)
+- 4GB RAM, 2 vCPU, 40GB SSD (~$10/month)
+- Ubuntu 22.04 LTS
+- Node.js 18.x LTS
+- PM2 for process management
+- Full Puppeteer installation with Chrome
+
+#### 2. Scraper Architecture
+- Dedicated Node.js application with:
+  - Express API server for PHP backend integration
+  - Puppeteer for browser automation
+  - Database connection for caching results
+  - Robust logging and error handling
+  - Proxy rotation capability
+
+#### 3. Key Features
+- **Browser Fingerprint Randomization**: Realistic browser profiles
+- **Session Management**: Persistent sessions to avoid login walls
+- **JavaScript Execution**: Ability to click "Show more" buttons
+- **Proxy Integration**: Option to rotate IPs if needed
+- **Caching Layer**: Store results to minimize scraping frequency
+- **Rate Limiting**: Self-throttling to avoid detection
+- **Fallback Mechanisms**: Multiple strategies for each source
+
+#### 4. Integration with PHP Backend
+- Simple REST API endpoints:
+  - `/scrape/goodreads?url=<url>&limit=<limit>`
+  - `/scrape/amazon?asin=<asin>&limit=<limit>`
+- JSON response format matching existing review structure
+- Authentication to prevent unauthorized access
+- Detailed error reporting
+
+#### 5. Deployment and Monitoring
+- Automated deployment with Git
+- PM2 for process monitoring and auto-restart
+- Logging to files with rotation
+- Regular backups of cached data
+- Health check endpoint for monitoring
+
+This VPS-based approach provides several advantages:
+- No serverless function size/time limits
+- Full control over the environment
+- Ability to run a complete browser instance
+- Persistent sessions between requests
+- Cost-effective compared to commercial scraping services
+
 ## Advanced Web Scraping Techniques
 
-The system employs sophisticated web scraping techniques to extract reviews from sources that don't provide public APIs, particularly Amazon. These techniques include:
+The system employs sophisticated web scraping techniques to extract reviews from sources that don't provide public APIs. These techniques include:
 
 ### 1. Enhanced CAPTCHA Detection
 
-The Amazon review scraper includes comprehensive CAPTCHA and anti-bot detection:
+The review scrapers include comprehensive CAPTCHA and anti-bot detection:
 
 - Multiple pattern matching for various CAPTCHA and security challenge pages
 - Detection of login redirects and handling of partial data extraction
@@ -381,17 +482,16 @@ Sophisticated error handling ensures maximum data extraction:
 - Preservation of already-collected reviews when pagination is interrupted
 - Comprehensive logging for debugging and improvement
 
-### 6. Enhanced HTTP Client for cPanel Environment
+### 6. Puppeteer Browser Automation
 
-For sites with anti-bot measures like Amazon, the system employs enhanced HTTP client techniques optimized for cPanel environments:
+For sites with JavaScript-heavy interfaces like Goodreads:
 
-- Uses multiple user agent rotation with realistic browser fingerprints
-- Implements sophisticated request throttling with variable delays
-- Employs multiple fallback strategies when encountering CAPTCHAs or login pages
-- Uses persistent cookies to maintain sessions across requests
-- Implements robust pattern matching to extract data from various page formats
-- Provides comprehensive logging and debugging capabilities
-- Saves raw HTML responses for analysis and pattern improvement
+- Full browser automation with Puppeteer
+- Ability to interact with dynamic elements (click buttons, scroll pages)
+- Wait for network requests to complete
+- Extract content after JavaScript rendering
+- Handle login flows if necessary
+- Simulate realistic user behavior
 
 These techniques allow the system to reliably extract review data even from sources with strong anti-scraping measures, while being respectful of the source websites by limiting request frequency and volume.
 

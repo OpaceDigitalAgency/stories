@@ -1,9 +1,9 @@
 {
   "name": "goodreads-reviews",
   "version": "1.0.0",
-  "description": "Goodreads review scraper using Puppeteer",
+  "description": "Goodreads review scraper using Outscraper API",
   "main": "goodreads-reviews.js",
   "dependencies": {
-    "puppeteer": "^19.7.0"
+    "axios": "^1.6.0"
   }
 }

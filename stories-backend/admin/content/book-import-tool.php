@@ -662,7 +662,7 @@ require_once '../includes/header.php';
                                                 <thead>
                                                     <tr>
                                                         <th width="30">
-                                                            <input type="checkbox" id="select-all">
+                                                            <input type="checkbox" id="select-all" class="select-all-checkbox">
                                                         </th>
                                                         <th>Book</th>
                                                         <th>Reviewer</th>
@@ -967,6 +967,64 @@ $(document).ready(function() {
     // Start Scrape Button
     $('#startScrapeBtn').click(function() {
         $('#scrapeForm').submit();
+    });
+
+    // Select All Checkbox
+    $('.select-all-checkbox').on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('.review-checkbox').prop('checked', isChecked);
+    });
+
+    // Individual Delete Buttons
+    $('.delete-review').on('click', function() {
+        const reviewId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this review?')) {
+            // Create a temporary form to submit the delete request
+            const form = $('<form>', {
+                'method': 'post',
+                'action': 'review-bulk-actions.php'
+            });
+
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'bulk_action',
+                'value': 'delete'
+            }));
+
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'selected_reviews[]',
+                'value': reviewId
+            }));
+
+            $('body').append(form);
+            form.submit();
+        }
+    });
+
+    // Apply Bulk Action Button
+    $('#apply-bulk-action').on('click', function(e) {
+        const action = $('#bulk-action').val();
+        const selectedReviews = $('.review-checkbox:checked').length;
+
+        if (!action) {
+            e.preventDefault();
+            alert('Please select an action to perform.');
+            return false;
+        }
+
+        if (selectedReviews === 0) {
+            e.preventDefault();
+            alert('Please select at least one review.');
+            return false;
+        }
+
+        if (action === 'delete' && !confirm(`Are you sure you want to delete ${selectedReviews} selected reviews?`)) {
+            e.preventDefault();
+            return false;
+        }
+
+        return true;
     });
 });
 </script>

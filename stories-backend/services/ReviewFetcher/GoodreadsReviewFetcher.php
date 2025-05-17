@@ -384,7 +384,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $reviews = [];
         $page = 1;
-        $maxPages = min(3, ceil($limit / 10)); // Limit to 3 pages maximum to avoid rate limiting
+        // Calculate how many pages we need based on the limit
+        // Goodreads typically shows 10-30 reviews per page
+        // We'll use a conservative estimate of 10 reviews per page
+        // Cap at 5 pages to avoid excessive scraping
+        $maxPages = min(5, ceil($limit / 10));
 
         // First, try to extract the aggregate rating from the first page
         $firstPageResponse = $this->makeRequest($reviewsUrl);
@@ -414,55 +418,69 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Check if we need more reviews and if there are pagination links
         if (count($reviews) < $limit && $page < $maxPages) {
-            // Look for pagination links
+            // Look for pagination links - try multiple patterns
             if (preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Next<\/a>/i', $firstPageResponse, $matches) ||
-                preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $firstPageResponse, $matches)) {
+                preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $firstPageResponse, $matches) ||
+                preg_match('/<button[^>]*data-testid="loadMore"[^>]*>.*?<a[^>]*href="([^"]+)"[^>]*>/is', $firstPageResponse, $matches) ||
+                preg_match('/<button[^>]*class="[^"]*Button--secondary[^"]*"[^>]*>Show more reviews<\/button>/i', $firstPageResponse)) {
 
-                $nextPageUrl = html_entity_decode($matches[1]);
-                if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
-                    // Convert relative URL to absolute
-                    $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
-                }
-
-                $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Found next page URL: {$nextPageUrl}");
-
-                // Fetch additional pages
-                while (count($reviews) < $limit && $page < $maxPages) {
-                    $page++;
-
-                    // Add a longer pause between page requests
-                    sleep(rand(3, 5));
-
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching page {$page}");
-                    $pageResponse = $this->makeRequest($nextPageUrl);
-
-                    if ($pageResponse === false) {
-                        $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to fetch page {$page}");
-                        break;
-                    }
-
-                    // Save this page's HTML for debugging
-                    file_put_contents($debugDir . "/goodreads_reviews_page{$page}_debug.html", substr($pageResponse, 0, 500000));
-
-                    // Process this page
-                    $pageReviews = $this->extractReviewsFromHtml($pageResponse, $reviewsUrl, $debugDir);
-                    $reviews = array_merge($reviews, $pageReviews);
-
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted " . count($pageReviews) . " reviews from page {$page}");
-
-                    // Look for next page link
-                    if (preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Next<\/a>/i', $pageResponse, $matches) ||
-                        preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $pageResponse, $matches)) {
-
-                        $nextPageUrl = html_entity_decode($matches[1]);
-                        if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
-                            // Convert relative URL to absolute
-                            $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
-                        }
+                // If we found a "Show more" button without a direct link, we need to construct the URL
+                if (empty($matches[1]) && strpos($firstPageResponse, 'Show more reviews') !== false) {
+                    // Extract the current book ID from the URL
+                    if (preg_match('/\/book\/show\/(\d+)/', $reviewsUrl, $bookIdMatch)) {
+                        $bookId = $bookIdMatch[1];
+                        $nextPageUrl = "https://www.goodreads.com/book/show/{$bookId}/reviews?page=2";
+                        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Constructed next page URL from Show more button: {$nextPageUrl}");
                     } else {
-                        // No more pages
-                        break;
+                        $nextPageUrl = $reviewsUrl . "?page=2";
+                        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Constructed fallback next page URL: {$nextPageUrl}");
                     }
+                } else {
+                    $nextPageUrl = html_entity_decode($matches[1]);
+                    if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
+                        // Convert relative URL to absolute
+                        $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
+                    }
+
+                    $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Found next page URL: {$nextPageUrl}");
+
+                    // Fetch additional pages
+                    while (count($reviews) < $limit && $page < $maxPages) {
+                        $page++;
+
+                        // Add a longer pause between page requests
+                        sleep(rand(3, 5));
+
+                        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching page {$page}");
+                        $pageResponse = $this->makeRequest($nextPageUrl);
+
+                        if ($pageResponse === false) {
+                            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to fetch page {$page}");
+                            break;
+                        }
+
+                        // Save this page's HTML for debugging
+                        file_put_contents($debugDir . "/goodreads_reviews_page{$page}_debug.html", substr($pageResponse, 0, 500000));
+
+                        // Process this page
+                        $pageReviews = $this->extractReviewsFromHtml($pageResponse, $reviewsUrl, $debugDir);
+                        $reviews = array_merge($reviews, $pageReviews);
+
+                        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted " . count($pageReviews) . " reviews from page {$page}");
+
+                        // Look for next page link
+                        if (preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Next<\/a>/i', $pageResponse, $matches) ||
+                            preg_match('/<a[^>]*href="([^"]*page=(\d+)[^"]*)"[^>]*>Show more reviews<\/a>/i', $pageResponse, $matches)) {
+
+                            $nextPageUrl = html_entity_decode($matches[1]);
+                            if (!preg_match('/^https?:\/\//', $nextPageUrl)) {
+                                // Convert relative URL to absolute
+                                $nextPageUrl = preg_replace('/^\//', 'https://www.goodreads.com/', $nextPageUrl);
+                            }
+                        } else {
+                            // No more pages
+                            break;
+                        }
                 }
             }
         }

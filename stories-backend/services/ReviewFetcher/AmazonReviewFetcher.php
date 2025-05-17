@@ -898,10 +898,13 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             mkdir($debugDir, 0755, true);
         }
 
-        $this->logToFile("{$debugDir}/scrape-log.txt", "🤖 Attempting to fetch reviews using VPS Headless Browser for ASIN: {$asin}");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "📦 [VPS-Scraper-Amazon] Attempting to fetch reviews using Puppeteer with full page JS evaluation for ASIN: {$asin}");
+
+        // Request more reviews than needed to ensure we get enough
+        $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
 
         // Build the request URL
-        $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$limit}";
+        $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$requestLimit}";
 
         // Make the request
         $ch = curl_init();
@@ -932,7 +935,11 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             return [];
         }
 
-        $this->logToFile("{$debugDir}/scrape-log.txt", "✅ Found " . count($data['reviews']) . " reviews using VPS Headless Browser");
+        $reviewCount = count($data['reviews']);
+        $this->logToFile("{$debugDir}/scrape-log.txt", "✅ [VPS-Scraper-Success] Found {$reviewCount} reviews using Puppeteer-based Headless Browser");
+
+        // Add a prominent message to the main log
+        error_log("✅✅✅ AMAZON VPS SCRAPER SUCCESSFULLY RETURNED {$reviewCount} REVIEWS ✅✅✅");
 
         // Process the reviews to match our expected format
         $reviews = [];

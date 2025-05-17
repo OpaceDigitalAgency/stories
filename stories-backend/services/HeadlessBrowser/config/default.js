@@ -34,13 +34,13 @@ module.exports = {
   sources: {
     goodreads: {
       baseUrl: 'https://www.goodreads.com',
-      maxReviews: 100,
-      maxPages: 10
+      maxReviews: 200,
+      maxPages: 20
     },
     amazon: {
       baseUrl: 'https://www.amazon.co.uk',
-      maxReviews: 100,
-      maxPages: 10,
+      maxReviews: 200,
+      maxPages: 20,
       affiliateTag: 'storiesfro0f0-20'
     }
   }

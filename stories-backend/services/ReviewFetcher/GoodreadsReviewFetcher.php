@@ -382,7 +382,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit);
 
         if (!empty($vpsReviews)) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched " . count($vpsReviews) . " reviews using VPS Headless Browser");
+            $reviewCount = count($vpsReviews);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched {$reviewCount} reviews using VPS Headless Browser");
+
+            // Add a prominent summary message
+            error_log("🎉🎉🎉 GOODREADS REVIEW IMPORT SUMMARY: {$reviewCount} REVIEWS FETCHED USING VPS PUPPETEER SCRAPER 🎉🎉🎉");
 
             // If we have an aggregate rating from the VPS, store it separately
             foreach ($vpsReviews as $key => $review) {
@@ -398,6 +402,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
             // Reindex the array after potentially removing the aggregate rating
             $vpsReviews = array_values($vpsReviews);
+
+            // Log the final count after processing
+            $finalCount = count($vpsReviews);
+            if ($finalCount > 30) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 VPS SCRAPER SUCCESS: Returning {$finalCount} reviews (more than the 30 limit of direct scraping)");
+                error_log("🚀🚀🚀 VPS SCRAPER SUCCESS: Returning {$finalCount} reviews (more than the 30 limit of direct scraping) 🚀🚀🚀");
+            }
 
             // Limit the number of reviews to the requested limit
             return array_slice($vpsReviews, 0, $limit);
@@ -1031,7 +1042,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             mkdir($debugDir, 0755, true);
         }
 
-        $this->logToFile($debugDir . '/goodreads-log.txt', "🤖 Attempting to fetch reviews using VPS Headless Browser for URL: {$goodreadsUrl}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "📦 [VPS-Scraper-Goodreads] Attempting to fetch reviews using Puppeteer with full page JS evaluation for URL: {$goodreadsUrl}");
 
         // Use the VPS IP address as the default if environment variable is not set
         $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
@@ -1040,8 +1051,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Log the API URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
 
+        // Request more reviews than needed to ensure we get enough
+        $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
+
         // Build the request URL
-        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$limit}";
+        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}";
 
         // Make the request
         $ch = curl_init();
@@ -1072,7 +1086,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
-        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($data['reviews']) . " reviews using VPS Headless Browser");
+        $reviewCount = count($data['reviews']);
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ [VPS-Scraper-Success] Found {$reviewCount} reviews using Puppeteer-based Headless Browser");
+
+        // Add a prominent message to the main log
+        error_log("✅✅✅ GOODREADS VPS SCRAPER SUCCESSFULLY RETURNED {$reviewCount} REVIEWS ✅✅✅");
 
         // Process the reviews to match our expected format
         $reviews = [];

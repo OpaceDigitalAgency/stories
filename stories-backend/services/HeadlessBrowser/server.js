@@ -113,7 +113,7 @@ app.use((err, req, res, next) => {
 
 // Start the server
 const PORT = process.env.PORT || config.server.port;
-const HOST = process.env.HOST || config.server.host;
+const HOST = '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
   logger.info(`Server running on http://${HOST}:${PORT}`);

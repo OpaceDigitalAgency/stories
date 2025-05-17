@@ -72,7 +72,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Get reviews URL - make sure we're using the correct format
         $reviewsUrl = preg_replace('/\?.*$/', '', $bookUrl); // Remove any query parameters
         $reviewsUrl = rtrim($reviewsUrl, '/'); // Remove trailing slash if present
-        $reviewsUrl = $reviewsUrl . "/reviews"; // Add reviews path
+
+        // Check if the URL already contains '/reviews' to avoid duplicating it
+        if (strpos($reviewsUrl, '/reviews') === false) {
+            $reviewsUrl = $reviewsUrl . "/reviews"; // Add reviews path
+        }
 
         // Log the reviews URL for debugging
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "📚 Reviews URL: {$reviewsUrl}");

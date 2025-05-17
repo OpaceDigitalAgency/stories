@@ -1,5 +1,4 @@
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 // Main handler function
 exports.handler = async (event, context) => {
@@ -28,13 +27,20 @@ exports.handler = async (event, context) => {
     console.log(`Starting Goodreads scraping for URL: ${goodreadsUrl}`);
     console.log(`Requested limit: ${limit}, Max pages: ${maxPages}`);
 
-    // Launch browser
-    console.log("Launching browser with chrome-aws-lambda");
+    // Launch browser with standard Puppeteer
+    console.log("Launching browser with standard Puppeteer");
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      headless: true,
       ignoreHTTPSErrors: true,
     });
     console.log("Browser launched successfully");

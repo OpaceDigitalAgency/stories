@@ -8,7 +8,7 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["chrome-aws-lambda", "puppeteer-core"]
+  external_node_modules = ["puppeteer"]
 
 [functions.amazon-reviews]
   timeout = 60

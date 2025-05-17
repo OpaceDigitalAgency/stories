@@ -62,7 +62,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
 
         // VPS Headless Browser API URL and key
         $this->vpsHeadlessBrowserUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
-        $this->vpsHeadlessBrowserApiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'your-secret-api-key-here';
+        $this->vpsHeadlessBrowserApiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
 
         // Optional override from settings
         $stmt = $db->prepare(

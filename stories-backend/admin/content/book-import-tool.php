@@ -886,12 +886,12 @@ require_once '../includes/header.php';
                         <label for="scrapeSources">Select Sources</label>
                         <select class="form-control" id="scrapeSources" name="sources[]" multiple required>
                             <?php foreach ($reviewSources as $source): ?>
-                                <?php if ($source['is_third_party']): ?>
-                                    <option value="<?php echo $source['id']; ?>"><?php echo htmlspecialchars($source['name']); ?></option>
+                                <?php if ($source['is_third_party'] && strtolower($source['name']) === 'goodreads'): ?>
+                                    <option value="<?php echo $source['id']; ?>" selected><?php echo htmlspecialchars($source['name']); ?></option>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                         </select>
-                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple sources</small>
+                        <small class="form-text text-muted"><strong>Note:</strong> Currently only Goodreads is available for review scraping due to issues with other sources.</small>
                     </div>
 
                     <div class="form-group">

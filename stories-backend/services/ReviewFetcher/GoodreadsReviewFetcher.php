@@ -266,24 +266,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     }
 
     /**
-     * Log a message to a file
+     * Log a message to a file (implementation from parent class)
      *
-     * @param string $file The file to log to
-     * @param string $message The message to log
+     * This method is already defined in the parent class with protected access,
+     * so we don't need to redefine it here.
      */
-    private function logToFile(string $file, string $message): void {
-        $dir = dirname($file);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents(
-            $file,
-            "[{$timestamp}] {$message}" . PHP_EOL,
-            FILE_APPEND
-        );
-    }
 
     /**
      * Get book details from Goodreads

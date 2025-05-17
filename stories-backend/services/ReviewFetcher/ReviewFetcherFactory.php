@@ -151,8 +151,8 @@ class ReviewFetcherFactory {
         $fetchers = [];
 
         foreach ($this->sources as $source) {
-            // Skip internal sources
-            if (!$source['is_third_party']) {
+            // Skip internal sources and non-Goodreads sources
+            if (!$source['is_third_party'] || strtolower($source['name']) !== 'goodreads') {
                 continue;
             }
 
@@ -161,6 +161,10 @@ class ReviewFetcherFactory {
                 $fetchers[] = $fetcher;
             }
         }
+
+        // Log which fetchers are being used
+        $fetcherNames = array_map(function($f) { return $f->getSourceName(); }, $fetchers);
+        error_log("Using fetchers: " . implode(', ', $fetcherNames));
 
         return $fetchers;
     }

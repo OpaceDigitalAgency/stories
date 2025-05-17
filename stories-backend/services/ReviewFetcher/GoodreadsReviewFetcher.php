@@ -378,6 +378,34 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Scraping reviews from URL: {$reviewsUrl}");
 
+        // First try to use Puppeteer for better results (especially for books with many reviews)
+        $puppeteerReviews = $this->fetchReviewsWithPuppeteer($reviewsUrl, $limit);
+
+        if (!empty($puppeteerReviews)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched " . count($puppeteerReviews) . " reviews using Puppeteer");
+
+            // If we have an aggregate rating from Puppeteer, store it separately
+            foreach ($puppeteerReviews as $key => $review) {
+                if (isset($review['metadata'])) {
+                    $metadata = json_decode($review['metadata'], true);
+                    if (isset($metadata['is_aggregate']) && $metadata['is_aggregate']) {
+                        $this->aggregateRating = $review;
+                        unset($puppeteerReviews[$key]);
+                        break;
+                    }
+                }
+            }
+
+            // Reindex the array after potentially removing the aggregate rating
+            $puppeteerReviews = array_values($puppeteerReviews);
+
+            // Limit the number of reviews to the requested limit
+            return array_slice($puppeteerReviews, 0, $limit);
+        }
+
+        // If Puppeteer fails, fall back to regex-based scraping
+        $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Puppeteer scraping failed or returned no results, falling back to regex-based scraping");
+
         $reviews = [];
         $page = 1;
         // Calculate how many pages we need based on the limit
@@ -484,6 +512,78 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Limit the number of reviews to the requested limit
         return array_slice($reviews, 0, $limit);
+    }
+
+    /**
+     * Fetch reviews using Puppeteer via Netlify function
+     *
+     * @param string $reviewsUrl The URL to scrape reviews from
+     * @param int $limit Maximum number of reviews to return
+     * @return array Array of reviews
+     */
+    private function fetchReviewsWithPuppeteer(string $reviewsUrl, int $limit): array {
+        $debugDir = __DIR__ . '/debug';
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🤖 Attempting to fetch reviews using Puppeteer for URL: {$reviewsUrl}");
+
+        // Get the Netlify function URL from environment variable or use default
+        $puppeteerUrl = getenv('GOODREADS_PUPPETEER_URL') ?: 'https://storiesfromtheweb.netlify.app/.netlify/functions/goodreads-reviews';
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using Puppeteer function URL: {$puppeteerUrl}");
+
+        // Prepare the request data
+        $requestData = [
+            'goodreadsUrl' => $reviewsUrl,
+            'limit' => $limit,
+            'maxPages' => 10 // Allow up to 10 pages to get more reviews
+        ];
+
+        // Set up cURL options
+        $ch = curl_init($puppeteerUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+
+        // Execute the request
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 Sending request to Puppeteer function");
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        // Check for errors
+        if ($response === false) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ cURL error: {$error}");
+            return [];
+        }
+
+        if ($httpCode !== 200) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ HTTP error: {$httpCode}");
+            $this->logToFile($debugDir . '/goodreads-log.txt', "Response: " . substr($response, 0, 1000));
+            return [];
+        }
+
+        // Save the raw response for debugging
+        file_put_contents($debugDir . '/puppeteer_response.json', $response);
+
+        // Parse the response
+        $data = json_decode($response, true);
+
+        if (!isset($data['reviews']) || !is_array($data['reviews'])) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Invalid response format from Puppeteer function");
+            return [];
+        }
+
+        $reviews = $data['reviews'];
+        $totalReviews = $data['total'] ?? count($reviews);
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched {$totalReviews} reviews using Puppeteer (returning " . count($reviews) . ")");
+
+        return $reviews;
     }
 
     /**

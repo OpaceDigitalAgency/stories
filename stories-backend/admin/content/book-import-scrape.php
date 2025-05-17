@@ -356,8 +356,8 @@ function updateBookAggregateValues($db, $bookId) {
                         }
 
                         try {
-                            // Fetch reviews from the source - get 30 reviews instead of just 10
-                            $result = $fetcher->fetchReviewsByISBN($isbnToUse, 30);
+                            // Fetch reviews from the source - get 100 reviews instead of just 10
+                            $result = $fetcher->fetchReviewsByISBN($isbnToUse, 100);
 
                             // Check if we got a structured result (new format) or just an array of reviews (old format)
                             if (is_array($result) && isset($result['reviews'])) {

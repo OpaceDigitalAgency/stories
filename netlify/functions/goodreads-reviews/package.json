@@ -1,0 +1,10 @@
+{
+  "name": "goodreads-reviews",
+  "version": "1.0.0",
+  "description": "Goodreads review scraper using Puppeteer",
+  "main": "goodreads-reviews.js",
+  "dependencies": {
+    "chrome-aws-lambda": "^10.1.0",
+    "puppeteer-core": "^10.1.0"
+  }
+}

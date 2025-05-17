@@ -69,8 +69,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             return [];
         }
 
-        // Get reviews URL
-        $reviewsUrl = $bookUrl . "/reviews";
+        // Get reviews URL - make sure we're using the correct format
+        $reviewsUrl = preg_replace('/\?.*$/', '', $bookUrl); // Remove any query parameters
+        $reviewsUrl = rtrim($reviewsUrl, '/'); // Remove trailing slash if present
+        $reviewsUrl = $reviewsUrl . "/reviews"; // Add reviews path
 
         // Fetch reviews
         $reviews = $this->scrapeReviews($reviewsUrl, $limit);
@@ -246,8 +248,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $workResponse = $this->makeRequest($workUrl);
 
             if ($workResponse !== false) {
+                // Create a safe filename by removing slashes
+                $safeWorkKey = str_replace('/', '_', $workKey);
+
                 // Save the raw response for debugging
-                file_put_contents($debugDir . "/openlibrary_work_{$workKey}_response.json", $workResponse);
+                file_put_contents($debugDir . "/openlibrary_work{$safeWorkKey}_response.json", $workResponse);
 
                 // Parse the response
                 $workData = json_decode($workResponse, true);
@@ -361,49 +366,98 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of review data
      */
     private function scrapeReviews(string $reviewsUrl, int $limit): array {
+        // Create debug directory if it doesn't exist
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Scraping reviews from URL: {$reviewsUrl}");
+
         // Make the request
         $response = $this->makeRequest($reviewsUrl);
 
         if ($response === false) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to make request to Goodreads reviews page");
             return [];
         }
 
         // Debug: Save the raw HTML to a file for inspection
-        // Uncomment this line to debug
-        // file_put_contents(__DIR__ . '/goodreads_reviews_debug.html', substr($response, 0, 50000));
+        file_put_contents($debugDir . '/goodreads_reviews_debug.html', substr($response, 0, 500000));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved reviews HTML to debug file");
 
         $reviews = [];
+
+        // First, try to extract the aggregate rating
+        $aggregateRating = $this->extractAggregateRating($response, $reviewsUrl);
+        if ($aggregateRating) {
+            $reviews[] = $aggregateRating;
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted aggregate rating: {$aggregateRating['rating_value']}/5");
+        }
 
         // Try multiple patterns for review blocks to handle different Goodreads layouts
         $reviewBlocks = [];
 
-        // Pattern 1: Classic review layout
+        // Pattern 1: Modern Goodreads layout with ReviewCard components
+        if (preg_match_all('/<div[^>]*class="ReviewCard[^"]*"[^>]*>.*?<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 1 (ReviewCard)");
+            $reviewBlocks = array_merge($reviewBlocks, array_map(function($block) {
+                return ['0' => $block, '1' => 'modern_' . md5($block)];
+            }, $matches[0]));
+        }
+
+        // Pattern 2: Classic review layout
         if (preg_match_all('/<div class="review"[^>]*id="review_(\d+)".*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches, PREG_SET_ORDER)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches) . " reviews using Pattern 2 (classic)");
             $reviewBlocks = array_merge($reviewBlocks, $matches);
         }
 
-        // Pattern 2: Alternative review layout
+        // Pattern 3: Alternative review layout
         if (preg_match_all('/<div[^>]+class="[^"]*review[^"]*"[^>]*id="review_(\d+)".*?<\/div>\s*<\/div>\s*<\/div>/is', $response, $matches, PREG_SET_ORDER)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches) . " reviews using Pattern 3 (alternative)");
             $reviewBlocks = array_merge($reviewBlocks, $matches);
         }
 
-        // Pattern 3: Newer review layout
+        // Pattern 4: Newer review layout with articles
         if (preg_match_all('/<article[^>]+class="[^"]*review[^"]*"[^>]*id="review_(\d+)".*?<\/article>/is', $response, $matches, PREG_SET_ORDER)) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches) . " reviews using Pattern 4 (article)");
             $reviewBlocks = array_merge($reviewBlocks, $matches);
         }
+
+        // Pattern 5: Community Reviews section with ReviewsList
+        if (preg_match('/<div[^>]*id="CommunityReviews"[^>]*>(.*?)<\/div>\s*<\/div>\s*<\/div>/is', $response, $communityMatch)) {
+            $communitySection = $communityMatch[1];
+            if (preg_match_all('/<div[^>]*class="ReviewsList__item[^"]*"[^>]*>(.*?)<\/div>\s*<\/div>\s*<\/div>/is', $communitySection, $matches)) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found " . count($matches[0]) . " reviews using Pattern 5 (ReviewsList)");
+                $reviewBlocks = array_merge($reviewBlocks, array_map(function($block) {
+                    return ['0' => $block, '1' => 'modern_' . md5($block)];
+                }, $matches[0]));
+            }
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Total review blocks found: " . count($reviewBlocks));
 
         // Process the review blocks
         foreach ($reviewBlocks as $index => $block) {
-            if ($index >= $limit) {
+            if (count($reviews) >= $limit) {
                 break;
             }
 
             $reviewId = $block[1];
             $reviewHtml = $block[0];
 
+            // Save individual review HTML for debugging
+            file_put_contents($debugDir . "/review_block_{$index}.html", $reviewHtml);
+
             // Extract reviewer name with multiple patterns
             $reviewerName = 'Goodreads User';
-            if (preg_match('/<a class="user"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+
+            // Modern pattern: User link with data-testid
+            if (preg_match('/<a[^>]*data-testid="user-profile-link"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewerName = trim($matches[1]);
+            }
+            // Classic patterns
+            else if (preg_match('/<a class="user"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
             } else if (preg_match('/<a[^>]+class="[^"]*reviewer[^"]*"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
                 $reviewerName = trim($matches[1]);
@@ -413,17 +467,28 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
             // Extract rating with multiple patterns
             $rating = 0;
-            // Pattern 1: Classic static stars
-            if (preg_match('/<span class="static-stars"[^>]*title="([^"]+)"/i', $reviewHtml, $matches)) {
+
+            // Modern pattern: RatingStars with aria-label
+            if (preg_match('/<span[^>]*aria-label="Rating ([0-9.]+) out of 5"[^>]*>/i', $reviewHtml, $matches)) {
+                $rating = (float)$matches[1];
+            }
+            // Modern pattern: RatingStars with data-testid
+            else if (preg_match('/<span[^>]*data-testid="rating-stars"[^>]*aria-label="([^"]*)"[^>]*>/i', $reviewHtml, $matches)) {
+                if (preg_match('/([0-9.]+) out of 5/i', $matches[1], $ratingMatch)) {
+                    $rating = (float)$ratingMatch[1];
+                }
+            }
+            // Classic pattern: Static stars
+            else if (preg_match('/<span class="static-stars"[^>]*title="([^"]+)"/i', $reviewHtml, $matches)) {
                 if (preg_match('/(\d+)/', $matches[1], $ratingMatch)) {
                     $rating = (int)$ratingMatch[1];
                 }
             }
-            // Pattern 2: Rating value in data attribute
+            // Pattern: Rating value in data attribute
             else if (preg_match('/<span[^>]+data-rating="([1-5])"/i', $reviewHtml, $matches)) {
                 $rating = (int)$matches[1];
             }
-            // Pattern 3: Stars in class name
+            // Pattern: Stars in class name
             else if (preg_match('/<span class="[^"]*p10[^"]*"[^>]*>/i', $reviewHtml)) {
                 $rating = 5;
             } else if (preg_match('/<span class="[^"]*p8[^"]*"[^>]*>/i', $reviewHtml)) {
@@ -438,30 +503,40 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
             // Extract review text with multiple patterns
             $reviewText = '';
-            // Pattern 1: Classic review text
-            if (preg_match('/<div class="reviewText"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+
+            // Modern pattern: ReviewText with data-testid
+            if (preg_match('/<div[^>]*data-testid="reviewText"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
             }
-            // Pattern 2: Alternative review text
+            // Modern pattern: Review content in Formatted section
+            else if (preg_match('/<div[^>]*class="Formatted"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
+            // Classic patterns
+            else if (preg_match('/<div class="reviewText"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $reviewHtml, $matches)) {
+                $reviewText = trim(strip_tags($matches[1]));
+            }
             else if (preg_match('/<div[^>]+class="[^"]*reviewText[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
             }
-            // Pattern 3: Review content in newer layout
             else if (preg_match('/<div[^>]+class="[^"]*reviewContent[^"]*"[^>]*>(.*?)<\/div>/is', $reviewHtml, $matches)) {
                 $reviewText = trim(strip_tags($matches[1]));
             }
 
             // Extract review date with multiple patterns
             $reviewDate = null;
-            // Pattern 1: Classic review date
-            if (preg_match('/<a class="reviewDate"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+
+            // Modern pattern: Date with data-testid
+            if (preg_match('/<div[^>]*data-testid="reviewDate"[^>]*>([^<]+)<\/div>/i', $reviewHtml, $matches)) {
                 $reviewDate = $this->formatDate($matches[1]);
             }
-            // Pattern 2: Date in time tag
+            // Classic patterns
+            else if (preg_match('/<a class="reviewDate"[^>]*>([^<]+)<\/a>/i', $reviewHtml, $matches)) {
+                $reviewDate = $this->formatDate($matches[1]);
+            }
             else if (preg_match('/<time[^>]*datetime="([^"]+)"[^>]*>/i', $reviewHtml, $matches)) {
                 $reviewDate = substr($matches[1], 0, 10); // Extract YYYY-MM-DD
             }
-            // Pattern 3: Date in span
             else if (preg_match('/<span[^>]+class="[^"]*reviewDate[^"]*"[^>]*>([^<]+)<\/span>/i', $reviewHtml, $matches)) {
                 $reviewDate = $this->formatDate($matches[1]);
             }
@@ -473,8 +548,11 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
             // Skip reviews without text or rating
             if (empty($reviewText) || $rating == 0) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Skipping review block {$index} - missing text or rating");
                 continue;
             }
+
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Extracted review from block {$index}: {$reviewerName}, rating: {$rating}");
 
             $reviews[] = [
                 'source_id' => $this->sourceId,
@@ -497,9 +575,92 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // If no reviews found but we can see we're on a CAPTCHA page, set a specific error
         if (empty($reviews) && (strpos($response, 'captcha') !== false || strpos($response, 'robot check') !== false)) {
             $this->lastError = "Goodreads is showing a CAPTCHA or robot check page. Try again later.";
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ CAPTCHA or robot check detected");
         }
 
+        // If we still have no reviews, check if we can extract an aggregate rating
+        if (empty($reviews) && !$aggregateRating) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ No individual reviews found, trying to extract aggregate rating");
+            $aggregateRating = $this->extractAggregateRating($response, $reviewsUrl);
+            if ($aggregateRating) {
+                $reviews[] = $aggregateRating;
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Added aggregate rating as fallback");
+            }
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Total reviews extracted: " . count($reviews));
         return $reviews;
+    }
+
+    /**
+     * Extract aggregate rating from Goodreads page
+     *
+     * @param string $html The HTML content
+     * @param string $bookUrl The book URL
+     * @return array|null The aggregate review data or null if not found
+     */
+    private function extractAggregateRating(string $html, string $bookUrl): ?array {
+        $debugDir = __DIR__ . '/debug';
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Extracting aggregate rating");
+
+        $rating = 0;
+        $ratingCount = 0;
+        $reviewCount = 0;
+
+        // Modern pattern: RatingStatistics with aria-label
+        if (preg_match('/<div[^>]*class="RatingStatistics__rating"[^>]*>([0-9.]+)<\/div>/i', $html, $ratingMatch)) {
+            $rating = (float)$ratingMatch[1];
+
+            // Try to get ratings count
+            if (preg_match('/<span[^>]*data-testid="ratingsCount"[^>]*>([^<]+)&nbsp;<!-- -->ratings<\/span>/i', $html, $countMatch)) {
+                $ratingCount = (int)str_replace(',', '', $countMatch[1]);
+            }
+
+            // Try to get reviews count
+            if (preg_match('/<span[^>]*data-testid="reviewsCount"[^>]*>([^<]+)&nbsp;<!-- -->reviews<\/span>/i', $html, $reviewsMatch)) {
+                $reviewCount = (int)str_replace(',', '', $reviewsMatch[1]);
+            }
+        }
+        // Classic pattern: Average rating in meta tag
+        else if (preg_match('/<span itemprop="ratingValue"[^>]*>([^<]+)<\/span>/i', $html, $ratingMatch)) {
+            $rating = (float)$ratingMatch[1];
+
+            // Try to get ratings count
+            if (preg_match('/<meta itemprop="ratingCount" content="([^"]+)"/i', $html, $countMatch)) {
+                $ratingCount = (int)$countMatch[1];
+            }
+
+            // Try to get reviews count
+            if (preg_match('/<meta itemprop="reviewCount" content="([^"]+)"/i', $html, $reviewsMatch)) {
+                $reviewCount = (int)$reviewsMatch[1];
+            }
+        }
+
+        if ($rating > 0) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found aggregate rating: {$rating}/5 from {$ratingCount} ratings and {$reviewCount} reviews");
+
+            return [
+                'source_id' => $this->sourceId,
+                'reviewer_name' => "Goodreads Aggregate",
+                'reviewer_age' => null,
+                'review_date' => date('Y-m-d'),
+                'original_rating' => "{$rating}/5",
+                'rating_value' => $rating,
+                'rating_scale' => 5,
+                'rating_normalised' => $this->normalizeRating($rating, 5),
+                'review_text' => "This book has an average rating of {$rating}/5 based on {$ratingCount} ratings and {$reviewCount} reviews on Goodreads.",
+                'metadata' => json_encode([
+                    'book_url' => $bookUrl,
+                    'is_synthetic' => false,
+                    'is_aggregate' => true,
+                    'ratings_count' => $ratingCount,
+                    'reviews_count' => $reviewCount
+                ])
+            ];
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ No aggregate rating found");
+        return null;
     }
 
 

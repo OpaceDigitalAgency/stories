@@ -81,6 +81,12 @@ $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($db);
 // Function to update book aggregate values
 function updateBookAggregateValues($db, $bookId) {
     // Get aggregate values
+    // Debug: Count all reviews for this book
+    $debugCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
+    $debugCountStmt->execute([$bookId]);
+    $totalReviews = $debugCountStmt->fetchColumn();
+    error_log("Total reviews for book ID $bookId: $totalReviews");
+    
     $aggregateStmt = $db->prepare("
         SELECT
             COUNT(*) as review_count,
@@ -105,6 +111,9 @@ function updateBookAggregateValues($db, $bookId) {
             WHERE id = ?
         ");
 
+        // Debug: Log the values being updated
+        error_log("Updating directory_items for book ID $bookId with review_count: {$aggregateValues['review_count']}");
+        
         $stmt->execute([
             $aggregateValues['review_count'],
             $aggregateValues['average_rating'],
@@ -454,11 +463,13 @@ function updateBookAggregateValues($db, $bookId) {
                             }
 
                             // If force refresh or continue from last is enabled and the review exists, delete the old one first
+                            $isReplacement = false;
                             if (($forceRefresh || $continueFromLast) && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
                                 $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
                                 $deleteStmt->execute([$existingReview['id']]);
                                 echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
                                 flushOutput();
+                                $isReplacement = true;
                             }
 
                             try {

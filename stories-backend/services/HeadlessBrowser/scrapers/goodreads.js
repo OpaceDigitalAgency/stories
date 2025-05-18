@@ -16,23 +16,37 @@ if (!fs.existsSync(debugDir)) {
 
 /**
  * Extract book ID from Goodreads URL
- * @param {string} url - Goodreads URL
+ * @param {string} url - Goodreads book URL
  * @returns {string|null} - Book ID or null if not found
  */
 function extractBookIdFromUrl(url) {
-  // Try to extract book ID from URL
-  const patterns = [
-    /goodreads\.com\/book\/show\/(\d+)/,
-    /goodreads\.com\/book\/show\/([\w.-]+)/
-  ];
+  // Match patterns like /book/show/12345.Book_Title or /book/show/12345-Book-Title
+  // or /book/isbn/9781234567890
 
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
+  // First, try to extract from ISBN URL
+  const isbnMatch = url.match(/\/book\/isbn\/(\d+)/);
+  if (isbnMatch && isbnMatch[1]) {
+    logger.info(`Extracted ISBN ${isbnMatch[1]} from URL`);
+    return isbnMatch[1];
   }
 
+  // Next, try to extract numeric ID from show URL
+  const numericIdMatch = url.match(/\/book\/show\/(\d+)(?:[.-]|$)/);
+  if (numericIdMatch && numericIdMatch[1]) {
+    logger.info(`Extracted numeric ID ${numericIdMatch[1]} from URL`);
+    return numericIdMatch[1];
+  }
+
+  // Finally, try to extract alphanumeric ID from show URL
+  const alphaNumIdMatch = url.match(/\/book\/show\/([\w.-]+)/);
+  if (alphaNumIdMatch && alphaNumIdMatch[1]) {
+    // If the ID contains a period or hyphen, extract just the first part
+    const cleanId = alphaNumIdMatch[1].split(/[.-]/)[0];
+    logger.info(`Extracted alphanumeric ID ${cleanId} from URL`);
+    return cleanId;
+  }
+
+  logger.warn(`Could not extract book ID from URL: ${url}`);
   return null;
 }
 
@@ -201,18 +215,24 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
       await page.waitForTimeout(1000);
 
-      // Check for different button selectors
-      const buttonSelectors = [
+      // Check for different button selectors using CSS selectors
+      const cssButtonSelectors = [
         'button.Button--secondary',
         '.gr_more_reviews_button',
-        'button.Button--secondary[data-testid="loadMore"]',
-        'button:contains("Show more reviews")',
-        'button:contains("More reviews")'
+        'button.Button--secondary[data-testid="loadMore"]'
+      ];
+
+      // Also try XPath selectors for text-based matching (more reliable than CSS :contains)
+      const xpathButtonSelectors = [
+        "//button[contains(., 'Show more reviews')]",
+        "//button[contains(., 'More reviews')]",
+        "//button[contains(., 'Load more')]"
       ];
 
       let buttonFound = false;
 
-      for (const selector of buttonSelectors) {
+      // First try CSS selectors
+      for (const selector of cssButtonSelectors) {
         try {
           const hasButton = await page.evaluate((sel) => {
             const button = document.querySelector(sel);
@@ -226,13 +246,13 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
             if (isVisible) {
               // Check button text
               const text = button.textContent.toLowerCase();
-              return text.includes('more reviews') || text.includes('show more');
+              return text.includes('more reviews') || text.includes('show more') || text.includes('load more');
             }
             return false;
           }, selector);
 
           if (hasButton) {
-            logger.info(`✅ Found "More reviews" button using selector: ${selector}`);
+            logger.info(`✅ Found "More reviews" button using CSS selector: ${selector}`);
 
             // Click the button
             await page.evaluate((sel) => {
@@ -244,31 +264,58 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
             break;
           }
         } catch (err) {
-          logger.error(`Error with selector ${selector}: ${err.message}`);
+          logger.error(`Error with CSS selector ${selector}: ${err.message}`);
+        }
+      }
+
+      // If CSS selectors didn't work, try XPath selectors
+      if (!buttonFound) {
+        for (const xpathSelector of xpathButtonSelectors) {
+          try {
+            // Find elements using XPath
+            const buttons = await page.$x(xpathSelector);
+
+            if (buttons.length > 0) {
+              logger.info(`✅ Found "More reviews" button using XPath selector: ${xpathSelector}`);
+
+              // Click the first matching button
+              await buttons[0].click();
+
+              buttonFound = true;
+              break;
+            }
+          } catch (err) {
+            logger.error(`Error with XPath selector ${xpathSelector}: ${err.message}`);
+          }
         }
       }
 
       if (!buttonFound) {
-        // Try clicking by position as a last resort
+        // Try a more generic XPath approach as a last resort
         try {
-          await page.evaluate(() => {
-            // Find all buttons on the page
-            const buttons = Array.from(document.querySelectorAll('button'));
+          // Look for any button that contains text about reviews or loading more
+          const genericButtons = await page.$x("//button[contains(., 'review') or contains(., 'Review') or contains(., 'more') or contains(., 'More') or contains(., 'load') or contains(., 'Load')]");
 
-            // Find a button that might be the "More reviews" button
-            const moreButton = buttons.find(btn => {
-              const text = btn.textContent.toLowerCase();
-              return text.includes('more reviews') || text.includes('show more');
-            });
+          if (genericButtons.length > 0) {
+            logger.info(`✅ Found a potential "More reviews" button using generic XPath (${genericButtons.length} matches)`);
 
-            if (moreButton) {
-              moreButton.click();
-              return true;
-            }
-            return false;
-          });
+            // Click the first button that might be relevant
+            await genericButtons[0].click();
+            logger.info(`Clicked generic button with text: ${await page.evaluate(el => el.textContent, genericButtons[0])}`);
+
+            buttonFound = true;
+          } else {
+            logger.info(`⚠️ No buttons found with generic XPath selectors`);
+
+            // Take a screenshot to see what's on the page
+            await browser.takeScreenshot(page, `goodreads-no-buttons-${bookId}-attempt-${clickAttempts}`);
+
+            // Log the HTML for debugging
+            const currentHtml = await page.content();
+            fs.writeFileSync(path.join(debugDir, `goodreads-no-buttons-${bookId}-attempt-${clickAttempts}.html`), currentHtml);
+          }
         } catch (err) {
-          logger.error(`Error clicking by position: ${err.message}`);
+          logger.error(`Error with generic XPath approach: ${err.message}`);
         }
       }
 

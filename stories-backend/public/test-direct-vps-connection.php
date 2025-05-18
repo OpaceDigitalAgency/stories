@@ -16,6 +16,7 @@ header('Content-Type: text/html');
 $isbn = isset($_GET['isbn']) ? $_GET['isbn'] : '9780007416851';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $source = isset($_GET['source']) ? $_GET['source'] : 'goodreads';
+$force = isset($_GET['force']) ? $_GET['force'] : false;
 
 // VPS server details
 $vpsIp = '37.27.31.107';
@@ -51,6 +52,7 @@ echo "<!DOCTYPE html>
             <p><strong>ISBN:</strong> <?php echo htmlspecialchars($isbn); ?></p>
             <p><strong>Limit:</strong> <?php echo $limit; ?></p>
             <p><strong>Source:</strong> <?php echo htmlspecialchars($source); ?></p>
+            <p><strong>Force:</strong> <?php echo $force ? 'Yes' : 'No'; ?></p>
             <p><strong>VPS Server:</strong> <?php echo $vpsIp . ':' . $vpsPort; ?></p>
         </div>";
 
@@ -88,6 +90,11 @@ if ($source === 'goodreads') {
     $scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}?asin={$isbn}&limit={$limit}";
 } else {
     $scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}?isbn={$isbn}&limit={$limit}";
+}
+
+// Add force parameter if set
+if ($force) {
+    $scraperUrl .= "&force=1";
 }
 
 echo "<p><strong>Request URL:</strong> " . htmlspecialchars($scraperUrl) . "</p>";

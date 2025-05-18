@@ -42,8 +42,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param string $isbn The ISBN of the book (can be ISBN-10 or ISBN-13)
      * @param int $limit Maximum number of reviews to fetch
      * @return array Array of review data
+     * @param string $isbn The ISBN of the book (can be ISBN-10 or ISBN-13)
+     * @param int $limit Maximum number of reviews to fetch
+     * @param array $options Additional options for the fetcher
+     *                      - maxPages: Maximum number of pages to scrape
+     *                      - continueFromLast: Whether to continue from the last scrape
+     * @return array Array of review data
      */
-    public function fetchReviewsByISBN(string $isbn, int $limit = 100): array {
+    public function fetchReviewsByISBN(string $isbn, int $limit = 100, array $options = []): array {
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
 
@@ -379,8 +385,15 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Scraping reviews from URL: {$reviewsUrl}");
 
+        // Extract options
+        $maxPages = $options['maxPages'] ?? 20;
+        $continueFromLast = $options['continueFromLast'] ?? false;
+        
         // First try to use the VPS-based Headless Browser service
-        $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit);
+        $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
+            'maxPages' => $maxPages,
+            'continueFromLast' => $continueFromLast
+        ]);
 
         if (!empty($vpsReviews)) {
             $reviewCount = count($vpsReviews);
@@ -1044,9 +1057,12 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      *
      * @param string $goodreadsUrl The URL of the Goodreads book page
      * @param int $limit Maximum number of reviews to return
+     * @param array $options Additional options for the scraper
+     *                      - maxPages: Maximum number of pages to scrape
+     *                      - continueFromLast: Whether to continue from the last scrape
      * @return array Array of reviews
      */
-    private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit): array {
+    private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit, array $options = []): array {
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
             mkdir($debugDir, 0755, true);
@@ -1107,8 +1123,17 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Request more reviews than needed to ensure we get enough
         $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
 
-        // Build the request URL
-        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}";
+        // Extract options
+        $maxPages = $options['maxPages'] ?? 20;
+        $continueFromLast = $options['continueFromLast'] ?? false;
+        
+        // Build the request URL with options
+        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}&maxPages={$maxPages}";
+        
+        // Add continueFromLast parameter if true
+        if ($continueFromLast) {
+            $url .= "&continueFromLast=1";
+        }
 
         // Log the full URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Full request URL: {$url}");

@@ -895,6 +895,34 @@ require_once '../includes/header.php';
                     </div>
 
                     <div class="form-group">
+                        <label for="reviewLimit">Maximum Reviews to Fetch</label>
+                        <input type="number" class="form-control" id="reviewLimit" name="review_limit" value="100" min="10" max="1000">
+                        <small class="form-text text-muted">Higher values will take longer but fetch more reviews. Maximum 1000.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="maxPages">Maximum Pages to Scrape</label>
+                        <input type="number" class="form-control" id="maxPages" name="max_pages" value="20" min="1" max="100">
+                        <small class="form-text text-muted">Higher values will allow more reviews to be fetched.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="forceRefresh" name="force_refresh" value="1">
+                            <label class="custom-control-label" for="forceRefresh">Force refresh (replace existing reviews)</label>
+                            <small class="form-text text-muted">If unchecked, will skip existing reviews and add new ones.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="continueFromLast" name="continue_from_last" value="1" checked>
+                            <label class="custom-control-label" for="continueFromLast">Continue from last scrape</label>
+                            <small class="form-text text-muted">If checked, will attempt to fetch reviews beyond those already collected.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="runAiAnalysis" name="run_ai_analysis" value="1">
                             <label class="custom-control-label" for="runAiAnalysis">Run AI analysis after scraping</label>

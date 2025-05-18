@@ -59,13 +59,19 @@ app.get('/health', (req, res) => {
 // Goodreads scraper endpoint
 app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
-    const { url, limit = 50, force = false } = req.query;
+    const {
+      url,
+      limit = 50,
+      force = false,
+      maxPages = 20,
+      continueFromLast = false
+    } = req.query;
 
     if (!url) {
       return res.status(400).json({ error: 'Missing URL parameter' });
     }
 
-    logger.info(`Scraping Goodreads reviews for URL: ${url}, force=${force}`);
+    logger.info(`Scraping Goodreads reviews for URL: ${url}, force=${force}, maxPages=${maxPages}, continueFromLast=${continueFromLast}`);
 
     // Extract book ID for caching
     const bookIdMatch = url.match(/\/book\/isbn\/(\d+)/);
@@ -94,7 +100,10 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
       }
     }
 
-    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit));
+    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
+      maxPages: parseInt(maxPages),
+      continueFromLast: continueFromLast === 'true' || continueFromLast === '1'
+    });
 
     res.status(200).json(reviews);
   } catch (error) {

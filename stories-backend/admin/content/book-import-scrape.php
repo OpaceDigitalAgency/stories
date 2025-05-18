@@ -201,6 +201,13 @@ function updateBookAggregateValues($db, $bookId) {
                     $sources = $_POST['sources'] ?? [];
                     $runAiAnalysis = isset($_POST['run_ai_analysis']) && $_POST['run_ai_analysis'] == 1;
                     $forceRefresh = isset($_POST['force_refresh']) && $_POST['force_refresh'] == 1;
+                    $continueFromLast = isset($_POST['continue_from_last']) && $_POST['continue_from_last'] == 1;
+                    $reviewLimit = isset($_POST['review_limit']) ? intval($_POST['review_limit']) : 100;
+                    $maxPages = isset($_POST['max_pages']) ? intval($_POST['max_pages']) : 20;
+                    
+                    // Validate limits
+                    $reviewLimit = max(10, min(1000, $reviewLimit));
+                    $maxPages = max(1, min(100, $maxPages));
                 } else if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     // Multiple books from URL parameter
                     if (isset($_GET['books'])) {
@@ -217,6 +224,13 @@ function updateBookAggregateValues($db, $bookId) {
 
                     $runAiAnalysis = isset($_GET['ai']) && $_GET['ai'] == 1;
                     $forceRefresh = isset($_GET['force']) && $_GET['force'] == 1;
+                    $continueFromLast = isset($_GET['continue']) && $_GET['continue'] == 1;
+                    $reviewLimit = isset($_GET['limit']) ? intval($_GET['limit']) : 100;
+                    $maxPages = isset($_GET['pages']) ? intval($_GET['pages']) : 20;
+                    
+                    // Validate limits
+                    $reviewLimit = max(10, min(1000, $reviewLimit));
+                    $maxPages = max(1, min(100, $maxPages));
                 }
 
                 if (empty($bookIds)) {
@@ -358,8 +372,33 @@ function updateBookAggregateValues($db, $bookId) {
                         }
 
                         try {
-                            // Fetch reviews from the source - get 100 reviews instead of just 10
-                            $result = $fetcher->fetchReviewsByISBN($isbnToUse, 100);
+                            // Set up options for the fetcher
+                            $options = [
+                                'maxPages' => $maxPages,
+                                'continueFromLast' => $continueFromLast
+                            ];
+                            
+                            // If we're continuing from last scrape, get the count of existing reviews
+                            $existingReviewCount = 0;
+                            if ($continueFromLast) {
+                                $countStmt = $db->prepare("
+                                    SELECT COUNT(*) FROM reviews
+                                    WHERE book_id = ? AND source_id = ?
+                                ");
+                                $countStmt->execute([$book['id'], $sourceId]);
+                                $existingReviewCount = (int)$countStmt->fetchColumn();
+                                
+                                echo "<p class='info'>Found {$existingReviewCount} existing reviews for this book from {$sourceName}</p>";
+                                flushOutput();
+                                
+                                // If continuing, we need to fetch more than what we already have
+                                $fetchLimit = $existingReviewCount + $reviewLimit;
+                            } else {
+                                $fetchLimit = $reviewLimit;
+                            }
+                            
+                            // Fetch reviews from the source with the specified limit
+                            $result = $fetcher->fetchReviewsByISBN($isbnToUse, $fetchLimit, $options);
 
                             // Check if we got a structured result (new format) or just an array of reviews (old format)
                             if (is_array($result) && isset($result['reviews'])) {

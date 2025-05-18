@@ -622,8 +622,26 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       const newReviews = await extractReviewsFromPage();
       const uniqueNewReviews = newReviews.filter(newReview => {
         return !reviews.some(existingReview => {
-          return existingReview.reviewer_name === newReview.reviewer_name &&
-                 existingReview.review_text === newReview.review_text;
+          // Check if reviewer name matches
+          const nameMatch = existingReview.reviewer_name === newReview.reviewer_name;
+          
+          // For aggregate reviews, just check the name
+          if (nameMatch && (
+              existingReview.reviewer_name === 'Goodreads Aggregate' ||
+              newReview.reviewer_name === 'Goodreads Aggregate'
+          )) {
+            return true;
+          }
+          
+          // For regular reviews, check name and first 50 chars of text
+          // This is more reliable than comparing entire text which might have small differences
+          if (nameMatch) {
+            const existingTextStart = existingReview.review_text.substring(0, 50);
+            const newTextStart = newReview.review_text.substring(0, 50);
+            return existingTextStart === newTextStart;
+          }
+          
+          return false;
         });
       });
       
@@ -966,9 +984,25 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       // Check if we got new unique reviews by comparing with what we already have
       const uniqueNewReviews = newReviews.filter(newReview => {
         return !reviews.some(existingReview => {
-          // Compare reviewer name and review text to identify duplicates
-          return existingReview.reviewer_name === newReview.reviewer_name &&
-                 existingReview.review_text === newReview.review_text;
+          // Check if reviewer name matches
+          const nameMatch = existingReview.reviewer_name === newReview.reviewer_name;
+          
+          // For aggregate reviews, just check the name
+          if (nameMatch && (
+              existingReview.reviewer_name === 'Goodreads Aggregate' ||
+              newReview.reviewer_name === 'Goodreads Aggregate'
+          )) {
+            return true;
+          }
+          
+          // For regular reviews, check name and first 50 chars of text
+          if (nameMatch) {
+            const existingTextStart = existingReview.review_text.substring(0, 50);
+            const newTextStart = newReview.review_text.substring(0, 50);
+            return existingTextStart === newTextStart;
+          }
+          
+          return false;
         });
       });
 

@@ -406,9 +406,18 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
             // Log the final count after processing
             $finalCount = count($vpsReviews);
-            if ($finalCount > 30) {
+
+            // Check if we're hitting the 30-review limit
+            if ($finalCount == 30 && $limit > 30) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ WARNING: Exactly 30 reviews returned. This may indicate a Goodreads limitation.");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Goodreads often limits non-authenticated users to 30 reviews per book.");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Try visiting the book page in a browser to confirm if more reviews are available.");
+                error_log("⚠️⚠️⚠️ GOODREADS REVIEW LIMIT DETECTED: Exactly 30 reviews returned, which is a common Goodreads limitation ⚠️⚠️⚠️");
+            } else if ($finalCount > 30) {
                 $this->logToFile($debugDir . '/goodreads-log.txt', "🚀 VPS SCRAPER SUCCESS: Returning {$finalCount} reviews (more than the 30 limit of direct scraping)");
                 error_log("🚀🚀🚀 VPS SCRAPER SUCCESS: Returning {$finalCount} reviews (more than the 30 limit of direct scraping) 🚀🚀🚀");
+            } else if ($finalCount < $limit) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "ℹ️ Fewer reviews returned ({$finalCount}) than requested ({$limit}). This may be all that's available for this book.");
             }
 
             // Limit the number of reviews to the requested limit

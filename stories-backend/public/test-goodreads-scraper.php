@@ -106,13 +106,18 @@ try {
                 if (preg_match('/\[VPS-Scraper-Success\] Found (\d+) reviews/', $logContent, $matches)) {
                     echo "   Found {$matches[1]} reviews using VPS Scraper\n";
                 }
+            } else if (strpos($logContent, '[VPS-Scraper-Goodreads]') !== false) {
+                // The VPS scraper was attempted
+                if (count($reviews) > 0) {
+                    echo "✅ VPS Scraper was used successfully (reviews were returned)!\n";
+                    echo "   Found " . count($reviews) . " reviews\n";
+                } else {
+                    echo "❌ VPS Scraper was attempted but returned no reviews.\n";
+                }
             } else {
-                echo "❌ VPS Scraper was not used or failed.\n";
+                echo "❌ VPS Scraper was not used.\n";
 
                 // Check which methods were attempted
-                if (strpos($logContent, '[VPS-Scraper-Goodreads]') !== false) {
-                    echo "   VPS Scraper was attempted but may have failed\n";
-                }
                 if (strpos($logContent, 'Trying Puppeteer') !== false) {
                     echo "   Puppeteer was attempted\n";
                 }

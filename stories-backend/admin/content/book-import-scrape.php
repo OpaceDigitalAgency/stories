@@ -81,7 +81,7 @@ $reviewAnalyzer = new \Services\AI\ReviewAnalyzer($db);
 // Function to update book aggregate values
 function updateBookAggregateValues($db, $bookId) {
     // Get aggregate values
-    // Debug: Count all reviews for this book
+    // Debug: Count all reviews for this book with detailed query
     $debugCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
     $debugCountStmt->execute([$bookId]);
     $totalReviews = $debugCountStmt->fetchColumn();
@@ -91,8 +91,17 @@ function updateBookAggregateValues($db, $bookId) {
     $currentCountStmt->execute([$bookId]);
     $currentReviewCount = $currentCountStmt->fetchColumn();
     
+    // Get a list of all review IDs for this book to debug
+    $reviewIdsStmt = $db->prepare("SELECT id, reviewer_name FROM reviews WHERE book_id = ? ORDER BY id DESC LIMIT 10");
+    $reviewIdsStmt->execute([$bookId]);
+    $recentReviews = $reviewIdsStmt->fetchAll(PDO::FETCH_ASSOC);
+    
     echo "<p class='info'><strong>DEBUG:</strong> Current review count in directory_items: $currentReviewCount</p>";
     echo "<p class='info'><strong>DEBUG:</strong> Total reviews in database for book ID $bookId: $totalReviews</p>";
+    echo "<p class='info'><strong>DEBUG:</strong> 10 most recent reviews:</p>";
+    foreach ($recentReviews as $review) {
+        echo "<p class='info'>- Review ID: {$review['id']}, Reviewer: {$review['reviewer_name']}</p>";
+    }
     flushOutput();
     
     // First, count ALL reviews for this book
@@ -470,6 +479,13 @@ function updateBookAggregateValues($db, $bookId) {
 
                         echo "<p class='info'>Found " . count($reviews) . " reviews from $sourceName</p>";
                         flushOutput();
+                        
+                        // Debug: Count reviews before processing
+                        $beforeCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
+                        $beforeCountStmt->execute([$book['id']]);
+                        $beforeCount = $beforeCountStmt->fetchColumn();
+                        echo "<p class='info'><strong>DEBUG:</strong> Reviews count BEFORE processing: $beforeCount</p>";
+                        flushOutput();
 
                         // Import reviews
                         foreach ($reviews as $review) {
@@ -588,6 +604,14 @@ function updateBookAggregateValues($db, $bookId) {
                             }
                         }
                     }
+                    
+                    // Debug: Count reviews after processing
+                    $afterCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
+                    $afterCountStmt->execute([$book['id']]);
+                    $afterCount = $afterCountStmt->fetchColumn();
+                    echo "<p class='info'><strong>DEBUG:</strong> Reviews count AFTER processing: $afterCount</p>";
+                    echo "<p class='info'><strong>DEBUG:</strong> Change in review count: " . ($afterCount - $beforeCount) . "</p>";
+                    flushOutput();
 
                     // Update aggregate values
                     if ($bookReviewsImported > 0) {

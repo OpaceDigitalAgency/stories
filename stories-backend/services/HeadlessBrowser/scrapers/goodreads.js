@@ -205,15 +205,37 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
     logger.info(`📊 Starting enhanced review extraction - target: ${limit} reviews`);
 
-    while (reviews.length < limit + 1 && pageNum <= config.sources.goodreads.maxPages && clickAttempts < maxClickAttempts) {
-      logger.info(`📑 Attempting to load more reviews (attempt ${clickAttempts + 1}/${maxClickAttempts})`);
+    // Take a screenshot of the initial page for debugging
+    await browser.takeScreenshot(page, `goodreads-initial-page-${bookId || 'unknown'}`);
+
+    // Save the initial HTML for debugging
+    const initialHtml = await page.content();
+    fs.writeFileSync(path.join(debugDir, `goodreads-initial-page-${bookId || 'unknown'}.html`), initialHtml);
+
+    // Log all buttons on the page for debugging
+    const allButtons = await page.$$('button');
+    logger.info(`Found ${allButtons.length} buttons on the page`);
+
+    // Log the text content of each button
+    for (let i = 0; i < allButtons.length; i++) {
+      try {
+        const buttonText = await page.evaluate(el => el.textContent.trim(), allButtons[i]);
+        const buttonClass = await page.evaluate(el => el.className, allButtons[i]);
+        logger.info(`Button ${i+1}: Text="${buttonText}", Class="${buttonClass}"`);
+      } catch (err) {
+        logger.error(`Error getting button ${i+1} details: ${err.message}`);
+      }
+    }
+
+    while (reviews.length < limit && pageNum <= config.sources.goodreads.maxPages && clickAttempts < maxClickAttempts) {
+      logger.info(`📑 Attempting to load more reviews (attempt ${clickAttempts + 1}/${maxClickAttempts}), current count: ${reviews.length}`);
 
       // Scroll to bottom to ensure the button is visible
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
       });
 
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000); // Increased wait time
 
       // Check for different button selectors using CSS selectors
       const cssButtonSelectors = [
@@ -278,8 +300,32 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
             if (buttons.length > 0) {
               logger.info(`✅ Found "More reviews" button using XPath selector: ${xpathSelector}`);
 
+              // Log the button details
+              const buttonText = await page.evaluate(el => el.textContent.trim(), buttons[0]);
+              const buttonClass = await page.evaluate(el => el.className, buttons[0]);
+              logger.info(`Button details: Text="${buttonText}", Class="${buttonClass}"`);
+
+              // Take a screenshot before clicking
+              await browser.takeScreenshot(page, `goodreads-before-click-${bookId}-attempt-${clickAttempts}`);
+
               // Click the first matching button
-              await buttons[0].click();
+              try {
+                // Try direct click first
+                await buttons[0].click();
+                logger.info(`Clicked button using direct click`);
+              } catch (clickErr) {
+                logger.warn(`Direct click failed: ${clickErr.message}, trying evaluate click`);
+
+                // If direct click fails, try clicking via evaluate
+                await page.evaluate(el => {
+                  el.click();
+                }, buttons[0]);
+                logger.info(`Clicked button using evaluate click`);
+              }
+
+              // Take a screenshot after clicking
+              await page.waitForTimeout(1000);
+              await browser.takeScreenshot(page, `goodreads-after-click-${bookId}-attempt-${clickAttempts}`);
 
               buttonFound = true;
               break;
@@ -290,32 +336,95 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
         }
       }
 
+      // If still no button found, try a more aggressive approach with direct DOM manipulation
       if (!buttonFound) {
-        // Try a more generic XPath approach as a last resort
         try {
-          // Look for any button that contains text about reviews or loading more
-          const genericButtons = await page.$x("//button[contains(., 'review') or contains(., 'Review') or contains(., 'more') or contains(., 'More') or contains(., 'load') or contains(., 'Load')]");
+          logger.info(`Trying direct DOM manipulation to load more reviews`);
 
-          if (genericButtons.length > 0) {
-            logger.info(`✅ Found a potential "More reviews" button using generic XPath (${genericButtons.length} matches)`);
+          // Try to find the load more button by its role and text content
+          const buttonFound = await page.evaluate(() => {
+            // Look for buttons with specific text content
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const loadMoreButton = buttons.find(btn => {
+              const text = btn.textContent.toLowerCase();
+              return text.includes('more reviews') || text.includes('show more') || text.includes('load more');
+            });
 
-            // Click the first button that might be relevant
-            await genericButtons[0].click();
-            logger.info(`Clicked generic button with text: ${await page.evaluate(el => el.textContent, genericButtons[0])}`);
+            if (loadMoreButton) {
+              // Try to click it
+              loadMoreButton.click();
+              console.log('Found and clicked button via DOM: ' + loadMoreButton.textContent);
+              return true;
+            }
 
-            buttonFound = true;
+            // If no button found, try to trigger the load more functionality directly
+            // This is a last resort and might break with Goodreads updates
+            try {
+              // Check if there's a pagination container
+              const paginationContainer = document.querySelector('.Pagination');
+              if (paginationContainer) {
+                // Try to find the next page link
+                const nextPageLink = paginationContainer.querySelector('a[rel="next"]');
+                if (nextPageLink) {
+                  // Simulate clicking the next page link
+                  nextPageLink.click();
+                  console.log('Clicked next page link');
+                  return true;
+                }
+              }
+            } catch (e) {
+              console.error('Error trying pagination:', e);
+            }
+
+            return false;
+          });
+
+          if (buttonFound) {
+            logger.info(`✅ Successfully triggered more reviews loading via DOM manipulation`);
           } else {
-            logger.info(`⚠️ No buttons found with generic XPath selectors`);
-
-            // Take a screenshot to see what's on the page
-            await browser.takeScreenshot(page, `goodreads-no-buttons-${bookId}-attempt-${clickAttempts}`);
-
-            // Log the HTML for debugging
-            const currentHtml = await page.content();
-            fs.writeFileSync(path.join(debugDir, `goodreads-no-buttons-${bookId}-attempt-${clickAttempts}.html`), currentHtml);
+            logger.warn(`⚠️ Could not find any way to load more reviews via DOM manipulation`);
           }
         } catch (err) {
-          logger.error(`Error with generic XPath approach: ${err.message}`);
+          logger.error(`Error with DOM manipulation approach: ${err.message}`);
+        }
+      }
+
+      // Final fallback: Try to navigate to the next page directly via URL
+      if (!buttonFound) {
+        try {
+          // Extract the current page number from the URL
+          const currentUrl = page.url();
+          logger.info(`Current URL: ${currentUrl}`);
+
+          // Check if we're already on a paginated page
+          const pageMatch = currentUrl.match(/page=(\d+)/);
+          let nextPageUrl;
+
+          if (pageMatch) {
+            // We're on a paginated page, increment the page number
+            const currentPage = parseInt(pageMatch[1]);
+            nextPageUrl = currentUrl.replace(`page=${currentPage}`, `page=${currentPage + 1}`);
+          } else {
+            // We're on the first page, add page=2
+            if (currentUrl.includes('?')) {
+              nextPageUrl = `${currentUrl}&page=2`;
+            } else {
+              nextPageUrl = `${currentUrl}?page=2`;
+            }
+          }
+
+          logger.info(`Attempting to navigate directly to next page: ${nextPageUrl}`);
+
+          // Navigate to the next page
+          await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+          // Take a screenshot after navigation
+          await browser.takeScreenshot(page, `goodreads-next-page-${bookId}-attempt-${clickAttempts}`);
+
+          logger.info(`✅ Navigated to next page via URL`);
+          buttonFound = true;
+        } catch (err) {
+          logger.error(`Error navigating to next page via URL: ${err.message}`);
         }
       }
 

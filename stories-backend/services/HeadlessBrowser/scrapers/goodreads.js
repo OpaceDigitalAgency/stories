@@ -495,43 +495,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
     logger.info(`Extracted ${pageReviews.length} reviews from first page`);
 
-    // Set up request interception to capture GraphQL requests
-    await page.setRequestInterception(true);
-    
-    // Store GraphQL request data
-    let graphqlData = null;
-    let workId = null;
-    
     // Extract work ID from the HTML
     const reviewsPageHtml = await page.content();
-    workId = extractWorkIdFromHtml(reviewsPageHtml);
+    let workId = extractWorkIdFromHtml(reviewsPageHtml);
+    let graphqlData = null;
     
     if (workId) {
       logger.info(`Found work ID for GraphQL requests: ${workId}`);
     } else {
       logger.warn('Could not find work ID for GraphQL requests, will try to capture it from network requests');
     }
-    
-    // Listen for requests to capture GraphQL data
-    page.on('request', request => {
-      if (request.url().includes('graphql') && request.postData() && request.postData().includes('getReviews')) {
-        try {
-          const postData = JSON.parse(request.postData());
-          graphqlData = postData;
-          
-          // Extract work ID from the request if we don't have it yet
-          if (!workId && postData.variables && postData.variables.filters && postData.variables.filters.resourceId) {
-            workId = postData.variables.filters.resourceId;
-            logger.info(`Captured work ID from GraphQL request: ${workId}`);
-          }
-          
-          logger.info(`Captured GraphQL request data for reviews`);
-        } catch (err) {
-          logger.error(`Error parsing GraphQL request data: ${err.message}`);
-        }
-      }
-      request.continue();
-    });
     
     // Function to make direct GraphQL requests
     const fetchMoreReviewsViaGraphQL = async (nextPageToken) => {

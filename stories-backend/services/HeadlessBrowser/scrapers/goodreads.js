@@ -138,50 +138,190 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
     // Function to extract reviews from current page
     const extractReviewsFromPage = async () => {
+      // Log the current URL for debugging
+      const currentUrl = await page.url();
+      logger.info(`Extracting reviews from URL: ${currentUrl}`);
+
       return page.evaluate(() => {
-        const reviewElements = document.querySelectorAll('div.ReviewsList__item');
+        // Log what we're doing to the console (for screenshots)
+        console.log('Starting review extraction...');
+
+        // Try multiple selectors for review elements
+        const selectors = [
+          'div.ReviewsList__item',
+          'div.ReviewCard',
+          'div[data-testid="review"]',
+          'article.Review'
+        ];
+
+        let reviewElements = [];
+
+        // Try each selector until we find reviews
+        for (const selector of selectors) {
+          const elements = document.querySelectorAll(selector);
+          if (elements.length > 0) {
+            console.log(`Found ${elements.length} reviews using selector: ${selector}`);
+            reviewElements = Array.from(elements);
+            break;
+          }
+        }
+
+        if (reviewElements.length === 0) {
+          console.log('No reviews found with standard selectors, trying alternative approach');
+
+          // Try a more generic approach - look for elements that contain both reviewer name and rating stars
+          const allDivs = document.querySelectorAll('div');
+          reviewElements = Array.from(allDivs).filter(div => {
+            return div.querySelector('.ReviewerProfile__name') ||
+                   div.querySelector('.RatingStars') ||
+                   div.querySelector('[data-testid="rating-stars"]');
+          });
+
+          console.log(`Found ${reviewElements.length} reviews using alternative approach`);
+        }
+
         const pageReviews = [];
 
-        reviewElements.forEach(reviewElement => {
-          // Extract reviewer name
-          const nameElement = reviewElement.querySelector('.ReviewerProfile__name');
-          const reviewerName = nameElement ? nameElement.textContent.trim() : 'Goodreads User';
+        reviewElements.forEach((reviewElement, index) => {
+          try {
+            // Extract reviewer name - try multiple selectors
+            let reviewerName = 'Goodreads User';
+            const nameSelectors = [
+              '.ReviewerProfile__name',
+              '.UserLink__name',
+              '[data-testid="reviewer-name"]',
+              '.ReviewerProfile a'
+            ];
 
-          // Extract rating
-          const ratingElement = reviewElement.querySelector('.RatingStars');
-          let ratingValue = null;
-
-          if (ratingElement) {
-            const ariaLabel = ratingElement.getAttribute('aria-label');
-            if (ariaLabel) {
-              const match = ariaLabel.match(/(\d+)/);
-              if (match) {
-                ratingValue = parseInt(match[1]);
+            for (const selector of nameSelectors) {
+              const nameElement = reviewElement.querySelector(selector);
+              if (nameElement) {
+                reviewerName = nameElement.textContent.trim();
+                break;
               }
             }
-          }
 
-          // Extract review text
-          const textElement = reviewElement.querySelector('.ReviewText__content');
-          const reviewText = textElement ? textElement.textContent.trim() : '';
+            // Extract rating - try multiple approaches
+            let ratingValue = null;
 
-          // Extract date
-          const dateElement = reviewElement.querySelector('.ReviewCard__date');
-          const reviewDate = dateElement ?
-            dateElement.textContent.trim().replace(/^reviewed\s+/i, '') :
-            new Date().toISOString().split('T')[0];
+            // Approach 1: RatingStars with aria-label
+            const ratingElement = reviewElement.querySelector('.RatingStars') ||
+                                  reviewElement.querySelector('[data-testid="rating-stars"]');
 
-          if (ratingValue && reviewText) {
-            pageReviews.push({
-              reviewer_name: reviewerName,
-              rating: ratingValue,
-              rating_normalised: ratingValue / 5,
-              review_text: reviewText,
-              review_date: reviewDate
-            });
+            if (ratingElement) {
+              const ariaLabel = ratingElement.getAttribute('aria-label');
+              if (ariaLabel) {
+                const match = ariaLabel.match(/(\d+)/);
+                if (match) {
+                  ratingValue = parseInt(match[1]);
+                }
+              }
+
+              // Approach 2: Count the filled stars
+              if (!ratingValue) {
+                const filledStars = ratingElement.querySelectorAll('.RatingStar__filled') ||
+                                    ratingElement.querySelectorAll('[data-testid="filled-star"]');
+                if (filledStars.length > 0) {
+                  ratingValue = filledStars.length;
+                }
+              }
+            }
+
+            // Approach 3: Look for text that contains "rated it X stars"
+            if (!ratingValue) {
+              const ratedText = reviewElement.textContent;
+              const ratingMatch = ratedText.match(/rated it (\d+) stars?/i);
+              if (ratingMatch) {
+                ratingValue = parseInt(ratingMatch[1]);
+              }
+            }
+
+            // Extract review text - try multiple selectors
+            let reviewText = '';
+            const textSelectors = [
+              '.ReviewText__content',
+              '.Formatted',
+              '[data-testid="review-text"]',
+              '.ReviewText'
+            ];
+
+            for (const selector of textSelectors) {
+              const textElement = reviewElement.querySelector(selector);
+              if (textElement) {
+                reviewText = textElement.textContent.trim();
+                break;
+              }
+            }
+
+            // If no specific text element found, try to get all text excluding certain elements
+            if (!reviewText) {
+              // Clone the element to avoid modifying the original
+              const clone = reviewElement.cloneNode(true);
+
+              // Remove elements we don't want in the review text
+              const elementsToRemove = [
+                '.ReviewerProfile',
+                '.RatingStars',
+                '.ReviewCard__date',
+                '.ReviewActions'
+              ];
+
+              elementsToRemove.forEach(selector => {
+                const elements = clone.querySelectorAll(selector);
+                elements.forEach(el => el.remove());
+              });
+
+              reviewText = clone.textContent.trim()
+                .replace(/\s+/g, ' ')  // Replace multiple spaces with a single space
+                .substring(0, 2000);   // Limit length to avoid huge reviews
+            }
+
+            // Extract date - try multiple selectors
+            let reviewDate = new Date().toISOString().split('T')[0]; // Default to today
+            const dateSelectors = [
+              '.ReviewCard__date',
+              '[data-testid="review-date"]',
+              '.ReviewDate'
+            ];
+
+            for (const selector of dateSelectors) {
+              const dateElement = reviewElement.querySelector(selector);
+              if (dateElement) {
+                const dateText = dateElement.textContent.trim().replace(/^reviewed\s+/i, '');
+
+                // Try to parse the date
+                try {
+                  const parsedDate = new Date(dateText);
+                  if (!isNaN(parsedDate.getTime())) {
+                    reviewDate = parsedDate.toISOString().split('T')[0];
+                  }
+                } catch (e) {
+                  // If parsing fails, keep the default date
+                  console.log(`Could not parse date: ${dateText}`);
+                }
+
+                break;
+              }
+            }
+
+            // Only add reviews with both rating and text
+            if (ratingValue && reviewText && reviewText.length > 10) {
+              pageReviews.push({
+                reviewer_name: reviewerName,
+                rating: ratingValue,
+                rating_normalised: ratingValue / 5,
+                review_text: reviewText,
+                review_date: reviewDate
+              });
+
+              console.log(`Extracted review ${index + 1}: ${reviewerName}, ${ratingValue} stars`);
+            }
+          } catch (err) {
+            console.error(`Error extracting review ${index + 1}: ${err.message}`);
           }
         });
 
+        console.log(`Successfully extracted ${pageReviews.length} reviews`);
         return pageReviews;
       });
     };
@@ -439,15 +579,27 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       // Extract reviews from the updated page
       const newReviews = await extractReviewsFromPage();
 
-      // Check if we got new reviews
-      if (newReviews.length > pageReviews.length) {
-        logger.info(`✅ Found ${newReviews.length - pageReviews.length} new reviews`);
+      // Save the current page HTML for debugging
+      const currentHtml = await page.content();
+      fs.writeFileSync(path.join(debugDir, `goodreads-page-${bookId || 'unknown'}-attempt-${clickAttempts}.html`), currentHtml);
 
-        // Update pageReviews with the new reviews
-        pageReviews = newReviews;
+      // Log the number of reviews found
+      logger.info(`📊 Found ${newReviews.length} reviews on current page (attempt ${clickAttempts + 1})`);
 
-        // Add the new reviews to our collection
-        reviews = [...reviews, ...pageReviews.map(review => ({
+      // Check if we got new unique reviews by comparing with what we already have
+      const uniqueNewReviews = newReviews.filter(newReview => {
+        return !reviews.some(existingReview => {
+          // Compare reviewer name and review text to identify duplicates
+          return existingReview.reviewer_name === newReview.reviewer_name &&
+                 existingReview.review_text === newReview.review_text;
+        });
+      });
+
+      logger.info(`✅ Found ${uniqueNewReviews.length} unique new reviews`);
+
+      if (uniqueNewReviews.length > 0) {
+        // Add the unique new reviews to our collection
+        reviews = [...reviews, ...uniqueNewReviews.map(review => ({
           source_id: 4, // Goodreads source ID
           ...review,
           metadata: JSON.stringify({
@@ -460,8 +612,35 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
         // Reset click attempts on success
         clickAttempts = 0;
+
+        // Update pageReviews with all reviews from this page for next comparison
+        pageReviews = newReviews;
       } else {
         logger.info(`⚠️ No new reviews found after clicking, attempt ${clickAttempts + 1}/${maxClickAttempts}`);
+
+        // Try a different approach - check if we're on a paginated URL
+        const currentUrl = page.url();
+        if (currentUrl.includes('reviews?page=') || currentUrl.includes('reviews?sort=')) {
+          // We're on a paginated URL, try to go to the next page directly
+          const pageMatch = currentUrl.match(/reviews\?page=(\d+)/);
+          if (pageMatch) {
+            const currentPage = parseInt(pageMatch[1]);
+            const nextPageUrl = currentUrl.replace(`page=${currentPage}`, `page=${currentPage + 1}`);
+
+            logger.info(`🔄 Trying direct navigation to next page: ${nextPageUrl}`);
+
+            try {
+              await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+              await browser.takeScreenshot(page, `goodreads-direct-navigation-${bookId}-page-${currentPage+1}`);
+
+              // Don't increment clickAttempts here, we're trying a different approach
+              continue;
+            } catch (err) {
+              logger.error(`❌ Error navigating to next page: ${err.message}`);
+            }
+          }
+        }
+
         clickAttempts++;
       }
 

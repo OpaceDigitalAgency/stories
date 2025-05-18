@@ -85,7 +85,15 @@ function updateBookAggregateValues($db, $bookId) {
     $debugCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
     $debugCountStmt->execute([$bookId]);
     $totalReviews = $debugCountStmt->fetchColumn();
-    error_log("Total reviews for book ID $bookId: $totalReviews");
+    
+    // Get current review count from directory_items
+    $currentCountStmt = $db->prepare("SELECT review_count FROM directory_items WHERE id = ?");
+    $currentCountStmt->execute([$bookId]);
+    $currentReviewCount = $currentCountStmt->fetchColumn();
+    
+    echo "<p class='info'><strong>DEBUG:</strong> Current review count in directory_items: $currentReviewCount</p>";
+    echo "<p class='info'><strong>DEBUG:</strong> Total reviews in database for book ID $bookId: $totalReviews</p>";
+    flushOutput();
     
     $aggregateStmt = $db->prepare("
         SELECT
@@ -111,8 +119,9 @@ function updateBookAggregateValues($db, $bookId) {
             WHERE id = ?
         ");
 
-        // Debug: Log the values being updated
-        error_log("Updating directory_items for book ID $bookId with review_count: {$aggregateValues['review_count']}");
+        // Debug: Display the values being updated
+        echo "<p class='info'><strong>DEBUG:</strong> Updating directory_items for book ID $bookId with review_count: {$aggregateValues['review_count']}</p>";
+        flushOutput();
         
         $stmt->execute([
             $aggregateValues['review_count'],

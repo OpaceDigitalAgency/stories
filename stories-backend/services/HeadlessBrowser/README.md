@@ -238,3 +238,4 @@ private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit): arra
 **Deployment test: Sat May 17 15:44:32 BST 2025**
 Test deploy at Sun May 18 08:34:28 BST 2025
 Test auto-deploy: Sun May 18 09:05:59 BST 2025
+Deployment check Sun May 18 09:06:48 BST 2025

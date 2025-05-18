@@ -94,11 +94,27 @@ module.exports = {
     // Block unnecessary resources to speed up scraping
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-      const resourceType = req.resourceType();
-      if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
-        req.abort();
-      } else {
-        req.continue();
+      try {
+        const resourceType = req.resourceType();
+        if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      } catch (error) {
+        // If the request has already been handled, log it and move on
+        if (error.message.includes('Request is already handled')) {
+          logger.warn(`Request is already handled: ${req.url().substring(0, 100)}...`);
+        } else {
+          logger.error(`Error handling request: ${error.message}`);
+          // Try to continue the request if possible
+          try {
+            req.continue();
+          } catch (continueError) {
+            // Ignore errors from trying to continue an already handled request
+            logger.debug(`Could not continue request: ${continueError.message}`);
+          }
+        }
       }
     });
     

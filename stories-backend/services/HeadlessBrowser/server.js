@@ -1,6 +1,6 @@
 /**
  * Review Scraper Server
- * 
+ *
  * This server provides API endpoints for scraping book reviews from various sources.
  */
 const express = require('express');
@@ -33,11 +33,11 @@ const rateLimiter = new RateLimiterMemory({
 // API key authentication middleware
 const authenticateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
-  
+
   if (!apiKey || apiKey !== config.server.apiKey) {
     return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
   }
-  
+
   next();
 };
 
@@ -60,14 +60,14 @@ app.get('/health', (req, res) => {
 app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
     const { url, limit = 50 } = req.query;
-    
+
     if (!url) {
       return res.status(400).json({ error: 'Missing URL parameter' });
     }
-    
+
     logger.info(`Scraping Goodreads reviews for URL: ${url}`);
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit));
-    
+
     res.status(200).json(reviews);
   } catch (error) {
     logger.error(`Error scraping Goodreads reviews: ${error.message}`);
@@ -79,14 +79,14 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
     const { asin, limit = 50 } = req.query;
-    
+
     if (!asin) {
       return res.status(400).json({ error: 'Missing ASIN parameter' });
     }
-    
+
     logger.info(`Scraping Amazon reviews for ASIN: ${asin}`);
     const reviews = await amazon.scrapeAmazonReviews(asin, parseInt(limit));
-    
+
     res.status(200).json(reviews);
   } catch (error) {
     logger.error(`Error scraping Amazon reviews: ${error.message}`);
@@ -105,6 +105,78 @@ app.post('/cache/clear', authenticateApiKey, async (req, res) => {
   }
 });
 
+// Logs endpoint
+app.get('/logs', authenticateApiKey, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Get the most recent log files
+    const logsDir = path.join(__dirname, 'logs');
+    const combinedLogPath = path.join(logsDir, 'combined.log');
+    const errorLogPath = path.join(logsDir, 'error.log');
+
+    let logs = [];
+
+    // Read combined log if it exists
+    if (fs.existsSync(combinedLogPath)) {
+      const combinedLog = fs.readFileSync(combinedLogPath, 'utf8');
+      const combinedLines = combinedLog.split('\n').filter(line => line.trim() !== '');
+
+      // Get the last 100 lines
+      const lastLines = combinedLines.slice(-100);
+
+      // Parse each line as JSON
+      for (const line of lastLines) {
+        try {
+          const logEntry = JSON.parse(line);
+          logs.push({
+            timestamp: logEntry.timestamp,
+            level: logEntry.level,
+            message: logEntry.message
+          });
+        } catch (err) {
+          // If line isn't valid JSON, add it as a raw message
+          logs.push({
+            timestamp: new Date().toISOString(),
+            level: 'info',
+            message: line
+          });
+        }
+      }
+    }
+
+    // Sort logs by timestamp (newest first)
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.status(200).json({ logs });
+  } catch (error) {
+    logger.error(`Error retrieving logs: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Restart endpoint
+app.get('/restart', authenticateApiKey, async (req, res) => {
+  try {
+    logger.info('Restart requested via API');
+
+    // Send success response before restarting
+    res.status(200).json({
+      success: true,
+      message: 'Restart initiated. The server will restart in 2 seconds.'
+    });
+
+    // Wait 2 seconds to allow the response to be sent
+    setTimeout(() => {
+      process.exit(0); // PM2 will restart the process
+    }, 2000);
+  } catch (error) {
+    logger.error(`Error during restart: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error(`Unhandled error: ${err.message}`);
@@ -113,10 +185,11 @@ app.use((err, req, res, next) => {
 
 // Start the server
 const PORT = process.env.PORT || config.server.port;
-const HOST = '0.0.0.0';
+const HOST = config.server.host || '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
   logger.info(`Server running on http://${HOST}:${PORT}`);
+  logger.info(`API Key: ${config.server.apiKey}`);
 });
 
 // Graceful shutdown
@@ -125,26 +198,26 @@ process.on('SIGINT', gracefulShutdown);
 
 async function gracefulShutdown() {
   logger.info('Received shutdown signal, closing server and resources');
-  
+
   // Close the server
   server.close(() => {
     logger.info('HTTP server closed');
   });
-  
+
   // Close the browser
   try {
     await browser.closeBrowser();
   } catch (error) {
     logger.error(`Error closing browser: ${error.message}`);
   }
-  
+
   // Close the cache
   try {
     cache.close();
   } catch (error) {
     logger.error(`Error closing cache: ${error.message}`);
   }
-  
+
   // Exit process
   process.exit(0);
 }

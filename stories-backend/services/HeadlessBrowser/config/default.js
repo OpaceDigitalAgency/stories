@@ -4,8 +4,8 @@
 module.exports = {
   server: {
     port: 3000,
-    host: 'localhost',
-    apiKey: 'your-secret-api-key-here' // Change this in production
+    host: '0.0.0.0', // Listen on all interfaces to allow external connections
+    apiKey: 'stories-scraper-api-key' // API key used by the PHP code
   },
   browser: {
     headless: true,

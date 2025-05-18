@@ -445,16 +445,16 @@ function updateBookAggregateValues($db, $bookId) {
 
                         // Import reviews
                         foreach ($reviews as $review) {
-                            // Check for duplicates, but allow force refresh to override
-                            if (!$forceRefresh && reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'])) {
+                            // Check for duplicates, but allow force refresh or continue from last to override
+                            if (!$forceRefresh && !$continueFromLast && reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'])) {
                                 echo "<p class='warning'>Skipping duplicate review by {$review['reviewer_name']}</p>";
                                 flushOutput();
                                 $bookReviewsSkipped++;
                                 continue;
                             }
 
-                            // If force refresh is enabled and the review exists, delete the old one first
-                            if ($forceRefresh && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
+                            // If force refresh or continue from last is enabled and the review exists, delete the old one first
+                            if (($forceRefresh || $continueFromLast) && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
                                 $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
                                 $deleteStmt->execute([$existingReview['id']]);
                                 echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";

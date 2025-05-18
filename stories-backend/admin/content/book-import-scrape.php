@@ -95,9 +95,19 @@ function updateBookAggregateValues($db, $bookId) {
     echo "<p class='info'><strong>DEBUG:</strong> Total reviews in database for book ID $bookId: $totalReviews</p>";
     flushOutput();
     
+    // First, count ALL reviews for this book
+    $totalReviewCount = 0;
+    $countAllStmt = $db->prepare("
+        SELECT COUNT(*) as total_review_count
+        FROM reviews
+        WHERE book_id = ?
+    ");
+    $countAllStmt->execute([$bookId]);
+    $totalReviewCount = $countAllStmt->fetchColumn();
+    
+    // Then get aggregate values for reviews with ratings
     $aggregateStmt = $db->prepare("
         SELECT
-            COUNT(*) as review_count,
             AVG(rating_normalised) as average_rating,
             MAX(rating_normalised) as highest_rating,
             MIN(rating_normalised) as lowest_rating
@@ -108,7 +118,7 @@ function updateBookAggregateValues($db, $bookId) {
     $aggregateValues = $aggregateStmt->fetch(PDO::FETCH_ASSOC);
 
     // Update the directory item
-    if ($aggregateValues['review_count'] > 0) {
+    if ($totalReviewCount > 0) {
         $stmt = $db->prepare("
             UPDATE directory_items
             SET
@@ -120,11 +130,11 @@ function updateBookAggregateValues($db, $bookId) {
         ");
 
         // Debug: Display the values being updated
-        echo "<p class='info'><strong>DEBUG:</strong> Updating directory_items for book ID $bookId with review_count: {$aggregateValues['review_count']}</p>";
+        echo "<p class='info'><strong>DEBUG:</strong> Updating directory_items for book ID $bookId with review_count: {$totalReviewCount}</p>";
         flushOutput();
         
         $stmt->execute([
-            $aggregateValues['review_count'],
+            $totalReviewCount,
             $aggregateValues['average_rating'],
             $aggregateValues['highest_rating'],
             $aggregateValues['lowest_rating'],

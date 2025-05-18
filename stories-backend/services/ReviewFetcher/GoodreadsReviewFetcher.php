@@ -14,6 +14,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $sourceId = 1; // Goodreads source ID
     protected $lastError = null;
     protected $aggregateRating = null; // Store aggregate rating separately
+    protected $useVpsHeadlessBrowser = false; // Whether to use the VPS Headless Browser
 
     /**
      * Constructor
@@ -1099,6 +1100,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}";
 
+        // Log the full URL for debugging
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Full request URL: {$url}");
+
         // Make the request
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -1108,8 +1112,22 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             "x-api-key: {$apiKey}"
         ]);
 
+        // Enable verbose output for debugging
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        $verbose = fopen('php://temp', 'w+');
+        curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Get verbose information
+        rewind($verbose);
+        $verboseLog = stream_get_contents($verbose);
+        fclose($verbose);
+
+        // Log the verbose output
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 CURL Verbose Log for VPS Request:\n{$verboseLog}");
+
         curl_close($ch);
 
         // Save the response for debugging

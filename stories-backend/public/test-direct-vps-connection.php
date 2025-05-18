@@ -1,7 +1,7 @@
 <?php
 /**
  * Test Direct VPS Connection
- * 
+ *
  * This script tests a direct connection to the VPS scraper API.
  */
 
@@ -45,7 +45,7 @@ echo "<!DOCTYPE html>
 <body>
     <div class='container'>
         <h1>Direct VPS Scraper Test</h1>
-        
+
         <div class='info'>
             <h2>Test Parameters</h2>
             <p><strong>ISBN:</strong> <?php echo htmlspecialchars($isbn); ?></p>
@@ -77,22 +77,27 @@ if ($httpCode === 200) {
 
 // Test scraper endpoint
 echo "<h2>Scraper Test</h2>";
-$scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}";
-$postData = json_encode([
-    'isbn' => $isbn,
-    'limit' => $limit,
-    'apiKey' => $apiKey
-]);
+
+// Build the URL with query parameters
+if ($source === 'goodreads') {
+    // For Goodreads, we need to get the Goodreads URL from the ISBN
+    $goodreadsUrl = "https://www.goodreads.com/book/isbn/{$isbn}";
+    $scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}?url=" . urlencode($goodreadsUrl) . "&limit={$limit}";
+} else if ($source === 'amazon') {
+    // For Amazon, we use the ASIN directly
+    $scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}?asin={$isbn}&limit={$limit}";
+} else {
+    $scraperUrl = "http://{$vpsIp}:{$vpsPort}/scrape/{$source}?isbn={$isbn}&limit={$limit}";
+}
+
+echo "<p><strong>Request URL:</strong> " . htmlspecialchars($scraperUrl) . "</p>";
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $scraperUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 120); // 2 minutes timeout
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json',
-    'Content-Length: ' . strlen($postData)
+    "x-api-key: {$apiKey}"
 ]);
 
 $response = curl_exec($ch);
@@ -102,12 +107,12 @@ $duration = round($endTime - $startTime, 2);
 
 if ($httpCode === 200) {
     $data = json_decode($response, true);
-    
+
     if (json_last_error() === JSON_ERROR_NONE && isset($data['reviews'])) {
         $reviewCount = count($data['reviews']);
-        
+
         echo "<p class='success'>✅ Successfully retrieved {$reviewCount} reviews in {$duration} seconds!</p>";
-        
+
         echo "<h3>Reviews:</h3>";
         foreach ($data['reviews'] as $index => $review) {
             echo "<div class='review'>";
@@ -115,7 +120,7 @@ if ($httpCode === 200) {
             echo "<div class='review-text'>" . htmlspecialchars(substr($review['review_text'], 0, 200)) . (strlen($review['review_text']) > 200 ? '...' : '') . "</div>";
             echo "</div>";
         }
-        
+
         echo "<h3>Raw Response:</h3>";
         echo "<pre>" . htmlspecialchars(json_encode($data, JSON_PRETTY_PRINT)) . "</pre>";
     } else {

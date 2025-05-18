@@ -183,8 +183,16 @@ function extractWorkIdFromHtml(html) {
  * @returns {Promise<Object>} - Object containing reviews and metadata
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
-  const maxPages = options.maxPages || 20;
+  const maxPages = options.maxPages || 100; // Increased from 20 to 100
   const continueFromLast = options.continueFromLast || false;
+  const startPage = options.startPage || 1;
+  
+  logger.info(`Starting Goodreads scraping with settings:
+    - URL: ${goodreadsUrl}
+    - Limit: ${limit}
+    - Max Pages: ${maxPages}
+    - Continue From Last: ${continueFromLast}
+    - Start Page: ${startPage}`);
   
   logger.info(`Starting Goodreads scraping for URL: ${goodreadsUrl}, limit: ${limit}, maxPages: ${maxPages}, continueFromLast: ${continueFromLast}`);
 
@@ -196,25 +204,44 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     // Check cache first
     const cachedData = await cache.get('goodreads', bookId);
     if (cachedData) {
-      // If we're not continuing from last scrape, use the cache if it has enough reviews
-      if (!continueFromLast) {
-        // Check if we have more than just the aggregate review
-        if (cachedData.reviews && cachedData.reviews.length > 1) {
-          logger.info(`Using cached data for Goodreads book ID: ${bookId} (${cachedData.reviews.length} reviews)`);
-          return {
-            source: 'cache',
-            ...cachedData
-          };
+      // Handle cached data
+      if (cachedData) {
+        if (!continueFromLast) {
+          // If not continuing and cache has enough reviews, use it
+          if (cachedData.reviews && cachedData.reviews.length >= limit) {
+            logger.info(`Using cached data for Goodreads book ID: ${bookId} (${cachedData.reviews.length} reviews)`);
+            return {
+              source: 'cache',
+              ...cachedData
+            };
+          } else {
+            logger.info(`Cache has insufficient reviews (${cachedData.reviews ? cachedData.reviews.length : 0} < ${limit}), fetching fresh data`);
+          }
         } else {
-          logger.info(`Cache only has ${cachedData.reviews ? cachedData.reviews.length : 0} reviews for book ID: ${bookId}, fetching fresh data`);
-        }
-      } else {
-        // If we're continuing from last scrape, we'll use the cached data as a starting point
-        logger.info(`Continuing from last scrape for book ID: ${bookId} with ${cachedData.reviews ? cachedData.reviews.length : 0} existing reviews`);
-        
-        // If we have a nextPageToken in the cache, we'll use it
-        if (cachedData.nextPageToken) {
-          logger.info(`Found next page token in cache: ${cachedData.nextPageToken}`);
+          // If continuing from last scrape, use cached data as starting point
+          logger.info(`Continuing from last scrape:
+            - Book ID: ${bookId}
+            - Existing reviews: ${cachedData.reviews ? cachedData.reviews.length : 0}
+            - Last page: ${cachedData.currentPage || 1}
+            - Total available: ${cachedData.totalAvailable || 'unknown'}
+            - Has more: ${cachedData.hasMoreReviews ? 'yes' : 'no'}
+            - Last scraped: ${cachedData.lastScrapedAt || 'unknown'}`);
+
+          // Initialize from cached state
+          reviews = cachedData.reviews || [];
+          pageNum = cachedData.currentPage || 1;
+          
+          if (cachedData.nextPageToken) {
+            logger.info(`Resuming from page token: ${cachedData.nextPageToken}`);
+          }
+          
+          // If we know total available, adjust limit
+          if (cachedData.totalAvailable) {
+            const remaining = cachedData.totalAvailable - reviews.length;
+            if (remaining > 0) {
+              logger.info(`${remaining} more reviews available to scrape`);
+            }
+          }
         }
       }
     }
@@ -543,7 +570,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           },
           pagination: {
             after: nextPageToken,
-            limit: 30
+            limit: 100 // Increased from 30 to 100 for more reviews per request
           }
         }
       };
@@ -570,9 +597,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     };
 
     // Click "More reviews" button and extract more reviews until we reach the limit
-    let pageNum = 2;
+    let pageNum = startPage || 2;
     let clickAttempts = 0;
-    const maxClickAttempts = 20; // Try up to 20 times to get more reviews
+    const maxClickAttempts = 50; // Increased from 20 to 50
+    let consecutiveEmptyPages = 0;
+    const maxConsecutiveEmptyPages = 3;
 
     logger.info(`📊 Starting enhanced review extraction - target: ${limit} reviews`);
 
@@ -788,10 +817,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       const startTime = Date.now();
       const maxScrapingTime = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-      while (reviews.length < limit &&
+      while ((continueFromLast || reviews.length < limit) &&
              pageNum <= maxPages &&
              clickAttempts < maxClickAttempts &&
              consecutiveFailedAttempts < maxConsecutiveFailedAttempts &&
+             consecutiveEmptyPages < maxConsecutiveEmptyPages &&
              (Date.now() - startTime) < maxScrapingTime) {
 
       logger.info(`� Progress: ${reviews.length}/${limit} reviews, page ${pageNum}, attempt ${clickAttempts + 1}/${maxClickAttempts}, consecutive fails: ${consecutiveFailedAttempts}`);
@@ -1065,6 +1095,12 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         pageReviews = newReviews;
       } else {
         logger.info(`⚠️ No new reviews found after clicking, attempt ${clickAttempts + 1}/${maxClickAttempts}`);
+        consecutiveEmptyPages++;
+        
+        if (consecutiveEmptyPages >= maxConsecutiveEmptyPages) {
+          logger.info(`⚠️ Stopping after ${consecutiveEmptyPages} consecutive empty pages`);
+          break;
+        }
 
         // Try a different approach - check if we're on a paginated URL
         const currentUrl = page.url();
@@ -1110,8 +1146,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       }
     }
 
-    // Limit the number of reviews to the requested limit
-    const limitedReviews = reviews.slice(0, limit);
+    // Only limit reviews if we're not continuing from last scrape
+    const limitedReviews = continueFromLast ? reviews : reviews.slice(0, limit);
 
     // Cache the results
     if (bookId) {
@@ -1137,7 +1173,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         book_title: bookTitle,
         total: reviews.length,
         reviews: limitedReviews,
-        nextPageToken: nextPageToken
+        nextPageToken: nextPageToken,
+        currentPage: pageNum,
+        lastScrapedAt: new Date().toISOString(),
+        totalAvailable: aggregateRating.count || null,
+        hasMoreReviews: reviews.length < (aggregateRating.count || limit)
       };
 
       await cache.set('goodreads', bookId, dataToCache);
@@ -1147,7 +1187,10 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       source: 'scrape',
       book_title: bookTitle,
       total: reviews.length,
-      reviews: limitedReviews
+      reviews: limitedReviews,
+      currentPage: pageNum,
+      hasMoreReviews: reviews.length < (aggregateRating.count || limit),
+      totalAvailable: aggregateRating.count || null
     };
   } catch (error) {
     logger.error(`Error scraping Goodreads reviews: ${error.message}`);

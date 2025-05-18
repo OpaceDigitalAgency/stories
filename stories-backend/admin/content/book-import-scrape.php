@@ -51,7 +51,27 @@ function flushOutput() {
 }
 
 // Function to check if a review already exists
-function reviewExists($db, $bookId, $sourceId, $reviewerName) {
+function reviewExists($db, $bookId, $sourceId, $reviewerName, $reviewText = null) {
+    // If review text is provided, use it to check for duplicates more accurately
+    if ($reviewText) {
+        // Use the first 100 characters of the review text to check for duplicates
+        $reviewTextStart = substr($reviewText, 0, 100);
+        
+        $stmt = $db->prepare("
+            SELECT id FROM reviews
+            WHERE book_id = ? AND source_id = ? AND
+                  LOWER(TRIM(REPLACE(reviewer_name, '**', ''))) = LOWER(TRIM(?)) AND
+                  LOWER(SUBSTRING(review_text, 1, 100)) = LOWER(?)
+        ");
+        $stmt->execute([$bookId, $sourceId, $reviewerName, $reviewTextStart]);
+        $result = $stmt->fetch();
+        
+        if ($result) {
+            return $result;
+        }
+    }
+    
+    // Fall back to just checking the reviewer name
     $stmt = $db->prepare("
         SELECT id FROM reviews
         WHERE book_id = ? AND source_id = ? AND
@@ -434,6 +454,10 @@ function updateBookAggregateValues($db, $bookId) {
                                 $fetchLimit = $reviewLimit;
                             }
                             
+                            // Debug the fetch limit
+                            echo "<p class='info'><strong>DEBUG:</strong> Requesting {$fetchLimit} reviews from {$sourceName} (reviewLimit: {$reviewLimit}, existingReviewCount: {$existingReviewCount})</p>";
+                            flushOutput();
+                            
                             // Fetch reviews from the source with the specified limit
                             $result = $fetcher->fetchReviewsByISBN($isbnToUse, $fetchLimit, $options);
 
@@ -489,37 +513,36 @@ function updateBookAggregateValues($db, $bookId) {
 
                         // Import reviews
                         foreach ($reviews as $review) {
-                            // Check for duplicates, but allow force refresh or continue from last to override
-                            if (!$forceRefresh && !$continueFromLast && reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'])) {
-                                echo "<p class='warning'>Skipping duplicate review by {$review['reviewer_name']}</p>";
-                                flushOutput();
-                                $bookReviewsSkipped++;
-                                continue;
-                            }
-
-                            // If force refresh or continue from last is enabled and the review exists, delete the old one first
-                            $isReplacement = false;
-                            if (($forceRefresh || $continueFromLast) && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
-                                echo "<p class='info'><strong>DEBUG:</strong> Found existing review ID: {$existingReview['id']} for {$review['reviewer_name']}</p>";
-                                flushOutput();
-                                
-                                $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
-                                $deleteStmt->execute([$existingReview['id']]);
-                                
-                                // Check if the delete was successful
-                                $checkDeleteStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE id = ?");
-                                $checkDeleteStmt->execute([$existingReview['id']]);
-                                $deleteCount = $checkDeleteStmt->fetchColumn();
-                                
-                                if ($deleteCount == 0) {
+                            // Check for duplicates
+                            $existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'], $review['review_text'] ?? null);
+                            
+                            // Handle different scenarios
+                            if ($existingReview) {
+                                if ($continueFromLast) {
+                                    // If continuing from last, skip existing reviews
+                                    echo "<p class='info'>Skipping existing review by {$review['reviewer_name']} (continuing from last)</p>";
+                                    flushOutput();
+                                    $bookReviewsSkipped++;
+                                    continue;
+                                } else if ($forceRefresh) {
+                                    // If force refresh, delete and replace the review
+                                    echo "<p class='info'><strong>DEBUG:</strong> Found existing review ID: {$existingReview['id']} for {$review['reviewer_name']}</p>";
+                                    flushOutput();
+                                    
+                                    $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
+                                    $deleteStmt->execute([$existingReview['id']]);
+                                    
                                     echo "<p class='info'>Successfully deleted review ID: {$existingReview['id']}</p>";
+                                    echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
+                                    flushOutput();
+                                    $isReplacement = true;
                                 } else {
-                                    echo "<p class='error'>Failed to delete review ID: {$existingReview['id']}</p>";
+                                    // Normal case - skip duplicate
+                                    echo "<p class='warning'>Skipping duplicate review by {$review['reviewer_name']}</p>";
+                                    flushOutput();
+                                    $bookReviewsSkipped++;
+                                    continue;
                                 }
-                                
-                                echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
-                                flushOutput();
-                                $isReplacement = true;
                             }
 
                             try {

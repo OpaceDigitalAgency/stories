@@ -50,6 +50,17 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of review data
      */
     public function fetchReviewsByISBN(string $isbn, int $limit = 100, array $options = []): array {
+        // Get pagination state from options
+        $maxPages = $options['maxPages'] ?? 100; // Increase default max pages
+        $continueFromLast = $options['continueFromLast'] ?? false;
+        $startPage = $options['startPage'] ?? 1;
+        
+        // Store these in class properties for the scraper to use
+        $this->maxPages = $maxPages;
+        $this->continueFromLast = $continueFromLast;
+        $this->startPage = $startPage;
+        $this->reviewLimit = $limit;
+
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
 
@@ -1081,12 +1092,19 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array Array of reviews
      */
     private function fetchReviewsWithHeadlessBrowser(string $goodreadsUrl, int $limit, array $options = []): array {
+        // Debug: Log the limit being requested
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Requesting {$limit} reviews from Headless Browser");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 [DEBUG] Options: " . json_encode($options));
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
             mkdir($debugDir, 0755, true);
         }
 
-        $this->logToFile($debugDir . '/goodreads-log.txt', "📦 [VPS-Scraper-Goodreads] Attempting to fetch reviews using Puppeteer with full page JS evaluation for URL: {$goodreadsUrl}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "� [VPS-Scraper-Goodreads] Attempting to fetch reviews using Puppeteer with full page JS evaluation for URL: {$goodreadsUrl}");
 
         // Use the VPS IP address as the default if environment variable is not set
         $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';

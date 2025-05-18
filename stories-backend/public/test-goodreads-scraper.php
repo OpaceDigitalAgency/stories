@@ -51,6 +51,14 @@ try {
     // Create Goodreads review fetcher
     $fetcher = new \Services\ReviewFetcher\GoodreadsReviewFetcher($db, $sourceId);
 
+    // Force VPS Headless Browser to be used
+    $reflectionClass = new ReflectionClass('\\Services\\ReviewFetcher\\GoodreadsReviewFetcher');
+    $property = $reflectionClass->getProperty('useVpsHeadlessBrowser');
+    $property->setAccessible(true);
+    $property->setValue($fetcher, true);
+
+    echo "Forced VPS Headless Browser to be used\n";
+
     // Fetch reviews
     echo "Fetching reviews...\n";
     $startTime = microtime(true);
@@ -118,7 +126,7 @@ try {
                 echo "✅ VPS Headless Browser API is reachable\n";
             } else if (strpos($logContent, 'VPS Headless Browser API is not reachable') !== false) {
                 echo "❌ VPS Headless Browser API is NOT reachable\n";
-                
+
                 // Extract HTTP code if available
                 if (preg_match('/VPS Headless Browser API is not reachable: HTTP (\d+)/', $logContent, $matches)) {
                     echo "   HTTP Status Code: {$matches[1]}\n";

@@ -14,6 +14,101 @@ if (!fs.existsSync(debugDir)) {
   fs.mkdirSync(debugDir, { recursive: true });
 }
 
+// GraphQL query for fetching reviews
+const REVIEWS_QUERY = `
+query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput) {
+  getReviews(filters: $filters, pagination: $pagination) {
+    ...BookReviewsFragment
+    __typename
+  }
+}
+
+fragment BookReviewsFragment on BookReviewsConnection {
+  totalCount
+  edges {
+    node {
+      ...ReviewCardFragment
+      __typename
+    }
+    __typename
+  }
+  pageInfo {
+    prevPageToken
+    nextPageToken
+    __typename
+  }
+  __typename
+}
+
+fragment ReviewCardFragment on Review {
+  __typename
+  id
+  creator {
+    ...ReviewerProfileFragment
+    __typename
+  }
+  recommendFor
+  updatedAt
+  createdAt
+  spoilerStatus
+  lastRevisionAt
+  text
+  rating
+  shelving {
+    shelf {
+      name
+      webUrl
+      __typename
+    }
+    taggings {
+      tag {
+        name
+        webUrl
+        __typename
+      }
+      __typename
+    }
+    webUrl
+    __typename
+  }
+  likeCount
+  viewerHasLiked
+  commentCount
+}
+
+fragment ReviewerProfileFragment on User {
+  id: legacyId
+  imageUrlSquare
+  isAuthor
+  ...SocialUserFragment
+  textReviewsCount
+  viewerRelationshipStatus {
+    isBlockedByViewer
+    __typename
+  }
+  name
+  webUrl
+  contributor {
+    id
+    works {
+      totalCount
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment SocialUserFragment on User {
+  viewerRelationshipStatus {
+    isFollowing
+    isFriend
+    __typename
+  }
+  followersCount
+  __typename
+}`;
+
 /**
  * Extract book ID from Goodreads URL
  * @param {string} url - Goodreads book URL
@@ -37,6 +132,13 @@ function extractBookIdFromUrl(url) {
     return numericIdMatch[1];
   }
 
+  // Try to extract work ID from URL (used in GraphQL queries)
+  const workIdMatch = url.match(/amzn1\.gr\.work\.v1\.[a-zA-Z0-9]+/);
+  if (workIdMatch && workIdMatch[0]) {
+    logger.info(`Extracted work ID ${workIdMatch[0]} from URL`);
+    return workIdMatch[0];
+  }
+
   // Finally, try to extract alphanumeric ID from show URL
   const alphaNumIdMatch = url.match(/\/book\/show\/([\w.-]+)/);
   if (alphaNumIdMatch && alphaNumIdMatch[1]) {
@@ -47,6 +149,24 @@ function extractBookIdFromUrl(url) {
   }
 
   logger.warn(`Could not extract book ID from URL: ${url}`);
+  return null;
+}
+
+/**
+ * Extract work ID from HTML content
+ * @param {string} html - HTML content of the page
+ * @returns {string|null} - Work ID or null if not found
+ */
+function extractWorkIdFromHtml(html) {
+  // Look for the work ID in the HTML
+  const workIdMatch = html.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[a-zA-Z0-9]+/);
+  if (workIdMatch && workIdMatch[0]) {
+    const workId = workIdMatch[0].replace('kca://', '');
+    logger.info(`Extracted work ID ${workId} from HTML`);
+    return workId;
+  }
+  
+  logger.warn('Could not extract work ID from HTML');
   return null;
 }
 
@@ -90,8 +210,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
     await page.goto(goodreadsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
     // Save the page HTML for debugging
-    const html = await page.content();
-    fs.writeFileSync(path.join(debugDir, `goodreads-${bookId || 'unknown'}-page.html`), html);
+    const initialPageHtml = await page.content();
+    fs.writeFileSync(path.join(debugDir, `goodreads-${bookId || 'unknown'}-page.html`), initialPageHtml);
 
     // Extract book title
     bookTitle = await page.evaluate(() => {
@@ -331,6 +451,38 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       });
     };
 
+    /**
+     * Extract reviews from GraphQL response
+     * @param {Object} response - GraphQL response
+     * @returns {Object} - Object containing reviews and next page token
+     */
+    const extractReviewsFromGraphQL = (response) => {
+      if (!response.data || !response.data.getReviews || !response.data.getReviews.edges) {
+        logger.warn('Invalid GraphQL response structure');
+        return { reviews: [], nextPageToken: null };
+      }
+
+      const reviews = response.data.getReviews.edges.map(edge => {
+        const node = edge.node;
+        const reviewer = node.creator || {};
+        
+        return {
+          reviewer_name: reviewer.name || 'Goodreads User',
+          rating: node.rating || 0,
+          rating_normalised: (node.rating || 0) / 5,
+          review_text: node.text || '',
+          review_date: node.updatedAt || node.createdAt || new Date().toISOString().split('T')[0]
+        };
+      }).filter(review => review.rating > 0 && review.review_text.length > 10);
+
+      const nextPageToken = response.data.getReviews.pageInfo.nextPageToken;
+      const totalCount = response.data.getReviews.totalCount;
+
+      logger.info(`Extracted ${reviews.length} reviews from GraphQL response. Total available: ${totalCount}`);
+      
+      return { reviews, nextPageToken, totalCount };
+    };
+
     // Extract reviews from first page
     let pageReviews = await extractReviewsFromPage();
     reviews = [...reviews, ...pageReviews.map(review => ({
@@ -343,6 +495,87 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
 
     logger.info(`Extracted ${pageReviews.length} reviews from first page`);
 
+    // Set up request interception to capture GraphQL requests
+    await page.setRequestInterception(true);
+    
+    // Store GraphQL request data
+    let graphqlData = null;
+    let workId = null;
+    
+    // Extract work ID from the HTML
+    const reviewsPageHtml = await page.content();
+    workId = extractWorkIdFromHtml(reviewsPageHtml);
+    
+    if (workId) {
+      logger.info(`Found work ID for GraphQL requests: ${workId}`);
+    } else {
+      logger.warn('Could not find work ID for GraphQL requests, will try to capture it from network requests');
+    }
+    
+    // Listen for requests to capture GraphQL data
+    page.on('request', request => {
+      if (request.url().includes('graphql') && request.postData() && request.postData().includes('getReviews')) {
+        try {
+          const postData = JSON.parse(request.postData());
+          graphqlData = postData;
+          
+          // Extract work ID from the request if we don't have it yet
+          if (!workId && postData.variables && postData.variables.filters && postData.variables.filters.resourceId) {
+            workId = postData.variables.filters.resourceId;
+            logger.info(`Captured work ID from GraphQL request: ${workId}`);
+          }
+          
+          logger.info(`Captured GraphQL request data for reviews`);
+        } catch (err) {
+          logger.error(`Error parsing GraphQL request data: ${err.message}`);
+        }
+      }
+      request.continue();
+    });
+    
+    // Function to make direct GraphQL requests
+    const fetchMoreReviewsViaGraphQL = async (nextPageToken) => {
+      if (!workId) {
+        logger.warn('Cannot make GraphQL request without work ID');
+        return null;
+      }
+      
+      const requestData = {
+        operationName: "getReviews",
+        query: REVIEWS_QUERY,
+        variables: {
+          filters: {
+            resourceType: "WORK",
+            resourceId: workId
+          },
+          pagination: {
+            after: nextPageToken,
+            limit: 30
+          }
+        }
+      };
+      
+      logger.info(`Making GraphQL request with token: ${nextPageToken}`);
+      
+      try {
+        const response = await page.evaluate(async (url, data) => {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+          });
+          return response.json();
+        }, 'https://www.goodreads.com/graphql', requestData);
+        
+        return response;
+      } catch (err) {
+        logger.error(`Error making GraphQL request: ${err.message}`);
+        return null;
+      }
+    };
+
     // Click "More reviews" button and extract more reviews until we reach the limit
     let pageNum = 2;
     let clickAttempts = 0;
@@ -354,8 +587,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
     await browser.takeScreenshot(page, `goodreads-initial-page-${bookId || 'unknown'}`);
 
     // Save the initial HTML for debugging
-    const initialHtml = await page.content();
-    fs.writeFileSync(path.join(debugDir, `goodreads-initial-page-${bookId || 'unknown'}.html`), initialHtml);
+    const pageContent = await page.content();
+    fs.writeFileSync(path.join(debugDir, `goodreads-initial-page-${bookId || 'unknown'}.html`), pageContent);
 
     // Log all buttons on the page for debugging
     const allButtons = await page.$$('button');
@@ -372,8 +605,174 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       }
     }
 
-    while (reviews.length < limit && pageNum <= config.sources.goodreads.maxPages && clickAttempts < maxClickAttempts) {
-      logger.info(`📑 Attempting to load more reviews (attempt ${clickAttempts + 1}/${maxClickAttempts}), current count: ${reviews.length}`);
+    // Click "Show more reviews" once to capture the GraphQL request
+    logger.info('Attempting to click "Show more reviews" button to capture GraphQL request');
+    let buttonClicked = false;
+    
+    // Try XPath selector first (most reliable)
+    try {
+      const moreReviewsButton = await page.$x("//button[contains(., 'Show more reviews')]");
+      if (moreReviewsButton.length > 0) {
+        await moreReviewsButton[0].click();
+        await page.waitForTimeout(3000); // Wait for request to be captured
+        buttonClicked = true;
+        logger.info('Successfully clicked "Show more reviews" button to capture GraphQL request');
+      }
+    } catch (err) {
+      logger.error(`Error clicking "Show more reviews" button: ${err.message}`);
+    }
+    
+    // If XPath didn't work, try CSS selector
+    if (!buttonClicked) {
+      try {
+        const hasButton = await page.evaluate(() => {
+          const button = document.querySelector('button.Button--secondary');
+          if (button && button.textContent.toLowerCase().includes('more reviews')) {
+            button.click();
+            return true;
+          }
+          return false;
+        });
+        
+        if (hasButton) {
+          await page.waitForTimeout(3000); // Wait for request to be captured
+          buttonClicked = true;
+          logger.info('Successfully clicked "Show more reviews" button using CSS selector');
+        }
+      } catch (err) {
+        logger.error(`Error with CSS button click: ${err.message}`);
+      }
+    }
+    
+    // Extract the new reviews after clicking
+    if (buttonClicked) {
+      const newReviews = await extractReviewsFromPage();
+      const uniqueNewReviews = newReviews.filter(newReview => {
+        return !reviews.some(existingReview => {
+          return existingReview.reviewer_name === newReview.reviewer_name &&
+                 existingReview.review_text === newReview.review_text;
+        });
+      });
+      
+      if (uniqueNewReviews.length > 0) {
+        reviews = [...reviews, ...uniqueNewReviews.map(review => ({
+          source_id: 4,
+          ...review,
+          metadata: JSON.stringify({
+            book_id: bookId
+          })
+        }))];
+        
+        logger.info(`Added ${uniqueNewReviews.length} new reviews after initial button click`);
+      }
+    }
+    
+    // Check if we captured GraphQL data
+    if (graphqlData && workId) {
+      logger.info('Successfully captured GraphQL data, using GraphQL API for pagination');
+      
+      // Get the next page token from the captured request
+      let nextPageToken = null;
+      
+      if (graphqlData.variables && graphqlData.variables.pagination && graphqlData.variables.pagination.after) {
+        nextPageToken = graphqlData.variables.pagination.after;
+      } else if (buttonClicked) {
+        // If we clicked the button but didn't get a token, we need to extract it from the response
+        try {
+          const responseHtml = await page.content();
+          const tokenMatch = responseHtml.match(/"nextPageToken":"([^"]+)"/);
+          if (tokenMatch && tokenMatch[1]) {
+            nextPageToken = tokenMatch[1];
+            logger.info(`Extracted next page token from HTML: ${nextPageToken}`);
+          }
+        } catch (err) {
+          logger.error(`Error extracting token from HTML: ${err.message}`);
+        }
+      }
+      
+      // If we still don't have a token, try to make a request with null token to get the first page
+      if (!nextPageToken) {
+        logger.info('No next page token found, starting with null token');
+        nextPageToken = null;
+      }
+      
+      // Use GraphQL pagination to fetch more reviews
+      while (reviews.length < limit && nextPageToken !== undefined) {
+        const response = await fetchMoreReviewsViaGraphQL(nextPageToken);
+        
+        if (!response) {
+          logger.warn('GraphQL request failed, falling back to button clicking');
+          break;
+        }
+        
+        const { reviews: newReviews, nextPageToken: newToken, totalCount } = extractReviewsFromGraphQL(response);
+        
+        if (newReviews.length === 0) {
+          logger.info('No more reviews returned from GraphQL API');
+          break;
+        }
+        
+        // Add the new reviews to our collection
+        reviews = [...reviews, ...newReviews.map(review => ({
+          source_id: 4,
+          ...review,
+          metadata: JSON.stringify({
+            book_id: bookId
+          })
+        }))];
+        
+        logger.info(`Added ${newReviews.length} reviews from GraphQL API, total: ${reviews.length}/${totalCount}`);
+        
+        // Update the token for the next request
+        nextPageToken = newToken;
+        
+        // If there's no next token, we've reached the end
+        if (!nextPageToken) {
+          logger.info('No next page token returned, reached end of reviews');
+          break;
+        }
+        
+        // Add a small delay between requests
+        await page.waitForTimeout(1000);
+      }
+      
+      // If we've reached the limit or have no more reviews, we're done
+      if (reviews.length >= limit) {
+        logger.info(`Reached review limit (${limit}) using GraphQL API`);
+      } else if (nextPageToken === undefined) {
+        logger.info('No more reviews available via GraphQL API');
+      } else {
+        logger.info('Falling back to button clicking approach for more reviews');
+      }
+    } else {
+      logger.warn('Could not capture GraphQL data or work ID, falling back to button clicking approach');
+    }
+    
+    // If we still need more reviews, fall back to the button clicking approach
+    if (reviews.length < limit) {
+      logger.info(`Still need more reviews (${reviews.length}/${limit}), trying button clicking approach`);
+      
+      // Track consecutive attempts with no new reviews
+      let consecutiveFailedAttempts = 0;
+      const maxConsecutiveFailedAttempts = 5; // Stop after 5 consecutive attempts with no new reviews
+
+      // Set a timeout for the entire scraping process (10 minutes)
+      const startTime = Date.now();
+      const maxScrapingTime = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+      while (reviews.length < limit &&
+             pageNum <= config.sources.goodreads.maxPages &&
+             clickAttempts < maxClickAttempts &&
+             consecutiveFailedAttempts < maxConsecutiveFailedAttempts &&
+             (Date.now() - startTime) < maxScrapingTime) {
+
+      logger.info(`� Progress: ${reviews.length}/${limit} reviews, page ${pageNum}, attempt ${clickAttempts + 1}/${maxClickAttempts}, consecutive fails: ${consecutiveFailedAttempts}`);
+
+      // Check if we've been running too long
+      const runningTime = Math.floor((Date.now() - startTime) / 1000);
+      if (runningTime > 300) { // 5 minutes
+        logger.warn(`⚠️ Scraping taking too long (${runningTime} seconds), may be stuck in a loop`);
+      }
 
       // Scroll to bottom to ensure the button is visible
       await page.evaluate(() => {
@@ -652,6 +1051,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
       // Add a delay between attempts
       await page.waitForTimeout(2000);
     }
+    } // Close the if (reviews.length < limit) block
 
     logger.info(`🏁 Finished review extraction. Total reviews: ${reviews.length}`);
 

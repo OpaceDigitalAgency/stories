@@ -48,3 +48,4 @@ Changes are automatically deployed when pushed to the main branch of the GitHub 
 - `/health` - Returns a 200 OK response if the server is running
 - `/scrape/goodreads` - Scrapes reviews from Goodreads
 - `/scrape/amazon` - Scrapes reviews from Amazon
+Auto-deploy test Sun May 18 08:57:54 BST 2025

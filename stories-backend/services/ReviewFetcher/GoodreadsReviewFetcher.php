@@ -93,7 +93,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "📚 Reviews URL: {$reviewsUrl}");
 
         // Fetch reviews
-        $reviews = $this->scrapeReviews($reviewsUrl, $limit);
+        $reviews = $this->scrapeReviews($reviewsUrl, $limit, $options);
 
         // If no reviews found but we have average rating, add an aggregate review
         if (empty($reviews) && !empty($bookDetails['average_rating'])) {
@@ -376,7 +376,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param int $limit Maximum number of reviews to return
      * @return array Array of reviews
      */
-    private function scrapeReviews(string $reviewsUrl, int $limit): array {
+    private function scrapeReviews(string $reviewsUrl, int $limit, array $options = []): array {
         // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
@@ -433,8 +433,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $this->logToFile($debugDir . '/goodreads-log.txt', "ℹ️ Fewer reviews returned ({$finalCount}) than requested ({$limit}). This may be all that's available for this book.");
             }
 
-            // Limit the number of reviews to the requested limit
-            return array_slice($vpsReviews, 0, $limit);
+            // If we're continuing from the last scrape, return all reviews
+            // Otherwise, limit the number of reviews to the requested limit
+            if ($options['continueFromLast'] ?? false) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Continuing from last scrape, returning all {$reviewCount} reviews");
+                return $vpsReviews;
+            } else {
+                return array_slice($vpsReviews, 0, $limit);
+            }
         }
 
         // If VPS Headless Browser fails, try Puppeteer for better results (especially for books with many reviews)
@@ -460,8 +466,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Reindex the array after potentially removing the aggregate rating
             $puppeteerReviews = array_values($puppeteerReviews);
 
-            // Limit the number of reviews to the requested limit
-            return array_slice($puppeteerReviews, 0, $limit);
+            // If we're continuing from the last scrape, return all reviews
+            // Otherwise, limit the number of reviews to the requested limit
+            if ($options['continueFromLast'] ?? false) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Continuing from last scrape, returning all " . count($puppeteerReviews) . " reviews from Puppeteer");
+                return $puppeteerReviews;
+            } else {
+                return array_slice($puppeteerReviews, 0, $limit);
+            }
         }
 
         // If both VPS and Puppeteer fail, fall back to regex-based scraping
@@ -571,8 +583,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             }
         }
 
-        // Limit the number of reviews to the requested limit
-        return array_slice($reviews, 0, $limit);
+        // If we're continuing from the last scrape, return all reviews
+        // Otherwise, limit the number of reviews to the requested limit
+        if ($options['continueFromLast'] ?? false) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Continuing from last scrape, returning all " . count($reviews) . " reviews from regex-based scraping");
+            return $reviews;
+        } else {
+            return array_slice($reviews, 0, $limit);
+        }
     }
 
     /**

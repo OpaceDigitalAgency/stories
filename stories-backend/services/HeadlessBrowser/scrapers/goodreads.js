@@ -67,11 +67,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50) {
     // Check cache first
     const cachedData = await cache.get('goodreads', bookId);
     if (cachedData) {
-      logger.info(`Using cached data for Goodreads book ID: ${bookId}`);
-      return {
-        source: 'cache',
-        ...cachedData
-      };
+      // Check if we have more than just the aggregate review
+      if (cachedData.reviews && cachedData.reviews.length > 1) {
+        logger.info(`Using cached data for Goodreads book ID: ${bookId} (${cachedData.reviews.length} reviews)`);
+        return {
+          source: 'cache',
+          ...cachedData
+        };
+      } else {
+        logger.info(`Cache only has ${cachedData.reviews ? cachedData.reviews.length : 0} reviews for book ID: ${bookId}, fetching fresh data`);
+      }
     }
   }
 

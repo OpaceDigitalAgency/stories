@@ -59,13 +59,41 @@ app.get('/health', (req, res) => {
 // Goodreads scraper endpoint
 app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
-    const { url, limit = 50 } = req.query;
+    const { url, limit = 50, force = false } = req.query;
 
     if (!url) {
       return res.status(400).json({ error: 'Missing URL parameter' });
     }
 
-    logger.info(`Scraping Goodreads reviews for URL: ${url}`);
+    logger.info(`Scraping Goodreads reviews for URL: ${url}, force=${force}`);
+
+    // Extract book ID for caching
+    const bookIdMatch = url.match(/\/book\/isbn\/(\d+)/);
+    const bookId = bookIdMatch ? bookIdMatch[1] : null;
+
+    // Check if we should bypass cache
+    if (force === 'true' || force === '1') {
+      logger.info(`Force parameter set to ${force}, bypassing cache`);
+
+      // If we have a book ID, clear its cache entry
+      if (bookId) {
+        // Use the db directly to delete the cache entry
+        const sqlite3 = require('sqlite3').verbose();
+        const path = require('path');
+        const dbPath = path.resolve(config.cache.dbPath);
+        const db = new sqlite3.Database(dbPath);
+
+        db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier = ?', ['goodreads', bookId], function(err) {
+          if (err) {
+            logger.error(`Error clearing cache for ${bookId}: ${err.message}`);
+          } else {
+            logger.info(`Cleared cache for book ID ${bookId}`);
+          }
+          db.close();
+        });
+      }
+    }
+
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit));
 
     res.status(200).json(reviews);
@@ -78,13 +106,34 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 // Amazon scraper endpoint
 app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
-    const { asin, limit = 50 } = req.query;
+    const { asin, limit = 50, force = false } = req.query;
 
     if (!asin) {
       return res.status(400).json({ error: 'Missing ASIN parameter' });
     }
 
-    logger.info(`Scraping Amazon reviews for ASIN: ${asin}`);
+    logger.info(`Scraping Amazon reviews for ASIN: ${asin}, force=${force}`);
+
+    // Check if we should bypass cache
+    if (force === 'true' || force === '1') {
+      logger.info(`Force parameter set to ${force}, bypassing cache`);
+
+      // Clear cache for this ASIN
+      const sqlite3 = require('sqlite3').verbose();
+      const path = require('path');
+      const dbPath = path.resolve(config.cache.dbPath);
+      const db = new sqlite3.Database(dbPath);
+
+      db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier = ?', ['amazon', asin], function(err) {
+        if (err) {
+          logger.error(`Error clearing cache for ASIN ${asin}: ${err.message}`);
+        } else {
+          logger.info(`Cleared cache for ASIN ${asin}`);
+        }
+        db.close();
+      });
+    }
+
     const reviews = await amazon.scrapeAmazonReviews(asin, parseInt(limit));
 
     res.status(200).json(reviews);
@@ -101,6 +150,45 @@ app.post('/cache/clear', authenticateApiKey, async (req, res) => {
     res.status(200).json({ message: `Cleared ${cleared} expired cache entries` });
   } catch (error) {
     logger.error(`Error clearing cache: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Clear specific cache entry endpoint
+app.post('/cache/clear/:source/:identifier', authenticateApiKey, async (req, res) => {
+  try {
+    const { source, identifier } = req.params;
+
+    if (!source || !identifier) {
+      return res.status(400).json({ error: 'Missing source or identifier parameter' });
+    }
+
+    logger.info(`Clearing cache for ${source}:${identifier}`);
+
+    // Use the db directly to delete the cache entry
+    const sqlite3 = require('sqlite3').verbose();
+    const path = require('path');
+    const dbPath = path.resolve(config.cache.dbPath);
+    const db = new sqlite3.Database(dbPath);
+
+    db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier = ?', [source, identifier], function(err) {
+      if (err) {
+        logger.error(`Error clearing cache for ${source}:${identifier}: ${err.message}`);
+        db.close();
+        return res.status(500).json({ error: err.message });
+      }
+
+      const rowsDeleted = this.changes;
+      logger.info(`Cleared ${rowsDeleted} cache entries for ${source}:${identifier}`);
+      db.close();
+
+      res.status(200).json({
+        success: true,
+        message: `Cleared ${rowsDeleted} cache entries for ${source}:${identifier}`
+      });
+    });
+  } catch (error) {
+    logger.error(`Error clearing specific cache: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });

@@ -20,7 +20,7 @@ $source = isset($_GET['source']) ? $_GET['source'] : 'goodreads';
 // VPS server details
 $vpsIp = '37.27.31.107';
 $vpsPort = 3000;
-$apiKey = 'your-api-key-here'; // Replace with your actual API key
+$apiKey = 'stories-scraper-api-key-2023'; // API key from GoodreadsReviewFetcher.php
 
 // Start timing
 $startTime = microtime(true);

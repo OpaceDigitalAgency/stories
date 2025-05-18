@@ -484,14 +484,33 @@ function updateBookAggregateValues($db, $bookId) {
                             // If force refresh or continue from last is enabled and the review exists, delete the old one first
                             $isReplacement = false;
                             if (($forceRefresh || $continueFromLast) && ($existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name']))) {
+                                echo "<p class='info'><strong>DEBUG:</strong> Found existing review ID: {$existingReview['id']} for {$review['reviewer_name']}</p>";
+                                flushOutput();
+                                
                                 $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
                                 $deleteStmt->execute([$existingReview['id']]);
+                                
+                                // Check if the delete was successful
+                                $checkDeleteStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE id = ?");
+                                $checkDeleteStmt->execute([$existingReview['id']]);
+                                $deleteCount = $checkDeleteStmt->fetchColumn();
+                                
+                                if ($deleteCount == 0) {
+                                    echo "<p class='info'>Successfully deleted review ID: {$existingReview['id']}</p>";
+                                } else {
+                                    echo "<p class='error'>Failed to delete review ID: {$existingReview['id']}</p>";
+                                }
+                                
                                 echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
                                 flushOutput();
                                 $isReplacement = true;
                             }
 
                             try {
+                                // Debug the review data
+                                echo "<p class='info'><strong>DEBUG:</strong> Inserting review for book ID: {$book['id']}, source ID: {$review['source_id']}, reviewer: {$review['reviewer_name']}</p>";
+                                flushOutput();
+                                
                                 // Insert the review
                                 $stmt = $db->prepare("
                                     INSERT INTO reviews (
@@ -535,21 +554,32 @@ function updateBookAggregateValues($db, $bookId) {
                                     $ratingValue = $ratingNormalised * $ratingScale;
                                 }
 
-                                $stmt->execute([
-                                    ':book_id' => $book['id'],
-                                    ':source_id' => $review['source_id'],
-                                    ':reviewer_name' => $review['reviewer_name'],
-                                    ':reviewer_age' => $review['reviewer_age'],
-                                    ':review_date' => $review['review_date'],
-                                    ':original_rating' => $review['original_rating'] ?? 'N/A',
-                                    ':rating_value' => $ratingValue,
-                                    ':rating_scale' => $ratingScale,
-                                    ':rating_normalised' => $ratingNormalised,
-                                    ':review_text' => $review['review_text'],
-                                    ':metadata' => $review['metadata']
-                                ]);
+                                try {
+                                    $stmt->execute([
+                                        ':book_id' => $book['id'],
+                                        ':source_id' => $review['source_id'],
+                                        ':reviewer_name' => $review['reviewer_name'],
+                                        ':reviewer_age' => $review['reviewer_age'] ?? null,
+                                        ':review_date' => $review['review_date'] ?? null,
+                                        ':original_rating' => $review['original_rating'] ?? 'N/A',
+                                        ':rating_value' => $ratingValue,
+                                        ':rating_scale' => $ratingScale,
+                                        ':rating_normalised' => $ratingNormalised,
+                                        ':review_text' => $review['review_text'],
+                                        ':metadata' => $review['metadata'] ?? null
+                                    ]);
+                                    
+                                    echo "<p class='success'>SQL query executed successfully</p>";
+                                    flushOutput();
+                                } catch (PDOException $e) {
+                                    echo "<p class='error'>SQL Error: " . $e->getMessage() . "</p>";
+                                    flushOutput();
+                                    throw $e; // Re-throw to be caught by the outer try-catch
+                                }
 
-                                echo "<p class='success'>Imported review by {$review['reviewer_name']}</p>";
+                                // Get the ID of the newly inserted review
+                                $newReviewId = $db->lastInsertId();
+                                echo "<p class='success'>Imported review by {$review['reviewer_name']} (ID: $newReviewId)</p>";
                                 flushOutput();
                                 $bookReviewsImported++;
                             } catch (Exception $e) {

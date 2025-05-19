@@ -57,6 +57,9 @@ try {
         $reviewsPerPage = 10;
     }
     
+    // Force debug output
+    error_log("REVIEWS PER PAGE: " . $reviewsPerPage);
+    
     // Log the parameters for debugging
     error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
     
@@ -65,7 +68,7 @@ try {
     $reviewsOffset = max(0, $reviewsOffset);
 
     // Initialize standard per page values
-    $validPerPageValues = [10, 25, 50, 100];
+    $validPerPageValues = [5, 10, 15, 20, 25, 50, 100];
 
     // Get all review sources
     $sourcesStmt = $db->prepare("
@@ -126,6 +129,11 @@ try {
     // Add total items as a valid per_page value
     if (!in_array($totalReviews, $validPerPageValues)) {
         $validPerPageValues[] = $totalReviews;
+    }
+    
+    // Add the current reviewsPerPage to the valid values if it's not already there
+    if (!in_array($reviewsPerPage, $validPerPageValues)) {
+        $validPerPageValues[] = $reviewsPerPage;
     }
 
     // Calculate pagination
@@ -243,7 +251,10 @@ require_once '../includes/header.php';
                                 <div class="col-md-2">
                                     <label for="reviews_per_page" class="form-label">Show</label>
                                     <select class="form-control" id="reviews_per_page">
+                                        <option value="5" <?php echo $reviewsPerPage == 5 ? 'selected' : ''; ?>>5</option>
                                         <option value="10" <?php echo $reviewsPerPage == 10 ? 'selected' : ''; ?>>10</option>
+                                        <option value="15" <?php echo $reviewsPerPage == 15 ? 'selected' : ''; ?>>15</option>
+                                        <option value="20" <?php echo $reviewsPerPage == 20 ? 'selected' : ''; ?>>20</option>
                                         <option value="25" <?php echo $reviewsPerPage == 25 ? 'selected' : ''; ?>>25</option>
                                         <option value="50" <?php echo $reviewsPerPage == 50 ? 'selected' : ''; ?>>50</option>
                                         <option value="100" <?php echo $reviewsPerPage == 100 ? 'selected' : ''; ?>>100</option>

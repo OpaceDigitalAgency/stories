@@ -242,12 +242,12 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="col-md-2">
                                     <label for="reviews_per_page" class="form-label">Show</label>
-                                    <select class="form-control" id="reviews_per_page" name="reviews_per_page">
+                                    <select class="form-control" id="reviews_per_page">
                                         <option value="10" <?php echo $reviewsPerPage == 10 ? 'selected' : ''; ?>>10</option>
                                         <option value="25" <?php echo $reviewsPerPage == 25 ? 'selected' : ''; ?>>25</option>
                                         <option value="50" <?php echo $reviewsPerPage == 50 ? 'selected' : ''; ?>>50</option>
                                         <option value="100" <?php echo $reviewsPerPage == 100 ? 'selected' : ''; ?>>100</option>
-                                        <option value="<?php echo $totalReviews; ?>" <?php echo $reviewsPerPage == $totalReviews ? 'selected' : ''; ?>>All</option>
+                                        <option value="<?php echo $totalReviews; ?>" <?php echo $reviewsPerPage == $totalReviews ? 'selected' : ''; ?>>All (<?php echo $totalReviews; ?>)</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -336,13 +336,14 @@ require_once '../includes/header.php';
                             ?>
                         </div>
                         <?php
-                        // Render pagination
+                        // Render pagination with custom options
                         renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                             'pageParam' => 'reviews_page',
                             'perPageParam' => 'reviews_per_page',
                             'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
                             'perPageLabel' => 'Show',
-                            'showAllLabel' => 'Show All'
+                            'showAllLabel' => 'Show All',
+                            'showItemsPerPage' => false // Disable the built-in per-page dropdown since we have our own
                         ]);
                         ?>
                     </div>
@@ -354,6 +355,21 @@ require_once '../includes/header.php';
 
 <script>
 $(document).ready(function() {
+    // Handle per-page dropdown change
+    $('#reviews_per_page').on('change', function() {
+        // Get current URL
+        let url = new URL(window.location.href);
+        
+        // Update reviews_per_page parameter
+        url.searchParams.set('reviews_per_page', $(this).val());
+        
+        // Reset to page 1 when changing items per page
+        url.searchParams.set('reviews_page', '1');
+        
+        // Redirect to the new URL
+        window.location.href = url.toString();
+    });
+
     // Individual Delete Buttons
     $('.delete-review').on('click', function() {
         const reviewId = $(this).data('id');

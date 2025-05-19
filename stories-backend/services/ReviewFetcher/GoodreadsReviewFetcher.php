@@ -649,11 +649,22 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // If we're continuing from last and have existing reviews, filter duplicates from VPS results
             if (!empty($existingReviews)) {
                 $filteredReviews = [];
+                $seenFingerprints = [];
+
                 foreach ($vpsReviews as $review) {
+                    $fingerprint = md5($review['reviewer_name'] . '|' . substr($review['review_text'], 0, 100));
+
+                    // Skip if we've already processed this review in the current scrape
+                    if (isset($seenFingerprints[$fingerprint])) {
+                        continue;
+                    }
+                    $seenFingerprints[$fingerprint] = true;
+
                     if (!$isDuplicate($review, $existingReviews, $options['startPage'] ?? 1)) {
                         $filteredReviews[] = $review;
                     }
                 }
+
                 $vpsReviews = $filteredReviews;
                 $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Filtered duplicate reviews, returning " . count($vpsReviews));
             }

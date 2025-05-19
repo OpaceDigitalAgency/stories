@@ -169,6 +169,51 @@ require_once '../includes/header.php';
                 </div>
             <?php endif; ?>
 
+            <?php
+            // Function to check if Git Auto Deploy webhook is running
+            function is_webhook_online() {
+                $fp = @fsockopen("localhost", 8080, $errno, $errstr, 1);
+                return $fp ? fclose($fp) || true : false;
+            }
+
+            // Get the last auto-pull timestamp
+            function get_last_pull_timestamp() {
+                $logFile = '/var/log/git-auto-deploy.log';
+                if (file_exists($logFile)) {
+                    $lastLine = exec("tail -n 1 " . escapeshellarg($logFile));
+                    if (preg_match('/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $lastLine, $matches)) {
+                        return $matches[1];
+                    }
+                }
+
+                // Fallback: check the git directory for last commit time
+                $gitDir = dirname(dirname(dirname(__DIR__))) . '/.git';
+                if (is_dir($gitDir)) {
+                    $lastCommitTime = exec("git --git-dir=" . escapeshellarg($gitDir) . " log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M:%S'");
+                    if ($lastCommitTime) {
+                        return $lastCommitTime;
+                    }
+                }
+
+                return 'Unknown';
+            }
+
+            $webhookStatus = is_webhook_online();
+            $statusClass = $webhookStatus ? 'alert-success' : 'alert-danger';
+            $statusIcon = $webhookStatus ? 'check-circle' : 'exclamation-triangle';
+            $statusText = $webhookStatus ? '🟢 Git Auto Deploy: Online' : '🔴 Git Auto Deploy: Not running!';
+            $lastPullTime = get_last_pull_timestamp();
+            $statusDesc = $webhookStatus ?
+                "Code changes will be automatically deployed to the server. Last auto-pull: {$lastPullTime}" :
+                "WARNING: Code changes will NOT be automatically deployed to the server! Please restart the Git Auto Deploy service.";
+            ?>
+            <div class="alert <?php echo $statusClass; ?> d-flex align-items-center mb-4" role="alert">
+                <i class="fas fa-<?php echo $statusIcon; ?> me-2"></i>
+                <div>
+                    <strong><?php echo $statusText; ?></strong> - <?php echo $statusDesc; ?>
+                </div>
+            </div>
+
             <div class="card mb-4">
                 <div class="card-header">
                     <p class="text-muted">Import books and scrape reviews from various sources</p>

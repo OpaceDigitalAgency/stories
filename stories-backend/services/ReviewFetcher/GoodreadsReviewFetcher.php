@@ -1376,7 +1376,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$limit}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - maxPages: {$maxPages}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: {$options['force']}" . ($options['force'] ? " (will be sent as 1)" : " (will be sent as 0)"));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: " . (isset($options['force']) && $options['force'] ? "true" : "false") . " (will be sent as {$forceValue})");
 
         // Log the full URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Full request URL: {$url}");

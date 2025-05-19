@@ -429,14 +429,8 @@ function updateBookAggregateValues($db, $bookId) {
                         }
 
                         try {
-                            // Set up options for the fetcher
-                            $options = [
-                                'limit' => $fetchLimit, // 👈 ADD THIS LINE
-                                'maxPages' => $maxPages,
-                                'continueFromLast' => $continueFromLast,
-                                'force' => $forceRefresh,
-                                'book_id' => $book['id']
-                            ];
+                            // Initialize fetchLimit before using it
+                            $fetchLimit = $reviewLimit;
 
                             // If we're continuing from last scrape, get the count of existing reviews
                             $existingReviewCount = 0;
@@ -453,9 +447,16 @@ function updateBookAggregateValues($db, $bookId) {
 
                                 // If continuing, we need to fetch more than what we already have
                                 $fetchLimit = $existingReviewCount + $reviewLimit;
-                            } else {
-                                $fetchLimit = $reviewLimit;
                             }
+
+                            // Set up options for the fetcher
+                            $options = [
+                                'limit' => (int)$fetchLimit, // Cast to integer and use the correct parameter name
+                                'maxPages' => $maxPages,
+                                'continueFromLast' => $continueFromLast,
+                                'force' => $forceRefresh,
+                                'book_id' => $book['id']
+                            ];
 
                             // Debug the fetch limit
                             echo "<p class='info'><strong>DEBUG:</strong> Requesting {$fetchLimit} reviews from {$sourceName} (reviewLimit: {$reviewLimit}, existingReviewCount: {$existingReviewCount})</p>";

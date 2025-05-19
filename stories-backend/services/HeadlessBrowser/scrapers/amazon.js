@@ -23,57 +23,144 @@ if (!fs.existsSync(debugDir)) {
 function parseReviewsWithRegex(html, asin) {
   const reviews = [];
 
-  // Match review blocks
-  const reviewRegex = /<div[^>]*data-hook="review"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/gi;
-  let reviewMatch;
+  try {
+    // Match review blocks - try multiple patterns to be more robust
+    const reviewRegexPatterns = [
+      /<div[^>]*data-hook="review"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/gi,
+      /<div[^>]*data-hook="review"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/gi,
+      /<div[^>]*class="[^"]*review[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/gi
+    ];
 
-  while ((reviewMatch = reviewRegex.exec(html)) !== null) {
-    const reviewBlock = reviewMatch[0];
+    let reviewMatches = [];
 
-    // Extract reviewer name
-    const nameRegex = /<span[^>]*class="a-profile-name"[^>]*>([\s\S]*?)<\/span>/i;
-    const nameMatch = reviewBlock.match(nameRegex);
-    const reviewerName = nameMatch ? nameMatch[1].trim() : 'Amazon Customer';
+    // Try each pattern until we find reviews
+    for (const pattern of reviewRegexPatterns) {
+      let reviewMatch;
+      const regex = new RegExp(pattern);
 
-    // Extract rating
-    const ratingRegex = /<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i;
-    const ratingMatch = reviewBlock.match(ratingRegex);
-    const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
+      while ((reviewMatch = regex.exec(html)) !== null) {
+        reviewMatches.push(reviewMatch[0]);
+      }
 
-    // Extract date
-    const dateRegex = /<span[^>]*data-hook="review-date"[^>]*>([\s\S]*?)<\/span>/i;
-    const dateMatch = reviewBlock.match(dateRegex);
-    const reviewDate = dateMatch ? dateMatch[1].trim() : '';
-
-    // Extract title
-    const titleRegex = /<a[^>]*data-hook="review-title"[^>]*><span[^>]*>([\s\S]*?)<\/span><\/a>/i;
-    const titleMatch = reviewBlock.match(titleRegex);
-    const title = titleMatch ? titleMatch[1].trim() : '';
-
-    // Extract review text
-    const textRegex = /<span[^>]*data-hook="review-body"[^>]*><span[^>]*>([\s\S]*?)<\/span><\/span>/i;
-    const textMatch = reviewBlock.match(textRegex);
-    const reviewText = textMatch ? textMatch[1].trim() : '';
-
-    // Only add reviews with valid ratings
-    if (rating !== null) {
-      reviews.push({
-        source_id: 5, // Amazon source ID
-        reviewer_name: reviewerName,
-        review_date: reviewDate,
-        original_rating: `${rating}/5`,
-        rating_value: rating,
-        rating_scale: 5,
-        rating_normalised: rating / 5, // Normalize to 0-1 scale
-        review_text: reviewText,
-        metadata: JSON.stringify({
-          asin: asin,
-          review_title: title,
-          review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
-          affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
-        }),
-      });
+      if (reviewMatches.length > 0) {
+        logger.info(`Found ${reviewMatches.length} reviews using pattern: ${pattern}`);
+        break;
+      }
     }
+
+    if (reviewMatches.length === 0) {
+      logger.warn('No reviews found with any regex pattern');
+      return reviews;
+    }
+
+    for (const reviewBlock of reviewMatches) {
+      try {
+        // Extract reviewer name - try multiple patterns
+        let reviewerName = 'Amazon Customer';
+        const nameRegexPatterns = [
+          /<span[^>]*class="a-profile-name"[^>]*>([\s\S]*?)<\/span>/i,
+          /<div[^>]*class="[^"]*a-profile-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+        ];
+
+        for (const pattern of nameRegexPatterns) {
+          const nameMatch = reviewBlock.match(pattern);
+          if (nameMatch && nameMatch[1].trim()) {
+            reviewerName = nameMatch[1].trim();
+            break;
+          }
+        }
+
+        // Extract rating - try multiple patterns
+        let rating = null;
+        const ratingRegexPatterns = [
+          /<i[^>]*class="[^"]*a-icon-star[^"]*"[^>]*><span[^>]*>([0-9.]+) out of 5 stars<\/span><\/i>/i,
+          /<span[^>]*class="[^"]*a-icon-alt[^"]*"[^>]*>([0-9.]+) out of 5 stars<\/span>/i,
+          /([0-9.]+) out of 5 stars/i
+        ];
+
+        for (const pattern of ratingRegexPatterns) {
+          const ratingMatch = reviewBlock.match(pattern);
+          if (ratingMatch && !isNaN(parseFloat(ratingMatch[1]))) {
+            rating = parseFloat(ratingMatch[1]);
+            break;
+          }
+        }
+
+        // Extract date
+        let reviewDate = new Date().toISOString().split('T')[0]; // Default to today
+        const dateRegexPatterns = [
+          /<span[^>]*data-hook="review-date"[^>]*>([\s\S]*?)<\/span>/i,
+          /Reviewed in .* on ([A-Za-z]+ [0-9]+, [0-9]+)/i
+        ];
+
+        for (const pattern of dateRegexPatterns) {
+          const dateMatch = reviewBlock.match(pattern);
+          if (dateMatch && dateMatch[1].trim()) {
+            reviewDate = dateMatch[1].trim();
+            break;
+          }
+        }
+
+        // Extract title
+        let title = '';
+        const titleRegexPatterns = [
+          /<a[^>]*data-hook="review-title"[^>]*><span[^>]*>([\s\S]*?)<\/span><\/a>/i,
+          /<span[^>]*data-hook="review-title"[^>]*>([\s\S]*?)<\/span>/i,
+          /<a[^>]*class="[^"]*review-title[^"]*"[^>]*>([\s\S]*?)<\/a>/i
+        ];
+
+        for (const pattern of titleRegexPatterns) {
+          const titleMatch = reviewBlock.match(pattern);
+          if (titleMatch && titleMatch[1].trim()) {
+            title = titleMatch[1].trim();
+            break;
+          }
+        }
+
+        // Extract review text
+        let reviewText = '';
+        const textRegexPatterns = [
+          /<span[^>]*data-hook="review-body"[^>]*><span[^>]*>([\s\S]*?)<\/span><\/span>/i,
+          /<div[^>]*class="[^"]*review-data[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+          /<span[^>]*class="[^"]*review-text[^"]*"[^>]*>([\s\S]*?)<\/span>/i
+        ];
+
+        for (const pattern of textRegexPatterns) {
+          const textMatch = reviewBlock.match(pattern);
+          if (textMatch && textMatch[1].trim()) {
+            reviewText = textMatch[1].trim()
+              .replace(/<br\s*\/?>/gi, '\n') // Replace <br> with newlines
+              .replace(/<[^>]*>/g, ''); // Remove any remaining HTML tags
+            break;
+          }
+        }
+
+        // Only add reviews with valid ratings
+        if (rating !== null) {
+          reviews.push({
+            source_id: 5, // Amazon source ID
+            reviewer_name: reviewerName,
+            review_date: reviewDate,
+            original_rating: `${rating}/5`,
+            rating_value: rating,
+            rating_scale: 5,
+            rating_normalised: rating / 5, // Normalize to 0-1 scale
+            review_text: reviewText,
+            metadata: JSON.stringify({
+              asin: asin,
+              review_title: title,
+              review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
+              affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
+            }),
+          });
+        }
+      } catch (reviewError) {
+        logger.error(`Error parsing individual review: ${reviewError.message}`);
+        // Continue with next review
+      }
+    }
+  } catch (error) {
+    logger.error(`Error in parseReviewsWithRegex: ${error.message}`);
   }
 
   return reviews;
@@ -86,35 +173,71 @@ function parseReviewsWithRegex(html, asin) {
  * @returns {Object|null} - Aggregate rating object or null if not found
  */
 function extractAggregateRating(html, asin) {
-  const ratingRegex = /<span[^>]*class="[^"]*a-icon-alt[^"]*"[^>]*>([0-9.]+) out of 5 stars<\/span>/i;
-  const ratingMatch = html.match(ratingRegex);
+  try {
+    // Try multiple patterns for rating
+    const ratingRegexPatterns = [
+      /<span[^>]*class="[^"]*a-icon-alt[^"]*"[^>]*>([0-9.]+) out of 5 stars<\/span>/i,
+      /<span[^>]*>([0-9.]+) out of 5 stars<\/span>/i,
+      /([0-9.]+) out of 5 stars/i,
+      /<div[^>]*class="[^"]*a-row[^"]*"[^>]*>([0-9.]+) out of 5 stars<\/div>/i
+    ];
 
-  if (!ratingMatch) return null;
+    let avg = null;
 
-  const avg = parseFloat(ratingMatch[1]);
+    for (const pattern of ratingRegexPatterns) {
+      const ratingMatch = html.match(pattern);
+      if (ratingMatch && !isNaN(parseFloat(ratingMatch[1]))) {
+        avg = parseFloat(ratingMatch[1]);
+        logger.info(`Found aggregate rating ${avg} using pattern: ${pattern}`);
+        break;
+      }
+    }
 
-  // Extract number of ratings
-  const countRegex = /(\d+(?:,\d+)*) ratings?/i;
-  const countMatch = html.match(countRegex);
-  const count = countMatch ? parseInt(countMatch[1].replace(/,/g, '')) : 1;
+    if (avg === null) {
+      logger.warn('No aggregate rating found with any regex pattern');
+      return null;
+    }
 
-  return {
-    source_id: 5, // Amazon source ID
-    reviewer_name: 'Amazon Aggregate',
-    review_date: new Date().toISOString().split('T')[0],
-    original_rating: `${avg}/5`,
-    rating_value: avg,
-    rating_scale: 5,
-    rating_normalised: avg / 5,
-    review_text: `Average rating ${avg}/5 based on ${count} ratings on Amazon.`,
-    metadata: JSON.stringify({
-      asin: asin,
-      review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
-      affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
-      is_aggregate: true,
-      ratings_count: count,
-    }),
-  };
+    // Try multiple patterns for number of ratings
+    const countRegexPatterns = [
+      /(\d+(?:,\d+)*) ratings?/i,
+      /(\d+(?:,\d+)*) reviews?/i,
+      /(\d+(?:,\d+)*) global ratings?/i,
+      /(\d+(?:,\d+)*) global reviews?/i
+    ];
+
+    let count = 1;
+
+    for (const pattern of countRegexPatterns) {
+      const countMatch = html.match(pattern);
+      if (countMatch) {
+        count = parseInt(countMatch[1].replace(/,/g, ''));
+        logger.info(`Found ${count} ratings using pattern: ${pattern}`);
+        break;
+      }
+    }
+
+    return {
+      source_id: 5, // Amazon source ID
+      reviewer_name: 'Amazon Aggregate',
+      review_date: new Date().toISOString().split('T')[0],
+      original_rating: `${avg}/5`,
+      rating_value: avg,
+      rating_scale: 5,
+      rating_normalised: avg / 5,
+      review_text: `Average rating ${avg}/5 based on ${count} ratings on Amazon.`,
+      metadata: JSON.stringify({
+        asin: asin,
+        review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
+        affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
+        is_aggregate: true,
+        ratings_count: count,
+      }),
+    };
+  } catch (error) {
+    logger.error(`Error in extractAggregateRating: ${error.message}`);
+    return null;
+  }
 }
 
 /**

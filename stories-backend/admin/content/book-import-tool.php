@@ -11,6 +11,11 @@
  * 5. Run AI analysis on reviews
  */
 
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Include auth check
 require_once '../includes/auth-check.php';
 
@@ -984,12 +989,50 @@ require_once '../includes/header.php';
                                                             $statusClass = 'danger';
                                                             $statusIcon = 'times-circle';
                                                         } else {
-                                                            // Basic format check (not checking checksum here)
+                                                            // Basic format check
                                                             $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
                                                             if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
                                                                 $isbnStatus = 'invalid';
                                                                 $statusClass = 'warning';
                                                                 $statusIcon = 'exclamation-circle';
+                                                            } else {
+                                                                // Quick validation against Open Library
+                                                                $isbnValid = false;
+
+                                                                // Check if we have a cached result
+                                                                $cacheKey = 'isbn_check_' . $cleanIsbn;
+                                                                if (isset($_SESSION[$cacheKey])) {
+                                                                    $isbnValid = $_SESSION[$cacheKey];
+                                                                } else {
+                                                                    // Try Open Library first (fast and reliable)
+                                                                    $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($cleanIsbn) . "&format=json&jscmd=data";
+                                                                    $ch = curl_init($url);
+                                                                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                                                                    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Short timeout for quick check
+                                                                    $response = curl_exec($ch);
+                                                                    curl_close($ch);
+
+                                                                    if ($response) {
+                                                                        $data = json_decode($response, true);
+                                                                        $key = "ISBN:$cleanIsbn";
+                                                                        if (!empty($data[$key])) {
+                                                                            $isbnValid = true;
+                                                                        }
+                                                                    }
+
+                                                                    // Cache the result
+                                                                    $_SESSION[$cacheKey] = $isbnValid;
+                                                                }
+
+                                                                if ($isbnValid) {
+                                                                    $isbnStatus = 'valid';
+                                                                    $statusClass = 'success';
+                                                                    $statusIcon = 'check-circle';
+                                                                } else {
+                                                                    $isbnStatus = 'invalid';
+                                                                    $statusClass = 'danger';
+                                                                    $statusIcon = 'times-circle';
+                                                                }
                                                             }
                                                         }
                                                         ?>

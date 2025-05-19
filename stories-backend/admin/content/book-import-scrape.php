@@ -431,10 +431,11 @@ function updateBookAggregateValues($db, $bookId) {
                         try {
                             // Set up options for the fetcher
                             $options = [
+                                'limit' => $fetchLimit, // 👈 ADD THIS LINE
                                 'maxPages' => $maxPages,
                                 'continueFromLast' => $continueFromLast,
                                 'force' => $forceRefresh,
-                                'book_id' => $book['id'] // Add book_id for metadata tracking
+                                'book_id' => $book['id']
                             ];
 
                             // If we're continuing from last scrape, get the count of existing reviews

@@ -286,7 +286,10 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
   const continueFromLast = options.continueFromLast || false;
   const maxPages = options.maxPages || config.sources.amazon.maxPages;
 
-  logger.info(`Options: continueFromLast=${continueFromLast}, maxPages=${maxPages}`);
+  // Track if we should take a detour (approximately every 3-5 ASINs)
+  const shouldTakeDetour = Math.random() < 0.25; // 25% chance
+
+  logger.info(`Options: continueFromLast=${continueFromLast}, maxPages=${maxPages}, shouldTakeDetour=${shouldTakeDetour}`);
 
   // Check cache first (unless continueFromLast is true)
   if (!continueFromLast) {
@@ -297,6 +300,51 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
         source: 'cache',
         ...cachedData
       };
+    }
+  }
+
+  // Take a detour to a harmless Amazon page occasionally to mimic natural browsing
+  if (shouldTakeDetour) {
+    logger.info('Taking a detour to a harmless Amazon page to mimic natural browsing');
+    const page = await browser.getNewPage();
+
+    try {
+      // Set up the page with realistic headers
+      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+      // Choose a random help page to visit
+      const helpPages = [
+        '/gp/help/customer/display.html',
+        '/gp/help/customer/display.html?nodeId=508510',
+        '/gp/help/customer/display.html?nodeId=G201909010',
+        '/gp/help/customer/display.html?nodeId=G201909000'
+      ];
+
+      const randomHelpPage = helpPages[Math.floor(Math.random() * helpPages.length)];
+      const detourUrl = `${config.sources.amazon.baseUrl}${randomHelpPage}`;
+
+      logger.info(`Visiting detour page: ${detourUrl}`);
+      await page.goto(detourUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+      // Simulate some human behavior
+      await browser.simulateHumanBehavior(page);
+
+      // Save cookies from this session
+      const domain = new URL(config.sources.amazon.baseUrl).hostname;
+      const currentCookies = await page.cookies();
+      await browser.saveCookies(domain, currentCookies);
+
+    } catch (detourError) {
+      logger.warn(`Error during detour: ${detourError.message}`);
+    } finally {
+      // Close the detour page
+      try {
+        if (page && page.browser) {
+          await page.close();
+        }
+      } catch (closeError) {
+        logger.error(`Error closing detour page: ${closeError.message}`);
+      }
     }
   }
 
@@ -326,6 +374,24 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
   const page = await browser.getNewPage();
   let reviews = [];
 
+  // Get domain for cookies
+  const domain = new URL(config.sources.amazon.baseUrl).hostname;
+
+  // Define a list of desktop viewports to randomize
+  const desktopViewports = [
+    { width: 1280, height: 800 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1536, height: 864 },
+    { width: 1920, height: 1080 }
+  ];
+
+  // Select a random viewport
+  const randomViewport = desktopViewports[Math.floor(Math.random() * desktopViewports.length)];
+
+  // Set random viewport
+  await page.setViewport(randomViewport);
+
   // Set realistic headers for desktop browser
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
   await page.setExtraHTTPHeaders({
@@ -342,6 +408,12 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"macOS"'
   });
+
+  // Load cookies AFTER setting user agent and headers to maintain fingerprint consistency
+  const cookies = browser.loadCookies(domain);
+  if (cookies.length > 0) {
+    await page.setCookie(...cookies);
+  }
 
   try {
     // First try the product page to get aggregate rating
@@ -486,8 +558,6 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
         const jsonApiUrl = `${config.sources.amazon.baseUrl}/hz/reviews-render/ajax/reviews/get/?asin=${asin}&pageNumber=${pageNum}&pageSize=50&sortBy=recent&reviewerType=all`;
         logger.info(`Trying JSON API endpoint for page ${pageNum}: ${jsonApiUrl}`);
 
-        let useJsonApi = false;
-
         try {
           // Set the X-Requested-With header to make it look like an AJAX request
           await page.setExtraHTTPHeaders({
@@ -508,7 +578,6 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
 
           if (isJson) {
             logger.info('Successfully accessed JSON API endpoint');
-            useJsonApi = true;
 
             // Extract the HTML from the JSON response
             const reviewsHtml = await page.evaluate(() => {
@@ -657,6 +726,21 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
   let reviews = [];
 
   try {
+    // Get domain for cookies
+    const domain = new URL(config.sources.amazon.baseUrl).hostname;
+
+    // Define a list of mobile viewports to randomize
+    const mobileViewports = [
+      { width: 375, height: 812 },  // iPhone X/XS/11 Pro
+      { width: 390, height: 844 },  // iPhone 12/13/14 Pro
+      { width: 414, height: 896 },  // iPhone XR/XS Max/11
+      { width: 360, height: 740 },  // Common Android size
+      { width: 412, height: 915 },  // Pixel 6/7
+    ];
+
+    // Select a random viewport
+    const randomViewport = mobileViewports[Math.floor(Math.random() * mobileViewports.length)];
+
     // Set mobile user agent and viewport with realistic headers
     const mobileUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
     await page.setUserAgent(mobileUserAgent);
@@ -677,15 +761,15 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
       'Sec-Ch-Ua-Platform': '"iOS"'
     });
 
+    // Set random viewport
     await page.setViewport({
-      width: 375,
-      height: 812,
+      width: randomViewport.width,
+      height: randomViewport.height,
       isMobile: true,
       hasTouch: true
     });
 
-    // Load cookies if available
-    const domain = new URL(config.sources.amazon.baseUrl).hostname;
+    // Load cookies AFTER setting user agent and headers to maintain fingerprint consistency
     const cookies = browser.loadCookies(domain);
     if (cookies.length > 0) {
       await page.setCookie(...cookies);
@@ -724,29 +808,54 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
       const html = await page.content();
       fs.writeFileSync(path.join(debugDir, `amazon-${asin}-mobile-login-captcha.html`), html);
 
-      // Try the product page to at least get aggregate rating
-      const mobileProductUrl = `https://${mobileBaseUrl}/dp/${asin}`;
-      logger.info(`Navigating to mobile product page: ${mobileProductUrl}`);
+      // Soft retry: Clear cookies and try once more before giving up
+      logger.info('Attempting soft retry with fresh cookie jar');
 
-      await page.goto(mobileProductUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      // Clear all cookies
+      const allCookies = await page.cookies();
+      await Promise.all(allCookies.map(cookie => page.deleteCookie(cookie)));
+
+      // Wait a bit before retrying
+      await page.waitForTimeout(2000 + Math.floor(Math.random() * 2000));
+
+      // Try again with the reviews page
+      logger.info('Retrying mobile reviews page with fresh cookies');
+      await page.goto(mobileReviewsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
       // Simulate human behavior
       await browser.simulateHumanBehavior(page);
 
-      const productContent = await page.content();
+      // Check if we still have a login page
+      if (await isLoginPage(page) || await hasCaptcha(page)) {
+        logger.warn('Still detected login page after retry, falling back to product page');
 
-      // Extract aggregate rating
-      const aggregate = extractAggregateRating(productContent, asin);
-      if (aggregate) {
-        reviews.push(aggregate);
-        logger.info(`Found aggregate rating from mobile: ${aggregate.rating_value}/5`);
+        // Try the product page to at least get aggregate rating
+        const mobileProductUrl = `https://${mobileBaseUrl}/dp/${asin}`;
+        logger.info(`Navigating to mobile product page: ${mobileProductUrl}`);
+
+        await page.goto(mobileProductUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+        // Simulate human behavior
+        await browser.simulateHumanBehavior(page);
+
+        const productContent = await page.content();
+
+        // Extract aggregate rating
+        const aggregate = extractAggregateRating(productContent, asin);
+        if (aggregate) {
+          reviews.push(aggregate);
+          logger.info(`Found aggregate rating from mobile: ${aggregate.rating_value}/5`);
+        }
+
+        // Save cookies for future use
+        const currentCookies = await page.cookies();
+        await browser.saveCookies(domain, currentCookies);
+
+        return reviews;
+      } else {
+        // If retry worked, continue with the normal flow
+        logger.info('Soft retry successful, continuing with scraping');
       }
-
-      // Save cookies for future use
-      const currentCookies = await page.cookies();
-      await browser.saveCookies(domain, currentCookies);
-
-      return reviews;
     }
 
     // Get the reviews page content
@@ -874,8 +983,8 @@ async function extractMobileReviews(page, asin) {
   return page.evaluate((asin, sourceId, domain, affiliateTag) => {
     const reviews = [];
 
-    // Find review containers
-    const reviewContainers = document.querySelectorAll('.review');
+    // Find review containers - use data-hook attribute as the class may have changed
+    const reviewContainers = document.querySelectorAll('div[data-hook="review"], .review');
 
     for (const container of reviewContainers) {
       try {

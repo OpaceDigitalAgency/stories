@@ -31,20 +31,8 @@ $(function() {
         // Make sure we're using the correct page parameter for the current tab
         const pageParam = url.searchParams.get('page');
         if (pageParam) {
-            // If there's a generic page parameter, replace it with the tab-specific one
-            url.searchParams.delete('page');
-            
-            // Set the tab-specific page parameter
-            if (currentTab === 'reviews') {
-                url.searchParams.set('reviews_page', pageParam);
-            } else if (currentTab === 'sources') {
-                url.searchParams.set('sources_page', pageParam);
-            } else if (currentTab === 'validate') {
-                url.searchParams.set('isbn_page', pageParam);
-            } else {
-                // For other tabs, use the generic page parameter
-                url.searchParams.set('page', pageParam);
-            }
+            // Always use the generic page parameter
+            url.searchParams.set('page', pageParam);
         }
         
         window.location.href = url.toString();
@@ -68,23 +56,9 @@ $(function() {
             
             let tabInput = form.querySelector('input[name="tab"]');
             
-            // Get the appropriate page input based on the current tab
-            let pageInput;
-            let pageInputName;
-            
-            if (currentTab === 'reviews') {
-                pageInput = form.querySelector('input[name="reviews_page"]');
-                pageInputName = 'reviews_page';
-            } else if (currentTab === 'sources') {
-                pageInput = form.querySelector('input[name="sources_page"]');
-                pageInputName = 'sources_page';
-            } else if (currentTab === 'validate') {
-                pageInput = form.querySelector('input[name="isbn_page"]');
-                pageInputName = 'isbn_page';
-            } else {
-                pageInput = form.querySelector('input[name="page"]');
-                pageInputName = 'page';
-            }
+            // Always use the generic page parameter
+            let pageInput = form.querySelector('input[name="page"]');
+            let pageInputName = 'page';
             
             console.log('Current tab:', currentTab);
             console.log('Tab input:', tabInput);

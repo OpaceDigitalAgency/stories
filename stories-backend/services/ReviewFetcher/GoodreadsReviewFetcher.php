@@ -1344,20 +1344,33 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $maxPages = $options['maxPages'] ?? 20;
         $continueFromLast = $options['continueFromLast'] ?? false;
 
-        // Build the request URL with options
-        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}&maxPages={$maxPages}";
+        // Build the request URL with options - use the exact parameter names expected by the Node.js server
+        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl);
 
-        // Add continueFromLast parameter if true
+        // Add limit parameter (required by Node.js server)
+        $url .= "&limit={$requestLimit}";
+
+        // Add maxPages parameter (required by Node.js server)
+        $url .= "&maxPages={$maxPages}";
+
+        // Add continueFromLast parameter if true (camelCase as expected by Node.js server)
         if ($continueFromLast) {
             $url .= "&continueFromLast=1";
             $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting continueFromLast=1 to continue from last scrape");
         }
 
-        // Add force parameter if we're not continuing from last
-        if (!$continueFromLast && isset($options['force']) && $options['force']) {
-            $url .= "&force=1";
-            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force=1 to bypass cache");
-        }
+        // Add force parameter (always include it with the correct value)
+        $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
+        $url .= "&force={$forceValue}";
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force={$forceValue} parameter");
+
+        // Log all parameters for debugging
+        $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Parameters being sent to Node.js server:");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - url: " . urlencode($goodreadsUrl));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$requestLimit}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - maxPages: {$maxPages}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: " . ($continueFromLast ? "1" : "0"));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: {$forceValue}");
 
         // Log the full URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Full request URL: {$url}");

@@ -183,9 +183,19 @@ function extractWorkIdFromHtml(html) {
  * @returns {Promise<Object>} - Object containing reviews and metadata
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
-  const maxPages = options.maxPages || 100; // Increased from 20 to 100
-  const continueFromLast = options.continueFromLast || false;
-  const startPage = options.startPage || 1;
+  // Ensure options are properly parsed
+  const maxPages = parseInt(options.maxPages || 100, 10);
+  const continueFromLast = options.continueFromLast === true || options.continueFromLast === 'true' || options.continueFromLast === 1 || options.continueFromLast === '1';
+  const startPage = parseInt(options.startPage || 1, 10);
+
+  // Log options for debugging
+  logger.info(`Goodreads scraper options:
+    - url: ${goodreadsUrl}
+    - limit: ${limit}
+    - maxPages: ${maxPages}
+    - continueFromLast: ${continueFromLast}
+    - startPage: ${startPage}
+  `);
 
   logger.info(`Starting Goodreads scraping with settings:
     - URL: ${goodreadsUrl}
@@ -205,6 +215,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     const cacheKey = `${bookId}`;
     const cachedData = await cache.get('goodreads', cacheKey);
 
+    // Log cache status
+    if (cachedData) {
+      logger.info(`Found cached data for Goodreads book ID: ${bookId}`);
+      logger.info(`Cache contains ${cachedData.reviews ? cachedData.reviews.length : 0} reviews`);
+      logger.info(`Requested limit: ${limit}`);
+      logger.info(`Continue from last: ${continueFromLast}`);
+    } else {
+      logger.info(`No cached data found for Goodreads book ID: ${bookId}`);
+    }
+
     if (cachedData) {
       // Handle cached data differently based on continueFromLast parameter
       if (continueFromLast) {
@@ -223,6 +243,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
         if (cachedData.graphql_state && cachedData.graphql_state.next_token) {
           logger.info(`Resuming from page token: ${cachedData.graphql_state.next_token}`);
+          nextPageToken = cachedData.graphql_state.next_token;
+          pageCount = cachedData.graphql_state.current_page || 0;
         }
 
         // If we know total available, adjust limit
@@ -232,6 +254,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             logger.info(`${remaining} more reviews available to scrape`);
           }
         }
+
+        logger.info(`Starting with ${reviews.length} reviews from cache, will continue scraping`);
       } else {
         // If not continuing and cache has enough reviews, use it
         if (cachedData.reviews && cachedData.reviews.length >= limit) {
@@ -762,7 +786,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       // Initialize reviews array with cached reviews if continuing from last scrape
       if (continueFromLast && cachedData && cachedData.reviews) {
         reviews = cachedData.reviews;
-        logger.info(`Starting with ${reviews.length} reviews from cache`);
+        logger.info(`Starting with ${reviews.length} reviews from cache for GraphQL pagination`);
 
         // Get the GraphQL state from the cached data
         if (cachedData.graphql_state) {
@@ -795,11 +819,27 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             }
           }
         }
+
+        // Log the state of the pagination variables
+        logger.info(`GraphQL pagination variables after initialization:
+          - nextPageToken: ${nextPageToken}
+          - pageCount: ${pageCount}
+          - totalCount: ${totalCount}
+          - reviews.length: ${reviews.length}
+        `);
       }
 
       // Use GraphQL pagination to fetch more reviews
       // Use maxPages to limit the number of pages we fetch
       let pageCount = 0;
+
+      // Log the pagination loop conditions
+      logger.info(`GraphQL pagination loop conditions:
+        - nextPageToken !== undefined: ${nextPageToken !== undefined}
+        - pageCount < maxPages: ${pageCount < maxPages}
+        - continueFromLast || reviews.length < limit: ${continueFromLast || reviews.length < limit}
+        - totalCount === undefined || reviews.length < totalCount: ${totalCount === undefined || reviews.length < totalCount}
+      `);
 
       while (nextPageToken !== undefined &&
              pageCount < maxPages &&
@@ -1231,6 +1271,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         }
       }
 
+      // Prepare data to cache
       const dataToCache = {
         book_title: bookTitle,
         total: reviews.length,
@@ -1251,17 +1292,34 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         }
       };
 
-      logger.info(`Caching GraphQL state:
-        - Current page: ${pageCount}
-        - Total fetched: ${reviews.length}
-        - Total available: ${totalCount}
-        - Has more: ${reviews.length < totalCount}
-        - Next token: ${nextPageToken}
-        - Requested limit: ${limit}`);
+      // Log detailed cache information
+      logger.info(`Preparing to cache data for book ID ${bookId}:`);
+      logger.info(`- Book title: ${bookTitle}`);
+      logger.info(`- Total reviews: ${reviews.length}`);
+      logger.info(`- Limited reviews: ${limitedReviews.length}`);
+      logger.info(`- Current page: ${pageNum}`);
+      logger.info(`- Has more reviews: ${reviews.length < (aggregateRating.count || limit)}`);
+      logger.info(`- Total available: ${aggregateRating.count || 'unknown'}`);
+      logger.info(`- Requested limit: ${limit}`);
+      logger.info(`- GraphQL state:`);
+      logger.info(`  - Next token: ${nextPageToken || 'null'}`);
+      logger.info(`  - Current page: ${pageCount}`);
+      logger.info(`  - Total available: ${totalCount || 'unknown'}`);
+      logger.info(`  - Total fetched: ${reviews.length}`);
+      logger.info(`  - Has more: ${reviews.length < totalCount}`);
 
       // Use the same cache key format as when retrieving
       const cacheKey = `${bookId}`;
+      logger.info(`Setting cache with key: goodreads:${cacheKey}`);
       await cache.set('goodreads', cacheKey, dataToCache);
+
+      // Verify the cache was set
+      const verifyCachedData = await cache.get('goodreads', cacheKey);
+      if (verifyCachedData) {
+        logger.info(`Cache verification successful. Cached ${verifyCachedData.reviews.length} reviews.`);
+      } else {
+        logger.warn(`Cache verification failed. Could not retrieve cached data.`);
+      }
     }
 
     return {

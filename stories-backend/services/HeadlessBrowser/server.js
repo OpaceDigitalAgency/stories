@@ -59,13 +59,21 @@ app.get('/health', (req, res) => {
 // Goodreads scraper endpoint
 app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
-    const {
-      url,
-      limit = 50,
-      force = false,
-      maxPages = 20,
-      continueFromLast = false
-    } = req.query;
+    // Extract parameters from query string, ensuring proper type conversion
+    const url = req.query.url;
+    const limit = parseInt(req.query.limit || '50', 10);
+    const maxPages = parseInt(req.query.maxPages || '20', 10);
+    const continueFromLast = req.query.continueFromLast === '1' || req.query.continueFromLast === 'true';
+    const force = req.query.force === '1' || req.query.force === 'true';
+
+    // Log all parameters for debugging
+    logger.info(`Goodreads scraper parameters:
+      - url: ${url}
+      - limit: ${limit}
+      - maxPages: ${maxPages}
+      - continueFromLast: ${continueFromLast}
+      - force: ${force}
+    `);
 
     if (!url) {
       return res.status(400).json({ error: 'Missing URL parameter' });
@@ -119,7 +127,17 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 // Amazon scraper endpoint
 app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req, res) => {
   try {
-    const { asin, limit = 50, force = false } = req.query;
+    // Extract parameters from query string, ensuring proper type conversion
+    const asin = req.query.asin;
+    const limit = parseInt(req.query.limit || '50', 10);
+    const force = req.query.force === '1' || req.query.force === 'true';
+
+    // Log all parameters for debugging
+    logger.info(`Amazon scraper parameters:
+      - asin: ${asin}
+      - limit: ${limit}
+      - force: ${force}
+    `);
 
     if (!asin) {
       return res.status(400).json({ error: 'Missing ASIN parameter' });

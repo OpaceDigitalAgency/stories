@@ -1049,29 +1049,30 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       logger.info(`📊 Found ${newReviews.length} reviews on current page (attempt ${clickAttempts + 1})`);
 
       // Check if we got new unique reviews by comparing with what we already have
-      const uniqueNewReviews = newReviews.filter(newReview => {
-        return !reviews.some(existingReview => {
-          // Check if reviewer name matches
-          const nameMatch = existingReview.reviewer_name === newReview.reviewer_name;
-          
-          // For aggregate reviews, just check the name
-          if (nameMatch && (
-              existingReview.reviewer_name === 'Goodreads Aggregate' ||
-              newReview.reviewer_name === 'Goodreads Aggregate'
-          )) {
+      // When continuing from last scrape, we want all reviews after our last page
+      const uniqueNewReviews = continueFromLast ?
+        // If continuing, keep all reviews from new pages
+        newReviews.filter(review => {
+          // Always keep aggregate reviews
+          if (review.reviewer_name === 'Goodreads Aggregate') {
             return true;
           }
           
-          // For regular reviews, check name and first 50 chars of text
-          if (nameMatch) {
-            const existingTextStart = existingReview.review_text.substring(0, 50);
-            const newTextStart = newReview.review_text.substring(0, 50);
-            return existingTextStart === newTextStart;
-          }
+          // For regular reviews, check if we've seen this exact review before
+          const isDuplicate = reviews.some(existingReview =>
+            existingReview.reviewer_name === review.reviewer_name &&
+            existingReview.review_text.substring(0, 50) === review.review_text.substring(0, 50)
+          );
           
-          return false;
+          return !isDuplicate;
+        }) :
+        // If not continuing, only keep reviews we haven't seen before
+        newReviews.filter(review => {
+          return !reviews.some(existingReview =>
+            existingReview.reviewer_name === review.reviewer_name &&
+            existingReview.review_text.substring(0, 50) === review.review_text.substring(0, 50)
+          );
         });
-      });
 
       logger.info(`✅ Found ${uniqueNewReviews.length} unique new reviews`);
 
@@ -1081,7 +1082,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           source_id: 4, // Goodreads source ID
           ...review,
           metadata: JSON.stringify({
-            book_id: bookId
+            book_id: bookId,
+            page_number: pageNum,
+            scrape_date: new Date().toISOString(),
+            total_available: aggregateRating.count || null,
+            is_continuation: continueFromLast
           })
         }))];
 

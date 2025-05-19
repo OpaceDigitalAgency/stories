@@ -15,6 +15,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $lastError = null;
     protected $aggregateRating = null; // Store aggregate rating separately
     protected $useVpsHeadlessBrowser = false; // Whether to use the VPS Headless Browser
+    
+    // Scraping configuration
+    protected $maxPages = 100;
+    protected $continueFromLast = false;
+    protected $startPage = 1;
+    protected $reviewLimit = 100;
+    protected $lastScrapedPage = 0;
+    protected $existingReviews = [];
 
     /**
      * Constructor
@@ -51,15 +59,32 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      */
     public function fetchReviewsByISBN(string $isbn, int $limit = 100, array $options = []): array {
         // Get pagination state from options
-        $maxPages = $options['maxPages'] ?? 100; // Increase default max pages
-        $continueFromLast = $options['continueFromLast'] ?? false;
-        $startPage = $options['startPage'] ?? 1;
-        
-        // Store these in class properties for the scraper to use
-        $this->maxPages = $maxPages;
-        $this->continueFromLast = $continueFromLast;
-        $this->startPage = $startPage;
+        $this->maxPages = $options['maxPages'] ?? 100;
+        $this->continueFromLast = $options['continueFromLast'] ?? false;
+        $this->startPage = $options['startPage'] ?? 1;
         $this->reviewLimit = $limit;
+        
+        // If continuing from last, get existing reviews
+        if ($this->continueFromLast) {
+            // Get existing reviews for duplicate checking
+            $stmt = $this->db->prepare("
+                SELECT reviewer_name, SUBSTRING(review_text, 1, 100) as text_start
+                FROM reviews
+                WHERE book_id = ? AND source_id = ?
+            ");
+            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
+            $this->existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Get last scraped page
+            $stmt = $this->db->prepare("
+                SELECT MAX(metadata->>'$.page_number') as last_page
+                FROM reviews
+                WHERE book_id = ? AND source_id = ?
+            ");
+            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
+            $this->lastScrapedPage = (int)$stmt->fetchColumn() ?: 0;
+            $this->startPage = $this->lastScrapedPage + 1;
+        }
 
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);

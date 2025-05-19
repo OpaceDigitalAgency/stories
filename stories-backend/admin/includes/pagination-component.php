@@ -261,18 +261,34 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                             }
                             
                             // Always reset to page 1 when changing items per page
-                            let pageInput = form.querySelector('input[name="page"]');
+                            // Use the correct page parameter name based on the current tab
+                            let pageInput;
+                            let pageInputName = 'page'; // Default to standard parameter name
+                            
+                            // Get the page input
+                            pageInput = form.querySelector('input[name="page"]');
+                            
                             if (!pageInput) {
                                 console.log('Adding page input');
                                 const input = document.createElement('input');
                                 input.type = 'hidden';
-                                input.name = 'page';
+                                input.name = pageInputName;
                                 input.value = '1';
                                 form.appendChild(input);
                             } else {
                                 console.log('Setting page input value');
                                 pageInput.value = '1';
                             }
+                            
+                            // Remove any old parameter names that might be in the form
+                            const oldParams = ['reviews_page', 'sources_page', 'isbn_page'];
+                            oldParams.forEach(param => {
+                                const oldInput = form.querySelector(`input[name="${param}"]`);
+                                if (oldInput) {
+                                    console.log(`Removing old parameter: ${param}`);
+                                    oldInput.remove();
+                                }
+                            });
                             
                             // Submit the form
                             console.log('Submitting form');

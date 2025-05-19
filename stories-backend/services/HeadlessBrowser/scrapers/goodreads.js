@@ -858,10 +858,12 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         `);
       }
 
-      // Use GraphQL pagination to fetch more reviews
-      // Use maxPages to limit the number of pages we fetch
-      // pageCount, nextPageToken, totalCount are now set correctly above if continuing from last
-      logger.info(`📋 ENTERING GRAPHQL LOOP
+    // Use GraphQL pagination to fetch more reviews
+    // Use maxPages to limit the number of pages we fetch
+    // pageCount, nextPageToken, totalCount are now set correctly above if continuing from last
+    // Ensure nextToken is declared before the loop
+    let nextToken = null;
+    logger.info(`📋 ENTERING GRAPHQL LOOP
 - nextPageToken: ${nextPageToken}
 - pageCount: ${pageCount}/${maxPages}
 - reviews.length: ${reviews.length}
@@ -869,30 +871,30 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 - continueFromLast: ${continueFromLast}
 - totalCount: ${totalCount}`);
 
-      while ((nextPageToken !== undefined && nextPageToken !== null) &&
-             pageCount < maxPages &&
-             (continueFromLast || reviews.length < limit) &&
-             (totalCount === undefined || totalCount === null || reviews.length < totalCount)) {
+    while ((nextPageToken !== undefined && nextPageToken !== null) &&
+           pageCount < maxPages &&
+           (continueFromLast || reviews.length < limit) &&
+           (totalCount === undefined || totalCount === null || reviews.length < totalCount)) {
 
-        logger.info(`Fetching GraphQL page ${pageCount + 1}/${maxPages}:
-          - Reviews so far: ${reviews.length}
-          - Total available: ${totalCount || 'unknown'}
-          - Next token: ${nextPageToken}
-          - Continue from last: ${continueFromLast}`);
-        pageCount++;
-        logger.info(`Fetching page ${pageCount}/${maxPages} of reviews via GraphQL API`);
-        logger.info(`Fetching GraphQL page ${pageCount + 1}/${maxPages}, ` +
-                   `reviews so far: ${reviews.length}/${totalCount || 'unknown'}`);
+      logger.info(`Fetching GraphQL page ${pageCount + 1}/${maxPages}:
+        - Reviews so far: ${reviews.length}
+        - Total available: ${totalCount || 'unknown'}
+        - Next token: ${nextPageToken}
+        - Continue from last: ${continueFromLast}`);
+      pageCount++;
+      logger.info(`Fetching page ${pageCount}/${maxPages} of reviews via GraphQL API`);
+      logger.info(`Fetching GraphQL page ${pageCount + 1}/${maxPages}, ` +
+                 `reviews so far: ${reviews.length}/${totalCount || 'unknown'}`);
 
-        const response = await fetchMoreReviewsViaGraphQL(nextPageToken);
+      const response = await fetchMoreReviewsViaGraphQL(nextPageToken);
 
-        if (!response) {
-          logger.warn('GraphQL request failed, falling back to button clicking');
-          break;
-        }
+      if (!response) {
+        logger.warn('GraphQL request failed, falling back to button clicking');
+        break;
+      }
 
-        const { reviews: newReviews, nextPageToken: nextToken, totalCount } = extractReviewsFromGraphQL(response);
-        logger.info(`GraphQL response: ${newReviews.length} reviews, next token: ${newToken}, total: ${totalCount}`);
+      const { reviews: newReviews, nextPageToken: nextToken, totalCount } = extractReviewsFromGraphQL(response);
+      logger.info(`GraphQL response: ${newReviews.length} reviews, next token: ${nextToken}, total: ${totalCount}`);
 
         if (newReviews.length === 0) {
           logger.info('No more reviews returned from GraphQL API');

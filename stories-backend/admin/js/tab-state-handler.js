@@ -30,14 +30,22 @@ $(function() {
 
     // Handle per_page changes
     $('.per-page-select').on('change', function() {
-        // Make sure the form has the tab parameter
+        // Make sure the form has the tab parameter and reset page to 1
         const form = this.closest('form');
         let tabInput = form.querySelector('input[name="tab"]');
+        let pageInput = form.querySelector('input[name="page"]');
 
         if (!tabInput) {
             $(form).append(`<input type="hidden" name="tab" value="${currentTab}">`);
         } else {
             tabInput.value = currentTab;
+        }
+
+        // Always reset to page 1 when changing items per page
+        if (!pageInput) {
+            $(form).append('<input type="hidden" name="page" value="1">');
+        } else {
+            pageInput.value = '1';
         }
 
         // Submit the form

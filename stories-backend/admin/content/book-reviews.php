@@ -250,7 +250,7 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="col-md-2">
                                     <label for="reviews_per_page" class="form-label">Show</label>
-                                    <select class="form-control" id="reviews_per_page">
+                                    <select class="form-control" id="reviews_per_page" name="per_page">
                                         <option value="5" <?php echo $reviewsPerPage == 5 ? 'selected' : ''; ?>>5</option>
                                         <option value="10" <?php echo $reviewsPerPage == 10 ? 'selected' : ''; ?>>10</option>
                                         <option value="15" <?php echo $reviewsPerPage == 15 ? 'selected' : ''; ?>>15</option>

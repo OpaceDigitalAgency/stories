@@ -259,7 +259,8 @@ function updateBookAggregateValues($db, $bookId) {
                     $runAiAnalysis = isset($_POST['run_ai_analysis']) && $_POST['run_ai_analysis'] == 1;
                     $forceRefresh = isset($_POST['force_refresh']) && $_POST['force_refresh'] == 1;
                     $continueFromLast = isset($_POST['continue_from_last']) && $_POST['continue_from_last'] == 1;
-                    $reviewLimit = isset($_POST['review_limit']) ? intval($_POST['review_limit']) : 100;
+                    // Use review_limit from POST but also check for limit for consistency with GET parameter
+                    $reviewLimit = isset($_POST['limit']) ? intval($_POST['limit']) : (isset($_POST['review_limit']) ? intval($_POST['review_limit']) : 100);
                     $maxPages = isset($_POST['max_pages']) ? intval($_POST['max_pages']) : 20;
 
                     // Validate limits

@@ -896,7 +896,7 @@ require_once '../includes/header.php';
 
                     <div class="form-group">
                         <label for="reviewLimit">Maximum Reviews to Fetch</label>
-                        <input type="number" class="form-control" id="reviewLimit" name="review_limit" value="100" min="10" max="1000">
+                        <input type="number" class="form-control" id="reviewLimit" name="limit" value="100" min="10" max="1000">
                         <small class="form-text text-muted">Higher values will take longer but fetch more reviews. Maximum 1000.</small>
                     </div>
 

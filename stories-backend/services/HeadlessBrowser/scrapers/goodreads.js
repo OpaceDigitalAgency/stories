@@ -277,7 +277,6 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   let totalCount = null;
   let bookTitle = 'Unknown Book';
   // --- Request interception setup ---
-  // Safer interception to prevent "Request is already handled!" errors
   await page.setRequestInterception(true);
 
   function shouldAbortRequest(request) {
@@ -290,17 +289,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     );
   }
 
-  page.on('request', async (request) => {
-    try {
-      if (!request._interceptionHandled) {
-        if (shouldAbortRequest(request)) {
-          await request.abort();
-        } else {
-          await request.continue();
+  page.on('request', request => {
+    if (shouldAbortRequest(request)) {
+      request.abort().catch(err => {
+        // ignore "Request is already handled" errors
+        if (!err.message.includes('already handled')) {
+          console.error('❌ Abort error:', err.message);
         }
-      }
-    } catch (err) {
-      console.error('❌ Interception error:', err.message);
+      });
+    } else {
+      request.continue().catch(err => {
+        // ignore "Request is already handled" errors
+        if (!err.message.includes('already handled')) {
+          console.error('❌ Continue error:', err.message);
+        }
+      });
     }
   });
 

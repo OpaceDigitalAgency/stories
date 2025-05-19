@@ -241,10 +241,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         reviews = cachedData.reviews || [];
         pageNum = cachedData.currentPage || 1;
 
-        if (cachedData.graphql_state && cachedData.graphql_state.next_token) {
-          logger.info(`Resuming from page token: ${cachedData.graphql_state.next_token}`);
-          nextPageToken = cachedData.graphql_state.next_token;
+        if (cachedData.graphql_state) {
+          logger.info(`Resuming from cached GraphQL state:
+          - Next token: ${cachedData.graphql_state.next_token || 'null'}
+          - Current page: ${cachedData.graphql_state.current_page || 0}
+          - Total available: ${cachedData.graphql_state.total_available || 'unknown'}`);
+
+          nextPageToken = cachedData.graphql_state.next_token || null;
           pageCount = cachedData.graphql_state.current_page || 0;
+          totalCount = cachedData.graphql_state.total_available || cachedData.totalAvailable;
+
+          logger.info(`✅ Resuming from cache:
+- Total cached reviews: ${reviews.length}
+- Page count: ${pageCount}
+- Next token: ${nextPageToken}
+- Total available: ${totalCount}`);
         }
 
         // If we know total available, adjust limit
@@ -841,10 +852,20 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         - totalCount === undefined || reviews.length < totalCount: ${totalCount === undefined || reviews.length < totalCount}
       `);
 
-      while (nextPageToken !== undefined &&
+      // Debug log for entering GraphQL loop
+      logger.info(`📋 ENTERING GRAPHQL LOOP
+- nextPageToken: ${nextPageToken}
+- pageCount: ${pageCount}/${maxPages}
+- reviews.length: ${reviews.length}
+- limit: ${limit}
+- continueFromLast: ${continueFromLast}
+- totalCount: ${totalCount}
+      `);
+
+      while ((nextPageToken !== undefined && nextPageToken !== null) &&
              pageCount < maxPages &&
              (continueFromLast || reviews.length < limit) &&
-             (totalCount === undefined || reviews.length < totalCount)) {
+             (totalCount === undefined || totalCount === null || reviews.length < totalCount)) {
 
         logger.info(`Fetching GraphQL page ${pageCount + 1}/${maxPages}:
           - Reviews so far: ${reviews.length}

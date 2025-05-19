@@ -170,10 +170,17 @@ require_once '../includes/header.php';
             <?php endif; ?>
 
             <?php
-            // Function to check if Git Auto Deploy webhook is running
+            // Function to check if Git Auto Deploy webhook is running (HTTP-based check)
             function is_webhook_online() {
-                $fp = @fsockopen("localhost", 8080, $errno, $errstr, 1);
-                return $fp ? fclose($fp) || true : false;
+                $context = stream_context_create([
+                    'http' => [
+                        'method' => 'GET',
+                        'timeout' => 1,
+                    ]
+                ]);
+            
+                $response = @file_get_contents("http://127.0.0.1:8080", false, $context);
+                return $response !== false && str_contains($response, 'Webhook server is running');
             }
 
             // Get the last auto-pull timestamp

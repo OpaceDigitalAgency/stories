@@ -217,10 +217,33 @@ require_once '../includes/header.php';
 
             // Get the last auto-pull timestamp
             function get_last_pull_timestamp() {
-                $logFile = '/var/log/git-auto-deploy.log';
-                if (file_exists($logFile)) {
-                    $lastLine = exec("tail -n 1 " . escapeshellarg($logFile));
-                    if (preg_match('/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $lastLine, $matches)) {
+                // Try multiple log file locations
+                $logFiles = [
+                    '/var/log/git-auto-deploy.log',
+                    '/home/stories/logs/git-auto-deploy.log',
+                    '/opt/stories/logs/git-auto-deploy.log',
+                    '/var/log/webhook/git-auto-deploy.log'
+                ];
+
+                foreach ($logFiles as $logFile) {
+                    if (file_exists($logFile)) {
+                        $lastLine = exec("tail -n 1 " . escapeshellarg($logFile));
+                        if (preg_match('/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $lastLine, $matches)) {
+                            return $matches[1];
+                        }
+                    }
+                }
+
+                // Check if we can get the last pull time from the webhook server directly
+                if (function_exists('curl_init')) {
+                    $ch = curl_init('http://37.27.31.107:8080/status');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    if ($response && preg_match('/Last pull: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $response, $matches)) {
                         return $matches[1];
                     }
                 }
@@ -234,7 +257,16 @@ require_once '../includes/header.php';
                     }
                 }
 
-                return 'Unknown';
+                // Last resort: check the modification time of the current file
+                $currentFile = __FILE__;
+                if (file_exists($currentFile)) {
+                    $modTime = filemtime($currentFile);
+                    if ($modTime) {
+                        return date('Y-m-d H:i:s', $modTime);
+                    }
+                }
+
+                return date('Y-m-d H:i:s'); // Return current time as last resort
             }
 
             $webhookStatus = is_webhook_online();

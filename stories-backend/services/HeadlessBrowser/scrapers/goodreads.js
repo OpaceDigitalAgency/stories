@@ -272,19 +272,33 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   let reviews = [];
   let bookTitle = 'Unknown Book';
   // --- Request interception setup ---
-  // Replace the old page.setRequestInterception and page.on('request', ...) block with a safe version
+  // Safer interception to prevent "Request is already handled!" errors
   await page.setRequestInterception(true);
   page.on('request', request => {
+    if (request._interceptionHandled) {
+      logger.warn(`Request already handled: ${request.url()}`);
+      return;
+    }
     try {
-      if (request._interceptionHandled) return;
-
       const url = request.url();
       const type = request.resourceType();
 
       if (url.includes('google-analytics') || type === 'image') {
-        request.abort();
+        try {
+          if (!request._interceptionHandled) {
+            request.abort();
+          }
+        } catch (err) {
+          logger.error('Error in abort interception:', err.message);
+        }
       } else {
-        request.continue();
+        try {
+          if (!request._interceptionHandled) {
+            request.continue();
+          }
+        } catch (err) {
+          logger.error('Error in continue interception:', err.message);
+        }
       }
     } catch (err) {
       logger.warn(`Request interception failed: ${err.message}`);

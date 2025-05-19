@@ -536,25 +536,61 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Function to check if a review is a duplicate
         $isDuplicate = function($review, $existingReviews, $currentPage) {
+            // Create a unique fingerprint for the new review
+            $reviewFingerprint = md5($review['reviewer_name'] . '|' . substr($review['review_text'], 0, 100));
+
+            // Log the review we're checking
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Checking for duplicate: {$review['reviewer_name']} (fingerprint: {$reviewFingerprint})");
+
             foreach ($existingReviews as $existingReview) {
                 try {
                     $metadata = json_decode($existingReview['review_metadata'], true);
 
-                    // If the existing review is from a previous page, it's not a duplicate
+                    // Create a fingerprint for the existing review
+                    $existingFingerprint = md5($existingReview['reviewer_name'] . '|' . substr($existingReview['review_text'], 0, 100));
+
+                    // If we're continuing from last scrape and this is from a previous page, it's not a duplicate
                     if (isset($metadata['graphql_page']) && $metadata['graphql_page'] < $currentPage) {
+                        $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                            "Skipping comparison with review from previous page {$metadata['graphql_page']} < {$currentPage}");
                         continue;
                     }
 
-                    // Check for exact match
-                    if ($existingReview['reviewer_name'] === $review['reviewer_name'] &&
-                        substr($existingReview['review_text'], 0, 50) === substr($review['review_text'], 0, 50)) {
+                    // Check for exact fingerprint match
+                    if ($existingFingerprint === $reviewFingerprint) {
+                        $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                            "Found duplicate by fingerprint: {$existingReview['reviewer_name']}");
                         return true;
+                    }
+
+                    // If fingerprints don't match but names do, do a more detailed check
+                    if ($existingReview['reviewer_name'] === $review['reviewer_name']) {
+                        // Check if review texts are significantly different
+                        $existingTextSample = substr($existingReview['review_text'], 0, 100);
+                        $newTextSample = substr($review['review_text'], 0, 100);
+
+                        // Calculate similarity
+                        similar_text($existingTextSample, $newTextSample, $similarity);
+
+                        // If texts are very similar (>80% match), consider it a duplicate
+                        if ($similarity > 80) {
+                            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                                "Found duplicate by text similarity ({$similarity}%): {$existingReview['reviewer_name']}");
+                            return true;
+                        } else {
+                            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                                "Same reviewer but different text ({$similarity}% similar): {$existingReview['reviewer_name']}");
+                        }
                     }
                 } catch (Exception $e) {
                     $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
                         "Error parsing metadata: " . $e->getMessage());
                 }
             }
+
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "No duplicate found for: {$review['reviewer_name']}");
             return false;
         };
 

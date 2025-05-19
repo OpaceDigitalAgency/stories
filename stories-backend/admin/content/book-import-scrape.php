@@ -19,6 +19,12 @@ require_once '../includes/header.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
+// Function to check if Git Auto Deploy webhook is running
+function is_webhook_online() {
+    $fp = @fsockopen("localhost", 8080, $errno, $errstr, 1);
+    return $fp ? fclose($fp) || true : false;
+}
+
 // Include the review fetcher services
 require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
 require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';
@@ -225,13 +231,21 @@ function updateBookAggregateValues($db, $bookId) {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Book Review Scraping</h5>
-                <div class="btn-group">
-                    <a href="book-import-tool.php" class="btn btn-primary">
-                        <i class="fas fa-arrow-left"></i> Back to Import Tool
-                    </a>
-                    <a href="debug-logs.php" class="btn btn-info">
-                        <i class="fas fa-file-alt"></i> View Debug Logs
-                    </a>
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <?php echo is_webhook_online()
+                            ? "<span class='badge bg-success'><i class='fas fa-check-circle'></i> 🟢 Git Auto Deploy: Online</span>"
+                            : "<span class='badge bg-danger'><i class='fas fa-exclamation-triangle'></i> 🔴 Git Auto Deploy: Not running!</span>";
+                        ?>
+                    </div>
+                    <div class="btn-group">
+                        <a href="book-import-tool.php" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> Back to Import Tool
+                        </a>
+                        <a href="debug-logs.php" class="btn btn-info">
+                            <i class="fas fa-file-alt"></i> View Debug Logs
+                        </a>
+                    </div>
                 </div>
             </div>
             <div class="card-body">

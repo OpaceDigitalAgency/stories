@@ -223,8 +223,68 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </option>
                     </select>
                 </form>
+                <script>
+                // Inline JavaScript to handle per-page dropdown changes
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('Pagination component loaded');
+                    
+                    // Get the per-page select element
+                    const perPageSelect = document.getElementById('per-page');
+                    
+                    if (perPageSelect) {
+                        console.log('Per-page select found');
+                        
+                        // Add change event listener
+                        perPageSelect.addEventListener('change', function() {
+                            console.log('Per-page select changed');
+                            
+                            // Get the form
+                            const form = this.closest('form');
+                            
+                            // Get the current tab from URL
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const currentTab = urlParams.get('tab') || 'existing';
+                            
+                            console.log('Current tab:', currentTab);
+                            
+                            // Make sure the form has the tab parameter
+                            let tabInput = form.querySelector('input[name="tab"]');
+                            if (!tabInput) {
+                                console.log('Adding tab input');
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'tab';
+                                input.value = currentTab;
+                                form.appendChild(input);
+                            } else {
+                                console.log('Setting tab input value');
+                                tabInput.value = currentTab;
+                            }
+                            
+                            // Always reset to page 1 when changing items per page
+                            let pageInput = form.querySelector('input[name="page"]');
+                            if (!pageInput) {
+                                console.log('Adding page input');
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'page';
+                                input.value = '1';
+                                form.appendChild(input);
+                            } else {
+                                console.log('Setting page input value');
+                                pageInput.value = '1';
+                            }
+                            
+                            // Submit the form
+                            console.log('Submitting form');
+                            form.submit();
+                        });
+                    } else {
+                        console.error('Per-page select not found');
+                    }
+                });
+                </script>
             </div>
-            <!-- JavaScript for this is handled by tab-state-handler.js -->
         </div>
     </div>
 

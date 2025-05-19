@@ -81,25 +81,13 @@ try {
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
 
-    // Get total counts for "Show All" option
-    $totalBooks = isset($totalBooks) ? $totalBooks : count($books);
-    $totalReviews = isset($totalReviews) ? $totalReviews : count($reviews);
-    $totalSources = count($reviewSources);
-
-    // Validate per page values
+    // Initialize standard per page values
+    $validPerPageValues = [10, 25, 50, 100];
+    
+    // Basic validation to prevent negative values
     foreach (['books', 'reviews', 'sources', 'isbn'] as $section) {
         $perPageVar = $section . 'PerPage';
-        $totalVar = 'total' . ucfirst($section);
-        $validValues = [10, 25, 50, 100];
-        
-        // Add total count as valid value for "Show All"
-        if (isset($$totalVar)) {
-            $validValues[] = $$totalVar;
-        }
-        
-        if (!in_array($$perPageVar, $validValues)) {
-            $$perPageVar = 10;
-        }
+        $$perPageVar = max(1, intval($$perPageVar));
     }
 
     // Build query conditions for books
@@ -729,6 +717,16 @@ require_once '../includes/header.php';
                             $reviewCountStmt = $db->prepare($reviewCountQuery);
                             $reviewCountStmt->execute($reviewParams);
                             $totalReviews = $reviewCountStmt->fetchColumn();
+                            
+                            // Add total reviews as valid per_page value
+                            if ($reviewsPerPage == $totalReviews) {
+                                $validPerPageValues[] = $totalReviews;
+                            }
+                            
+                            // Validate reviews per page
+                            if (!in_array($reviewsPerPage, $validPerPageValues)) {
+                                $reviewsPerPage = 10;
+                            }
 
                             // Calculate pagination
                             $totalReviewPages = ceil($totalReviews / $reviewsPerPage);

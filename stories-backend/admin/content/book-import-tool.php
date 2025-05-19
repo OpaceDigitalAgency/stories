@@ -868,6 +868,8 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <form method="get" class="row g-3" id="review-filter-form">
                                         <input type="hidden" name="tab" value="reviews">
+                                        <!-- Reset page to 1 when applying filters -->
+                                        <input type="hidden" name="reviews_page" value="1">
                                         <!-- Don't include reviews_per_page as hidden field since we have a dropdown for it -->
                                         <div class="col-md-4">
                                             <label for="review_search" class="form-label">Search</label>

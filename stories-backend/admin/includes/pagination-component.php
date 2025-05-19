@@ -94,7 +94,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="First page">
+                            <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="First page">
                                 <span aria-hidden="true">&laquo;&laquo;</span>
                             </a>
                         </li>
@@ -109,7 +109,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Previous page">
+                            <a class="page-link" href="<?php echo $getPageUrl(1); ?>" aria-label="Previous page">
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -131,16 +131,16 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     <?php else: ?>
                         <!-- When showing all items, show first few pages -->
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">1</a>
+                            <a class="page-link" href="<?php echo $getPageUrl(1); ?>">1</a>
                         </li>
                         <?php if ($totalPages > 1): ?>
                             <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">2</a>
+                                <a class="page-link" href="<?php echo $getPageUrl(2); ?>">2</a>
                             </li>
                         <?php endif; ?>
                         <?php if ($totalPages > 2): ?>
                             <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=3&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">3</a>
+                                <a class="page-link" href="<?php echo $getPageUrl(3); ?>">3</a>
                             </li>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -154,7 +154,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=<?php echo $itemsPerPage; ?>&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Next page">
+                            <a class="page-link" href="<?php echo $getPageUrl(2); ?>" aria-label="Next page">
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
@@ -169,7 +169,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=<?php echo max(1, $totalPages); ?>&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Last page">
+                            <a class="page-link" href="<?php echo $getPageUrl(max(1, $totalPages)); ?>" aria-label="Last page">
                                 <span aria-hidden="true">&raquo;&raquo;</span>
                             </a>
                         </li>

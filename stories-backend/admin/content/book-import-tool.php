@@ -469,11 +469,8 @@ require_once '../includes/header.php';
                                             'currentPage' => $booksPage,
                                             'totalItems' => $totalBooks,
                                             'htmlFields' => ['rating', 'actions'],
-                                            'showPagination' => true,
-                                            'showItemsPerPage' => true,
-                                            'validPerPageValues' => [10, 25, 50, 100, $totalBooks],
-                                            'perPageLabel' => 'Show',
-                                            'showAllLabel' => 'Show All'
+                                            'showPagination' => false, // Disable enhanced table pagination
+                                            'showItemsPerPage' => false // Disable enhanced table per_page dropdown
                                         ]
                                     );
                                     ?>
@@ -611,11 +608,8 @@ require_once '../includes/header.php';
                                     'currentPage' => $sourcesPage,
                                     'totalItems' => count($reviewSources),
                                     'htmlFields' => ['actions'],
-                                    'showPagination' => true,
-                                    'showItemsPerPage' => true,
-                                    'validPerPageValues' => [10, 25, 50, 100, count($reviewSources)],
-                                    'perPageLabel' => 'Show',
-                                    'showAllLabel' => 'Show All'
+                                    'showPagination' => false, // Disable enhanced table pagination
+                                    'showItemsPerPage' => false // Disable enhanced table per_page dropdown
                                 ]
                             );
                             ?>
@@ -879,25 +873,17 @@ require_once '../includes/header.php';
                                             'currentPage' => $reviewsPage,
                                             'totalItems' => $totalReviews,
                                             'htmlFields' => ['book', 'rating', 'source', 'actions'],
-                                            'showPagination' => true,
-                                            'showItemsPerPage' => true,
-                                            'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
-                                            'perPageLabel' => 'Show',
-                                            'showAllLabel' => 'Show All'
+                                            'showPagination' => false, // Disable enhanced table pagination
+                                            'showItemsPerPage' => false // Disable enhanced table per_page dropdown
                                         ]
                                     );
                                     ?>
                                 </div>
-                                <?php
-                                // Ensure tab parameter is in URL for pagination
-                                $_GET['tab'] = 'reviews';
-                                // Render pagination for reviews table
-                                renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
+                                <?php renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                                     'pageParam' => 'reviews_page',
                                     'perPageParam' => 'reviews_per_page',
                                     'tab' => 'reviews'
-                                ]);
-                                ?>
+                                ]); ?>
                             </div>
                         </div>
 

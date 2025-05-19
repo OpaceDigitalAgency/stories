@@ -234,21 +234,66 @@ module.exports = {
    * @param {Object} page - Puppeteer page
    */
   simulateHumanBehavior: async (page) => {
-    // Random scroll
-    await page.evaluate(() => {
-      const scrollAmount = Math.floor(Math.random() * 100) + 100;
-      window.scrollBy(0, scrollAmount);
-    });
+    try {
+      // Scroll down gradually to simulate reading
+      await page.evaluate(() => {
+        return new Promise((resolve) => {
+          let totalHeight = 0;
+          const distance = 100;
+          const timer = setInterval(() => {
+            const scrollHeight = document.body.scrollHeight;
+            window.scrollBy(0, distance);
+            totalHeight += distance;
 
-    // Random delay
-    const delay = Math.floor(Math.random() * 2000) + 1000;
-    await page.waitForTimeout(delay);
+            // Add some randomness to the scrolling
+            if (Math.random() > 0.7) {
+              // Sometimes pause scrolling
+              setTimeout(() => {}, Math.random() * 500);
+            }
 
-    // Move mouse randomly
-    const x = Math.floor(Math.random() * 500);
-    const y = Math.floor(Math.random() * 500);
-    await page.mouse.move(x, y);
+            if (totalHeight >= scrollHeight * 0.7 || totalHeight > 4000) {
+              clearInterval(timer);
+              resolve();
+            }
+          }, 100 + Math.floor(Math.random() * 150)); // Random interval between 100-250ms
+        });
+      });
 
-    logger.debug('Simulated human-like behavior on page');
+      // Random delay with jitter to avoid detection
+      const baseDelay = 1500;
+      const jitter = Math.floor(Math.random() * 1500);
+      await page.waitForTimeout(baseDelay + jitter);
+
+      // Move mouse randomly to simulate human interaction
+      const viewportWidth = page.viewport().width;
+      const viewportHeight = page.viewport().height;
+      const x = Math.floor(Math.random() * viewportWidth);
+      const y = Math.floor(Math.random() * viewportHeight);
+      await page.mouse.move(x, y);
+
+      // Sometimes click on non-link elements
+      if (Math.random() > 0.7) {
+        await page.evaluate(() => {
+          const nonLinkElements = Array.from(document.querySelectorAll('div, span, p'))
+            .filter(el => !el.closest('a') && el.offsetWidth > 0 && el.offsetHeight > 0);
+
+          if (nonLinkElements.length > 0) {
+            const randomElement = nonLinkElements[Math.floor(Math.random() * nonLinkElements.length)];
+            const rect = randomElement.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const x = rect.left + rect.width / 2;
+              const y = rect.top + rect.height / 2;
+              if (x > 0 && y > 0) {
+                randomElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+              }
+            }
+          }
+        });
+      }
+
+      logger.debug('Simulated human-like behavior on page');
+    } catch (error) {
+      logger.error(`Error simulating human behavior: ${error.message}`);
+    }
   }
 };

@@ -326,6 +326,23 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
   const page = await browser.getNewPage();
   let reviews = [];
 
+  // Set realistic headers for desktop browser
+  await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+  await page.setExtraHTTPHeaders({
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Sec-Ch-Ua': '"Chromium";v="122", "Google Chrome";v="122", "Not(A:Brand";v="24"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"macOS"'
+  });
+
   try {
     // First try the product page to get aggregate rating
     const productUrl = `${config.sources.amazon.baseUrl}/dp/${asin}`;
@@ -370,6 +387,23 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     logger.info(`Navigating to reviews page: ${reviewsUrl}`);
 
     await page.goto(reviewsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Simulate human behavior and leave breadcrumbs
+    await browser.simulateHumanBehavior(page);
+
+    // Scroll to load lazy content
+    await page.evaluate(() => {
+      return new Promise((resolve) => {
+        // Scroll to bottom to load lazy content
+        window.scrollTo(0, document.body.scrollHeight);
+
+        // Then scroll back up a bit to look more natural
+        setTimeout(() => {
+          window.scrollTo(0, document.body.scrollHeight * 0.7);
+          resolve();
+        }, 1000);
+      });
+    });
 
     // Check for login page or CAPTCHA
     if (await isLoginPage(page)) {
@@ -448,8 +482,72 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     let pageNum = 2;
     while (reviews.length < limit + 1 && pageNum <= config.sources.amazon.maxPages) {
       try {
+        // Try the JSON API endpoint first as it's less protected
+        const jsonApiUrl = `${config.sources.amazon.baseUrl}/hz/reviews-render/ajax/reviews/get/?asin=${asin}&pageNumber=${pageNum}&pageSize=50&sortBy=recent&reviewerType=all`;
+        logger.info(`Trying JSON API endpoint for page ${pageNum}: ${jsonApiUrl}`);
+
+        let useJsonApi = false;
+
+        try {
+          // Set the X-Requested-With header to make it look like an AJAX request
+          await page.setExtraHTTPHeaders({
+            'X-Requested-With': 'XMLHttpRequest'
+          });
+
+          await page.goto(jsonApiUrl, { waitUntil: 'networkidle2', timeout: 15000 });
+
+          // Check if we got a valid JSON response
+          const isJson = await page.evaluate(() => {
+            try {
+              return document.body.textContent.trim().startsWith('{') &&
+                     document.body.textContent.includes('reviewsHtml');
+            } catch (e) {
+              return false;
+            }
+          });
+
+          if (isJson) {
+            logger.info('Successfully accessed JSON API endpoint');
+            useJsonApi = true;
+
+            // Extract the HTML from the JSON response
+            const reviewsHtml = await page.evaluate(() => {
+              try {
+                const jsonResponse = JSON.parse(document.body.textContent);
+                return jsonResponse.reviewsHtml || '';
+              } catch (e) {
+                return '';
+              }
+            });
+
+            if (reviewsHtml) {
+              // Parse the reviews from the HTML
+              const pageReviews = parseReviewsWithRegex(reviewsHtml, asin);
+
+              if (pageReviews.length > 0) {
+                logger.info(`Found ${pageReviews.length} reviews from JSON API on page ${pageNum}`);
+                reviews = [...reviews, ...pageReviews];
+                pageNum++;
+
+                // Add a variable delay with jitter
+                const baseDelay = 1500;
+                const jitter = Math.floor(Math.random() * 1500);
+                await page.waitForTimeout(baseDelay + jitter);
+
+                continue; // Skip to next iteration
+              }
+            }
+          }
+        } catch (jsonError) {
+          logger.warn(`Error using JSON API endpoint: ${jsonError.message}`);
+        } finally {
+          // Reset the headers
+          await page.setExtraHTTPHeaders({});
+        }
+
+        // Fall back to regular page if JSON API fails
         const nextPageUrl = `${config.sources.amazon.baseUrl}/product-reviews/${asin}?pageNumber=${pageNum}`;
-        logger.info(`Navigating to page ${pageNum}: ${nextPageUrl}`);
+        logger.info(`Falling back to regular page ${pageNum}: ${nextPageUrl}`);
 
         await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
@@ -476,8 +574,10 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
         reviews = [...reviews, ...pageReviews];
         pageNum++;
 
-        // Add a small delay between pages
-        await page.waitForTimeout(2000);
+        // Add a variable delay between pages with exponential back-off and jitter
+        const baseDelay = 1500;
+        const jitter = Math.floor(Math.random() * 1500);
+        await page.waitForTimeout(baseDelay + jitter);
       } catch (err) {
         logger.error(`Error fetching page ${pageNum}: ${err.message}`);
         break;
@@ -557,9 +657,25 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
   let reviews = [];
 
   try {
-    // Set mobile user agent and viewport
+    // Set mobile user agent and viewport with realistic headers
     const mobileUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
     await page.setUserAgent(mobileUserAgent);
+
+    // Add realistic headers that real browsers would send
+    await page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Sec-Ch-Ua': '"Not A(Brand";v="99", "Safari";v="17.2"',
+      'Sec-Ch-Ua-Mobile': '?1',
+      'Sec-Ch-Ua-Platform': '"iOS"'
+    });
 
     await page.setViewport({
       width: 375,
@@ -584,6 +700,20 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
 
     // Simulate human behavior
     await browser.simulateHumanBehavior(page);
+
+    // Scroll to load lazy content and leave breadcrumbs
+    await page.evaluate(() => {
+      return new Promise((resolve) => {
+        // Scroll to bottom to load lazy content
+        window.scrollTo(0, document.body.scrollHeight);
+
+        // Then scroll back up a bit to look more natural
+        setTimeout(() => {
+          window.scrollTo(0, document.body.scrollHeight * 0.7);
+          resolve();
+        }, 1000);
+      });
+    });
 
     // Check for login page or CAPTCHA
     if (await isLoginPage(page) || await hasCaptcha(page)) {
@@ -690,8 +820,11 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
         reviews = [...reviews, ...pageReviews];
         pageNum++;
 
-        // Add a small delay between pages
-        await page.waitForTimeout(Math.floor(Math.random() * 2000) + 1000);
+        // Add a variable delay between pages with exponential back-off and jitter
+        const baseDelay = 1500;
+        const jitter = Math.floor(Math.random() * 1500);
+        const backoff = Math.min(pageNum * 500, 3000); // Increase delay as we go through more pages
+        await page.waitForTimeout(baseDelay + jitter + backoff);
       } catch (err) {
         logger.error(`Error fetching mobile page ${pageNum}: ${err.message}`);
         break;

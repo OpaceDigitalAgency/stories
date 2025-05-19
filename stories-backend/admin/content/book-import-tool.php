@@ -73,26 +73,26 @@ try {
     $sourcesPage = isset($_GET['sources_page']) ? max(1, intval($_GET['sources_page'])) : 1;
     $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
 
-    // Reviews pagination
     // Reviews pagination with proper validation
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
     $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
-    
+
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];
-    
+
     // Get total reviews count first
     $reviewCountQuery = "SELECT COUNT(*) FROM reviews r";
     $reviewCountStmt = $db->prepare($reviewCountQuery);
     $reviewCountStmt->execute();
     $totalReviews = $reviewCountStmt->fetchColumn();
-    
+
     // Add total reviews as a valid per_page value
     $validPerPageValues[] = $totalReviews;
-    
-    // Validate reviews per page value
+
+    // Validate reviews per page value - only if it's not already in the valid values
     if (!in_array($reviewsPerPage, $validPerPageValues)) {
-        $reviewsPerPage = 10;
+        // If it's not a standard value, check if it's the "All" option
+        $reviewsPerPage = ($reviewsPerPage >= $totalReviews) ? $totalReviews : 10;
     }
 
     // ISBN validation pagination
@@ -134,7 +134,7 @@ try {
     // Calculate pagination
     $totalBookPages = ceil($totalBooks / $booksPerPage);
     $bookOffset = ($booksPage - 1) * $booksPerPage;
-    
+
     // Ensure offset is not negative
     $bookOffset = max(0, $bookOffset);
 
@@ -461,8 +461,7 @@ require_once '../includes/header.php';
                                         'author' => 'Author',
                                         'isbn' => 'ISBN',
                                         'reviews' => 'Reviews',
-                                        'rating' => 'Rating',
-                                        'actions' => 'Actions'
+                                        'rating' => 'Rating'
                                     ];
 
                                     // Render enhanced table
@@ -474,10 +473,10 @@ require_once '../includes/header.php';
                                         'books-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => true,
+                                            'showActions' => false,
                                             'actions' => ['view', 'edit', 'validate', 'scrape'],
                                             'bulkActions' => ['delete', 'validate', 'scrape'],
-                                            'htmlFields' => ['rating', 'actions'],
+                                            'htmlFields' => ['rating'],
                                             'showPagination' => false,
                                             'showItemsPerPage' => false
                                         ]
@@ -598,8 +597,7 @@ require_once '../includes/header.php';
                             $columns = [
                                 'name' => 'Name',
                                 'url' => 'URL',
-                                'type' => 'Type',
-                                'actions' => 'Actions'
+                                'type' => 'Type'
                             ];
 
                             // Render enhanced table
@@ -611,10 +609,10 @@ require_once '../includes/header.php';
                                 'sources-table',
                                 [
                                     'showCheckboxes' => true,
-                                    'showActions' => true,
+                                    'showActions' => false,
                                     'actions' => ['edit', 'delete'],
                                     'bulkActions' => ['delete', 'toggle'],
-                                    'htmlFields' => ['actions'],
+                                    'htmlFields' => [],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
                                 ]
@@ -732,21 +730,22 @@ require_once '../includes/header.php';
                             $reviewCountStmt = $db->prepare($reviewCountQuery);
                             $reviewCountStmt->execute($reviewParams);
                             $totalReviews = $reviewCountStmt->fetchColumn();
-                            
+
                             // Add total reviews as valid per_page value
-                            if ($reviewsPerPage == $totalReviews) {
+                            // Make sure the total reviews is in the valid values
+                            if (!in_array($totalReviews, $validPerPageValues)) {
                                 $validPerPageValues[] = $totalReviews;
                             }
-                            
-                            // Validate reviews per page
+
+                            // Validate reviews per page - use the same logic as earlier
                             if (!in_array($reviewsPerPage, $validPerPageValues)) {
-                                $reviewsPerPage = 10;
+                                $reviewsPerPage = ($reviewsPerPage >= $totalReviews) ? $totalReviews : 10;
                             }
 
                             // Calculate pagination
                             $totalReviewPages = ceil($totalReviews / $reviewsPerPage);
                             $reviewOffset = ($reviewsPage - 1) * $reviewsPerPage;
-                            
+
                             // Ensure offset is not negative
                             $reviewOffset = max(0, $reviewOffset);
 
@@ -849,7 +848,7 @@ require_once '../includes/header.php';
                                         $stars = round($review['rating_normalised'] * 5);
                                         $rating = str_repeat('★', $stars) . str_repeat('☆', 5 - $stars) .
                                                 ' (' . $review['original_rating'] . ')';
-                                        
+
                                         $source = htmlspecialchars($review['source_name']);
                                         if ($review['is_third_party']) {
                                             $source .= ' <span class="badge badge-info">External</span>';
@@ -882,8 +881,7 @@ require_once '../includes/header.php';
                                         'reviewer' => 'Reviewer',
                                         'rating' => 'Rating',
                                         'source' => 'Source',
-                                        'date' => 'Date',
-                                        'actions' => 'Actions'
+                                        'date' => 'Date'
                                     ];
 
                                     // Render enhanced table
@@ -895,10 +893,10 @@ require_once '../includes/header.php';
                                         'reviews-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => true,
+                                            'showActions' => false,
                                             'actions' => ['view', 'edit', 'delete'],
                                             'bulkActions' => ['delete', 'analyze'],
-                                            'htmlFields' => ['book', 'rating', 'source', 'actions'],
+                                            'htmlFields' => ['book', 'rating', 'source'],
                                             'showPagination' => false,
                                             'showItemsPerPage' => false
                                         ]
@@ -908,6 +906,8 @@ require_once '../includes/header.php';
                                 <?php
                                 // Ensure tab parameter is in URL for pagination
                                 $_GET['tab'] = 'reviews';
+                                // Make sure the reviews_per_page parameter is properly set
+                                $_GET['reviews_per_page'] = $reviewsPerPage;
                                 renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                                     'pageParam' => 'reviews_page',
                                     'perPageParam' => 'reviews_per_page',
@@ -1018,7 +1018,7 @@ require_once '../includes/header.php';
                                         if (empty($genreTags)) $missingFields[] = 'Genre';
                                         if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
                                         if (empty($book['price_range'])) $missingFields[] = 'Price Range';
-                                        
+
                                         $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
                                         if (empty($ageRangeTags)) $missingFields[] = 'Age Range';
 
@@ -1051,8 +1051,7 @@ require_once '../includes/header.php';
                                         'isbn' => 'ISBN',
                                         'status' => 'Status',
                                         'genre' => 'Genre',
-                                        'missing_data' => 'Missing Data',
-                                        'actions' => 'Actions'
+                                        'missing_data' => 'Missing Data'
                                     ];
 
                                     // Render enhanced table
@@ -1063,13 +1062,13 @@ require_once '../includes/header.php';
                                         'isbn-validation-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => true,
+                                            'showActions' => false,
                                             'actions' => ['validate', 'edit'],
                                             'bulkActions' => ['validate', 'enrich'],
                                             'itemsPerPage' => $isbnPerPage,
                                             'currentPage' => $isbnPage,
                                             'totalItems' => count($books),
-                                            'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
+                                            'htmlFields' => ['isbn', 'status', 'genre', 'missing_data'],
                                             'showPagination' => true,
                                             'showItemsPerPage' => true,
                                             'validPerPageValues' => [10, 25, 50, 100, count($books)],

@@ -262,54 +262,82 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
 
     // Check Goodreads - Direct search approach
     try {
-        // First try a direct search on Goodreads by ISBN
-        $url = "https://www.goodreads.com/search/index.xml?key=YOUR_API_KEY&q=" . urlencode($cleanIsbn);
-
         // Since Goodreads API is deprecated, we'll use a web search approach
         $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
 
         $ch = curl_init($searchUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($response && $httpCode == 200) {
             // Check if we found a book
-            if (strpos($response, 'No results') === false && strpos($response, 'class="bookTitle"') !== false) {
+            if (strpos($response, 'No results') === false &&
+                (strpos($response, 'class="bookTitle"') !== false ||
+                 strpos($response, 'class="bookCover"') !== false)) {
+
                 $foundInSources[] = 'Goodreads';
 
                 // Extract book details using regex
-                preg_match('/<span itemprop="name">(.*?)<\/span>/s', $response, $titleMatches);
+                preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
                 preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
                 preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
                 preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
+                preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
+                preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
+
+                // Extract cover image
+                preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
+
+                // Extract description
+                preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
 
                 $title = $titleMatches[1] ?? '';
                 $author = $authorMatches[1] ?? '';
                 $isbn10 = $isbnMatches[1] ?? '';
                 $isbn13 = $isbn13Matches[1] ?? '';
+                $publisher = $publisherMatches[2] ?? '';
+                $pageCount = $pageCountMatches[1] ?? '';
+                $coverUrl = $coverMatches[1] ?? '';
+                $description = $descMatches[1] ?? '';
 
                 // Clean up extracted data
                 $title = strip_tags($title);
                 $author = strip_tags($author);
+                $publisher = trim(strip_tags($publisher));
+                $description = strip_tags($description);
+
+                // Extract genres/categories
+                $categories = [];
+                if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
+                    $categories = $genreMatches[1];
+                }
 
                 $bookData['goodreads'] = [
                     'title' => $title,
                     'author' => $author,
-                    'publisher' => '',
-                    'publication_date' => '',
-                    'page_count' => '',
+                    'publisher' => $publisher,
+                    'publication_date' => $publisherMatches[1] ?? '',
+                    'page_count' => $pageCount,
                     'isbn' => $isbn10,
                     'isbn13' => $isbn13,
-                    'categories' => [],
-                    'description' => '',
-                    'cover_url' => '',
+                    'categories' => $categories,
+                    'description' => $description,
+                    'cover_url' => $coverUrl,
                     'source' => 'Goodreads'
                 ];
+
+                // Log success for debugging
+                error_log("Successfully extracted Goodreads data for ISBN: $cleanIsbn");
+            } else {
+                error_log("No book found on Goodreads for ISBN: $cleanIsbn");
             }
+        } else {
+            error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
         }
     } catch (Exception $e) {
         // Log error but continue
@@ -1359,12 +1387,12 @@ function updateBookData($bookId, $data, $db) {
         $params = [];
         $updatedFieldNames = [];
 
-        // Helper function to check if a value is a placeholder like "Unknown"
-        function isPlaceholder($value) {
+        // Check if a value is a placeholder like "Unknown"
+        $isPlaceholder = function($value) {
             if (empty($value)) return true;
             $placeholders = ['unknown', 'n/a', 'none', '0'];
             return in_array(strtolower(trim($value)), $placeholders);
-        }
+        };
 
         // Only update fields that are provided and different from current values
         if (!empty($data['title']) && $data['title'] !== $currentBook['title']) {
@@ -1409,7 +1437,7 @@ function updateBookData($bookId, $data, $db) {
 
         // For series, replace if current value is empty or "Unknown"
         if (!empty($data['series']) &&
-            (isPlaceholder($currentBook['series']) || $data['series'] !== $currentBook['series'])) {
+            ($isPlaceholder($currentBook['series']) || $data['series'] !== $currentBook['series'])) {
             $updateFields[] = "series = ?";
             $params[] = $data['series'];
             $updatedFieldNames[] = 'Series';
@@ -1885,7 +1913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             <span class="badge bg-secondary me-1">No ISBN</span>
                                                                         <?php endif; ?>
 
-                                                                        <button type="button" class="btn btn-sm btn-info me-1" data-bs-toggle="modal" data-bs-target="#dataModal<?php echo htmlspecialchars($source); ?>" title="View complete book details">
+                                                                        <button type="button" class="btn btn-sm btn-info me-1 d-flex align-items-center justify-content-center" style="height: 31px; width: 31px;" data-bs-toggle="modal" data-bs-target="#dataModal<?php echo htmlspecialchars($source); ?>" title="View complete book details">
                                                                             <i class="fas fa-eye"></i>
                                                                         </button>
 
@@ -2047,7 +2075,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             </button>
                                                                         </form>
 
-                                                                        <button type="button" class="btn btn-sm btn-info me-1" data-bs-toggle="modal" data-bs-target="#suggestionModal<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>" title="View complete book details">
+                                                                        <button type="button" class="btn btn-sm btn-info me-1 d-flex align-items-center justify-content-center" style="height: 31px; width: 31px;" data-bs-toggle="modal" data-bs-target="#suggestionModal<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>" title="View complete book details">
                                                                             <i class="fas fa-eye"></i>
                                                                         </button>
 

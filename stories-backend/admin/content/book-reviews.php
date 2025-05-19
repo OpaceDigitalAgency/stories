@@ -48,9 +48,9 @@ $message = '';
 $messageType = '';
 
 try {
-    // Reviews tab pagination
-    $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
-    $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
+    // Reviews tab pagination - use standard parameter names
+    $reviewsPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $reviewsPerPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
     
     // Ensure reviewsPerPage is a valid value
     if ($reviewsPerPage <= 0) {
@@ -209,8 +209,8 @@ require_once '../includes/header.php';
                         <div class="card-body">
                             <form method="get" class="row g-3" id="review-filter-form">
                                 <!-- Reset page to 1 when applying filters -->
-                                <input type="hidden" name="reviews_page" value="1">
-                                <!-- Don't include reviews_per_page as hidden field since we have a dropdown for it -->
+                                <input type="hidden" name="page" value="1">
+                                <!-- Don't include per_page as hidden field since we have a dropdown for it -->
                                 <div class="col-md-4">
                                     <label for="review_search" class="form-label">Search</label>
                                     <input type="text" class="form-control" id="review_search" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>" placeholder="Search reviews...">
@@ -349,9 +349,9 @@ require_once '../includes/header.php';
                         <?php
                         // Render pagination with custom options
                         renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
-                            'pageParam' => 'reviews_page',
-                            'perPageParam' => 'reviews_per_page',
-                            'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
+                            'pageParam' => 'page',
+                            'perPageParam' => 'per_page',
+                            'validPerPageValues' => [5, 10, 15, 20, 25, 50, 100, $totalReviews],
                             'perPageLabel' => 'Show',
                             'showAllLabel' => 'Show All',
                             'showItemsPerPage' => true, // Enable the built-in per-page dropdown for consistency
@@ -372,11 +372,15 @@ $(document).ready(function() {
         // Get current URL
         let url = new URL(window.location.href);
         
-        // Update reviews_per_page parameter
-        url.searchParams.set('reviews_per_page', $(this).val());
+        // Update per_page parameter
+        url.searchParams.set('per_page', $(this).val());
         
         // Reset to page 1 when changing items per page
-        url.searchParams.set('reviews_page', '1');
+        url.searchParams.set('page', '1');
+        
+        // Remove any old parameter names that might be in the URL
+        url.searchParams.delete('reviews_per_page');
+        url.searchParams.delete('reviews_page');
         
         // Redirect to the new URL
         window.location.href = url.toString();

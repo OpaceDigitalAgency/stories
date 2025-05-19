@@ -758,6 +758,7 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <form method="get" class="row g-3" id="review-filter-form">
                                         <input type="hidden" name="tab" value="reviews">
+                                        <input type="hidden" name="reviews_per_page" value="<?php echo $reviewsPerPage; ?>">
                                         <div class="col-md-4">
                                             <label for="review_search" class="form-label">Search</label>
                                             <input type="text" class="form-control" id="review_search" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>" placeholder="Search reviews...">
@@ -793,6 +794,16 @@ require_once '../includes/header.php';
                                                 <option value="3" <?php echo $reviewRatingFilter == 3 ? 'selected' : ''; ?>>★★★ (3+)</option>
                                                 <option value="4" <?php echo $reviewRatingFilter == 4 ? 'selected' : ''; ?>>★★★★ (4+)</option>
                                                 <option value="5" <?php echo $reviewRatingFilter == 5 ? 'selected' : ''; ?>>★★★★★ (5)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="reviews_per_page" class="form-label">Show</label>
+                                            <select class="form-control" id="reviews_per_page" name="reviews_per_page">
+                                                <option value="10" <?php echo $reviewsPerPage == 10 ? 'selected' : ''; ?>>10</option>
+                                                <option value="25" <?php echo $reviewsPerPage == 25 ? 'selected' : ''; ?>>25</option>
+                                                <option value="50" <?php echo $reviewsPerPage == 50 ? 'selected' : ''; ?>>50</option>
+                                                <option value="100" <?php echo $reviewsPerPage == 100 ? 'selected' : ''; ?>>100</option>
+                                                <option value="<?php echo $totalReviews; ?>" <?php echo $reviewsPerPage == $totalReviews ? 'selected' : ''; ?>>All</option>
                                             </select>
                                         </div>
                                         <div class="col-12">

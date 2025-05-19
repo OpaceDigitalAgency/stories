@@ -968,13 +968,14 @@ require_once '../includes/header.php';
                                                     <th>Author</th>
                                                     <th>ISBN</th>
                                                     <th>Status</th>
+                                                    <th>Missing Data</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php if (empty($books)): ?>
                                                     <tr>
-                                                        <td colspan="6" class="text-center">No books found. Import some books first.</td>
+                                                        <td colspan="7" class="text-center">No books found. Import some books first.</td>
                                                     </tr>
                                                 <?php else: ?>
                                                     <?php foreach ($books as $book): ?>
@@ -1046,6 +1047,24 @@ require_once '../includes/header.php';
                                                                     <i class="fas fa-<?php echo $statusIcon; ?>"></i>
                                                                     <?php echo ucfirst($isbnStatus); ?>
                                                                 </span>
+                                                            </td>
+                                                            <td>
+                                                                <?php
+                                                                $missingFields = [];
+                                                                if (empty($book['publisher'])) $missingFields[] = 'Publisher';
+                                                                if (empty($book['page_count'])) $missingFields[] = 'Page Count';
+                                                                if (empty($book['genre'])) $missingFields[] = 'Genre';
+                                                                if (empty($book['series'])) $missingFields[] = 'Series';
+                                                                if (empty($book['age_range'])) $missingFields[] = 'Reading Age';
+
+                                                                if (!empty($missingFields)) {
+                                                                    echo '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .
+                                                                         count($missingFields) . ' field' . (count($missingFields) > 1 ? 's' : '') . '</span> ' .
+                                                                         '<small class="text-muted">' . htmlspecialchars(implode(', ', $missingFields)) . '</small>';
+                                                                } else {
+                                                                    echo '<span class="badge badge-success">Complete</span>';
+                                                                }
+                                                                ?>
                                                             </td>
                                                             <td>
                                                                 <button class="btn btn-sm btn-primary validate-isbn-btn"

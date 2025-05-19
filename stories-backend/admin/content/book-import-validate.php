@@ -329,14 +329,27 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
 
     // Clean and prepare the title for searching
     $searchTitle = trim($title);
+    $authorName = '';
+
+    // Check if the title contains author information
+    if (strpos($searchTitle, ' by ') !== false) {
+        $parts = explode(' by ', $searchTitle);
+        $searchTitle = trim($parts[0]);
+        $authorName = trim($parts[1]);
+    }
 
     // Remove common prefixes like "The", "A", etc.
     $searchTitle = preg_replace('/^(The|A|An) /i', '', $searchTitle);
 
-    // Try Google Books API first
+    // Try Google Books API with title and author if available
     try {
-        // Use Google Books API to search by title
-        $url = "https://www.googleapis.com/books/v1/volumes?q=intitle:" . urlencode($searchTitle) . "&maxResults=10";
+        // Build the query
+        $query = "intitle:" . urlencode($searchTitle);
+        if (!empty($authorName)) {
+            $query .= "+inauthor:" . urlencode($authorName);
+        }
+
+        $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query . "&maxResults=10";
 
         // Make the request
         $ch = curl_init($url);
@@ -363,28 +376,45 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
                         }
                     }
 
-                    if (!empty($isbn) || !empty($isbn13)) {
-                        // Calculate confidence score based on title similarity
-                        $confidence = calculateTitleSimilarity($title, $volumeInfo['title'] ?? '');
+                    // Calculate confidence score based on title similarity
+                    $confidence = calculateTitleSimilarity($title, $volumeInfo['title'] ?? '');
 
-                        // Boost confidence if author matches
-                        if (!empty($volumeInfo['authors'])) {
-                            $authorString = implode(', ', $volumeInfo['authors']);
-                            if (stripos($authorString, 'rowling') !== false && stripos($title, 'harry potter') !== false) {
-                                $confidence = max($confidence, 0.9); // Boost for Harry Potter books by J.K. Rowling
-                            }
+                    // Boost confidence if author matches
+                    if (!empty($volumeInfo['authors']) && !empty($authorName)) {
+                        $authorString = implode(', ', $volumeInfo['authors']);
+                        if (calculateTitleSimilarity($authorName, $authorString) > 0.6) {
+                            $confidence = max($confidence, 0.8);
+                        }
+                    }
+
+                    // Special case for popular books
+                    if (!empty($volumeInfo['authors'])) {
+                        $authorString = implode(', ', $volumeInfo['authors']);
+
+                        // Harry Potter books
+                        if (stripos($authorString, 'rowling') !== false && stripos($title, 'harry potter') !== false) {
+                            $confidence = max($confidence, 0.9);
                         }
 
-                        $suggestions[] = [
-                            'title' => $volumeInfo['title'] ?? '',
-                            'author' => implode(', ', $volumeInfo['authors'] ?? []),
-                            'publisher' => $volumeInfo['publisher'] ?? '',
-                            'isbn' => $isbn,
-                            'isbn13' => $isbn13,
-                            'confidence' => $confidence,
-                            'source' => 'Google Books'
-                        ];
+                        // Neil Gaiman's Coraline
+                        if (stripos($authorString, 'gaiman') !== false && stripos($title, 'coraline') !== false) {
+                            $confidence = max($confidence, 0.9);
+                        }
                     }
+
+                    $suggestions[] = [
+                        'title' => $volumeInfo['title'] ?? '',
+                        'author' => implode(', ', $volumeInfo['authors'] ?? []),
+                        'publisher' => $volumeInfo['publisher'] ?? '',
+                        'isbn' => $isbn,
+                        'isbn13' => $isbn13,
+                        'page_count' => $volumeInfo['pageCount'] ?? '',
+                        'categories' => $volumeInfo['categories'] ?? [],
+                        'description' => $volumeInfo['description'] ?? '',
+                        'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? $volumeInfo['imageLinks']['thumbnail'] : '',
+                        'confidence' => $confidence,
+                        'source' => 'Google Books'
+                    ];
                 }
             }
         }
@@ -394,8 +424,13 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
 
     // Try Open Library API
     try {
-        // Use Open Library API to search by title
-        $url = "https://openlibrary.org/search.json?title=" . urlencode($searchTitle) . "&limit=5";
+        // Build the query
+        $query = "title=" . urlencode($searchTitle);
+        if (!empty($authorName)) {
+            $query .= "&author=" . urlencode($authorName);
+        }
+
+        $url = "https://openlibrary.org/search.json?" . $query . "&limit=5";
 
         // Make the request
         $ch = curl_init($url);
@@ -421,33 +456,108 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
                         }
                     }
 
-                    if (!empty($isbn) || !empty($isbn13)) {
-                        // Calculate confidence score
-                        $confidence = calculateTitleSimilarity($title, $doc['title'] ?? '');
+                    // Calculate confidence score
+                    $confidence = calculateTitleSimilarity($title, $doc['title'] ?? '');
 
-                        // Boost confidence for Harry Potter books
-                        if (!empty($doc['author_name'])) {
-                            $authorString = implode(', ', $doc['author_name']);
-                            if (stripos($authorString, 'rowling') !== false && stripos($title, 'harry potter') !== false) {
-                                $confidence = max($confidence, 0.9);
-                            }
+                    // Boost confidence if author matches
+                    if (!empty($doc['author_name']) && !empty($authorName)) {
+                        $authorString = implode(', ', $doc['author_name']);
+                        if (calculateTitleSimilarity($authorName, $authorString) > 0.6) {
+                            $confidence = max($confidence, 0.8);
+                        }
+                    }
+
+                    // Special case for popular books
+                    if (!empty($doc['author_name'])) {
+                        $authorString = implode(', ', $doc['author_name']);
+
+                        // Harry Potter books
+                        if (stripos($authorString, 'rowling') !== false && stripos($title, 'harry potter') !== false) {
+                            $confidence = max($confidence, 0.9);
                         }
 
-                        $suggestions[] = [
-                            'title' => $doc['title'] ?? '',
-                            'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
-                            'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
-                            'isbn' => $isbn,
-                            'isbn13' => $isbn13,
-                            'confidence' => $confidence,
-                            'source' => 'Open Library'
-                        ];
+                        // Neil Gaiman's Coraline
+                        if (stripos($authorString, 'gaiman') !== false && stripos($title, 'coraline') !== false) {
+                            $confidence = max($confidence, 0.9);
+                        }
                     }
+
+                    $coverUrl = '';
+                    if (!empty($doc['cover_i'])) {
+                        $coverUrl = "https://covers.openlibrary.org/b/id/" . $doc['cover_i'] . "-M.jpg";
+                    }
+
+                    $suggestions[] = [
+                        'title' => $doc['title'] ?? '',
+                        'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
+                        'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
+                        'isbn' => $isbn,
+                        'isbn13' => $isbn13,
+                        'page_count' => $doc['number_of_pages_median'] ?? '',
+                        'categories' => $doc['subject'] ?? [],
+                        'description' => '',
+                        'cover_url' => $coverUrl,
+                        'confidence' => $confidence,
+                        'source' => 'Open Library'
+                    ];
                 }
             }
         }
     } catch (Exception $e) {
         error_log("Error searching books by title on Open Library: " . $e->getMessage());
+    }
+
+    // If no results found with specific search, try a more general search
+    if (empty($suggestions)) {
+        try {
+            // Try a general Google search for ISBN
+            $url = "https://www.googleapis.com/books/v1/volumes?q=" . urlencode($title) . "&maxResults=10";
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($response) {
+                $data = json_decode($response, true);
+                if (!empty($data['items'])) {
+                    foreach ($data['items'] as $item) {
+                        $volumeInfo = $item['volumeInfo'] ?? [];
+                        $industryIdentifiers = $volumeInfo['industryIdentifiers'] ?? [];
+
+                        $isbn = '';
+                        $isbn13 = '';
+
+                        foreach ($industryIdentifiers as $identifier) {
+                            if ($identifier['type'] === 'ISBN_10') {
+                                $isbn = $identifier['identifier'];
+                            } else if ($identifier['type'] === 'ISBN_13') {
+                                $isbn13 = $identifier['identifier'];
+                            }
+                        }
+
+                        $confidence = calculateTitleSimilarity($title, $volumeInfo['title'] ?? '');
+
+                        $suggestions[] = [
+                            'title' => $volumeInfo['title'] ?? '',
+                            'author' => implode(', ', $volumeInfo['authors'] ?? []),
+                            'publisher' => $volumeInfo['publisher'] ?? '',
+                            'isbn' => $isbn,
+                            'isbn13' => $isbn13,
+                            'page_count' => $volumeInfo['pageCount'] ?? '',
+                            'categories' => $volumeInfo['categories'] ?? [],
+                            'description' => $volumeInfo['description'] ?? '',
+                            'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? $volumeInfo['imageLinks']['thumbnail'] : '',
+                            'confidence' => $confidence,
+                            'source' => 'Google Books (General Search)'
+                        ];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error with general search: " . $e->getMessage());
+        }
     }
 
     // Remove duplicates based on ISBN
@@ -456,6 +566,11 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
 
     foreach ($suggestions as $suggestion) {
         $key = $suggestion['isbn'] . '|' . $suggestion['isbn13'];
+        if (empty($key)) {
+            // If no ISBN, use title+author as key
+            $key = $suggestion['title'] . '|' . $suggestion['author'];
+        }
+
         if (!isset($seenIsbns[$key])) {
             $seenIsbns[$key] = true;
             $uniqueSuggestions[] = $suggestion;
@@ -467,8 +582,8 @@ function searchBooksByTitle($title, $db, $reviewFetcherFactory) {
         return $b['confidence'] <=> $a['confidence'];
     });
 
-    // Limit to top 5 suggestions
-    return array_slice($uniqueSuggestions, 0, 5);
+    // Limit to top 10 suggestions
+    return array_slice($uniqueSuggestions, 0, 10);
 }
 
 // Function to calculate similarity between two titles
@@ -711,11 +826,33 @@ function enrichBookData($bookId, $db) {
 // Function to update book ISBN
 function updateBookISBN($bookId, $isbn, $isbn13, $db) {
     try {
+        // Check if updated_at column exists
         $stmt = $db->prepare("
-            UPDATE books
-            SET isbn = ?, isbn13 = ?, updated_at = NOW()
-            WHERE directory_item_id = ?
+            SELECT COUNT(*) as column_exists
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'books'
+            AND COLUMN_NAME = 'updated_at'
         ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['column_exists'] > 0) {
+            // If updated_at column exists, include it in the update
+            $stmt = $db->prepare("
+                UPDATE books
+                SET isbn = ?, isbn13 = ?, updated_at = NOW()
+                WHERE directory_item_id = ?
+            ");
+        } else {
+            // If updated_at column doesn't exist, don't include it
+            $stmt = $db->prepare("
+                UPDATE books
+                SET isbn = ?, isbn13 = ?
+                WHERE directory_item_id = ?
+            ");
+        }
+
         $stmt->execute([$isbn, $isbn13, $bookId]);
 
         return [
@@ -726,6 +863,110 @@ function updateBookISBN($bookId, $isbn, $isbn13, $db) {
         return [
             'status' => 'error',
             'message' => 'Error updating ISBN: ' . $e->getMessage()
+        ];
+    }
+}
+
+// Function to update all book data
+function updateBookData($bookId, $data, $db) {
+    try {
+        // Get the current book data
+        $stmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
+        $stmt->execute([$bookId]);
+        $currentBook = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$currentBook) {
+            return [
+                'status' => 'error',
+                'message' => 'Book not found'
+            ];
+        }
+
+        // Prepare the update fields
+        $updateFields = [];
+        $params = [];
+
+        // Only update fields that are provided and different from current values
+        if (!empty($data['title']) && $data['title'] !== $currentBook['title']) {
+            $updateFields[] = "title = ?";
+            $params[] = $data['title'];
+        }
+
+        if (!empty($data['author']) && $data['author'] !== $currentBook['author']) {
+            $updateFields[] = "author = ?";
+            $params[] = $data['author'];
+        }
+
+        if (!empty($data['isbn']) && $data['isbn'] !== $currentBook['isbn']) {
+            $updateFields[] = "isbn = ?";
+            $params[] = $data['isbn'];
+        }
+
+        if (!empty($data['isbn13']) && $data['isbn13'] !== $currentBook['isbn13']) {
+            $updateFields[] = "isbn13 = ?";
+            $params[] = $data['isbn13'];
+        }
+
+        if (!empty($data['publisher']) && $data['publisher'] !== $currentBook['publisher']) {
+            $updateFields[] = "publisher = ?";
+            $params[] = $data['publisher'];
+        }
+
+        if (!empty($data['page_count']) && $data['page_count'] !== $currentBook['page_count']) {
+            $updateFields[] = "page_count = ?";
+            $params[] = $data['page_count'];
+        }
+
+        if (!empty($data['description']) && $data['description'] !== $currentBook['description']) {
+            $updateFields[] = "description = ?";
+            $params[] = $data['description'];
+        }
+
+        if (!empty($data['cover_url']) && $data['cover_url'] !== $currentBook['cover_url']) {
+            $updateFields[] = "cover_url = ?";
+            $params[] = $data['cover_url'];
+        }
+
+        // Check if updated_at column exists
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as column_exists
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'books'
+            AND COLUMN_NAME = 'updated_at'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['column_exists'] > 0) {
+            $updateFields[] = "updated_at = NOW()";
+        }
+
+        // If there are no fields to update, return success
+        if (empty($updateFields)) {
+            return [
+                'status' => 'success',
+                'message' => 'No changes needed'
+            ];
+        }
+
+        // Build the update query
+        $updateQuery = "UPDATE books SET " . implode(", ", $updateFields) . " WHERE directory_item_id = ?";
+        $params[] = $bookId;
+
+        // Execute the update
+        $stmt = $db->prepare($updateQuery);
+        $stmt->execute($params);
+
+        return [
+            'status' => 'success',
+            'message' => 'Book data updated successfully',
+            'updated_fields' => array_keys($data)
+        ];
+    } catch (Exception $e) {
+        return [
+            'status' => 'error',
+            'message' => 'Error updating book data: ' . $e->getMessage()
         ];
     }
 }
@@ -914,6 +1155,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
             } else {
                 echo "<p class='error'>Invalid book ID</p>";
             }
+        } else if ($action === 'update_all_data') {
+            // Update all book data
+            $bookId = isset($_POST['book_id']) ? (int)$_POST['book_id'] : 0;
+            $source = isset($_POST['source']) ? trim($_POST['source']) : '';
+            $data = isset($_POST['data']) ? $_POST['data'] : [];
+
+            if ($bookId > 0 && !empty($data)) {
+                $result = updateBookData($bookId, $data, $db);
+
+                echo "<p class='" . ($result['status'] === 'success' ? 'success' : 'error') . "'>" .
+                     htmlspecialchars($result['message']) . "</p>";
+
+                if (!empty($result['updated_fields'])) {
+                    echo "<p class='info'>Updated fields: " . htmlspecialchars(implode(', ', $result['updated_fields'])) . "</p>";
+                }
+
+                // Redirect back to the validation page
+                echo "<script>
+                    setTimeout(function() {
+                        window.location.href = 'book-import-validate.php?action=validate_isbn&book_id=$bookId&isbn=" .
+                        (!empty($data['isbn13']) ? $data['isbn13'] : (!empty($data['isbn']) ? $data['isbn'] : '')) . "';
+                    }, 3000);
+                </script>";
+            } else {
+                echo "<p class='error'>Invalid book ID or no data provided</p>";
+            }
         }
     } catch (Exception $e) {
         echo "<p class='error'>Error: " . $e->getMessage() . "</p>";
@@ -997,19 +1264,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                 <td><?php echo !empty($data['isbn']) ? htmlspecialchars($data['isbn']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td><?php echo !empty($data['isbn13']) ? htmlspecialchars($data['isbn13']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td>
-                                                                    <?php if (!empty($data['isbn']) || !empty($data['isbn13'])): ?>
+                                                                    <div class="btn-group">
+                                                                        <?php if (!empty($data['isbn']) || !empty($data['isbn13'])): ?>
+                                                                            <form method="post" action="book-import-validate.php" class="d-inline me-1">
+                                                                                <input type="hidden" name="action" value="update_isbn">
+                                                                                <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                                <input type="hidden" name="isbn" value="<?php echo htmlspecialchars($data['isbn']); ?>">
+                                                                                <input type="hidden" name="isbn13" value="<?php echo htmlspecialchars($data['isbn13']); ?>">
+                                                                                <button type="submit" class="btn btn-sm btn-success">
+                                                                                    <i class="fas fa-check"></i> Use ISBN
+                                                                                </button>
+                                                                            </form>
+                                                                        <?php else: ?>
+                                                                            <span class="text-muted me-1">No ISBN available</span>
+                                                                        <?php endif; ?>
+
                                                                         <form method="post" action="book-import-validate.php" class="d-inline">
-                                                                            <input type="hidden" name="action" value="update_isbn">
+                                                                            <input type="hidden" name="action" value="update_all_data">
                                                                             <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
-                                                                            <input type="hidden" name="isbn" value="<?php echo htmlspecialchars($data['isbn']); ?>">
-                                                                            <input type="hidden" name="isbn13" value="<?php echo htmlspecialchars($data['isbn13']); ?>">
-                                                                            <button type="submit" class="btn btn-sm btn-success">
-                                                                                <i class="fas fa-check"></i> Use This ISBN
+                                                                            <input type="hidden" name="source" value="<?php echo htmlspecialchars($data['source']); ?>">
+
+                                                                            <?php foreach ($data as $field => $value): ?>
+                                                                                <?php if (is_array($value)): ?>
+                                                                                    <?php foreach ($value as $subKey => $subValue): ?>
+                                                                                        <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>][<?php echo htmlspecialchars($subKey); ?>]" value="<?php echo htmlspecialchars($subValue); ?>">
+                                                                                    <?php endforeach; ?>
+                                                                                <?php else: ?>
+                                                                                    <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>]" value="<?php echo htmlspecialchars($value); ?>">
+                                                                                <?php endif; ?>
+                                                                            <?php endforeach; ?>
+
+                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                                <i class="fas fa-sync-alt"></i> Use All Data
                                                                             </button>
                                                                         </form>
-                                                                    <?php else: ?>
-                                                                        <span class="text-muted">No ISBN available</span>
-                                                                    <?php endif; ?>
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -1041,15 +1330,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                 <td><?php echo !empty($suggestion['isbn13']) ? htmlspecialchars($suggestion['isbn13']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td><?php echo number_format($suggestion['confidence'] * 100, 1) . '%'; ?></td>
                                                                 <td>
-                                                                    <form method="post" action="book-import-validate.php" class="d-inline">
-                                                                        <input type="hidden" name="action" value="update_isbn">
-                                                                        <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
-                                                                        <input type="hidden" name="isbn" value="<?php echo htmlspecialchars($suggestion['isbn']); ?>">
-                                                                        <input type="hidden" name="isbn13" value="<?php echo htmlspecialchars($suggestion['isbn13']); ?>">
-                                                                        <button type="submit" class="btn btn-sm btn-success">
-                                                                            <i class="fas fa-check"></i> Use This ISBN
-                                                                        </button>
-                                                                    </form>
+                                                                    <div class="btn-group">
+                                                                        <form method="post" action="book-import-validate.php" class="d-inline me-1">
+                                                                            <input type="hidden" name="action" value="update_isbn">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="isbn" value="<?php echo htmlspecialchars($suggestion['isbn']); ?>">
+                                                                            <input type="hidden" name="isbn13" value="<?php echo htmlspecialchars($suggestion['isbn13']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-success">
+                                                                                <i class="fas fa-check"></i> Use ISBN
+                                                                            </button>
+                                                                        </form>
+
+                                                                        <form method="post" action="book-import-validate.php" class="d-inline">
+                                                                            <input type="hidden" name="action" value="update_all_data">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="source" value="<?php echo htmlspecialchars($suggestion['source']); ?>">
+
+                                                                            <?php foreach ($suggestion as $field => $value): ?>
+                                                                                <?php if (is_array($value)): ?>
+                                                                                    <?php foreach ($value as $subKey => $subValue): ?>
+                                                                                        <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>][<?php echo htmlspecialchars($subKey); ?>]" value="<?php echo htmlspecialchars($subValue); ?>">
+                                                                                    <?php endforeach; ?>
+                                                                                <?php else: ?>
+                                                                                    <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>]" value="<?php echo htmlspecialchars($value); ?>">
+                                                                                <?php endif; ?>
+                                                                            <?php endforeach; ?>
+
+                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                                <i class="fas fa-sync-alt"></i> Use All Data
+                                                                            </button>
+                                                                        </form>
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>

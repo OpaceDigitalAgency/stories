@@ -75,7 +75,14 @@ try {
 
     // Reviews pagination with proper validation
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
-    $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
+
+    // Get the reviews_per_page parameter with proper validation
+    if (isset($_GET['reviews_per_page'])) {
+        $reviewsPerPage = intval($_GET['reviews_per_page']);
+    } else {
+        // Default to 10 if not set
+        $reviewsPerPage = 10;
+    }
 
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];
@@ -87,12 +94,18 @@ try {
     $totalReviews = $reviewCountStmt->fetchColumn();
 
     // Add total reviews as a valid per_page value
-    $validPerPageValues[] = $totalReviews;
+    if (!in_array($totalReviews, $validPerPageValues)) {
+        $validPerPageValues[] = $totalReviews;
+    }
 
     // Validate reviews per page value - only if it's not already in the valid values
     if (!in_array($reviewsPerPage, $validPerPageValues)) {
         // If it's not a standard value, check if it's the "All" option
-        $reviewsPerPage = ($reviewsPerPage >= $totalReviews) ? $totalReviews : 10;
+        if ($reviewsPerPage >= $totalReviews) {
+            $reviewsPerPage = $totalReviews;
+        } else {
+            $reviewsPerPage = 10; // Default to 10 if invalid
+        }
     }
 
     // ISBN validation pagination
@@ -455,13 +468,14 @@ require_once '../includes/header.php';
                                         ];
                                     }
 
-                                    // Define table columns
+                                    // Define table columns - include actions in the columns
                                     $columns = [
                                         'title' => 'Title',
                                         'author' => 'Author',
                                         'isbn' => 'ISBN',
                                         'reviews' => 'Reviews',
-                                        'rating' => 'Rating'
+                                        'rating' => 'Rating',
+                                        'actions' => 'Actions'
                                     ];
 
                                     // Render enhanced table
@@ -473,10 +487,10 @@ require_once '../includes/header.php';
                                         'books-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => false,
+                                            'showActions' => false, // Don't show the last actions column
                                             'actions' => ['view', 'edit', 'validate', 'scrape'],
                                             'bulkActions' => ['delete', 'validate', 'scrape'],
-                                            'htmlFields' => ['rating'],
+                                            'htmlFields' => ['rating', 'actions'],
                                             'showPagination' => false,
                                             'showItemsPerPage' => false
                                         ]
@@ -593,11 +607,12 @@ require_once '../includes/header.php';
                                 ];
                             }
 
-                            // Define table columns
+                            // Define table columns - include actions in the columns
                             $columns = [
                                 'name' => 'Name',
                                 'url' => 'URL',
-                                'type' => 'Type'
+                                'type' => 'Type',
+                                'actions' => 'Actions'
                             ];
 
                             // Render enhanced table
@@ -609,10 +624,10 @@ require_once '../includes/header.php';
                                 'sources-table',
                                 [
                                     'showCheckboxes' => true,
-                                    'showActions' => false,
+                                    'showActions' => false, // Don't show the last actions column
                                     'actions' => ['edit', 'delete'],
                                     'bulkActions' => ['delete', 'toggle'],
-                                    'htmlFields' => [],
+                                    'htmlFields' => ['actions'],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
                                 ]
@@ -731,16 +746,8 @@ require_once '../includes/header.php';
                             $reviewCountStmt->execute($reviewParams);
                             $totalReviews = $reviewCountStmt->fetchColumn();
 
-                            // Add total reviews as valid per_page value
-                            // Make sure the total reviews is in the valid values
-                            if (!in_array($totalReviews, $validPerPageValues)) {
-                                $validPerPageValues[] = $totalReviews;
-                            }
-
-                            // Validate reviews per page - use the same logic as earlier
-                            if (!in_array($reviewsPerPage, $validPerPageValues)) {
-                                $reviewsPerPage = ($reviewsPerPage >= $totalReviews) ? $totalReviews : 10;
-                            }
+                            // We already validated the reviews_per_page parameter earlier,
+                            // so we don't need to do it again here.
 
                             // Calculate pagination
                             $totalReviewPages = ceil($totalReviews / $reviewsPerPage);
@@ -772,7 +779,7 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <form method="get" class="row g-3" id="review-filter-form">
                                         <input type="hidden" name="tab" value="reviews">
-                                        <input type="hidden" name="reviews_per_page" value="<?php echo $reviewsPerPage; ?>">
+                                        <!-- Don't include reviews_per_page as hidden field since we have a dropdown for it -->
                                         <div class="col-md-4">
                                             <label for="review_search" class="form-label">Search</label>
                                             <input type="text" class="form-control" id="review_search" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>" placeholder="Search reviews...">
@@ -875,13 +882,14 @@ require_once '../includes/header.php';
                                         ];
                                     }
 
-                                    // Define table columns
+                                    // Define table columns - include actions in the columns
                                     $columns = [
                                         'book' => 'Book',
                                         'reviewer' => 'Reviewer',
                                         'rating' => 'Rating',
                                         'source' => 'Source',
-                                        'date' => 'Date'
+                                        'date' => 'Date',
+                                        'actions' => 'Actions'
                                     ];
 
                                     // Render enhanced table
@@ -893,10 +901,10 @@ require_once '../includes/header.php';
                                         'reviews-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => false,
+                                            'showActions' => false, // Don't show the last actions column
                                             'actions' => ['view', 'edit', 'delete'],
                                             'bulkActions' => ['delete', 'analyze'],
-                                            'htmlFields' => ['book', 'rating', 'source'],
+                                            'htmlFields' => ['book', 'rating', 'source', 'actions'],
                                             'showPagination' => false,
                                             'showItemsPerPage' => false
                                         ]
@@ -906,8 +914,11 @@ require_once '../includes/header.php';
                                 <?php
                                 // Ensure tab parameter is in URL for pagination
                                 $_GET['tab'] = 'reviews';
+
                                 // Make sure the reviews_per_page parameter is properly set
                                 $_GET['reviews_per_page'] = $reviewsPerPage;
+
+                                // Pass the current reviews_per_page value to the pagination component
                                 renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                                     'pageParam' => 'reviews_page',
                                     'perPageParam' => 'reviews_per_page',
@@ -1044,14 +1055,15 @@ require_once '../includes/header.php';
                                         ];
                                     }
 
-                                    // Define table columns
+                                    // Define table columns - include actions in the columns
                                     $columns = [
                                         'title' => 'Title',
                                         'author' => 'Author',
                                         'isbn' => 'ISBN',
                                         'status' => 'Status',
                                         'genre' => 'Genre',
-                                        'missing_data' => 'Missing Data'
+                                        'missing_data' => 'Missing Data',
+                                        'actions' => 'Actions'
                                     ];
 
                                     // Render enhanced table
@@ -1062,13 +1074,13 @@ require_once '../includes/header.php';
                                         'isbn-validation-table',
                                         [
                                             'showCheckboxes' => true,
-                                            'showActions' => false,
+                                            'showActions' => false, // Don't show the last actions column
                                             'actions' => ['validate', 'edit'],
                                             'bulkActions' => ['validate', 'enrich'],
                                             'itemsPerPage' => $isbnPerPage,
                                             'currentPage' => $isbnPage,
                                             'totalItems' => count($books),
-                                            'htmlFields' => ['isbn', 'status', 'genre', 'missing_data'],
+                                            'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
                                             'showPagination' => true,
                                             'showItemsPerPage' => true,
                                             'validPerPageValues' => [10, 25, 50, 100, count($books)],

@@ -59,6 +59,12 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     // Function to generate page URL
     $getPageUrl = function($page) use ($currentUrl, $queryParams, $options) {
         $queryParams[$options['pageParam']] = $page;
+
+        // Always ensure tab parameter is included
+        if (!isset($queryParams['tab']) && isset($options['tab'])) {
+            $queryParams['tab'] = $options['tab'];
+        }
+
         return $currentUrl . '?' . http_build_query($queryParams);
     };
 
@@ -88,7 +94,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="First page">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="First page">
                                 <span aria-hidden="true">&laquo;&laquo;</span>
                             </a>
                         </li>
@@ -103,7 +109,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10" aria-label="Previous page">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Previous page">
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -125,16 +131,16 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     <?php else: ?>
                         <!-- When showing all items, show first few pages -->
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10">1</a>
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=1&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">1</a>
                         </li>
                         <?php if ($totalPages > 1): ?>
                             <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10">2</a>
+                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">2</a>
                             </li>
                         <?php endif; ?>
                         <?php if ($totalPages > 2): ?>
                             <li class="page-item">
-                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=3&per_page=10">3</a>
+                                <a class="page-link" href="<?php echo $currentUrl; ?>?page=3&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">3</a>
                             </li>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -148,7 +154,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10" aria-label="Next page">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=2&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Next page">
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
@@ -163,7 +169,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         </li>
                     <?php else: ?>
                         <li class="page-item">
-                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=<?php echo max(1, $totalPages); ?>&per_page=10" aria-label="Last page">
+                            <a class="page-link" href="<?php echo $currentUrl; ?>?page=<?php echo max(1, $totalPages); ?>&per_page=10&tab=<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>" aria-label="Last page">
                                 <span aria-hidden="true">&raquo;&raquo;</span>
                             </a>
                         </li>
@@ -182,9 +188,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     <?php endforeach; ?>
 
                     <!-- Always include the tab parameter -->
-                    <?php if (!isset($_GET['tab']) && isset($options['tab'])): ?>
-                        <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab']); ?>">
-                    <?php endif; ?>
+                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">
 
                     <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php
@@ -216,35 +220,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     </select>
                 </form>
             </div>
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Handle per page dropdown changes
-                document.querySelectorAll('.per-page-select').forEach(function(select) {
-                    select.addEventListener('change', function() {
-                        // Get the current tab from URL or data attribute
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const currentTab = urlParams.get('tab') || 'existing';
-
-                        // Make sure the form has the tab parameter
-                        const form = this.closest('form');
-                        let tabInput = form.querySelector('input[name="tab"]');
-
-                        if (!tabInput) {
-                            tabInput = document.createElement('input');
-                            tabInput.type = 'hidden';
-                            tabInput.name = 'tab';
-                            tabInput.value = currentTab;
-                            form.appendChild(tabInput);
-                        } else {
-                            tabInput.value = currentTab;
-                        }
-
-                        // Submit the form
-                        form.submit();
-                    });
-                });
-            });
-            </script>
+            <!-- JavaScript for this is handled by tab-state-handler.js -->
         </div>
     </div>
 

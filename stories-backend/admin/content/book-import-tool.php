@@ -112,7 +112,10 @@ try {
 
     // Calculate pagination
     $totalBookPages = ceil($totalBooks / $booksPerPage);
-    $bookOffset = ($bookPage - 1) * $booksPerPage;
+    $bookOffset = ($booksPage - 1) * $booksPerPage;
+    
+    // Ensure offset is not negative
+    $bookOffset = max(0, $bookOffset);
 
     // Get books with pagination
     $booksStmt = $db->prepare("
@@ -398,7 +401,7 @@ require_once '../includes/header.php';
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h5>Books (<?php echo number_format($totalBooks); ?>)</h5>
                                     <div>
-                                        <span class="text-muted">Page <?php echo $bookPage; ?> of <?php echo $totalBookPages; ?></span>
+                                        <span class="text-muted">Page <?php echo $booksPage; ?> of <?php echo $totalBookPages; ?></span>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -696,7 +699,10 @@ require_once '../includes/header.php';
 
                             // Calculate pagination
                             $totalReviewPages = ceil($totalReviews / $reviewsPerPage);
-                            $reviewOffset = ($reviewPage - 1) * $reviewsPerPage;
+                            $reviewOffset = ($reviewsPage - 1) * $reviewsPerPage;
+                            
+                            // Ensure offset is not negative
+                            $reviewOffset = max(0, $reviewOffset);
 
                             // Get reviews
                             $reviewQuery = "
@@ -775,7 +781,7 @@ require_once '../includes/header.php';
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h5>Reviews (<?php echo number_format($totalReviews); ?>)</h5>
                                     <div>
-                                        <span class="text-muted">Page <?php echo $reviewPage; ?> of <?php echo $totalReviewPages; ?></span>
+                                        <span class="text-muted">Page <?php echo $reviewsPage; ?> of <?php echo $totalReviewPages; ?></span>
                                     </div>
                                 </div>
                                 <div class="card-body">

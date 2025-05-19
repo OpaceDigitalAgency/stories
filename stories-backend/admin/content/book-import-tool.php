@@ -81,11 +81,23 @@ try {
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
 
+    // Get total counts for "Show All" option
+    $totalBooks = isset($totalBooks) ? $totalBooks : count($books);
+    $totalReviews = isset($totalReviews) ? $totalReviews : count($reviews);
+    $totalSources = count($reviewSources);
+
     // Validate per page values
-    $validPerPageValues = [10, 25, 50, 100];
     foreach (['books', 'reviews', 'sources', 'isbn'] as $section) {
         $perPageVar = $section . 'PerPage';
-        if (!in_array($$perPageVar, $validPerPageValues)) {
+        $totalVar = 'total' . ucfirst($section);
+        $validValues = [10, 25, 50, 100];
+        
+        // Add total count as valid value for "Show All"
+        if (isset($$totalVar)) {
+            $validValues[] = $$totalVar;
+        }
+        
+        if (!in_array($$perPageVar, $validValues)) {
             $$perPageVar = 10;
         }
     }

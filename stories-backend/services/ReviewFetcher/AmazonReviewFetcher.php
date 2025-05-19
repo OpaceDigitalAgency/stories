@@ -123,7 +123,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $reviews = [];
         if ($this->useVpsHeadlessBrowser) {
             $this->logToFile("{$this->dbgDir}/scrape-log.txt", "🔍 Trying VPS Headless Browser API for ASIN {$asin}");
-            $reviews = $this->fetchReviewsWithHeadlessBrowser($asin, $limit);
+            $reviews = $this->fetchReviewsWithHeadlessBrowser($asin, $limit, $options);
 
             if (!empty($reviews)) {
                 $this->logToFile("{$this->dbgDir}/scrape-log.txt", "✅ Successfully fetched " . count($reviews) . " reviews with VPS Headless Browser");
@@ -894,9 +894,10 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
      *
      * @param string $asin Amazon ASIN
      * @param int $limit Maximum number of reviews to return
+     * @param array $options Additional options for the fetcher
      * @return array Array of reviews
      */
-    private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit): array
+    private function fetchReviewsWithHeadlessBrowser(string $asin, int $limit, array $options = []): array
     {
         $debugDir = $this->dbgDir;
         if (!is_dir($debugDir)) {
@@ -947,11 +948,10 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
             $this->logToFile("{$debugDir}/scrape-log.txt", "✅ Health Response: {$healthResponse}");
         }
 
-        // Request more reviews than needed to ensure we get enough
-        $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
+        // Calculate a reasonable limit for the request
+        // Note: We now use the limit parameter directly in the URL
 
-        // Extract options
-        $options = func_get_arg(2) ?? [];
+        // Use the options parameter passed to the method
         $continueFromLast = $options['continueFromLast'] ?? false;
         $forceRefresh = $options['force'] ?? false;
         $maxPages = $options['maxPages'] ?? 20;

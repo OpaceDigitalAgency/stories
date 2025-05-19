@@ -124,9 +124,9 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
         logger.info(`Cache hit but continuing scrape (continueFromLast=${continueFromLast}, cachedCount=${cachedCount}, limit=${limit})`);
       }
     }
-    
 
-    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), { 
+
+    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1'
     });
@@ -145,19 +145,23 @@ app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req,
     const asin = req.query.asin;
     const limit = parseInt(req.query.limit || '50', 10);
     const force = req.query.force === '1' || req.query.force === 'true';
+    const continueFromLast = req.query.continueFromLast === '1' || req.query.continueFromLast === 'true';
+    const maxPages = parseInt(req.query.maxPages || '20', 10);
 
     // Log all parameters for debugging
     logger.info(`Amazon scraper parameters:
       - asin: ${asin}
       - limit: ${limit}
       - force: ${force}
+      - continueFromLast: ${continueFromLast}
+      - maxPages: ${maxPages}
     `);
 
     if (!asin) {
       return res.status(400).json({ error: 'Missing ASIN parameter' });
     }
 
-    logger.info(`Scraping Amazon reviews for ASIN: ${asin}, force=${force}`);
+    logger.info(`Scraping Amazon reviews for ASIN: ${asin}, force=${force}, continueFromLast=${continueFromLast}`);
 
     // Check if we should bypass cache
     if (force === 'true' || force === '1') {
@@ -181,7 +185,10 @@ app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req,
       });
     }
 
-    const reviews = await amazon.scrapeAmazonReviews(asin, parseInt(limit));
+    const reviews = await amazon.scrapeAmazonReviews(asin, parseInt(limit), {
+      continueFromLast,
+      maxPages
+    });
 
     res.status(200).json(reviews);
   } catch (error) {

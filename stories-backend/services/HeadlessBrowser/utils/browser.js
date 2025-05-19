@@ -1,11 +1,19 @@
 /**
  * Browser utility for managing Puppeteer browser instances
+ * Enhanced with stealth plugins to avoid detection
  */
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const AnonymizeUAPlugin = require('puppeteer-extra-plugin-anonymize-ua');
+const pageProxy = require('puppeteer-page-proxy');
 const config = require('../config/default');
 const logger = require('./logger');
 const fs = require('fs');
 const path = require('path');
+
+// Add plugins
+puppeteer.use(StealthPlugin());
+puppeteer.use(AnonymizeUAPlugin());
 
 // Ensure browser data directory exists
 const userDataDir = path.resolve(config.browser.userDataDir);
@@ -22,7 +30,7 @@ module.exports = {
    */
   getBrowser: async () => {
     if (!browserInstance) {
-      logger.info('Launching new browser instance');
+      logger.info('Launching new browser instance with enhanced stealth features');
       try {
         browserInstance = await puppeteer.launch({
           headless: config.browser.headless,
@@ -35,7 +43,12 @@ module.exports = {
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
             '--window-size=1920x1080',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--disable-web-security',
+            '--disable-features=site-per-process',
+            '--disable-blink-features=AutomationControlled',
           ],
+          ignoreHTTPSErrors: true,
         });
 
         // Handle browser disconnection
@@ -44,7 +57,27 @@ module.exports = {
           browserInstance = null;
         });
 
-        logger.info('Browser instance launched successfully');
+        // Create a default page and apply additional evasion techniques
+        const defaultPage = await browserInstance.newPage();
+        await defaultPage.evaluateOnNewDocument(() => {
+          // Overwrite the 'navigator.webdriver' property to prevent detection
+          Object.defineProperty(navigator, 'webdriver', {
+            get: () => false,
+          });
+
+          // Overwrite the 'plugins' property to include fake plugins
+          Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5],
+          });
+
+          // Overwrite the 'languages' property
+          Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en'],
+          });
+        });
+        await defaultPage.close();
+
+        logger.info('Browser instance launched successfully with anti-detection measures');
       } catch (error) {
         logger.error(`Error launching browser: ${error.message}`);
         throw error;
@@ -136,5 +169,66 @@ module.exports = {
     logger.info(`Screenshot saved to ${filepath}`);
 
     return filepath;
+  },
+
+  /**
+   * Save cookies for a specific domain
+   * @param {string} domain - Domain to save cookies for
+   * @param {Array} cookies - Cookies to save
+   */
+  saveCookies: async (domain, cookies) => {
+    const cookiesDir = path.join(__dirname, '../data/cookies');
+    if (!fs.existsSync(cookiesDir)) {
+      fs.mkdirSync(cookiesDir, { recursive: true });
+    }
+
+    const cookieFile = path.join(cookiesDir, `${domain.replace(/\./g, '_')}.json`);
+    fs.writeFileSync(cookieFile, JSON.stringify(cookies, null, 2));
+    logger.info(`Saved ${cookies.length} cookies for ${domain}`);
+  },
+
+  /**
+   * Load cookies for a specific domain
+   * @param {string} domain - Domain to load cookies for
+   * @returns {Array} - Cookies for the domain
+   */
+  loadCookies: (domain) => {
+    const cookiesDir = path.join(__dirname, '../data/cookies');
+    const cookieFile = path.join(cookiesDir, `${domain.replace(/\./g, '_')}.json`);
+
+    if (fs.existsSync(cookieFile)) {
+      try {
+        const cookies = JSON.parse(fs.readFileSync(cookieFile, 'utf8'));
+        logger.info(`Loaded ${cookies.length} cookies for ${domain}`);
+        return cookies;
+      } catch (error) {
+        logger.error(`Error loading cookies for ${domain}: ${error.message}`);
+      }
+    }
+
+    return [];
+  },
+
+  /**
+   * Simulate human-like behavior on a page
+   * @param {Object} page - Puppeteer page
+   */
+  simulateHumanBehavior: async (page) => {
+    // Random scroll
+    await page.evaluate(() => {
+      const scrollAmount = Math.floor(Math.random() * 100) + 100;
+      window.scrollBy(0, scrollAmount);
+    });
+
+    // Random delay
+    const delay = Math.floor(Math.random() * 2000) + 1000;
+    await page.waitForTimeout(delay);
+
+    // Move mouse randomly
+    const x = Math.floor(Math.random() * 500);
+    const y = Math.floor(Math.random() * 500);
+    await page.mouse.move(x, y);
+
+    logger.debug('Simulated human-like behavior on page');
   }
 };

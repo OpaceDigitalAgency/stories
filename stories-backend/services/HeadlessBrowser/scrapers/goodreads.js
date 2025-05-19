@@ -274,34 +274,28 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   // --- Request interception setup ---
   // Safer interception to prevent "Request is already handled!" errors
   await page.setRequestInterception(true);
-  page.on('request', request => {
-    if (request._interceptionHandled) {
-      logger.warn(`Request already handled: ${request.url()}`);
-      return;
-    }
-    try {
-      const url = request.url();
-      const type = request.resourceType();
 
-      if (url.includes('google-analytics') || type === 'image') {
-        try {
-          if (!request._interceptionHandled) {
-            request.abort();
-          }
-        } catch (err) {
-          logger.error('Error in abort interception:', err.message);
-        }
-      } else {
-        try {
-          if (!request._interceptionHandled) {
-            request.continue();
-          }
-        } catch (err) {
-          logger.error('Error in continue interception:', err.message);
+  function shouldAbortRequest(request) {
+    const url = request.url();
+    return (
+      request.resourceType() === 'image' ||
+      url.includes('google-analytics.com') ||
+      url.includes('facebook.net') ||
+      url.includes('doubleclick.net')
+    );
+  }
+
+  page.on('request', async (request) => {
+    try {
+      if (!request._interceptionHandled) {
+        if (shouldAbortRequest(request)) {
+          await request.abort();
+        } else {
+          await request.continue();
         }
       }
     } catch (err) {
-      logger.warn(`Request interception failed: ${err.message}`);
+      console.error('❌ Interception error:', err.message);
     }
   });
 

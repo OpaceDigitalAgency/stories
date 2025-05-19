@@ -55,13 +55,25 @@ $messageType = '';
 
 try {
     // Get current tab from URL or default to 'existing'
-    $currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
+    // Check for tab-specific page parameters to determine the current tab
+    if (isset($_GET['reviews_page']) || isset($_GET['reviews_per_page'])) {
+        $currentTab = 'reviews';
+    } elseif (isset($_GET['sources_page']) || isset($_GET['sources_per_page'])) {
+        $currentTab = 'sources';
+    } elseif (isset($_GET['isbn_page']) || isset($_GET['isbn_per_page'])) {
+        $currentTab = 'validate';
+    } else {
+        $currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
+    }
 
     // Validate tab value
     $validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate'];
     if (!in_array($currentTab, $validTabs)) {
         $currentTab = 'existing';
     }
+    
+    // Force the tab parameter to match the current tab
+    $_GET['tab'] = $currentTab;
     $pageDescription = 'Import books and scrape reviews from various sources';
 
     // Get the page and per_page parameters for each tab
@@ -739,8 +751,7 @@ require_once '../includes/header.php';
                             );
                             ?>
                             <?php
-                            // Ensure tab parameter is in URL for pagination
-                            $_GET['tab'] = 'sources';
+                            // Tab parameter is already set at the beginning of the file
                             
                             // Get the total number of sources
                             $sourcesCount = count($reviewSources);
@@ -1030,8 +1041,7 @@ require_once '../includes/header.php';
                                     ?>
                                 </div>
                                 <?php
-                                // Ensure tab parameter is in URL for pagination
-                                $_GET['tab'] = 'reviews';
+                                // Tab parameter is already set at the beginning of the file
 
                                 // Render pagination with the same configuration as the ISBN validation tab
                                 renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
@@ -1221,8 +1231,7 @@ require_once '../includes/header.php';
                                     );
                                     ?>
                                     <?php
-                                    // Ensure tab parameter is in URL for pagination
-                                    $_GET['tab'] = 'validate';
+                                    // Tab parameter is already set at the beginning of the file
 
                                     // Render pagination for ISBN validation table
                                     renderPagination($totalBooks, $isbnPerPage, $isbnPage, 5, [

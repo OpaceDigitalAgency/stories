@@ -156,19 +156,39 @@ module.exports = {
    * @param {string} name - Name for the screenshot file
    */
   takeScreenshot: async (page, name) => {
-    const screenshotsDir = path.join(__dirname, '../logs/screenshots');
-    if (!fs.existsSync(screenshotsDir)) {
-      fs.mkdirSync(screenshotsDir, { recursive: true });
+    try {
+      // Check if page is still valid
+      if (!page || !page.browser) {
+        logger.warn(`Cannot take screenshot: page is not valid`);
+        return null;
+      }
+
+      const screenshotsDir = path.join(__dirname, '../logs/screenshots');
+      if (!fs.existsSync(screenshotsDir)) {
+        fs.mkdirSync(screenshotsDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `${name}-${timestamp}.png`;
+      const filepath = path.join(screenshotsDir, filename);
+
+      // Check if page is still attached to browser
+      const pages = await page.browser().pages();
+      const isAttached = pages.includes(page);
+
+      if (!isAttached) {
+        logger.warn(`Cannot take screenshot: page is not attached to browser`);
+        return null;
+      }
+
+      await page.screenshot({ path: filepath, fullPage: true });
+      logger.info(`Screenshot saved to ${filepath}`);
+
+      return filepath;
+    } catch (error) {
+      logger.error(`Error taking screenshot: ${error.message}`);
+      return null;
     }
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${name}-${timestamp}.png`;
-    const filepath = path.join(screenshotsDir, filename);
-
-    await page.screenshot({ path: filepath, fullPage: true });
-    logger.info(`Screenshot saved to ${filepath}`);
-
-    return filepath;
   },
 
   /**

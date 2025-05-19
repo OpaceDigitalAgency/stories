@@ -379,17 +379,41 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     };
   } catch (error) {
     logger.error(`Error scraping Amazon reviews: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
 
     // Take a screenshot for debugging
     try {
-      await browser.takeScreenshot(page, `amazon-error-${asin}`);
+      if (page && page.browser) {
+        await browser.takeScreenshot(page, `amazon-error-${asin}`);
+      }
     } catch (screenshotError) {
       logger.error(`Error taking screenshot: ${screenshotError.message}`);
     }
 
-    throw error;
+    // Return any reviews we might have collected instead of throwing
+    if (reviews.length > 0) {
+      logger.info(`Returning ${reviews.length} reviews despite error`);
+      return {
+        source: 'scrape_partial',
+        total: reviews.length,
+        reviews: reviews.slice(0, limit)
+      };
+    }
+
+    // Return empty result instead of throwing
+    return {
+      source: 'scrape_error',
+      total: 0,
+      reviews: []
+    };
   } finally {
-    await page.close();
+    try {
+      if (page && page.browser) {
+        await page.close();
+      }
+    } catch (closeError) {
+      logger.error(`Error closing page: ${closeError.message}`);
+    }
   }
 }
 
@@ -429,7 +453,7 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
     }
 
     // Navigate to mobile reviews page
-    const mobileBaseUrl = config.sources.amazon.baseUrl.replace('www.', 'm.');
+    const mobileBaseUrl = config.sources.amazon.baseUrl.replace('www.', 'm.').replace('https://', '').replace('http://', '');
     const mobileReviewsUrl = `https://${mobileBaseUrl}/gp/aw/cr/asin/${asin}`;
     logger.info(`Navigating to mobile reviews page: ${mobileReviewsUrl}`);
 
@@ -558,17 +582,26 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
     return reviews;
   } catch (error) {
     logger.error(`Error scraping Amazon mobile reviews: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
 
     // Take a screenshot for debugging
     try {
-      await browser.takeScreenshot(page, `amazon-mobile-error-${asin}`);
+      if (page && page.browser) {
+        await browser.takeScreenshot(page, `amazon-mobile-error-${asin}`);
+      }
     } catch (screenshotError) {
       logger.error(`Error taking screenshot: ${screenshotError.message}`);
     }
 
     return [];
   } finally {
-    await page.close();
+    try {
+      if (page && page.browser) {
+        await page.close();
+      }
+    } catch (closeError) {
+      logger.error(`Error closing page: ${closeError.message}`);
+    }
   }
 }
 

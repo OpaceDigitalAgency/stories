@@ -205,8 +205,10 @@ try {
     switch ($currentTab) {
         case 'reviews':
             $query = "
-                SELECT r.*
+                SELECT r.*, d.title as book_title, s.name as source_name, s.is_third_party
                 FROM reviews r
+                LEFT JOIN directory_items d ON r.book_id = d.id
+                LEFT JOIN review_sources s ON r.source_id = s.id
                 ORDER BY r.created_at DESC
                 LIMIT $reviewsPerPage OFFSET $reviewsOffset
             ";
@@ -581,12 +583,21 @@ require_once '../includes/header.php';
                                                 break;
 
                                             case 'reviews':
+                                                $stars = round($item['rating_normalised'] * 5);
+                                                $rating = str_repeat('★', $stars) . str_repeat('☆', 5 - $stars) .
+                                                        ' (' . $item['original_rating'] . ')';
+
+                                                $source = htmlspecialchars($item['source_name'] ?? 'Unknown');
+                                                if (isset($item['is_third_party']) && $item['is_third_party']) {
+                                                    $source .= ' <span class="badge badge-info">External</span>';
+                                                }
+
                                                 $tableData[] = [
                                                     'id' => $item['id'],
                                                     'book_id' => $item['book_id'],
-                                                    'source' => $item['source'],
-                                                    'rating' => $item['rating'],
-                                                    'content' => htmlspecialchars($item['content']),
+                                                    'source' => $source,
+                                                    'rating' => $rating,
+                                                    'content' => isset($item['content']) ? htmlspecialchars($item['content']) : '',
                                                     'date' => $item['created_at']
                                                 ];
                                                 break;

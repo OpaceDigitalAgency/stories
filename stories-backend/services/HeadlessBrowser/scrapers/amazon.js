@@ -256,12 +256,15 @@ function extractAggregateRating(html, asin) {
  */
 async function isLoginPage(page) {
   return page.evaluate(() => {
-    return document.body.innerHTML.includes('Sign-In') ||
-           document.body.innerHTML.includes('sign-in') ||
-           document.body.innerHTML.includes('Sign in') ||
-           document.body.innerHTML.includes('Amazon password') ||
-           document.body.innerHTML.includes('ap_password') ||
-           document.body.innerHTML.includes('ap_email');
+    const path = location.pathname || '';
+    // only treat true Amazon sign-in URLs as login walls
+    if (path.startsWith('/ap/') || path.includes('/signin')) {
+      return true;
+    }
+    // look for the actual sign-in form, not just the word "Sign in"
+    return Boolean(
+      document.querySelector('form[name="signIn"], #ap_signin_form, input[name="email"][type="email"]')
+    );
   });
 }
 

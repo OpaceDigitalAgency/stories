@@ -503,11 +503,13 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
      * @param {Object} response - GraphQL response
      * @returns {Object} - Object containing reviews and next page token
      */
-    const extractReviewsFromGraphQL = (response) => {
+    const extractReviewsFromGraphQL = (response, pageNumber) => {
       if (!response.data || !response.data.getReviews || !response.data.getReviews.edges) {
         logger.warn('Invalid GraphQL response structure');
         return { reviews: [], nextPageToken: null };
       }
+      
+      logger.info(`Processing GraphQL reviews from page ${pageNumber}`);
 
       const reviews = response.data.getReviews.edges.map(edge => {
         const node = edge.node;
@@ -532,11 +534,17 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
     // Extract reviews from first page
     let pageReviews = await extractReviewsFromPage();
-    reviews = [...reviews, ...pageReviews.map(review => ({
+    reviews = [...reviews, ...pageReviews.map((review, index) => ({
       source_id: 4, // Goodreads source ID
       ...review,
       metadata: JSON.stringify({
-        book_id: bookId
+        book_id: bookId,
+        graphql_batch: 1,
+        position_in_batch: index + 1,
+        total_in_batch: pageReviews.length,
+        total_available: aggregateRating.count,
+        scrape_date: new Date().toISOString(),
+        source: 'initial_page'
       })
     }))];
 
@@ -570,7 +578,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           },
           pagination: {
             after: nextPageToken,
-            limit: 100 // Increased from 30 to 100 for more reviews per request
+            limit: 100, // Increased from 30 to 100 for more reviews per request
+            includeStats: true // Request additional stats if available
           }
         }
       };
@@ -741,10 +750,23 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         reviews = cachedData.reviews;
         logger.info(`Starting with ${reviews.length} reviews from cache`);
         
-        // If we have a nextPageToken in the cache, use it
-        if (cachedData.nextPageToken) {
-          nextPageToken = cachedData.nextPageToken;
-          logger.info(`Starting with next page token from cache: ${nextPageToken}`);
+        // Get the last GraphQL state from metadata
+        const lastReview = reviews[reviews.length - 1];
+        if (lastReview && lastReview.metadata) {
+          try {
+            const metadata = JSON.parse(lastReview.metadata);
+            if (metadata.next_token) {
+              nextPageToken = metadata.next_token;
+              pageCount = metadata.graphql_page || 0;
+              logger.info(`Resuming GraphQL pagination from:
+                - Page: ${pageCount}
+                - Token: ${nextPageToken}
+                - Total available: ${metadata.total_available}
+                - Reviews so far: ${reviews.length}`);
+            }
+          } catch (err) {
+            logger.error(`Error parsing review metadata: ${err.message}`);
+          }
         }
       }
       
@@ -752,7 +774,10 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       // Use maxPages to limit the number of pages we fetch
       let pageCount = 0;
       
-      while (reviews.length < limit && nextPageToken !== undefined && pageCount < maxPages) {
+      while ((continueFromLast || reviews.length < limit) &&
+             nextPageToken !== undefined &&
+             pageCount < maxPages &&
+             reviews.length < (aggregateRating.count || Infinity)) {
         pageCount++;
         logger.info(`Fetching page ${pageCount}/${maxPages} of reviews via GraphQL API`);
         const response = await fetchMoreReviewsViaGraphQL(nextPageToken);
@@ -770,11 +795,19 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         }
         
         // Add the new reviews to our collection
-        reviews = [...reviews, ...newReviews.map(review => ({
+        reviews = [...reviews, ...newReviews.map((review, index) => ({
           source_id: 4,
           ...review,
           metadata: JSON.stringify({
-            book_id: bookId
+            book_id: bookId,
+            graphql_page: pageCount,
+            batch_position: index + 1,
+            batch_size: newReviews.length,
+            next_token: newToken,
+            total_available: totalCount,
+            scrape_date: new Date().toISOString(),
+            is_continuation: continueFromLast,
+            source: 'graphql'
           })
         }))];
         
@@ -991,42 +1024,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         }
       }
 
-      // Final fallback: Try to navigate to the next page directly via URL
+      // No URL pagination fallback - Goodreads only works with GraphQL pagination
       if (!buttonFound) {
+        logger.warn('Could not find "Show more reviews" button, trying to resume GraphQL pagination');
+        
+        // Try to extract GraphQL token from the page
         try {
-          // Extract the current page number from the URL
-          const currentUrl = page.url();
-          logger.info(`Current URL: ${currentUrl}`);
-
-          // Check if we're already on a paginated page
-          const pageMatch = currentUrl.match(/page=(\d+)/);
-          let nextPageUrl;
-
-          if (pageMatch) {
-            // We're on a paginated page, increment the page number
-            const currentPage = parseInt(pageMatch[1]);
-            nextPageUrl = currentUrl.replace(`page=${currentPage}`, `page=${currentPage + 1}`);
-          } else {
-            // We're on the first page, add page=2
-            if (currentUrl.includes('?')) {
-              nextPageUrl = `${currentUrl}&page=2`;
-            } else {
-              nextPageUrl = `${currentUrl}?page=2`;
-            }
+          const responseHtml = await page.content();
+          const tokenMatch = responseHtml.match(/"nextPageToken":"([^"]+)"/);
+          if (tokenMatch && tokenMatch[1]) {
+            nextPageToken = tokenMatch[1];
+            logger.info(`Found GraphQL token on page: ${nextPageToken}`);
+            return; // Exit the button clicking loop to resume GraphQL pagination
           }
-
-          logger.info(`Attempting to navigate directly to next page: ${nextPageUrl}`);
-
-          // Navigate to the next page
-          await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-
-          // Take a screenshot after navigation
-          await browser.takeScreenshot(page, `goodreads-next-page-${bookId}-attempt-${clickAttempts}`);
-
-          logger.info(`✅ Navigated to next page via URL`);
-          buttonFound = true;
         } catch (err) {
-          logger.error(`Error navigating to next page via URL: ${err.message}`);
+          logger.error(`Error extracting GraphQL token: ${err.message}`);
         }
       }
 
@@ -1040,6 +1052,13 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
       // Extract reviews from the updated page
       const newReviews = await extractReviewsFromPage();
+      
+      // Add page number and position to each review
+      newReviews.forEach((review, index) => {
+        review.fromGraphQL = false;
+        review.pageNumber = pageNum;
+        review.position = index + 1;
+      });
 
       // Save the current page HTML for debugging
       const currentHtml = await page.content();
@@ -1078,17 +1097,24 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
       if (uniqueNewReviews.length > 0) {
         // Add the unique new reviews to our collection
-        reviews = [...reviews, ...uniqueNewReviews.map(review => ({
-          source_id: 4, // Goodreads source ID
-          ...review,
-          metadata: JSON.stringify({
-            book_id: bookId,
-            page_number: pageNum,
-            scrape_date: new Date().toISOString(),
-            total_available: aggregateRating.count || null,
-            is_continuation: continueFromLast
-          })
-        }))];
+        reviews = [...reviews, ...uniqueNewReviews.map(review => {
+          // Get page number based on source
+          const pageNumber = review.fromGraphQL ? review.graphqlPage : review.pageNumber;
+          
+          return {
+            source_id: 4, // Goodreads source ID
+            ...review,
+            metadata: JSON.stringify({
+              book_id: bookId,
+              page_number: pageNumber,
+              scrape_date: new Date().toISOString(),
+              total_available: aggregateRating.count || null,
+              is_continuation: continueFromLast,
+              source_type: review.fromGraphQL ? 'graphql' : 'html',
+              review_position: review.position || null
+            })
+          };
+        })];
 
         logger.info(`📊 Total reviews collected: ${reviews.length}`);
         pageNum++;
@@ -1107,28 +1133,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           break;
         }
 
-        // Try a different approach - check if we're on a paginated URL
-        const currentUrl = page.url();
-        if (currentUrl.includes('reviews?page=') || currentUrl.includes('reviews?sort=')) {
-          // We're on a paginated URL, try to go to the next page directly
-          const pageMatch = currentUrl.match(/reviews\?page=(\d+)/);
-          if (pageMatch) {
-            const currentPage = parseInt(pageMatch[1]);
-            const nextPageUrl = currentUrl.replace(`page=${currentPage}`, `page=${currentPage + 1}`);
-
-            logger.info(`🔄 Trying direct navigation to next page: ${nextPageUrl}`);
-
-            try {
-              await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-              await browser.takeScreenshot(page, `goodreads-direct-navigation-${bookId}-page-${currentPage+1}`);
-
-              // Don't increment clickAttempts here, we're trying a different approach
-              continue;
-            } catch (err) {
-              logger.error(`❌ Error navigating to next page: ${err.message}`);
-            }
-          }
-        }
+        // If we couldn't find the button or extract a token, increment attempts
+        clickAttempts++;
 
         clickAttempts++;
       }
@@ -1179,10 +1185,17 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         total: reviews.length,
         reviews: limitedReviews,
         nextPageToken: nextPageToken,
-        currentPage: pageNum,
+        graphqlPage: pageCount,
         lastScrapedAt: new Date().toISOString(),
         totalAvailable: aggregateRating.count || null,
-        hasMoreReviews: reviews.length < (aggregateRating.count || limit)
+        hasMoreReviews: reviews.length < (aggregateRating.count || limit),
+        batchStats: {
+          total_batches: pageCount,
+          reviews_per_batch: 100,
+          last_batch_size: uniqueNewReviews.length,
+          total_reviews_found: reviews.length,
+          total_available: aggregateRating.count || null
+        }
       };
 
       await cache.set('goodreads', bookId, dataToCache);

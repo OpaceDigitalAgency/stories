@@ -171,7 +171,6 @@ require_once '../includes/header.php';
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>Book Import Tool</h3>
                     <p class="text-muted">Import books and scrape reviews from various sources</p>
                 </div>
                 <div class="card-body">

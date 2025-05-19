@@ -206,7 +206,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         <?php endif; ?>
                     <?php endforeach; ?>
 
-                    <select name="per_page" id="per-page" class="form-control form-control-sm" aria-label="Items per page" onchange="this.form.submit()">
+                    <select name="per_page" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php foreach ([10, 25, 50, 100] as $option): ?>
                             <option value="<?php echo $option; ?>" <?php echo $itemsPerPage == $option ? 'selected' : ''; ?>>
                                 <?php echo $option; ?> per page
@@ -218,6 +218,32 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     </select>
                 </form>
             </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle per page dropdown changes
+                document.querySelectorAll('.per-page-select').forEach(function(select) {
+                    select.addEventListener('change', function() {
+                        const form = this.closest('form');
+                        const url = new URL(form.action);
+                        const formData = new FormData(form);
+                        
+                        // Add all form data to URL
+                        for (const [key, value] of formData.entries()) {
+                            url.searchParams.set(key, value);
+                        }
+                        
+                        // Preserve current tab
+                        const currentTab = new URLSearchParams(window.location.search).get('tab');
+                        if (currentTab) {
+                            url.searchParams.set('tab', currentTab);
+                        }
+                        
+                        // Navigate to new URL
+                        window.location.href = url.toString();
+                    });
+                });
+            });
+            </script>
         </div>
     </div>
 

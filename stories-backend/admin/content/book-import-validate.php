@@ -302,9 +302,38 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
 
     // If we didn't find the ISBN in any source, try to search by title
     if (empty($foundInSources) && !empty($title)) {
+        // Always search by title if ISBN is empty or not found
         $titleSuggestions = searchBooksByTitle($title, $db, $reviewFetcherFactory);
         if (!empty($titleSuggestions)) {
             $results['suggestions'] = $titleSuggestions;
+        }
+    }
+
+    // If we still don't have suggestions and the ISBN is empty, force a title search
+    if (empty($results['suggestions']) && empty($cleanIsbn)) {
+        echo "<p class='info'>No ISBN provided. Searching by title instead...</p>";
+        flushOutput();
+
+        // Try a more aggressive search with author if available
+        $authorName = '';
+        if (strpos($title, ' by ') !== false) {
+            $parts = explode(' by ', $title);
+            $searchTitle = trim($parts[0]);
+            $authorName = trim($parts[1]);
+        } else {
+            $searchTitle = $title;
+
+            // Try to extract author from the book details if available
+            global $bookDetails;
+            if (!empty($bookDetails['author'])) {
+                $authorName = $bookDetails['author'];
+            }
+        }
+
+        // Search directly with Google Books API
+        $suggestions = searchBookDirectly($searchTitle, $authorName);
+        if (!empty($suggestions)) {
+            $results['suggestions'] = $suggestions;
         }
     }
 
@@ -321,6 +350,252 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
     }
 
     return $results;
+}
+
+// Function to directly search for a book using title and author
+function searchBookDirectly($title, $author = '') {
+    $suggestions = [];
+
+    // Clean the title and author
+    $title = trim($title);
+    $author = trim($author);
+
+    // Build the query
+    $query = urlencode($title);
+    if (!empty($author)) {
+        $query .= '+inauthor:' . urlencode($author);
+    }
+
+    // Try Google Books API first
+    try {
+        $url = "https://www.googleapis.com/books/v1/volumes?q={$query}&maxResults=5";
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        if ($response) {
+            $data = json_decode($response, true);
+            if (!empty($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    $volumeInfo = $item['volumeInfo'] ?? [];
+                    $industryIdentifiers = $volumeInfo['industryIdentifiers'] ?? [];
+
+                    $isbn = '';
+                    $isbn13 = '';
+
+                    foreach ($industryIdentifiers as $identifier) {
+                        if ($identifier['type'] === 'ISBN_10') {
+                            $isbn = $identifier['identifier'];
+                        } else if ($identifier['type'] === 'ISBN_13') {
+                            $isbn13 = $identifier['identifier'];
+                        }
+                    }
+
+                    // Calculate confidence score
+                    $confidence = 0.7; // Start with a decent confidence for direct searches
+
+                    // Boost confidence if title matches closely
+                    if (calculateTitleSimilarity($title, $volumeInfo['title'] ?? '') > 0.8) {
+                        $confidence += 0.1;
+                    }
+
+                    // Boost confidence if author matches
+                    if (!empty($volumeInfo['authors']) && !empty($author)) {
+                        $authorString = implode(', ', $volumeInfo['authors']);
+                        if (stripos($authorString, $author) !== false) {
+                            $confidence += 0.2;
+                        }
+                    }
+
+                    // Extract categories and publication date
+                    $categories = $volumeInfo['categories'] ?? [];
+                    $publicationDate = $volumeInfo['publishedDate'] ?? '';
+                    $pageCount = $volumeInfo['pageCount'] ?? '';
+                    $publisher = $volumeInfo['publisher'] ?? '';
+
+                    // Try to determine series from title or categories
+                    $series = '';
+                    if (preg_match('/(.*?)\s+\(([^)]+)\)/', $volumeInfo['title'] ?? '', $matches)) {
+                        $series = $matches[2];
+                        if (stripos($series, 'book') !== false || stripos($series, 'volume') !== false ||
+                            stripos($series, 'part') !== false || stripos($series, 'series') !== false) {
+                            $series = $matches[2];
+                        }
+                    } else {
+                        // Try to find series in categories
+                        foreach ($categories as $category) {
+                            if (stripos($category, 'series') !== false) {
+                                $series = $category;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Try to determine age range from categories
+                    $ageRange = '';
+                    foreach ($categories as $category) {
+                        if (preg_match('/(\d+)-(\d+)/', $category, $matches) ||
+                            stripos($category, 'children') !== false ||
+                            stripos($category, 'young adult') !== false ||
+                            stripos($category, 'juvenile') !== false) {
+                            $ageRange = $category;
+                            break;
+                        }
+                    }
+
+                    // Determine price range based on page count and categories
+                    $priceRange = '£5-£10'; // Default price range
+
+                    // Adjust based on page count
+                    if ($pageCount < 50) {
+                        $priceRange = 'Under £5';
+                    } else if ($pageCount > 300) {
+                        $priceRange = '£10-£15';
+                    } else if ($pageCount > 500) {
+                        $priceRange = '£15-£20';
+                    }
+
+                    // Adjust based on categories
+                    foreach ($categories as $category) {
+                        // Hardcover or special editions are usually more expensive
+                        if (stripos($category, 'hardcover') !== false ||
+                            stripos($category, 'collector') !== false ||
+                            stripos($category, 'special edition') !== false) {
+                            $priceRange = '£15-£20';
+                            break;
+                        }
+
+                        // Academic or textbooks are usually more expensive
+                        if (stripos($category, 'textbook') !== false ||
+                            stripos($category, 'academic') !== false ||
+                            stripos($category, 'reference') !== false) {
+                            $priceRange = 'Over £20';
+                            break;
+                        }
+                    }
+
+                    // Add to suggestions
+                    $suggestions[] = [
+                        'title' => $volumeInfo['title'] ?? '',
+                        'author' => implode(', ', $volumeInfo['authors'] ?? []),
+                        'publisher' => $publisher,
+                        'publication_date' => $publicationDate,
+                        'isbn' => $isbn,
+                        'isbn13' => $isbn13,
+                        'page_count' => $pageCount,
+                        'categories' => $categories,
+                        'series' => $series,
+                        'age_range' => $ageRange,
+                        'price_range' => $priceRange,
+                        'description' => $volumeInfo['description'] ?? '',
+                        'cover_url' => isset($volumeInfo['imageLinks']['thumbnail']) ? $volumeInfo['imageLinks']['thumbnail'] : '',
+                        'confidence' => $confidence,
+                        'source' => 'Google Books'
+                    ];
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error in direct book search: " . $e->getMessage());
+    }
+
+    // If Google Books didn't return results, try Open Library
+    if (empty($suggestions)) {
+        try {
+            $url = "https://openlibrary.org/search.json?title=" . urlencode($title);
+            if (!empty($author)) {
+                $url .= "&author=" . urlencode($author);
+            }
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($response) {
+                $data = json_decode($response, true);
+                if (!empty($data['docs'])) {
+                    foreach ($data['docs'] as $doc) {
+                        $isbn = '';
+                        $isbn13 = '';
+
+                        if (!empty($doc['isbn'])) {
+                            foreach ($doc['isbn'] as $isbnValue) {
+                                if (strlen($isbnValue) == 10) {
+                                    $isbn = $isbnValue;
+                                } else if (strlen($isbnValue) == 13) {
+                                    $isbn13 = $isbnValue;
+                                }
+                            }
+                        }
+
+                        $coverUrl = '';
+                        if (!empty($doc['cover_i'])) {
+                            $coverUrl = "https://covers.openlibrary.org/b/id/" . $doc['cover_i'] . "-M.jpg";
+                        }
+
+                        // Determine price range based on page count
+                        $pageCount = $doc['number_of_pages_median'] ?? 0;
+                        $priceRange = '£5-£10'; // Default price range
+
+                        if ($pageCount < 50) {
+                            $priceRange = 'Under £5';
+                        } else if ($pageCount > 300) {
+                            $priceRange = '£10-£15';
+                        } else if ($pageCount > 500) {
+                            $priceRange = '£15-£20';
+                        }
+
+                        // Check subjects for special categories
+                        $subjects = $doc['subject'] ?? [];
+                        foreach ($subjects as $subject) {
+                            // Hardcover or special editions are usually more expensive
+                            if (stripos($subject, 'hardcover') !== false ||
+                                stripos($subject, 'collector') !== false ||
+                                stripos($subject, 'special edition') !== false) {
+                                $priceRange = '£15-£20';
+                                break;
+                            }
+
+                            // Academic or textbooks are usually more expensive
+                            if (stripos($subject, 'textbook') !== false ||
+                                stripos($subject, 'academic') !== false ||
+                                stripos($subject, 'reference') !== false) {
+                                $priceRange = 'Over £20';
+                                break;
+                            }
+                        }
+
+                        $suggestions[] = [
+                            'title' => $doc['title'] ?? '',
+                            'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
+                            'publisher' => !empty($doc['publisher']) ? implode(', ', $doc['publisher']) : '',
+                            'publication_date' => $doc['publish_date'] ? $doc['publish_date'][0] : '',
+                            'isbn' => $isbn,
+                            'isbn13' => $isbn13,
+                            'page_count' => $pageCount,
+                            'categories' => $subjects,
+                            'series' => '',
+                            'age_range' => '',
+                            'price_range' => $priceRange,
+                            'description' => '',
+                            'cover_url' => $coverUrl,
+                            'confidence' => 0.6,
+                            'source' => 'Open Library'
+                        ];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error in Open Library search: " . $e->getMessage());
+        }
+    }
+
+    return $suggestions;
 }
 
 // Function to search for books by title
@@ -619,7 +894,7 @@ function enrichBookData($bookId, $db) {
         // Get book details
         $stmt = $db->prepare("
             SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                   b.page_count, b.age_range, b.reading_level, b.genre, b.series
+                   b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
             FROM directory_items di
             JOIN books b ON di.id = b.directory_item_id
             WHERE di.id = ?
@@ -782,6 +1057,50 @@ function enrichBookData($bookId, $db) {
                     $fieldsToUpdate['age_range'] = $ageRange;
                     $results['updated_fields'][] = 'age_range';
                 }
+            }
+
+            // Add price range based on book type/category
+            if (empty($book['price_range'])) {
+                $priceRange = '';
+
+                // Default price range
+                $priceRange = '£5-£10';
+
+                // Adjust based on page count if available
+                if (!empty($mergedData['page_count'])) {
+                    $pageCount = (int)$mergedData['page_count'];
+                    if ($pageCount < 50) {
+                        $priceRange = 'Under £5';
+                    } else if ($pageCount > 300) {
+                        $priceRange = '£10-£15';
+                    } else if ($pageCount > 500) {
+                        $priceRange = '£15-£20';
+                    }
+                }
+
+                // Adjust based on categories if available
+                if (!empty($mergedData['categories'])) {
+                    foreach ($mergedData['categories'] as $category) {
+                        // Hardcover or special editions are usually more expensive
+                        if (stripos($category, 'hardcover') !== false ||
+                            stripos($category, 'collector') !== false ||
+                            stripos($category, 'special edition') !== false) {
+                            $priceRange = '£15-£20';
+                            break;
+                        }
+
+                        // Academic or textbooks are usually more expensive
+                        if (stripos($category, 'textbook') !== false ||
+                            stripos($category, 'academic') !== false ||
+                            stripos($category, 'reference') !== false) {
+                            $priceRange = 'Over £20';
+                            break;
+                        }
+                    }
+                }
+
+                $fieldsToUpdate['price_range'] = $priceRange;
+                $results['updated_fields'][] = 'price_range';
             }
 
             // Update the book if we have fields to update
@@ -950,6 +1269,13 @@ function updateBookData($bookId, $data, $db) {
             $updatedFieldNames[] = 'Genre';
         }
 
+        // For price_range, only replace if current value is empty
+        if (!empty($data['price_range']) && empty($currentBook['price_range'])) {
+            $updateFields[] = "price_range = ?";
+            $params[] = $data['price_range'];
+            $updatedFieldNames[] = 'Price Range';
+        }
+
         if (!empty($data['description']) && $data['description'] !== $currentBook['description']) {
             $updateFields[] = "description = ?";
             $params[] = $data['description'];
@@ -1021,7 +1347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
             // Get book details
             $stmt = $db->prepare("
                 SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                       b.page_count, b.age_range, b.reading_level, b.genre, b.series
+                       b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
                 FROM directory_items di
                 JOIN books b ON di.id = b.directory_item_id
                 WHERE di.id = ?
@@ -1102,7 +1428,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                 // Build query to get books
                 $query = "
                     SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                           b.page_count, b.age_range, b.reading_level, b.genre, b.series
+                           b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
                     FROM directory_items di
                     JOIN books b ON di.id = b.directory_item_id
                     WHERE di.type = 'book'
@@ -1119,15 +1445,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
                     foreach ($fields as $field) {
                         if ($field === 'series') {
-                            $conditions[] = "(b.series IS NULL OR b.series = '')";
+                            $conditions[] = "(b.series IS NULL OR b.series = '' OR b.series = 'Unknown')";
                         } else if ($field === 'reading_age') {
-                            $conditions[] = "(b.age_range IS NULL OR b.age_range = '')";
+                            $conditions[] = "(b.age_range IS NULL OR b.age_range = '' OR b.age_range = 'Unknown')";
                         } else if ($field === 'page_count') {
                             $conditions[] = "(b.page_count IS NULL OR b.page_count = 0)";
                         } else if ($field === 'genre') {
                             $conditions[] = "(b.genre IS NULL OR b.genre = '')";
                         } else if ($field === 'publisher') {
-                            $conditions[] = "(b.publisher IS NULL OR b.publisher = '')";
+                            $conditions[] = "(b.publisher IS NULL OR b.publisher = '' OR b.publisher = 'Unknown')";
+                        } else if ($field === 'price_range') {
+                            $conditions[] = "(b.price_range IS NULL OR b.price_range = '')";
                         }
                     }
 
@@ -1257,6 +1585,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                             <p><strong>Genre:</strong> <?php echo !empty($bookDetails['genre']) ? htmlspecialchars($bookDetails['genre']) : '<span class="text-muted">Not available</span>'; ?></p>
                                             <p><strong>Series:</strong> <?php echo !empty($bookDetails['series']) ? htmlspecialchars($bookDetails['series']) : '<span class="text-muted">Not available</span>'; ?></p>
                                             <p><strong>Page Count:</strong> <?php echo !empty($bookDetails['page_count']) ? htmlspecialchars($bookDetails['page_count']) : '<span class="text-muted">Not available</span>'; ?></p>
+                                            <p><strong>Price Range:</strong> <?php echo !empty($bookDetails['price_range']) ? htmlspecialchars($bookDetails['price_range']) : '<span class="text-muted">Not available</span>'; ?></p>
                                         </div>
                                     </div>
                                 </div>
@@ -1287,6 +1616,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                             <th>Author</th>
                                                             <th>ISBN-10</th>
                                                             <th>ISBN-13</th>
+                                                            <th>Publisher</th>
+                                                            <th>Series</th>
+                                                            <th>Page Count</th>
                                                             <th>Actions</th>
                                                         </tr>
                                                     </thead>
@@ -1298,6 +1630,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                 <td><?php echo htmlspecialchars($data['author']); ?></td>
                                                                 <td><?php echo !empty($data['isbn']) ? htmlspecialchars($data['isbn']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td><?php echo !empty($data['isbn13']) ? htmlspecialchars($data['isbn13']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td><?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    // Try to extract series from categories or title
+                                                                    $series = '';
+                                                                    if (!empty($data['series'])) {
+                                                                        $series = $data['series'];
+                                                                    } else if (!empty($data['categories'])) {
+                                                                        foreach ($data['categories'] as $category) {
+                                                                            if (stripos($category, 'series') !== false) {
+                                                                                $series = $category;
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    echo !empty($series) ? htmlspecialchars($series) : '<span class="text-muted">N/A</span>';
+                                                                    ?>
+                                                                </td>
+                                                                <td><?php echo !empty($data['page_count']) ? htmlspecialchars($data['page_count']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td>
                                                                     <div class="btn-group">
                                                                         <?php if (!empty($data['isbn']) || !empty($data['isbn13'])): ?>
@@ -1314,7 +1665,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             <span class="text-muted me-1">No ISBN available</span>
                                                                         <?php endif; ?>
 
-                                                                        <form method="post" action="book-import-validate.php" class="d-inline">
+                                                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#dataModal<?php echo htmlspecialchars($source); ?>">
+                                                                            <i class="fas fa-eye"></i> View All Data
+                                                                        </button>
+
+                                                                        <form method="post" action="book-import-validate.php" class="d-inline ms-1">
                                                                             <input type="hidden" name="action" value="update_all_data">
                                                                             <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
                                                                             <input type="hidden" name="source" value="<?php echo htmlspecialchars($data['source']); ?>">
@@ -1334,6 +1689,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             </button>
                                                                         </form>
                                                                     </div>
+
+                                                                    <!-- Modal for detailed data view -->
+                                                                    <div class="modal fade" id="dataModal<?php echo htmlspecialchars($source); ?>" tabindex="-1" aria-labelledby="dataModalLabel<?php echo htmlspecialchars($source); ?>" aria-hidden="true">
+                                                                        <div class="modal-dialog modal-lg">
+                                                                            <div class="modal-content">
+                                                                                <div class="modal-header">
+                                                                                    <h5 class="modal-title" id="dataModalLabel<?php echo htmlspecialchars($source); ?>">Complete Book Data from <?php echo htmlspecialchars($data['source']); ?></h5>
+                                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body">
+                                                                                    <div class="row">
+                                                                                        <div class="col-md-6">
+                                                                                            <?php if (!empty($data['cover_url'])): ?>
+                                                                                                <img src="<?php echo htmlspecialchars($data['cover_url']); ?>" alt="Book Cover" class="img-fluid mb-3" style="max-height: 300px;">
+                                                                                            <?php endif; ?>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <h6>Basic Information</h6>
+                                                                                            <p><strong>Title:</strong> <?php echo htmlspecialchars($data['title']); ?></p>
+                                                                                            <p><strong>Author:</strong> <?php echo htmlspecialchars($data['author']); ?></p>
+                                                                                            <p><strong>ISBN-10:</strong> <?php echo !empty($data['isbn']) ? htmlspecialchars($data['isbn']) : 'N/A'; ?></p>
+                                                                                            <p><strong>ISBN-13:</strong> <?php echo !empty($data['isbn13']) ? htmlspecialchars($data['isbn13']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Publisher:</strong> <?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Publication Date:</strong> <?php echo !empty($data['publication_date']) ? htmlspecialchars($data['publication_date']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Page Count:</strong> <?php echo !empty($data['page_count']) ? htmlspecialchars($data['page_count']) : 'N/A'; ?></p>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <div class="row mt-3">
+                                                                                        <div class="col-12">
+                                                                                            <h6>Additional Information</h6>
+                                                                                            <p><strong>Series:</strong> <?php echo !empty($series) ? htmlspecialchars($series) : 'N/A'; ?></p>
+
+                                                                                            <?php if (!empty($data['categories'])): ?>
+                                                                                                <p><strong>Categories/Genres:</strong>
+                                                                                                    <?php echo htmlspecialchars(implode(', ', $data['categories'])); ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+
+                                                                                            <?php if (!empty($data['description'])): ?>
+                                                                                                <p><strong>Description:</strong><br>
+                                                                                                    <?php echo nl2br(htmlspecialchars($data['description'])); ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="modal-footer">
+                                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                                                    <form method="post" action="book-import-validate.php">
+                                                                                        <input type="hidden" name="action" value="update_all_data">
+                                                                                        <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                                        <input type="hidden" name="source" value="<?php echo htmlspecialchars($data['source']); ?>">
+
+                                                                                        <?php foreach ($data as $field => $value): ?>
+                                                                                            <?php if (is_array($value)): ?>
+                                                                                                <?php foreach ($value as $subKey => $subValue): ?>
+                                                                                                    <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>][<?php echo htmlspecialchars($subKey); ?>]" value="<?php echo htmlspecialchars($subValue); ?>">
+                                                                                                <?php endforeach; ?>
+                                                                                            <?php else: ?>
+                                                                                                <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>]" value="<?php echo htmlspecialchars($value); ?>">
+                                                                                            <?php endif; ?>
+                                                                                        <?php endforeach; ?>
+
+                                                                                        <button type="submit" class="btn btn-primary">
+                                                                                            <i class="fas fa-sync-alt"></i> Use All Data
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -1352,6 +1779,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                             <th>Author</th>
                                                             <th>ISBN-10</th>
                                                             <th>ISBN-13</th>
+                                                            <th>Publisher</th>
+                                                            <th>Series</th>
                                                             <th>Confidence</th>
                                                             <th>Actions</th>
                                                         </tr>
@@ -1363,6 +1792,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                 <td><?php echo htmlspecialchars($suggestion['author']); ?></td>
                                                                 <td><?php echo !empty($suggestion['isbn']) ? htmlspecialchars($suggestion['isbn']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td><?php echo !empty($suggestion['isbn13']) ? htmlspecialchars($suggestion['isbn13']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td><?php echo !empty($suggestion['publisher']) ? htmlspecialchars($suggestion['publisher']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    // Try to extract series from categories or title
+                                                                    $series = '';
+                                                                    if (!empty($suggestion['series'])) {
+                                                                        $series = $suggestion['series'];
+                                                                    } else if (!empty($suggestion['categories'])) {
+                                                                        foreach ($suggestion['categories'] as $category) {
+                                                                            if (stripos($category, 'series') !== false) {
+                                                                                $series = $category;
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    echo !empty($series) ? htmlspecialchars($series) : '<span class="text-muted">N/A</span>';
+                                                                    ?>
+                                                                </td>
                                                                 <td><?php echo number_format($suggestion['confidence'] * 100, 1) . '%'; ?></td>
                                                                 <td>
                                                                     <div class="btn-group">
@@ -1376,7 +1823,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             </button>
                                                                         </form>
 
-                                                                        <form method="post" action="book-import-validate.php" class="d-inline">
+                                                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#suggestionModal<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>">
+                                                                            <i class="fas fa-eye"></i> View All Data
+                                                                        </button>
+
+                                                                        <form method="post" action="book-import-validate.php" class="d-inline ms-1">
                                                                             <input type="hidden" name="action" value="update_all_data">
                                                                             <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
                                                                             <input type="hidden" name="source" value="<?php echo htmlspecialchars($suggestion['source']); ?>">
@@ -1395,6 +1846,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                 <i class="fas fa-sync-alt"></i> Use All Data
                                                                             </button>
                                                                         </form>
+                                                                    </div>
+
+                                                                    <!-- Modal for detailed suggestion view -->
+                                                                    <div class="modal fade" id="suggestionModal<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>" tabindex="-1" aria-labelledby="suggestionModalLabel<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>" aria-hidden="true">
+                                                                        <div class="modal-dialog modal-lg">
+                                                                            <div class="modal-content">
+                                                                                <div class="modal-header">
+                                                                                    <h5 class="modal-title" id="suggestionModalLabel<?php echo md5($suggestion['title'] . $suggestion['isbn']); ?>">Complete Book Data from <?php echo htmlspecialchars($suggestion['source']); ?></h5>
+                                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                                </div>
+                                                                                <div class="modal-body">
+                                                                                    <div class="row">
+                                                                                        <div class="col-md-6">
+                                                                                            <?php if (!empty($suggestion['cover_url'])): ?>
+                                                                                                <img src="<?php echo htmlspecialchars($suggestion['cover_url']); ?>" alt="Book Cover" class="img-fluid mb-3" style="max-height: 300px;">
+                                                                                            <?php endif; ?>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <h6>Basic Information</h6>
+                                                                                            <p><strong>Title:</strong> <?php echo htmlspecialchars($suggestion['title']); ?></p>
+                                                                                            <p><strong>Author:</strong> <?php echo htmlspecialchars($suggestion['author']); ?></p>
+                                                                                            <p><strong>ISBN-10:</strong> <?php echo !empty($suggestion['isbn']) ? htmlspecialchars($suggestion['isbn']) : 'N/A'; ?></p>
+                                                                                            <p><strong>ISBN-13:</strong> <?php echo !empty($suggestion['isbn13']) ? htmlspecialchars($suggestion['isbn13']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Publisher:</strong> <?php echo !empty($suggestion['publisher']) ? htmlspecialchars($suggestion['publisher']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Publication Date:</strong> <?php echo !empty($suggestion['publication_date']) ? htmlspecialchars($suggestion['publication_date']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Page Count:</strong> <?php echo !empty($suggestion['page_count']) ? htmlspecialchars($suggestion['page_count']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Match Confidence:</strong> <?php echo number_format($suggestion['confidence'] * 100, 1) . '%'; ?></p>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <div class="row mt-3">
+                                                                                        <div class="col-12">
+                                                                                            <h6>Additional Information</h6>
+                                                                                            <p><strong>Series:</strong> <?php echo !empty($series) ? htmlspecialchars($series) : 'N/A'; ?></p>
+
+                                                                                            <?php if (!empty($suggestion['categories'])): ?>
+                                                                                                <p><strong>Categories/Genres:</strong>
+                                                                                                    <?php echo htmlspecialchars(implode(', ', $suggestion['categories'])); ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+
+                                                                                            <?php if (!empty($suggestion['description'])): ?>
+                                                                                                <p><strong>Description:</strong><br>
+                                                                                                    <?php echo nl2br(htmlspecialchars($suggestion['description'])); ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="modal-footer">
+                                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                                                    <form method="post" action="book-import-validate.php">
+                                                                                        <input type="hidden" name="action" value="update_all_data">
+                                                                                        <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                                        <input type="hidden" name="source" value="<?php echo htmlspecialchars($suggestion['source']); ?>">
+
+                                                                                        <?php foreach ($suggestion as $field => $value): ?>
+                                                                                            <?php if (is_array($value)): ?>
+                                                                                                <?php foreach ($value as $subKey => $subValue): ?>
+                                                                                                    <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>][<?php echo htmlspecialchars($subKey); ?>]" value="<?php echo htmlspecialchars($subValue); ?>">
+                                                                                                <?php endforeach; ?>
+                                                                                            <?php else: ?>
+                                                                                                <input type="hidden" name="data[<?php echo htmlspecialchars($field); ?>]" value="<?php echo htmlspecialchars($value); ?>">
+                                                                                            <?php endif; ?>
+                                                                                        <?php endforeach; ?>
+
+                                                                                        <button type="submit" class="btn btn-primary">
+                                                                                            <i class="fas fa-sync-alt"></i> Use All Data
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                             </tr>

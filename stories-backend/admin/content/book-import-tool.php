@@ -85,7 +85,7 @@ try {
     // Get books with pagination
     $booksStmt = $db->prepare("
         SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
-               b.isbn, b.isbn13, b.author, b.publisher
+               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.genre, b.series, b.price_range
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
         WHERE $bookWhereClause
@@ -1062,6 +1062,9 @@ require_once '../includes/header.php';
                                                                 // Check for empty or placeholder values in series
                                                                 if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
 
+                                                                // Check for price range
+                                                                if (empty($book['price_range'])) $missingFields[] = 'Price Range';
+
                                                                 // Don't check age_range as it's auto-populated in the UI
 
                                                                 if (!empty($missingFields)) {
@@ -1127,6 +1130,10 @@ require_once '../includes/header.php';
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="enrich_publisher" name="enrich_fields[]" value="publisher" checked>
                                                 <label class="form-check-label" for="enrich_publisher">Publisher</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_price_range" name="enrich_fields[]" value="price_range" checked>
+                                                <label class="form-check-label" for="enrich_price_range">Price Range</label>
                                             </div>
                                         </div>
 

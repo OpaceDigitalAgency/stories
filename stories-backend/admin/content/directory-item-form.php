@@ -1354,30 +1354,7 @@ if (isset($_SESSION['error'])) {
                                     </div>
                                 </div>
 
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label class="form-label" for="genre_tags">Genre Tags</label>
-                                        <select id="genre_tags" name="genre_tags[]" class="form-control" multiple>
-                                            <?php
-                                            // Get existing genre tags for this book
-                                            $selectedTags = [];
-                                            if (isset($item['id'])) {
-                                                $existingTags = getGenreTagsForDirectoryItem($db, $item['id']);
-                                                $selectedTags = array_column($existingTags, 'id');
-                                            }
-
-                                            // Display all available tags
-                                            foreach ($tags as $tag):
-                                                $isSelected = in_array($tag['id'], $selectedTags);
-                                            ?>
-                                                <option value="<?php echo $tag['id']; ?>" <?php echo $isSelected ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($tag['name']); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple genres</small>
-                                    </div>
-                                </div>
+                                <!-- Genre tags are handled in the Basic Information section -->
 
                                 <div class="col-md-4">
                                     <div class="form-group">

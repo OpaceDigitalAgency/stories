@@ -272,6 +272,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   // Ensure variables are always defined globally for this function
   let reviews = [];
   let pageCount = 1; // Track how many pages we've scraped
+  let newToken = null;        // 👈 prevents “newToken is not defined”
   let nextPageToken = null;
   let totalCount = null;
   let bookTitle = 'Unknown Book';
@@ -890,7 +891,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           break;
         }
 
-        const { reviews: newReviews, nextPageToken: newToken, totalCount } = extractReviewsFromGraphQL(response);
+        const { reviews: newReviews, nextPageToken: nextToken, totalCount } = extractReviewsFromGraphQL(response);
         logger.info(`GraphQL response: ${newReviews.length} reviews, next token: ${newToken}, total: ${totalCount}`);
 
         if (newReviews.length === 0) {
@@ -906,7 +907,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           metadata: JSON.stringify({
             book_id: bookId,
             graphql_page: pageCount,
-            next_token: newToken,
+            next_token: nextToken,
             batch_position: index + 1,
             batch_size: newReviews.length,
             total_available: totalCount,
@@ -921,7 +922,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         logger.info(`Added ${newReviews.length} reviews from GraphQL API, total: ${reviews.length}/${totalCount}`);
 
         // Update the token for the next request
-        nextPageToken = newToken;
+        nextPageToken = nextToken;
 
         // If there's no next token, we've reached the end
         if (!nextPageToken) {

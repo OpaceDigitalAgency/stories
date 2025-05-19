@@ -28,8 +28,9 @@ $(function() {
         window.location.href = url.toString();
     });
 
-    // Handle per_page changes
-    $('.per-page-select').on('change', function() {
+    // Handle per_page changes - use event delegation for dynamically added elements
+    $(document).on('change', '.per-page-select', function() {
+        console.log('Per page select changed');
         // Make sure the form has the tab parameter and reset page to 1
         const form = this.closest('form');
         let tabInput = form.querySelector('input[name="tab"]');

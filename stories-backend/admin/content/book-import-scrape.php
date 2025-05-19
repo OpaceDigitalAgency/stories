@@ -243,12 +243,15 @@ function updateBookAggregateValues($db, $bookId) {
         color: white;
         font-weight: bold;
         font-size: 16px;
-        transition: width 0.5s;
+        transition: width 0.8s ease, background-color 0.5s ease;
         animation: progress-bar-stripes 2s linear infinite;
     }
     .progress-bar.active-fetch {
         background-color: #007bff;
         animation: progress-bar-stripes 1s linear infinite, progress-bar-pulse 2s ease-in-out infinite;
+    }
+    .progress-bar.processing {
+        background-color: #17a2b8;
     }
     @keyframes progress-bar-stripes {
         from { background-position: 40px 0; }
@@ -361,7 +364,7 @@ function updateBookAggregateValues($db, $bookId) {
                 </div>
 
                 <div class="progress-container">
-                    <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+                    <div class="progress-bar processing" id="progressBar" style="width: 5%">Initializing...</div>
                 </div>
 
                 <div class="log-container" id="logContainer">
@@ -615,22 +618,46 @@ function updateBookAggregateValues($db, $bookId) {
                             // Show that we're actively fetching reviews
                             echo "<p class='info'>Fetching reviews from {$sourceName} for ISBN: $isbnToUse (limit: $fetchLimit)...</p>";
 
-                            // Update progress bar to show activity
+                            // Update progress bar to show activity - start with a lower percentage
                             echo "<script>
-                                // Add 'active' class to make progress bar pulse
+                                // Add 'active-fetch' class to make progress bar pulse blue
+                                document.getElementById('progressBar').classList.remove('processing');
                                 document.getElementById('progressBar').classList.add('active-fetch');
-                                document.getElementById('progressBar').innerText = 'Fetching reviews...';
+                                document.getElementById('progressBar').innerText = 'Fetching reviews from {$sourceName}...';
+
+                                // Start with a slightly lower percentage to show progress during fetch
+                                let startProgress = Math.max(5, $sourceProgress - 10);
+                                document.getElementById('progressBar').style.width = startProgress + '%';
+
+                                // Create a gradual progress animation during the API call
+                                let currentProgress = startProgress;
+                                let targetProgress = $sourceProgress - 2;
+                                let progressInterval = setInterval(function() {
+                                    if (currentProgress < targetProgress) {
+                                        currentProgress += 0.5;
+                                        document.getElementById('progressBar').style.width = currentProgress + '%';
+                                    } else {
+                                        clearInterval(progressInterval);
+                                    }
+                                }, 500);
                             </script>";
                             flushOutput();
 
                             // Fetch reviews from the source with the specified limit
                             $result = $fetcher->fetchReviewsByISBN($isbnToUse, $fetchLimit, $options);
 
-                            // Remove active class when fetch completes
+                            // Clear any running intervals and update progress when fetch completes
                             echo "<script>
+                                // Clear any running intervals
+                                for (let i = 1; i < 9999; i++) {
+                                    window.clearInterval(i);
+                                }
+
+                                // Switch back to processing style
                                 document.getElementById('progressBar').classList.remove('active-fetch');
+                                document.getElementById('progressBar').classList.add('processing');
                                 document.getElementById('progressBar').style.width = '$sourceProgress%';
-                                document.getElementById('progressBar').innerText = '$sourceProgress%';
+                                document.getElementById('progressBar').innerText = 'Processing reviews from {$sourceName}...';
                             </script>";
                             flushOutput();
 
@@ -701,15 +728,17 @@ function updateBookAggregateValues($db, $bookId) {
                         $totalReviews = count($reviews);
                         foreach ($reviews as $reviewIndex => $review) {
                             // Update progress during review processing
-                            if ($totalReviews > 10 && $reviewIndex % 10 == 0) {
+                            if ($totalReviews > 10 && $reviewIndex % 5 == 0) {
                                 // Calculate progress for this review within the source
                                 $reviewProgress = $sourceProgress + $bookProgressRange * 0.5 * $reviewIndex / $totalReviews;
                                 $reviewProgress = round($reviewProgress);
+                                $processedCount = $reviewIndex + 1;
+                                $remainingCount = $totalReviews - $processedCount;
 
-                                // Update progress bar
+                                // Update progress bar with more informative text
                                 echo "<script>
                                     document.getElementById('progressBar').style.width = '$reviewProgress%';
-                                    document.getElementById('progressBar').innerText = '$reviewProgress%';
+                                    document.getElementById('progressBar').innerText = 'Processing reviews: $processedCount of $totalReviews ($reviewProgress%)';
                                 </script>";
                                 flushOutput();
                             }
@@ -833,10 +862,27 @@ function updateBookAggregateValues($db, $bookId) {
                     $totalReviewsSkipped += $bookReviewsSkipped;
                 }
 
-                // Update progress to 100%
+                // Update progress to 100% with a smooth transition
                 echo "<script>
-                    document.getElementById('progressBar').style.width = '100%';
-                    document.getElementById('progressBar').innerText = '100%';
+                    // Animate to 100% with a smooth transition
+                    document.getElementById('progressBar').classList.remove('processing');
+                    document.getElementById('progressBar').classList.remove('active-fetch');
+
+                    // Get current progress
+                    let currentWidth = parseFloat(document.getElementById('progressBar').style.width);
+                    if (isNaN(currentWidth)) currentWidth = 0;
+
+                    // Create a smooth animation to 100%
+                    let completeInterval = setInterval(function() {
+                        if (currentWidth < 100) {
+                            currentWidth += 1;
+                            document.getElementById('progressBar').style.width = currentWidth + '%';
+                            document.getElementById('progressBar').innerText = 'Completing... ' + Math.round(currentWidth) + '%';
+                        } else {
+                            clearInterval(completeInterval);
+                            document.getElementById('progressBar').innerText = 'Complete! 100%';
+                        }
+                    }, 30);
                 </script>";
                 flushOutput();
 
@@ -881,4 +927,20 @@ require_once '../includes/footer.php';
     setInterval(function() {
         logContainer.scrollTop = logContainer.scrollHeight;
     }, 500);
+
+    // Initialize progress bar with a small animation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const progressBar = document.getElementById('progressBar');
+        let width = 5;
+
+        // Small animation to show the page is ready
+        let initInterval = setInterval(function() {
+            if (width < 10) {
+                width += 0.5;
+                progressBar.style.width = width + '%';
+            } else {
+                clearInterval(initInterval);
+            }
+        }, 100);
+    });
 </script>

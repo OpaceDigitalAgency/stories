@@ -446,7 +446,7 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
     });
 
     // Load cookies if available
-    const domain = config.sources.amazon.baseUrl.replace('https://', '').replace('http://', '');
+    const domain = new URL(config.sources.amazon.baseUrl).hostname;
     const cookies = browser.loadCookies(domain);
     if (cookies.length > 0) {
       await page.setCookie(...cookies);
@@ -612,7 +612,10 @@ async function scrapeMobileAmazonReviews(asin, limit = 50, options = {}) {
  * @returns {Promise<Array>} - Array of reviews
  */
 async function extractMobileReviews(page, asin) {
-  return page.evaluate((asin, sourceId) => {
+  // Get the base domain for URLs
+  const domain = new URL(config.sources.amazon.baseUrl).hostname;
+
+  return page.evaluate((asin, sourceId, domain, affiliateTag) => {
     const reviews = [];
 
     // Find review containers
@@ -659,8 +662,8 @@ async function extractMobileReviews(page, asin) {
             metadata: JSON.stringify({
               asin: asin,
               review_title: title,
-              review_url: `https://www.amazon.com/product-reviews/${asin}`,
-              affiliate_url: `https://www.amazon.com/dp/${asin}`,
+              review_url: `https://${domain}/product-reviews/${asin}`,
+              affiliate_url: `https://${domain}/dp/${asin}?tag=${affiliateTag}`,
               source: 'mobile'
             })
           });
@@ -671,7 +674,7 @@ async function extractMobileReviews(page, asin) {
     }
 
     return reviews;
-  }, asin, this.sourceId || 5);
+  }, asin, 5, domain, config.sources.amazon.affiliateTag);
 }
 
 module.exports = {

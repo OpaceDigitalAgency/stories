@@ -52,20 +52,23 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     // Remove old pagination parameters
     unset($queryParams['page'], $queryParams[$options['pageParam']], $queryParams[$options['perPageParam']]);
 
-    // Set required parameters
-    $queryParams['tab'] = $options['tab'] ?? $queryParams['tab'] ?? 'existing';
+    // Set required parameters - remove any existing tab parameter first
+    unset($queryParams['tab']);
+    $queryParams['tab'] = $options['tab'] ?? 'existing';
     $queryParams[$options['perPageParam']] = $itemsPerPage;
 
     // Function to generate page URL
     $getPageUrl = function($page) use ($currentUrl, $queryParams, $options) {
-        $queryParams[$options['pageParam']] = $page;
-
-        // Always ensure tab parameter is included
-        if (!isset($queryParams['tab']) && isset($options['tab'])) {
-            $queryParams['tab'] = $options['tab'];
-        }
-
-        return $currentUrl . '?' . http_build_query($queryParams);
+        // Create a copy of the query parameters to avoid modifying the original
+        $params = $queryParams;
+        
+        // Set the page parameter using the tab-specific parameter name
+        $params[$options['pageParam']] = $page;
+        
+        // Always ensure tab parameter is included and correct
+        $params['tab'] = $options['tab'] ?? 'existing';
+        
+        return $currentUrl . '?' . http_build_query($params);
     };
 
     // Render pagination
@@ -187,12 +190,8 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         <?php endif; ?>
                     <?php endforeach; ?>
 
-                    <!-- Always include the tab parameter -->
-                    <?php if (isset($options['tab'])): ?>
-                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab']); ?>">
-                    <?php elseif (isset($_GET['tab'])): ?>
-                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($_GET['tab']); ?>">
-                    <?php endif; ?>
+                    <!-- Always include the tab parameter - but only once -->
+                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">
 
                     <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php

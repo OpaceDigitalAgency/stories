@@ -885,46 +885,81 @@ function updateBookData($bookId, $data, $db) {
         // Prepare the update fields
         $updateFields = [];
         $params = [];
+        $updatedFieldNames = [];
+
+        // Helper function to check if a value is a placeholder like "Unknown"
+        function isPlaceholder($value) {
+            if (empty($value)) return true;
+            $placeholders = ['unknown', 'n/a', 'none', '0'];
+            return in_array(strtolower(trim($value)), $placeholders);
+        }
 
         // Only update fields that are provided and different from current values
         if (!empty($data['title']) && $data['title'] !== $currentBook['title']) {
             $updateFields[] = "title = ?";
             $params[] = $data['title'];
+            $updatedFieldNames[] = 'Title';
         }
 
         if (!empty($data['author']) && $data['author'] !== $currentBook['author']) {
             $updateFields[] = "author = ?";
             $params[] = $data['author'];
+            $updatedFieldNames[] = 'Author';
         }
 
         if (!empty($data['isbn']) && $data['isbn'] !== $currentBook['isbn']) {
             $updateFields[] = "isbn = ?";
             $params[] = $data['isbn'];
+            $updatedFieldNames[] = 'ISBN';
         }
 
         if (!empty($data['isbn13']) && $data['isbn13'] !== $currentBook['isbn13']) {
             $updateFields[] = "isbn13 = ?";
             $params[] = $data['isbn13'];
+            $updatedFieldNames[] = 'ISBN-13';
         }
 
-        if (!empty($data['publisher']) && $data['publisher'] !== $currentBook['publisher']) {
+        // For publisher, replace if current value is empty or a placeholder
+        if (!empty($data['publisher']) &&
+            ($isPlaceholder($currentBook['publisher']) || $data['publisher'] !== $currentBook['publisher'])) {
             $updateFields[] = "publisher = ?";
             $params[] = $data['publisher'];
+            $updatedFieldNames[] = 'Publisher';
         }
 
-        if (!empty($data['page_count']) && $data['page_count'] !== $currentBook['page_count']) {
+        // For page count, replace if current value is empty, zero, or a placeholder
+        if (!empty($data['page_count']) &&
+            (empty($currentBook['page_count']) || $currentBook['page_count'] == '0' || $data['page_count'] !== $currentBook['page_count'])) {
             $updateFields[] = "page_count = ?";
             $params[] = $data['page_count'];
+            $updatedFieldNames[] = 'Page Count';
+        }
+
+        // For series, replace if current value is empty or "Unknown"
+        if (!empty($data['series']) &&
+            (isPlaceholder($currentBook['series']) || $data['series'] !== $currentBook['series'])) {
+            $updateFields[] = "series = ?";
+            $params[] = $data['series'];
+            $updatedFieldNames[] = 'Series';
+        }
+
+        // For genre, only replace if current value is empty (since genre could be anything)
+        if (!empty($data['genre']) && empty($currentBook['genre'])) {
+            $updateFields[] = "genre = ?";
+            $params[] = $data['genre'];
+            $updatedFieldNames[] = 'Genre';
         }
 
         if (!empty($data['description']) && $data['description'] !== $currentBook['description']) {
             $updateFields[] = "description = ?";
             $params[] = $data['description'];
+            $updatedFieldNames[] = 'Description';
         }
 
         if (!empty($data['cover_url']) && $data['cover_url'] !== $currentBook['cover_url']) {
             $updateFields[] = "cover_url = ?";
             $params[] = $data['cover_url'];
+            $updatedFieldNames[] = 'Cover Image';
         }
 
         // Check if updated_at column exists
@@ -961,7 +996,7 @@ function updateBookData($bookId, $data, $db) {
         return [
             'status' => 'success',
             'message' => 'Book data updated successfully',
-            'updated_fields' => array_keys($data)
+            'updated_fields' => $updatedFieldNames
         ];
     } catch (Exception $e) {
         return [

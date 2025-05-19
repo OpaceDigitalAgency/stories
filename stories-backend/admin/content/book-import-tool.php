@@ -1051,11 +1051,18 @@ require_once '../includes/header.php';
                                                             <td>
                                                                 <?php
                                                                 $missingFields = [];
-                                                                if (empty($book['publisher'])) $missingFields[] = 'Publisher';
-                                                                if (empty($book['page_count'])) $missingFields[] = 'Page Count';
+
+                                                                // Check for empty or placeholder values
+                                                                if (empty($book['publisher']) || strtolower($book['publisher']) == 'unknown') $missingFields[] = 'Publisher';
+                                                                if (empty($book['page_count']) || $book['page_count'] == '0') $missingFields[] = 'Page Count';
+
+                                                                // Only check genre if it's completely empty (not checking for 'unknown' as genre could be anything)
                                                                 if (empty($book['genre'])) $missingFields[] = 'Genre';
-                                                                if (empty($book['series'])) $missingFields[] = 'Series';
-                                                                if (empty($book['age_range'])) $missingFields[] = 'Reading Age';
+
+                                                                // Check for empty or placeholder values in series
+                                                                if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
+
+                                                                // Don't check age_range as it's auto-populated in the UI
 
                                                                 if (!empty($missingFields)) {
                                                                     echo '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .

@@ -269,7 +269,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   }
 
   const page = await browser.getNewPage();
+  // Ensure variables are always defined globally for this function
   let reviews = [];
+  let pageCount = 1; // Track how many pages we've scraped
+  let nextPageToken = null;
+  let totalCount = null;
   let bookTitle = 'Unknown Book';
   // --- Request interception setup ---
   // Safer interception to prevent "Request is already handled!" errors

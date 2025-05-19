@@ -65,96 +65,71 @@ try {
     $pageDescription = 'Import books and scrape reviews from various sources';
 
     // Books pagination
-    $booksPage = isset($_GET['books_page']) ? max(1, intval($_GET['books_page'])) : 1;
-    $booksPerPage = isset($_GET['books_per_page']) ? intval($_GET['books_per_page']) : 10;
+    // Get the page and per_page parameters
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
 
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];
 
-    // Count total books first to add as a valid per_page value
-    $bookCountQuery = "SELECT COUNT(*) FROM directory_items di WHERE di.type = 'book'";
-    $bookCountStmt = $db->prepare($bookCountQuery);
-    $bookCountStmt->execute();
-    $totalBooksCount = $bookCountStmt->fetchColumn();
-
-    // Add total books as a valid per_page value
-    if (!in_array($totalBooksCount, $validPerPageValues)) {
-        $validPerPageValues[] = $totalBooksCount;
+    // Count total items for current tab
+    $countQuery = "";
+    switch ($currentTab) {
+        case 'reviews':
+            $countQuery = "SELECT COUNT(*) FROM reviews r";
+            break;
+        case 'sources':
+            $countQuery = "SELECT COUNT(*) FROM review_sources";
+            break;
+        default: // 'existing' tab and others
+            $countQuery = "SELECT COUNT(*) FROM directory_items di WHERE di.type = 'book'";
     }
 
-    // Validate books per page value
-    if (!in_array($booksPerPage, $validPerPageValues)) {
-        // If it's not a standard value, check if it's the "All" option
-        if ($booksPerPage >= $totalBooksCount) {
-            $booksPerPage = $totalBooksCount;
+    $countStmt = $db->prepare($countQuery);
+    $countStmt->execute();
+    $totalItems = $countStmt->fetchColumn();
+
+    // Add total items as a valid per_page value
+    if (!in_array($totalItems, $validPerPageValues)) {
+        $validPerPageValues[] = $totalItems;
+    }
+
+    // Validate per_page value
+    if (!in_array($perPage, $validPerPageValues)) {
+        if ($perPage >= $totalItems) {
+            $perPage = $totalItems;
         } else {
-            $booksPerPage = 10; // Default to 10 if invalid
+            $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
         }
     }
     $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
 
-    // Sources pagination
-    $sourcesPage = isset($_GET['sources_page']) ? max(1, intval($_GET['sources_page'])) : 1;
-    $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
+    // Calculate offset based on current page and items per page
+    $offset = ($page - 1) * $perPage;
+    $offset = max(0, $offset); // Ensure offset is not negative
 
-    // Reviews pagination with proper validation
-    $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
-
-    // Get the reviews_per_page parameter with proper validation
-    if (isset($_GET['reviews_per_page'])) {
-        $reviewsPerPage = intval($_GET['reviews_per_page']);
-    } else {
-        // Default to 10 if not set
-        $reviewsPerPage = 10;
-    }
-
-    // Initialize standard per page values
-    $validPerPageValues = [10, 25, 50, 100];
-
-    // Get total reviews count first
-    $reviewCountQuery = "SELECT COUNT(*) FROM reviews r";
-    $reviewCountStmt = $db->prepare($reviewCountQuery);
-    $reviewCountStmt->execute();
-    $totalReviews = $reviewCountStmt->fetchColumn();
-
-    // Add total reviews as a valid per_page value
-    if (!in_array($totalReviews, $validPerPageValues)) {
-        $validPerPageValues[] = $totalReviews;
-    }
-
-    // Validate reviews per page value - only if it's not already in the valid values
-    if (!in_array($reviewsPerPage, $validPerPageValues)) {
-        // If it's not a standard value, check if it's the "All" option
-        if ($reviewsPerPage >= $totalReviews) {
-            $reviewsPerPage = $totalReviews;
-        } else {
-            $reviewsPerPage = 10; // Default to 10 if invalid
-        }
-    }
-
-    // ISBN validation pagination
-    $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
-    $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
-
-    // Validate ISBN per page value
-    if (!in_array($isbnPerPage, $validPerPageValues)) {
-        // If it's not a standard value, check if it's the "All" option
-        if ($isbnPerPage >= $totalBooksCount) {
-            $isbnPerPage = $totalBooksCount;
-        } else {
-            $isbnPerPage = 10; // Default to 10 if invalid
-        }
-    }
-
-    // Calculate pagination for ISBN validation
-    $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
-    $isbnOffset = max(0, $isbnOffset); // Ensure offset is not negative
-
-    // Basic validation to prevent negative values
-    foreach (['books', 'sources', 'isbn'] as $section) {
-        $perPageVar = $section . 'PerPage';
-        $$perPageVar = max(1, intval($$perPageVar));
-    }
+    // Define columns for each tab
+    $columns = [
+        'existing' => [
+            'title' => 'Title',
+            'isbn' => 'ISBN',
+            'author' => 'Author',
+            'rating' => 'Rating',
+            'reviews' => 'Reviews'
+        ],
+        'reviews' => [
+            'book_id' => 'Book ID',
+            'source' => 'Source',
+            'rating' => 'Rating',
+            'content' => 'Content',
+            'date' => 'Date'
+        ],
+        'sources' => [
+            'name' => 'Name',
+            'url' => 'URL',
+            'is_third_party' => 'Third Party'
+        ]
+    ];
 
     // Build query conditions for books
     $bookConditions = ["di.type = 'book'"];
@@ -182,25 +157,47 @@ try {
     $bookCountStmt->execute($bookParams);
     $totalBooks = $bookCountStmt->fetchColumn(); // This is the filtered count based on search
 
-    // Calculate pagination
-    $totalBookPages = ceil($totalBooks / $booksPerPage);
-    $bookOffset = ($booksPage - 1) * $booksPerPage;
+    // Calculate total pages
+    $totalPages = ceil($totalItems / $perPage);
 
-    // Ensure offset is not negative
-    $bookOffset = max(0, $bookOffset);
+    // Get items with pagination based on current tab
+    $query = "";
+    switch ($currentTab) {
+        case 'reviews':
+            $query = "
+                SELECT r.*
+                FROM reviews r
+                ORDER BY r.created_at DESC
+                LIMIT $perPage OFFSET $offset
+            ";
+            break;
+        case 'sources':
+            $query = "
+                SELECT *
+                FROM review_sources
+                ORDER BY name ASC
+                LIMIT $perPage OFFSET $offset
+            ";
+            break;
+        default: // 'existing' tab and others
+            $query = "
+                SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
+                       b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
+                FROM directory_items di
+                JOIN books b ON di.id = b.directory_item_id
+                WHERE $bookWhereClause
+                ORDER BY di.title ASC
+                LIMIT $perPage OFFSET $offset
+            ";
+    }
 
-    // Get books with pagination
-    $booksStmt = $db->prepare("
-        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
-               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
-        FROM directory_items di
-        JOIN books b ON di.id = b.directory_item_id
-        WHERE $bookWhereClause
-        ORDER BY di.title ASC
-        LIMIT $booksPerPage OFFSET $bookOffset
-    ");
-    $booksStmt->execute($bookParams);
-    $books = $booksStmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $db->prepare($query);
+    if ($currentTab === 'existing') {
+        $stmt->execute($bookParams);
+    } else {
+        $stmt->execute();
+    }
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get all review sources
     $sourcesStmt = $db->prepare("
@@ -476,73 +473,101 @@ require_once '../includes/header.php';
 
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5>Books (<?php echo number_format($totalBooks); ?>)</h5>
+                                    <h5><?php echo ucfirst($currentTab); ?> (<?php echo number_format($totalItems); ?>)</h5>
                                     <div>
-                                        <span class="text-muted">Page <?php echo $booksPage; ?> of <?php echo $totalBookPages; ?></span>
+                                        <span class="text-muted">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
                                     </div>
                                 </div>
                                 <div class="card-body">
                                     <?php
-                                    // Initialize table data
-                                    $tableData = [];
-                                    $books = $books ?? [];
-                                    foreach ($books as $book) {
-                                        $rating = !empty($book['average_rating'])
-                                            ? number_format(round($book['average_rating'] * 5, 1), 1) . ' / 5'
-                                            : 'N/A';
-
-                                        $isbn = !empty($book['isbn13'])
-                                            ? htmlspecialchars($book['isbn13'])
-                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
-
-                                        $tableData[] = [
-                                            'id' => $book['id'],
-                                            'title' => htmlspecialchars($book['title']),
-                                            'author' => htmlspecialchars($book['author']),
-                                            'isbn' => $isbn,
-                                            'reviews' => (int)$book['review_count'],
-                                            'rating' => $rating,
-                                            'actions' => '<button class="btn btn-sm btn-primary scrape-reviews-btn" data-book-id="' . $book['id'] . '" data-book-title="' . htmlspecialchars($book['title']) . '"><i class="fas fa-sync"></i> Scrape Reviews</button>'
-                                        ];
-                                    }
-
-                                    // Define table columns - include actions in the columns
+                                    // Define columns for each tab
                                     $columns = [
-                                        'title' => 'Title',
-                                        'author' => 'Author',
-                                        'isbn' => 'ISBN',
-                                        'reviews' => 'Reviews',
-                                        'rating' => 'Rating',
-                                        'actions' => 'Actions'
+                                        'existing' => [
+                                            'title' => 'Title',
+                                            'isbn' => 'ISBN',
+                                            'author' => 'Author',
+                                            'rating' => 'Rating',
+                                            'reviews' => 'Reviews'
+                                        ],
+                                        'reviews' => [
+                                            'book_id' => 'Book ID',
+                                            'source' => 'Source',
+                                            'rating' => 'Rating',
+                                            'content' => 'Content',
+                                            'date' => 'Date'
+                                        ],
+                                        'sources' => [
+                                            'name' => 'Name',
+                                            'url' => 'URL',
+                                            'is_third_party' => 'Third Party'
+                                        ]
                                     ];
 
-                                    // Render enhanced table
-                                    // Disable enhanced table's built-in pagination
-                                    renderEnhancedTable(
-                                        $tableData,
-                                        $columns,
-                                        'book',
-                                        'books-table',
-                                        [
-                                            'showCheckboxes' => true,
-                                            'showActions' => false, // Don't show the last actions column
-                                            'actions' => ['view', 'edit', 'validate', 'scrape'],
-                                            'bulkActions' => ['delete', 'validate', 'scrape'],
-                                            'htmlFields' => ['rating', 'actions'],
-                                            'showPagination' => false,
-                                            'showItemsPerPage' => false
-                                        ]
-                                    );
+                                    // Initialize table data
+                                    $tableData = [];
+                                    foreach ($items as $item) {
+                                        switch ($currentTab) {
+                                            case 'existing':
+                                                $rating = !empty($item['average_rating'])
+                                                    ? number_format(round($item['average_rating'] * 5, 1), 1) . ' / 5'
+                                                    : 'N/A';
+
+                                                $isbn = !empty($item['isbn13'])
+                                                    ? htmlspecialchars($item['isbn13'])
+                                                    : (!empty($item['isbn']) ? htmlspecialchars($item['isbn']) : 'N/A');
+
+                                                $tableData[] = [
+                                                    'id' => $item['id'],
+                                                    'title' => htmlspecialchars($item['title']),
+                                                    'isbn' => $isbn,
+                                                    'author' => htmlspecialchars($item['author']),
+                                                    'rating' => $rating,
+                                                    'reviews' => $item['review_count'] ?? 0
+                                                ];
+                                                break;
+
+                                            case 'reviews':
+                                                $tableData[] = [
+                                                    'id' => $item['id'],
+                                                    'book_id' => $item['book_id'],
+                                                    'source' => $item['source'],
+                                                    'rating' => $item['rating'],
+                                                    'content' => htmlspecialchars($item['content']),
+                                                    'date' => $item['created_at']
+                                                ];
+                                                break;
+
+                                            case 'sources':
+                                                $tableData[] = [
+                                                    'id' => $item['id'],
+                                                    'name' => htmlspecialchars($item['name']),
+                                                    'url' => htmlspecialchars($item['url']),
+                                                    'is_third_party' => $item['is_third_party'] ? 'Yes' : 'No'
+                                                ];
+                                                break;
+                                        }
+                                    }
+
+                                    // Render the enhanced table with pagination
+                                    renderEnhancedTable($tableData, $columns[$currentTab] ?? [], $currentTab, $currentTab . '-table', [
+                                        'showPagination' => true,
+                                        'itemsPerPage' => $perPage,
+                                        'currentPage' => $page,
+                                        'totalItems' => $totalItems,
+                                        'validPerPageValues' => $validPerPageValues,
+                                        'useCustomPagination' => true,
+                                        'customPageParam' => 'page',
+                                        'customPerPageParam' => 'per_page',
+                                        'tab' => $currentTab
+                                    ]);
                                     ?>
                                 </div>
                                 <?php
-                                // Ensure tab parameter is in URL for pagination
-                                $_GET['tab'] = 'existing';
-                                // Render pagination for books table
-                                renderPagination($totalBooks, $booksPerPage, $booksPage, 5, [
-                                    'pageParam' => 'books_page',
-                                    'perPageParam' => 'books_per_page',
-                                    'tab' => 'existing',
+                                // Render pagination for the current tab
+                                renderPagination($totalItems, $perPage, $page, 5, [
+                                    'pageParam' => 'page',
+                                    'perPageParam' => 'per_page',
+                                    'tab' => $currentTab,
                                     'validPerPageValues' => $validPerPageValues,
                                     'perPageLabel' => 'Show',
                                     'showAllLabel' => 'Show All'

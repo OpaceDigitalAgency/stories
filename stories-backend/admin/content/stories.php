@@ -397,7 +397,13 @@ if (function_exists('renderEnhancedTable')) {
 // Include pagination component if needed
 include_once '../includes/pagination-component.php';
 if (function_exists('renderPagination') && $totalItems > $perPage) {
-    renderPagination($totalItems, $perPage, $page);
+    renderPagination($totalItems, $perPage, $page, 5, [
+        'pageParam' => 'page',
+        'perPageParam' => 'per_page',
+        'validPerPageValues' => [10, 25, 50, 100],
+        'perPageLabel' => 'Show',
+        'showAllLabel' => 'Show All'
+    ]);
 }
 
 // Include footer

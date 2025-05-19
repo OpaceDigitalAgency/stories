@@ -463,8 +463,11 @@ require_once '../includes/header.php';
                                         ]
                                     );
                                     ?>
-
                                 </div>
+                                <?php
+                                // Render pagination for books table
+                                renderPagination($totalBooks, $booksPerPage, $booksPage);
+                                ?>
                             </div>
                         </div>
 
@@ -595,6 +598,10 @@ require_once '../includes/header.php';
                                     'showAllLabel' => 'Show All'
                                 ]
                             );
+                            ?>
+                            <?php
+                            // Render pagination for sources table
+                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage);
                             ?>
 
                             <button class="btn btn-success" id="addSourceBtn">
@@ -854,8 +861,11 @@ require_once '../includes/header.php';
                                         ]
                                     );
                                     ?>
-
                                 </div>
+                                <?php
+                                // Render pagination for reviews table
+                                renderPagination($totalReviews, $reviewsPerPage, $reviewsPage);
+                                ?>
                             </div>
                         </div>
 
@@ -1019,6 +1029,10 @@ require_once '../includes/header.php';
                                             'showAllLabel' => 'Show All'
                                         ]
                                     );
+                                    ?>
+                                    <?php
+                                    // Render pagination for ISBN validation table
+                                    renderPagination(count($books), $isbnPerPage, $isbnPage);
                                     ?>
 
                                     <div class="mt-3">

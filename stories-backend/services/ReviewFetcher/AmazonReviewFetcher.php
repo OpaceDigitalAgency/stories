@@ -957,7 +957,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         $maxPages = $options['maxPages'] ?? 20;
 
         // Build the request URL with options - use the exact parameter names expected by the Node.js server
-        $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$requestLimit}";
+        $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$limit}";
 
         // Add maxPages parameter
         $url .= "&maxPages={$maxPages}";
@@ -979,7 +979,7 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         // Log all parameters for debugging
         $this->logToFile("{$debugDir}/scrape-log.txt", "📝 Parameters being sent to Node.js server:");
         $this->logToFile("{$debugDir}/scrape-log.txt", "   - asin: {$asin}");
-        $this->logToFile("{$debugDir}/scrape-log.txt", "   - limit: {$requestLimit}");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - limit: {$limit}");
         $this->logToFile("{$debugDir}/scrape-log.txt", "   - maxPages: {$maxPages}");
         $this->logToFile("{$debugDir}/scrape-log.txt", "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
         $this->logToFile("{$debugDir}/scrape-log.txt", "   - force: {$forceRefresh}" . ($forceRefresh ? " (will be sent as 1)" : " (will be sent as 0)"));

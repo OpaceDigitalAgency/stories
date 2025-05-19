@@ -1348,7 +1348,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl);
 
         // Add limit parameter (required by Node.js server)
-        $url .= "&limit={$requestLimit}";
+        $url .= "&limit={$limit}";
+
+        // Log the actual limit being used vs requested
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Using actual limit={$limit} (original requestLimit was {$requestLimit})");
 
         // Add maxPages parameter (required by Node.js server)
         $url .= "&maxPages={$maxPages}";
@@ -1370,7 +1373,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Log all parameters for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Parameters being sent to Node.js server:");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - url: " . urlencode($goodreadsUrl));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$requestLimit}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$limit}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - maxPages: {$maxPages}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: {$options['force']}" . ($options['force'] ? " (will be sent as 1)" : " (will be sent as 0)"));

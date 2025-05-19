@@ -458,6 +458,9 @@ function updateBookAggregateValues($db, $bookId) {
 
                             // Debug the fetch limit
                             echo "<p class='info'><strong>DEBUG:</strong> Requesting {$fetchLimit} reviews from {$sourceName} (reviewLimit: {$reviewLimit}, existingReviewCount: {$existingReviewCount})</p>";
+
+                            // Add more detailed debug information
+                            echo "<p class='info'><strong>DEBUG PARAMS:</strong> Passing limit={$fetchLimit}, maxPages={$maxPages}, continueFromLast=" . ($continueFromLast ? "true" : "false") . ", force=" . ($forceRefresh ? "true" : "false") . "</p>";
                             flushOutput();
 
                             // Fetch reviews from the source with the specified limit

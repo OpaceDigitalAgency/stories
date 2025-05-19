@@ -19,7 +19,13 @@
  * @param int $visiblePages Number of visible page links (odd number recommended)
  * @return void
  */
-function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visiblePages = 5) {
+function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visiblePages = 5, $options = []) {
+    // Set default options
+    $defaultOptions = [
+        'pageParam' => 'page',
+        'perPageParam' => 'per_page'
+    ];
+    $options = array_merge($defaultOptions, $options);
     // Calculate total pages
     $totalPages = ceil($totalItems / $itemsPerPage);
 
@@ -81,9 +87,9 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     error_log("Pagination: Modified Query params: " . print_r($queryParams, true));
 
     // Function to generate page URL
-    $getPageUrl = function($page) use ($currentUrl, $queryParams) {
+    $getPageUrl = function($page) use ($currentUrl, $queryParams, $options) {
         $params = $queryParams;
-        $params['page'] = $page;
+        $params[$options['pageParam']] = $page;
         return $currentUrl . '?' . http_build_query($params);
     };
 
@@ -200,13 +206,13 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
             <div class="items-per-page" style="margin-left: 10px;">
                 <form method="GET" action="<?php echo $currentUrl; ?>" class="d-flex align-items-center pagination-form">
                     <!-- Preserve existing query parameters -->
-                    <?php foreach ($queryParams as $key => $value): ?>
-                        <?php if ($key !== 'page' && $key !== 'per_page'): ?>
+                    <?php foreach ($_GET as $key => $value): ?>
+                        <?php if ($key !== $options['pageParam'] && $key !== $options['perPageParam']): ?>
                             <input type="hidden" name="<?php echo htmlspecialchars($key); ?>" value="<?php echo htmlspecialchars($value); ?>">
                         <?php endif; ?>
                     <?php endforeach; ?>
 
-                    <select name="per_page" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
+                    <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php foreach ([10, 25, 50, 100] as $option): ?>
                             <option value="<?php echo $option; ?>" <?php echo $itemsPerPage == $option ? 'selected' : ''; ?>>
                                 <?php echo $option; ?> per page
@@ -223,23 +229,7 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                 // Handle per page dropdown changes
                 document.querySelectorAll('.per-page-select').forEach(function(select) {
                     select.addEventListener('change', function() {
-                        const form = this.closest('form');
-                        const url = new URL(form.action);
-                        const formData = new FormData(form);
-                        
-                        // Add all form data to URL
-                        for (const [key, value] of formData.entries()) {
-                            url.searchParams.set(key, value);
-                        }
-                        
-                        // Preserve current tab
-                        const currentTab = new URLSearchParams(window.location.search).get('tab');
-                        if (currentTab) {
-                            url.searchParams.set('tab', currentTab);
-                        }
-                        
-                        // Navigate to new URL
-                        window.location.href = url.toString();
+                        this.closest('form').submit();
                     });
                 });
             });

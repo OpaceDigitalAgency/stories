@@ -482,7 +482,11 @@ require_once '../includes/header.php';
                                 // Ensure tab parameter is in URL for pagination
                                 $_GET['tab'] = 'existing';
                                 // Render pagination for books table
-                                renderPagination($totalBooks, $booksPerPage, $booksPage, 5, ['tab' => 'existing']);
+                                renderPagination($totalBooks, $booksPerPage, $booksPage, 5, [
+                                    'pageParam' => 'books_page',
+                                    'perPageParam' => 'books_per_page',
+                                    'tab' => 'existing'
+                                ]);
                                 ?>
                             </div>
                         </div>
@@ -619,7 +623,11 @@ require_once '../includes/header.php';
                             // Ensure tab parameter is in URL for pagination
                             $_GET['tab'] = 'sources';
                             // Render pagination for sources table
-                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage, 5, ['tab' => 'sources']);
+                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage, 5, [
+                                'pageParam' => 'sources_page',
+                                'perPageParam' => 'sources_per_page',
+                                'tab' => 'sources'
+                            ]);
                             ?>
 
                             <button class="btn btn-success" id="addSourceBtn">
@@ -884,7 +892,11 @@ require_once '../includes/header.php';
                                 // Ensure tab parameter is in URL for pagination
                                 $_GET['tab'] = 'reviews';
                                 // Render pagination for reviews table
-                                renderPagination($totalReviews, $reviewsPerPage, $reviewsPage);
+                                renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
+                                    'pageParam' => 'reviews_page',
+                                    'perPageParam' => 'reviews_per_page',
+                                    'tab' => 'reviews'
+                                ]);
                                 ?>
                             </div>
                         </div>

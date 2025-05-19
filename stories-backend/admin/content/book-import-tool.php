@@ -48,6 +48,15 @@ require_once '../../services/AI/ReviewAnalyzer.php';
 // Set page variables for header
 $pageTitle = 'Book Import Tool';
 $currentPage = 'book-import-tool';
+
+// Get current tab from URL or default to 'existing'
+$currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
+
+// Validate tab value
+$validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate'];
+if (!in_array($currentTab, $validTabs)) {
+    $currentTab = 'existing';
+}
 $pageDescription = 'Import books and scrape reviews from various sources';
 
 // Process form submissions
@@ -332,22 +341,26 @@ require_once '../includes/header.php';
                 <div class="card-body">
                     <ul class="nav nav-tabs" id="importTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="existing-tab" data-toggle="tab" href="#existing" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'existing' ? 'active' : ''; ?>"
+                               id="existing-tab" data-toggle="tab" href="#existing" role="tab" data-tab="existing">
                                 <i class="fas fa-book"></i> Existing Books
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="import-tab" data-toggle="tab" href="#import" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'import' ? 'active' : ''; ?>"
+                               id="import-tab" data-toggle="tab" href="#import" role="tab" data-tab="import">
                                 <i class="fas fa-file-import"></i> Import New Books
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="reviews-tab" data-toggle="tab" href="#reviews" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'reviews' ? 'active' : ''; ?>"
+                               id="reviews-tab" data-toggle="tab" href="#reviews" role="tab" data-tab="reviews">
                                 <i class="fas fa-star"></i> Reviews
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="sources-tab" data-toggle="tab" href="#sources" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'sources' ? 'active' : ''; ?>"
+                               id="sources-tab" data-toggle="tab" href="#sources" role="tab" data-tab="sources">
                                 <i class="fas fa-database"></i> Review Sources
                             </a>
                         </li>
@@ -381,6 +394,7 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="card-body">
                                     <form method="get" class="row g-3">
+                                        <input type="hidden" name="tab" value="existing">
                                         <input type="hidden" name="tab" value="existing">
                                         <div class="col-md-8">
                                             <label for="book_search" class="form-label">Search</label>
@@ -465,8 +479,10 @@ require_once '../includes/header.php';
                                     ?>
                                 </div>
                                 <?php
+                                // Ensure tab parameter is in URL for pagination
+                                $_GET['tab'] = 'existing';
                                 // Render pagination for books table
-                                renderPagination($totalBooks, $booksPerPage, $booksPage);
+                                renderPagination($totalBooks, $booksPerPage, $booksPage, 5, ['tab' => 'existing']);
                                 ?>
                             </div>
                         </div>
@@ -600,8 +616,10 @@ require_once '../includes/header.php';
                             );
                             ?>
                             <?php
+                            // Ensure tab parameter is in URL for pagination
+                            $_GET['tab'] = 'sources';
                             // Render pagination for sources table
-                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage);
+                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage, 5, ['tab' => 'sources']);
                             ?>
 
                             <button class="btn btn-success" id="addSourceBtn">
@@ -863,6 +881,8 @@ require_once '../includes/header.php';
                                     ?>
                                 </div>
                                 <?php
+                                // Ensure tab parameter is in URL for pagination
+                                $_GET['tab'] = 'reviews';
                                 // Render pagination for reviews table
                                 renderPagination($totalReviews, $reviewsPerPage, $reviewsPage);
                                 ?>
@@ -1399,6 +1419,9 @@ $(document).ready(function() {
     });
 });
 </script>
+
+<!-- Include tab state handler -->
+<script src="../js/tab-state-handler.js"></script>
 
 <?php
 // Include footer

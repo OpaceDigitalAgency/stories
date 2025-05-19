@@ -9,18 +9,19 @@
 namespace Services\ReviewFetcher;
 
 use PDO;
+use Exception;
 
 class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $sourceId = 1; // Goodreads source ID
     protected $lastError = null;
     protected $aggregateRating = null; // Store aggregate rating separately
     protected $useVpsHeadlessBrowser = false; // Whether to use the VPS Headless Browser
-    
+
     // GraphQL pagination state
     protected $nextPageToken = null;
     protected $lastGraphQLPage = 0;
     protected $totalAvailable = 0;
-    
+
     // Scraping configuration
     protected $maxPages = 100;
     protected $continueFromLast = false;
@@ -67,7 +68,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->continueFromLast = $options['continueFromLast'] ?? false;
         $this->startPage = $options['startPage'] ?? 1;
         $this->reviewLimit = $limit;
-        
+
         // If continuing from last, get existing reviews
         if ($this->continueFromLast) {
             // Get existing reviews for duplicate checking
@@ -82,15 +83,15 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             ");
             $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
             $this->existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($result && $result['next_token']) {
                 $this->nextPageToken = $result['next_token'];
                 $this->lastGraphQLPage = (int)$result['page_number'];
                 $this->startPage = $this->lastGraphQLPage + 1;
-                
+
                 $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
                     "Resuming from GraphQL page {$this->lastGraphQLPage} with token {$this->nextPageToken}");
             }
@@ -437,7 +438,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         ");
         $stmt->execute([$bookId, $this->sourceId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         return [
             'nextPageToken' => $result['next_token'] ?? null,
             'currentPage' => (int)($result['page_number'] ?? 0),
@@ -446,54 +447,127 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     }
 
     private function scrapeReviews(string $reviewsUrl, int $limit, array $options = []): array {
-        // If continuing from last scrape, get the GraphQL pagination state
-        if ($options['continueFromLast'] ?? false) {
-            $state = $this->getGraphQLPaginationState($options['book_id'] ?? 0);
+        $continueFromLast = $options['continueFromLast'] ?? false;
+        $bookId = $options['book_id'] ?? 0;
+
+        // Get existing reviews for duplicate checking
+        $existingReviews = [];
+        if ($continueFromLast && $bookId) {
+            $stmt = $this->db->prepare("
+                SELECT r.*, r.metadata as review_metadata
+                FROM reviews r
+                WHERE r.book_id = ? AND r.source_id = ?
+                ORDER BY r.id DESC
+            ");
+            $stmt->execute([$bookId, $this->sourceId]);
+            $existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Found " . count($existingReviews) . " existing reviews for duplicate checking");
+        }
+
+        // Calculate how many more reviews we need
+        $reviewLimit = $limit;
+        if (!empty($existingReviews)) {
+            $reviewLimit = $limit + 100; // Request extra reviews to ensure we get enough new ones
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Requesting {$reviewLimit} reviews from Goodreads " .
+                "(reviewLimit: {$limit}, existingReviewCount: " . count($existingReviews) . ")");
+        }
+
+        // Get GraphQL pagination state if continuing
+        if ($continueFromLast) {
+            $state = $this->getGraphQLPaginationState($bookId);
             if ($state['nextPageToken']) {
                 $options['nextPageToken'] = $state['nextPageToken'];
                 $options['startPage'] = $state['currentPage'] + 1;
-                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
-                    "Resuming GraphQL pagination from page {$options['startPage']} " .
-                    "with token {$options['nextPageToken']}, " .
-                    "{$state['totalAvailable']} total reviews available");
+
+                $logMsg = "Resuming GraphQL pagination - " .
+                    "Page: " . $options['startPage'] . ", " .
+                    "Token: " . $options['nextPageToken'] . ", " .
+                    "Total available: " . $state['totalAvailable'];
+                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', $logMsg);
+
+                // Set initial state for GraphQL pagination
+                $this->nextPageToken = $state['nextPageToken'];
+                $this->lastGraphQLPage = $state['currentPage'];
+                $this->totalAvailable = $state['totalAvailable'];
             }
         }
-        // If continuing from last scrape, get the last GraphQL state
-        if ($options['continueFromLast'] ?? false) {
+
+        // Function to check if a review is a duplicate
+        $isDuplicate = function($review, $existingReviews) {
+            // Skip duplicate check for GraphQL reviews
+            if (isset($review['metadata'])) {
+                try {
+                    $metadata = json_decode($review['metadata'], true);
+                    if ($metadata && isset($metadata['source']) && $metadata['source'] === 'graphql') {
+                        return false;
+                    }
+                } catch (Exception $e) {
+                    // If metadata parsing fails, continue with duplicate check
+                }
+            }
+
+            // For non-GraphQL reviews, check for exact matches
+            foreach ($existingReviews as $existingReview) {
+                if ($existingReview['reviewer_name'] === $review['reviewer_name'] &&
+                    substr($existingReview['review_text'], 0, 50) === substr($review['review_text'], 0, 50)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        // Get existing reviews for duplicate checking
+        $existingReviews = [];
+        if ($continueFromLast && $bookId) {
             $stmt = $this->db->prepare("
-                SELECT metadata->>'$.next_token' as next_token,
-                       metadata->>'$.graphql_page' as page_number,
-                       metadata->>'$.total_available' as total_available
-                FROM reviews
-                WHERE book_id = ? AND source_id = ?
-                AND metadata->>'$.source' = 'graphql'
-                ORDER BY id DESC LIMIT 1
+                SELECT r.*, r.metadata as review_metadata
+                FROM reviews r
+                WHERE r.book_id = ? AND r.source_id = ?
+                ORDER BY r.id DESC
             ");
-            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($result && $result['next_token']) {
-                $this->nextPageToken = $result['next_token'];
-                $this->lastGraphQLPage = (int)$result['page_number'];
-                $this->totalAvailable = (int)$result['total_available'];
-                
-                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
-                    "Resuming GraphQL pagination from page {$this->lastGraphQLPage} " .
-                    "with token {$this->nextPageToken}, " .
-                    "{$this->totalAvailable} total reviews available");
-            }
+            $stmt->execute([$bookId, $this->sourceId]);
+            $existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Found " . count($existingReviews) . " existing reviews for duplicate checking");
         }
+
+        // Function to check if a review is a duplicate
+        $isDuplicate = function($review, $existingReviews, $currentPage) {
+            foreach ($existingReviews as $existingReview) {
+                try {
+                    $metadata = json_decode($existingReview['review_metadata'], true);
+
+                    // If the existing review is from a previous page, it's not a duplicate
+                    if (isset($metadata['graphql_page']) && $metadata['graphql_page'] < $currentPage) {
+                        continue;
+                    }
+
+                    // Check for exact match
+                    if ($existingReview['reviewer_name'] === $review['reviewer_name'] &&
+                        substr($existingReview['review_text'], 0, 50) === substr($review['review_text'], 0, 50)) {
+                        return true;
+                    }
+                } catch (Exception $e) {
+                    $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                        "Error parsing metadata: " . $e->getMessage());
+                }
+            }
+            return false;
+        };
+
+        // Store the duplicate check function for use in other methods
+        $this->isDuplicateReview = $isDuplicate;
+
         // If we have a nextPageToken from previous scrape, add it to options
         if ($this->nextPageToken) {
             $options['nextPageToken'] = $this->nextPageToken;
             $options['startPage'] = $this->lastGraphQLPage + 1;
             $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
-                "Continuing GraphQL pagination from page {$this->lastGraphQLPage} with token {$this->nextPageToken}");
-        }
-        // If we have a nextPageToken from previous scrape, add it to options
-        if ($this->nextPageToken) {
-            $options['nextPageToken'] = $this->nextPageToken;
-            $options['startPage'] = $this->lastGraphQLPage + 1;
+                "Continuing GraphQL pagination from page {$this->lastGraphQLPage} with token {$this->nextPageToken}, " .
+                "{$this->totalAvailable} total reviews available");
         }
         // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
@@ -506,7 +580,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract options
         $maxPages = $options['maxPages'] ?? 20;
         $continueFromLast = $options['continueFromLast'] ?? false;
-        
+
         // First try to use the VPS-based Headless Browser service
         $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
             'maxPages' => $maxPages,
@@ -764,7 +838,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $this->logToFile($logFile, "❌ Puppeteer function not available (HTTP {$httpCode}). Falling back to regex scraping.");
                 return [];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logToFile($logFile, "❌ Error checking Puppeteer function: " . $e->getMessage());
             return [];
         }
@@ -1269,10 +1343,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract options
         $maxPages = $options['maxPages'] ?? 20;
         $continueFromLast = $options['continueFromLast'] ?? false;
-        
+
         // Build the request URL with options
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl) . "&limit={$requestLimit}&maxPages={$maxPages}";
-        
+
         // Add continueFromLast parameter if true
         if ($continueFromLast) {
             $url .= "&continueFromLast=1";

@@ -69,8 +69,8 @@ function parseReviewsWithRegex(html, asin) {
         metadata: JSON.stringify({
           asin: asin,
           review_title: title,
-          review_url: `https://www.amazon.co.uk/product-reviews/${asin}`,
-          affiliate_url: `https://www.amazon.co.uk/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
+          review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
+          affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
         }),
       });
     }
@@ -109,8 +109,8 @@ function extractAggregateRating(html, asin) {
     review_text: `Average rating ${avg}/5 based on ${count} ratings on Amazon.`,
     metadata: JSON.stringify({
       asin: asin,
-      review_url: `https://www.amazon.co.uk/product-reviews/${asin}`,
-      affiliate_url: `https://www.amazon.co.uk/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
+      review_url: `${config.sources.amazon.baseUrl}/product-reviews/${asin}`,
+      affiliate_url: `${config.sources.amazon.baseUrl}/dp/${asin}?tag=${config.sources.amazon.affiliateTag}`,
       is_aggregate: true,
       ratings_count: count,
     }),
@@ -205,7 +205,7 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
 
   try {
     // First try the product page to get aggregate rating
-    const productUrl = `https://${config.sources.amazon.baseUrl}/dp/${asin}`;
+    const productUrl = `${config.sources.amazon.baseUrl}/dp/${asin}`;
     logger.info(`Navigating to product page: ${productUrl}`);
 
     await page.goto(productUrl, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -243,7 +243,7 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     }
 
     // Navigate to reviews page
-    const reviewsUrl = `https://${config.sources.amazon.baseUrl}/product-reviews/${asin}`;
+    const reviewsUrl = `${config.sources.amazon.baseUrl}/product-reviews/${asin}`;
     logger.info(`Navigating to reviews page: ${reviewsUrl}`);
 
     await page.goto(reviewsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -325,7 +325,7 @@ async function scrapeAmazonReviews(asin, limit = 50, options = {}) {
     let pageNum = 2;
     while (reviews.length < limit + 1 && pageNum <= config.sources.amazon.maxPages) {
       try {
-        const nextPageUrl = `https://${config.sources.amazon.baseUrl}/product-reviews/${asin}?pageNumber=${pageNum}`;
+        const nextPageUrl = `${config.sources.amazon.baseUrl}/product-reviews/${asin}?pageNumber=${pageNum}`;
         logger.info(`Navigating to page ${pageNum}: ${nextPageUrl}`);
 
         await page.goto(nextPageUrl, { waitUntil: 'networkidle2', timeout: 30000 });

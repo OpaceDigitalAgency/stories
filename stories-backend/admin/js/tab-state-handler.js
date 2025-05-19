@@ -31,6 +31,25 @@ $(document).ready(function() {
         }
     });
 
+    // Handle pagination links
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        const url = new URL($(this).attr('href'), window.location.origin);
+        const currentTab = getCurrentTab();
+        url.searchParams.set('tab', currentTab);
+        window.location.href = url.toString();
+    });
+
+    // Handle per_page dropdown changes
+    $(document).on('change', '.per-page-select', function() {
+        const form = $(this).closest('form');
+        const currentTab = getCurrentTab();
+        if (!form.find('input[name="tab"]').length) {
+            form.append(`<input type="hidden" name="tab" value="${currentTab}">`);
+        }
+        form.submit();
+    });
+
     // Initialize correct tab on page load
     activateTab(getCurrentTab());
 });

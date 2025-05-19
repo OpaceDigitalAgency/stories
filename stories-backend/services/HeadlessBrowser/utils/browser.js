@@ -93,21 +93,19 @@ module.exports = {
 
     // Block unnecessary resources to speed up scraping
     await page.setRequestInterception(true);
-    page.on('request', async (request) => {
+    page.on('request', request => {
+      if (request._interceptionHandled) return;
+
+      const resourceType = request.resourceType();
+
       try {
-        if (!request._interceptionHandled) {
-          const resourceType = request.resourceType();
-          if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
-            request.abort();
-          } else {
-            // Check if the request has already been handled
-            if (!request._interceptionHandled) {
-              request.continue();
-            }
-          }
+        if (['image', 'media', 'font'].includes(resourceType)) {
+          request.abort();
+        } else {
+          request.continue();
         }
-      } catch (err) {
-        console.error('⚠️ Request interception error:', err.message);
+      } catch (e) {
+        console.warn(`Skipping already handled request: ${request.url()} (${resourceType})`);
       }
     });
 

@@ -324,11 +324,8 @@ if (function_exists('renderEnhancedTable')) {
             'currentPage' => $page,
             'totalItems' => $totalItems, // Pass the total items count from SQL query
             'customActionRenderer' => $customActionRenderer, // Add custom action renderer
-            'useCustomPagination' => true,
-            'customPageParam' => 'page',
-            'customPerPageParam' => 'per_page',
-            'validPerPageValues' => [10, 25, 50, 100],
-            'showPagination' => false // We'll use the separate pagination component
+            'showPagination' => false, // Disable built-in pagination
+            'showItemsPerPage' => false // Disable built-in items per page dropdown
         ]
     );
 } else {
@@ -401,12 +398,12 @@ if (function_exists('renderEnhancedTable')) {
 
 // Include pagination component if needed
 include_once '../includes/pagination-component.php';
-if (function_exists('renderPagination') && $totalItems > $perPage) {
+if (function_exists('renderPagination')) {
     renderPagination($totalItems, $perPage, $page, 5, [
         'pageParam' => 'page',
         'perPageParam' => 'per_page',
         'validPerPageValues' => [10, 25, 50, 100],
-        'perPageLabel' => 'Show',
+        'perPageLabel' => 'per page',
         'showAllLabel' => 'Show All'
     ]);
 }

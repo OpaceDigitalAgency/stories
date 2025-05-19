@@ -550,14 +550,11 @@ require_once '../includes/header.php';
 
                                     // Render the enhanced table with pagination
                                     renderEnhancedTable($tableData, $columns[$currentTab] ?? [], $currentTab, $currentTab . '-table', [
-                                        'showPagination' => true,
+                                        'showPagination' => false, // Disable built-in pagination
+                                        'showItemsPerPage' => false, // Disable built-in items per page dropdown
                                         'itemsPerPage' => $perPage,
                                         'currentPage' => $page,
                                         'totalItems' => $totalItems,
-                                        'validPerPageValues' => $validPerPageValues,
-                                        'useCustomPagination' => true,
-                                        'customPageParam' => 'page',
-                                        'customPerPageParam' => 'per_page',
                                         'tab' => $currentTab
                                     ]);
                                     ?>

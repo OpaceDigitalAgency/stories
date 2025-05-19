@@ -30,6 +30,17 @@ $(function() {
 
     // Handle per_page changes
     $('.per-page-select').on('change', function() {
-        this.closest('form').submit();
+        // Make sure the form has the tab parameter
+        const form = this.closest('form');
+        let tabInput = form.querySelector('input[name="tab"]');
+
+        if (!tabInput) {
+            $(form).append(`<input type="hidden" name="tab" value="${currentTab}">`);
+        } else {
+            tabInput.value = currentTab;
+        }
+
+        // Submit the form
+        form.submit();
     });
 });

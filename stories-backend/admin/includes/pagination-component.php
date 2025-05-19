@@ -181,6 +181,11 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                         <?php endif; ?>
                     <?php endforeach; ?>
 
+                    <!-- Always include the tab parameter -->
+                    <?php if (!isset($_GET['tab']) && isset($options['tab'])): ?>
+                        <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab']); ?>">
+                    <?php endif; ?>
+
                     <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php
                         // Use validPerPageValues from options if provided, otherwise use default values
@@ -216,7 +221,26 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                 // Handle per page dropdown changes
                 document.querySelectorAll('.per-page-select').forEach(function(select) {
                     select.addEventListener('change', function() {
-                        this.closest('form').submit();
+                        // Get the current tab from URL or data attribute
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const currentTab = urlParams.get('tab') || 'existing';
+
+                        // Make sure the form has the tab parameter
+                        const form = this.closest('form');
+                        let tabInput = form.querySelector('input[name="tab"]');
+
+                        if (!tabInput) {
+                            tabInput = document.createElement('input');
+                            tabInput.type = 'hidden';
+                            tabInput.name = 'tab';
+                            tabInput.value = currentTab;
+                            form.appendChild(tabInput);
+                        } else {
+                            tabInput.value = currentTab;
+                        }
+
+                        // Submit the form
+                        form.submit();
                     });
                 });
             });

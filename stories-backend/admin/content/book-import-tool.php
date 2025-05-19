@@ -321,6 +321,11 @@ require_once '../includes/header.php';
                                 <i class="fas fa-robot"></i> AI Analysis
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="validate-tab" data-toggle="tab" href="#validate" role="tab">
+                                <i class="fas fa-check-circle"></i> ISBN & Data Validation
+                            </a>
+                        </li>
                     </ul>
 
                     <div class="tab-content p-3" id="importTabsContent">
@@ -936,6 +941,152 @@ require_once '../includes/header.php';
                                 </button>
                             </form>
                         </div>
+
+                        <!-- ISBN & Data Validation Tab -->
+                        <div class="tab-pane fade" id="validate" role="tabpanel">
+                            <h4>ISBN & Data Validation</h4>
+                            <p>Check and fix incorrect ISBNs, and enrich missing book data from external sources.</p>
+
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>ISBN Validation</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>This tool checks ISBNs against external sources like Goodreads, Google Books, and Open Library to verify their accuracy.</p>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th width="30"><input type="checkbox" id="select-all-isbn" class="select-all-checkbox"></th>
+                                                    <th>Title</th>
+                                                    <th>Author</th>
+                                                    <th>ISBN</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (empty($books)): ?>
+                                                    <tr>
+                                                        <td colspan="6" class="text-center">No books found. Import some books first.</td>
+                                                    </tr>
+                                                <?php else: ?>
+                                                    <?php foreach ($books as $book): ?>
+                                                        <?php
+                                                        $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
+                                                        $isbnStatus = 'unknown';
+                                                        $statusClass = 'secondary';
+                                                        $statusIcon = 'question-circle';
+
+                                                        if (empty($isbn)) {
+                                                            $isbnStatus = 'missing';
+                                                            $statusClass = 'danger';
+                                                            $statusIcon = 'times-circle';
+                                                        } else {
+                                                            // Basic format check (not checking checksum here)
+                                                            $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+                                                            if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
+                                                                $isbnStatus = 'invalid';
+                                                                $statusClass = 'warning';
+                                                                $statusIcon = 'exclamation-circle';
+                                                            }
+                                                        }
+                                                        ?>
+                                                        <tr>
+                                                            <td><input type="checkbox" name="isbn_books[]" value="<?php echo $book['id']; ?>" class="isbn-checkbox"></td>
+                                                            <td><?php echo htmlspecialchars($book['title']); ?></td>
+                                                            <td><?php echo htmlspecialchars($book['author']); ?></td>
+                                                            <td><?php echo !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>'; ?></td>
+                                                            <td>
+                                                                <span class="badge badge-<?php echo $statusClass; ?>">
+                                                                    <i class="fas fa-<?php echo $statusIcon; ?>"></i>
+                                                                    <?php echo ucfirst($isbnStatus); ?>
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-primary validate-isbn-btn"
+                                                                        data-book-id="<?php echo $book['id']; ?>"
+                                                                        data-book-title="<?php echo htmlspecialchars($book['title']); ?>"
+                                                                        data-isbn="<?php echo htmlspecialchars($isbn); ?>">
+                                                                    <i class="fas fa-check"></i> Validate
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <button id="validate-selected-isbns" class="btn btn-primary">
+                                            <i class="fas fa-check-double"></i> Validate Selected ISBNs
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Data Enrichment</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Enrich your book data by fetching missing information from external sources.</p>
+
+                                    <form id="enrichForm" method="post" action="book-import-validate.php">
+                                        <input type="hidden" name="action" value="enrich_data">
+
+                                        <div class="form-group">
+                                            <label>Fields to Enrich</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_series" name="enrich_fields[]" value="series" checked>
+                                                <label class="form-check-label" for="enrich_series">Series</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_reading_age" name="enrich_fields[]" value="reading_age" checked>
+                                                <label class="form-check-label" for="enrich_reading_age">Reading Age</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_page_count" name="enrich_fields[]" value="page_count" checked>
+                                                <label class="form-check-label" for="enrich_page_count">Page Count</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_genre" name="enrich_fields[]" value="genre" checked>
+                                                <label class="form-check-label" for="enrich_genre">Genre</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="enrich_publisher" name="enrich_fields[]" value="publisher" checked>
+                                                <label class="form-check-label" for="enrich_publisher">Publisher</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="enrichBookSelection">Book Selection</label>
+                                            <select class="form-control" id="enrichBookSelection" name="enrich_book_selection">
+                                                <option value="all">All Books</option>
+                                                <option value="missing">Books with Missing Data</option>
+                                                <option value="specific">Specific Books</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group enrich-specific" style="display: none;">
+                                            <label for="enrichSpecificBooks">Select Books</label>
+                                            <select class="form-control" id="enrichSpecificBooks" name="enrich_specific_books[]" multiple>
+                                                <?php foreach ($books as $book): ?>
+                                                    <option value="<?php echo $book['id']; ?>"><?php echo htmlspecialchars($book['title']); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple books</small>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-sync"></i> Start Data Enrichment
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1168,6 +1319,63 @@ $(document).ready(function() {
         }
 
         return true;
+    });
+
+    // ISBN Validation Tab Handlers
+    $('#select-all-isbn').on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('.isbn-checkbox').prop('checked', isChecked);
+    });
+
+    $('.validate-isbn-btn').on('click', function() {
+        const bookId = $(this).data('book-id');
+        const bookTitle = $(this).data('book-title');
+        const isbn = $(this).data('isbn');
+
+        // Redirect to the validation page with the book ID
+        window.location.href = `book-import-validate.php?action=validate_isbn&book_id=${bookId}&isbn=${isbn}`;
+    });
+
+    $('#validate-selected-isbns').on('click', function() {
+        const selectedBooks = $('.isbn-checkbox:checked').length;
+
+        if (selectedBooks === 0) {
+            alert('Please select at least one book to validate.');
+            return false;
+        }
+
+        // Create a form to submit the selected books
+        const form = $('<form>', {
+            'method': 'post',
+            'action': 'book-import-validate.php'
+        });
+
+        form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'action',
+            'value': 'validate_isbns'
+        }));
+
+        $('.isbn-checkbox:checked').each(function() {
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'book_ids[]',
+                'value': $(this).val()
+            }));
+        });
+
+        $('body').append(form);
+        form.submit();
+    });
+
+    // Data Enrichment Tab Handlers
+    $('#enrichBookSelection').change(function() {
+        const selection = $(this).val();
+        if (selection === 'specific') {
+            $('.enrich-specific').show();
+        } else {
+            $('.enrich-specific').hide();
+        }
     });
 });
 </script>

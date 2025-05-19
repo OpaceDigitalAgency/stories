@@ -452,50 +452,33 @@ require_once '../includes/header.php';
                     <p class="text-muted">Import books and scrape reviews from various sources</p>
                 </div>
                 <div class="card-body">
-                    <ul class="nav nav-tabs" id="importTabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'existing' ? 'active' : ''; ?>"
-                               id="existing-tab" data-toggle="tab" href="#existing" role="tab" data-tab="existing">
-                                <i class="fas fa-book"></i> Existing Books
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'import' ? 'active' : ''; ?>"
-                               id="import-tab" data-toggle="tab" href="#import" role="tab" data-tab="import">
-                                <i class="fas fa-file-import"></i> Import New Books
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'reviews' ? 'active' : ''; ?>"
-                               id="reviews-tab" data-toggle="tab" href="#reviews" role="tab" data-tab="reviews">
-                                <i class="fas fa-star"></i> Reviews
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'sources' ? 'active' : ''; ?>"
-                               id="sources-tab" data-toggle="tab" href="#sources" role="tab" data-tab="sources">
-                                <i class="fas fa-database"></i> Review Sources
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'batch' ? 'active' : ''; ?>"
-                               id="batch-tab" data-toggle="tab" href="#batch" role="tab" data-tab="batch">
-                                <i class="fas fa-tasks"></i> Batch Processing
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'ai' ? 'active' : ''; ?>"
-                               id="ai-tab" data-toggle="tab" href="#ai" role="tab" data-tab="ai">
-                                <i class="fas fa-robot"></i> AI Analysis
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $currentTab === 'validate' ? 'active' : ''; ?>"
-                               id="validate-tab" data-toggle="tab" href="#validate" role="tab" data-tab="validate">
-                                <i class="fas fa-check-circle"></i> ISBN & Data Validation
-                            </a>
-                        </li>
-                    </ul>
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap">
+                                <a href="book-import-tool.php" class="btn btn-primary m-1">
+                                    <i class="fas fa-book"></i> Existing Books
+                                </a>
+                                <a href="book-import-tool.php?tab=import" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-file-import"></i> Import New Books
+                                </a>
+                                <a href="book-reviews.php" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-star"></i> Reviews
+                                </a>
+                                <a href="review-sources.php" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-database"></i> Review Sources
+                                </a>
+                                <a href="book-import-tool.php?tab=batch" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-tasks"></i> Batch Processing
+                                </a>
+                                <a href="book-import-tool.php?tab=ai" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-robot"></i> AI Analysis
+                                </a>
+                                <a href="book-validation.php" class="btn btn-outline-primary m-1">
+                                    <i class="fas fa-check-circle"></i> ISBN & Data Validation
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="tab-content p-3" id="importTabsContent">
                         <!-- Existing Books Tab -->

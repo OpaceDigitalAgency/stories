@@ -1561,9 +1561,6 @@ $(document).ready(function() {
 });
 </script>
 
-<!-- Include tab state handler -->
-<script src="../js/tab-state-handler.js"></script>
-
 <?php
 // Include footer
 require_once '../includes/footer.php';

@@ -181,6 +181,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <script src="<?php echo $enhancedAdminJsPath; ?>"></script>
     <script src="<?php echo $liveSearchJsPath; ?>"></script>
     <script src="<?php echo $inlineEditingJsPath; ?>"></script>
+    
+    <?php
+    // Tab state handler path
+    $tabStateHandlerJsPath = $isContentDir ? '../js/tab-state-handler.js' : 'js/tab-state-handler.js';
+    ?>
+    <!-- Include tab state handler for pagination -->
+    <script src="<?php echo $tabStateHandlerJsPath; ?>"></script>
 
     <!-- Load preview scripts based on current page -->
     <?php if ($currentPage === 'stories'): ?>

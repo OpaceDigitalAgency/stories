@@ -316,37 +316,51 @@ require_once '../includes/header.php';
                 <div class="card-body">
                     <ul class="nav nav-tabs" id="importTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="existing-tab" data-toggle="tab" href="#existing" role="tab">
+                            <a class="nav-link <?php echo empty($_GET['tab']) || $_GET['tab'] == 'existing' ? 'active' : ''; ?>"
+                               id="existing-tab" data-toggle="tab" href="#existing" role="tab"
+                               onclick="updateUrlParam('tab', 'existing')">
                                 <i class="fas fa-book"></i> Existing Books
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="import-tab" data-toggle="tab" href="#import" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'import' ? 'active' : ''; ?>"
+                               id="import-tab" data-toggle="tab" href="#import" role="tab"
+                               onclick="updateUrlParam('tab', 'import')">
                                 <i class="fas fa-file-import"></i> Import New Books
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="reviews-tab" data-toggle="tab" href="#reviews" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'reviews' ? 'active' : ''; ?>"
+                               id="reviews-tab" data-toggle="tab" href="#reviews" role="tab"
+                               onclick="updateUrlParam('tab', 'reviews')">
                                 <i class="fas fa-star"></i> Reviews
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="sources-tab" data-toggle="tab" href="#sources" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'sources' ? 'active' : ''; ?>"
+                               id="sources-tab" data-toggle="tab" href="#sources" role="tab"
+                               onclick="updateUrlParam('tab', 'sources')">
                                 <i class="fas fa-database"></i> Review Sources
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="batch-tab" data-toggle="tab" href="#batch" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'batch' ? 'active' : ''; ?>"
+                               id="batch-tab" data-toggle="tab" href="#batch" role="tab"
+                               onclick="updateUrlParam('tab', 'batch')">
                                 <i class="fas fa-tasks"></i> Batch Processing
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="ai-tab" data-toggle="tab" href="#ai" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'ai' ? 'active' : ''; ?>"
+                               id="ai-tab" data-toggle="tab" href="#ai" role="tab"
+                               onclick="updateUrlParam('tab', 'ai')">
                                 <i class="fas fa-robot"></i> AI Analysis
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="validate-tab" data-toggle="tab" href="#validate" role="tab">
+                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'validate' ? 'active' : ''; ?>"
+                               id="validate-tab" data-toggle="tab" href="#validate" role="tab"
+                               onclick="updateUrlParam('tab', 'validate')">
                                 <i class="fas fa-check-circle"></i> ISBN & Data Validation
                             </a>
                         </li>
@@ -354,7 +368,7 @@ require_once '../includes/header.php';
 
                     <div class="tab-content p-3" id="importTabsContent">
                         <!-- Existing Books Tab -->
-                        <div class="tab-pane fade show active" id="existing" role="tabpanel">
+                        <div class="tab-pane fade <?php echo empty($_GET['tab']) || $_GET['tab'] == 'existing' ? 'show active' : ''; ?>" id="existing" role="tabpanel">
                             <h4>Existing Books</h4>
                             <p>View books already imported and scrape reviews for them.</p>
 
@@ -530,7 +544,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Import New Books Tab -->
-                        <div class="tab-pane fade" id="import" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'import' ? 'show active' : ''; ?>" id="import" role="tabpanel">
                             <h4>Import New Books</h4>
                             <p>Import new books by author, publisher, year, age, etc.</p>
 
@@ -604,7 +618,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Review Sources Tab -->
-                        <div class="tab-pane fade" id="sources" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'sources' ? 'show active' : ''; ?>" id="sources" role="tabpanel">
                             <h4>Review Sources</h4>
                             <p>Manage sources for scraping book reviews.</p>
 
@@ -645,7 +659,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Batch Processing Tab -->
-                        <div class="tab-pane fade" id="batch" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'batch' ? 'show active' : ''; ?>" id="batch" role="tabpanel">
                             <h4>Batch Processing</h4>
                             <p>Configure and run batch imports for books and reviews.</p>
 
@@ -687,14 +701,21 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Reviews Tab -->
-                        <div class="tab-pane fade" id="reviews" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'reviews' ? 'show active' : ''; ?>" id="reviews" role="tabpanel">
                             <h4>Reviews Management</h4>
                             <p>Manage book reviews from various sources.</p>
 
                             <?php
                             // Initialize reviews variables
-                            $reviewPage = isset($_GET['review_page']) ? max(1, intval($_GET['review_page'])) : 1;
-                            $reviewsPerPage = 20;
+                            $reviewPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                            $reviewsPerPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 20;
+
+                            // Ensure per_page is a valid value
+                            $validPerPageValues = [10, 20, 50, 100];
+                            if (!in_array($reviewsPerPage, $validPerPageValues)) {
+                                $reviewsPerPage = 20; // Default to 20 if invalid
+                            }
+
                             $reviewSearch = isset($_GET['review_search']) ? trim($_GET['review_search']) : '';
                             $reviewSourceFilter = isset($_GET['review_source']) ? intval($_GET['review_source']) : 0;
                             $reviewBookFilter = isset($_GET['review_book_id']) ? intval($_GET['review_book_id']) : 0;
@@ -768,6 +789,7 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <form method="get" class="row g-3" id="review-filter-form">
                                         <input type="hidden" name="tab" value="reviews">
+                                        <input type="hidden" name="page" value="1">
                                         <div class="col-md-4">
                                             <label for="review_search" class="form-label">Search</label>
                                             <input type="text" class="form-control" id="review_search" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>" placeholder="Search reviews...">
@@ -906,19 +928,48 @@ require_once '../includes/header.php';
                                     </form>
 
                                     <!-- Pagination -->
-                                    <?php if ($totalReviewPages > 1): ?>
+                                    <?php
+                                    // Build the query parameters for pagination links
+                                    $reviewQueryParams = [];
+                                    $reviewQueryParams[] = 'tab=reviews';
+                                    if (!empty($reviewSearch)) {
+                                        $reviewQueryParams[] = 'review_search=' . urlencode($reviewSearch);
+                                    }
+                                    if ($reviewSourceFilter > 0) {
+                                        $reviewQueryParams[] = 'review_source=' . $reviewSourceFilter;
+                                    }
+                                    if ($reviewBookFilter > 0) {
+                                        $reviewQueryParams[] = 'review_book_id=' . $reviewBookFilter;
+                                    }
+                                    if ($reviewRatingFilter > 0) {
+                                        $reviewQueryParams[] = 'review_rating=' . $reviewRatingFilter;
+                                    }
+                                    $reviewQueryString = implode('&', $reviewQueryParams);
+
+                                    // Use the standard pagination component
+                                    if (function_exists('renderPaginationComponent')) {
+                                        renderPaginationComponent(
+                                            $reviewPage,
+                                            $totalReviewPages,
+                                            $totalReviews,
+                                            $reviewsPerPage,
+                                            $validPerPageValues,
+                                            '?' . $reviewQueryString . '&',
+                                            'page',
+                                            'per_page'
+                                        );
+                                    } else {
+                                        // Fallback to basic pagination if component is not available
+                                        if ($totalReviewPages > 1):
+                                    ?>
                                         <nav aria-label="Page navigation" class="mt-4">
                                             <ul class="pagination justify-content-center">
                                                 <?php if ($reviewPage > 1): ?>
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=1<?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            First
-                                                        </a>
+                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=1">First</a>
                                                     </li>
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage - 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Previous
-                                                        </a>
+                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $reviewPage - 1; ?>">Previous</a>
                                                     </li>
                                                 <?php endif; ?>
 
@@ -929,33 +980,30 @@ require_once '../includes/header.php';
                                                 for ($i = $startPage; $i <= $endPage; $i++):
                                                 ?>
                                                     <li class="page-item <?php echo $i === $reviewPage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $i; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            <?php echo $i; ?>
-                                                        </a>
+                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
                                                     </li>
                                                 <?php endfor; ?>
 
                                                 <?php if ($reviewPage < $totalReviewPages): ?>
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage + 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Next
-                                                        </a>
+                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $reviewPage + 1; ?>">Next</a>
                                                     </li>
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $totalReviewPages; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Last
-                                                        </a>
+                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $totalReviewPages; ?>">Last</a>
                                                     </li>
                                                 <?php endif; ?>
                                             </ul>
                                         </nav>
-                                    <?php endif; ?>
+                                    <?php
+                                        endif;
+                                    }
+                                    ?>
                                 </div>
                             </div>
                         </div>
 
                         <!-- AI Analysis Tab -->
-                        <div class="tab-pane fade" id="ai" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'ai' ? 'show active' : ''; ?>" id="ai" role="tabpanel">
                             <h4>AI Analysis</h4>
                             <p>Run AI analysis on reviews to find age-related content and generate summaries.</p>
 
@@ -1004,9 +1052,36 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- ISBN & Data Validation Tab -->
-                        <div class="tab-pane fade" id="validate" role="tabpanel">
+                        <div class="tab-pane fade <?php echo isset($_GET['tab']) && $_GET['tab'] == 'validate' ? 'show active' : ''; ?>" id="validate" role="tabpanel">
                             <h4>ISBN & Data Validation</h4>
                             <p>Check and fix incorrect ISBNs, and enrich missing book data from external sources.</p>
+
+                            <?php
+                            // Initialize validation tab pagination variables
+                            $validatePage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                            $validatePerPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
+
+                            // Ensure per_page is a valid value
+                            if (!in_array($validatePerPage, $validPerPageValues)) {
+                                $validatePerPage = 10; // Default to 10 if invalid
+                            }
+
+                            // Calculate validation pagination
+                            $validateOffset = ($validatePage - 1) * $validatePerPage;
+
+                            // Get paginated books for validation tab
+                            $validateBooksStmt = $db->prepare("
+                                SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
+                                       b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
+                                FROM directory_items di
+                                JOIN books b ON di.id = b.directory_item_id
+                                WHERE $bookWhereClause
+                                ORDER BY di.title ASC
+                                LIMIT $validatePerPage OFFSET $validateOffset
+                            ");
+                            $validateBooksStmt->execute($bookParams);
+                            $validateBooks = $validateBooksStmt->fetchAll(PDO::FETCH_ASSOC);
+                            ?>
 
                             <div class="card mb-4">
                                 <div class="card-header">
@@ -1030,12 +1105,12 @@ require_once '../includes/header.php';
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php if (empty($books)): ?>
+                                                <?php if (empty($validateBooks)): ?>
                                                     <tr>
                                                         <td colspan="7" class="text-center">No books found. Import some books first.</td>
                                                     </tr>
                                                 <?php else: ?>
-                                                    <?php foreach ($books as $book): ?>
+                                                    <?php foreach ($validateBooks as $book): ?>
                                                         <?php
                                                         $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
                                                         $isbnStatus = 'unknown';
@@ -1166,6 +1241,69 @@ require_once '../includes/header.php';
                                             <i class="fas fa-check-double"></i> Validate Selected ISBNs
                                         </button>
                                     </div>
+
+                                    <!-- Pagination for validation tab -->
+                                    <?php
+                                    // Build the query parameters for pagination links
+                                    $validateQueryParams = [];
+                                    $validateQueryParams[] = 'tab=validate';
+                                    if (!empty($bookSearch)) {
+                                        $validateQueryParams[] = 'book_search=' . urlencode($bookSearch);
+                                    }
+                                    $validateQueryString = implode('&', $validateQueryParams);
+
+                                    // Use the standard pagination component
+                                    if (function_exists('renderPaginationComponent')) {
+                                        renderPaginationComponent(
+                                            $validatePage,
+                                            $totalPages,
+                                            $totalBooks,
+                                            $validatePerPage,
+                                            $validPerPageValues,
+                                            '?' . $validateQueryString . '&',
+                                            'page',
+                                            'per_page'
+                                        );
+                                    } else {
+                                        // Fallback to basic pagination if component is not available
+                                        if ($totalPages > 1):
+                                    ?>
+                                        <nav aria-label="Page navigation" class="mt-4">
+                                            <ul class="pagination justify-content-center">
+                                                <?php if ($validatePage > 1): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=1">First</a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $validatePage - 1; ?>">Previous</a>
+                                                    </li>
+                                                <?php endif; ?>
+
+                                                <?php
+                                                $startPage = max(1, $validatePage - 2);
+                                                $endPage = min($totalPages, $validatePage + 2);
+
+                                                for ($i = $startPage; $i <= $endPage; $i++):
+                                                ?>
+                                                    <li class="page-item <?php echo $i === $validatePage ? 'active' : ''; ?>">
+                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                                    </li>
+                                                <?php endfor; ?>
+
+                                                <?php if ($validatePage < $totalPages): ?>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $validatePage + 1; ?>">Next</a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $totalPages; ?>">Last</a>
+                                                    </li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        </nav>
+                                    <?php
+                                        endif;
+                                    }
+                                    ?>
                                 </div>
                             </div>
 
@@ -1351,7 +1489,38 @@ require_once '../includes/header.php';
 </div>
 
 <script>
+// Function to update URL parameters without reloading the page
+function updateUrlParam(key, value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, value);
+    window.history.pushState({}, '', url);
+}
+
 $(document).ready(function() {
+    // Activate the correct tab based on URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+        $('#importTabs a[href="#' + activeTab + '"]').tab('show');
+    }
+
+    // Update all pagination links to maintain the active tab
+    $('.pagination .page-link').each(function() {
+        const href = $(this).attr('href');
+        if (href && !href.includes('tab=')) {
+            const separator = href.includes('?') ? '&' : '?';
+            $(this).attr('href', href + separator + 'tab=' + (activeTab || 'existing'));
+        }
+    });
+
+    // Add tab parameter to all forms
+    $('form').submit(function() {
+        const activeTab = urlParams.get('tab') || 'existing';
+        if (!$(this).find('input[name="tab"]').length) {
+            $(this).append('<input type="hidden" name="tab" value="' + activeTab + '">');
+        }
+    });
+
     // Import Type Change Handler
     $('#importType').change(function() {
         const type = $(this).val();

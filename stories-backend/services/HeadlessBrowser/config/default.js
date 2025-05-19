@@ -5,7 +5,7 @@ module.exports = {
   server: {
     port: 3000,
     host: '0.0.0.0', // Listen on all interfaces to allow external connections
-    apiKey: 'stories-scraper-api-key' // API key used by the PHP code
+    apiKey: 'stories-scraper-api-key-2023' // API key used by the PHP code
   },
   browser: {
     headless: true,

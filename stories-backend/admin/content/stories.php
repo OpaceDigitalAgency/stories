@@ -408,5 +408,8 @@ if (function_exists('renderPagination')) {
     ]);
 }
 
+// Include tab state handler
+echo '<script src="../js/tab-state-handler.js"></script>';
+
 // Include footer
 include_once '../includes/footer.php';

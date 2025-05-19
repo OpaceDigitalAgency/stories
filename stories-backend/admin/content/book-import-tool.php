@@ -55,10 +55,34 @@ $message = '';
 $messageType = '';
 
 try {
-    // Initialize pagination variables for books
-    $bookPage = isset($_GET['book_page']) ? max(1, intval($_GET['book_page'])) : 1;
-    $booksPerPage = 20;
+    // Initialize pagination variables
+    $currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
+
+    // Books pagination
+    $booksPage = isset($_GET['books_page']) ? max(1, intval($_GET['books_page'])) : 1;
+    $booksPerPage = isset($_GET['books_per_page']) ? intval($_GET['books_per_page']) : 10;
     $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
+
+    // Sources pagination
+    $sourcesPage = isset($_GET['sources_page']) ? max(1, intval($_GET['sources_page'])) : 1;
+    $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
+
+    // Reviews pagination
+    $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
+    $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
+
+    // ISBN validation pagination
+    $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
+    $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
+
+    // Validate per page values
+    $validPerPageValues = [10, 25, 50, 100];
+    foreach (['books', 'reviews', 'sources', 'isbn'] as $section) {
+        $perPageVar = $section . 'PerPage';
+        if (!in_array($$perPageVar, $validPerPageValues)) {
+            $$perPageVar = 10;
+        }
+    }
 
     // Build query conditions for books
     $bookConditions = ["di.type = 'book'"];
@@ -422,8 +446,8 @@ require_once '../includes/header.php';
                                             'showActions' => true,
                                             'actions' => ['view', 'edit', 'validate', 'scrape'],
                                             'bulkActions' => ['delete', 'validate', 'scrape'],
-                                            'itemsPerPage' => 10,
-                                            'currentPage' => $page,
+                                            'itemsPerPage' => $booksPerPage,
+                                            'currentPage' => $booksPage,
                                             'totalItems' => $totalBooks,
                                             'htmlFields' => ['rating', 'actions'],
                                             'showPagination' => true,
@@ -555,8 +579,8 @@ require_once '../includes/header.php';
                                     'showActions' => true,
                                     'actions' => ['edit', 'delete'],
                                     'bulkActions' => ['delete', 'toggle'],
-                                    'itemsPerPage' => 10,
-                                    'currentPage' => isset($_GET['source_page']) ? max(1, intval($_GET['source_page'])) : 1,
+                                    'itemsPerPage' => $sourcesPerPage,
+                                    'currentPage' => $sourcesPage,
                                     'totalItems' => count($reviewSources),
                                     'htmlFields' => ['actions'],
                                     'showPagination' => true,
@@ -810,8 +834,8 @@ require_once '../includes/header.php';
                                             'showActions' => true,
                                             'actions' => ['view', 'edit', 'delete'],
                                             'bulkActions' => ['delete', 'analyze'],
-                                            'itemsPerPage' => 10,
-                                            'currentPage' => $reviewPage,
+                                            'itemsPerPage' => $reviewsPerPage,
+                                            'currentPage' => $reviewsPage,
                                             'totalItems' => $totalReviews,
                                             'htmlFields' => ['book', 'rating', 'source', 'actions'],
                                             'showPagination' => true,
@@ -976,8 +1000,8 @@ require_once '../includes/header.php';
                                             'showActions' => true,
                                             'actions' => ['validate', 'edit'],
                                             'bulkActions' => ['validate', 'enrich'],
-                                            'itemsPerPage' => 10,
-                                            'currentPage' => isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1,
+                                            'itemsPerPage' => $isbnPerPage,
+                                            'currentPage' => $isbnPage,
                                             'totalItems' => count($books),
                                             'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
                                             'showPagination' => true,

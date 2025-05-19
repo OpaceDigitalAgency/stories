@@ -49,23 +49,20 @@ require_once '../../services/AI/ReviewAnalyzer.php';
 $pageTitle = 'Book Import Tool';
 $currentPage = 'book-import-tool';
 
-// Get current tab from URL or default to 'existing'
-$currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
-
-// Validate tab value
-$validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate'];
-if (!in_array($currentTab, $validTabs)) {
-    $currentTab = 'existing';
-}
-$pageDescription = 'Import books and scrape reviews from various sources';
-
 // Process form submissions
 $message = '';
 $messageType = '';
 
 try {
-    // Initialize pagination variables
+    // Get current tab from URL or default to 'existing'
     $currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'existing';
+
+    // Validate tab value
+    $validTabs = ['existing', 'import', 'reviews', 'sources', 'batch', 'ai', 'validate'];
+    if (!in_array($currentTab, $validTabs)) {
+        $currentTab = 'existing';
+    }
+    $pageDescription = 'Import books and scrape reviews from various sources';
 
     // Books pagination
     $booksPage = isset($_GET['books_page']) ? max(1, intval($_GET['books_page'])) : 1;
@@ -383,7 +380,7 @@ require_once '../includes/header.php';
 
                     <div class="tab-content p-3" id="importTabsContent">
                         <!-- Existing Books Tab -->
-                        <div class="tab-pane fade show active" id="existing" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'existing' ? 'show active' : ''; ?>" id="existing" role="tabpanel">
                             <h4>Existing Books</h4>
                             <p>View books already imported and scrape reviews for them.</p>
 
@@ -394,7 +391,6 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="card-body">
                                     <form method="get" class="row g-3">
-                                        <input type="hidden" name="tab" value="existing">
                                         <input type="hidden" name="tab" value="existing">
                                         <div class="col-md-8">
                                             <label for="book_search" class="form-label">Search</label>
@@ -487,7 +483,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Import New Books Tab -->
-                        <div class="tab-pane fade" id="import" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'import' ? 'show active' : ''; ?>" id="import" role="tabpanel">
                             <h4>Import New Books</h4>
                             <p>Import new books by author, publisher, year, age, etc.</p>
 
@@ -561,7 +557,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Review Sources Tab -->
-                        <div class="tab-pane fade" id="sources" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'sources' ? 'show active' : ''; ?>" id="sources" role="tabpanel">
                             <h4>Review Sources</h4>
                             <p>Manage sources for scraping book reviews.</p>
 
@@ -626,7 +622,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Batch Processing Tab -->
-                        <div class="tab-pane fade" id="batch" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'batch' ? 'show active' : ''; ?>" id="batch" role="tabpanel">
                             <h4>Batch Processing</h4>
                             <p>Configure and run batch imports for books and reviews.</p>
 
@@ -668,7 +664,7 @@ require_once '../includes/header.php';
                         </div>
 
                         <!-- Reviews Tab -->
-                        <div class="tab-pane fade" id="reviews" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'reviews' ? 'show active' : ''; ?>" id="reviews" role="tabpanel">
                             <h4>Reviews Management</h4>
                             <p>Manage book reviews from various sources.</p>
 
@@ -873,16 +869,20 @@ require_once '../includes/header.php';
                                     );
                                     ?>
                                 </div>
-                                <?php renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
+                                <?php
+                                // Ensure tab parameter is in URL for pagination
+                                $_GET['tab'] = 'reviews';
+                                renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                                     'pageParam' => 'reviews_page',
                                     'perPageParam' => 'reviews_per_page',
                                     'tab' => 'reviews'
-                                ]); ?>
+                                ]);
+                                ?>
                             </div>
                         </div>
 
                         <!-- AI Analysis Tab -->
-                        <div class="tab-pane fade" id="ai" role="tabpanel">
+                        <div class="tab-pane fade <?php echo $currentTab === 'ai' ? 'show active' : ''; ?>" id="ai" role="tabpanel">
                             <h4>AI Analysis</h4>
                             <p>Run AI analysis on reviews to find age-related content and generate summaries.</p>
 

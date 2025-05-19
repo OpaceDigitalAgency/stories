@@ -291,7 +291,15 @@ function renderEnhancedTable($items, $columns, $itemType, $tableId, $options = [
         'htmlFields' => [], // Fields that should render HTML instead of escaping it
         'bulkActions' => ['delete'],
         'itemsPerPage' => 10,
-        'currentPage' => 1
+        'currentPage' => 1,
+        'showPagination' => true,
+        'showItemsPerPage' => true,
+        'useCustomPagination' => false, // Whether to use custom pagination parameters
+        'customPageParam' => 'page', // Custom parameter name for page number
+        'customPerPageParam' => 'per_page', // Custom parameter name for items per page
+        'validPerPageValues' => [10, 25, 50, 100],
+        'perPageLabel' => 'Show',
+        'showAllLabel' => 'Show All'
     ];
 
     // Merge options

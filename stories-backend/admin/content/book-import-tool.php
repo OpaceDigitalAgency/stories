@@ -381,6 +381,7 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="card-body">
                                     <form method="get" class="row g-3">
+                                        <input type="hidden" name="tab" value="existing">
                                         <div class="col-md-8">
                                             <label for="book_search" class="form-label">Search</label>
                                             <input type="text" class="form-control" id="book_search" name="book_search" value="<?php echo htmlspecialchars($bookSearch); ?>" placeholder="Search by title, author, or ISBN...">
@@ -389,7 +390,7 @@ require_once '../includes/header.php';
                                             <button type="submit" class="btn btn-primary">
                                                 <i class="fas fa-search"></i> Search
                                             </button>
-                                            <a href="book-import-tool.php" class="btn btn-secondary ml-2">
+                                            <a href="book-import-tool.php?tab=existing" class="btn btn-secondary ml-2">
                                                 <i class="fas fa-times"></i> Clear
                                             </a>
                                         </div>
@@ -406,8 +407,9 @@ require_once '../includes/header.php';
                                 </div>
                                 <div class="card-body">
                                     <?php
-                                    // Prepare table data for existing books
+                                    // Initialize table data
                                     $tableData = [];
+                                    $books = $books ?? [];
                                     foreach ($books as $book) {
                                         $rating = !empty($book['average_rating'])
                                             ? number_format(round($book['average_rating'] * 5, 1), 1) . ' / 5'

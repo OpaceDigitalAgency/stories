@@ -28,6 +28,15 @@ require_once '../includes/admin-functions.php';
 // Include tag functions
 require_once '../includes/tag-functions.php';
 
+// Include pagination component
+require_once '../includes/pagination-component.php';
+
+// Include bulk actions component
+require_once '../includes/bulk-actions-component.php';
+
+// Include enhanced table component
+require_once '../includes/enhanced-table-component.php';
+
 // Include the review fetcher services
 require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
 require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';
@@ -51,8 +60,15 @@ $messageType = '';
 
 try {
     // Initialize pagination variables for books
-    $bookPage = isset($_GET['book_page']) ? max(1, intval($_GET['book_page'])) : 1;
-    $booksPerPage = 20;
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
+
+    // Ensure per_page is a valid value
+    $validPerPageValues = [10, 25, 50, 100];
+    if (!in_array($perPage, $validPerPageValues)) {
+        $perPage = 10; // Default to 10 if invalid
+    }
+
     $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
 
     // Build query conditions for books
@@ -82,8 +98,8 @@ try {
     $totalBooks = $bookCountStmt->fetchColumn();
 
     // Calculate pagination
-    $totalBookPages = ceil($totalBooks / $booksPerPage);
-    $bookOffset = ($bookPage - 1) * $booksPerPage;
+    $totalPages = ceil($totalBooks / $perPage);
+    $offset = ($page - 1) * $perPage;
 
     // Get books with pagination
     $booksStmt = $db->prepare("
@@ -93,7 +109,7 @@ try {
         JOIN books b ON di.id = b.directory_item_id
         WHERE $bookWhereClause
         ORDER BY di.title ASC
-        LIMIT $booksPerPage OFFSET $bookOffset
+        LIMIT $perPage OFFSET $offset
     ");
     $booksStmt->execute($bookParams);
     $books = $booksStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -361,6 +377,8 @@ require_once '../includes/header.php';
                                                 <i class="fas fa-times"></i> Clear
                                             </a>
                                         </div>
+                                        <!-- Hidden field to ensure we're on page 1 when searching -->
+                                        <input type="hidden" name="page" value="1">
                                     </form>
                                 </div>
                             </div>
@@ -368,110 +386,145 @@ require_once '../includes/header.php';
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h5>Books (<?php echo number_format($totalBooks); ?>)</h5>
-                                    <div>
-                                        <span class="text-muted">Page <?php echo $bookPage; ?> of <?php echo $totalBookPages; ?></span>
-                                    </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Title</th>
-                                                    <th>Author</th>
-                                                    <th>ISBN</th>
-                                                    <th>Reviews</th>
-                                                    <th>Rating</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (empty($books)): ?>
+                                    <?php
+                                    // Include bulk actions component
+                                    if (function_exists('renderEnhancedBulkActionsComponent')) {
+                                        renderEnhancedBulkActionsComponent('books', [
+                                            'delete' => 'Delete Selected',
+                                            'validate' => 'Validate ISBNs',
+                                            'scrape' => 'Scrape Reviews'
+                                        ]);
+                                    }
+
+                                    // Prepare data for the enhanced table
+                                    $tableData = [];
+                                    foreach ($books as $book) {
+                                        // Format the rating display
+                                        $ratingDisplay = '';
+                                        if (!empty($book['average_rating'])) {
+                                            $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
+                                            $ratingDisplay = number_format($stars, 1) . ' / 5';
+                                        } else {
+                                            $ratingDisplay = 'N/A';
+                                        }
+
+                                        // Format the ISBN display
+                                        $isbnDisplay = !empty($book['isbn13'])
+                                            ? htmlspecialchars($book['isbn13'])
+                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
+
+                                        // Add the book to the table data
+                                        $tableData[] = [
+                                            'id' => $book['id'],
+                                            'title' => $book['title'],
+                                            'author' => $book['author'],
+                                            'isbn' => $isbnDisplay,
+                                            'reviews' => (int)$book['review_count'],
+                                            'rating' => $ratingDisplay,
+                                            'series' => !empty($book['series']) ? $book['series'] : 'N/A',
+                                            'publisher' => !empty($book['publisher']) ? $book['publisher'] : 'N/A'
+                                        ];
+                                    }
+
+                                    // Define columns for the table
+                                    $columns = [
+                                        'title' => 'Title',
+                                        'author' => 'Author',
+                                        'isbn' => 'ISBN',
+                                        'reviews' => 'Reviews',
+                                        'rating' => 'Rating',
+                                        'series' => 'Series',
+                                        'publisher' => 'Publisher'
+                                    ];
+
+                                    // Define which fields are editable inline
+                                    $editableFields = ['title', 'author', 'series', 'publisher'];
+
+                                    // Render the enhanced table if available
+                                    if (function_exists('renderEnhancedTable')) {
+                                        renderEnhancedTable(
+                                            $tableData,
+                                            $columns,
+                                            'book', // This must match a key in the $tableMap array in update-field.php
+                                            'books-table',
+                                            [
+                                                'showCheckboxes' => true,
+                                                'showActions' => true,
+                                                'actions' => ['view', 'edit', 'validate', 'scrape'],
+                                                'editableFields' => $editableFields,
+                                                'bulkActions' => ['delete', 'validate', 'scrape'],
+                                                'itemsPerPage' => $perPage,
+                                                'currentPage' => $page,
+                                                'totalItems' => $totalBooks, // Pass the total items count from SQL query
+                                                'htmlFields' => ['rating'], // Fields that should render HTML instead of escaping it
+                                            ]
+                                        );
+                                    } else {
+                                        // Fallback to basic table if enhanced table component is not available
+                                        ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
                                                     <tr>
-                                                        <td colspan="6" class="text-center">No books found. Import some books first.</td>
+                                                        <th>Title</th>
+                                                        <th>Author</th>
+                                                        <th>ISBN</th>
+                                                        <th>Reviews</th>
+                                                        <th>Rating</th>
+                                                        <th>Actions</th>
                                                     </tr>
-                                                <?php else: ?>
-                                                    <?php foreach ($books as $book): ?>
+                                                </thead>
+                                                <tbody>
+                                                    <?php if (empty($books)): ?>
                                                         <tr>
-                                                            <td><?php echo htmlspecialchars($book['title']); ?></td>
-                                                            <td><?php echo htmlspecialchars($book['author']); ?></td>
-                                                            <td>
-                                                                <?php
-                                                                echo !empty($book['isbn13'])
-                                                                    ? htmlspecialchars($book['isbn13'])
-                                                                    : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
-                                                                ?>
-                                                            </td>
-                                                            <td><?php echo (int)$book['review_count']; ?></td>
-                                                            <td>
-                                                                <?php
-                                                                if (!empty($book['average_rating'])) {
-                                                                    $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
-                                                                    echo number_format($stars, 1) . ' / 5';
-                                                                } else {
-                                                                    echo 'N/A';
-                                                                }
-                                                                ?>
-                                                            </td>
-                                                            <td>
-                                                                <button class="btn btn-sm btn-primary scrape-reviews-btn"
-                                                                        data-book-id="<?php echo $book['id']; ?>"
-                                                                        data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
-                                                                    <i class="fas fa-sync"></i> Scrape Reviews
-                                                                </button>
-                                                            </td>
+                                                            <td colspan="6" class="text-center">No books found. Import some books first.</td>
                                                         </tr>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                    <?php else: ?>
+                                                        <?php foreach ($books as $book): ?>
+                                                            <tr>
+                                                                <td><?php echo htmlspecialchars($book['title']); ?></td>
+                                                                <td><?php echo htmlspecialchars($book['author']); ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    echo !empty($book['isbn13'])
+                                                                        ? htmlspecialchars($book['isbn13'])
+                                                                        : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
+                                                                    ?>
+                                                                </td>
+                                                                <td><?php echo (int)$book['review_count']; ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    if (!empty($book['average_rating'])) {
+                                                                        $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
+                                                                        echo number_format($stars, 1) . ' / 5';
+                                                                    } else {
+                                                                        echo 'N/A';
+                                                                    }
+                                                                    ?>
+                                                                </td>
+                                                                <td>
+                                                                    <button class="btn btn-sm btn-primary scrape-reviews-btn"
+                                                                            data-book-id="<?php echo $book['id']; ?>"
+                                                                            data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
+                                                                        <i class="fas fa-sync"></i> Scrape Reviews
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <?php
+                                    }
 
-                                    <!-- Pagination -->
-                                    <?php if ($totalBookPages > 1): ?>
-                                        <nav aria-label="Page navigation" class="mt-4">
-                                            <ul class="pagination justify-content-center">
-                                                <?php if ($bookPage > 1): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=1<?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            First
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $bookPage - 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Previous
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
-
-                                                <?php
-                                                $startBookPage = max(1, $bookPage - 2);
-                                                $endBookPage = min($totalBookPages, $bookPage + 2);
-
-                                                for ($i = $startBookPage; $i <= $endBookPage; $i++):
-                                                ?>
-                                                    <li class="page-item <?php echo $i === $bookPage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?book_page=<?php echo $i; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            <?php echo $i; ?>
-                                                        </a>
-                                                    </li>
-                                                <?php endfor; ?>
-
-                                                <?php if ($bookPage < $totalBookPages): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $bookPage + 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Next
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $totalBookPages; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Last
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </nav>
-                                    <?php endif; ?>
+                                    // Include pagination component
+                                    if (function_exists('renderPagination') && $totalBooks > $perPage) {
+                                        renderPagination($totalBooks, $perPage, $page);
+                                    }
+                                    ?>
                                 </div>
                             </div>
                         </div>

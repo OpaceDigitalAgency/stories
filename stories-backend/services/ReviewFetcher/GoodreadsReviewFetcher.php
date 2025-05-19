@@ -1357,6 +1357,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         if ($continueFromLast) {
             $url .= "&continueFromLast=1";
             $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting continueFromLast=1 to continue from last scrape");
+        } else {
+            $url .= "&continueFromLast=0";
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting continueFromLast=0 (not continuing from last scrape)");
         }
 
         // Add force parameter (always include it with the correct value)
@@ -1369,8 +1372,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - url: " . urlencode($goodreadsUrl));
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - limit: {$requestLimit}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "   - maxPages: {$maxPages}");
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: " . ($continueFromLast ? "1" : "0"));
-        $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: {$forceValue}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - force: {$options['force']}" . ($options['force'] ? " (will be sent as 1)" : " (will be sent as 0)"));
 
         // Log the full URL for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Full request URL: {$url}");

@@ -433,7 +433,8 @@ function updateBookAggregateValues($db, $bookId) {
                             $options = [
                                 'maxPages' => $maxPages,
                                 'continueFromLast' => $continueFromLast,
-                                'force' => $forceRefresh
+                                'force' => $forceRefresh,
+                                'book_id' => $book['id'] // Add book_id for metadata tracking
                             ];
 
                             // If we're continuing from last scrape, get the count of existing reviews

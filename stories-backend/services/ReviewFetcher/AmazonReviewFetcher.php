@@ -950,8 +950,42 @@ class AmazonReviewFetcher extends AbstractReviewFetcher
         // Request more reviews than needed to ensure we get enough
         $requestLimit = min(100, $limit * 2); // Request up to 100 reviews or double the limit
 
-        // Build the request URL
+        // Extract options
+        $options = func_get_arg(2) ?? [];
+        $continueFromLast = $options['continueFromLast'] ?? false;
+        $forceRefresh = $options['force'] ?? false;
+        $maxPages = $options['maxPages'] ?? 20;
+
+        // Build the request URL with options - use the exact parameter names expected by the Node.js server
         $url = "{$this->vpsHeadlessBrowserUrl}/scrape/amazon?asin={$asin}&limit={$requestLimit}";
+
+        // Add maxPages parameter
+        $url .= "&maxPages={$maxPages}";
+
+        // Add continueFromLast parameter (camelCase as expected by Node.js server)
+        if ($continueFromLast) {
+            $url .= "&continueFromLast=1";
+            $this->logToFile("{$debugDir}/scrape-log.txt", "🔄 Setting continueFromLast=1 to continue from last scrape");
+        } else {
+            $url .= "&continueFromLast=0";
+            $this->logToFile("{$debugDir}/scrape-log.txt", "🔄 Setting continueFromLast=0 (not continuing from last scrape)");
+        }
+
+        // Add force parameter
+        $forceValue = $forceRefresh ? "1" : "0";
+        $url .= "&force={$forceValue}";
+        $this->logToFile("{$debugDir}/scrape-log.txt", "🔄 Setting force={$forceValue} parameter");
+
+        // Log all parameters for debugging
+        $this->logToFile("{$debugDir}/scrape-log.txt", "📝 Parameters being sent to Node.js server:");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - asin: {$asin}");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - limit: {$requestLimit}");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - maxPages: {$maxPages}");
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - continueFromLast: {$continueFromLast}" . ($continueFromLast ? " (will be sent as 1)" : " (will be sent as 0)"));
+        $this->logToFile("{$debugDir}/scrape-log.txt", "   - force: {$forceRefresh}" . ($forceRefresh ? " (will be sent as 1)" : " (will be sent as 0)"));
+
+        // Log the full URL for debugging
+        $this->logToFile("{$debugDir}/scrape-log.txt", "🔗 Full request URL: {$url}");
 
         // Make the request
         $ch = curl_init();

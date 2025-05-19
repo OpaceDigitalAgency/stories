@@ -231,24 +231,32 @@ function updateBookAggregateValues($db, $bookId) {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Book Review Scraping</h5>
-                <div class="d-flex align-items-center">
-                    <div class="me-3">
-                        <?php echo is_webhook_online()
-                            ? "<span class='badge bg-success'><i class='fas fa-check-circle'></i> 🟢 Git Auto Deploy: Online</span>"
-                            : "<span class='badge bg-danger'><i class='fas fa-exclamation-triangle'></i> 🔴 Git Auto Deploy: Not running!</span>";
-                        ?>
-                    </div>
-                    <div class="btn-group">
-                        <a href="book-import-tool.php" class="btn btn-primary">
-                            <i class="fas fa-arrow-left"></i> Back to Import Tool
-                        </a>
-                        <a href="debug-logs.php" class="btn btn-info">
-                            <i class="fas fa-file-alt"></i> View Debug Logs
-                        </a>
-                    </div>
+                <div class="btn-group">
+                    <a href="book-import-tool.php" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Import Tool
+                    </a>
+                    <a href="debug-logs.php" class="btn btn-info">
+                        <i class="fas fa-file-alt"></i> View Debug Logs
+                    </a>
                 </div>
             </div>
             <div class="card-body">
+                <?php
+                $webhookStatus = is_webhook_online();
+                $statusClass = $webhookStatus ? 'alert-success' : 'alert-danger';
+                $statusIcon = $webhookStatus ? 'check-circle' : 'exclamation-triangle';
+                $statusText = $webhookStatus ? '🟢 Git Auto Deploy: Online' : '🔴 Git Auto Deploy: Not running!';
+                $statusDesc = $webhookStatus ?
+                    'Code changes will be automatically deployed to the server.' :
+                    'WARNING: Code changes will NOT be automatically deployed to the server! Please restart the Git Auto Deploy service.';
+                ?>
+                <div class="alert <?php echo $statusClass; ?> d-flex align-items-center mb-4" role="alert">
+                    <i class="fas fa-<?php echo $statusIcon; ?> me-2"></i>
+                    <div>
+                        <strong><?php echo $statusText; ?></strong> - <?php echo $statusDesc; ?>
+                    </div>
+                </div>
+
                 <div class="progress-container">
                     <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
                 </div>

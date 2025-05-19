@@ -16,12 +16,16 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $aggregateRating = null; // Store aggregate rating separately
     protected $useVpsHeadlessBrowser = false; // Whether to use the VPS Headless Browser
     
+    // GraphQL pagination state
+    protected $nextPageToken = null;
+    protected $lastGraphQLPage = 0;
+    protected $totalAvailable = 0;
+    
     // Scraping configuration
     protected $maxPages = 100;
     protected $continueFromLast = false;
     protected $startPage = 1;
     protected $reviewLimit = 100;
-    protected $lastScrapedPage = 0;
     protected $existingReviews = [];
 
     /**
@@ -67,23 +71,29 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // If continuing from last, get existing reviews
         if ($this->continueFromLast) {
             // Get existing reviews for duplicate checking
+            // Get the last GraphQL page token
             $stmt = $this->db->prepare("
-                SELECT reviewer_name, SUBSTRING(review_text, 1, 100) as text_start
+                SELECT metadata->>'$.next_token' as next_token,
+                       metadata->>'$.graphql_page' as page_number
                 FROM reviews
                 WHERE book_id = ? AND source_id = ?
+                AND metadata->>'$.source' = 'graphql'
+                ORDER BY id DESC LIMIT 1
             ");
             $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
             $this->existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Get last scraped page
-            $stmt = $this->db->prepare("
-                SELECT MAX(metadata->>'$.page_number') as last_page
-                FROM reviews
-                WHERE book_id = ? AND source_id = ?
-            ");
             $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
-            $this->lastScrapedPage = (int)$stmt->fetchColumn() ?: 0;
-            $this->startPage = $this->lastScrapedPage + 1;
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && $result['next_token']) {
+                $this->nextPageToken = $result['next_token'];
+                $this->lastGraphQLPage = (int)$result['page_number'];
+                $this->startPage = $this->lastGraphQLPage + 1;
+                
+                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                    "Resuming from GraphQL page {$this->lastGraphQLPage} with token {$this->nextPageToken}");
+            }
         }
 
         // Standardize ISBN format
@@ -412,7 +422,79 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param int $limit Maximum number of reviews to return
      * @return array Array of reviews
      */
+    /**
+     * Get GraphQL pagination state from the database
+     */
+    private function getGraphQLPaginationState(int $bookId): array {
+        $stmt = $this->db->prepare("
+            SELECT r.metadata->>'$.next_token' as next_token,
+                   r.metadata->>'$.graphql_page' as page_number,
+                   r.metadata->>'$.total_available' as total_available
+            FROM reviews r
+            WHERE r.book_id = ? AND r.source_id = ?
+            AND r.metadata->>'$.source' = 'graphql'
+            ORDER BY r.id DESC LIMIT 1
+        ");
+        $stmt->execute([$bookId, $this->sourceId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return [
+            'nextPageToken' => $result['next_token'] ?? null,
+            'currentPage' => (int)($result['page_number'] ?? 0),
+            'totalAvailable' => (int)($result['total_available'] ?? 0)
+        ];
+    }
+
     private function scrapeReviews(string $reviewsUrl, int $limit, array $options = []): array {
+        // If continuing from last scrape, get the GraphQL pagination state
+        if ($options['continueFromLast'] ?? false) {
+            $state = $this->getGraphQLPaginationState($options['book_id'] ?? 0);
+            if ($state['nextPageToken']) {
+                $options['nextPageToken'] = $state['nextPageToken'];
+                $options['startPage'] = $state['currentPage'] + 1;
+                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                    "Resuming GraphQL pagination from page {$options['startPage']} " .
+                    "with token {$options['nextPageToken']}, " .
+                    "{$state['totalAvailable']} total reviews available");
+            }
+        }
+        // If continuing from last scrape, get the last GraphQL state
+        if ($options['continueFromLast'] ?? false) {
+            $stmt = $this->db->prepare("
+                SELECT metadata->>'$.next_token' as next_token,
+                       metadata->>'$.graphql_page' as page_number,
+                       metadata->>'$.total_available' as total_available
+                FROM reviews
+                WHERE book_id = ? AND source_id = ?
+                AND metadata->>'$.source' = 'graphql'
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmt->execute([$options['book_id'] ?? 0, $this->sourceId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result && $result['next_token']) {
+                $this->nextPageToken = $result['next_token'];
+                $this->lastGraphQLPage = (int)$result['page_number'];
+                $this->totalAvailable = (int)$result['total_available'];
+                
+                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                    "Resuming GraphQL pagination from page {$this->lastGraphQLPage} " .
+                    "with token {$this->nextPageToken}, " .
+                    "{$this->totalAvailable} total reviews available");
+            }
+        }
+        // If we have a nextPageToken from previous scrape, add it to options
+        if ($this->nextPageToken) {
+            $options['nextPageToken'] = $this->nextPageToken;
+            $options['startPage'] = $this->lastGraphQLPage + 1;
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Continuing GraphQL pagination from page {$this->lastGraphQLPage} with token {$this->nextPageToken}");
+        }
+        // If we have a nextPageToken from previous scrape, add it to options
+        if ($this->nextPageToken) {
+            $options['nextPageToken'] = $this->nextPageToken;
+            $options['startPage'] = $this->lastGraphQLPage + 1;
+        }
         // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {

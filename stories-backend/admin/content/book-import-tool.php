@@ -25,6 +25,9 @@ require_once '../includes/db-connect.php';
 // Include admin functions
 require_once '../includes/admin-functions.php';
 
+// Include tag functions
+require_once '../includes/tag-functions.php';
+
 // Include the review fetcher services
 require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
 require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';
@@ -85,7 +88,7 @@ try {
     // Get books with pagination
     $booksStmt = $db->prepare("
         SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
-               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.genre, b.series, b.price_range
+               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
         FROM directory_items di
         JOIN books b ON di.id = b.directory_item_id
         WHERE $bookWhereClause
@@ -968,6 +971,7 @@ require_once '../includes/header.php';
                                                     <th>Author</th>
                                                     <th>ISBN</th>
                                                     <th>Status</th>
+                                                    <th>Genre</th>
                                                     <th>Missing Data</th>
                                                     <th>Actions</th>
                                                 </tr>
@@ -1050,14 +1054,25 @@ require_once '../includes/header.php';
                                                             </td>
                                                             <td>
                                                                 <?php
+                                                                $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
+                                                                if (!empty($genreTags)) {
+                                                                    echo htmlspecialchars(formatTagsForDisplay($genreTags));
+                                                                } else {
+                                                                    echo '<span class="text-muted">No genres</span>';
+                                                                }
+                                                                ?>
+                                                            </td>
+                                                            <td>
+                                                                <?php
                                                                 $missingFields = [];
 
                                                                 // Check for empty or placeholder values
                                                                 if (empty($book['publisher']) || strtolower($book['publisher']) == 'unknown') $missingFields[] = 'Publisher';
                                                                 if (empty($book['page_count']) || $book['page_count'] == '0') $missingFields[] = 'Page Count';
 
-                                                                // Only check genre if it's completely empty (not checking for 'unknown' as genre could be anything)
-                                                                if (empty($book['genre'])) $missingFields[] = 'Genre';
+                                                                // Check for genre tags
+                                                                $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
+                                                                if (empty($genreTags)) $missingFields[] = 'Genre';
 
                                                                 // Check for empty or placeholder values in series
                                                                 if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
@@ -1065,7 +1080,9 @@ require_once '../includes/header.php';
                                                                 // Check for price range
                                                                 if (empty($book['price_range'])) $missingFields[] = 'Price Range';
 
-                                                                // Don't check age_range as it's auto-populated in the UI
+                                                                // Check for age range tags
+                                                                $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
+                                                                if (empty($ageRangeTags)) $missingFields[] = 'Age Range';
 
                                                                 if (!empty($missingFields)) {
                                                                     echo '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .

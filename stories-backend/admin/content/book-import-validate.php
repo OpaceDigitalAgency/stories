@@ -33,6 +33,9 @@ require_once '../../services/ReviewFetcher/OpenLibraryReviewFetcher.php';
 require_once '../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
 require_once '../../services/ReviewFetcher/ReviewFetcherFactory.php';
 
+// Include tag functions
+require_once '../includes/tag-functions.php';
+
 // Set up error handling
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -418,17 +421,53 @@ function searchBookDirectly($title, $author = '') {
 
                     // Try to determine series from title or categories
                     $series = '';
+
+                    // Check for series in title with parentheses pattern: "Title (Series Name)"
                     if (preg_match('/(.*?)\s+\(([^)]+)\)/', $volumeInfo['title'] ?? '', $matches)) {
-                        $series = $matches[2];
-                        if (stripos($series, 'book') !== false || stripos($series, 'volume') !== false ||
-                            stripos($series, 'part') !== false || stripos($series, 'series') !== false) {
-                            $series = $matches[2];
+                        $potentialSeries = $matches[2];
+                        if (stripos($potentialSeries, 'book') !== false ||
+                            stripos($potentialSeries, 'volume') !== false ||
+                            stripos($potentialSeries, 'part') !== false ||
+                            stripos($potentialSeries, 'series') !== false) {
+                            $series = $potentialSeries;
                         }
-                    } else {
-                        // Try to find series in categories
+                    }
+
+                    // Check for series in title with common patterns
+                    if (empty($series)) {
+                        $title = $volumeInfo['title'] ?? '';
+
+                        // Pattern: "Series Name: Book Title"
+                        if (preg_match('/^(.*?):\s+(.*)$/', $title, $matches)) {
+                            $series = $matches[1];
+                        }
+
+                        // Pattern: "Series Name - Book Title"
+                        if (empty($series) && preg_match('/^(.*?)\s+-\s+(.*)$/', $title, $matches)) {
+                            $series = $matches[1];
+                        }
+
+                        // Check for Harry Potter specifically
+                        if (empty($series) && stripos($title, 'harry potter') !== false) {
+                            $series = 'Harry Potter series';
+                        }
+                    }
+
+                    // Try to find series in categories
+                    if (empty($series)) {
                         foreach ($categories as $category) {
                             if (stripos($category, 'series') !== false) {
                                 $series = $category;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Check for series in industry identifiers (some APIs include series info here)
+                    if (empty($series) && !empty($volumeInfo['industryIdentifiers'])) {
+                        foreach ($volumeInfo['industryIdentifiers'] as $identifier) {
+                            if (isset($identifier['type']) && $identifier['type'] === 'SERIES') {
+                                $series = $identifier['identifier'];
                                 break;
                             }
                         }
@@ -894,7 +933,7 @@ function enrichBookData($bookId, $db) {
         // Get book details
         $stmt = $db->prepare("
             SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                   b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
+                   b.page_count, b.age_range, b.reading_level, b.series, b.price_range
             FROM directory_items di
             JOIN books b ON di.id = b.directory_item_id
             WHERE di.id = ?
@@ -1027,12 +1066,45 @@ function enrichBookData($bookId, $db) {
                 $results['updated_fields'][] = 'page_count';
             }
 
-            if (empty($book['genre']) && !empty($mergedData['categories'])) {
-                // Use the first category as genre
-                $genre = $mergedData['categories'][0] ?? '';
-                if (!empty($genre)) {
-                    $fieldsToUpdate['genre'] = $genre;
-                    $results['updated_fields'][] = 'genre';
+            // Add categories as tags
+            if (!empty($mergedData['categories'])) {
+                // Get existing tags
+                $existingTags = getGenreTagsForDirectoryItem($db, $bookId);
+                $existingTagNames = array_map(function($tag) {
+                    return strtolower($tag['name']);
+                }, $existingTags);
+
+                // Add new tags from categories
+                $addedTags = 0;
+                foreach ($mergedData['categories'] as $category) {
+                    // Skip empty categories or categories that are already added
+                    if (empty($category) || in_array(strtolower($category), $existingTagNames)) {
+                        continue;
+                    }
+
+                    // Check if tag exists
+                    $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
+                    $stmt->execute([trim($category)]);
+                    $tagId = $stmt->fetchColumn();
+
+                    // If tag doesn't exist, create it
+                    if (!$tagId) {
+                        $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+                        $stmt->execute([
+                            trim($category),
+                            strtolower(str_replace(' ', '-', trim($category)))
+                        ]);
+                        $tagId = $db->lastInsertId();
+                    }
+
+                    // Add tag to directory item
+                    if ($tagId && addTagToDirectoryItem($db, $bookId, $tagId)) {
+                        $addedTags++;
+                    }
+                }
+
+                if ($addedTags > 0) {
+                    $results['updated_fields'][] = 'genre tags (' . $addedTags . ')';
                 }
             }
 
@@ -1262,11 +1334,46 @@ function updateBookData($bookId, $data, $db) {
             $updatedFieldNames[] = 'Series';
         }
 
-        // For genre, only replace if current value is empty (since genre could be anything)
-        if (!empty($data['genre']) && empty($currentBook['genre'])) {
-            $updateFields[] = "genre = ?";
-            $params[] = $data['genre'];
-            $updatedFieldNames[] = 'Genre';
+        // For categories/genre, add as tags
+        if (!empty($data['categories'])) {
+            // Get existing tags
+            $existingTags = getGenreTagsForDirectoryItem($db, $bookId);
+            $existingTagNames = array_map(function($tag) {
+                return strtolower($tag['name']);
+            }, $existingTags);
+
+            // Add new tags from categories
+            $addedTags = 0;
+            foreach ($data['categories'] as $category) {
+                // Skip empty categories or categories that are already added
+                if (empty($category) || in_array(strtolower($category), $existingTagNames)) {
+                    continue;
+                }
+
+                // Check if tag exists
+                $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
+                $stmt->execute([trim($category)]);
+                $tagId = $stmt->fetchColumn();
+
+                // If tag doesn't exist, create it
+                if (!$tagId) {
+                    $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+                    $stmt->execute([
+                        trim($category),
+                        strtolower(str_replace(' ', '-', trim($category)))
+                    ]);
+                    $tagId = $db->lastInsertId();
+                }
+
+                // Add tag to directory item
+                if ($tagId && addTagToDirectoryItem($db, $bookId, $tagId)) {
+                    $addedTags++;
+                }
+            }
+
+            if ($addedTags > 0) {
+                $updatedFieldNames[] = 'Genre tags (' . $addedTags . ')';
+            }
         }
 
         // For price_range, only replace if current value is empty
@@ -1428,7 +1535,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                 // Build query to get books
                 $query = "
                     SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                           b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
+                           b.page_count, b.age_range, b.reading_level, b.series, b.price_range
                     FROM directory_items di
                     JOIN books b ON di.id = b.directory_item_id
                     WHERE di.type = 'book'
@@ -1451,7 +1558,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                         } else if ($field === 'page_count') {
                             $conditions[] = "(b.page_count IS NULL OR b.page_count = 0)";
                         } else if ($field === 'genre') {
-                            $conditions[] = "(b.genre IS NULL OR b.genre = '')";
+                            // For genre, check if there are any genre tags
+                            $conditions[] = "NOT EXISTS (
+                                SELECT 1 FROM directory_item_tags dit
+                                JOIN tags t ON dit.tag_id = t.id
+                                WHERE dit.directory_item_id = di.id
+                                AND LOWER(t.name) NOT LIKE '%year%'
+                                AND LOWER(t.name) NOT LIKE '%age%'
+                                AND LOWER(t.name) NOT IN ('teen', 'young adult', 'adult', '12+', '13+', '14+', '16+')
+                                AND t.name NOT REGEXP '^[0-9]+-[0-9]+$'
+                                AND t.name NOT REGEXP '^[0-9]+\\+$'
+                            )";
                         } else if ($field === 'publisher') {
                             $conditions[] = "(b.publisher IS NULL OR b.publisher = '' OR b.publisher = 'Unknown')";
                         } else if ($field === 'price_range') {
@@ -1582,7 +1699,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                         </div>
                                         <div class="col-md-6">
                                             <p><strong>Publisher:</strong> <?php echo !empty($bookDetails['publisher']) ? htmlspecialchars($bookDetails['publisher']) : '<span class="text-muted">Not available</span>'; ?></p>
-                                            <p><strong>Genre:</strong> <?php echo !empty($bookDetails['genre']) ? htmlspecialchars($bookDetails['genre']) : '<span class="text-muted">Not available</span>'; ?></p>
+                                            <p><strong>Genre:</strong>
+                                                <?php
+                                                $genreTags = getGenreTagsForDirectoryItem($db, $bookDetails['id']);
+                                                if (!empty($genreTags)) {
+                                                    echo htmlspecialchars(formatTagsForDisplay($genreTags));
+                                                } else {
+                                                    echo '<span class="text-muted">Not available</span>';
+                                                }
+                                                ?>
+                                            </p>
                                             <p><strong>Series:</strong> <?php echo !empty($bookDetails['series']) ? htmlspecialchars($bookDetails['series']) : '<span class="text-muted">Not available</span>'; ?></p>
                                             <p><strong>Page Count:</strong> <?php echo !empty($bookDetails['page_count']) ? htmlspecialchars($bookDetails['page_count']) : '<span class="text-muted">Not available</span>'; ?></p>
                                             <p><strong>Price Range:</strong> <?php echo !empty($bookDetails['price_range']) ? htmlspecialchars($bookDetails['price_range']) : '<span class="text-muted">Not available</span>'; ?></p>
@@ -1684,7 +1810,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                 <?php endif; ?>
                                                                             <?php endforeach; ?>
 
-                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                            <button type="submit" class="btn btn-sm btn-primary"
+                                                                                    data-bs-toggle="tooltip"
+                                                                                    title="Will update: ISBN, ISBN-13, Title, Author, Publisher, Series, Page Count, Price Range, and add Genre Tags">
                                                                                 <i class="fas fa-sync-alt"></i> Use All Data
                                                                             </button>
                                                                         </form>
@@ -1753,7 +1881,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <?php endif; ?>
                                                                                         <?php endforeach; ?>
 
-                                                                                        <button type="submit" class="btn btn-primary">
+                                                                                        <button type="submit" class="btn btn-primary"
+                                                                                            data-bs-toggle="tooltip"
+                                                                                            title="Will update: ISBN, ISBN-13, Title, Author, Publisher, Series, Page Count, Price Range, and add Genre Tags">
                                                                                             <i class="fas fa-sync-alt"></i> Use All Data
                                                                                         </button>
                                                                                     </form>
@@ -1842,7 +1972,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                 <?php endif; ?>
                                                                             <?php endforeach; ?>
 
-                                                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                                            <button type="submit" class="btn btn-sm btn-primary"
+                                                                                data-bs-toggle="tooltip"
+                                                                                title="Will update: ISBN, ISBN-13, Title, Author, Publisher, Series, Page Count, Price Range, and add Genre Tags">
                                                                                 <i class="fas fa-sync-alt"></i> Use All Data
                                                                             </button>
                                                                         </form>
@@ -1912,7 +2044,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <?php endif; ?>
                                                                                         <?php endforeach; ?>
 
-                                                                                        <button type="submit" class="btn btn-primary">
+                                                                                        <button type="submit" class="btn btn-primary"
+                                                                                            data-bs-toggle="tooltip"
+                                                                                            title="Will update: ISBN, ISBN-13, Title, Author, Publisher, Series, Page Count, Price Range, and add Genre Tags">
                                                                                             <i class="fas fa-sync-alt"></i> Use All Data
                                                                                         </button>
                                                                                     </form>

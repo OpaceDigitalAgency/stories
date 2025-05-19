@@ -32,6 +32,9 @@ if (file_exists('../includes/series-dropdown.php')) {
     require_once '../includes/series-dropdown.php';
 }
 
+// Include tag functions
+require_once '../includes/tag-functions.php';
+
 try {
     // Initialize variables
     $item = null;
@@ -1351,9 +1354,30 @@ if (isset($_SESSION['error'])) {
                                     </div>
                                 </div>
 
-                                <!-- Genre dropdown removed - using tags section instead -->
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label" for="genre_tags">Genre Tags</label>
+                                        <select id="genre_tags" name="genre_tags[]" class="form-control" multiple>
+                                            <?php
+                                            // Get existing genre tags for this book
+                                            $selectedTags = [];
+                                            if (isset($item['id'])) {
+                                                $existingTags = getGenreTagsForDirectoryItem($db, $item['id']);
+                                                $selectedTags = array_column($existingTags, 'id');
+                                            }
 
-
+                                            // Display all available tags
+                                            foreach ($tags as $tag):
+                                                $isSelected = in_array($tag['id'], $selectedTags);
+                                            ?>
+                                                <option value="<?php echo $tag['id']; ?>" <?php echo $isSelected ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($tag['name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple genres</small>
+                                    </div>
+                                </div>
 
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -2350,7 +2374,7 @@ function initReviewForm() {
     const reviewForm = document.getElementById('review-form');
     const submitButton = document.getElementById('submit-review');
     const cancelButton = document.getElementById('cancel-review');
-    
+
     if (!reviewForm) return;
 
     // Handle submit button click
@@ -2377,7 +2401,7 @@ function initReviewForm() {
 
             // Reset the star rating
             resetStarRating();
-            
+
             // Hide the modal
             $('#review-form-modal').modal('hide');
         });
@@ -2388,24 +2412,24 @@ function initReviewForm() {
 function submitReviewForm() {
     const reviewForm = document.getElementById('review-form');
     if (!reviewForm) return;
-    
+
     // Get form data
     const formData = new FormData(reviewForm);
-        
+
     // Get the book ID from the URL parameter or input field
     let bookId;
     const urlParams = new URLSearchParams(window.location.search);
     const idFromUrl = urlParams.get('id');
     const idFromInput = document.querySelector('input[name="id"]')?.value;
-    
+
     bookId = idFromUrl || idFromInput;
-    
+
     if (!bookId) {
         console.error('Could not find book ID from URL or input field');
         alert('Error: Could not find book ID. Please try again.');
         return;
     }
-    
+
     console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
     formData.append('book_id', bookId);
 
@@ -2418,13 +2442,13 @@ function submitReviewForm() {
     console.log('Submitting review form with action:', action);
     console.log('Review ID:', reviewId);
     console.log('Book ID:', bookId);
-    
+
     // Log all form data
     console.log('Form data:');
     for (let pair of formData.entries()) {
         console.log(pair[0] + ': ' + pair[1]);
     }
-    
+
     // Send the request to the review handler
     fetch('../handlers/review-handler.php', {
         method: 'POST',
@@ -2433,7 +2457,7 @@ function submitReviewForm() {
     .then(response => {
         console.log('Response status:', response.status);
         console.log('Response headers:', response.headers);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -2448,10 +2472,10 @@ function submitReviewForm() {
         if (data.success) {
             // Show success message
             alert(data.message);
-            
+
             // Hide the modal
             $('#review-form-modal').modal('hide');
-            
+
             // Don't reload the page automatically, let the user inspect the console
             if (confirm('Review saved successfully. Reload page to see changes?')) {
                 // Only reload if user confirms
@@ -2503,7 +2527,7 @@ function initReviewActions() {
         button.addEventListener('click', function() {
             const reviewId = this.getAttribute('data-id');
             console.log('Edit button clicked for review ID:', reviewId);
-            
+
             const reviewItem = document.getElementById('review-' + reviewId);
             console.log('Review item element:', reviewItem);
 
@@ -2520,7 +2544,7 @@ function initReviewActions() {
             const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
             const originalRating = reviewItem.getAttribute('data-original-rating');
             const reviewText = reviewItem.getAttribute('data-review-text');
-            
+
             console.log('Review data from attributes:', {
                 reviewerName,
                 reviewerAge,
@@ -2540,31 +2564,31 @@ function initReviewActions() {
             // Populate the form
             try {
                 console.log('Attempting to populate form fields...');
-                
+
                 document.getElementById('review_id').value = reviewId;
                 console.log('Set review_id to:', reviewId);
-                
+
                 document.getElementById('reviewer_name').value = reviewerName || '';
                 console.log('Set reviewer_name to:', reviewerName || '');
-                
+
                 document.getElementById('reviewer_age').value = reviewerAge || '';
                 console.log('Set reviewer_age to:', reviewerAge || '');
-                
+
                 document.getElementById('source_id').value = sourceId || '1';
                 console.log('Set source_id to:', sourceId || '1');
-                
+
                 document.getElementById('review_date').value = reviewDate || '';
                 console.log('Set review_date to:', reviewDate || '');
-                
+
                 document.getElementById('rating_normalised').value = ratingNormalised || '0';
                 console.log('Set rating_normalised to:', ratingNormalised || '0');
-                
+
                 document.getElementById('original_rating').value = originalRating || '';
                 console.log('Set original_rating to:', originalRating || '');
-                
+
                 document.getElementById('review_text').value = reviewText || '';
                 console.log('Set review_text to:', reviewText || '');
-                
+
                 console.log('Form populated successfully');
             } catch (error) {
                 console.error('Error populating form:', error);
@@ -2682,10 +2706,10 @@ function initStarRating() {
  */
 function updateStarRating(rating) {
     console.log('updateStarRating called with rating:', rating);
-    
+
     const stars = document.querySelectorAll('.rating-star');
     console.log('Found stars elements:', stars.length);
-    
+
     const ratingValueDisplay = document.querySelector('.rating-value');
     console.log('Found rating value display:', ratingValueDisplay);
 
@@ -2698,7 +2722,7 @@ function updateStarRating(rating) {
     stars.forEach((star, index) => {
         const highlighted = index < rating;
         console.log(`Star ${index+1}: ${highlighted ? 'highlighted' : 'not highlighted'}`);
-        
+
         if (highlighted) {
             star.style.color = '#ffc107'; // Yellow color
         } else {
@@ -2710,7 +2734,7 @@ function updateStarRating(rating) {
     const displayText = rating.toFixed(1) + '/5';
     console.log('Setting rating display text to:', displayText);
     ratingValueDisplay.textContent = displayText;
-    
+
     // Also update the hidden input field
     const ratingNormalisedInput = document.getElementById('rating_normalised');
     if (ratingNormalisedInput) {
@@ -2834,49 +2858,49 @@ $(document).ready(function() {
     $('#add-new-review-btn').on('click', function() {
         // Reset the form
         $('#review-form')[0].reset();
-        
+
         // Clear the review ID
         $('#review_id').val('');
-        
+
         // Reset the form title
         $('#review-form-modal-title').text('Add New Review');
-        
+
         // Reset the submit button text
         $('#submit-review').text('Add Review');
-        
+
         // Reset the star rating
         function localResetStarRating() {
             console.log('localResetStarRating called');
-            
+
             const stars = document.querySelectorAll('.rating-star');
             const ratingValueDisplay = document.querySelector('.rating-value');
             const ratingNormalisedInput = document.getElementById('rating_normalised');
             const originalRatingInput = document.getElementById('original_rating');
-            
+
             if (!stars.length || !ratingValueDisplay) {
                 console.error('Missing stars or rating value display elements');
                 return;
             }
-            
+
             // Reset stars to gray
             stars.forEach(star => {
                 star.style.color = '#e0e0e0';
             });
-            
+
             // Reset rating value display
             ratingValueDisplay.textContent = '0/5';
-            
+
             // Reset hidden inputs
             if (ratingNormalisedInput) ratingNormalisedInput.value = '0';
             if (originalRatingInput) originalRatingInput.value = '';
         }
-        
+
         localResetStarRating();
-        
+
         // Show the modal
         $('#review-form-modal').modal('show');
     });
-    
+
     // Handle form submission via the submit button
     $('#submit-review').on('click', function() {
         // Trigger the form submission handler
@@ -2888,21 +2912,21 @@ $(document).ready(function() {
 function submitReviewForm() {
     // Get form data
     const formData = new FormData(document.getElementById('review-form'));
-    
+
     // Get the book ID from the URL parameter or input field
     let bookId;
     const urlParams = new URLSearchParams(window.location.search);
     const idFromUrl = urlParams.get('id');
     const idFromInput = document.querySelector('input[name="id"]')?.value;
-    
+
     bookId = idFromUrl || idFromInput;
-    
+
     if (!bookId) {
         console.error('Could not find book ID from URL or input field');
         alert('Error: Could not find book ID. Please try again.');
         return;
     }
-    
+
     console.log('Using book ID:', bookId, 'from', idFromUrl ? 'URL' : 'input field');
     formData.append('book_id', bookId);
 
@@ -2915,13 +2939,13 @@ function submitReviewForm() {
     console.log('Submitting review form with action:', action);
     console.log('Review ID:', reviewId);
     console.log('Book ID:', bookId);
-    
+
     // Log all form data
     console.log('Form data:');
     for (let pair of formData.entries()) {
         console.log(pair[0] + ': ' + pair[1]);
     }
-    
+
     // Send the request to the review handler
     fetch('../handlers/review-handler.php', {
         method: 'POST',
@@ -2930,7 +2954,7 @@ function submitReviewForm() {
     .then(response => {
         console.log('Response status:', response.status);
         console.log('Response headers:', response.headers);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -2945,10 +2969,10 @@ function submitReviewForm() {
         if (data.success) {
             // Show success message
             alert(data.message);
-            
+
             // Close the modal
             $('#review-form-modal').modal('hide');
-            
+
             // Don't reload the page automatically, let the user inspect the console
             if (confirm('Review saved successfully. Reload page to see changes?')) {
                 // Only reload if user confirms
@@ -2969,11 +2993,11 @@ function submitReviewForm() {
 // Function to handle edit review button click
 function editReview(reviewId) {
     console.log('editReview function called with ID:', reviewId);
-    
+
     try {
         const reviewItem = document.getElementById('review-' + reviewId);
         console.log('Review item element:', reviewItem);
-        
+
         if (!reviewItem) {
             console.error('Review item not found for ID:', reviewId);
             alert('Error: Review item not found for ID: ' + reviewId);
@@ -2989,7 +3013,7 @@ function editReview(reviewId) {
         const ratingNormalised = reviewItem.getAttribute('data-rating-normalised');
         const originalRating = reviewItem.getAttribute('data-original-rating');
         const reviewText = reviewItem.getAttribute('data-review-text');
-        
+
         console.log('Data attributes retrieved:', {
             reviewerName,
             reviewerAge,
@@ -2999,7 +3023,7 @@ function editReview(reviewId) {
             originalRating,
             reviewText
         });
-        
+
         // Reset the form first
         console.log('Resetting form');
         const reviewForm = document.getElementById('review-form');
@@ -3017,30 +3041,30 @@ function editReview(reviewId) {
         document.getElementById('rating_normalised').value = ratingNormalised || '0';
         document.getElementById('original_rating').value = originalRating || '';
         document.getElementById('review_text').value = reviewText || '';
-        
+
         // Update the form title in the modal
         console.log('Updating form title and button text');
         document.getElementById('review-form-modal-title').textContent = 'Edit Review';
-        
+
         // Update the submit button text
         document.getElementById('submit-review').textContent = 'Update Review';
-        
+
         // Update the star rating
         console.log('Updating star rating');
         const starRating = parseFloat(ratingNormalised) * 5;
-        
+
         // Define a local updateStarRating function to avoid dependency issues
         function localUpdateStarRating(rating) {
             console.log('localUpdateStarRating called with rating:', rating);
-            
+
             const stars = document.querySelectorAll('.rating-star');
             const ratingValueDisplay = document.querySelector('.rating-value');
-            
+
             if (!stars.length || !ratingValueDisplay) {
                 console.error('Missing stars or rating value display elements');
                 return;
             }
-            
+
             // Update stars
             stars.forEach((star, index) => {
                 const highlighted = index < rating;
@@ -3050,11 +3074,11 @@ function editReview(reviewId) {
                     star.style.color = '#e0e0e0'; // Gray color
                 }
             });
-            
+
             // Update rating value display
             const displayText = rating.toFixed(1) + '/5';
             ratingValueDisplay.textContent = displayText;
-            
+
             // Also update the hidden input field
             const ratingNormalisedInput = document.getElementById('rating_normalised');
             if (ratingNormalisedInput) {
@@ -3062,10 +3086,10 @@ function editReview(reviewId) {
                 ratingNormalisedInput.value = normalizedValue;
             }
         }
-        
+
         // Use the local function instead of the global one
         localUpdateStarRating(starRating);
-        
+
         // Show the modal
         console.log('Showing modal');
         $('#review-form-modal').modal('show');

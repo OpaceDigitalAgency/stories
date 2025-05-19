@@ -271,6 +271,25 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   const page = await browser.getNewPage();
   let reviews = [];
   let bookTitle = 'Unknown Book';
+  // --- Request interception setup ---
+  // Replace the old page.setRequestInterception and page.on('request', ...) block with a safe version
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    try {
+      if (request._interceptionHandled) return;
+
+      const url = request.url();
+      const type = request.resourceType();
+
+      if (url.includes('google-analytics') || type === 'image') {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    } catch (err) {
+      logger.warn(`Request interception failed: ${err.message}`);
+    }
+  });
 
   try {
     // Navigate to the reviews page

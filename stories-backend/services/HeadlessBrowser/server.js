@@ -110,6 +110,24 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
           db.close();
         });
       }
+    } else if (!force && bookId) {
+      // Check if we have cached data
+      const cachedData = await cache.get('goodreads', bookId);
+
+      if (cachedData) {
+        const cachedCount = (cachedData.reviews || []).length;
+        logger.info(`Cache hit for ${bookId} - ${cachedCount} reviews`);
+
+        // Only use cache if we don't need to continue from last AND we have enough reviews
+        const needMore = continueFromLast && limit > cachedCount;
+
+        if (!needMore) {
+          logger.info(`Cache hit for ${bookId} - returning ${cachedCount} reviews`);
+          return res.json(cachedData);
+        }
+
+        logger.info(`Cache hit but need more (${cachedCount}/${limit}); continuing scrape`);
+      }
     }
 
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {

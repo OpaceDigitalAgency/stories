@@ -64,12 +64,22 @@ try {
     }
     $pageDescription = 'Import books and scrape reviews from various sources';
 
-    // Get the page and per_page parameters
+    // Get the page and per_page parameters for each tab
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
     
+    // Sources tab pagination
+    $sourcesPage = isset($_GET['sources_page']) ? max(1, intval($_GET['sources_page'])) : 1;
+    $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
+    
+    // Reviews tab pagination
+    $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
+    $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
+    
     // Log the parameters for debugging
     error_log("Page: $page, Per Page: $perPage, Tab: $currentTab");
+    error_log("Sources Page: $sourcesPage, Sources Per Page: $sourcesPerPage");
+    error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
 
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];
@@ -427,17 +437,20 @@ require_once '../includes/header.php';
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="batch-tab" data-toggle="tab" href="#batch" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'batch' ? 'active' : ''; ?>"
+                               id="batch-tab" data-toggle="tab" href="#batch" role="tab" data-tab="batch">
                                 <i class="fas fa-tasks"></i> Batch Processing
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="ai-tab" data-toggle="tab" href="#ai" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'ai' ? 'active' : ''; ?>"
+                               id="ai-tab" data-toggle="tab" href="#ai" role="tab" data-tab="ai">
                                 <i class="fas fa-robot"></i> AI Analysis
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="validate-tab" data-toggle="tab" href="#validate" role="tab">
+                            <a class="nav-link <?php echo $currentTab === 'validate' ? 'active' : ''; ?>"
+                               id="validate-tab" data-toggle="tab" href="#validate" role="tab" data-tab="validate">
                                 <i class="fas fa-check-circle"></i> ISBN & Data Validation
                             </a>
                         </li>
@@ -701,12 +714,22 @@ require_once '../includes/header.php';
                             <?php
                             // Ensure tab parameter is in URL for pagination
                             $_GET['tab'] = 'sources';
-                            // Render pagination for sources table
-                            renderPagination(count($reviewSources), $sourcesPerPage, $sourcesPage, 5, [
-                                'pageParam' => 'sources_page',
-                                'perPageParam' => 'sources_per_page',
-                                'tab' => 'sources'
-                            ]);
+                            
+                            // Get the total number of sources
+                            $sourcesCount = count($reviewSources);
+                            
+                            // Make sure we have valid values
+                            if ($sourcesCount > 0 && $sourcesPerPage > 0) {
+                                // Render pagination for sources table
+                                renderPagination($sourcesCount, $sourcesPerPage, $sourcesPage, 5, [
+                                    'pageParam' => 'sources_page',
+                                    'perPageParam' => 'sources_per_page',
+                                    'validPerPageValues' => [10, 25, 50, 100],
+                                    'perPageLabel' => 'per page',
+                                    'showAllLabel' => 'Show All',
+                                    'tab' => 'sources'
+                                ]);
+                            }
                             ?>
 
                             <button class="btn btn-success" id="addSourceBtn">

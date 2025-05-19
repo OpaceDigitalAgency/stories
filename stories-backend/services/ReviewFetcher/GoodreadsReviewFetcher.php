@@ -645,6 +645,20 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Reindex the array after potentially removing the aggregate rating
             $vpsReviews = array_values($vpsReviews);
 
+            // -- BEGIN DUPLICATE FILTERING BLOCK --
+            // If we're continuing from last and have existing reviews, filter duplicates from VPS results
+            if (!empty($existingReviews)) {
+                $filteredReviews = [];
+                foreach ($vpsReviews as $review) {
+                    if (!$isDuplicate($review, $existingReviews, $options['startPage'] ?? 1)) {
+                        $filteredReviews[] = $review;
+                    }
+                }
+                $vpsReviews = $filteredReviews;
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Filtered duplicate reviews, returning " . count($vpsReviews));
+            }
+            // -- END DUPLICATE FILTERING BLOCK --
+
             // Log the final count after processing
             $finalCount = count($vpsReviews);
 
@@ -664,7 +678,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // If we're continuing from the last scrape, return all reviews
             // Otherwise, limit the number of reviews to the requested limit
             if ($options['continueFromLast'] ?? false) {
-                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Continuing from last scrape, returning all {$reviewCount} reviews");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Continuing from last scrape, returning all {$finalCount} reviews");
                 return $vpsReviews;
             } else {
                 return array_slice($vpsReviews, 0, $limit);

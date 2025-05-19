@@ -651,17 +651,26 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                 $filteredReviews = [];
                 $seenFingerprints = [];
 
-                foreach ($vpsReviews as $review) {
+                $currentPage = $options['startPage'] ?? 1;
+
+                foreach ($vpsReviews as $i => $review) {
                     $fingerprint = md5($review['reviewer_name'] . '|' . substr($review['review_text'], 0, 100));
 
-                    // Skip if we've already processed this review in the current scrape
+                    // Skip if already processed in this batch
                     if (isset($seenFingerprints[$fingerprint])) {
                         continue;
                     }
                     $seenFingerprints[$fingerprint] = true;
 
-                    if (!$isDuplicate($review, $existingReviews, $options['startPage'] ?? 1)) {
-                        $filteredReviews[] = $review;
+                    // Add graphql_page metadata to new review
+                    $reviewMeta = json_decode($review['metadata'] ?? '{}', true);
+                    if (!isset($reviewMeta['graphql_page'])) {
+                        $reviewMeta['graphql_page'] = $currentPage;
+                        $review['metadata'] = json_encode($reviewMeta);
+                    }
+
+                    if (!$isDuplicate($review, $existingReviews, $currentPage)) {
+                        $filteredReviews[] = $review; 
                     }
                 }
 

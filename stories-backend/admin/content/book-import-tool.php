@@ -455,6 +455,7 @@ require_once '../includes/header.php';
                                     ];
 
                                     // Render enhanced table
+                                    // Disable enhanced table's built-in pagination
                                     renderEnhancedTable(
                                         $tableData,
                                         $columns,
@@ -465,12 +466,9 @@ require_once '../includes/header.php';
                                             'showActions' => true,
                                             'actions' => ['view', 'edit', 'validate', 'scrape'],
                                             'bulkActions' => ['delete', 'validate', 'scrape'],
-                                            'itemsPerPage' => $booksPerPage,
-                                            'currentPage' => $booksPage,
-                                            'totalItems' => $totalBooks,
                                             'htmlFields' => ['rating', 'actions'],
-                                            'showPagination' => false, // Disable enhanced table pagination
-                                            'showItemsPerPage' => false // Disable enhanced table per_page dropdown
+                                            'showPagination' => false,
+                                            'showItemsPerPage' => false
                                         ]
                                     );
                                     ?>
@@ -594,6 +592,7 @@ require_once '../includes/header.php';
                             ];
 
                             // Render enhanced table
+                            // Disable enhanced table's built-in pagination
                             renderEnhancedTable(
                                 $tableData,
                                 $columns,
@@ -604,12 +603,9 @@ require_once '../includes/header.php';
                                     'showActions' => true,
                                     'actions' => ['edit', 'delete'],
                                     'bulkActions' => ['delete', 'toggle'],
-                                    'itemsPerPage' => $sourcesPerPage,
-                                    'currentPage' => $sourcesPage,
-                                    'totalItems' => count($reviewSources),
                                     'htmlFields' => ['actions'],
-                                    'showPagination' => false, // Disable enhanced table pagination
-                                    'showItemsPerPage' => false // Disable enhanced table per_page dropdown
+                                    'showPagination' => false,
+                                    'showItemsPerPage' => false
                                 ]
                             );
                             ?>
@@ -859,6 +855,7 @@ require_once '../includes/header.php';
                                     ];
 
                                     // Render enhanced table
+                                    // Disable enhanced table's built-in pagination
                                     renderEnhancedTable(
                                         $tableData,
                                         $columns,
@@ -869,12 +866,9 @@ require_once '../includes/header.php';
                                             'showActions' => true,
                                             'actions' => ['view', 'edit', 'delete'],
                                             'bulkActions' => ['delete', 'analyze'],
-                                            'itemsPerPage' => $reviewsPerPage,
-                                            'currentPage' => $reviewsPage,
-                                            'totalItems' => $totalReviews,
                                             'htmlFields' => ['book', 'rating', 'source', 'actions'],
-                                            'showPagination' => false, // Disable enhanced table pagination
-                                            'showItemsPerPage' => false // Disable enhanced table per_page dropdown
+                                            'showPagination' => false,
+                                            'showItemsPerPage' => false
                                         ]
                                     );
                                     ?>

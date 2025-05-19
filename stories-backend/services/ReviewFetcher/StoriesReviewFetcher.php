@@ -35,9 +35,10 @@ class StoriesReviewFetcher extends AbstractReviewFetcher {
      *
      * @param string $isbn The ISBN of the book (can be ISBN-10 or ISBN-13)
      * @param int $limit Maximum number of reviews to fetch
+     * @param array $options Additional options for the fetcher
      * @return array Array of review data
      */
-    public function fetchReviewsByISBN(string $isbn, int $limit = 10): array {
+    public function fetchReviewsByISBN(string $isbn, int $limit = 10, array $options = []): array {
         // Standardize ISBN format
         $isbnData = $this->standardizeISBN($isbn);
 

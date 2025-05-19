@@ -56,7 +56,7 @@ function reviewExists($db, $bookId, $sourceId, $reviewerName, $reviewText = null
     if ($reviewText) {
         // Use the first 100 characters of the review text to check for duplicates
         $reviewTextStart = substr($reviewText, 0, 100);
-        
+
         $stmt = $db->prepare("
             SELECT id FROM reviews
             WHERE book_id = ? AND source_id = ? AND
@@ -65,12 +65,12 @@ function reviewExists($db, $bookId, $sourceId, $reviewerName, $reviewText = null
         ");
         $stmt->execute([$bookId, $sourceId, $reviewerName, $reviewTextStart]);
         $result = $stmt->fetch();
-        
+
         if ($result) {
             return $result;
         }
     }
-    
+
     // Fall back to just checking the reviewer name
     $stmt = $db->prepare("
         SELECT id FROM reviews
@@ -105,17 +105,17 @@ function updateBookAggregateValues($db, $bookId) {
     $debugCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
     $debugCountStmt->execute([$bookId]);
     $totalReviews = $debugCountStmt->fetchColumn();
-    
+
     // Get current review count from directory_items
     $currentCountStmt = $db->prepare("SELECT review_count FROM directory_items WHERE id = ?");
     $currentCountStmt->execute([$bookId]);
     $currentReviewCount = $currentCountStmt->fetchColumn();
-    
+
     // Get a list of all review IDs for this book to debug
     $reviewIdsStmt = $db->prepare("SELECT id, reviewer_name FROM reviews WHERE book_id = ? ORDER BY id DESC LIMIT 10");
     $reviewIdsStmt->execute([$bookId]);
     $recentReviews = $reviewIdsStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     echo "<p class='info'><strong>DEBUG:</strong> Current review count in directory_items: $currentReviewCount</p>";
     echo "<p class='info'><strong>DEBUG:</strong> Total reviews in database for book ID $bookId: $totalReviews</p>";
     echo "<p class='info'><strong>DEBUG:</strong> 10 most recent reviews:</p>";
@@ -123,7 +123,7 @@ function updateBookAggregateValues($db, $bookId) {
         echo "<p class='info'>- Review ID: {$review['id']}, Reviewer: {$review['reviewer_name']}</p>";
     }
     flushOutput();
-    
+
     // First, count ALL reviews for this book
     $totalReviewCount = 0;
     $countAllStmt = $db->prepare("
@@ -133,7 +133,7 @@ function updateBookAggregateValues($db, $bookId) {
     ");
     $countAllStmt->execute([$bookId]);
     $totalReviewCount = $countAllStmt->fetchColumn();
-    
+
     // Then get aggregate values for reviews with ratings
     $aggregateStmt = $db->prepare("
         SELECT
@@ -161,7 +161,7 @@ function updateBookAggregateValues($db, $bookId) {
         // Debug: Display the values being updated
         echo "<p class='info'><strong>DEBUG:</strong> Updating directory_items for book ID $bookId with review_count: {$totalReviewCount}</p>";
         flushOutput();
-        
+
         $stmt->execute([
             $totalReviewCount,
             $aggregateValues['average_rating'],
@@ -261,7 +261,7 @@ function updateBookAggregateValues($db, $bookId) {
                     $continueFromLast = isset($_POST['continue_from_last']) && $_POST['continue_from_last'] == 1;
                     $reviewLimit = isset($_POST['review_limit']) ? intval($_POST['review_limit']) : 100;
                     $maxPages = isset($_POST['max_pages']) ? intval($_POST['max_pages']) : 20;
-                    
+
                     // Validate limits
                     $reviewLimit = max(10, min(1000, $reviewLimit));
                     $maxPages = max(1, min(100, $maxPages));
@@ -284,7 +284,7 @@ function updateBookAggregateValues($db, $bookId) {
                     $continueFromLast = isset($_GET['continue']) && $_GET['continue'] == 1;
                     $reviewLimit = isset($_GET['limit']) ? intval($_GET['limit']) : 100;
                     $maxPages = isset($_GET['pages']) ? intval($_GET['pages']) : 20;
-                    
+
                     // Validate limits
                     $reviewLimit = max(10, min(1000, $reviewLimit));
                     $maxPages = max(1, min(100, $maxPages));
@@ -432,9 +432,10 @@ function updateBookAggregateValues($db, $bookId) {
                             // Set up options for the fetcher
                             $options = [
                                 'maxPages' => $maxPages,
-                                'continueFromLast' => $continueFromLast
+                                'continueFromLast' => $continueFromLast,
+                                'force' => $forceRefresh
                             ];
-                            
+
                             // If we're continuing from last scrape, get the count of existing reviews
                             $existingReviewCount = 0;
                             if ($continueFromLast) {
@@ -444,20 +445,20 @@ function updateBookAggregateValues($db, $bookId) {
                                 ");
                                 $countStmt->execute([$book['id'], $sourceId]);
                                 $existingReviewCount = (int)$countStmt->fetchColumn();
-                                
+
                                 echo "<p class='info'>Found {$existingReviewCount} existing reviews for this book from {$sourceName}</p>";
                                 flushOutput();
-                                
+
                                 // If continuing, we need to fetch more than what we already have
                                 $fetchLimit = $existingReviewCount + $reviewLimit;
                             } else {
                                 $fetchLimit = $reviewLimit;
                             }
-                            
+
                             // Debug the fetch limit
                             echo "<p class='info'><strong>DEBUG:</strong> Requesting {$fetchLimit} reviews from {$sourceName} (reviewLimit: {$reviewLimit}, existingReviewCount: {$existingReviewCount})</p>";
                             flushOutput();
-                            
+
                             // Fetch reviews from the source with the specified limit
                             $result = $fetcher->fetchReviewsByISBN($isbnToUse, $fetchLimit, $options);
 
@@ -503,7 +504,7 @@ function updateBookAggregateValues($db, $bookId) {
 
                         echo "<p class='info'>Found " . count($reviews) . " reviews from $sourceName</p>";
                         flushOutput();
-                        
+
                         // Debug: Count reviews before processing
                         $beforeCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
                         $beforeCountStmt->execute([$book['id']]);
@@ -515,7 +516,7 @@ function updateBookAggregateValues($db, $bookId) {
                         foreach ($reviews as $review) {
                             // Check for duplicates
                             $existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'], $review['review_text'] ?? null);
-                            
+
                             // Handle different scenarios
                             if ($existingReview) {
                                 if ($continueFromLast) {
@@ -528,10 +529,10 @@ function updateBookAggregateValues($db, $bookId) {
                                     // If force refresh, delete and replace the review
                                     echo "<p class='info'><strong>DEBUG:</strong> Found existing review ID: {$existingReview['id']} for {$review['reviewer_name']}</p>";
                                     flushOutput();
-                                    
+
                                     $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
                                     $deleteStmt->execute([$existingReview['id']]);
-                                    
+
                                     echo "<p class='info'>Successfully deleted review ID: {$existingReview['id']}</p>";
                                     echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
                                     flushOutput();
@@ -549,7 +550,7 @@ function updateBookAggregateValues($db, $bookId) {
                                 // Debug the review data
                                 echo "<p class='info'><strong>DEBUG:</strong> Inserting review for book ID: {$book['id']}, source ID: {$review['source_id']}, reviewer: {$review['reviewer_name']}</p>";
                                 flushOutput();
-                                
+
                                 // Insert the review
                                 $stmt = $db->prepare("
                                     INSERT INTO reviews (
@@ -607,7 +608,7 @@ function updateBookAggregateValues($db, $bookId) {
                                         ':review_text' => $review['review_text'],
                                         ':metadata' => $review['metadata'] ?? null
                                     ]);
-                                    
+
                                     echo "<p class='success'>SQL query executed successfully</p>";
                                     flushOutput();
                                 } catch (PDOException $e) {
@@ -627,7 +628,7 @@ function updateBookAggregateValues($db, $bookId) {
                             }
                         }
                     }
-                    
+
                     // Debug: Count reviews after processing
                     $afterCountStmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE book_id = ?");
                     $afterCountStmt->execute([$book['id']]);

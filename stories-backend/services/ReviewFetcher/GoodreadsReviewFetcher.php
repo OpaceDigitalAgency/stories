@@ -1350,6 +1350,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Add continueFromLast parameter if true
         if ($continueFromLast) {
             $url .= "&continueFromLast=1";
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting continueFromLast=1 to continue from last scrape");
+        }
+
+        // Add force parameter if we're not continuing from last
+        if (!$continueFromLast && isset($options['force']) && $options['force']) {
+            $url .= "&force=1";
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force=1 to bypass cache");
         }
 
         // Log the full URL for debugging

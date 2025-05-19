@@ -73,9 +73,11 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
 
     logger.info(`Scraping Goodreads reviews for URL: ${url}, force=${force}, maxPages=${maxPages}, continueFromLast=${continueFromLast}`);
 
-    // Extract book ID for caching
-    const bookIdMatch = url.match(/\/book\/isbn\/(\d+)/);
+    // Extract book ID for caching - handle both /book/show/ and /book/isbn/ formats
+    const bookIdMatch = url.match(/\/book\/(?:show|isbn)\/(\d+)/);
     const bookId = bookIdMatch ? bookIdMatch[1] : null;
+
+    logger.info(`Extracted book ID: ${bookId} from URL: ${url}`);
 
     // Check if we should bypass cache
     if (force === 'true' || force === '1') {
@@ -89,11 +91,13 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
         const dbPath = path.resolve(config.cache.dbPath);
         const db = new sqlite3.Database(dbPath);
 
-        db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier = ?', ['goodreads', bookId], function(err) {
+        // Clear all cache entries for this book ID (with any cache key format)
+        db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier LIKE ?',
+               ['goodreads', `${bookId}%`], function(err) {
           if (err) {
             logger.error(`Error clearing cache for ${bookId}: ${err.message}`);
           } else {
-            logger.info(`Cleared cache for book ID ${bookId}`);
+            logger.info(`Cleared ${this.changes} cache entries for book ID ${bookId}`);
           }
           db.close();
         });
@@ -133,11 +137,13 @@ app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req,
       const dbPath = path.resolve(config.cache.dbPath);
       const db = new sqlite3.Database(dbPath);
 
-      db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier = ?', ['amazon', asin], function(err) {
+      // Clear all cache entries for this ASIN (with any cache key format)
+      db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier LIKE ?',
+             ['amazon', `${asin}%`], function(err) {
         if (err) {
           logger.error(`Error clearing cache for ASIN ${asin}: ${err.message}`);
         } else {
-          logger.info(`Cleared cache for ASIN ${asin}`);
+          logger.info(`Cleared ${this.changes} cache entries for ASIN ${asin}`);
         }
         db.close();
       });

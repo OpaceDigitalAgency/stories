@@ -72,8 +72,13 @@ class AmazonHeadlessFetcher extends AmazonReviewFetcher
     /**
      * Main entry: fetch up to $limit reviews for $isbn.
      * Overrides parent method to use headless browser first, then fall back.
+     *
+     * @param string $isbn The ISBN of the book (can be ISBN-10 or ISBN-13)
+     * @param int $limit Maximum number of reviews to fetch
+     * @param array $options Additional options for the fetcher
+     * @return array Array of review data
      */
-    public function fetchReviewsByISBN(string $isbn, int $limit = 10): array
+    public function fetchReviewsByISBN(string $isbn, int $limit = 10, array $options = []): array
     {
         // 1) Clean ISBN and convert to ASIN (same as parent)
         $clean = preg_replace('/[^0-9X]/i', '', $isbn);

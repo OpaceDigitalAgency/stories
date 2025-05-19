@@ -319,7 +319,7 @@ require_once '../includes/header.php';
                             <a class="nav-link <?php echo empty($_GET['tab']) || $_GET['tab'] == 'existing' ? 'active' : ''; ?>"
                                id="existing-tab" data-toggle="tab" href="#existing" role="tab"
                                onclick="updateUrlParam('tab', 'existing')">
-                                <i class="fas fa-book"></i> Existing Books
+                                <i class="fas fa-book"></i> Books & Validation
                             </a>
                         </li>
                         <li class="nav-item">
@@ -355,13 +355,6 @@ require_once '../includes/header.php';
                                id="ai-tab" data-toggle="tab" href="#ai" role="tab"
                                onclick="updateUrlParam('tab', 'ai')">
                                 <i class="fas fa-robot"></i> AI Analysis
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo isset($_GET['tab']) && $_GET['tab'] == 'validate' ? 'active' : ''; ?>"
-                               id="validate-tab" data-toggle="tab" href="#validate" role="tab"
-                               onclick="updateUrlParam('tab', 'validate')">
-                                <i class="fas fa-check-circle"></i> ISBN & Data Validation
                             </a>
                         </li>
                     </ul>
@@ -410,8 +403,24 @@ require_once '../includes/header.php';
                                             'validate' => 'Validate ISBNs',
                                             'scrape' => 'Scrape Reviews'
                                         ]);
+                                    } else {
+                                    ?>
+                                    <div class="bulk-actions mb-3">
+                                        <div class="d-flex gap-2">
+                                            <select class="form-control w-auto" name="bulk_action" id="bulk-action-books">
+                                                <option value="">Bulk Actions</option>
+                                                <option value="delete">Delete Selected</option>
+                                                <option value="validate">Validate ISBNs</option>
+                                                <option value="scrape">Scrape Reviews</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-primary" id="apply-bulk-action-books">Apply</button>
+                                        </div>
+                                    </div>
+                                    <?php
                                     }
+                                    ?>
 
+                                    <?php
                                     // Prepare data for the enhanced table
                                     $tableData = [];
                                     foreach ($books as $book) {
@@ -519,11 +528,16 @@ require_once '../includes/header.php';
                                                                     ?>
                                                                 </td>
                                                                 <td>
-                                                                    <button class="btn btn-sm btn-primary scrape-reviews-btn"
-                                                                            data-book-id="<?php echo $book['id']; ?>"
-                                                                            data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
-                                                                        <i class="fas fa-sync"></i> Scrape Reviews
-                                                                    </button>
+                                                                    <div class="btn-group">
+                                                                        <button class="btn btn-sm btn-primary scrape-reviews-btn"
+                                                                                data-book-id="<?php echo $book['id']; ?>"
+                                                                                data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
+                                                                            <i class="fas fa-sync"></i> Scrape
+                                                                        </button>
+                                                                        <a href="?tab=reviews&review_book_id=<?php echo $book['id']; ?>" class="btn btn-sm btn-secondary">
+                                                                            <i class="fas fa-star"></i> Reviews (<?php echo (int)$book['review_count']; ?>)
+                                                                        </a>
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -531,13 +545,162 @@ require_once '../includes/header.php';
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <?php
-                                    }
+                                    <?php } ?>
 
-                                    // Include pagination component
-                                    if (function_exists('renderPagination') && $totalBooks > $perPage) {
-                                        renderPagination($totalBooks, $perPage, $page);
-                                    }
+                                    <!-- Pagination -->
+                                    <div class="pagination-container">
+                                        <div class="pagination-info">
+                                            <?php if ($perPage >= $totalBooks): ?>
+                                                Showing all <?php echo $totalBooks; ?> items
+                                            <?php else: ?>
+                                                Showing <?php echo ($page - 1) * $perPage + 1; ?> to
+                                                <?php echo min($page * $perPage, $totalBooks); ?> of
+                                                <?php echo $totalBooks; ?> items
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between" style="margin-top: 10px;">
+                                            <!-- Pagination links -->
+                                            <div class="d-flex align-items-center">
+                                                <ul class="pagination mb-0">
+                                                    <!-- First page link -->
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&per_page=<?php echo $perPage; ?>" aria-label="First page">
+                                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Previous page link -->
+                                                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?page=<?php echo max(1, $page - 1); ?>&per_page=<?php echo $perPage; ?>" aria-label="Previous page">
+                                                            <span aria-hidden="true">&laquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Page number links -->
+                                                    <?php
+                                                    $startPage = max(1, $page - 2);
+                                                    $endPage = min($totalPages, $startPage + 4);
+                                                    for ($i = $startPage; $i <= $endPage; $i++):
+                                                    ?>
+                                                        <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                                            <a class="page-link" href="?page=<?php echo $i; ?>&per_page=<?php echo $perPage; ?>"><?php echo $i; ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
+
+                                                    <!-- Next page link -->
+                                                    <li class="page-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?page=<?php echo min($totalPages, $page + 1); ?>&per_page=<?php echo $perPage; ?>" aria-label="Next page">
+                                                            <span aria-hidden="true">&raquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Last page link -->
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<?php echo $totalPages; ?>&per_page=<?php echo $perPage; ?>" aria-label="Last page">
+                                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <!-- Items per page selector -->
+                                            <div class="items-per-page" style="margin-left: 10px;">
+                                                <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" class="d-flex align-items-center pagination-form">
+                                                    <select name="per_page" id="per-page" class="form-control form-control-sm" aria-label="Items per page" onchange="this.form.submit()">
+                                                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                                                            <option value="<?php echo $option; ?>" <?php echo $perPage == $option ? 'selected' : ''; ?>>
+                                                                <?php echo $option; ?> per page
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                        <option value="<?php echo $totalBooks; ?>" <?php echo $perPage == $totalBooks ? 'selected' : ''; ?>>
+                                                            Show All (<?php echo $totalBooks; ?>)
+                                                        </option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="pagination-container">
+                                        <div class="pagination-info">
+                                            <?php if ($perPage >= $totalBooks): ?>
+                                                Showing all <?php echo $totalBooks; ?> items
+                                            <?php else: ?>
+                                                Showing <?php echo ($page - 1) * $perPage + 1; ?> to
+                                                <?php echo min($page * $perPage, $totalBooks); ?> of
+                                                <?php echo $totalBooks; ?> items
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between" style="margin-top: 10px;">
+                                            <!-- Pagination links -->
+                                            <div class="d-flex align-items-center">
+                                                <ul class="pagination mb-0">
+                                                    <!-- First page link -->
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&per_page=<?php echo $perPage; ?>" aria-label="First page">
+                                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Previous page link -->
+                                                    <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?page=<?php echo max(1, $page - 1); ?>&per_page=<?php echo $perPage; ?>" aria-label="Previous page">
+                                                            <span aria-hidden="true">&laquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Page number links -->
+                                                    <?php
+                                                    $startPage = max(1, $page - 2);
+                                                    $endPage = min($totalPages, $startPage + 4);
+                                                    for ($i = $startPage; $i <= $endPage; $i++):
+                                                    ?>
+                                                        <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                                            <a class="page-link" href="?page=<?php echo $i; ?>&per_page=<?php echo $perPage; ?>"><?php echo $i; ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
+
+                                                    <!-- Next page link -->
+                                                    <li class="page-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?page=<?php echo min($totalPages, $page + 1); ?>&per_page=<?php echo $perPage; ?>" aria-label="Next page">
+                                                            <span aria-hidden="true">&raquo;</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Last page link -->
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<?php echo $totalPages; ?>&per_page=<?php echo $perPage; ?>" aria-label="Last page">
+                                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <!-- Items per page selector -->
+                                            <div class="items-per-page" style="margin-left: 10px;">
+                                                <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" class="d-flex align-items-center pagination-form">
+                                                    <!-- Preserve existing query parameters -->
+                                                    <?php foreach ($_GET as $key => $value): ?>
+                                                        <?php if ($key !== 'page' && $key !== 'per_page'): ?>
+                                                            <input type="hidden" name="<?php echo htmlspecialchars($key); ?>" value="<?php echo htmlspecialchars($value); ?>">
+                                                        <?php endif; ?>
+                                                    <?php endforeach; ?>
+
+                                                    <select name="per_page" id="per-page" class="form-control form-control-sm" aria-label="Items per page" onchange="this.form.submit()">
+                                                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                                                            <option value="<?php echo $option; ?>" <?php echo $perPage == $option ? 'selected' : ''; ?>>
+                                                                <?php echo $option; ?> per page
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                        <option value="<?php echo $totalBooks; ?>" <?php echo $perPage == $totalBooks ? 'selected' : ''; ?>>
+                                                            Show All (<?php echo $totalBooks; ?>)
+                                                        </option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                     ?>
                                 </div>
                             </div>
@@ -851,12 +1014,12 @@ require_once '../includes/header.php';
                                     <form method="post" id="reviews-form" action="review-bulk-actions.php">
                                         <div class="bulk-actions mb-3">
                                             <div class="d-flex gap-2">
-                                                <select class="form-control w-auto" name="bulk_action" id="bulk-action">
+                                                <select class="form-control w-auto" name="bulk_action" id="bulk-action-reviews">
                                                     <option value="">Bulk Actions</option>
                                                     <option value="delete">Delete</option>
                                                     <option value="analyze">Analyze with AI</option>
                                                 </select>
-                                                <button type="submit" class="btn btn-primary" id="apply-bulk-action">Apply</button>
+                                                <button type="submit" class="btn btn-primary" id="apply-bulk-action-reviews">Apply</button>
                                             </div>
                                         </div>
 
@@ -928,76 +1091,93 @@ require_once '../includes/header.php';
                                     </form>
 
                                     <!-- Pagination -->
-                                    <?php
-                                    // Build the query parameters for pagination links
-                                    $reviewQueryParams = [];
-                                    $reviewQueryParams[] = 'tab=reviews';
-                                    if (!empty($reviewSearch)) {
-                                        $reviewQueryParams[] = 'review_search=' . urlencode($reviewSearch);
-                                    }
-                                    if ($reviewSourceFilter > 0) {
-                                        $reviewQueryParams[] = 'review_source=' . $reviewSourceFilter;
-                                    }
-                                    if ($reviewBookFilter > 0) {
-                                        $reviewQueryParams[] = 'review_book_id=' . $reviewBookFilter;
-                                    }
-                                    if ($reviewRatingFilter > 0) {
-                                        $reviewQueryParams[] = 'review_rating=' . $reviewRatingFilter;
-                                    }
-                                    $reviewQueryString = implode('&', $reviewQueryParams);
+                                    <div class="pagination-container">
+                                        <div class="pagination-info">
+                                            <?php if ($reviewsPerPage >= $totalReviews): ?>
+                                                Showing all <?php echo $totalReviews; ?> items
+                                            <?php else: ?>
+                                                Showing <?php echo ($reviewPage - 1) * $reviewsPerPage + 1; ?> to
+                                                <?php echo min($reviewPage * $reviewsPerPage, $totalReviews); ?> of
+                                                <?php echo $totalReviews; ?> items
+                                            <?php endif; ?>
+                                        </div>
 
-                                    // Use the standard pagination component
-                                    if (function_exists('renderPaginationComponent')) {
-                                        renderPaginationComponent(
-                                            $reviewPage,
-                                            $totalReviewPages,
-                                            $totalReviews,
-                                            $reviewsPerPage,
-                                            $validPerPageValues,
-                                            '?' . $reviewQueryString . '&',
-                                            'page',
-                                            'per_page'
-                                        );
-                                    } else {
-                                        // Fallback to basic pagination if component is not available
-                                        if ($totalReviewPages > 1):
-                                    ?>
-                                        <nav aria-label="Page navigation" class="mt-4">
-                                            <ul class="pagination justify-content-center">
-                                                <?php if ($reviewPage > 1): ?>
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between" style="margin-top: 10px;">
+                                            <!-- Pagination links -->
+                                            <div class="d-flex align-items-center">
+                                                <ul class="pagination mb-0">
+                                                    <!-- First page link -->
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=1">First</a>
+                                                        <a class="page-link" href="?tab=reviews&page=1&per_page=<?php echo $reviewsPerPage; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>" aria-label="First page">
+                                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                                        </a>
                                                     </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $reviewPage - 1; ?>">Previous</a>
-                                                    </li>
-                                                <?php endif; ?>
 
-                                                <?php
-                                                $startPage = max(1, $reviewPage - 2);
-                                                $endPage = min($totalReviewPages, $reviewPage + 2);
+                                                    <!-- Previous page link -->
+                                                    <li class="page-item <?php echo $reviewPage <= 1 ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?tab=reviews&page=<?php echo max(1, $reviewPage - 1); ?>&per_page=<?php echo $reviewsPerPage; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>" aria-label="Previous page">
+                                                            <span aria-hidden="true">&laquo;</span>
+                                                        </a>
+                                                    </li>
 
-                                                for ($i = $startPage; $i <= $endPage; $i++):
-                                                ?>
-                                                    <li class="page-item <?php echo $i === $reviewPage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                                    </li>
-                                                <?php endfor; ?>
+                                                    <!-- Page number links -->
+                                                    <?php
+                                                    $startPage = max(1, $reviewPage - 2);
+                                                    $endPage = min($totalReviewPages, $startPage + 4);
+                                                    for ($i = $startPage; $i <= $endPage; $i++):
+                                                    ?>
+                                                        <li class="page-item <?php echo $i === $reviewPage ? 'active' : ''; ?>">
+                                                            <a class="page-link" href="?tab=reviews&page=<?php echo $i; ?>&per_page=<?php echo $reviewsPerPage; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>"><?php echo $i; ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
 
-                                                <?php if ($reviewPage < $totalReviewPages): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $reviewPage + 1; ?>">Next</a>
+                                                    <!-- Next page link -->
+                                                    <li class="page-item <?php echo $reviewPage >= $totalReviewPages ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?tab=reviews&page=<?php echo min($totalReviewPages, $reviewPage + 1); ?>&per_page=<?php echo $reviewsPerPage; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>" aria-label="Next page">
+                                                            <span aria-hidden="true">&raquo;</span>
+                                                        </a>
                                                     </li>
+
+                                                    <!-- Last page link -->
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $reviewQueryString; ?>&page=<?php echo $totalReviewPages; ?>">Last</a>
+                                                        <a class="page-link" href="?tab=reviews&page=<?php echo $totalReviewPages; ?>&per_page=<?php echo $reviewsPerPage; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>" aria-label="Last page">
+                                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                                        </a>
                                                     </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </nav>
-                                    <?php
-                                        endif;
-                                    }
-                                    ?>
+                                                </ul>
+                                            </div>
+
+                                            <!-- Items per page selector -->
+                                            <div class="items-per-page" style="margin-left: 10px;">
+                                                <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" class="d-flex align-items-center pagination-form">
+                                                    <input type="hidden" name="tab" value="reviews">
+                                                    <?php if (!empty($reviewSearch)): ?>
+                                                        <input type="hidden" name="review_search" value="<?php echo htmlspecialchars($reviewSearch); ?>">
+                                                    <?php endif; ?>
+                                                    <?php if ($reviewSourceFilter > 0): ?>
+                                                        <input type="hidden" name="review_source" value="<?php echo $reviewSourceFilter; ?>">
+                                                    <?php endif; ?>
+                                                    <?php if ($reviewBookFilter > 0): ?>
+                                                        <input type="hidden" name="review_book_id" value="<?php echo $reviewBookFilter; ?>">
+                                                    <?php endif; ?>
+                                                    <?php if ($reviewRatingFilter > 0): ?>
+                                                        <input type="hidden" name="review_rating" value="<?php echo $reviewRatingFilter; ?>">
+                                                    <?php endif; ?>
+
+                                                    <select name="per_page" id="per-page-reviews" class="form-control form-control-sm" aria-label="Items per page" onchange="this.form.submit()">
+                                                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                                                            <option value="<?php echo $option; ?>" <?php echo $reviewsPerPage == $option ? 'selected' : ''; ?>>
+                                                                <?php echo $option; ?> per page
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                        <option value="<?php echo $totalReviews; ?>" <?php echo $reviewsPerPage == $totalReviews ? 'selected' : ''; ?>>
+                                                            Show All (<?php echo $totalReviews; ?>)
+                                                        </option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1243,67 +1423,84 @@ require_once '../includes/header.php';
                                     </div>
 
                                     <!-- Pagination for validation tab -->
-                                    <?php
-                                    // Build the query parameters for pagination links
-                                    $validateQueryParams = [];
-                                    $validateQueryParams[] = 'tab=validate';
-                                    if (!empty($bookSearch)) {
-                                        $validateQueryParams[] = 'book_search=' . urlencode($bookSearch);
-                                    }
-                                    $validateQueryString = implode('&', $validateQueryParams);
+                                    <div class="pagination-container">
+                                        <div class="pagination-info">
+                                            <?php if ($validatePerPage >= $totalBooks): ?>
+                                                Showing all <?php echo $totalBooks; ?> items
+                                            <?php else: ?>
+                                                Showing <?php echo ($validatePage - 1) * $validatePerPage + 1; ?> to
+                                                <?php echo min($validatePage * $validatePerPage, $totalBooks); ?> of
+                                                <?php echo $totalBooks; ?> items
+                                            <?php endif; ?>
+                                        </div>
 
-                                    // Use the standard pagination component
-                                    if (function_exists('renderPaginationComponent')) {
-                                        renderPaginationComponent(
-                                            $validatePage,
-                                            $totalPages,
-                                            $totalBooks,
-                                            $validatePerPage,
-                                            $validPerPageValues,
-                                            '?' . $validateQueryString . '&',
-                                            'page',
-                                            'per_page'
-                                        );
-                                    } else {
-                                        // Fallback to basic pagination if component is not available
-                                        if ($totalPages > 1):
-                                    ?>
-                                        <nav aria-label="Page navigation" class="mt-4">
-                                            <ul class="pagination justify-content-center">
-                                                <?php if ($validatePage > 1): ?>
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between" style="margin-top: 10px;">
+                                            <!-- Pagination links -->
+                                            <div class="d-flex align-items-center">
+                                                <ul class="pagination mb-0">
+                                                    <!-- First page link -->
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=1">First</a>
+                                                        <a class="page-link" href="?tab=validate&page=1&per_page=<?php echo $validatePerPage; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>" aria-label="First page">
+                                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                                        </a>
                                                     </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $validatePage - 1; ?>">Previous</a>
-                                                    </li>
-                                                <?php endif; ?>
 
-                                                <?php
-                                                $startPage = max(1, $validatePage - 2);
-                                                $endPage = min($totalPages, $validatePage + 2);
+                                                    <!-- Previous page link -->
+                                                    <li class="page-item <?php echo $validatePage <= 1 ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?tab=validate&page=<?php echo max(1, $validatePage - 1); ?>&per_page=<?php echo $validatePerPage; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>" aria-label="Previous page">
+                                                            <span aria-hidden="true">&laquo;</span>
+                                                        </a>
+                                                    </li>
 
-                                                for ($i = $startPage; $i <= $endPage; $i++):
-                                                ?>
-                                                    <li class="page-item <?php echo $i === $validatePage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                                    </li>
-                                                <?php endfor; ?>
+                                                    <!-- Page number links -->
+                                                    <?php
+                                                    $startPage = max(1, $validatePage - 2);
+                                                    $endPage = min($totalPages, $startPage + 4);
+                                                    for ($i = $startPage; $i <= $endPage; $i++):
+                                                    ?>
+                                                        <li class="page-item <?php echo $i === $validatePage ? 'active' : ''; ?>">
+                                                            <a class="page-link" href="?tab=validate&page=<?php echo $i; ?>&per_page=<?php echo $validatePerPage; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>"><?php echo $i; ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
 
-                                                <?php if ($validatePage < $totalPages): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $validatePage + 1; ?>">Next</a>
+                                                    <!-- Next page link -->
+                                                    <li class="page-item <?php echo $validatePage >= $totalPages ? 'disabled' : ''; ?>">
+                                                        <a class="page-link" href="?tab=validate&page=<?php echo min($totalPages, $validatePage + 1); ?>&per_page=<?php echo $validatePerPage; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>" aria-label="Next page">
+                                                            <span aria-hidden="true">&raquo;</span>
+                                                        </a>
                                                     </li>
+
+                                                    <!-- Last page link -->
                                                     <li class="page-item">
-                                                        <a class="page-link" href="?<?php echo $validateQueryString; ?>&page=<?php echo $totalPages; ?>">Last</a>
+                                                        <a class="page-link" href="?tab=validate&page=<?php echo $totalPages; ?>&per_page=<?php echo $validatePerPage; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>" aria-label="Last page">
+                                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                                        </a>
                                                     </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </nav>
-                                    <?php
-                                        endif;
-                                    }
-                                    ?>
+                                                </ul>
+                                            </div>
+
+                                            <!-- Items per page selector -->
+                                            <div class="items-per-page" style="margin-left: 10px;">
+                                                <form method="GET" action="<?php echo $_SERVER['PHP_SELF']; ?>" class="d-flex align-items-center pagination-form">
+                                                    <input type="hidden" name="tab" value="validate">
+                                                    <?php if (!empty($bookSearch)): ?>
+                                                        <input type="hidden" name="book_search" value="<?php echo htmlspecialchars($bookSearch); ?>">
+                                                    <?php endif; ?>
+
+                                                    <select name="per_page" id="per-page-validate" class="form-control form-control-sm" aria-label="Items per page" onchange="this.form.submit()">
+                                                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                                                            <option value="<?php echo $option; ?>" <?php echo $validatePerPage == $option ? 'selected' : ''; ?>>
+                                                                <?php echo $option; ?> per page
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                        <option value="<?php echo $totalBooks; ?>" <?php echo $validatePerPage == $totalBooks ? 'selected' : ''; ?>>
+                                                            Show All (<?php echo $totalBooks; ?>)
+                                                        </option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

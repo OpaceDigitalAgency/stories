@@ -343,7 +343,8 @@ require_once '../includes/header.php';
                             'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
                             'perPageLabel' => 'Show',
                             'showAllLabel' => 'Show All',
-                            'showItemsPerPage' => false // Disable the built-in per-page dropdown since we have our own
+                            'showItemsPerPage' => true, // Enable the built-in per-page dropdown for consistency
+                            'tab' => '' // Ensure no tab parameter is added
                         ]);
                         ?>
                     </div>
@@ -355,8 +356,8 @@ require_once '../includes/header.php';
 
 <script>
 $(document).ready(function() {
-    // Handle per-page dropdown change
-    $('#reviews_per_page').on('change', function() {
+    // Handle per-page dropdown change for both dropdowns
+    $('#reviews_per_page, .per-page-select').on('change', function() {
         // Get current URL
         let url = new URL(window.location.href);
         
@@ -369,6 +370,15 @@ $(document).ready(function() {
         // Redirect to the new URL
         window.location.href = url.toString();
     });
+    
+    // Ensure both dropdowns are synchronized
+    function syncDropdowns() {
+        const value = $('#reviews_per_page').val();
+        $('.per-page-select').val(value);
+    }
+    
+    // Sync on page load
+    syncDropdowns();
 
     // Individual Delete Buttons
     $('.delete-review').on('click', function() {

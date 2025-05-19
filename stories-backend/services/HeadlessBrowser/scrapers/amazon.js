@@ -1,6 +1,15 @@
 /**
  * Amazon review scraper
  */
+// Enable Puppeteer Extra stealth plugins
+const puppeteerExtra = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const AnonymizeUAPlugin = require('puppeteer-extra-plugin-anonymize-ua');
+
+// Apply stealth and UA anonymization
+puppeteerExtra.use(StealthPlugin());
+puppeteerExtra.use(AnonymizeUAPlugin());
+
 const browser = require('../utils/browser');
 const logger = require('../utils/logger');
 const cache = require('../utils/cache');

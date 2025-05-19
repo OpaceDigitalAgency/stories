@@ -76,10 +76,28 @@ try {
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
     $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
     
+    // ISBN tab pagination
+    $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
+    $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
+    
     // Log the parameters for debugging
     error_log("Page: $page, Per Page: $perPage, Tab: $currentTab");
     error_log("Sources Page: $sourcesPage, Sources Per Page: $sourcesPerPage");
     error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
+    error_log("ISBN Page: $isbnPage, ISBN Per Page: $isbnPerPage");
+    
+    // Calculate offsets for each tab
+    $offset = ($page - 1) * $perPage;
+    $offset = max(0, $offset); // Ensure offset is not negative
+    
+    $sourcesOffset = ($sourcesPage - 1) * $sourcesPerPage;
+    $sourcesOffset = max(0, $sourcesOffset);
+    
+    $reviewsOffset = ($reviewsPage - 1) * $reviewsPerPage;
+    $reviewsOffset = max(0, $reviewsOffset);
+    
+    $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
+    $isbnOffset = max(0, $isbnOffset);
 
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];
@@ -116,9 +134,7 @@ try {
     }
     $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
 
-    // Calculate offset based on current page and items per page
-    $offset = ($page - 1) * $perPage;
-    $offset = max(0, $offset); // Ensure offset is not negative
+    // Offset is calculated above for each tab
 
     // Define columns for each tab
     $columns = [
@@ -180,7 +196,7 @@ try {
                 SELECT r.*
                 FROM reviews r
                 ORDER BY r.created_at DESC
-                LIMIT $perPage OFFSET $offset
+                LIMIT $reviewsPerPage OFFSET $reviewsOffset
             ";
             break;
         case 'sources':
@@ -188,7 +204,18 @@ try {
                 SELECT *
                 FROM review_sources
                 ORDER BY name ASC
-                LIMIT $perPage OFFSET $offset
+                LIMIT $sourcesPerPage OFFSET $sourcesOffset
+            ";
+            break;
+        case 'validate':
+            $query = "
+                SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
+                       b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
+                FROM directory_items di
+                JOIN books b ON di.id = b.directory_item_id
+                WHERE di.type = 'book'
+                ORDER BY di.title ASC
+                LIMIT $isbnPerPage OFFSET $isbnOffset
             ";
             break;
         default: // 'existing' tab and others

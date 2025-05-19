@@ -28,6 +28,11 @@ require_once '../includes/admin-functions.php';
 // Include tag functions
 require_once '../includes/tag-functions.php';
 
+// Include components
+require_once '../includes/enhanced-table-component.php';
+require_once '../includes/bulk-actions-component.php';
+require_once '../includes/pagination-component.php';
+
 // Include the review fetcher services
 require_once '../../services/ReviewFetcher/ReviewFetcherInterface.php';
 require_once '../../services/ReviewFetcher/AbstractReviewFetcher.php';

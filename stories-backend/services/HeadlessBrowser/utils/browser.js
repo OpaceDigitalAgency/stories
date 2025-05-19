@@ -37,13 +37,13 @@ module.exports = {
             '--window-size=1920x1080',
           ],
         });
-        
+
         // Handle browser disconnection
         browserInstance.on('disconnected', () => {
           logger.warn('Browser disconnected');
           browserInstance = null;
         });
-        
+
         logger.info('Browser instance launched successfully');
       } catch (error) {
         logger.error(`Error launching browser: ${error.message}`);
@@ -52,7 +52,7 @@ module.exports = {
     }
     return browserInstance;
   },
-  
+
   /**
    * Close the browser instance if it exists
    */
@@ -68,7 +68,7 @@ module.exports = {
       }
     }
   },
-  
+
   /**
    * Get a new page with optional user agent
    * @param {string} userAgent - Optional user agent to use
@@ -77,7 +77,7 @@ module.exports = {
   getNewPage: async (userAgent = null) => {
     const browser = await module.exports.getBrowser();
     const page = await browser.newPage();
-    
+
     // Set a realistic user agent if provided
     if (userAgent) {
       await page.setUserAgent(userAgent);
@@ -87,45 +87,38 @@ module.exports = {
       ];
       await page.setUserAgent(randomUserAgent);
     }
-    
+
     // Set viewport
     await page.setViewport(config.browser.defaultViewport);
-    
+
     // Block unnecessary resources to speed up scraping
     await page.setRequestInterception(true);
-    page.on('request', (req) => {
+    page.on('request', async (request) => {
       try {
-        const resourceType = req.resourceType();
-        if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
-          req.abort();
-        } else {
-          req.continue();
-        }
-      } catch (error) {
-        // If the request has already been handled, log it and move on
-        if (error.message.includes('Request is already handled')) {
-          logger.warn(`Request is already handled: ${req.url().substring(0, 100)}...`);
-        } else {
-          logger.error(`Error handling request: ${error.message}`);
-          // Try to continue the request if possible
-          try {
-            req.continue();
-          } catch (continueError) {
-            // Ignore errors from trying to continue an already handled request
-            logger.debug(`Could not continue request: ${continueError.message}`);
+        if (!request._interceptionHandled) {
+          const resourceType = request.resourceType();
+          if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
+            request.abort();
+          } else {
+            // Check if the request has already been handled
+            if (!request._interceptionHandled) {
+              request.continue();
+            }
           }
         }
+      } catch (err) {
+        console.error('⚠️ Request interception error:', err.message);
       }
     });
-    
+
     // Add error handling for page errors
     page.on('error', error => {
       logger.error(`Page error: ${error.message}`);
     });
-    
+
     return page;
   },
-  
+
   /**
    * Take a screenshot of a page for debugging
    * @param {Page} page - Puppeteer page
@@ -136,14 +129,14 @@ module.exports = {
     if (!fs.existsSync(screenshotsDir)) {
       fs.mkdirSync(screenshotsDir, { recursive: true });
     }
-    
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `${name}-${timestamp}.png`;
     const filepath = path.join(screenshotsDir, filename);
-    
+
     await page.screenshot({ path: filepath, fullPage: true });
     logger.info(`Screenshot saved to ${filepath}`);
-    
+
     return filepath;
   }
 };

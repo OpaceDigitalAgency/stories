@@ -52,6 +52,11 @@ try {
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
     $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
     
+    // Ensure reviewsPerPage is a valid value
+    if ($reviewsPerPage <= 0) {
+        $reviewsPerPage = 10;
+    }
+    
     // Log the parameters for debugging
     error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
     
@@ -128,9 +133,14 @@ try {
 
     // Get reviews
     $reviewQuery = "
-        SELECT r.*, d.title as book_title, s.name as source_name, s.is_third_party
+        SELECT r.*,
+               d.title as book_title,
+               b.title as book_title_fallback,
+               s.name as source_name,
+               s.is_third_party
         FROM reviews r
         LEFT JOIN directory_items d ON r.book_id = d.id
+        LEFT JOIN books b ON b.directory_item_id = r.book_id
         LEFT JOIN review_sources s ON r.source_id = s.id
         $reviewWhereClause
         ORDER BY r.created_at DESC
@@ -286,11 +296,12 @@ require_once '../includes/header.php';
                                 $tableData[] = [
                                     'id' => $review['id'],
                                     'book' => '<a href="directory-item-form.php?id=' . $review['book_id'] . '">' .
-                                             htmlspecialchars($review['book_title']) . '</a>',
-                                    'reviewer' => htmlspecialchars($review['reviewer_name']),
+                                             htmlspecialchars(!empty($review['book_title']) ? $review['book_title'] :
+                                                (!empty($review['book_title_fallback']) ? $review['book_title_fallback'] : 'Unknown Book')) . '</a>',
+                                    'reviewer' => htmlspecialchars(!empty($review['reviewer_name']) ? $review['reviewer_name'] : 'Anonymous'),
                                     'rating' => $rating,
                                     'source' => $source,
-                                    'date' => $review['review_date'],
+                                    'date' => $review['created_at'],
                                     'actions' => $actions
                                 ];
                             }

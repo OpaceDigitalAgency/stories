@@ -113,24 +113,20 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     } else if (!force && bookId) {
       // Check if we have cached data
       const cachedData = await cache.get('goodreads', bookId);
-
       if (cachedData) {
         const cachedCount = (cachedData.reviews || []).length;
-        logger.info(`Cache hit for ${bookId} - ${cachedCount} reviews`);
-
-        // Only use cache if we don't need to continue from last AND we have enough reviews
-        const needMore = continueFromLast && limit > cachedCount;
-
-        if (!needMore) {
+        // Only return cache if NOT continuing from last AND we have at least the requested limit
+        if (!continueFromLast && cachedCount >= limit) {
           logger.info(`Cache hit for ${bookId} - returning ${cachedCount} reviews`);
           return res.json(cachedData);
         }
-
-        logger.info(`Cache hit but need more (${cachedCount}/${limit}); continuing scrape`);
+        // Otherwise always continue scraping to fetch next batch
+        logger.info(`Cache hit but continuing scrape (continueFromLast=${continueFromLast}, cachedCount=${cachedCount}, limit=${limit})`);
       }
     }
+    
 
-    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
+    const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), { 
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1'
     });

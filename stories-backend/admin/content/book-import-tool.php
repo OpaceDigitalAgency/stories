@@ -170,55 +170,63 @@ require_once '../includes/header.php';
             <?php endif; ?>
 
             <?php
-            // Function to check if Git Auto Deploy webhook is running (cURL-based check)
+            // Function to check if Git Auto Deploy webhook is running (direct socket check)
             function is_webhook_online() {
-                if (function_exists('curl_init')) {
-                    $ch = curl_init('http://127.0.0.1:8080');
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 1); // timeout in 1 second
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-
-                    // If we got any response or a successful HTTP code, the webhook is running
-                    if ($response !== false || ($httpCode > 0 && $httpCode < 500)) {
-                        return true;
-                    }
-
-                    // Try with the actual server IP as another fallback
-                    $serverIp = $_SERVER['SERVER_ADDR'] ?? '37.27.31.107';
-                    $ch = curl_init("http://{$serverIp}:8080");
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-
-                    if ($response !== false || ($httpCode > 0 && $httpCode < 500)) {
-                        return true;
-                    }
+                // First, check if the webhook process is running
+                exec("ps aux | grep 'git-auto-deploy' | grep -v grep", $output, $return_var);
+                if (!empty($output)) {
+                    return true; // Process is running
                 }
 
-                // Fallback to file_get_contents if cURL is not available
-                $context = stream_context_create([
-                    'http' => [
-                        'method' => 'GET',
-                        'timeout' => 1,
-                    ]
-                ]);
-
-                $response = @file_get_contents("http://127.0.0.1:8080", false, $context);
-                if ($response !== false) {
+                // Direct socket check to 37.27.31.107:8080
+                $fp = @fsockopen('37.27.31.107', 8080, $errno, $errstr, 1);
+                if ($fp) {
+                    fclose($fp);
                     return true;
                 }
 
-                // Try with the server IP
-                $serverIp = $_SERVER['SERVER_ADDR'] ?? '37.27.31.107';
-                $response = @file_get_contents("http://{$serverIp}:8080", false, $context);
+                // Try with localhost
+                $fp = @fsockopen('localhost', 8080, $errno, $errstr, 1);
+                if ($fp) {
+                    fclose($fp);
+                    return true;
+                }
 
-                return $response !== false;
+                // Try with 127.0.0.1
+                $fp = @fsockopen('127.0.0.1', 8080, $errno, $errstr, 1);
+                if ($fp) {
+                    fclose($fp);
+                    return true;
+                }
+
+                // Try with server IP
+                $serverIp = $_SERVER['SERVER_ADDR'] ?? '';
+                if ($serverIp) {
+                    $fp = @fsockopen($serverIp, 8080, $errno, $errstr, 1);
+                    if ($fp) {
+                        fclose($fp);
+                        return true;
+                    }
+                }
+
+                // If all direct checks fail, try HTTP requests
+                if (function_exists('curl_init')) {
+                    // Try with direct IP first (most reliable)
+                    $ch = curl_init('http://37.27.31.107:8080');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+                    curl_setopt($ch, CURLOPT_NOBODY, true); // HEAD request only
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($response !== false || ($httpCode > 0 && $httpCode < 500)) {
+                        return true;
+                    }
+                }
+
+                return false; // All checks failed
             }
 
             // Get the last auto-pull timestamp

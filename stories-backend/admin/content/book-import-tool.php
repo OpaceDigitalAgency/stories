@@ -373,105 +373,63 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Title</th>
-                                                    <th>Author</th>
-                                                    <th>ISBN</th>
-                                                    <th>Reviews</th>
-                                                    <th>Rating</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (empty($books)): ?>
-                                                    <tr>
-                                                        <td colspan="6" class="text-center">No books found. Import some books first.</td>
-                                                    </tr>
-                                                <?php else: ?>
-                                                    <?php foreach ($books as $book): ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($book['title']); ?></td>
-                                                            <td><?php echo htmlspecialchars($book['author']); ?></td>
-                                                            <td>
-                                                                <?php
-                                                                echo !empty($book['isbn13'])
-                                                                    ? htmlspecialchars($book['isbn13'])
-                                                                    : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
-                                                                ?>
-                                                            </td>
-                                                            <td><?php echo (int)$book['review_count']; ?></td>
-                                                            <td>
-                                                                <?php
-                                                                if (!empty($book['average_rating'])) {
-                                                                    $stars = round($book['average_rating'] * 5, 1); // Convert to 5-star scale
-                                                                    echo number_format($stars, 1) . ' / 5';
-                                                                } else {
-                                                                    echo 'N/A';
-                                                                }
-                                                                ?>
-                                                            </td>
-                                                            <td>
-                                                                <button class="btn btn-sm btn-primary scrape-reviews-btn"
-                                                                        data-book-id="<?php echo $book['id']; ?>"
-                                                                        data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
-                                                                    <i class="fas fa-sync"></i> Scrape Reviews
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <?php
+                                    // Prepare table data for existing books
+                                    $tableData = [];
+                                    foreach ($books as $book) {
+                                        $rating = !empty($book['average_rating'])
+                                            ? number_format(round($book['average_rating'] * 5, 1), 1) . ' / 5'
+                                            : 'N/A';
 
-                                    <!-- Pagination -->
-                                    <?php if ($totalBookPages > 1): ?>
-                                        <nav aria-label="Page navigation" class="mt-4">
-                                            <ul class="pagination justify-content-center">
-                                                <?php if ($bookPage > 1): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=1<?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            First
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $bookPage - 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Previous
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
+                                        $isbn = !empty($book['isbn13'])
+                                            ? htmlspecialchars($book['isbn13'])
+                                            : (!empty($book['isbn']) ? htmlspecialchars($book['isbn']) : 'N/A');
 
-                                                <?php
-                                                $startBookPage = max(1, $bookPage - 2);
-                                                $endBookPage = min($totalBookPages, $bookPage + 2);
+                                        $tableData[] = [
+                                            'id' => $book['id'],
+                                            'title' => htmlspecialchars($book['title']),
+                                            'author' => htmlspecialchars($book['author']),
+                                            'isbn' => $isbn,
+                                            'reviews' => (int)$book['review_count'],
+                                            'rating' => $rating,
+                                            'actions' => '<button class="btn btn-sm btn-primary scrape-reviews-btn" data-book-id="' . $book['id'] . '" data-book-title="' . htmlspecialchars($book['title']) . '"><i class="fas fa-sync"></i> Scrape Reviews</button>'
+                                        ];
+                                    }
 
-                                                for ($i = $startBookPage; $i <= $endBookPage; $i++):
-                                                ?>
-                                                    <li class="page-item <?php echo $i === $bookPage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?book_page=<?php echo $i; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            <?php echo $i; ?>
-                                                        </a>
-                                                    </li>
-                                                <?php endfor; ?>
+                                    // Define table columns
+                                    $columns = [
+                                        'title' => 'Title',
+                                        'author' => 'Author',
+                                        'isbn' => 'ISBN',
+                                        'reviews' => 'Reviews',
+                                        'rating' => 'Rating',
+                                        'actions' => 'Actions'
+                                    ];
 
-                                                <?php if ($bookPage < $totalBookPages): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $bookPage + 1; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Next
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?book_page=<?php echo $totalBookPages; ?><?php echo !empty($bookSearch) ? '&book_search=' . urlencode($bookSearch) : ''; ?>">
-                                                            Last
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </nav>
-                                    <?php endif; ?>
+                                    // Render enhanced table
+                                    renderEnhancedTable(
+                                        $tableData,
+                                        $columns,
+                                        'book',
+                                        'books-table',
+                                        [
+                                            'showCheckboxes' => true,
+                                            'showActions' => true,
+                                            'actions' => ['view', 'edit', 'validate', 'scrape'],
+                                            'bulkActions' => ['delete', 'validate', 'scrape'],
+                                            'itemsPerPage' => 10,
+                                            'currentPage' => $page,
+                                            'totalItems' => $totalBooks,
+                                            'htmlFields' => ['rating', 'actions'],
+                                            'showPagination' => true,
+                                            'showItemsPerPage' => true,
+                                            'validPerPageValues' => [10, 25, 50, 100, $totalBooks],
+                                            'perPageLabel' => 'Show',
+                                            'showAllLabel' => 'Show All'
+                                        ]
+                                    );
+                                    ?>
+
                                 </div>
                             </div>
                         </div>
@@ -555,36 +513,55 @@ require_once '../includes/header.php';
                             <h4>Review Sources</h4>
                             <p>Manage sources for scraping book reviews.</p>
 
-                            <div class="table-responsive mb-3">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>URL</th>
-                                            <th>Type</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($reviewSources as $source): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($source['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($source['url']); ?></td>
-                                                <td><?php echo $source['is_third_party'] ? 'Third-party' : 'Internal'; ?></td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-primary edit-source-btn"
-                                                            data-source-id="<?php echo $source['id']; ?>"
-                                                            data-source-name="<?php echo htmlspecialchars($source['name']); ?>"
-                                                            data-source-url="<?php echo htmlspecialchars($source['url']); ?>"
-                                                            data-source-type="<?php echo $source['is_third_party']; ?>">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <?php
+                            // Prepare table data for review sources
+                            $tableData = [];
+                            foreach ($reviewSources as $source) {
+                                $tableData[] = [
+                                    'id' => $source['id'],
+                                    'name' => htmlspecialchars($source['name']),
+                                    'url' => htmlspecialchars($source['url']),
+                                    'type' => $source['is_third_party'] ? 'Third-party' : 'Internal',
+                                    'actions' => '<button class="btn btn-sm btn-primary edit-source-btn" ' .
+                                               'data-source-id="' . $source['id'] . '" ' .
+                                               'data-source-name="' . htmlspecialchars($source['name']) . '" ' .
+                                               'data-source-url="' . htmlspecialchars($source['url']) . '" ' .
+                                               'data-source-type="' . $source['is_third_party'] . '">' .
+                                               '<i class="fas fa-edit"></i> Edit</button>'
+                                ];
+                            }
+
+                            // Define table columns
+                            $columns = [
+                                'name' => 'Name',
+                                'url' => 'URL',
+                                'type' => 'Type',
+                                'actions' => 'Actions'
+                            ];
+
+                            // Render enhanced table
+                            renderEnhancedTable(
+                                $tableData,
+                                $columns,
+                                'source',
+                                'sources-table',
+                                [
+                                    'showCheckboxes' => true,
+                                    'showActions' => true,
+                                    'actions' => ['edit', 'delete'],
+                                    'bulkActions' => ['delete', 'toggle'],
+                                    'itemsPerPage' => 10,
+                                    'currentPage' => isset($_GET['source_page']) ? max(1, intval($_GET['source_page'])) : 1,
+                                    'totalItems' => count($reviewSources),
+                                    'htmlFields' => ['actions'],
+                                    'showPagination' => true,
+                                    'showItemsPerPage' => true,
+                                    'validPerPageValues' => [10, 25, 50, 100, count($reviewSources)],
+                                    'perPageLabel' => 'Show',
+                                    'showAllLabel' => 'Show All'
+                                ]
+                            );
+                            ?>
 
                             <button class="btn btn-success" id="addSourceBtn">
                                 <i class="fas fa-plus"></i> Add New Source
@@ -773,130 +750,74 @@ require_once '../includes/header.php';
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <form method="post" id="reviews-form" action="review-bulk-actions.php">
-                                        <div class="bulk-actions mb-3">
-                                            <div class="d-flex gap-2">
-                                                <select class="form-control w-auto" name="bulk_action" id="bulk-action">
-                                                    <option value="">Bulk Actions</option>
-                                                    <option value="delete">Delete</option>
-                                                    <option value="analyze">Analyze with AI</option>
-                                                </select>
-                                                <button type="submit" class="btn btn-primary" id="apply-bulk-action">Apply</button>
-                                            </div>
-                                        </div>
+                                    <?php
+                                    // Prepare table data for reviews
+                                    $tableData = [];
+                                    foreach ($reviews as $review) {
+                                        $stars = round($review['rating_normalised'] * 5);
+                                        $rating = str_repeat('★', $stars) . str_repeat('☆', 5 - $stars) .
+                                                ' (' . $review['original_rating'] . ')';
+                                        
+                                        $source = htmlspecialchars($review['source_name']);
+                                        if ($review['is_third_party']) {
+                                            $source .= ' <span class="badge badge-info">External</span>';
+                                        }
 
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th width="30">
-                                                            <input type="checkbox" id="select-all" class="select-all-checkbox">
-                                                        </th>
-                                                        <th>Book</th>
-                                                        <th>Reviewer</th>
-                                                        <th>Rating</th>
-                                                        <th>Source</th>
-                                                        <th>Date</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php if (empty($reviews)): ?>
-                                                        <tr>
-                                                            <td colspan="7" class="text-center">No reviews found.</td>
-                                                        </tr>
-                                                    <?php else: ?>
-                                                        <?php foreach ($reviews as $review): ?>
-                                                            <tr>
-                                                                <td>
-                                                                    <input type="checkbox" name="selected_reviews[]" value="<?php echo $review['id']; ?>" class="review-checkbox">
-                                                                </td>
-                                                                <td>
-                                                                    <a href="directory-item-form.php?id=<?php echo $review['book_id']; ?>">
-                                                                        <?php echo htmlspecialchars($review['book_title']); ?>
-                                                                    </a>
-                                                                </td>
-                                                                <td><?php echo htmlspecialchars($review['reviewer_name']); ?></td>
-                                                                <td>
-                                                                    <?php
-                                                                    $stars = round($review['rating_normalised'] * 5);
-                                                                    echo str_repeat('★', $stars) . str_repeat('☆', 5 - $stars);
-                                                                    echo ' (' . $review['original_rating'] . ')';
-                                                                    ?>
-                                                                </td>
-                                                                <td>
-                                                                    <?php echo htmlspecialchars($review['source_name']); ?>
-                                                                    <?php if ($review['is_third_party']): ?>
-                                                                        <span class="badge badge-info">External</span>
-                                                                    <?php endif; ?>
-                                                                </td>
-                                                                <td><?php echo $review['review_date']; ?></td>
-                                                                <td>
-                                                                    <div class="btn-group">
-                                                                        <button type="button" class="btn btn-sm btn-info view-review" data-id="<?php echo $review['id']; ?>">
-                                                                            <i class="fas fa-eye"></i>
-                                                                        </button>
-                                                                        <a href="edit-review.php?id=<?php echo $review['id']; ?>" class="btn btn-sm btn-primary">
-                                                                            <i class="fas fa-edit"></i>
-                                                                        </a>
-                                                                        <button type="button" class="btn btn-sm btn-danger delete-review" data-id="<?php echo $review['id']; ?>">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        <?php endforeach; ?>
-                                                    <?php endif; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </form>
+                                        $actions = '<div class="btn-group">' .
+                                                  '<button type="button" class="btn btn-sm btn-info view-review" data-id="' . $review['id'] . '">' .
+                                                  '<i class="fas fa-eye"></i></button>' .
+                                                  '<a href="edit-review.php?id=' . $review['id'] . '" class="btn btn-sm btn-primary">' .
+                                                  '<i class="fas fa-edit"></i></a>' .
+                                                  '<button type="button" class="btn btn-sm btn-danger delete-review" data-id="' . $review['id'] . '">' .
+                                                  '<i class="fas fa-trash"></i></button>' .
+                                                  '</div>';
 
-                                    <!-- Pagination -->
-                                    <?php if ($totalReviewPages > 1): ?>
-                                        <nav aria-label="Page navigation" class="mt-4">
-                                            <ul class="pagination justify-content-center">
-                                                <?php if ($reviewPage > 1): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=1<?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            First
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage - 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Previous
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
+                                        $tableData[] = [
+                                            'id' => $review['id'],
+                                            'book' => '<a href="directory-item-form.php?id=' . $review['book_id'] . '">' .
+                                                     htmlspecialchars($review['book_title']) . '</a>',
+                                            'reviewer' => htmlspecialchars($review['reviewer_name']),
+                                            'rating' => $rating,
+                                            'source' => $source,
+                                            'date' => $review['review_date'],
+                                            'actions' => $actions
+                                        ];
+                                    }
 
-                                                <?php
-                                                $startPage = max(1, $reviewPage - 2);
-                                                $endPage = min($totalReviewPages, $reviewPage + 2);
+                                    // Define table columns
+                                    $columns = [
+                                        'book' => 'Book',
+                                        'reviewer' => 'Reviewer',
+                                        'rating' => 'Rating',
+                                        'source' => 'Source',
+                                        'date' => 'Date',
+                                        'actions' => 'Actions'
+                                    ];
 
-                                                for ($i = $startPage; $i <= $endPage; $i++):
-                                                ?>
-                                                    <li class="page-item <?php echo $i === $reviewPage ? 'active' : ''; ?>">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $i; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            <?php echo $i; ?>
-                                                        </a>
-                                                    </li>
-                                                <?php endfor; ?>
+                                    // Render enhanced table
+                                    renderEnhancedTable(
+                                        $tableData,
+                                        $columns,
+                                        'review',
+                                        'reviews-table',
+                                        [
+                                            'showCheckboxes' => true,
+                                            'showActions' => true,
+                                            'actions' => ['view', 'edit', 'delete'],
+                                            'bulkActions' => ['delete', 'analyze'],
+                                            'itemsPerPage' => 10,
+                                            'currentPage' => $reviewPage,
+                                            'totalItems' => $totalReviews,
+                                            'htmlFields' => ['book', 'rating', 'source', 'actions'],
+                                            'showPagination' => true,
+                                            'showItemsPerPage' => true,
+                                            'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
+                                            'perPageLabel' => 'Show',
+                                            'showAllLabel' => 'Show All'
+                                        ]
+                                    );
+                                    ?>
 
-                                                <?php if ($reviewPage < $totalReviewPages): ?>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $reviewPage + 1; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Next
-                                                        </a>
-                                                    </li>
-                                                    <li class="page-item">
-                                                        <a class="page-link" href="?tab=reviews&review_page=<?php echo $totalReviewPages; ?><?php echo !empty($reviewSearch) ? '&review_search=' . urlencode($reviewSearch) : ''; ?><?php echo $reviewSourceFilter > 0 ? '&review_source=' . $reviewSourceFilter : ''; ?><?php echo $reviewBookFilter > 0 ? '&review_book_id=' . $reviewBookFilter : ''; ?><?php echo $reviewRatingFilter > 0 ? '&review_rating=' . $reviewRatingFilter : ''; ?>">
-                                                            Last
-                                                        </a>
-                                                    </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </nav>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -962,151 +883,106 @@ require_once '../includes/header.php';
                                 <div class="card-body">
                                     <p>This tool checks ISBNs against external sources like Goodreads, Google Books, and Open Library to verify their accuracy.</p>
 
-                                    <div class="table-responsive">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th width="30"><input type="checkbox" id="select-all-isbn" class="select-all-checkbox"></th>
-                                                    <th>Title</th>
-                                                    <th>Author</th>
-                                                    <th>ISBN</th>
-                                                    <th>Status</th>
-                                                    <th>Genre</th>
-                                                    <th>Missing Data</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php if (empty($books)): ?>
-                                                    <tr>
-                                                        <td colspan="7" class="text-center">No books found. Import some books first.</td>
-                                                    </tr>
-                                                <?php else: ?>
-                                                    <?php foreach ($books as $book): ?>
-                                                        <?php
-                                                        $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
-                                                        $isbnStatus = 'unknown';
-                                                        $statusClass = 'secondary';
-                                                        $statusIcon = 'question-circle';
+                                    <?php
+                                    // Prepare table data for ISBN validation
+                                    $tableData = [];
+                                    foreach ($books as $book) {
+                                        $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
+                                        $isbnStatus = 'unknown';
+                                        $statusClass = 'secondary';
+                                        $statusIcon = 'question-circle';
 
-                                                        if (empty($isbn)) {
-                                                            $isbnStatus = 'missing';
-                                                            $statusClass = 'danger';
-                                                            $statusIcon = 'times-circle';
-                                                        } else {
-                                                            // Basic format check
-                                                            $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-                                                            if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
-                                                                $isbnStatus = 'invalid';
-                                                                $statusClass = 'warning';
-                                                                $statusIcon = 'exclamation-circle';
-                                                            } else {
-                                                                // Quick validation against Open Library
-                                                                $isbnValid = false;
+                                        if (empty($isbn)) {
+                                            $isbnStatus = 'missing';
+                                            $statusClass = 'danger';
+                                            $statusIcon = 'times-circle';
+                                        } else {
+                                            // Basic format check
+                                            $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+                                            if (strlen($cleanIsbn) != 10 && strlen($cleanIsbn) != 13) {
+                                                $isbnStatus = 'invalid';
+                                                $statusClass = 'warning';
+                                                $statusIcon = 'exclamation-circle';
+                                            } else {
+                                                $isbnStatus = 'valid';
+                                                $statusClass = 'success';
+                                                $statusIcon = 'check-circle';
+                                            }
+                                        }
 
-                                                                // Check if we have a cached result
-                                                                $cacheKey = 'isbn_check_' . $cleanIsbn;
-                                                                if (isset($_SESSION[$cacheKey])) {
-                                                                    $isbnValid = $_SESSION[$cacheKey];
-                                                                } else {
-                                                                    // Try Open Library first (fast and reliable)
-                                                                    $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($cleanIsbn) . "&format=json&jscmd=data";
-                                                                    $ch = curl_init($url);
-                                                                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                                                                    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Short timeout for quick check
-                                                                    $response = curl_exec($ch);
-                                                                    curl_close($ch);
+                                        // Get genre tags
+                                        $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
+                                        $genreDisplay = !empty($genreTags) ?
+                                            htmlspecialchars(formatTagsForDisplay($genreTags)) :
+                                            '<span class="text-muted">No genres</span>';
 
-                                                                    if ($response) {
-                                                                        $data = json_decode($response, true);
-                                                                        $key = "ISBN:$cleanIsbn";
-                                                                        if (!empty($data[$key])) {
-                                                                            $isbnValid = true;
-                                                                        }
-                                                                    }
+                                        // Check missing fields
+                                        $missingFields = [];
+                                        if (empty($book['publisher']) || strtolower($book['publisher']) == 'unknown') $missingFields[] = 'Publisher';
+                                        if (empty($book['page_count']) || $book['page_count'] == '0') $missingFields[] = 'Page Count';
+                                        if (empty($genreTags)) $missingFields[] = 'Genre';
+                                        if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
+                                        if (empty($book['price_range'])) $missingFields[] = 'Price Range';
+                                        
+                                        $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
+                                        if (empty($ageRangeTags)) $missingFields[] = 'Age Range';
 
-                                                                    // Cache the result
-                                                                    $_SESSION[$cacheKey] = $isbnValid;
-                                                                }
+                                        $missingDataDisplay = !empty($missingFields) ?
+                                            '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .
+                                            count($missingFields) . ' field' . (count($missingFields) > 1 ? 's' : '') . '</span> ' .
+                                            '<small class="text-muted">' . htmlspecialchars(implode(', ', $missingFields)) . '</small>' :
+                                            '<span class="badge badge-success">Complete</span>';
 
-                                                                if ($isbnValid) {
-                                                                    $isbnStatus = 'valid';
-                                                                    $statusClass = 'success';
-                                                                    $statusIcon = 'check-circle';
-                                                                } else {
-                                                                    $isbnStatus = 'invalid';
-                                                                    $statusClass = 'danger';
-                                                                    $statusIcon = 'times-circle';
-                                                                }
-                                                            }
-                                                        }
-                                                        ?>
-                                                        <tr>
-                                                            <td><input type="checkbox" name="isbn_books[]" value="<?php echo $book['id']; ?>" class="isbn-checkbox"></td>
-                                                            <td><?php echo htmlspecialchars($book['title']); ?></td>
-                                                            <td><?php echo htmlspecialchars($book['author']); ?></td>
-                                                            <td><?php echo !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>'; ?></td>
-                                                            <td>
-                                                                <span class="badge badge-<?php echo $statusClass; ?>">
-                                                                    <i class="fas fa-<?php echo $statusIcon; ?>"></i>
-                                                                    <?php echo ucfirst($isbnStatus); ?>
-                                                                </span>
-                                                            </td>
-                                                            <td>
-                                                                <?php
-                                                                $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
-                                                                if (!empty($genreTags)) {
-                                                                    echo htmlspecialchars(formatTagsForDisplay($genreTags));
-                                                                } else {
-                                                                    echo '<span class="text-muted">No genres</span>';
-                                                                }
-                                                                ?>
-                                                            </td>
-                                                            <td>
-                                                                <?php
-                                                                $missingFields = [];
+                                        $tableData[] = [
+                                            'id' => $book['id'],
+                                            'title' => htmlspecialchars($book['title']),
+                                            'author' => htmlspecialchars($book['author']),
+                                            'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
+                                            'status' => '<span class="badge badge-' . $statusClass . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
+                                            'genre' => $genreDisplay,
+                                            'missing_data' => $missingDataDisplay,
+                                            'actions' => '<button class="btn btn-sm btn-primary validate-isbn-btn" ' .
+                                                       'data-book-id="' . $book['id'] . '" ' .
+                                                       'data-book-title="' . htmlspecialchars($book['title']) . '" ' .
+                                                       'data-isbn="' . htmlspecialchars($isbn) . '">' .
+                                                       '<i class="fas fa-check"></i> Validate</button>'
+                                        ];
+                                    }
 
-                                                                // Check for empty or placeholder values
-                                                                if (empty($book['publisher']) || strtolower($book['publisher']) == 'unknown') $missingFields[] = 'Publisher';
-                                                                if (empty($book['page_count']) || $book['page_count'] == '0') $missingFields[] = 'Page Count';
+                                    // Define table columns
+                                    $columns = [
+                                        'title' => 'Title',
+                                        'author' => 'Author',
+                                        'isbn' => 'ISBN',
+                                        'status' => 'Status',
+                                        'genre' => 'Genre',
+                                        'missing_data' => 'Missing Data',
+                                        'actions' => 'Actions'
+                                    ];
 
-                                                                // Check for genre tags
-                                                                $genreTags = getGenreTagsForDirectoryItem($db, $book['id']);
-                                                                if (empty($genreTags)) $missingFields[] = 'Genre';
-
-                                                                // Check for empty or placeholder values in series
-                                                                if (empty($book['series']) || strtolower($book['series']) == 'unknown') $missingFields[] = 'Series';
-
-                                                                // Check for price range
-                                                                if (empty($book['price_range'])) $missingFields[] = 'Price Range';
-
-                                                                // Check for age range tags
-                                                                $ageRangeTags = getAgeRangeTagsForDirectoryItem($db, $book['id']);
-                                                                if (empty($ageRangeTags)) $missingFields[] = 'Age Range';
-
-                                                                if (!empty($missingFields)) {
-                                                                    echo '<span class="badge badge-warning" title="' . htmlspecialchars(implode(', ', $missingFields)) . '">' .
-                                                                         count($missingFields) . ' field' . (count($missingFields) > 1 ? 's' : '') . '</span> ' .
-                                                                         '<small class="text-muted">' . htmlspecialchars(implode(', ', $missingFields)) . '</small>';
-                                                                } else {
-                                                                    echo '<span class="badge badge-success">Complete</span>';
-                                                                }
-                                                                ?>
-                                                            </td>
-                                                            <td>
-                                                                <button class="btn btn-sm btn-primary validate-isbn-btn"
-                                                                        data-book-id="<?php echo $book['id']; ?>"
-                                                                        data-book-title="<?php echo htmlspecialchars($book['title']); ?>"
-                                                                        data-isbn="<?php echo htmlspecialchars($isbn); ?>">
-                                                                    <i class="fas fa-check"></i> Validate
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    // Render enhanced table
+                                    renderEnhancedTable(
+                                        $tableData,
+                                        $columns,
+                                        'isbn',
+                                        'isbn-validation-table',
+                                        [
+                                            'showCheckboxes' => true,
+                                            'showActions' => true,
+                                            'actions' => ['validate', 'edit'],
+                                            'bulkActions' => ['validate', 'enrich'],
+                                            'itemsPerPage' => 10,
+                                            'currentPage' => isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1,
+                                            'totalItems' => count($books),
+                                            'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
+                                            'showPagination' => true,
+                                            'showItemsPerPage' => true,
+                                            'validPerPageValues' => [10, 25, 50, 100, count($books)],
+                                            'perPageLabel' => 'Show',
+                                            'showAllLabel' => 'Show All'
+                                        ]
+                                    );
+                                    ?>
 
                                     <div class="mt-3">
                                         <button id="validate-selected-isbns" class="btn btn-primary">

@@ -1,7 +1,7 @@
 <?php
 /**
  * Webhook Test Script
- * 
+ *
  * This script tests various methods of connecting to the Git Auto Deploy webhook
  * to diagnose why the status check is failing.
  */
@@ -24,19 +24,19 @@ function test_curl_connection($url) {
             'http_code' => 0
         ];
     }
-    
+
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
     curl_setopt($ch, CURLOPT_HEADER, true);
-    
+
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     $errno = curl_errno($ch);
     curl_close($ch);
-    
+
     return [
         'success' => ($response !== false),
         'error' => $error,
@@ -55,9 +55,9 @@ function test_file_get_contents($url) {
             'ignore_errors' => true
         ]
     ]);
-    
+
     $response = @file_get_contents($url, false, $context);
-    
+
     return [
         'success' => ($response !== false),
         'error' => error_get_last(),
@@ -70,7 +70,7 @@ function test_socket_connection($host, $port) {
     $errno = 0;
     $errstr = '';
     $fp = @fsockopen($host, $port, $errno, $errstr, 5);
-    
+
     if ($fp) {
         // Try to get HTTP response
         fwrite($fp, "GET / HTTP/1.1\r\nHost: $host\r\nConnection: Close\r\n\r\n");
@@ -79,14 +79,14 @@ function test_socket_connection($host, $port) {
             $response .= fgets($fp, 128);
         }
         fclose($fp);
-        
+
         return [
             'success' => true,
             'error' => null,
             'response' => $response
         ];
     }
-    
+
     return [
         'success' => false,
         'error' => "$errstr ($errno)",
@@ -99,14 +99,13 @@ $server_ip = $_SERVER['SERVER_ADDR'] ?? 'Unknown';
 $server_name = $_SERVER['SERVER_NAME'] ?? 'Unknown';
 $remote_addr = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
 
-// URLs to test
+// URLs to test - focusing on the known working IP first
 $urls = [
+    'direct_ip (WORKING)' => 'http://37.27.31.107:8080',
     'localhost' => 'http://localhost:8080',
     '127.0.0.1' => 'http://127.0.0.1:8080',
-    '0.0.0.0' => 'http://0.0.0.0:8080',
     'server_ip' => "http://$server_ip:8080",
-    'server_name' => "http://$server_name:8080",
-    'direct_ip' => 'http://37.27.31.107:8080'
+    'server_name' => "http://$server_name:8080"
 ];
 
 // Run the tests
@@ -117,7 +116,7 @@ $socket_results = [];
 foreach ($urls as $name => $url) {
     $curl_results[$name] = test_curl_connection($url);
     $file_results[$name] = test_file_get_contents($url);
-    
+
     $parsed_url = parse_url($url);
     $host = $parsed_url['host'];
     $port = $parsed_url['port'] ?? 80;
@@ -128,11 +127,11 @@ foreach ($urls as $name => $url) {
 function display_result($result, $type) {
     $success_class = $result['success'] ? 'success' : 'danger';
     $success_icon = $result['success'] ? 'check-circle' : 'times-circle';
-    
+
     echo "<div class='alert alert-$success_class'>";
     echo "<i class='fas fa-$success_icon'></i> ";
     echo "<strong>" . ($result['success'] ? 'Success' : 'Failed') . "</strong>";
-    
+
     if (!$result['success'] && isset($result['error']) && $result['error']) {
         echo " - Error: ";
         if (is_array($result['error'])) {
@@ -141,13 +140,13 @@ function display_result($result, $type) {
             echo htmlspecialchars($result['error']);
         }
     }
-    
+
     if ($type === 'curl' && isset($result['http_code'])) {
         echo " - HTTP Code: " . $result['http_code'];
     }
-    
+
     echo "</div>";
-    
+
     if ($result['success'] && isset($result['response']) && $result['response']) {
         echo "<div class='card mb-3'>";
         echo "<div class='card-header'>Response</div>";
@@ -177,6 +176,17 @@ function display_result($result, $type) {
                     </div>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info">
+                        <h4><i class="fas fa-info-circle"></i> Important Information</h4>
+                        <p>Based on our diagnostics, the Git Auto Deploy webhook is <strong>only accessible via the direct IP address 37.27.31.107:8080</strong>.</p>
+                        <p>This is normal because:</p>
+                        <ul>
+                            <li>The webhook is running on a specific network interface (37.27.31.107) rather than all interfaces (0.0.0.0)</li>
+                            <li>The webhook is not accessible via localhost/127.0.0.1 from PHP because it's likely running in a separate container or VM</li>
+                            <li>The webhook is not accessible via the server's public IP (<?php echo $server_ip; ?>) because it's not bound to that interface</li>
+                        </ul>
+                        <p>The webhook status indicator has been updated to <strong>only check the working IP address</strong>.</p>
+                    </div>
                     <h3>Server Information</h3>
                     <table class="table table-bordered">
                         <tr>
@@ -200,9 +210,9 @@ function display_result($result, $type) {
                             <td><?php echo function_exists('curl_init') ? 'Yes' : 'No'; ?></td>
                         </tr>
                     </table>
-                    
+
                     <h3 class="mt-4">Connection Tests</h3>
-                    
+
                     <?php foreach ($urls as $name => $url): ?>
                         <div class="card mb-4">
                             <div class="card-header">
@@ -211,10 +221,10 @@ function display_result($result, $type) {
                             <div class="card-body">
                                 <h6>cURL Test</h6>
                                 <?php display_result($curl_results[$name], 'curl'); ?>
-                                
+
                                 <h6>file_get_contents Test</h6>
                                 <?php display_result($file_results[$name], 'file'); ?>
-                                
+
                                 <h6>Socket Test</h6>
                                 <?php display_result($socket_results[$name], 'socket'); ?>
                             </div>

@@ -1454,7 +1454,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
             // Get book details
             $stmt = $db->prepare("
                 SELECT di.id, di.title, b.isbn, b.isbn13, b.author, b.publisher, b.publication_date,
-                       b.page_count, b.age_range, b.reading_level, b.genre, b.series, b.price_range
+                       b.page_count, b.age_range, b.reading_level, b.series, b.price_range
                 FROM directory_items di
                 JOIN books b ON di.id = b.directory_item_id
                 WHERE di.id = ?

@@ -49,8 +49,27 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
 
     // Make sure we preserve all existing query parameters
     foreach ($_GET as $key => $value) {
+        // Skip page parameter as we'll set it later
         if ($key !== 'page') {
-            $queryParams[$key] = $value;
+            // Ensure tab parameter is preserved
+            if ($key === 'tab') {
+                $queryParams['tab'] = $value;
+            } else {
+                $queryParams[$key] = $value;
+            }
+        }
+    }
+
+    // If no tab is set, try to determine it from the URL
+    if (!isset($queryParams['tab'])) {
+        if (strpos($_SERVER['REQUEST_URI'], 'reviews')) {
+            $queryParams['tab'] = 'reviews';
+        } elseif (strpos($_SERVER['REQUEST_URI'], 'sources')) {
+            $queryParams['tab'] = 'sources';
+        } elseif (strpos($_SERVER['REQUEST_URI'], 'validate')) {
+            $queryParams['tab'] = 'validate';
+        } else {
+            $queryParams['tab'] = 'existing';
         }
     }
 

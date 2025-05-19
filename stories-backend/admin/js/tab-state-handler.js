@@ -24,7 +24,29 @@ $(function() {
     $('.pagination').on('click', 'a', function(e) {
         e.preventDefault();
         const url = new URL(this.href, window.location.origin);
+        
+        // Always ensure the tab parameter is set correctly
         url.searchParams.set('tab', currentTab);
+        
+        // Make sure we're using the correct page parameter for the current tab
+        const pageParam = url.searchParams.get('page');
+        if (pageParam) {
+            // If there's a generic page parameter, replace it with the tab-specific one
+            url.searchParams.delete('page');
+            
+            // Set the tab-specific page parameter
+            if (currentTab === 'reviews') {
+                url.searchParams.set('reviews_page', pageParam);
+            } else if (currentTab === 'sources') {
+                url.searchParams.set('sources_page', pageParam);
+            } else if (currentTab === 'validate') {
+                url.searchParams.set('isbn_page', pageParam);
+            } else {
+                // For other tabs, use the generic page parameter
+                url.searchParams.set('page', pageParam);
+            }
+        }
+        
         window.location.href = url.toString();
     });
 
@@ -45,11 +67,29 @@ $(function() {
             console.log('Form found:', form);
             
             let tabInput = form.querySelector('input[name="tab"]');
-            let pageInput = form.querySelector('input[name="page"]');
+            
+            // Get the appropriate page input based on the current tab
+            let pageInput;
+            let pageInputName;
+            
+            if (currentTab === 'reviews') {
+                pageInput = form.querySelector('input[name="reviews_page"]');
+                pageInputName = 'reviews_page';
+            } else if (currentTab === 'sources') {
+                pageInput = form.querySelector('input[name="sources_page"]');
+                pageInputName = 'sources_page';
+            } else if (currentTab === 'validate') {
+                pageInput = form.querySelector('input[name="isbn_page"]');
+                pageInputName = 'isbn_page';
+            } else {
+                pageInput = form.querySelector('input[name="page"]');
+                pageInputName = 'page';
+            }
             
             console.log('Current tab:', currentTab);
             console.log('Tab input:', tabInput);
             console.log('Page input:', pageInput);
+            console.log('Page input name:', pageInputName);
 
             if (!tabInput) {
                 console.log('Adding tab input');
@@ -62,7 +102,7 @@ $(function() {
             // Always reset to page 1 when changing items per page
             if (!pageInput) {
                 console.log('Adding page input');
-                $(form).append('<input type="hidden" name="page" value="1">');
+                $(form).append(`<input type="hidden" name="${pageInputName}" value="1">`);
             } else {
                 console.log('Setting page input value');
                 pageInput.value = '1';

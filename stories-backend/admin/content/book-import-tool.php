@@ -67,6 +67,30 @@ try {
     // Books pagination
     $booksPage = isset($_GET['books_page']) ? max(1, intval($_GET['books_page'])) : 1;
     $booksPerPage = isset($_GET['books_per_page']) ? intval($_GET['books_per_page']) : 10;
+
+    // Initialize standard per page values
+    $validPerPageValues = [10, 25, 50, 100];
+
+    // Count total books first to add as a valid per_page value
+    $bookCountQuery = "SELECT COUNT(*) FROM directory_items di WHERE di.type = 'book'";
+    $bookCountStmt = $db->prepare($bookCountQuery);
+    $bookCountStmt->execute();
+    $totalBooksCount = $bookCountStmt->fetchColumn();
+
+    // Add total books as a valid per_page value
+    if (!in_array($totalBooksCount, $validPerPageValues)) {
+        $validPerPageValues[] = $totalBooksCount;
+    }
+
+    // Validate books per page value
+    if (!in_array($booksPerPage, $validPerPageValues)) {
+        // If it's not a standard value, check if it's the "All" option
+        if ($booksPerPage >= $totalBooksCount) {
+            $booksPerPage = $totalBooksCount;
+        } else {
+            $booksPerPage = 10; // Default to 10 if invalid
+        }
+    }
     $bookSearch = isset($_GET['book_search']) ? trim($_GET['book_search']) : '';
 
     // Sources pagination
@@ -112,6 +136,16 @@ try {
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
 
+    // Validate ISBN per page value
+    if (!in_array($isbnPerPage, $validPerPageValues)) {
+        // If it's not a standard value, check if it's the "All" option
+        if ($isbnPerPage >= $totalBooksCount) {
+            $isbnPerPage = $totalBooksCount;
+        } else {
+            $isbnPerPage = 10; // Default to 10 if invalid
+        }
+    }
+
     // Calculate pagination for ISBN validation
     $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
     $isbnOffset = max(0, $isbnOffset); // Ensure offset is not negative
@@ -137,7 +171,7 @@ try {
 
     $bookWhereClause = implode(" AND ", $bookConditions);
 
-    // Count total books
+    // Count total books with search conditions
     $bookCountQuery = "
         SELECT COUNT(*)
         FROM directory_items di
@@ -146,7 +180,7 @@ try {
     ";
     $bookCountStmt = $db->prepare($bookCountQuery);
     $bookCountStmt->execute($bookParams);
-    $totalBooks = $bookCountStmt->fetchColumn();
+    $totalBooks = $bookCountStmt->fetchColumn(); // This is the filtered count based on search
 
     // Calculate pagination
     $totalBookPages = ceil($totalBooks / $booksPerPage);
@@ -508,7 +542,10 @@ require_once '../includes/header.php';
                                 renderPagination($totalBooks, $booksPerPage, $booksPage, 5, [
                                     'pageParam' => 'books_page',
                                     'perPageParam' => 'books_per_page',
-                                    'tab' => 'existing'
+                                    'tab' => 'existing',
+                                    'validPerPageValues' => $validPerPageValues,
+                                    'perPageLabel' => 'Show',
+                                    'showAllLabel' => 'Show All'
                                 ]);
                                 ?>
                             </div>

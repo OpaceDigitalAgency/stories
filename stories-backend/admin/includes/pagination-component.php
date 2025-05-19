@@ -182,13 +182,31 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     <?php endforeach; ?>
 
                     <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
-                        <?php foreach ([10, 25, 50, 100] as $option): ?>
+                        <?php
+                        // Use validPerPageValues from options if provided, otherwise use default values
+                        $perPageValues = isset($options['validPerPageValues']) ? $options['validPerPageValues'] : [10, 25, 50, 100];
+
+                        // Remove the total items value from the array to add it separately at the end
+                        if (($key = array_search($totalItems, $perPageValues)) !== false) {
+                            unset($perPageValues[$key]);
+                        }
+
+                        // Sort the values
+                        sort($perPageValues);
+
+                        // Add options for each per page value
+                        foreach ($perPageValues as $option):
+                            if ($option < $totalItems): // Only show options less than total items
+                        ?>
                             <option value="<?php echo $option; ?>" <?php echo $itemsPerPage == $option ? 'selected' : ''; ?>>
-                                <?php echo $option; ?> per page
+                                <?php echo $option; ?> <?php echo isset($options['perPageLabel']) ? $options['perPageLabel'] : 'per page'; ?>
                             </option>
-                        <?php endforeach; ?>
+                        <?php
+                            endif;
+                        endforeach;
+                        ?>
                         <option value="<?php echo $totalItems; ?>" <?php echo $itemsPerPage == $totalItems ? 'selected' : ''; ?>>
-                            Show All (<?php echo $totalItems; ?>)
+                            <?php echo isset($options['showAllLabel']) ? $options['showAllLabel'] : 'Show All'; ?> (<?php echo $totalItems; ?>)
                         </option>
                     </select>
                 </form>

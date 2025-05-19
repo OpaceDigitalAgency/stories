@@ -246,9 +246,18 @@ function updateBookAggregateValues($db, $bookId) {
         transition: width 0.5s;
         animation: progress-bar-stripes 2s linear infinite;
     }
+    .progress-bar.active-fetch {
+        background-color: #007bff;
+        animation: progress-bar-stripes 1s linear infinite, progress-bar-pulse 2s ease-in-out infinite;
+    }
     @keyframes progress-bar-stripes {
         from { background-position: 40px 0; }
         to { background-position: 0 0; }
+    }
+    @keyframes progress-bar-pulse {
+        0% { opacity: 0.8; }
+        50% { opacity: 1; }
+        100% { opacity: 0.8; }
     }
     .log-container {
         max-height: 400px;
@@ -446,10 +455,15 @@ function updateBookAggregateValues($db, $bookId) {
                 $totalReviewsSkipped = 0;
 
                 foreach ($books as $index => $book) {
-                    $progress = round(($index / $totalBooks) * 100);
+                    // Calculate base progress for this book (each book gets an equal portion of the progress bar)
+                    $baseProgress = round(($index / $totalBooks) * 100);
+                    $nextBookProgress = round((($index + 1) / $totalBooks) * 100);
+                    $bookProgressRange = $nextBookProgress - $baseProgress;
+
+                    // Update progress bar with initial book progress
                     echo "<script>
-                        document.getElementById('progressBar').style.width = '$progress%';
-                        document.getElementById('progressBar').innerText = '$progress%';
+                        document.getElementById('progressBar').style.width = '$baseProgress%';
+                        document.getElementById('progressBar').innerText = '$baseProgress%';
                     </script>";
                     flushOutput();
 
@@ -459,8 +473,24 @@ function updateBookAggregateValues($db, $bookId) {
                     $bookReviewsImported = 0;
                     $bookReviewsSkipped = 0;
 
+                    // Track source progress within this book
+                    $totalSources = count($sources);
+                    $currentSourceIndex = 0;
+
                     // Process each source
                     foreach ($sources as $sourceId) {
+                        // Calculate progress for this source within the book
+                        $currentSourceIndex++;
+                        $sourceProgress = $baseProgress + $bookProgressRange * $currentSourceIndex / $totalSources * 0.5;
+                        $sourceProgress = round($sourceProgress);
+
+                        // Update progress bar
+                        echo "<script>
+                            document.getElementById('progressBar').style.width = '$sourceProgress%';
+                            document.getElementById('progressBar').innerText = '$sourceProgress%';
+                        </script>";
+                        flushOutput();
+
                         // Get source name
                         $sourceStmt = $db->prepare("SELECT name FROM review_sources WHERE id = ?");
                         $sourceStmt->execute([$sourceId]);
@@ -582,8 +612,27 @@ function updateBookAggregateValues($db, $bookId) {
                             echo "<p class='info'><strong>DEBUG PARAMS:</strong> Passing limit={$fetchLimit}, maxPages={$maxPages}, continueFromLast=" . ($continueFromLast ? "true" : "false") . ", force=" . ($forceRefresh ? "true" : "false") . "</p>";
                             flushOutput();
 
+                            // Show that we're actively fetching reviews
+                            echo "<p class='info'>Fetching reviews from {$sourceName} for ISBN: $isbnToUse (limit: $fetchLimit)...</p>";
+
+                            // Update progress bar to show activity
+                            echo "<script>
+                                // Add 'active' class to make progress bar pulse
+                                document.getElementById('progressBar').classList.add('active-fetch');
+                                document.getElementById('progressBar').innerText = 'Fetching reviews...';
+                            </script>";
+                            flushOutput();
+
                             // Fetch reviews from the source with the specified limit
                             $result = $fetcher->fetchReviewsByISBN($isbnToUse, $fetchLimit, $options);
+
+                            // Remove active class when fetch completes
+                            echo "<script>
+                                document.getElementById('progressBar').classList.remove('active-fetch');
+                                document.getElementById('progressBar').style.width = '$sourceProgress%';
+                                document.getElementById('progressBar').innerText = '$sourceProgress%';
+                            </script>";
+                            flushOutput();
 
                             // Check if we got a structured result (new format) or just an array of reviews (old format)
                             if (is_array($result) && isset($result['reviews'])) {
@@ -635,39 +684,46 @@ function updateBookAggregateValues($db, $bookId) {
                         echo "<p class='info'><strong>DEBUG:</strong> Reviews count BEFORE processing: $beforeCount</p>";
                         flushOutput();
 
+                        // Bulk-load existing review keys for O(1) duplicate checks
+                        $seen = [];
+                        $seenStmt = $db->prepare("
+                            SELECT
+                              LOWER(TRIM(REPLACE(reviewer_name,'**',''))) AS reviewer_key,
+                              LOWER(SUBSTRING(review_text,1,100)) AS text_key
+                            FROM reviews
+                            WHERE book_id = ?
+                        ");
+                        $seenStmt->execute([$book['id']]);
+                        while ($row = $seenStmt->fetch(PDO::FETCH_ASSOC)) {
+                            $seen[$row['reviewer_key'] . '|' . $row['text_key']] = true;
+                        }
                         // Import reviews
-                        foreach ($reviews as $review) {
-                            // Check for duplicates
-                            $existingReview = reviewExists($db, $book['id'], $review['source_id'], $review['reviewer_name'], $review['review_text'] ?? null);
+                        $totalReviews = count($reviews);
+                        foreach ($reviews as $reviewIndex => $review) {
+                            // Update progress during review processing
+                            if ($totalReviews > 10 && $reviewIndex % 10 == 0) {
+                                // Calculate progress for this review within the source
+                                $reviewProgress = $sourceProgress + $bookProgressRange * 0.5 * $reviewIndex / $totalReviews;
+                                $reviewProgress = round($reviewProgress);
 
-                            // Handle different scenarios
-                            if ($existingReview) {
-                                if ($continueFromLast) {
-                                    // If continuing from last, skip existing reviews
-                                    echo "<p class='info'>Skipping existing review by {$review['reviewer_name']} (continuing from last)</p>";
-                                    flushOutput();
-                                    $bookReviewsSkipped++;
-                                    continue;
-                                } else if ($forceRefresh) {
-                                    // If force refresh, delete and replace the review
-                                    echo "<p class='info'><strong>DEBUG:</strong> Found existing review ID: {$existingReview['id']} for {$review['reviewer_name']}</p>";
-                                    flushOutput();
-
-                                    $deleteStmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
-                                    $deleteStmt->execute([$existingReview['id']]);
-
-                                    echo "<p class='info'>Successfully deleted review ID: {$existingReview['id']}</p>";
-                                    echo "<p class='info'>Replacing existing review by {$review['reviewer_name']}</p>";
-                                    flushOutput();
-                                    $isReplacement = true;
-                                } else {
-                                    // Normal case - skip duplicate
-                                    echo "<p class='warning'>Skipping duplicate review by {$review['reviewer_name']}</p>";
-                                    flushOutput();
-                                    $bookReviewsSkipped++;
-                                    continue;
-                                }
+                                // Update progress bar
+                                echo "<script>
+                                    document.getElementById('progressBar').style.width = '$reviewProgress%';
+                                    document.getElementById('progressBar').innerText = '$reviewProgress%';
+                                </script>";
+                                flushOutput();
                             }
+
+                            // Check for duplicates using in-memory map
+                            $key = strtolower(trim(str_replace('**','',$review['reviewer_name'])))
+                                 . '|' . strtolower(substr($review['review_text'] ?? '', 0, 100));
+                            if (isset($seen[$key])) {
+                                echo "<p class='info'>Skipping existing review by {$review['reviewer_name']}</p>";
+                                flushOutput();
+                                $bookReviewsSkipped++;
+                                continue;
+                            }
+                            $seen[$key] = true;
 
                             try {
                                 // Debug the review data
@@ -676,7 +732,7 @@ function updateBookAggregateValues($db, $bookId) {
 
                                 // Insert the review
                                 $stmt = $db->prepare("
-                                    INSERT INTO reviews (
+                                    INSERT IGNORE INTO reviews (
                                         book_id,
                                         source_id,
                                         reviewer_name,

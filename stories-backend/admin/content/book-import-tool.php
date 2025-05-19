@@ -74,18 +74,33 @@ try {
     $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
 
     // Reviews pagination
+    // Reviews pagination with proper validation
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
     $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
+    
+    // Initialize standard per page values
+    $validPerPageValues = [10, 25, 50, 100];
+    
+    // Get total reviews count first
+    $reviewCountQuery = "SELECT COUNT(*) FROM reviews r";
+    $reviewCountStmt = $db->prepare($reviewCountQuery);
+    $reviewCountStmt->execute();
+    $totalReviews = $reviewCountStmt->fetchColumn();
+    
+    // Add total reviews as a valid per_page value
+    $validPerPageValues[] = $totalReviews;
+    
+    // Validate reviews per page value
+    if (!in_array($reviewsPerPage, $validPerPageValues)) {
+        $reviewsPerPage = 10;
+    }
 
     // ISBN validation pagination
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
 
-    // Initialize standard per page values
-    $validPerPageValues = [10, 25, 50, 100];
-    
     // Basic validation to prevent negative values
-    foreach (['books', 'reviews', 'sources', 'isbn'] as $section) {
+    foreach (['books', 'sources', 'isbn'] as $section) {
         $perPageVar = $section . 'PerPage';
         $$perPageVar = max(1, intval($$perPageVar));
     }

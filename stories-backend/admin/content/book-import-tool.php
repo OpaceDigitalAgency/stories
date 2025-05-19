@@ -699,7 +699,8 @@ require_once '../includes/header.php';
                             <?php
                             // Initialize reviews variables
                             $reviewPage = isset($_GET['review_page']) ? max(1, intval($_GET['review_page'])) : 1;
-                            $reviewsPerPage = 20;
+                            // Use the validated reviewsPerPage from earlier in the file
+                            // DO NOT override it here
                             $reviewSearch = isset($_GET['review_search']) ? trim($_GET['review_search']) : '';
                             $reviewSourceFilter = isset($_GET['review_source']) ? intval($_GET['review_source']) : 0;
                             $reviewBookFilter = isset($_GET['review_book_id']) ? intval($_GET['review_book_id']) : 0;
@@ -915,14 +916,14 @@ require_once '../includes/header.php';
                                 // Ensure tab parameter is in URL for pagination
                                 $_GET['tab'] = 'reviews';
 
-                                // Make sure the reviews_per_page parameter is properly set
-                                $_GET['reviews_per_page'] = $reviewsPerPage;
-
-                                // Pass the current reviews_per_page value to the pagination component
+                                // Render pagination with the same configuration as the ISBN validation tab
                                 renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                                     'pageParam' => 'reviews_page',
                                     'perPageParam' => 'reviews_per_page',
-                                    'tab' => 'reviews'
+                                    'tab' => 'reviews',
+                                    'validPerPageValues' => [10, 25, 50, 100, $totalReviews],
+                                    'perPageLabel' => 'Show',
+                                    'showAllLabel' => 'Show All'
                                 ]);
                                 ?>
                             </div>

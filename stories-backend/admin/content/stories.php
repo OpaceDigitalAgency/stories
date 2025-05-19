@@ -323,7 +323,12 @@ if (function_exists('renderEnhancedTable')) {
             'itemsPerPage' => $perPage,
             'currentPage' => $page,
             'totalItems' => $totalItems, // Pass the total items count from SQL query
-            'customActionRenderer' => $customActionRenderer // Add custom action renderer
+            'customActionRenderer' => $customActionRenderer, // Add custom action renderer
+            'useCustomPagination' => true,
+            'customPageParam' => 'page',
+            'customPerPageParam' => 'per_page',
+            'validPerPageValues' => [10, 25, 50, 100],
+            'showPagination' => false // We'll use the separate pagination component
         ]
     );
 } else {

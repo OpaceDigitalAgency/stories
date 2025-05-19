@@ -188,7 +188,11 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
                     <?php endforeach; ?>
 
                     <!-- Always include the tab parameter -->
-                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab'] ?? ($_GET['tab'] ?? 'existing')); ?>">
+                    <?php if (isset($options['tab'])): ?>
+                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($options['tab']); ?>">
+                    <?php elseif (isset($_GET['tab'])): ?>
+                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($_GET['tab']); ?>">
+                    <?php endif; ?>
 
                     <select name="<?php echo $options['perPageParam']; ?>" id="per-page" class="form-control form-control-sm per-page-select" aria-label="Items per page">
                         <?php

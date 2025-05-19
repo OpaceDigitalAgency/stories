@@ -569,7 +569,7 @@ require_once '../includes/header.php';
                                     'perPageParam' => 'per_page',
                                     'tab' => $currentTab,
                                     'validPerPageValues' => $validPerPageValues,
-                                    'perPageLabel' => 'Show',
+                                    'perPageLabel' => 'per page',
                                     'showAllLabel' => 'Show All'
                                 ]);
                                 ?>

@@ -19,48 +19,20 @@ require_once '../includes/header.php';
 // Include database connection
 require_once '../includes/db-connect.php';
 
-// Function to check if Git Auto Deploy webhook is running (direct socket check)
+// Function to check if Git Auto Deploy webhook is running
 function is_webhook_online() {
-    // First, check if the webhook process is running
-    exec("ps aux | grep 'git-auto-deploy' | grep -v grep", $output, $return_var);
-    if (!empty($output)) {
-        return true; // Process is running
-    }
+    // ONLY check the known working IP address: 37.27.31.107
+    // Based on diagnostic results, this is the only address that works
 
-    // Direct socket check to 37.27.31.107:8080
+    // Try direct socket connection first (most reliable)
     $fp = @fsockopen('37.27.31.107', 8080, $errno, $errstr, 1);
     if ($fp) {
         fclose($fp);
         return true;
     }
 
-    // Try with localhost
-    $fp = @fsockopen('localhost', 8080, $errno, $errstr, 1);
-    if ($fp) {
-        fclose($fp);
-        return true;
-    }
-
-    // Try with 127.0.0.1
-    $fp = @fsockopen('127.0.0.1', 8080, $errno, $errstr, 1);
-    if ($fp) {
-        fclose($fp);
-        return true;
-    }
-
-    // Try with server IP
-    $serverIp = $_SERVER['SERVER_ADDR'] ?? '';
-    if ($serverIp) {
-        $fp = @fsockopen($serverIp, 8080, $errno, $errstr, 1);
-        if ($fp) {
-            fclose($fp);
-            return true;
-        }
-    }
-
-    // If all direct checks fail, try HTTP requests
+    // If socket fails, try cURL
     if (function_exists('curl_init')) {
-        // Try with direct IP first (most reliable)
         $ch = curl_init('http://37.27.31.107:8080');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 1);
@@ -73,6 +45,20 @@ function is_webhook_online() {
         if ($response !== false || ($httpCode > 0 && $httpCode < 500)) {
             return true;
         }
+    }
+
+    // Last resort: try file_get_contents
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'HEAD',
+            'timeout' => 1,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents('http://37.27.31.107:8080', false, $context);
+    if ($response !== false) {
+        return true;
     }
 
     return false; // All checks failed

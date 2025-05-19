@@ -64,10 +64,12 @@ try {
     }
     $pageDescription = 'Import books and scrape reviews from various sources';
 
-    // Books pagination
     // Get the page and per_page parameters
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
+    
+    // Log the parameters for debugging
+    error_log("Page: $page, Per Page: $perPage, Tab: $currentTab");
 
     // Initialize standard per page values
     $validPerPageValues = [10, 25, 50, 100];

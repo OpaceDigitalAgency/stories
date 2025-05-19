@@ -250,13 +250,17 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
         logger.info(`Starting with ${reviews.length} reviews from cache, will continue scraping`);
       } else {
-        // If not continuing and cache has enough reviews, use it
+        // Updated logic: allow continued scraping if continueFromLast is true, even if cache has >= limit reviews
         if (cachedData.reviews && cachedData.reviews.length >= limit) {
-          logger.info(`Using cached data for Goodreads book ID: ${bookId} (${cachedData.reviews.length} reviews)`);
-          return {
-            source: 'cache',
-            ...cachedData
-          };
+          if (continueFromLast) {
+            logger.info(`Cached data has ${cachedData.reviews.length} reviews, but continueFromLast=true — will fetch more`);
+          } else {
+            logger.info(`Using cached data for Goodreads book ID: ${bookId} (${cachedData.reviews.length} reviews)`);
+            return {
+              source: 'cache',
+              ...cachedData
+            };
+          }
         } else {
           logger.info(`Cache has insufficient reviews (${cachedData.reviews ? cachedData.reviews.length : 0} < ${limit}), fetching fresh data`);
         }

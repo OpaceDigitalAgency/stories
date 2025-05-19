@@ -1492,10 +1492,22 @@ function updateBookData($bookId, $data, $db) {
             $updatedFieldNames[] = 'Price Range';
         }
 
-        if (!empty($data['description']) && $data['description'] !== $currentBook['description']) {
-            $updateFields[] = "description = ?";
-            $params[] = $data['description'];
-            $updatedFieldNames[] = 'Description';
+        // Skip description field as it doesn't exist in the books table
+        // We'll store it in metadata JSON field instead if it's available
+        if (!empty($data['description'])) {
+            // Get current metadata
+            $metadata = !empty($currentBook['metadata']) ? json_decode($currentBook['metadata'], true) : [];
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
+
+            // Add description to metadata
+            $metadata['description'] = $data['description'];
+
+            // Update metadata field
+            $updateFields[] = "metadata = ?";
+            $params[] = json_encode($metadata);
+            $updatedFieldNames[] = 'Description (in metadata)';
         }
 
         if (!empty($data['cover_url']) && $data['cover_url'] !== $currentBook['cover_url']) {

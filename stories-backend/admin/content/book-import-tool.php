@@ -112,6 +112,10 @@ try {
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
 
+    // Calculate pagination for ISBN validation
+    $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
+    $isbnOffset = max(0, $isbnOffset); // Ensure offset is not negative
+
     // Basic validation to prevent negative values
     foreach (['books', 'sources', 'isbn'] as $section) {
         $perPageVar = $section . 'PerPage';
@@ -991,9 +995,22 @@ require_once '../includes/header.php';
                                     <p>This tool checks ISBNs against external sources like Goodreads, Google Books, and Open Library to verify their accuracy.</p>
 
                                     <?php
+                                    // Get books with pagination for ISBN validation
+                                    $isbnBooksStmt = $db->prepare("
+                                        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating,
+                                               b.isbn, b.isbn13, b.author, b.publisher, b.page_count, b.series, b.price_range
+                                        FROM directory_items di
+                                        JOIN books b ON di.id = b.directory_item_id
+                                        WHERE di.type = 'book'
+                                        ORDER BY di.title ASC
+                                        LIMIT $isbnPerPage OFFSET $isbnOffset
+                                    ");
+                                    $isbnBooksStmt->execute();
+                                    $isbnBooks = $isbnBooksStmt->fetchAll(PDO::FETCH_ASSOC);
+
                                     // Prepare table data for ISBN validation
                                     $tableData = [];
-                                    foreach ($books as $book) {
+                                    foreach ($isbnBooks as $book) {
                                         $isbn = !empty($book['isbn13']) ? $book['isbn13'] : (!empty($book['isbn']) ? $book['isbn'] : '');
                                         $isbnStatus = 'unknown';
                                         $statusClass = 'secondary';
@@ -1080,19 +1097,29 @@ require_once '../includes/header.php';
                                             'bulkActions' => ['validate', 'enrich'],
                                             'itemsPerPage' => $isbnPerPage,
                                             'currentPage' => $isbnPage,
-                                            'totalItems' => count($books),
+                                            'totalItems' => $totalBooks,
                                             'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
                                             'showPagination' => true,
                                             'showItemsPerPage' => true,
-                                            'validPerPageValues' => [10, 25, 50, 100, count($books)],
+                                            'validPerPageValues' => [10, 25, 50, 100, $totalBooks],
                                             'perPageLabel' => 'Show',
                                             'showAllLabel' => 'Show All'
                                         ]
                                     );
                                     ?>
                                     <?php
+                                    // Ensure tab parameter is in URL for pagination
+                                    $_GET['tab'] = 'validate';
+
                                     // Render pagination for ISBN validation table
-                                    renderPagination(count($books), $isbnPerPage, $isbnPage);
+                                    renderPagination($totalBooks, $isbnPerPage, $isbnPage, 5, [
+                                        'pageParam' => 'isbn_page',
+                                        'perPageParam' => 'isbn_per_page',
+                                        'tab' => 'validate',
+                                        'validPerPageValues' => [10, 25, 50, 100, $totalBooks],
+                                        'perPageLabel' => 'Show',
+                                        'showAllLabel' => 'Show All'
+                                    ]);
                                     ?>
 
                                     <div class="mt-3">
@@ -1153,7 +1180,20 @@ require_once '../includes/header.php';
                                         <div class="form-group enrich-specific" style="display: none;">
                                             <label for="enrichSpecificBooks">Select Books</label>
                                             <select class="form-control" id="enrichSpecificBooks" name="enrich_specific_books[]" multiple>
-                                                <?php foreach ($books as $book): ?>
+                                                <?php
+                                                // Get all books for the dropdown (not paginated)
+                                                $allBooksStmt = $db->prepare("
+                                                    SELECT di.id, di.title
+                                                    FROM directory_items di
+                                                    JOIN books b ON di.id = b.directory_item_id
+                                                    WHERE di.type = 'book'
+                                                    ORDER BY di.title ASC
+                                                ");
+                                                $allBooksStmt->execute();
+                                                $allBooks = $allBooksStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                                foreach ($allBooks as $book):
+                                                ?>
                                                     <option value="<?php echo $book['id']; ?>"><?php echo htmlspecialchars($book['title']); ?></option>
                                                 <?php endforeach; ?>
                                             </select>

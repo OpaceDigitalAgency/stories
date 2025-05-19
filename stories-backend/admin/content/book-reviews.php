@@ -248,19 +248,7 @@ require_once '../includes/header.php';
                                         <option value="5" <?php echo $reviewRatingFilter == 5 ? 'selected' : ''; ?>>★★★★★ (5)</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
-                                    <label for="reviews_per_page" class="form-label">Show</label>
-                                    <select class="form-control" id="reviews_per_page" name="per_page">
-                                        <option value="5" <?php echo $reviewsPerPage == 5 ? 'selected' : ''; ?>>5</option>
-                                        <option value="10" <?php echo $reviewsPerPage == 10 ? 'selected' : ''; ?>>10</option>
-                                        <option value="15" <?php echo $reviewsPerPage == 15 ? 'selected' : ''; ?>>15</option>
-                                        <option value="20" <?php echo $reviewsPerPage == 20 ? 'selected' : ''; ?>>20</option>
-                                        <option value="25" <?php echo $reviewsPerPage == 25 ? 'selected' : ''; ?>>25</option>
-                                        <option value="50" <?php echo $reviewsPerPage == 50 ? 'selected' : ''; ?>>50</option>
-                                        <option value="100" <?php echo $reviewsPerPage == 100 ? 'selected' : ''; ?>>100</option>
-                                        <option value="<?php echo $totalReviews; ?>" <?php echo $reviewsPerPage == $totalReviews ? 'selected' : ''; ?>>All (<?php echo $totalReviews; ?>)</option>
-                                    </select>
-                                </div>
+                                <!-- Per-page dropdown removed to avoid conflicts -->
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-filter"></i> Apply Filters
@@ -347,14 +335,14 @@ require_once '../includes/header.php';
                             ?>
                         </div>
                         <?php
-                        // Render pagination with custom options
+                        // Render pagination with custom options - force showItemsPerPage to true
                         renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
                             'pageParam' => 'page',
                             'perPageParam' => 'per_page',
                             'validPerPageValues' => [5, 10, 15, 20, 25, 50, 100, $totalReviews],
                             'perPageLabel' => 'Show',
                             'showAllLabel' => 'Show All',
-                            'showItemsPerPage' => true, // Enable the built-in per-page dropdown for consistency
+                            'showItemsPerPage' => true, // Force enable the built-in per-page dropdown
                             'tab' => '' // Ensure no tab parameter is added
                         ]);
                         ?>
@@ -367,8 +355,8 @@ require_once '../includes/header.php';
 
 <script>
 $(document).ready(function() {
-    // Handle per-page dropdown change for both dropdowns
-    $('#reviews_per_page, .per-page-select').on('change', function() {
+    // Handle per-page dropdown change
+    $('.per-page-select').on('change', function() {
         // Get current URL
         let url = new URL(window.location.href);
         
@@ -385,15 +373,6 @@ $(document).ready(function() {
         // Redirect to the new URL
         window.location.href = url.toString();
     });
-    
-    // Ensure both dropdowns are synchronized
-    function syncDropdowns() {
-        const value = $('#reviews_per_page').val();
-        $('.per-page-select').val(value);
-    }
-    
-    // Sync on page load
-    syncDropdowns();
 
     // Individual Delete Buttons
     $('.delete-review').on('click', function() {

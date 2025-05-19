@@ -228,39 +228,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     if (cachedData) {
       // Handle cached data differently based on continueFromLast parameter
       if (continueFromLast) {
-        // If continuing from last scrape, use cached data as starting point but don't return early
-        logger.info(`Continuing from last scrape:
-          - Book ID: ${bookId}
-          - Existing reviews: ${cachedData.reviews ? cachedData.reviews.length : 0}
-          - Last page: ${cachedData.currentPage || 1}
-          - Total available: ${cachedData.totalAvailable || 'unknown'}
-          - Has more: ${cachedData.hasMoreReviews ? 'yes' : 'no'}
-          - Last scraped: ${cachedData.lastScrapedAt || 'unknown'}`);
-
-        // Initialize from cached state
+        // Properly resume from last GraphQL state, not just return cache
         reviews = cachedData.reviews || [];
-        pageNum = cachedData.currentPage || 1;
+        pageCount = cachedData.graphql_state?.current_page || cachedData.currentPage || 1;
+        nextPageToken = cachedData.graphql_state?.next_token || null;
+        totalCount = cachedData.graphql_state?.total_available || cachedData.totalAvailable || 0;
 
-        if (cachedData.graphql_state) {
-          logger.info(`Resuming from cached GraphQL state:
-          - Next token: ${cachedData.graphql_state.next_token || 'null'}
-          - Current page: ${cachedData.graphql_state.current_page || 0}
-          - Total available: ${cachedData.graphql_state.total_available || 'unknown'}`);
-
-          nextPageToken = cachedData.graphql_state.next_token || null;
-          pageCount = cachedData.graphql_state.current_page || 0;
-          totalCount = cachedData.graphql_state.total_available || cachedData.totalAvailable;
-
-          logger.info(`✅ Resuming from cache:
+        logger.info(`✅ Resuming from cache:
 - Total cached reviews: ${reviews.length}
 - Page count: ${pageCount}
 - Next token: ${nextPageToken}
 - Total available: ${totalCount}`);
-        }
 
         // If we know total available, adjust limit
-        if (cachedData.totalAvailable) {
-          const remaining = cachedData.totalAvailable - reviews.length;
+        if (totalCount) {
+          const remaining = totalCount - reviews.length;
           if (remaining > 0) {
             logger.info(`${remaining} more reviews available to scrape`);
           }
@@ -842,25 +824,14 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
       // Use GraphQL pagination to fetch more reviews
       // Use maxPages to limit the number of pages we fetch
-      let pageCount = 0;
-
-      // Log the pagination loop conditions
-      logger.info(`GraphQL pagination loop conditions:
-        - nextPageToken !== undefined: ${nextPageToken !== undefined}
-        - pageCount < maxPages: ${pageCount < maxPages}
-        - continueFromLast || reviews.length < limit: ${continueFromLast || reviews.length < limit}
-        - totalCount === undefined || reviews.length < totalCount: ${totalCount === undefined || reviews.length < totalCount}
-      `);
-
-      // Debug log for entering GraphQL loop
+      // pageCount, nextPageToken, totalCount are now set correctly above if continuing from last
       logger.info(`📋 ENTERING GRAPHQL LOOP
 - nextPageToken: ${nextPageToken}
 - pageCount: ${pageCount}/${maxPages}
 - reviews.length: ${reviews.length}
 - limit: ${limit}
 - continueFromLast: ${continueFromLast}
-- totalCount: ${totalCount}
-      `);
+- totalCount: ${totalCount}`);
 
       while ((nextPageToken !== undefined && nextPageToken !== null) &&
              pageCount < maxPages &&

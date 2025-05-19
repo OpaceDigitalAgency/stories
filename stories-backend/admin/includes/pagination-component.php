@@ -57,31 +57,21 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     foreach ($_GET as $key => $value) {
         // Skip page parameter as we'll set it later
         if ($key !== 'page') {
-            // Ensure tab parameter is preserved
-            if ($key === 'tab') {
-                $queryParams['tab'] = $value;
-            } else {
+            // Skip page and per_page parameters as they'll be handled separately
+            if ($key !== $options['pageParam'] && $key !== $options['perPageParam']) {
                 $queryParams[$key] = $value;
             }
         }
     }
 
-    // If no tab is set, try to determine it from the URL
-    if (!isset($queryParams['tab'])) {
-        if (strpos($_SERVER['REQUEST_URI'], 'reviews')) {
-            $queryParams['tab'] = 'reviews';
-        } elseif (strpos($_SERVER['REQUEST_URI'], 'sources')) {
-            $queryParams['tab'] = 'sources';
-        } elseif (strpos($_SERVER['REQUEST_URI'], 'validate')) {
-            $queryParams['tab'] = 'validate';
-        } else {
-            $queryParams['tab'] = 'existing';
-        }
+    // Ensure tab parameter is preserved
+    if (isset($options['tab'])) {
+        $queryParams['tab'] = $options['tab'];
     }
 
     // Ensure per_page is preserved in pagination links
-    if (!isset($queryParams['per_page']) && $itemsPerPage) {
-        $queryParams['per_page'] = $itemsPerPage;
+    if (!isset($queryParams[$options['perPageParam']]) && $itemsPerPage) {
+        $queryParams[$options['perPageParam']] = $itemsPerPage;
     }
 
     error_log("Pagination: Modified Query params: " . print_r($queryParams, true));
@@ -90,6 +80,11 @@ function renderPagination($totalItems, $itemsPerPage, $currentPage = 1, $visible
     $getPageUrl = function($page) use ($currentUrl, $queryParams, $options) {
         $params = $queryParams;
         $params[$options['pageParam']] = $page;
+        // Ensure we're using the correct per_page parameter name
+        if (isset($params['per_page'])) {
+            $params[$options['perPageParam']] = $params['per_page'];
+            unset($params['per_page']);
+        }
         return $currentUrl . '?' . http_build_query($params);
     };
 

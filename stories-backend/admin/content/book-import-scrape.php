@@ -375,11 +375,18 @@ function updateBookAggregateValues($db, $bookId) {
                 // Get book IDs to process
                 $bookIds = [];
 
+                // Debug information
+                error_log("book-import-scrape.php: Request method: " . $_SERVER['REQUEST_METHOD']);
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    error_log("book-import-scrape.php: POST data: " . print_r($_POST, true));
+
                     // Single book from form submission
                     $bookId = $_POST['book_id'] ?? 0;
+                    error_log("book-import-scrape.php: Book ID from POST: " . $bookId);
+
                     if ($bookId > 0) {
                         $bookIds[] = $bookId;
+                        error_log("book-import-scrape.php: Added book ID to process: " . $bookId);
                     }
 
                     // Get selected sources

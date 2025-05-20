@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../../../services/ReviewFetcher/AbstractReviewFetche
 require_once __DIR__ . '/../../../../services/ReviewFetcher/GoogleBooksReviewFetcher.php';
 require_once __DIR__ . '/../../../../services/ReviewFetcher/OpenLibraryReviewFetcher.php';
 require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
+require_once __DIR__ . '/../../../../services/ReviewFetcher/StoriesReviewFetcher.php';
 require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherFactory.php';
 
 // Include source-specific functions

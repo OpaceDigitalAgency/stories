@@ -189,6 +189,13 @@ $siteName = get_config('site.name', 'Stories From The Web');
     <!-- Include tab state handler for pagination -->
     <script src="<?php echo $tabStateHandlerJsPath; ?>"></script>
 
+    <?php
+    // Scrape reviews script path
+    $scrapeReviewsJsPath = $isContentDir ? '../assets/js/scrape-reviews.js' : 'assets/js/scrape-reviews.js';
+    ?>
+    <!-- Include scrape reviews handler -->
+    <script src="<?php echo $scrapeReviewsJsPath; ?>"></script>
+
     <!-- Load preview scripts based on current page -->
     <?php if ($currentPage === 'stories'): ?>
     <script src="<?php echo $storyPreviewJsPath; ?>"></script>

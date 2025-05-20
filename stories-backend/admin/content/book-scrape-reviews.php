@@ -50,6 +50,7 @@ if (!$book) {
 $sourcesStmt = $db->prepare("
     SELECT id, name, url, is_third_party
     FROM review_sources
+    WHERE name = 'Goodreads'
     ORDER BY name ASC
 ");
 $sourcesStmt->execute();

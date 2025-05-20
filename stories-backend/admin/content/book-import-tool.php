@@ -557,7 +557,7 @@ require_once '../includes/header.php';
                                                     : (!empty($item['isbn']) ? htmlspecialchars($item['isbn']) : 'N/A');
 
                                                 // Create a custom action button for scraping reviews
-                                                $scrapeButton = '<a href="book-scrape-reviews.php?book_id=' . $item['id'] . '" class="btn btn-sm btn-primary" onclick="console.log(\'Scrape Reviews button clicked for book ID: ' . $item['id'] . '\');">
+                                                $scrapeButton = '<a href="#" class="btn btn-sm btn-primary" data-scrape-reviews data-book-id="' . $item['id'] . '">
                                                     <i class="fas fa-cloud-download-alt"></i> Scrape Reviews
                                                 </a>';
 

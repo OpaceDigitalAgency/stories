@@ -187,6 +187,29 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             // Get the book metadata from the first review
             $bookMetadata = $response[0]['book_metadata'] ?? [];
 
+            // Check if this is an error response
+            if (isset($response[0]['reviewer_name']) && $response[0]['reviewer_name'] === 'Error') {
+                $errorMessage = $response[0]['review_text'] ?? 'Unknown error';
+                $detailedStatus['steps'][] = [
+                    'name' => 'data_extraction',
+                    'status' => 'error',
+                    'message' => "Error from Goodreads: " . $errorMessage
+                ];
+
+                $detailedStatus['status'] = 'error';
+                $detailedStatus['message'] = 'Error from Goodreads: ' . $errorMessage;
+                $detailedStatus['processing_time'] = round($processingTime, 2);
+
+                // Return a minimal set of data with the error status
+                return [
+                    'title' => $bookMetadata['title'] ?? 'Unknown',
+                    'author' => $bookMetadata['author'] ?? 'Unknown',
+                    'isbn' => $bookMetadata['isbn'] ?? $isbn,
+                    'error' => $errorMessage,
+                    '_status' => $detailedStatus
+                ];
+            }
+
             if (empty($bookMetadata)) {
                 $detailedStatus['steps'][] = [
                     'name' => 'data_extraction',

@@ -117,17 +117,51 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             }
 
             if (empty($bookUrl)) {
-                $this->lastError = "No book found on Goodreads for ISBN: $isbnToUse";
-                return [];
+                $errorMsg = "No book found on Goodreads for ISBN: $isbnToUse";
+                $this->lastError = $errorMsg;
+                $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "❌ {$errorMsg}");
+
+                // Return a structured response with error information
+                return [
+                    [
+                        'source_id' => $this->sourceId,
+                        'reviewer_name' => 'Error',
+                        'review_text' => $errorMsg,
+                        'book_metadata' => [
+                            'title' => 'Unknown',
+                            'author' => 'Unknown',
+                            'isbn' => $isbn,
+                            'error' => $errorMsg
+                        ]
+                    ]
+                ];
             }
         }
+
+        $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "✅ Found book URL: {$bookUrl}");
 
         // Get book details
         $bookDetails = $this->getBookDetails($bookUrl);
 
         if (empty($bookDetails)) {
-            $this->lastError = "Failed to get book details from Goodreads";
-            return [];
+            $errorMsg = "Failed to get book details from Goodreads for URL: {$bookUrl}";
+            $this->lastError = $errorMsg;
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "❌ {$errorMsg}");
+
+            // Return a structured response with error information
+            return [
+                [
+                    'source_id' => $this->sourceId,
+                    'reviewer_name' => 'Error',
+                    'review_text' => $errorMsg,
+                    'book_metadata' => [
+                        'title' => 'Unknown',
+                        'author' => 'Unknown',
+                        'isbn' => $isbn,
+                        'error' => $errorMsg
+                    ]
+                ]
+            ];
         }
 
         // Get reviews URL - make sure we're using the correct format

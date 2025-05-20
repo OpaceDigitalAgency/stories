@@ -153,8 +153,25 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
                 $goodreadsData = fetchGoodreadsDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($goodreadsData) {
+                    // Check if we have status information
+                    $status = 'success';
+                    $message = 'Successfully fetched data from Goodreads';
+                    $processingTime = null;
+
+                    if (isset($goodreadsData['_status'])) {
+                        $statusInfo = $goodreadsData['_status'];
+                        $status = $statusInfo['status'] ?? 'success';
+                        $message = $statusInfo['message'] ?? 'Successfully fetched data from Goodreads';
+                        $processingTime = $statusInfo['processing_time'] ?? null;
+
+                        // Remove status info from the data
+                        unset($goodreadsData['_status']);
+                    }
+
                     $sourceData['goodreads'] = [
-                        'status' => 'success',
+                        'status' => $status,
+                        'message' => $message,
+                        'processing_time' => $processingTime,
                         'data' => $goodreadsData
                     ];
                 } else {

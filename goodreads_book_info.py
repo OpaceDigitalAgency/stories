@@ -512,6 +512,14 @@ def extract_json_data(html):
     return json_data
 
 def main():
+    # Initialize status object for structured output
+    status = {
+        "status": "initializing",
+        "message": "Starting Goodreads data extraction",
+        "steps": [],
+        "data": {}
+    }
+
     # Check if URL is provided as command line argument
     if len(sys.argv) > 1:
         url = sys.argv[1]
@@ -519,101 +527,160 @@ def main():
         # Default URL for testing
         url = "https://www.goodreads.com/book/show/72193.Harry_Potter_and_the_Philosopher_s_Stone"
 
-    print(f"Fetching book information from: {url}")
-    print(f"Python version: {sys.version}")
-    print(f"BeautifulSoup version: {BeautifulSoup.__version__}")
-    print(f"Requests version: {requests.__version__}")
+    # Add initialization step
+    status["steps"].append({
+        "name": "initialization",
+        "status": "success",
+        "message": f"URL: {url}"
+    })
+
+    # Add environment info
+    status["environment"] = {
+        "python_version": sys.version,
+        "beautifulsoup_version": BeautifulSoup.__version__,
+        "requests_version": requests.__version__
+    }
+
+    # Fetch the page
+    status["status"] = "fetching"
+    status["message"] = f"Fetching page: {url}"
 
     html = fetch_goodreads_page(url)
 
-    if html:
-        # Extract book ID or title from URL for filename
-        match = re.search(r'/show/(\d+)(?:-(.+))?', url)
-        if match:
-            book_id = match.group(1)
-            book_slug = match.group(2) if match.group(2) else "book"
-            raw_filename_base = f"{book_id}_{book_slug}"
-        else:
-            import time
-            raw_filename_base = f"book_{int(time.time())}"
+    if not html:
+        status["status"] = "error"
+        status["message"] = "Failed to fetch page"
+        status["steps"].append({
+            "name": "fetch_page",
+            "status": "error",
+            "message": "Failed to fetch page content"
+        })
+        # Print status as JSON for PHP to parse
+        print(f"STATUS_JSON: {json.dumps(status)}")
+        return
 
-        # Save raw HTML for inspection
+    # Successfully fetched the page
+    status["steps"].append({
+        "name": "fetch_page",
+        "status": "success",
+        "message": "Successfully fetched page content"
+    })
+
+    # Extract book ID or title from URL for filename
+    match = re.search(r'/show/(\d+)(?:-(.+))?', url)
+    if match:
+        book_id = match.group(1)
+        book_slug = match.group(2) if match.group(2) else "book"
+        raw_filename_base = f"{book_id}_{book_slug}"
+    else:
+        import time
+        raw_filename_base = f"book_{int(time.time())}"
+
+    # Save raw HTML for inspection
+    try:
         raw_html_file = f"{raw_filename_base}_raw.html"
         with open(raw_html_file, "w", encoding="utf-8") as f:
             f.write(html)
-        print(f"Saved raw HTML to {raw_html_file}")
 
-        # Extract book information
-        book_info = extract_book_info(html)
+        status["steps"].append({
+            "name": "save_html",
+            "status": "success",
+            "message": f"Saved raw HTML to {raw_html_file}"
+        })
+    except Exception as e:
+        status["steps"].append({
+            "name": "save_html",
+            "status": "warning",
+            "message": f"Failed to save HTML: {str(e)}"
+        })
 
-        if book_info:
-            # Create a filename based on the book title
-            if 'title' in book_info:
-                # Clean the title to make it suitable for a filename
-                clean_title = re.sub(r'[^\w\s-]', '', book_info['title'])
-                clean_title = re.sub(r'\s+', '_', clean_title)
-                base_filename = clean_title
-            else:
-                # Fallback to the raw filename base
-                base_filename = raw_filename_base
+    # Extract book information
+    status["status"] = "extracting"
+    status["message"] = "Extracting book information"
 
-            # Extract selectors info before printing
-            selectors_info = book_info.pop("_selectors", {})
+    book_info = extract_book_info(html)
 
-            # Print book information
-            print("\nBook Information:")
-            print("=" * 60)
+    if not book_info:
+        status["status"] = "error"
+        status["message"] = "Failed to extract book information"
+        status["steps"].append({
+            "name": "extract_info",
+            "status": "error",
+            "message": "No book information could be extracted"
+        })
+        # Print status as JSON for PHP to parse
+        print(f"STATUS_JSON: {json.dumps(status)}")
+        return
 
-            for key, value in book_info.items():
-                if isinstance(value, list):
-                    print(f"{key.upper()}: {', '.join(str(item) for item in value)}")
-                else:
-                    print(f"{key.upper()}: {value}")
+    # Successfully extracted book info
+    status["steps"].append({
+        "name": "extract_info",
+        "status": "success",
+        "message": "Successfully extracted book information"
+    })
 
-            # Save book info to JSON file
-            book_info_file = f"{base_filename}.json"
-            with open(book_info_file, "w", encoding="utf-8") as f:
-                json.dump(book_info, f, indent=2)
-            print(f"\nSaved book information to {book_info_file}")
-
-            # Save selectors info to a separate file
-            selectors_file = f"{base_filename}_selectors.json"
-            with open(selectors_file, "w", encoding="utf-8") as f:
-                json.dump(selectors_info, f, indent=2)
-            print(f"Saved selectors information to {selectors_file}")
-
-            # Create a combined reference file with both data and selectors
-            reference_file = f"{base_filename}_reference.json"
-            reference_data = {}
-            for key, selector_info in selectors_info.items():
-                reference_data[key] = {
-                    "selector": selector_info["selector"],
-                    "example_value": selector_info["value"],
-                    "actual_value": book_info.get(key, "Not found in book data")
-                }
-
-            with open(reference_file, "w", encoding="utf-8") as f:
-                json.dump(reference_data, f, indent=2)
-            print(f"Saved reference information to {reference_file}")
-
-            # Save raw JSON data for inspection
-            if 'isbn' in book_info:
-                print(f"\nISBN found in book_info: {book_info['isbn']}")
-                print("Searching raw HTML for this ISBN...")
-                isbn = book_info['isbn']
-                if isbn in html:
-                    print(f"ISBN {isbn} found in raw HTML!")
-                    # Find the context around the ISBN
-                    isbn_index = html.find(isbn)
-                    start = max(0, isbn_index - 100)
-                    end = min(len(html), isbn_index + 100)
-                    print(f"Context: ...{html[start:end]}...")
-                else:
-                    print(f"ISBN {isbn} NOT found in raw HTML as a direct string!")
-        else:
-            print("Failed to extract book information.")
+    # Create a filename based on the book title
+    if 'title' in book_info:
+        # Clean the title to make it suitable for a filename
+        clean_title = re.sub(r'[^\w\s-]', '', book_info['title'])
+        clean_title = re.sub(r'\s+', '_', clean_title)
+        base_filename = clean_title
     else:
-        print("Failed to fetch the Goodreads page.")
+        # Fallback to the raw filename base
+        base_filename = raw_filename_base
+
+    # Extract selectors info before saving
+    selectors_info = book_info.pop("_selectors", {})
+
+    # Save book info to JSON file
+    try:
+        book_info_file = f"{base_filename}.json"
+        with open(book_info_file, "w", encoding="utf-8") as f:
+            json.dump(book_info, f, indent=2)
+
+        status["steps"].append({
+            "name": "save_json",
+            "status": "success",
+            "message": f"Saved book information to {book_info_file}"
+        })
+
+        # Add the book data to the status object
+        status["data"] = book_info
+
+        # Check for key fields to determine completeness
+        required_fields = ["title", "author", "publisher", "isbn"]
+        missing_fields = [field for field in required_fields if not book_info.get(field)]
+
+        if missing_fields:
+            status["status"] = "partial"
+            status["message"] = f"Extracted partial book information (missing: {', '.join(missing_fields)})"
+        else:
+            status["status"] = "success"
+            status["message"] = "Successfully extracted complete book information"
+
+    except Exception as e:
+        status["steps"].append({
+            "name": "save_json",
+            "status": "error",
+            "message": f"Failed to save JSON: {str(e)}"
+        })
+        status["status"] = "error"
+        status["message"] = f"Error saving book data: {str(e)}"
+
+    # Print status as JSON for PHP to parse
+    print(f"STATUS_JSON: {json.dumps(status)}")
+
+    # Also print the book info in a readable format for debugging
+    print("\nBook Information:")
+    print("=" * 60)
+
+    for key, value in book_info.items():
+        if isinstance(value, list):
+            print(f"{key.upper()}: {', '.join(str(item) for item in value)}")
+        else:
+            print(f"{key.upper()}: {value}")
+
+    print(f"\nSaved book information to {book_info_file}")
 
 if __name__ == "__main__":
     main()

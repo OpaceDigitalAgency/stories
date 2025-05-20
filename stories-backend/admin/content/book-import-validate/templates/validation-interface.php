@@ -63,6 +63,73 @@ $sources = array_keys($sourceData);
                 </div>
             </div>
 
+            <!-- Data Source Status Panel -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Data Source Status</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($sources as $source): ?>
+                                <?php
+                                    $status = !empty($sourceData[$source]) ? $sourceData[$source]['status'] : 'not_attempted';
+                                    $statusClass = '';
+                                    $statusIcon = '';
+                                    $statusText = '';
+
+                                    switch ($status) {
+                                        case 'success':
+                                            $statusClass = 'success';
+                                            $statusIcon = 'check-circle';
+                                            $statusText = 'Success';
+                                            break;
+                                        case 'error':
+                                            $statusClass = 'danger';
+                                            $statusIcon = 'times-circle';
+                                            $statusText = 'Error';
+                                            break;
+                                        case 'partial':
+                                            $statusClass = 'warning';
+                                            $statusIcon = 'exclamation-circle';
+                                            $statusText = 'Partial Data';
+                                            break;
+                                        case 'not_attempted':
+                                        default:
+                                            $statusClass = 'secondary';
+                                            $statusIcon = 'minus-circle';
+                                            $statusText = 'Not Attempted';
+                                            break;
+                                    }
+
+                                    $details = !empty($sourceData[$source]['message']) ? $sourceData[$source]['message'] : '';
+                                    $processingTime = !empty($sourceData[$source]['processing_time']) ? $sourceData[$source]['processing_time'] . 's' : '';
+                                ?>
+                                <tr>
+                                    <td><strong><?php echo ucfirst(str_replace('_', ' ', $source)); ?></strong></td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $statusClass; ?>">
+                                            <i class="fas fa-<?php echo $statusIcon; ?>"></i> <?php echo $statusText; ?>
+                                        </span>
+                                        <?php if ($processingTime): ?>
+                                            <small class="text-muted">(<?php echo $processingTime; ?>)</small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($details); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <?php if ($sourceCount > 0): ?>
                 <div class="comparison-table-container">
                     <?php include 'source-comparison-table.php'; ?>

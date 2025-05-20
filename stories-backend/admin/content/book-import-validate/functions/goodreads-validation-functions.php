@@ -11,9 +11,10 @@
  * @param string $isbn The ISBN to search for
  * @param string $title The book title
  * @param string $author The book author
+ * @param PDO|null $db Database connection (optional)
  * @return array|null Book data or null if not found
  */
-function fetchGoodreadsDataNew($isbn, $title, $author) {
+function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
     try {
         // Start timer for performance tracking
         $startTime = microtime(true);
@@ -34,9 +35,20 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             'message' => "Parameters: ISBN: '$isbn', Title: '$title', Author: '$author'"
         ];
 
-        // Create a GoodreadsReviewFetcher instance
-        require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherFactory.php';
-        $reviewFetcherFactory = new ReviewFetcherFactory();
+        // Get the GoodreadsReviewFetcher instance from the global factory
+        // The ReviewFetcherFactory is already included in validation-functions.php
+        global $reviewFetcherFactory;
+        if (!isset($reviewFetcherFactory)) {
+            // If we have a database connection, use it
+            if ($db) {
+                $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
+            } else {
+                // Otherwise, try to get the database connection from the global scope
+                require_once __DIR__ . '/../../../../db-connect.php';
+                global $db;
+                $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
+            }
+        }
         $goodreadsFetcher = $reviewFetcherFactory->getFetcher(1); // 1 is the Goodreads source ID
 
         if (!$goodreadsFetcher || !$goodreadsFetcher->isConfigured()) {

@@ -411,9 +411,6 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
 
-        // Add API key
-        $url .= "&api_key=" . urlencode($apiKey);
-
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
 
         // Make the request to the VPS Headless Browser service
@@ -1669,7 +1666,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "x-api-key: {$apiKey}"
+            "x-api-key: stories-scraper-api-key-2023"
         ]);
 
         // Enable verbose output for debugging

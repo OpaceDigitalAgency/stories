@@ -106,8 +106,12 @@ function handleApplyAllValid() {
         formData.append('action', 'apply_all_valid');
         formData.append('book_id', bookId);
 
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
         // Send the request
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
@@ -149,8 +153,12 @@ function handleApplyAllFromSource(event) {
         formData.append('book_id', bookId);
         formData.append('source', source);
 
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
         // Send the request
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
@@ -196,8 +204,12 @@ function handleValidateAgain() {
         formData.append('action', 'validate_again');
         formData.append('book_id', bookId);
 
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
         // Send the request
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
@@ -240,8 +252,12 @@ function handleRefreshValidation() {
         formData.append('action', 'refresh_data');
         formData.append('book_id', bookId);
 
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
         // Send the request
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
@@ -282,8 +298,12 @@ function handleSearchByTitle() {
         formData.append('book_id', bookId);
         formData.append('title', bookTitle);
 
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
         // Send the request
-        fetch(window.location.href, {
+        fetch(url, {
             method: 'POST',
             body: formData
         })
@@ -322,6 +342,18 @@ function updateField(field, value, source) {
     document.getElementById('actionField').value = field;
     document.getElementById('actionValue').value = value;
     document.getElementById('actionSource').value = source;
+
+    // Add a cache-busting parameter to the form
+    const cacheBuster = new Date().getTime();
+    let cacheBustInput = document.getElementById('cacheBuster');
+    if (!cacheBustInput) {
+        cacheBustInput = document.createElement('input');
+        cacheBustInput.type = 'hidden';
+        cacheBustInput.id = 'cacheBuster';
+        cacheBustInput.name = '_cb';
+        document.getElementById('validationActionForm').appendChild(cacheBustInput);
+    }
+    cacheBustInput.value = cacheBuster;
 
     // Submit the form
     document.getElementById('validationActionForm').submit();

@@ -237,8 +237,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "⚠️ No Goodreads ID found in OpenLibrary for ISBN {$isbn}, falling back to search");
 
         // If OpenLibrary doesn't have the Goodreads ID, fall back to search
-        // Build the search URL
-        $searchUrl = "https://www.goodreads.com/search?q={$isbn}";
+        // Build the search URL with cache-busting parameter
+        $cacheBuster = time();
+        $searchUrl = "https://www.goodreads.com/search?q={$isbn}&_cb={$cacheBuster}";
 
         // Make the request
         $response = $this->makeRequest($searchUrl);

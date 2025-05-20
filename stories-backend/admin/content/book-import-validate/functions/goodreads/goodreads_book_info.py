@@ -5,11 +5,22 @@ This script fetches a Goodreads book page and extracts key information
 like title, author, ISBN, etc.
 """
 
-import requests
-from bs4 import BeautifulSoup
+import sys
 import re
 import json
-import sys
+
+# Try to import required packages, handle gracefully if missing
+try:
+    import requests
+except ImportError:
+    print("ERROR: The 'requests' package is not installed. Please run 'pip install --user requests'.")
+    sys.exit(1)
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print("ERROR: The 'beautifulsoup4' package is not installed. Please run 'pip install --user beautifulsoup4'.")
+    sys.exit(1)
 
 def clean_text(text):
     """Clean up text by removing HTML tags, URLs, and extra whitespace."""
@@ -42,7 +53,7 @@ def fetch_goodreads_page(url):
         print(f"Error fetching page: {e}")
         return None
 
-def extract_book_info(html):
+def extract_book_info(html, url=None):
     """Extract book information from HTML."""
     if not html:
         print("No HTML content to analyze")
@@ -51,6 +62,10 @@ def extract_book_info(html):
     soup = BeautifulSoup(html, 'html.parser')
     book_info = {}
     selectors_info = {}  # Store selector information for reference
+
+    # Store the URL for reference
+    if url:
+        book_info["source_url"] = url
 
     # First try to extract direct text matches for key information
     # Format and pages info - shown directly on the page
@@ -82,7 +97,7 @@ def extract_book_info(html):
     if isbn_text:
         isbn13_match = re.search(r'(\d{13})', isbn_text)
         isbn10_match = re.search(r'ISBN10:\s*(\d{10}|\d{9}X)', isbn_text)
-        
+
         if isbn13_match:
             book_info["isbn13"] = isbn13_match.group(1)
             selectors_info["isbn13"] = {"selector": "Direct text match", "value": book_info["isbn13"]}
@@ -105,26 +120,26 @@ def extract_book_info(html):
 
     # Check if we're on a search results page
     search_results = []
-    
+
     # Try multiple selectors for search results
     selectors = [
         "table.tableList tr.bookalike",  # Classic format
         "div.BookSearchResult",          # Modern format
         "div[data-testid='searchResults'] > div",  # Newest format
     ]
-    
+
     for selector in selectors:
         results = soup.select(selector)
         if results:
             search_results = results
             print(f"Found {len(results)} search results using selector: {selector}")
             break
-    
+
     if search_results:
         print(f"Analyzing {len(search_results)} search results to find the best match")
         best_match = None
         best_match_score = 0
-        
+
         # Get search parameters from URL
         url_params = {}
         if "?" in url:
@@ -132,12 +147,12 @@ def extract_book_info(html):
             url_params = dict(param.split("=") for param in query.split("&"))
             search_query = url_params.get("q", "").replace("+", " ")
             print(f"Search query: {search_query}")
-        
+
         # Analyze each result
         for result in search_results:
             match_score = 0
             result_data = {}
-            
+
             # Extract book info using multiple selectors
             for title_selector in ["a.bookTitle", "a[data-testid='bookTitle']", "a[href*='/book/show/']"]:
                 title_elem = result.select_one(title_selector)
@@ -145,20 +160,20 @@ def extract_book_info(html):
                     result_data["title"] = title_elem.text.strip()
                     result_data["url"] = title_elem["href"]
                     break
-            
+
             for author_selector in ["a.authorName", "a[data-testid='authorLink']", "a[href*='/author/show/']"]:
                 author_elem = result.select_one(author_selector)
                 if author_elem:
                     result_data["author"] = author_elem.text.strip()
                     break
-            
+
             # Look for ISBN in result
             isbn_elem = result.find(string=re.compile(r'ISBN.*\d'))
             if isbn_elem:
                 isbn_match = re.search(r'ISBN.*?(\d+[X\d]+)', isbn_elem)
                 if isbn_match:
                     result_data["isbn"] = isbn_match.group(1)
-            
+
             # Score the match
             if search_query:
                 # Direct ISBN match
@@ -171,20 +186,20 @@ def extract_book_info(html):
                         match_score += 40
                     if "author" in result_data and result_data["author"].lower() in search_query.lower():
                         match_score += 40
-            
+
             print(f"Result score: {match_score} for {result_data.get('title', 'Unknown')} by {result_data.get('author', 'Unknown')}")
-            
+
             if match_score > best_match_score:
                 best_match = result_data
                 best_match_score = match_score
-        
+
         if best_match and best_match.get("url"):
             book_url = best_match["url"]
             if not book_url.startswith("http"):
                 book_url = "https://www.goodreads.com" + book_url
-            
+
             print(f"Selected best match (score: {best_match_score}): {book_url}")
-            
+
             # Fetch the actual book page
             html = fetch_goodreads_page(book_url)
             if html:
@@ -222,7 +237,7 @@ def extract_book_info(html):
         "h1.Text__title1",
         "h1.BookPageTitleSection__title"
     ]
-    
+
     for selector in title_selectors:
         title_elem = main_content.select_one(selector)
         if title_elem:
@@ -236,7 +251,7 @@ def extract_book_info(html):
         "span.ContributorLink__name",
         "a[href*='/author/show/']"
     ]
-    
+
     for selector in author_selectors:
         author_elem = main_content.select_one(selector)
         if author_elem:
@@ -249,7 +264,7 @@ def extract_book_info(html):
         "div.BookPageMetadataSection__ratingStats div.RatingStatistics__rating",
         "div[data-testid='ratingsSection'] span[data-testid='averageRating']"
     ]
-    
+
     for selector in rating_selectors:
         rating_elem = main_content.select_one(selector)
         if rating_elem:
@@ -262,7 +277,7 @@ def extract_book_info(html):
         "div[data-testid='description'] div[data-testid='contentContainer']",
         "div.BookPageMetadataSection__description div.TruncatedContent__text"
     ]
-    
+
     for selector in description_selectors:
         description_elem = main_content.select_one(selector)
         if description_elem:
@@ -278,7 +293,7 @@ def extract_book_info(html):
         "div.BookPage__rightColumn img.ResponsiveImage",
         "div.BookPage__rightCover img[data-testid='coverImage']"
     ]
-    
+
     for selector in cover_selectors:
         cover_img = soup.select_one(selector)
         if cover_img and cover_img.get('src'):
@@ -291,7 +306,7 @@ def extract_book_info(html):
         "div[data-testid='genresList'] a",
         "div.BookPageMetadataSection__genres span.BookPageMetadataSection__genreButton"
     ]
-    
+
     for selector in genre_selectors:
         genre_elements = main_content.select(selector)
         if genre_elements:
@@ -306,14 +321,14 @@ def extract_book_info(html):
             # Find the label (dt) and value (dd)
             label = item.find("dt")
             value = item.find("dd")
-            
+
             if label and value:
                 label_text = label.text.strip().lower()
                 # Look for the actual content in TruncatedContent
                 content_container = value.select_one("div[data-testid='contentContainer']")
                 value_text = content_container.text.strip() if content_container else value.text.strip()
                 value_text = clean_text(value_text)
-                
+
                 # Extract various fields
                 if "isbn" in label_text:
                     # Handle both ISBN-10 and ISBN-13
@@ -696,7 +711,7 @@ def main():
     status["status"] = "extracting"
     status["message"] = "Extracting book information"
 
-    book_info = extract_book_info(html)
+    book_info = extract_book_info(html, url)
 
     if not book_info:
         status["status"] = "error"
@@ -729,6 +744,9 @@ def main():
 
     # Extract selectors info before saving
     selectors_info = book_info.pop("_selectors", {})
+
+    # Add selectors info to status for debugging
+    status["selectors_info"] = selectors_info
 
     # Save book info to JSON file
     try:

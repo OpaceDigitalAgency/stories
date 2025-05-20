@@ -151,7 +151,9 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'maxPages' => 1,
             'limit' => 1,
             'validation_mode' => true, // Flag to indicate we're just validating, not fetching reviews
-            'skip_db_check' => true // Skip database check for reviews
+            'skip_db_check' => true, // Skip database check for reviews
+            'force' => true, // Force refresh to avoid caching issues
+            'cache_ttl' => 0 // Don't cache results
         ];
 
         try {

@@ -21,9 +21,6 @@ require_once '../includes/db-connect.php';
 // Get book ID from URL parameter
 $bookId = isset($_GET['book_id']) ? intval($_GET['book_id']) : 0;
 
-// Debug information
-error_log("book-scrape-reviews.php: Book ID from URL: " . $bookId);
-
 // If no book ID provided, redirect to book import tool
 if ($bookId <= 0) {
     header('Location: book-import-tool.php');

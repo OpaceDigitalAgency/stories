@@ -41,32 +41,92 @@ def extract_book_info(html):
     selectors_info = {}  # Store selector information for reference
 
     # Check if we're on a search results page
-    search_results = soup.select("table.tableList tr.bookalike")
-    if not search_results:
-        # Try newer search results format
-        search_results = soup.select("div.BookSearchResult")
-
+    search_results = []
+    
+    # Try multiple selectors for search results
+    selectors = [
+        "table.tableList tr.bookalike",  # Classic format
+        "div.BookSearchResult",          # Modern format
+        "div[data-testid='searchResults'] > div",  # Newest format
+    ]
+    
+    for selector in selectors:
+        results = soup.select(selector)
+        if results:
+            search_results = results
+            print(f"Found {len(results)} search results using selector: {selector}")
+            break
+    
     if search_results:
-        print(f"Detected search results page with {len(search_results)} results, attempting to find the first book")
-        # Get the first book result
-        first_result = search_results[0]
-
-        # Try different selectors for book links
-        book_link = first_result.select_one("a.bookTitle")
-        if not book_link:
-            book_link = first_result.select_one("a[href*='/book/show/']")
-
-        if book_link and book_link.get('href'):
-            book_url = book_link.get('href')
-            if not book_url.startswith('http'):
+        print(f"Analyzing {len(search_results)} search results to find the best match")
+        best_match = None
+        best_match_score = 0
+        
+        # Get search parameters from URL
+        url_params = {}
+        if "?" in url:
+            query = url.split("?")[1]
+            url_params = dict(param.split("=") for param in query.split("&"))
+            search_query = url_params.get("q", "").replace("+", " ")
+            print(f"Search query: {search_query}")
+        
+        # Analyze each result
+        for result in search_results:
+            match_score = 0
+            result_data = {}
+            
+            # Extract book info using multiple selectors
+            for title_selector in ["a.bookTitle", "a[data-testid='bookTitle']", "a[href*='/book/show/']"]:
+                title_elem = result.select_one(title_selector)
+                if title_elem:
+                    result_data["title"] = title_elem.text.strip()
+                    result_data["url"] = title_elem["href"]
+                    break
+            
+            for author_selector in ["a.authorName", "a[data-testid='authorLink']", "a[href*='/author/show/']"]:
+                author_elem = result.select_one(author_selector)
+                if author_elem:
+                    result_data["author"] = author_elem.text.strip()
+                    break
+            
+            # Look for ISBN in result
+            isbn_elem = result.find(string=re.compile(r'ISBN.*\d'))
+            if isbn_elem:
+                isbn_match = re.search(r'ISBN.*?(\d+[X\d]+)', isbn_elem)
+                if isbn_match:
+                    result_data["isbn"] = isbn_match.group(1)
+            
+            # Score the match
+            if search_query:
+                # Direct ISBN match
+                if "isbn" in result_data and search_query.replace("-", "") == result_data["isbn"].replace("-", ""):
+                    match_score = 100
+                    print(f"Found exact ISBN match: {result_data['isbn']}")
+                else:
+                    # Title and author match
+                    if "title" in result_data and result_data["title"].lower() in search_query.lower():
+                        match_score += 40
+                    if "author" in result_data and result_data["author"].lower() in search_query.lower():
+                        match_score += 40
+            
+            print(f"Result score: {match_score} for {result_data.get('title', 'Unknown')} by {result_data.get('author', 'Unknown')}")
+            
+            if match_score > best_match_score:
+                best_match = result_data
+                best_match_score = match_score
+        
+        if best_match and best_match.get("url"):
+            book_url = best_match["url"]
+            if not book_url.startswith("http"):
                 book_url = "https://www.goodreads.com" + book_url
-
-            print(f"Found book link: {book_url}")
+            
+            print(f"Selected best match (score: {best_match_score}): {book_url}")
+            
             # Fetch the actual book page
             html = fetch_goodreads_page(book_url)
             if html:
                 # Re-parse with the new HTML
-                soup = BeautifulSoup(html, 'html.parser')
+                soup = BeautifulSoup(html, "html.parser")
                 # Save the book page HTML for debugging
                 with open("book_page.html", "w", encoding="utf-8") as f:
                     f.write(html)
@@ -75,7 +135,7 @@ def extract_book_info(html):
                 print("Failed to fetch the book page from search results")
                 return None
         else:
-            print("No book link found in search results")
+            print("No suitable match found in search results")
             # Dump the HTML for debugging
             with open("search_results_debug.html", "w", encoding="utf-8") as f:
                 f.write(html)

@@ -81,8 +81,12 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                         );
                         $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($directDb);
                     } catch (PDOException $e) {
-                        // If direct connection fails, create a factory with null
-                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory(null);
+                        // If direct connection fails, log the error and create a minimal PDO object
+                        error_log("Database connection error in Goodreads validation: " . $e->getMessage());
+
+                        // Create a minimal factory without trying to use the database
+                        // We'll handle this case in the code below by checking if the fetcher is configured
+                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory(new PDO('sqlite::memory:'));
                     }
                 }
             }

@@ -93,6 +93,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         }
         $goodreadsFetcher = $reviewFetcherFactory->getFetcher(1); // 1 is the Goodreads source ID
 
+        // Check if we got the correct fetcher type
         if (!$goodreadsFetcher || !$goodreadsFetcher->isConfigured()) {
             $detailedStatus['steps'][] = [
                 'name' => 'fetcher_initialization',
@@ -102,6 +103,23 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
 
             $detailedStatus['status'] = 'error';
             $detailedStatus['message'] = 'Failed to initialize Goodreads review fetcher';
+
+            return [
+                '_status' => $detailedStatus
+            ];
+        }
+
+        // Check if we got the correct fetcher class
+        if (!($goodreadsFetcher instanceof \Services\ReviewFetcher\GoodreadsReviewFetcher)) {
+            $actualClass = get_class($goodreadsFetcher);
+            $detailedStatus['steps'][] = [
+                'name' => 'fetcher_initialization',
+                'status' => 'error',
+                'message' => "Expected GoodreadsReviewFetcher but got $actualClass"
+            ];
+
+            $detailedStatus['status'] = 'error';
+            $detailedStatus['message'] = "Expected GoodreadsReviewFetcher but got $actualClass";
 
             return [
                 '_status' => $detailedStatus
@@ -197,19 +215,25 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                     ];
 
                     // Now get the book details using the URL
-                    $bookDetails = $goodreadsFetcher->getBookDetails($bookUrl);
+                    // Check if the method exists (it should, since we checked the class type earlier)
+                    if (method_exists($goodreadsFetcher, 'getBookDetails')) {
+                        $bookDetails = $goodreadsFetcher->getBookDetails($bookUrl);
 
-                    if ($bookDetails) {
-                        // Create a response similar to fetchReviewsByISBN
-                        $response = [
-                            [
-                                'source_id' => 1,
-                                'reviewer_name' => 'Goodreads Aggregate',
-                                'book_metadata' => $bookDetails
-                            ]
-                        ];
+                        if ($bookDetails) {
+                            // Create a response similar to fetchReviewsByISBN
+                            $response = [
+                                [
+                                    'source_id' => 1,
+                                    'reviewer_name' => 'Goodreads Aggregate',
+                                    'book_metadata' => $bookDetails
+                                ]
+                            ];
+                        } else {
+                            throw new Exception("Failed to get book details from URL: $bookUrl");
+                        }
                     } else {
-                        throw new Exception("Failed to get book details from URL: $bookUrl");
+                        // Fallback if the method doesn't exist
+                        throw new Exception("The getBookDetails method is not available in " . get_class($goodreadsFetcher));
                     }
                 } else {
                     throw new Exception("No book found for title: $title by author: $author");

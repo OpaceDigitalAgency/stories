@@ -5,7 +5,8 @@
 RewriteEngine On
 
 # Set the base directory
-RewriteBase /admin/
+# Set the base directory for the subdomain
+RewriteBase /
 
 # Prevent directory listing
 Options -Indexes
@@ -67,12 +68,13 @@ DirectoryIndex index.php
         Allow from all
     </If>
     <Else>
-        # For all other PHP files, require a valid session
+        # For all other PHP files, check for either session or auth token
         RewriteCond %{HTTP_COOKIE} !PHPSESSID [NC]
-        RewriteRule .* login.php [L,R=302]
+        RewriteCond %{HTTP_COOKIE} !auth_token [NC]
+        RewriteRule .* ./login.php [L,R=302]
     </Else>
 </FilesMatch>
 
 # Error documents
-ErrorDocument 404 /admin/index.php
-ErrorDocument 403 /admin/index.php
+ErrorDocument 404 ./index.php
+ErrorDocument 403 ./index.php

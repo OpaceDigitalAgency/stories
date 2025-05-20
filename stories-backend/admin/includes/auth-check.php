@@ -39,7 +39,7 @@ if (!SimpleAuth::check()) {
     session_destroy();
 
     // Redirect to login page with absolute path
-    header('Location: /admin/login.php');
+    header('Location: ../login.php');
     exit;
 }
 

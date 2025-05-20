@@ -138,7 +138,10 @@ class SimpleAuth {
         $data = "$userId|$role|$timestamp|$random";
 
         // Add a simple signature
-        $signature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
+        // Get real IP and user agent, accounting for proxies
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $signature = hash('sha256', $data . $userAgent . $ip);
         $token = base64_encode("$data|$signature");
 
         // Store token in database for validation
@@ -172,7 +175,10 @@ class SimpleAuth {
 
             // Verify signature
             $data = "$userId|$role|$timestamp|$random";
-            $expectedSignature = hash('sha256', $data . $_SERVER['HTTP_USER_AGENT'] . $_SERVER['REMOTE_ADDR']);
+            // Get real IP and user agent, accounting for proxies
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $expectedSignature = hash('sha256', $data . $userAgent . $ip);
 
             if ($signature !== $expectedSignature) {
                 return false;

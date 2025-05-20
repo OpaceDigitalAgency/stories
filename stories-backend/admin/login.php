@@ -32,7 +32,7 @@ SimpleAuth::initDB($config);
 // Check if already logged in
 if (SimpleAuth::check()) {
     // Redirect to dashboard
-    header("Location: dashboard.php");
+    header("Location: ./dashboard.php");
     exit;
 }
 
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if ($user = SimpleAuth::login($email, $password)) {
-        header("Location: dashboard.php");
+        header("Location: ./dashboard.php");
         exit;
     } else {
         $error = 'Invalid email or password';

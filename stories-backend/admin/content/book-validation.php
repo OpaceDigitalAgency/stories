@@ -247,7 +247,7 @@ require_once '../includes/header.php';
                         <div class="card-body">
                             <p>Enrich your book data by fetching missing information from external sources.</p>
 
-                            <form id="enrichForm" method="post" action="book-import-validate.php">
+                            <form id="enrichForm" method="post" action="book-import-validate-new.php">
                                 <input type="hidden" name="action" value="enrich_data">
 
                                 <div class="form-group">
@@ -335,8 +335,8 @@ $(document).ready(function() {
         const bookTitle = $(this).data('book-title');
         const isbn = $(this).data('isbn');
 
-        // Redirect to the validation page with the book ID
-        window.location.href = `book-import-validate.php?action=validate_isbn&book_id=${bookId}&isbn=${isbn}`;
+        // Redirect to the new validation page with the book ID
+        window.location.href = `book-import-validate-new.php?action=validate_book&book_id=${bookId}`;
     });
 
     $('#validate-selected-isbns').on('click', function() {
@@ -350,7 +350,7 @@ $(document).ready(function() {
         // Create a form to submit the selected books
         const form = $('<form>', {
             'method': 'post',
-            'action': 'book-import-validate.php'
+            'action': 'book-import-validate-new.php'
         });
 
         form.append($('<input>', {

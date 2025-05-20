@@ -104,7 +104,7 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
 
     // Check cache first to improve performance
     $cacheKey = md5("isbn_validation_{$cleanIsbn}_{$title}");
-    $cachedResults = getValidationCache($cacheKey, $db);
+    $cachedResults = getValidationCacheNew($cacheKey, $db);
 
     if ($cachedResults) {
         error_log("Using cached validation results for ISBN: $cleanIsbn");

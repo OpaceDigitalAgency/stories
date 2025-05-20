@@ -476,7 +476,7 @@ require_once '../includes/header.php';
                                 <a href="book-validation.php" class="btn btn-outline-primary m-1">
                                     <i class="fas fa-check-circle"></i> ISBN & Data Validation
                                 </a>
-                                <a href="book-import-validate.php" class="btn btn-outline-success m-1">
+                                <a href="book-import-validate-new.php" class="btn btn-outline-success m-1">
                                     <i class="fas fa-database"></i> Book Data Enrichment
                                 </a>
                             </div>

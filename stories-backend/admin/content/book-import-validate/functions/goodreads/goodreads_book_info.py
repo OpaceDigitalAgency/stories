@@ -158,70 +158,74 @@ def extract_book_info(html):
     json_data = extract_json_data(html)
 
     # Extract information from HTML elements
-    # Title - try multiple selectors
+    # Find main content area
+    main_content = soup.select_one("div.BookPage__mainContent")
+    if not main_content:
+        print("Could not find main content area")
+        return None
+
+    # Title from BookPageTitleSection
     title_selectors = [
-        "h1.Text__title1",
-        "h1.BookPageTitleSection__title",
         "h1[data-testid='bookTitle']",
-        "h1.Text__title3"
+        "div.BookPageTitleSection h1",
+        "h1.Text__title1",
+        "h1.BookPageTitleSection__title"
     ]
     
     for selector in title_selectors:
-        title_elem = soup.select_one(selector)
+        title_elem = main_content.select_one(selector)
         if title_elem:
             book_info["title"] = title_elem.text.strip()
             selectors_info["title"] = {"selector": selector, "value": book_info["title"]}
             break
 
-    # Author - try multiple selectors
+    # Author from BookPageMetadataSection
     author_selectors = [
+        "div.BookPageMetadataSection__contributor a[data-testid='authorLink']",
         "span.ContributorLink__name",
-        "span.BookPageTitleSection__authorName",
-        "a[data-testid='authorLink']",
         "a[href*='/author/show/']"
     ]
     
     for selector in author_selectors:
-        author_elem = soup.select_one(selector)
+        author_elem = main_content.select_one(selector)
         if author_elem:
             book_info["author"] = author_elem.text.strip()
             selectors_info["author"] = {"selector": selector, "value": book_info["author"]}
             break
 
-    # Rating
+    # Rating from BookPageMetadataSection
     rating_selectors = [
-        "div.RatingStatistics__rating",
-        "span[data-testid='averageRating']"
+        "div.BookPageMetadataSection__ratingStats div.RatingStatistics__rating",
+        "div[data-testid='ratingsSection'] span[data-testid='averageRating']"
     ]
     
     for selector in rating_selectors:
-        rating_elem = soup.select_one(selector)
+        rating_elem = main_content.select_one(selector)
         if rating_elem:
             book_info["rating"] = rating_elem.text.strip()
             selectors_info["rating"] = {"selector": selector, "value": book_info["rating"]}
             break
 
-    # Description
+    # Description from BookPageMetadataSection
     description_selectors = [
-        "div.DetailsLayoutRightParagraph__widthConstrained",
-        "div[data-testid='description']",
-        "div.TruncatedContent div[data-testid='contentContainer']"
+        "div[data-testid='description'] div[data-testid='contentContainer']",
+        "div.BookPageMetadataSection__description div.TruncatedContent__text"
     ]
     
     for selector in description_selectors:
-        description_elem = soup.select_one(selector)
+        description_elem = main_content.select_one(selector)
         if description_elem:
-            book_info["description"] = description_elem.text.strip()
+            book_info["description"] = clean_text(description_elem.text)
             selectors_info["description"] = {
                 "selector": selector,
                 "value": book_info["description"][:100] + "..." if len(book_info["description"]) > 100 else book_info["description"]
             }
             break
 
-    # Cover image
+    # Cover image from rightColumn
     cover_selectors = [
-        "img.ResponsiveImage",
-        "img[data-testid='coverImage']"
+        "div.BookPage__rightColumn img.ResponsiveImage",
+        "div.BookPage__rightCover img[data-testid='coverImage']"
     ]
     
     for selector in cover_selectors:
@@ -231,27 +235,22 @@ def extract_book_info(html):
             selectors_info["cover_image"] = {"selector": selector, "value": book_info["cover_image"]}
             break
 
-    # Genres/Categories
+    # Genres from BookPageMetadataSection
     genre_selectors = [
-        "span.BookPageMetadataSection__genreButton",
-        "a[href*='/genres/']",
-        "div[data-testid='genresList'] a"
+        "div[data-testid='genresList'] a",
+        "div.BookPageMetadataSection__genres span.BookPageMetadataSection__genreButton"
     ]
     
     for selector in genre_selectors:
-        genre_elements = soup.select(selector)
+        genre_elements = main_content.select(selector)
         if genre_elements:
             book_info["genres"] = [genre.text.strip() for genre in genre_elements]
             selectors_info["genres"] = {"selector": selector, "value": book_info["genres"]}
             break
 
-    # Book Details - try both new and old formats
-    details_found = False
-    
-    # Method 1: New Goodreads design with CollapsableList
-    book_details = soup.select("div.BookDetails div.CollapsableList div.DescListItem")
+    # Book Details from CollapsableList
+    book_details = main_content.select("div.BookDetails div.CollapsableList div.DescListItem")
     if book_details:
-        details_found = True
         for item in book_details:
             # Find the label (dt) and value (dd)
             label = item.find("dt")
@@ -262,17 +261,26 @@ def extract_book_info(html):
                 # Look for the actual content in TruncatedContent
                 content_container = value.select_one("div[data-testid='contentContainer']")
                 value_text = content_container.text.strip() if content_container else value.text.strip()
+                value_text = clean_text(value_text)
                 
                 # Extract various fields
                 if "isbn" in label_text:
                     # Handle both ISBN-10 and ISBN-13
-                    isbn_match = re.search(r'(\d{10}|\d{13})', value_text)
-                    if isbn_match:
-                        book_info["isbn"] = isbn_match.group(1)
-                        selectors_info["isbn"] = {"selector": "BookDetails CollapsableList ISBN", "value": book_info["isbn"]}
+                    isbn_matches = re.findall(r'(\d{10}|\d{13})', value_text)
+                    if isbn_matches:
+                        for isbn in isbn_matches:
+                            if len(isbn) == 13:
+                                book_info["isbn13"] = isbn
+                            else:
+                                book_info["isbn"] = isbn
+                        selectors_info["isbn"] = {"selector": "BookDetails CollapsableList ISBN", "value": isbn_matches}
                 elif "format" in label_text:
-                    book_info["format"] = value_text
-                    selectors_info["format"] = {"selector": "BookDetails CollapsableList Format", "value": value_text}
+                    pages_match = re.search(r'(\d+)\s*pages?,?\s*([^,]+)', value_text)
+                    if pages_match:
+                        book_info["pages"] = pages_match.group(1)
+                        book_info["format"] = pages_match.group(2).strip()
+                        selectors_info["format"] = {"selector": "BookDetails CollapsableList Format", "value": book_info["format"]}
+                        selectors_info["pages"] = {"selector": "BookDetails CollapsableList Pages", "value": book_info["pages"]}
                 elif "published" in label_text:
                     # Extract date and publisher
                     pub_match = re.match(r'(.*?)\s+by\s+(.*?)(?:\s*$|\s*\()', value_text)
@@ -281,42 +289,9 @@ def extract_book_info(html):
                         book_info["publisher"] = pub_match.group(2).strip()
                         selectors_info["published_date"] = {"selector": "BookDetails CollapsableList Published", "value": book_info["published_date"]}
                         selectors_info["publisher"] = {"selector": "BookDetails CollapsableList Publisher", "value": book_info["publisher"]}
-                elif "pages" in label_text:
-                    pages_match = re.search(r'(\d+)\s*pages', value_text)
-                    if pages_match:
-                        book_info["pages"] = pages_match.group(1)
-                        selectors_info["pages"] = {"selector": "BookDetails CollapsableList Pages", "value": book_info["pages"]}
                 elif "language" in label_text:
                     book_info["language"] = value_text
                     selectors_info["language"] = {"selector": "BookDetails CollapsableList Language", "value": value_text}
-
-    # Method 2: Feature items (if Method 1 didn't find anything)
-    if not details_found:
-        feature_items = soup.select("div.FeatureItems div.FeatureItem")
-        if feature_items:
-            for item in feature_items:
-                label = item.select_one("div.FeatureItem__label")
-                value = item.select_one("div.FeatureItem__value")
-
-                if label and value:
-                    label_text = label.text.strip().lower()
-                    value_text = value.text.strip()
-
-                    if "isbn" in label_text:
-                        book_info["isbn"] = value_text
-                        selectors_info["isbn"] = {"selector": "FeatureItem ISBN", "value": value_text}
-                    elif "pages" in label_text:
-                        book_info["pages"] = value_text
-                        selectors_info["pages"] = {"selector": "FeatureItem Pages", "value": value_text}
-                    elif "published" in label_text:
-                        book_info["published_date"] = value_text
-                        selectors_info["published_date"] = {"selector": "FeatureItem Published", "value": value_text}
-                    elif "publisher" in label_text:
-                        book_info["publisher"] = clean_text(value_text)
-                        selectors_info["publisher"] = {"selector": "FeatureItem Publisher", "value": book_info["publisher"]}
-                    elif "language" in label_text:
-                        book_info["language"] = value_text
-                        selectors_info["language"] = {"selector": "FeatureItem Language", "value": value_text}
 
     # Method 3: Look for data attributes or other patterns
     # Try to find ISBN in any format

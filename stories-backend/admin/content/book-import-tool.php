@@ -526,7 +526,8 @@ require_once '../includes/header.php';
                                             'isbn' => 'ISBN',
                                             'author' => 'Author',
                                             'rating' => 'Rating',
-                                            'reviews' => 'Reviews'
+                                            'reviews' => 'Reviews',
+                                            'actions' => 'Actions'
                                         ],
                                         'reviews' => [
                                             'book_id' => 'Book ID',
@@ -555,13 +556,19 @@ require_once '../includes/header.php';
                                                     ? htmlspecialchars($item['isbn13'])
                                                     : (!empty($item['isbn']) ? htmlspecialchars($item['isbn']) : 'N/A');
 
+                                                // Create a custom action button for scraping reviews
+                                                $scrapeButton = '<a href="book-scrape-reviews.php?book_id=' . $item['id'] . '" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-cloud-download-alt"></i> Scrape Reviews
+                                                </a>';
+
                                                 $tableData[] = [
                                                     'id' => $item['id'],
                                                     'title' => htmlspecialchars($item['title']),
                                                     'isbn' => $isbn,
                                                     'author' => htmlspecialchars($item['author']),
                                                     'rating' => $rating,
-                                                    'reviews' => $item['review_count'] ?? 0
+                                                    'reviews' => $item['review_count'] ?? 0,
+                                                    'actions' => $scrapeButton
                                                 ];
                                                 break;
 
@@ -603,7 +610,9 @@ require_once '../includes/header.php';
                                         'itemsPerPage' => $perPage,
                                         'currentPage' => $page,
                                         'totalItems' => $totalItems,
-                                        'tab' => $currentTab
+                                        'tab' => $currentTab,
+                                        'showActions' => false, // Disable default actions column
+                                        'htmlFields' => ['actions'] // Allow HTML in the actions column
                                     ]);
                                     ?>
                                 </div>

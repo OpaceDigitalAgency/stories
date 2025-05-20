@@ -1,7 +1,7 @@
 <?php
 /**
  * Source Comparison Table Template
- * 
+ *
  * This template displays a comparison table of book data from multiple sources.
  */
 
@@ -39,30 +39,30 @@ function getFieldStatus($currentValue, $sourceValue) {
     if (empty($sourceValue)) {
         return 'empty';
     }
-    
+
     if (empty($currentValue)) {
         return 'new';
     }
-    
+
     // For numeric values, allow small differences
     if (is_numeric($currentValue) && is_numeric($sourceValue)) {
         if (abs((float)$currentValue - (float)$sourceValue) < 0.01) {
             return 'match';
         }
     }
-    
+
     // For dates, normalize format
     if (strtotime($currentValue) && strtotime($sourceValue)) {
         if (date('Y-m-d', strtotime($currentValue)) === date('Y-m-d', strtotime($sourceValue))) {
             return 'match';
         }
     }
-    
+
     // For strings, case-insensitive comparison
     if (strtolower(trim($currentValue)) === strtolower(trim($sourceValue))) {
         return 'match';
     }
-    
+
     return 'new';
 }
 
@@ -71,24 +71,24 @@ function formatFieldValue($field, $value) {
     if (empty($value)) {
         return '<span class="text-muted">Not available</span>';
     }
-    
+
     switch ($field) {
         case 'publication_date':
             return date('Y-m-d', strtotime($value));
-        
+
         case 'cover_url':
             return '<img src="' . htmlspecialchars($value) . '" alt="Cover" class="img-thumbnail" style="max-height: 100px;">';
-        
+
         case 'preview_link':
             return '<a href="' . htmlspecialchars($value) . '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt"></i> View</a>';
-        
+
         case 'rating':
             return number_format((float)$value, 2) . '/5';
-        
+
         case 'rating_count':
         case 'review_count':
             return number_format((int)$value);
-        
+
         case 'awards':
         case 'characters':
         case 'settings':
@@ -106,7 +106,7 @@ function formatFieldValue($field, $value) {
                 }
             }
             return htmlspecialchars($value);
-            
+
         default:
             return htmlspecialchars($value);
     }
@@ -115,11 +115,11 @@ function formatFieldValue($field, $value) {
 // Helper function to render apply button
 function renderApplyButton($field, $status, $source) {
     global $statusIcons;
-    
+
     $icon = $statusIcons[$status]['icon'];
     $btnClass = 'btn-outline-' . $statusIcons[$status]['class'];
     $disabled = ($status === 'match' || $status === 'empty') ? 'disabled' : '';
-    
+
     return '<button type="button" class="btn btn-sm apply-button ' . $btnClass . ' ' . $disabled . '" ' .
            'data-field="' . htmlspecialchars($field) . '" ' .
            'data-source="' . htmlspecialchars($source) . '" ' .
@@ -135,7 +135,7 @@ function renderApplyButton($field, $status, $source) {
                 <th>Field</th>
                 <th>Current Value</th>
                 <?php foreach ($sources as $source): ?>
-                    <?php if (!empty($sourceData[$source]) && $sourceData[$source]['status'] === 'success'): ?>
+                    <?php if (!empty($sourceData[$source])): ?>
                         <th><?php echo ucfirst(htmlspecialchars($source)); ?></th>
                     <?php endif; ?>
                 <?php endforeach; ?>
@@ -148,26 +148,39 @@ function renderApplyButton($field, $status, $source) {
                     <td class="current-value">
                         <?php echo formatFieldValue($field, $book[$field] ?? null); ?>
                     </td>
-                    
+
                     <?php foreach ($sources as $source): ?>
-                        <?php if (!empty($sourceData[$source]) && $sourceData[$source]['status'] === 'success'): ?>
-                            <?php
-                            $sourceValue = $sourceData[$source]['data'][$field] ?? null;
-                            $status = getFieldStatus($book[$field] ?? '', $sourceValue);
-                            $cellClass = 'field-' . $status;
-                            ?>
-                            <td class="source-value <?php echo $cellClass; ?>">
-                                <div class="value-container">
-                                    <?php echo formatFieldValue($field, $sourceValue); ?>
-                                </div>
-                                <div class="action-container mt-2">
-                                    <?php if ($status !== 'empty'): ?>
-                                        <?php echo renderApplyButton($field, $status, $source); ?>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary">[-]</span>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
+                        <?php if (!empty($sourceData[$source])): ?>
+                            <?php if ($sourceData[$source]['status'] === 'success'): ?>
+                                <?php
+                                $sourceValue = $sourceData[$source]['data'][$field] ?? null;
+                                $status = getFieldStatus($book[$field] ?? '', $sourceValue);
+                                $cellClass = 'field-' . $status;
+                                ?>
+                                <td class="source-value <?php echo $cellClass; ?>">
+                                    <div class="value-container">
+                                        <?php echo formatFieldValue($field, $sourceValue); ?>
+                                    </div>
+                                    <div class="action-container mt-2">
+                                        <?php if ($status !== 'empty'): ?>
+                                            <?php echo renderApplyButton($field, $status, $source); ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">[-]</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            <?php else: ?>
+                                <td class="source-value field-empty">
+                                    <div class="value-container">
+                                        <span class="text-danger">
+                                            <?php echo $sourceData[$source]['message'] ?? 'Error fetching data'; ?>
+                                        </span>
+                                    </div>
+                                    <div class="action-container mt-2">
+                                        <span class="badge bg-danger">Error</span>
+                                    </div>
+                                </td>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endforeach; ?>
                 </tr>

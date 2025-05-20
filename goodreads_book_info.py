@@ -42,41 +42,76 @@ def extract_book_info(html):
 
     # Check if we're on a search results page
     search_results = soup.select("table.tableList tr.bookalike")
+    if not search_results:
+        # Try newer search results format
+        search_results = soup.select("div.BookSearchResult")
+
     if search_results:
-        print("Detected search results page, attempting to find the first book")
+        print(f"Detected search results page with {len(search_results)} results, attempting to find the first book")
         # Get the first book result
         first_result = search_results[0]
+
+        # Try different selectors for book links
         book_link = first_result.select_one("a.bookTitle")
+        if not book_link:
+            book_link = first_result.select_one("a[href*='/book/show/']")
+
         if book_link and book_link.get('href'):
-            book_url = "https://www.goodreads.com" + book_link.get('href')
+            book_url = book_link.get('href')
+            if not book_url.startswith('http'):
+                book_url = "https://www.goodreads.com" + book_url
+
             print(f"Found book link: {book_url}")
             # Fetch the actual book page
             html = fetch_goodreads_page(book_url)
             if html:
                 # Re-parse with the new HTML
                 soup = BeautifulSoup(html, 'html.parser')
+                # Save the book page HTML for debugging
+                with open("book_page.html", "w", encoding="utf-8") as f:
+                    f.write(html)
+                print("Saved book page HTML to book_page.html")
             else:
                 print("Failed to fetch the book page from search results")
                 return None
         else:
             print("No book link found in search results")
+            # Dump the HTML for debugging
+            with open("search_results_debug.html", "w", encoding="utf-8") as f:
+                f.write(html)
+            print("Saved search results HTML to search_results_debug.html")
             return None
 
     # Try to extract structured data first (most reliable)
     json_data = extract_json_data(html)
 
     # Extract information from HTML elements
-    # Title
+    # Title - try multiple selectors
     title_elem = soup.select_one("h1.Text__title1")
+    if not title_elem:
+        title_elem = soup.select_one("h1.BookPageTitleSection__title")
+    if not title_elem:
+        title_elem = soup.select_one("h1[data-testid='bookTitle']")
+
     if title_elem:
         book_info["title"] = title_elem.text.strip()
-        selectors_info["title"] = {"selector": "h1.Text__title1", "value": book_info["title"]}
+        selectors_info["title"] = {"selector": "Book title element", "value": book_info["title"]}
 
-    # Author
+    # Author - try multiple selectors
     author_elem = soup.select_one("span.ContributorLink__name")
+    if not author_elem:
+        author_elem = soup.select_one("span.BookPageTitleSection__authorName")
+    if not author_elem:
+        author_elem = soup.select_one("a[data-testid='authorLink']")
+    if not author_elem:
+        # Try to find any author link
+        author_links = soup.select("a[href*='/author/show/']")
+        if author_links:
+            author_elem = author_links[0]
+
     if author_elem:
         book_info["author"] = author_elem.text.strip()
-        selectors_info["author"] = {"selector": "span.ContributorLink__name", "value": book_info["author"]}
+        selectors_info["author"] = {"selector": "Author element", "value": book_info["author"]}
 
     # Rating
     rating_elem = soup.select_one("div.RatingStatistics__rating")
@@ -136,10 +171,21 @@ def extract_book_info(html):
                         "value": value_text
                     }
                 elif "publisher" in label_text:
-                    book_info["publisher"] = value_text
+                    # Clean up publisher text
+                    publisher_text = value_text
+                    # Remove any HTML tags
+                    publisher_text = re.sub(r'<[^>]+>', '', publisher_text)
+                    # Remove any URLs
+                    publisher_text = re.sub(r'https?://\S+', '', publisher_text)
+                    # Remove any href attributes
+                    publisher_text = re.sub(r'href="[^"]+"', '', publisher_text)
+                    # Clean up whitespace
+                    publisher_text = re.sub(r'\s+', ' ', publisher_text).strip()
+
+                    book_info["publisher"] = publisher_text
                     selectors_info["publisher"] = {
                         "selector": "div.FeatureItem:contains('Publisher') div.FeatureItem__value",
-                        "value": value_text
+                        "value": publisher_text
                     }
                 elif "language" in label_text:
                     book_info["language"] = value_text
@@ -177,10 +223,21 @@ def extract_book_info(html):
                         "value": value_text
                     }
                 elif "publisher" in label_text:
-                    book_info["publisher"] = value_text
+                    # Clean up publisher text
+                    publisher_text = value_text
+                    # Remove any HTML tags
+                    publisher_text = re.sub(r'<[^>]+>', '', publisher_text)
+                    # Remove any URLs
+                    publisher_text = re.sub(r'https?://\S+', '', publisher_text)
+                    # Remove any href attributes
+                    publisher_text = re.sub(r'href="[^"]+"', '', publisher_text)
+                    # Clean up whitespace
+                    publisher_text = re.sub(r'\s+', ' ', publisher_text).strip()
+
+                    book_info["publisher"] = publisher_text
                     selectors_info["publisher"] = {
                         "selector": "div.BookDetails__list span.BookDetails__label:contains('Publisher') + span.BookDetails__value",
-                        "value": value_text
+                        "value": publisher_text
                     }
                 elif "language" in label_text:
                     book_info["language"] = value_text
@@ -254,6 +311,32 @@ def extract_book_info(html):
                     "selector": "h3:contains('Setting') parent div a",
                     "value": book_info["settings"]
                 }
+
+    # Direct publisher extraction - try to find publisher information directly
+    if "publisher" not in book_info:
+        # Try to find publisher in the details section
+        publisher_patterns = [
+            r'Published\s+(?:.*?)\s+by\s+(.*?)(?:\.|,|\(|$)',
+            r'Publisher\s*:\s*(.*?)(?:\.|,|\(|$)',
+            r'Published\s+by\s+(.*?)(?:\.|,|\(|$)'
+        ]
+
+        for pattern in publisher_patterns:
+            publisher_match = re.search(pattern, html, re.IGNORECASE)
+            if publisher_match:
+                publisher_text = publisher_match.group(1).strip()
+                # Clean up publisher text
+                publisher_text = re.sub(r'<[^>]+>', '', publisher_text)
+                publisher_text = re.sub(r'https?://\S+', '', publisher_text)
+                publisher_text = re.sub(r'href="[^"]+"', '', publisher_text)
+                publisher_text = re.sub(r'\s+', ' ', publisher_text).strip()
+
+                book_info["publisher"] = publisher_text
+                selectors_info["publisher"] = {
+                    "selector": f"Regex pattern: {pattern}",
+                    "value": publisher_text
+                }
+                break
 
     # If we found JSON data, use it to fill in any missing information
     # or add additional information
@@ -437,6 +520,10 @@ def main():
         url = "https://www.goodreads.com/book/show/72193.Harry_Potter_and_the_Philosopher_s_Stone"
 
     print(f"Fetching book information from: {url}")
+    print(f"Python version: {sys.version}")
+    print(f"BeautifulSoup version: {BeautifulSoup.__version__}")
+    print(f"Requests version: {requests.__version__}")
+
     html = fetch_goodreads_page(url)
 
     if html:

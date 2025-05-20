@@ -34,7 +34,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         }
 
         // First try using the Python script (most reliable method)
-        $pythonScript = __DIR__ . '/../../../../../goodreads_book_info.py';
+        $pythonScript = $_SERVER['DOCUMENT_ROOT'] . '/../goodreads_book_info.py';
+        error_log("Looking for Python script at: $pythonScript");
         if (file_exists($pythonScript)) {
             // Execute Python script with a longer timeout
             $command = "python3 " . escapeshellarg($pythonScript) . " " . escapeshellarg($searchUrl) . " 2>&1";
@@ -44,8 +45,14 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             // Log that we're executing the Python script
             error_log("Executing Python script: $command");
 
+            // Log the command for debugging
+            error_log("Executing command: $command");
+
             // Execute with a longer timeout
             exec($command, $output, $returnCode);
+
+            // Log the full output for debugging
+            error_log("Python script output: " . implode("\n", $output));
 
             // Check if Python script executed successfully
             if ($returnCode === 0) {
@@ -57,20 +64,33 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
                 foreach ($output as $line) {
                     if (strpos($line, 'Saved book information to ') !== false) {
                         $jsonFile = trim(str_replace('Saved book information to ', '', $line));
+                        error_log("Found JSON file reference: $jsonFile");
                         if (file_exists($jsonFile)) {
-                            $jsonData = json_decode(file_get_contents($jsonFile), true);
+                            $jsonContent = file_get_contents($jsonFile);
+                            error_log("JSON file content: $jsonContent");
+                            $jsonData = json_decode($jsonContent, true);
+                            if ($jsonData === null) {
+                                error_log("Failed to decode JSON from file: " . json_last_error_msg());
+                            }
                             break;
+                        } else {
+                            error_log("JSON file not found: $jsonFile");
                         }
                     }
                 }
 
                 // If no file found, look for JSON in the output
                 if (!$jsonData) {
+                    error_log("No JSON file found, looking for JSON in output");
                     foreach ($output as $line) {
                         if (strpos($line, '{') === 0) {
+                            error_log("Found potential JSON line: $line");
                             $jsonData = json_decode($line, true);
                             if ($jsonData) {
+                                error_log("Successfully decoded JSON from output");
                                 break;
+                            } else {
+                                error_log("Failed to decode JSON from line: " . json_last_error_msg());
                             }
                         }
                     }

@@ -43,10 +43,48 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             if ($db) {
                 $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
             } else {
-                // Otherwise, try to get the database connection from the global scope
-                require_once __DIR__ . '/../../../../db-connect.php';
-                global $db;
-                $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
+                // Try multiple possible paths for db-connect.php
+                $possiblePaths = [
+                    __DIR__ . '/../../../../db-connect.php',
+                    __DIR__ . '/../../../../includes/db-connect.php',
+                    __DIR__ . '/../../../../admin/includes/db-connect.php',
+                    __DIR__ . '/../../../includes/db-connect.php',
+                    __DIR__ . '/../../../db-connect.php'
+                ];
+
+                $dbConnected = false;
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        require_once $path;
+                        global $db;
+                        if (isset($db) && $db instanceof PDO) {
+                            $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
+                            $dbConnected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If we couldn't connect to the database, create a factory with a null DB connection
+                // or try to create a new PDO connection directly
+                if (!$dbConnected) {
+                    try {
+                        // Try to create a direct database connection
+                        $directDb = new PDO(
+                            'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                            'stories_user',
+                            '$tw1cac3*sOt',
+                            [
+                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                            ]
+                        );
+                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($directDb);
+                    } catch (PDOException $e) {
+                        // If direct connection fails, create a factory with null
+                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory(null);
+                    }
+                }
             }
         }
         $goodreadsFetcher = $reviewFetcherFactory->getFetcher(1); // 1 is the Goodreads source ID

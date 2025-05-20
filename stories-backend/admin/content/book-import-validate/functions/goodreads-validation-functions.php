@@ -219,7 +219,11 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 'cover_url' => $bookMetadata['cover_url'] ?? '',
                 'rating' => strip_tags($bookMetadata['average_rating'] ?? ''),
                 'rating_count' => strip_tags($bookMetadata['ratings_count'] ?? ''),
-                'review_count' => strip_tags($bookMetadata['reviews_count'] ?? '')
+                'review_count' => strip_tags($bookMetadata['reviews_count'] ?? ''),
+                'awards' => $bookMetadata['awards'] ?? [],
+                'characters' => $bookMetadata['characters'] ?? [],
+                'settings' => $bookMetadata['settings'] ?? [],
+                'genres' => $bookMetadata['genres'] ?? []
             ];
 
             // Log success for debugging

@@ -345,47 +345,163 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @return array|null The book details or null if not found
      */
     private function getBookDetails(string $bookUrl): ?array {
+        // Create debug directory if it doesn't exist
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching book details from URL: {$bookUrl}");
+
         // Make the request
         $response = $this->makeRequest($bookUrl);
 
         if ($response === false) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ Failed to fetch book details from URL: {$bookUrl}");
             return null;
         }
 
+        // Save the HTML for debugging
+        file_put_contents($debugDir . '/goodreads_book_page.html', substr($response, 0, 500000));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Saved book page HTML to debug file");
+
         $details = [];
+
+        // Try to use the VPS-based Headless Browser service first for comprehensive metadata
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Attempting to use VPS Headless Browser for comprehensive metadata");
+
+        // Use the VPS IP address as the default if environment variable is not set
+        $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
+        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key';
+
+        // Build the request URL
+        $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
+
+        // Add API key
+        $url .= "&api_key=" . urlencode($apiKey);
+
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
+
+        // Make the request to the VPS Headless Browser service
+        $vpsResponse = $this->makeRequest($url);
+
+        if ($vpsResponse !== false) {
+            // Parse the response
+            $vpsData = json_decode($vpsResponse, true);
+
+            // Check if we have valid data
+            if (isset($vpsData['book_title']) && !empty($vpsData)) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Successfully fetched comprehensive metadata from VPS Headless Browser");
+
+                // Map the VPS response to our details array
+                $details['title'] = $vpsData['book_title'] ?? '';
+                $details['author'] = $vpsData['book_author'] ?? '';
+                $details['isbn'] = $vpsData['book_isbn'] ?? '';
+                $details['isbn13'] = $vpsData['book_isbn13'] ?? '';
+                $details['publisher'] = $vpsData['book_publisher'] ?? '';
+                $details['published_date'] = $vpsData['book_publication_date'] ?? '';
+                $details['page_count'] = $vpsData['book_page_count'] ?? '';
+                $details['language'] = $vpsData['book_language'] ?? '';
+                $details['format'] = $vpsData['book_format'] ?? '';
+                $details['series'] = $vpsData['book_series'] ?? '';
+                $details['genres'] = $vpsData['book_genres'] ?? [];
+                $details['awards'] = $vpsData['book_awards'] ?? [];
+                $details['characters'] = $vpsData['book_characters'] ?? [];
+                $details['settings'] = $vpsData['book_settings'] ?? [];
+                $details['cover_url'] = $vpsData['book_cover_url'] ?? '';
+                $details['description'] = $vpsData['book_description'] ?? '';
+                $details['average_rating'] = $vpsData['book_rating'] ?? '';
+                $details['ratings_count'] = $vpsData['book_rating_count'] ?? '';
+                $details['review_count'] = $vpsData['book_review_count'] ?? '';
+                $details['url'] = $bookUrl;
+
+                // Log the extracted metadata
+                $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Extracted metadata from VPS Headless Browser:");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Title: " . ($details['title'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Author: " . ($details['author'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN: " . ($details['isbn'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN-13: " . ($details['isbn13'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Publisher: " . ($details['publisher'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Publication Date: " . ($details['published_date'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Page Count: " . ($details['page_count'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Language: " . ($details['language'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
+                $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
+
+                return $details;
+            } else {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ VPS Headless Browser returned invalid data, falling back to direct scraping");
+            }
+        } else {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Failed to fetch data from VPS Headless Browser, falling back to direct scraping");
+        }
+
+        // If VPS Headless Browser fails, fall back to direct scraping
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Falling back to direct HTML scraping for book details");
 
         // Extract book title
         if (preg_match('/<h1 id="bookTitle"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
+            $details['title'] = trim($matches[1]);
+        } else if (preg_match('/<h1[^>]*class="[^"]*BookPageTitleSection__title[^"]*"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
+            $details['title'] = trim($matches[1]);
+        } else if (preg_match('/<h1[^>]*data-testid="bookTitle"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {
             $details['title'] = trim($matches[1]);
         }
 
         // Extract book author
         if (preg_match('/<a class="authorName"[^>]*><span[^>]*>([^<]+)<\/span><\/a>/i', $response, $matches)) {
             $details['author'] = trim($matches[1]);
+        } else if (preg_match('/<a[^>]*class="[^"]*BookPageTitleSection__authorLink[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $details['author'] = trim($matches[1]);
+        } else if (preg_match('/<a[^>]*data-testid="authorLink"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $details['author'] = trim($matches[1]);
         }
 
         // Extract book cover
         if (preg_match('/<img id="coverImage"[^>]*src="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        } else if (preg_match('/<img[^>]*class="[^"]*BookCover__image[^"]*"[^>]*src="([^"]+)"/i', $response, $matches)) {
+            $details['cover_url'] = $matches[1];
+        } else if (preg_match('/<img[^>]*class="[^"]*ResponsiveImage[^"]*"[^>]*src="([^"]+)"/i', $response, $matches)) {
             $details['cover_url'] = $matches[1];
         }
 
         // Extract book description
         if (preg_match('/<div id="description"[^>]*>.*?<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
             $details['description'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<div[^>]*class="[^"]*BookPageMetadataSection__description[^"]*"[^>]*>.*?<div[^>]*class="[^"]*Formatted[^"]*"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['description'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<div[^>]*data-testid="description"[^>]*>(.*?)<\/div>/is', $response, $matches)) {
+            $details['description'] = trim(strip_tags($matches[1]));
         }
 
         // Extract average rating
         if (preg_match('/<span itemprop="ratingValue"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
+            $details['average_rating'] = (float)trim($matches[1]);
+        } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__rating[^"]*"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
+            $details['average_rating'] = (float)trim($matches[1]);
+        } else if (preg_match('/<div[^>]*data-testid="averageRating"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
         }
 
         // Extract ratings count
         if (preg_match('/<meta itemprop="ratingCount" content="([^"]+)"/i', $response, $matches)) {
             $details['ratings_count'] = (int)$matches[1];
+        } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__meta[^"]*"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
+            $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+        } else if (preg_match('/<div[^>]*data-testid="ratingsCount"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
+            $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
         }
 
         // Extract publication info
         if (preg_match('/Published\s+(.*?)(?:\s+by\s+(.*?))?(?:\s+\(first published\s+(.*?)\))?</is', $response, $matches)) {
+            if (!empty($matches[1])) {
+                $details['published_date'] = trim($matches[1]);
+            }
+            if (!empty($matches[2])) {
+                $details['publisher'] = trim($matches[2]);
+            }
+        } else if (preg_match('/Published\s+(.*?)(?:\s+by\s+(.*?))?/i', $response, $matches)) {
             if (!empty($matches[1])) {
                 $details['published_date'] = trim($matches[1]);
             }
@@ -397,10 +513,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract ISBN
         if (preg_match('/ISBN\s+(\d+X?)/i', $response, $matches)) {
             $details['isbn'] = $matches[1];
+        } else if (preg_match('/ISBN10:\s*(\d+X?)/i', $response, $matches)) {
+            $details['isbn'] = $matches[1];
         }
 
         // Extract ISBN13
         if (preg_match('/ISBN13\s+(\d+)/i', $response, $matches)) {
+            $details['isbn13'] = $matches[1];
+        } else if (preg_match('/ISBN\s+(\d{13})/i', $response, $matches)) {
             $details['isbn13'] = $matches[1];
         }
 
@@ -409,12 +529,63 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $details['page_count'] = (int)$matches[1];
         }
 
+        // Extract language
+        if (preg_match('/Language\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['language'] = trim($matches[1]);
+        }
+
+        // Extract format
+        if (preg_match('/Format\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['format'] = trim($matches[1]);
+        } else if (preg_match('/(\d+)\s+pages,\s+([^,<\n]+)/i', $response, $matches)) {
+            $details['format'] = trim($matches[2]);
+        }
+
+        // Extract series
+        if (preg_match('/Series\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+        } else if (preg_match('/<a[^>]*href="\/series\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+        }
+
         // Extract genres/shelves
         if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
             $details['genres'] = array_map('trim', $matches[1]);
+        } else if (preg_match_all('/<a[^>]*href="\/genres\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $details['genres'] = array_map('trim', $matches[1]);
+        } else if (preg_match_all('/<span[^>]*class="[^"]*Button__labelItem[^"]*"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
+            $details['genres'] = array_map('trim', $matches[1]);
+        }
+
+        // Extract awards
+        if (preg_match('/Awards\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['awards'] = array_map('trim', explode(',', $matches[1]));
+        }
+
+        // Extract characters (if available)
+        if (preg_match('/Characters\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['characters'] = array_map('trim', explode(',', $matches[1]));
+        }
+
+        // Extract settings (if available)
+        if (preg_match('/Setting\s*:?\s*([^<\n]+)/i', $response, $matches)) {
+            $details['settings'] = array_map('trim', explode(',', $matches[1]));
         }
 
         $details['url'] = $bookUrl;
+
+        // Log the extracted metadata
+        $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Extracted metadata from direct HTML scraping:");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Title: " . ($details['title'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Author: " . ($details['author'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN: " . ($details['isbn'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- ISBN-13: " . ($details['isbn13'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Publisher: " . ($details['publisher'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Publication Date: " . ($details['published_date'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Page Count: " . ($details['page_count'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Language: " . ($details['language'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
 
         return $details;
     }

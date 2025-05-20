@@ -171,6 +171,766 @@ function extractWorkIdFromHtml(html) {
 }
 
 /**
+ * Extract comprehensive book metadata from the book page
+ * @param {Page} page - Puppeteer page object
+ * @returns {Promise<Object>} - Book metadata
+ */
+async function extractBookMetadata(page) {
+  logger.info('Extracting comprehensive book metadata from page');
+
+  try {
+    // Take a screenshot for debugging
+    await browser.takeScreenshot(page, 'goodreads-metadata-extraction');
+
+    // Save the HTML for debugging
+    const pageHtml = await page.content();
+    fs.writeFileSync(path.join(debugDir, 'goodreads-metadata-page.html'), pageHtml);
+
+    // Extract metadata using page.evaluate
+    const metadata = await page.evaluate(() => {
+      console.log('Starting book metadata extraction...');
+
+      const bookData = {
+        title: '',
+        author: '',
+        isbn: '',
+        isbn13: '',
+        publisher: '',
+        publication_date: '',
+        page_count: '',
+        language: '',
+        format: '',
+        series: '',
+        genres: [],
+        awards: [],
+        characters: [],
+        settings: [],
+        rating: '',
+        rating_count: '',
+        review_count: '',
+        description: '',
+        cover_url: '',
+        selectors_used: {} // Track which selectors were used successfully
+      };
+
+      // Extract title - try multiple selectors
+      const titleSelectors = [
+        'h1.BookPageTitleSection__title',
+        'h1[data-testid="bookTitle"]',
+        '.BookPageTitleSection h1'
+      ];
+
+      for (const selector of titleSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          bookData.title = element.textContent.trim();
+          bookData.selectors_used.title = selector;
+          break;
+        }
+      }
+
+      // Extract author - try multiple selectors
+      const authorSelectors = [
+        '.BookPageTitleSection__authorLink',
+        '.BookPageTitleSection a[data-testid="authorLink"]',
+        '.AuthorLink__name'
+      ];
+
+      for (const selector of authorSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          bookData.author = Array.from(elements)
+            .map(el => el.textContent.trim())
+            .join(', ');
+          bookData.selectors_used.author = selector;
+          break;
+        }
+      }
+
+      // Extract cover image - try multiple selectors
+      const coverSelectors = [
+        '.BookCover__image img',
+        '.BookPage__bookCover img',
+        'img.ResponsiveImage'
+      ];
+
+      for (const selector of coverSelectors) {
+        const element = document.querySelector(selector);
+        if (element && element.src) {
+          bookData.cover_url = element.src;
+          bookData.selectors_used.cover_url = selector;
+          break;
+        }
+      }
+
+      // Extract rating - try multiple selectors
+      const ratingSelectors = [
+        '.RatingStatistics__rating',
+        '[data-testid="averageRating"]'
+      ];
+
+      for (const selector of ratingSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          bookData.rating = parseFloat(element.textContent.trim());
+          bookData.selectors_used.rating = selector;
+          break;
+        }
+      }
+
+      // Extract rating count - try multiple selectors
+      const ratingCountSelectors = [
+        '.RatingStatistics__meta span',
+        '[data-testid="ratingsCount"]'
+      ];
+
+      for (const selector of ratingCountSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          const countText = element.textContent.trim();
+          const countMatch = countText.match(/(\d+(?:,\d+)*)/);
+          if (countMatch) {
+            bookData.rating_count = parseInt(countMatch[1].replace(/,/g, ''));
+            bookData.selectors_used.rating_count = selector;
+            break;
+          }
+        }
+      }
+
+      // Extract description - try multiple selectors
+      const descriptionSelectors = [
+        '.BookPageMetadataSection__description .Formatted',
+        '[data-testid="description"] .Formatted',
+        '[data-testid="description"]'
+      ];
+
+      for (const selector of descriptionSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          bookData.description = element.textContent.trim();
+          bookData.selectors_used.description = selector;
+          break;
+        }
+      }
+
+      // Extract genres - try multiple selectors
+      const genreSelectors = [
+        '.BookPageMetadataSection__genres .Button__labelItem',
+        '[data-testid="genresList"] a',
+        '.BookPageMetadataSection__genres a'
+      ];
+
+      for (const selector of genreSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          bookData.genres = Array.from(elements)
+            .map(el => el.textContent.trim())
+            .filter(text => text.length > 0);
+          bookData.selectors_used.genres = selector;
+          break;
+        }
+      }
+
+      // Extract book details from the BookDetails section
+      // Based on the screenshot, we need to look for the CollapsableList inside BookDetails
+      const detailsContainers = [
+        '.BookDetails .CollapsableList',
+        '.BookDetails__list',
+        '.EditionDetails',
+        '.MoreInformation'
+      ];
+
+      // Function to process details from various containers
+      const processDetailsContainer = (container) => {
+        // Look for key-value pairs in the container
+        const rows = container.querySelectorAll('div, span');
+
+        rows.forEach(row => {
+          const text = row.textContent.trim();
+
+          // Format: 267 pages, Paperback
+          if (text.match(/pages.*,.*paperback/i) || text.match(/pages/i)) {
+            const pagesMatch = text.match(/(\d+)\s+pages/i);
+            if (pagesMatch) {
+              bookData.page_count = parseInt(pagesMatch[1]);
+              bookData.selectors_used.page_count = 'BookDetails text';
+            }
+
+            const formatMatch = text.match(/pages,\s+([^,]+)/i);
+            if (formatMatch) {
+              bookData.format = formatMatch[1].trim();
+              bookData.selectors_used.format = 'BookDetails text';
+            }
+          }
+
+          // Published date
+          if (text.match(/published/i)) {
+            const dateMatch = text.match(/published\s+([^by]+)(?:by\s+(.+))?/i);
+            if (dateMatch) {
+              bookData.publication_date = dateMatch[1].trim();
+              bookData.selectors_used.publication_date = 'BookDetails text';
+
+              if (dateMatch[2]) {
+                bookData.publisher = dateMatch[2].trim();
+                bookData.selectors_used.publisher = 'BookDetails text';
+              }
+            }
+          }
+
+          // ISBN
+          if (text.match(/isbn/i)) {
+            const isbnMatch = text.match(/isbn\s*:?\s*(\d+)/i);
+            if (isbnMatch) {
+              bookData.isbn = isbnMatch[1];
+              bookData.selectors_used.isbn = 'BookDetails text';
+            }
+
+            const isbn13Match = text.match(/isbn13\s*:?\s*(\d+)/i);
+            if (isbn13Match) {
+              bookData.isbn13 = isbn13Match[1];
+              bookData.selectors_used.isbn13 = 'BookDetails text';
+            }
+          }
+
+          // Language
+          if (text.match(/language/i)) {
+            const languageMatch = text.match(/language\s*:?\s*(.+)/i);
+            if (languageMatch) {
+              bookData.language = languageMatch[1].trim();
+              bookData.selectors_used.language = 'BookDetails text';
+            }
+          }
+
+          // Awards
+          if (text.match(/awards/i)) {
+            const awardsMatch = text.match(/awards\s*:?\s*(.+)/i);
+            if (awardsMatch) {
+              bookData.awards = awardsMatch[1].trim().split(',').map(a => a.trim());
+              bookData.selectors_used.awards = 'BookDetails text';
+            }
+          }
+        });
+      };
+
+      // Try each container type
+      for (const selector of detailsContainers) {
+        const containers = document.querySelectorAll(selector);
+        if (containers.length > 0) {
+          containers.forEach(container => processDetailsContainer(container));
+          break;
+        }
+      }
+
+      // Look for specific format sections in the "This edition" section
+      const editionDetails = document.querySelectorAll('.EditionDetails, [data-testid="editionDetails"]');
+      editionDetails.forEach(section => {
+        // Format
+        const formatRow = section.querySelector('div:contains("Format")');
+        if (formatRow) {
+          const formatText = formatRow.textContent.replace('Format', '').trim();
+          if (formatText && !bookData.format) {
+            bookData.format = formatText;
+            bookData.selectors_used.format = 'EditionDetails Format';
+          }
+        }
+
+        // Published
+        const publishedRow = section.querySelector('div:contains("Published")');
+        if (publishedRow) {
+          const publishedText = publishedRow.textContent.replace('Published', '').trim();
+          if (publishedText) {
+            const pubMatch = publishedText.match(/([^by]+)(?:by\s+(.+))?/);
+            if (pubMatch) {
+              if (!bookData.publication_date) {
+                bookData.publication_date = pubMatch[1].trim();
+                bookData.selectors_used.publication_date = 'EditionDetails Published';
+              }
+
+              if (pubMatch[2] && !bookData.publisher) {
+                bookData.publisher = pubMatch[2].trim();
+                bookData.selectors_used.publisher = 'EditionDetails Published';
+              }
+            }
+          }
+        }
+
+        // ISBN
+        const isbnRow = section.querySelector('div:contains("ISBN")');
+        if (isbnRow) {
+          const isbnText = isbnRow.textContent.trim();
+
+          const isbn13Match = isbnText.match(/(\d{13})/);
+          if (isbn13Match && !bookData.isbn13) {
+            bookData.isbn13 = isbn13Match[1];
+            bookData.selectors_used.isbn13 = 'EditionDetails ISBN';
+          }
+
+          const isbn10Match = isbnText.match(/\(ISBN10:\s*(\d+X?)\)/i);
+          if (isbn10Match && !bookData.isbn) {
+            bookData.isbn = isbn10Match[1];
+            bookData.selectors_used.isbn = 'EditionDetails ISBN';
+          }
+        }
+
+        // Language
+        const languageRow = section.querySelector('div:contains("Language")');
+        if (languageRow) {
+          const languageText = languageRow.textContent.replace('Language', '').trim();
+          if (languageText && !bookData.language) {
+            bookData.language = languageText;
+            bookData.selectors_used.language = 'EditionDetails Language';
+          }
+        }
+      });
+
+      // Try to extract additional metadata from JSON-LD
+      try {
+        const scriptElements = document.querySelectorAll('script[type="application/ld+json"]');
+        scriptElements.forEach(script => {
+          try {
+            const jsonData = JSON.parse(script.textContent);
+
+            // Check if this is book data
+            if (jsonData && jsonData['@type'] === 'Book') {
+              console.log('Found JSON-LD Book data');
+
+              // Fill in missing data from JSON-LD
+              if (!bookData.title && jsonData.name) {
+                bookData.title = jsonData.name;
+                bookData.selectors_used.title = 'JSON-LD name';
+              }
+
+              if (!bookData.author && jsonData.author) {
+                if (Array.isArray(jsonData.author)) {
+                  bookData.author = jsonData.author.map(a => a.name).join(', ');
+                } else if (jsonData.author.name) {
+                  bookData.author = jsonData.author.name;
+                }
+                bookData.selectors_used.author = 'JSON-LD author';
+              }
+
+              if (!bookData.isbn && jsonData.isbn) {
+                bookData.isbn = jsonData.isbn;
+                bookData.selectors_used.isbn = 'JSON-LD isbn';
+              }
+
+              if (!bookData.publisher && jsonData.publisher && jsonData.publisher.name) {
+                bookData.publisher = jsonData.publisher.name;
+                bookData.selectors_used.publisher = 'JSON-LD publisher';
+              }
+
+              if (!bookData.description && jsonData.description) {
+                bookData.description = jsonData.description;
+                bookData.selectors_used.description = 'JSON-LD description';
+              }
+
+              // Extract additional data that might not be in the HTML
+              if (jsonData.bookFormat && !bookData.format) {
+                bookData.format = jsonData.bookFormat;
+                bookData.selectors_used.format = 'JSON-LD bookFormat';
+              }
+
+              if (jsonData.numberOfPages && !bookData.page_count) {
+                bookData.page_count = jsonData.numberOfPages;
+                bookData.selectors_used.page_count = 'JSON-LD numberOfPages';
+              }
+
+              if (jsonData.inLanguage && !bookData.language) {
+                bookData.language = jsonData.inLanguage;
+                bookData.selectors_used.language = 'JSON-LD inLanguage';
+              }
+
+              if (jsonData.datePublished && !bookData.publication_date) {
+                bookData.publication_date = jsonData.datePublished;
+                bookData.selectors_used.publication_date = 'JSON-LD datePublished';
+              }
+
+              // Extract awards if available
+              if (jsonData.awards && Array.isArray(jsonData.awards)) {
+                bookData.awards = jsonData.awards;
+                bookData.selectors_used.awards = 'JSON-LD awards';
+              }
+
+              // Extract characters if available
+              if (jsonData.character && Array.isArray(jsonData.character)) {
+                bookData.characters = jsonData.character.map(c => c.name || c);
+                bookData.selectors_used.characters = 'JSON-LD character';
+              }
+            }
+          } catch (err) {
+            console.error(`Error parsing JSON-LD: ${err.message}`);
+          }
+        });
+      } catch (err) {
+        console.error(`Error processing JSON-LD scripts: ${err.message}`);
+      }
+
+      // Try to extract data from meta tags
+      try {
+        // Check for Open Graph meta tags
+        const ogTitleElement = document.querySelector('meta[property="og:title"]');
+        if (ogTitleElement && !bookData.title) {
+          bookData.title = ogTitleElement.getAttribute('content');
+          bookData.selectors_used.title = 'meta og:title';
+        }
+
+        const ogDescriptionElement = document.querySelector('meta[property="og:description"]');
+        if (ogDescriptionElement && !bookData.description) {
+          bookData.description = ogDescriptionElement.getAttribute('content');
+          bookData.selectors_used.description = 'meta og:description';
+        }
+
+        const ogImageElement = document.querySelector('meta[property="og:image"]');
+        if (ogImageElement && !bookData.cover_url) {
+          bookData.cover_url = ogImageElement.getAttribute('content');
+          bookData.selectors_used.cover_url = 'meta og:image';
+        }
+      } catch (err) {
+        console.error(`Error extracting meta tags: ${err.message}`);
+      }
+
+      // Look for characters and settings in the book description
+      if (bookData.description) {
+        // Look for character mentions in the description
+        const characterMatches = bookData.description.match(/character(?:s)? (?:of|include|named) ([^\.]+)/i);
+        if (characterMatches && characterMatches[1] && !bookData.characters.length) {
+          const characterNames = characterMatches[1].split(/,|and/).map(name => name.trim());
+          bookData.characters = characterNames.filter(name => name.length > 0);
+          bookData.selectors_used.characters = 'description text analysis';
+        }
+
+        // Look for settings mentions in the description
+        const settingMatches = bookData.description.match(/set (?:in|on) ([^\.]+)/i);
+        if (settingMatches && settingMatches[1] && !bookData.settings.length) {
+          const settingNames = settingMatches[1].split(/,|and/).map(name => name.trim());
+          bookData.settings = settingNames.filter(name => name.length > 0);
+          bookData.selectors_used.settings = 'description text analysis';
+        }
+      }
+
+      console.log('Completed book metadata extraction');
+      return bookData;
+    });
+
+    logger.info('Successfully extracted book metadata:');
+    logger.info(`- Title: ${metadata.title}`);
+    logger.info(`- Author: ${metadata.author}`);
+    logger.info(`- ISBN: ${metadata.isbn}`);
+    logger.info(`- ISBN-13: ${metadata.isbn13}`);
+    logger.info(`- Publisher: ${metadata.publisher}`);
+    logger.info(`- Publication Date: ${metadata.publication_date}`);
+    logger.info(`- Page Count: ${metadata.page_count}`);
+    logger.info(`- Language: ${metadata.language}`);
+    logger.info(`- Format: ${metadata.format}`);
+    logger.info(`- Series: ${metadata.series}`);
+    logger.info(`- Genres: ${metadata.genres.join(', ')}`);
+
+    return metadata;
+  } catch (error) {
+    logger.error(`Error extracting book metadata: ${error.message}`);
+    return {
+      error: error.message,
+      title: '',
+      author: ''
+    };
+  }
+}
+
+/**
+ * Extract comprehensive book metadata from the book page
+ * @param {Page} page - Puppeteer page object
+ * @returns {Promise<Object>} - Book metadata
+ */
+async function extractBookMetadata(page) {
+  logger.info('Extracting comprehensive book metadata from page');
+
+  try {
+    // Take a screenshot for debugging
+    await browser.takeScreenshot(page, 'goodreads-metadata-extraction');
+
+    // Extract metadata using page.evaluate
+    const metadata = await page.evaluate(() => {
+      console.log('Starting book metadata extraction...');
+
+      const bookData = {
+        title: '',
+        author: '',
+        isbn: '',
+        isbn13: '',
+        publisher: '',
+        publication_date: '',
+        page_count: '',
+        language: '',
+        format: '',
+        series: '',
+        genres: [],
+        awards: [],
+        characters: [],
+        settings: [],
+        rating: '',
+        rating_count: '',
+        review_count: '',
+        description: '',
+        cover_url: '',
+        selectors_used: {} // Track which selectors were used successfully
+      };
+
+      // Extract title
+      const titleElement = document.querySelector('h1.BookPageTitleSection__title');
+      if (titleElement) {
+        bookData.title = titleElement.textContent.trim();
+        bookData.selectors_used.title = 'h1.BookPageTitleSection__title';
+      }
+
+      // Extract author
+      const authorElement = document.querySelector('.BookPageTitleSection__authorLink');
+      if (authorElement) {
+        bookData.author = authorElement.textContent.trim();
+        bookData.selectors_used.author = '.BookPageTitleSection__authorLink';
+      }
+
+      // Extract cover image
+      const coverElement = document.querySelector('.BookCover__image img');
+      if (coverElement) {
+        bookData.cover_url = coverElement.src;
+        bookData.selectors_used.cover_url = '.BookCover__image img';
+      }
+
+      // Extract rating
+      const ratingElement = document.querySelector('.RatingStatistics__rating');
+      if (ratingElement) {
+        bookData.rating = parseFloat(ratingElement.textContent.trim());
+        bookData.selectors_used.rating = '.RatingStatistics__rating';
+      }
+
+      // Extract rating count
+      const ratingCountElement = document.querySelector('.RatingStatistics__meta span');
+      if (ratingCountElement) {
+        const countText = ratingCountElement.textContent.trim();
+        const countMatch = countText.match(/(\d+(?:,\d+)*)/);
+        if (countMatch) {
+          bookData.rating_count = parseInt(countMatch[1].replace(/,/g, ''));
+          bookData.selectors_used.rating_count = '.RatingStatistics__meta span';
+        }
+      }
+
+      // Extract book details from the BookDetails section
+      const detailsElements = document.querySelectorAll('.BookDetails .FeatureDetails');
+      detailsElements.forEach(element => {
+        const labelElement = element.querySelector('.FeatureDetails__label');
+        const valueElement = element.querySelector('.FeatureDetails__value');
+
+        if (labelElement && valueElement) {
+          const label = labelElement.textContent.trim().toLowerCase();
+          const value = valueElement.textContent.trim();
+
+          if (label.includes('format')) {
+            bookData.format = value;
+            bookData.selectors_used.format = '.BookDetails .FeatureDetails (format)';
+          } else if (label.includes('pages')) {
+            const pagesMatch = value.match(/(\d+)/);
+            if (pagesMatch) {
+              bookData.page_count = parseInt(pagesMatch[1]);
+              bookData.selectors_used.page_count = '.BookDetails .FeatureDetails (pages)';
+            }
+          } else if (label.includes('published') || label.includes('publication')) {
+            // Extract publication date and publisher
+            const pubMatch = value.match(/(.*?)(?:\s+by\s+(.*?))?$/);
+            if (pubMatch) {
+              bookData.publication_date = pubMatch[1].trim();
+              bookData.selectors_used.publication_date = '.BookDetails .FeatureDetails (published)';
+
+              if (pubMatch[2]) {
+                bookData.publisher = pubMatch[2].trim();
+                bookData.selectors_used.publisher = '.BookDetails .FeatureDetails (published)';
+              }
+            }
+          } else if (label.includes('isbn')) {
+            if (label.includes('13')) {
+              bookData.isbn13 = value.replace(/[^0-9X]/g, '');
+              bookData.selectors_used.isbn13 = '.BookDetails .FeatureDetails (isbn13)';
+            } else {
+              bookData.isbn = value.replace(/[^0-9X]/g, '');
+              bookData.selectors_used.isbn = '.BookDetails .FeatureDetails (isbn)';
+            }
+          } else if (label.includes('language')) {
+            bookData.language = value;
+            bookData.selectors_used.language = '.BookDetails .FeatureDetails (language)';
+          } else if (label.includes('series')) {
+            bookData.series = value;
+            bookData.selectors_used.series = '.BookDetails .FeatureDetails (series)';
+          }
+        }
+      });
+
+      // Extract description
+      const descriptionElement = document.querySelector('.BookPageMetadataSection__description .Formatted');
+      if (descriptionElement) {
+        bookData.description = descriptionElement.textContent.trim();
+        bookData.selectors_used.description = '.BookPageMetadataSection__description .Formatted';
+      }
+
+      // Extract genres/shelves
+      const genreElements = document.querySelectorAll('.BookPageMetadataSection__genres .Button__labelItem');
+      if (genreElements.length > 0) {
+        bookData.genres = Array.from(genreElements).map(el => el.textContent.trim());
+        bookData.selectors_used.genres = '.BookPageMetadataSection__genres .Button__labelItem';
+      }
+
+      // Try to extract additional metadata from JSON-LD
+      try {
+        const scriptElements = document.querySelectorAll('script[type="application/ld+json"]');
+        scriptElements.forEach(script => {
+          try {
+            const jsonData = JSON.parse(script.textContent);
+
+            // Check if this is book data
+            if (jsonData && jsonData['@type'] === 'Book') {
+              console.log('Found JSON-LD Book data');
+
+              // Fill in missing data from JSON-LD
+              if (!bookData.title && jsonData.name) {
+                bookData.title = jsonData.name;
+                bookData.selectors_used.title = 'JSON-LD name';
+              }
+
+              if (!bookData.author && jsonData.author) {
+                if (Array.isArray(jsonData.author)) {
+                  bookData.author = jsonData.author.map(a => a.name).join(', ');
+                } else if (jsonData.author.name) {
+                  bookData.author = jsonData.author.name;
+                }
+                bookData.selectors_used.author = 'JSON-LD author';
+              }
+
+              if (!bookData.isbn && jsonData.isbn) {
+                bookData.isbn = jsonData.isbn;
+                bookData.selectors_used.isbn = 'JSON-LD isbn';
+              }
+
+              if (!bookData.publisher && jsonData.publisher && jsonData.publisher.name) {
+                bookData.publisher = jsonData.publisher.name;
+                bookData.selectors_used.publisher = 'JSON-LD publisher';
+              }
+
+              if (!bookData.description && jsonData.description) {
+                bookData.description = jsonData.description;
+                bookData.selectors_used.description = 'JSON-LD description';
+              }
+
+              // Extract additional data that might not be in the HTML
+              if (jsonData.bookFormat && !bookData.format) {
+                bookData.format = jsonData.bookFormat;
+                bookData.selectors_used.format = 'JSON-LD bookFormat';
+              }
+
+              if (jsonData.numberOfPages && !bookData.page_count) {
+                bookData.page_count = jsonData.numberOfPages;
+                bookData.selectors_used.page_count = 'JSON-LD numberOfPages';
+              }
+
+              if (jsonData.inLanguage && !bookData.language) {
+                bookData.language = jsonData.inLanguage;
+                bookData.selectors_used.language = 'JSON-LD inLanguage';
+              }
+
+              if (jsonData.datePublished && !bookData.publication_date) {
+                bookData.publication_date = jsonData.datePublished;
+                bookData.selectors_used.publication_date = 'JSON-LD datePublished';
+              }
+
+              // Extract awards if available
+              if (jsonData.awards && Array.isArray(jsonData.awards)) {
+                bookData.awards = jsonData.awards;
+                bookData.selectors_used.awards = 'JSON-LD awards';
+              }
+
+              // Extract characters if available
+              if (jsonData.character && Array.isArray(jsonData.character)) {
+                bookData.characters = jsonData.character.map(c => c.name || c);
+                bookData.selectors_used.characters = 'JSON-LD character';
+              }
+            }
+          } catch (err) {
+            console.error(`Error parsing JSON-LD: ${err.message}`);
+          }
+        });
+      } catch (err) {
+        console.error(`Error processing JSON-LD scripts: ${err.message}`);
+      }
+
+      // Try to extract data from meta tags
+      try {
+        // Check for Open Graph meta tags
+        const ogTitleElement = document.querySelector('meta[property="og:title"]');
+        if (ogTitleElement && !bookData.title) {
+          bookData.title = ogTitleElement.getAttribute('content');
+          bookData.selectors_used.title = 'meta og:title';
+        }
+
+        const ogDescriptionElement = document.querySelector('meta[property="og:description"]');
+        if (ogDescriptionElement && !bookData.description) {
+          bookData.description = ogDescriptionElement.getAttribute('content');
+          bookData.selectors_used.description = 'meta og:description';
+        }
+
+        const ogImageElement = document.querySelector('meta[property="og:image"]');
+        if (ogImageElement && !bookData.cover_url) {
+          bookData.cover_url = ogImageElement.getAttribute('content');
+          bookData.selectors_used.cover_url = 'meta og:image';
+        }
+      } catch (err) {
+        console.error(`Error extracting meta tags: ${err.message}`);
+      }
+
+      // Look for characters and settings in the book description
+      if (bookData.description) {
+        // Look for character mentions in the description
+        const characterMatches = bookData.description.match(/character(?:s)? (?:of|include|named) ([^\.]+)/i);
+        if (characterMatches && characterMatches[1] && !bookData.characters.length) {
+          const characterNames = characterMatches[1].split(/,|and/).map(name => name.trim());
+          bookData.characters = characterNames.filter(name => name.length > 0);
+          bookData.selectors_used.characters = 'description text analysis';
+        }
+
+        // Look for settings mentions in the description
+        const settingMatches = bookData.description.match(/set (?:in|on) ([^\.]+)/i);
+        if (settingMatches && settingMatches[1] && !bookData.settings.length) {
+          const settingNames = settingMatches[1].split(/,|and/).map(name => name.trim());
+          bookData.settings = settingNames.filter(name => name.length > 0);
+          bookData.selectors_used.settings = 'description text analysis';
+        }
+      }
+
+      console.log('Completed book metadata extraction');
+      return bookData;
+    });
+
+    logger.info('Successfully extracted book metadata:');
+    logger.info(`- Title: ${metadata.title}`);
+    logger.info(`- Author: ${metadata.author}`);
+    logger.info(`- ISBN: ${metadata.isbn}`);
+    logger.info(`- ISBN-13: ${metadata.isbn13}`);
+    logger.info(`- Publisher: ${metadata.publisher}`);
+    logger.info(`- Publication Date: ${metadata.publication_date}`);
+    logger.info(`- Page Count: ${metadata.page_count}`);
+    logger.info(`- Language: ${metadata.language}`);
+    logger.info(`- Format: ${metadata.format}`);
+    logger.info(`- Series: ${metadata.series}`);
+    logger.info(`- Genres: ${metadata.genres.join(', ')}`);
+
+    return metadata;
+  } catch (error) {
+    logger.error(`Error extracting book metadata: ${error.message}`);
+    return {
+      error: error.message,
+      title: '',
+      author: ''
+    };
+  }
+}
+
+/**
  * Scrape reviews from a Goodreads book page
  * @param {string} goodreadsUrl - The URL of the Goodreads book page
  * @param {number} limit - Maximum number of reviews to return
@@ -308,7 +1068,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   });
 
   try {
-    // Navigate to the reviews page
+    // Navigate to the book page
     logger.info(`Navigating to: ${goodreadsUrl}`);
     await page.goto(goodreadsUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
@@ -316,25 +1076,49 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     const initialPageHtml = await page.content();
     fs.writeFileSync(path.join(debugDir, `goodreads-${bookId || 'unknown'}-page.html`), initialPageHtml);
 
-    // Extract book title
-    bookTitle = await page.evaluate(() => {
-      const titleElement = document.querySelector('h1.BookPageTitleSection__title');
-      return titleElement ? titleElement.textContent.trim() : 'Unknown Book';
-    });
+    // Extract comprehensive book metadata
+    logger.info('Extracting comprehensive book metadata');
+    const bookMetadata = await extractBookMetadata(page);
 
+    // Set book title from metadata
+    bookTitle = bookMetadata.title || 'Unknown Book';
     logger.info(`Book title: ${bookTitle}`);
 
-    // Extract aggregate rating
-    const aggregateRating = await page.evaluate(() => {
-      const ratingElement = document.querySelector('div.RatingStatistics__rating');
-      const countElement = document.querySelector('div.RatingStatistics__meta span');
+    // Create aggregate rating object from metadata
+    const aggregateRating = {
+      rating: bookMetadata.rating || null,
+      count: bookMetadata.rating_count || 0
+    };
 
-      const rating = ratingElement ? parseFloat(ratingElement.textContent.trim()) : null;
-      const count = countElement ? parseInt(countElement.textContent.trim().replace(/[^0-9]/g, '')) : 0;
+    // Store the book metadata for later use
+    const bookInfo = {
+      title: bookMetadata.title,
+      author: bookMetadata.author,
+      isbn: bookMetadata.isbn,
+      isbn13: bookMetadata.isbn13,
+      publisher: bookMetadata.publisher,
+      publication_date: bookMetadata.publication_date,
+      page_count: bookMetadata.page_count,
+      language: bookMetadata.language,
+      format: bookMetadata.format,
+      series: bookMetadata.series,
+      genres: bookMetadata.genres,
+      awards: bookMetadata.awards,
+      characters: bookMetadata.characters,
+      settings: bookMetadata.settings,
+      cover_url: bookMetadata.cover_url,
+      description: bookMetadata.description
+    };
 
-      return { rating, count };
+    // Log the extracted metadata
+    logger.info('Extracted book metadata:');
+    Object.entries(bookInfo).forEach(([key, value]) => {
+      if (value && (typeof value !== 'object' || (Array.isArray(value) && value.length > 0))) {
+        logger.info(`- ${key}: ${Array.isArray(value) ? value.join(', ') : value}`);
+      }
     });
 
+    // Add aggregate rating review
     if (aggregateRating.rating) {
       reviews.push({
         source_id: 4, // Goodreads source ID
@@ -346,7 +1130,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         metadata: JSON.stringify({
           book_id: bookId,
           is_aggregate: true,
-          ratings_count: aggregateRating.count
+          ratings_count: aggregateRating.count,
+          book_metadata: bookInfo
         })
       });
 
@@ -588,23 +1373,27 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       return { reviews, nextPageToken, totalCount };
     };
 
-    // Extract reviews from first page
-    let pageReviews = await extractReviewsFromPage();
-    reviews = [...reviews, ...pageReviews.map((review, index) => ({
-      source_id: 4, // Goodreads source ID
-      ...review,
-      metadata: JSON.stringify({
-        book_id: bookId,
-        graphql_batch: 1,
-        position_in_batch: index + 1,
-        total_in_batch: pageReviews.length,
-        total_available: aggregateRating.count,
-        scrape_date: new Date().toISOString(),
-        source: 'initial_page'
-      })
-    }))];
+    // Extract reviews from first page, but skip if resuming from cursor and have a nextPageToken
+    if (!continueFromLast || (continueFromLast && (!reviews.length || !nextPageToken))) {
+      let pageReviews = await extractReviewsFromPage();
+      reviews = [...reviews, ...pageReviews.map((review, index) => ({
+        source_id: 4, // Goodreads source ID
+        ...review,
+        metadata: JSON.stringify({
+          book_id: bookId,
+          graphql_batch: 1,
+          position_in_batch: index + 1,
+          total_in_batch: pageReviews.length,
+          total_available: aggregateRating.count,
+          scrape_date: new Date().toISOString(),
+          source: 'initial_page'
+        })
+      }))];
 
-    logger.info(`Extracted ${pageReviews.length} reviews from first page`);
+      logger.info(`Extracted ${pageReviews.length} reviews from first page`);
+    } else {
+      logger.info(`Skipping initial page extraction, resuming GraphQL from token: ${nextPageToken}`);
+    }
 
     // Extract work ID from the HTML
     const reviewsPageHtml = await page.content();
@@ -1307,6 +2096,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       // Prepare data to cache
       const dataToCache = {
         book_title: bookTitle,
+        book_author: bookInfo.author,
+        book_isbn: bookInfo.isbn,
+        book_isbn13: bookInfo.isbn13,
+        book_publisher: bookInfo.publisher,
+        book_publication_date: bookInfo.publication_date,
+        book_page_count: bookInfo.page_count,
+        book_language: bookInfo.language,
+        book_format: bookInfo.format,
+        book_series: bookInfo.series,
+        book_genres: bookInfo.genres,
+        book_awards: bookInfo.awards,
+        book_characters: bookInfo.characters,
+        book_settings: bookInfo.settings,
+        book_cover_url: bookInfo.cover_url,
+        book_description: bookInfo.description,
         total: reviews.length,
         reviews: limitedReviews,
         currentPage: pageNum,
@@ -1358,6 +2162,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     return {
       source: 'scrape',
       book_title: bookTitle,
+      book_author: bookInfo.author,
+      book_isbn: bookInfo.isbn,
+      book_isbn13: bookInfo.isbn13,
+      book_publisher: bookInfo.publisher,
+      book_publication_date: bookInfo.publication_date,
+      book_page_count: bookInfo.page_count,
+      book_language: bookInfo.language,
+      book_format: bookInfo.format,
+      book_series: bookInfo.series,
+      book_genres: bookInfo.genres,
+      book_awards: bookInfo.awards,
+      book_characters: bookInfo.characters,
+      book_settings: bookInfo.settings,
+      book_cover_url: bookInfo.cover_url,
+      book_description: bookInfo.description,
       total: reviews.length,
       reviews: limitedReviews,
       currentPage: pageNum,

@@ -81,26 +81,27 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
                     error_log("Goodreads JSON data: " . json_encode($jsonData));
 
                     // Extract book details from JSON data
+                    // Make sure to clean any HTML tags from all fields
                     $bookData = [
-                        'title' => $jsonData['title'] ?? '',
+                        'title' => strip_tags($jsonData['title'] ?? ''),
                         'author' => strip_tags($jsonData['author'] ?? ''),
-                        'publisher' => $jsonData['publisher'] ?? '',
-                        'publication_date' => $jsonData['published_date'] ?? ($jsonData['publication_date'] ?? ''),
-                        'page_count' => $jsonData['pages'] ?? ($jsonData['page_count'] ?? ''),
-                        'isbn' => $jsonData['isbn'] ?? '',
-                        'isbn13' => $jsonData['isbn13'] ?? '',
-                        'language' => $jsonData['language'] ?? '',
-                        'format' => $jsonData['format'] ?? '',
-                        'series' => $jsonData['series'] ?? '',
-                        'awards' => $jsonData['awards'] ?? '',
-                        'characters' => $jsonData['characters'] ?? [],
-                        'settings' => $jsonData['settings'] ?? [],
+                        'publisher' => strip_tags($jsonData['publisher'] ?? ''),
+                        'publication_date' => strip_tags($jsonData['published_date'] ?? ($jsonData['publication_date'] ?? '')),
+                        'page_count' => strip_tags($jsonData['pages'] ?? ($jsonData['page_count'] ?? '')),
+                        'isbn' => strip_tags($jsonData['isbn'] ?? ''),
+                        'isbn13' => strip_tags($jsonData['isbn13'] ?? ''),
+                        'language' => strip_tags($jsonData['language'] ?? ''),
+                        'format' => strip_tags($jsonData['format'] ?? ''),
+                        'series' => strip_tags($jsonData['series'] ?? ''),
+                        'awards' => strip_tags($jsonData['awards'] ?? ''),
+                        'characters' => is_array($jsonData['characters'] ?? null) ? array_map('strip_tags', $jsonData['characters']) : [],
+                        'settings' => is_array($jsonData['settings'] ?? null) ? array_map('strip_tags', $jsonData['settings']) : [],
                         'preview_link' => $jsonData['preview_link'] ?? '',
                         'cover_url' => $jsonData['cover_image'] ?? '',
-                        'rating' => $jsonData['rating'] ?? '',
-                        'rating_count' => $jsonData['rating_count'] ?? '',
-                        'review_count' => $jsonData['review_count'] ?? '',
-                        'maturity_rating' => $jsonData['maturity_rating'] ?? ''
+                        'rating' => strip_tags($jsonData['rating'] ?? ''),
+                        'rating_count' => strip_tags($jsonData['rating_count'] ?? ''),
+                        'review_count' => strip_tags($jsonData['review_count'] ?? ''),
+                        'maturity_rating' => strip_tags($jsonData['maturity_rating'] ?? '')
                     ];
 
                     // Log success for debugging

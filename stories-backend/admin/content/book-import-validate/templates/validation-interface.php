@@ -38,7 +38,6 @@ $sources = array_keys($sourceData);
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Book Validation Interface</h5>
                 <div>
                     <button type="button" class="btn btn-light btn-sm" id="refreshValidation">
                         <i class="fas fa-sync-alt"></i> Refresh Data

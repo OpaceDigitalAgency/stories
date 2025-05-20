@@ -40,6 +40,28 @@ def extract_book_info(html):
     book_info = {}
     selectors_info = {}  # Store selector information for reference
 
+    # Check if we're on a search results page
+    search_results = soup.select("table.tableList tr.bookalike")
+    if search_results:
+        print("Detected search results page, attempting to find the first book")
+        # Get the first book result
+        first_result = search_results[0]
+        book_link = first_result.select_one("a.bookTitle")
+        if book_link and book_link.get('href'):
+            book_url = "https://www.goodreads.com" + book_link.get('href')
+            print(f"Found book link: {book_url}")
+            # Fetch the actual book page
+            html = fetch_goodreads_page(book_url)
+            if html:
+                # Re-parse with the new HTML
+                soup = BeautifulSoup(html, 'html.parser')
+            else:
+                print("Failed to fetch the book page from search results")
+                return None
+        else:
+            print("No book link found in search results")
+            return None
+
     # Try to extract structured data first (most reliable)
     json_data = extract_json_data(html)
 
@@ -284,6 +306,17 @@ def extract_book_info(html):
                 book_info["publisher"] = json_data["publisher"].get("name", "")
             else:
                 book_info["publisher"] = json_data["publisher"]
+
+            # Clean up publisher field - remove any HTML or URL fragments
+            if book_info["publisher"]:
+                # Remove HTML tags
+                book_info["publisher"] = re.sub(r'<[^>]+>', '', book_info["publisher"])
+                # Remove href attributes
+                book_info["publisher"] = re.sub(r'href="[^"]+"', '', book_info["publisher"])
+                # Remove any remaining URL fragments
+                book_info["publisher"] = re.sub(r'https?://\S+', '', book_info["publisher"])
+                # Clean up whitespace
+                book_info["publisher"] = re.sub(r'\s+', ' ', book_info["publisher"]).strip()
 
             selectors_info["publisher"] = {
                 "selector": "JSON data: @type=Book, publisher property",

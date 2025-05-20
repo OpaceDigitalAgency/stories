@@ -1,6 +1,6 @@
 /**
  * Book Validation Logic
- * 
+ *
  * Main JavaScript for the book validation interface.
  */
 
@@ -8,10 +8,10 @@
 function initValidationInterface() {
     // Set up event listeners
     setupEventListeners();
-    
+
     // Initialize tooltips
     initTooltips();
-    
+
     console.log('Validation interface initialized');
 }
 
@@ -23,22 +23,22 @@ function setupEventListeners() {
             button.addEventListener('click', handleApplyButtonClick);
         }
     });
-    
+
     // Global action buttons
     document.getElementById('applyAllValid')?.addEventListener('click', handleApplyAllValid);
     document.getElementById('resetAll')?.addEventListener('click', handleResetAll);
     document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
     document.getElementById('exportChanges')?.addEventListener('click', handleExportChanges);
     document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
-    
+
     // Source-specific apply all buttons
     document.querySelectorAll('.apply-all-source').forEach(button => {
         button.addEventListener('click', handleApplyAllFromSource);
     });
-    
+
     // Search by title button (when no data found)
     document.getElementById('searchByTitle')?.addEventListener('click', handleSearchByTitle);
-    
+
     // Manual entry button (when no data found)
     document.getElementById('manualEntry')?.addEventListener('click', handleManualEntry);
 }
@@ -62,12 +62,12 @@ function handleApplyButtonClick(event) {
     const field = button.dataset.field;
     const source = button.dataset.source;
     const status = button.dataset.status;
-    
+
     // Get the value from the source cell
     const sourceCell = button.closest('.source-value');
     const valueContainer = sourceCell.querySelector('.value-container');
     let value = '';
-    
+
     // Extract the value based on the field type
     if (field === 'cover_url') {
         // For cover images, get the src attribute
@@ -80,13 +80,13 @@ function handleApplyButtonClick(event) {
     } else {
         // For other fields, get the text content
         value = valueContainer.textContent.trim();
-        
+
         // Remove "Not available" text if present
         if (value === 'Not available') {
             value = '';
         }
     }
-    
+
     // Confirm the update
     if (confirm(`Are you sure you want to update the ${field} with the value from ${source}?`)) {
         updateField(field, value, source);
@@ -97,15 +97,15 @@ function handleApplyButtonClick(event) {
 function handleApplyAllValid() {
     if (confirm('Are you sure you want to apply all valid values from all sources?')) {
         showLoadingOverlay();
-        
+
         // Get the book ID from the hidden form
         const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-        
+
         // Create form data
         const formData = new FormData();
         formData.append('action', 'apply_all_valid');
         formData.append('book_id', bookId);
-        
+
         // Send the request
         fetch(window.location.href, {
             method: 'POST',
@@ -115,10 +115,10 @@ function handleApplyAllValid() {
         .then(html => {
             // Replace the current page content with the new HTML
             document.documentElement.innerHTML = html;
-            
+
             // Re-initialize the validation interface
             initValidationInterface();
-            
+
             // Show success message
             showNotification('All valid values have been applied successfully.', 'success');
         })
@@ -136,19 +136,19 @@ function handleApplyAllValid() {
 function handleApplyAllFromSource(event) {
     const button = event.currentTarget;
     const source = button.dataset.source;
-    
+
     if (confirm(`Are you sure you want to apply all values from ${source}?`)) {
         showLoadingOverlay();
-        
+
         // Get the book ID from the hidden form
         const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-        
+
         // Create form data
         const formData = new FormData();
         formData.append('action', 'apply_all_from_source');
         formData.append('book_id', bookId);
         formData.append('source', source);
-        
+
         // Send the request
         fetch(window.location.href, {
             method: 'POST',
@@ -158,10 +158,10 @@ function handleApplyAllFromSource(event) {
         .then(html => {
             // Replace the current page content with the new HTML
             document.documentElement.innerHTML = html;
-            
+
             // Re-initialize the validation interface
             initValidationInterface();
-            
+
             // Show success message
             showNotification(`All values from ${source} have been applied successfully.`, 'success');
         })
@@ -187,15 +187,15 @@ function handleResetAll() {
 function handleValidateAgain() {
     if (confirm('Are you sure you want to validate this book again? This may take a moment.')) {
         showLoadingOverlay();
-        
+
         // Get the book ID from the hidden form
         const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-        
+
         // Create form data
         const formData = new FormData();
         formData.append('action', 'validate_again');
         formData.append('book_id', bookId);
-        
+
         // Send the request
         fetch(window.location.href, {
             method: 'POST',
@@ -205,10 +205,10 @@ function handleValidateAgain() {
         .then(html => {
             // Replace the current page content with the new HTML
             document.documentElement.innerHTML = html;
-            
+
             // Re-initialize the validation interface
             initValidationInterface();
-            
+
             // Show success message
             showNotification('Book has been validated successfully.', 'success');
         })
@@ -229,26 +229,17 @@ function handleExportChanges() {
 
 // Handle refresh validation button click
 function handleRefreshValidation() {
-    // Simply reload the page
-    window.location.reload();
-}
-
-// Handle search by title button click
-function handleSearchByTitle() {
-    const bookTitle = prompt('Enter the book title to search for:');
-    
-    if (bookTitle) {
+    if (confirm('Are you sure you want to refresh the data? This will clear the cache and fetch fresh data from all sources.')) {
         showLoadingOverlay();
-        
+
         // Get the book ID from the hidden form
         const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-        
+
         // Create form data
         const formData = new FormData();
-        formData.append('action', 'search_by_title');
+        formData.append('action', 'refresh_data');
         formData.append('book_id', bookId);
-        formData.append('title', bookTitle);
-        
+
         // Send the request
         fetch(window.location.href, {
             method: 'POST',
@@ -258,7 +249,49 @@ function handleSearchByTitle() {
         .then(html => {
             // Replace the current page content with the new HTML
             document.documentElement.innerHTML = html;
-            
+
+            // Re-initialize the validation interface
+            initValidationInterface();
+
+            // Show success message
+            showNotification('Data has been refreshed successfully.', 'success');
+        })
+        .catch(error => {
+            console.error('Error refreshing data:', error);
+            showNotification('Error refreshing data. Please try again.', 'error');
+        })
+        .finally(() => {
+            hideLoadingOverlay();
+        });
+    }
+}
+
+// Handle search by title button click
+function handleSearchByTitle() {
+    const bookTitle = prompt('Enter the book title to search for:');
+
+    if (bookTitle) {
+        showLoadingOverlay();
+
+        // Get the book ID from the hidden form
+        const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('action', 'search_by_title');
+        formData.append('book_id', bookId);
+        formData.append('title', bookTitle);
+
+        // Send the request
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Replace the current page content with the new HTML
+            document.documentElement.innerHTML = html;
+
             // Re-initialize the validation interface
             initValidationInterface();
         })
@@ -280,16 +313,16 @@ function handleManualEntry() {
 // Update a field with a new value
 function updateField(field, value, source) {
     showLoadingOverlay();
-    
+
     // Get the book ID from the hidden form
     const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-    
+
     // Update the hidden form values
     document.getElementById('actionType').value = 'update_field';
     document.getElementById('actionField').value = field;
     document.getElementById('actionValue').value = value;
     document.getElementById('actionSource').value = source;
-    
+
     // Submit the form
     document.getElementById('validationActionForm').submit();
 }
@@ -323,7 +356,7 @@ function hideLoadingOverlay() {
 function showNotification(message, type = 'info') {
     // Check if the notification container exists
     let container = document.querySelector('.notification-container');
-    
+
     // Create container if it doesn't exist
     if (!container) {
         container = document.createElement('div');
@@ -334,7 +367,7 @@ function showNotification(message, type = 'info') {
         container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
-    
+
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-dismissible fade show`;
@@ -342,10 +375,10 @@ function showNotification(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-    
+
     // Add to container
     container.appendChild(notification);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
         notification.classList.remove('show');

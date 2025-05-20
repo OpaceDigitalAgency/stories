@@ -327,6 +327,9 @@ require_once '../includes/header.php';
                                     'showActions' => false, // Don't show the last actions column
                                     'actions' => ['view', 'edit', 'delete'],
                                     'bulkActions' => ['delete', 'analyze'],
+                                    'itemsPerPage' => $reviewsPerPage,
+                                    'currentPage' => $reviewsPerPage,
+                                    'totalItems' => $totalReviews,
                                     'htmlFields' => ['book', 'rating', 'source', 'actions'],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
@@ -335,14 +338,21 @@ require_once '../includes/header.php';
                             ?>
                         </div>
                         <?php
-                        // Render pagination with custom options - force showItemsPerPage to true
-                        renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, visiblePages: 5, options: [
-                          'pageParam'         => 'page',
-                          'perPageParam'      => 'per_page',
-                          'validPerPageValues'=> [5,10,15,20,25,50,100,$totalReviews],
-                          'perPageLabel'      => 'Show',
-                          'showAllLabel'      => 'Show All',
-                        ]);
+                        // Render pagination
+                        renderPagination(
+                          $totalReviews,       // total items
+                          $reviewsPerPage,     // items per page
+                          $reviewsPage,        // current page
+                          5,                   // number of visible page links
+                          [                    // options
+                            'pageParam'         => 'page',
+                            'perPageParam'      => 'per_page',
+                            'validPerPageValues'=> [5,10,15,20,25,50,100,$totalReviews],
+                            'perPageLabel'      => 'Show',
+                            'showItemsPerPage'  => true,
+                            'showAllLabel'      => 'Show All',
+                          ]
+                        );
                         ?>
                     </div>
                 </div>

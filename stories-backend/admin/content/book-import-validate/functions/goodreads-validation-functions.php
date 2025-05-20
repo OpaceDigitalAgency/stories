@@ -60,10 +60,48 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
 
         // First try using the Python script (most reliable method)
         $pythonScript = __DIR__ . '/goodreads/goodreads_book_info.py';
-
-        // Check if Python dependencies are installed
+        $setupScript = __DIR__ . '/goodreads/setup.sh';
         $requirementsFile = __DIR__ . '/goodreads/requirements.txt';
-        if (file_exists($requirementsFile)) {
+
+        // Run setup script if it exists
+        if (file_exists($setupScript)) {
+            $detailedStatus['steps'][] = [
+                'name' => 'setup_check',
+                'status' => 'in_progress',
+                'message' => "Running setup script to ensure dependencies"
+            ];
+
+            $output = [];
+            $returnCode = 0;
+            exec('bash ' . escapeshellarg($setupScript) . ' 2>&1', $output, $returnCode);
+
+            if ($returnCode === 0) {
+                $detailedStatus['steps'][] = [
+                    'name' => 'setup_check',
+                    'status' => 'success',
+                    'message' => "Setup completed successfully"
+                ];
+            } else {
+                $detailedStatus['steps'][] = [
+                    'name' => 'setup_check',
+                    'status' => 'error',
+                    'message' => "Setup failed: " . implode(" | ", $output)
+                ];
+            }
+        }
+
+        // Check if Python script exists
+        if (file_exists($pythonScript)) {
+            // Make script executable
+            chmod($pythonScript, 0755);
+
+            $detailedStatus['steps'][] = [
+                'name' => 'python_script_check',
+                'status' => 'success',
+                'message' => "Python script found at: $pythonScript"
+            ];
+
+            // Check Python dependencies
             $detailedStatus['steps'][] = [
                 'name' => 'dependency_check',
                 'status' => 'in_progress',
@@ -104,20 +142,6 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
                     'message' => "Required Python packages already installed"
                 ];
             }
-        }
-
-        $detailedStatus['steps'][] = [
-            'name' => 'python_script_check',
-            'status' => 'in_progress',
-            'message' => "Looking for Python script at: $pythonScript"
-        ];
-
-        if (file_exists($pythonScript)) {
-            $detailedStatus['steps'][] = [
-                'name' => 'python_script_check',
-                'status' => 'success',
-                'message' => "Python script found at: $pythonScript"
-            ];
 
             // Set method to Python script
             $detailedStatus['method'] = 'python_script';
@@ -556,11 +580,8 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     }
                 }
 
-                // Extract series information
-                preg_match('/<a[^>]+href="\/series\/[^"]+"[^>]*>(.*?)<\/a>/s', $response, $seriesMatches);
-
                 // Process all the extracted data
-                if (!empty($titleMatches) || !empty($authorMatches) || !empty($coverMatches) ||
+                if (!empty($titleMatches) || !empty($authorMatches) || !empty($coverMatches) || 
                     !empty($descMatches) || !empty($ratingMatches) || !empty($genreMatches)) {
                     
                     $detailedStatus['steps'][] = [
@@ -573,15 +594,15 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     $bookData = [
                         'title' => strip_tags($titleMatches[1] ?? ''),
                         'author' => strip_tags($authorMatches[1] ?? ''),
-                        'publisher' => '',  // From JSON-LD
-                        'publication_date' => '', // From JSON-LD
-                        'page_count' => $pages,
-                        'isbn' => '', // From JSON-LD
-                        'isbn13' => '', // From JSON-LD
+                        'publisher' => strip_tags($publisherMatches[2] ?? ''),
+                        'publication_date' => strip_tags($publisherMatches[1] ?? ''),
+                        'page_count' => $pages ?: strip_tags($pageCountMatches[1] ?? ''),
+                        'isbn' => strip_tags($isbnMatches[1] ?? ''),
+                        'isbn13' => strip_tags($isbn13Matches[1] ?? ''),
                         'language' => $language,
                         'format' => $format,
-                        'series' => '', // From JSON-LD
-                        'awards' => '', // From JSON-LD
+                        'series' => '',
+                        'awards' => '',
                         'characters' => [],
                         'settings' => [],
                         'preview_link' => '',
@@ -611,173 +632,25 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                         'status' => 'error',
                         'message' => "Failed to extract required book data from HTML"
                     ];
-                    $detailedStatus['steps'][] = [
-                        'name' => 'extract_series',
-                        'status' => 'success',
-                        'message' => "Found series: " . strip_tags($seriesMatches[1])
-                    ];
                 }
-
-                // Extract rating information
-                preg_match('/<span itemprop="ratingValue">(.*?)<\/span>/s', $response, $ratingMatches);
-                preg_match('/<meta itemprop="ratingCount" content="(\d+)"/', $response, $ratingCountMatches);
-                preg_match('/<meta itemprop="reviewCount" content="(\d+)"/', $response, $reviewCountMatches);
-
-                $title = $titleMatches[1] ?? '';
-                $author = $authorMatches[1] ?? '';
-                $isbn10 = $isbnMatches[1] ?? '';
-                $isbn13 = $isbn13Matches[1] ?? '';
-                $publisher = $publisherMatches[2] ?? '';
-                $pageCount = $pageCountMatches[1] ?? '';
-                $coverUrl = $coverMatches[1] ?? '';
-                $description = $descMatches[1] ?? '';
-                $series = $seriesMatches[1] ?? '';
-                $rating = $ratingMatches[1] ?? '';
-                $ratingCount = $ratingCountMatches[1] ?? '';
-                $reviewCount = $reviewCountMatches[1] ?? '';
-
-                // Clean up extracted data
-                $title = strip_tags($title);
-                $author = strip_tags($author);
-                $publisher = trim(strip_tags($publisher));
-                $description = strip_tags($description);
-                $series = strip_tags($series);
-
-                $detailedStatus['steps'][] = [
-                    'name' => 'extract_genres',
-                    'status' => 'in_progress',
-                    'message' => "Extracting genres/categories"
-                ];
-
-                // Extract genres/categories - updated for current Goodreads HTML structure
-                $categories = [];
-                if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
-                    $categories = $genreMatches[1];
-                }
-                if (empty($categories) && preg_match_all('/<a[^>]+data-testid="genreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
-                    $categories = $genreMatches[1];
-                }
-
-                if (!empty($categories)) {
-                    $detailedStatus['steps'][] = [
-                        'name' => 'extract_genres',
-                        'status' => 'success',
-                        'message' => "Found " . count($categories) . " genres/categories"
-                    ];
-                } else {
-                    $detailedStatus['steps'][] = [
-                        'name' => 'extract_genres',
-                        'status' => 'warning',
-                        'message' => "No genres/categories found"
-                    ];
-                }
-
-                $detailedStatus['steps'][] = [
-                    'name' => 'build_data',
-                    'status' => 'success',
-                    'message' => "Building book data object"
-                ];
-
-                $bookData = [
-                    'title' => $title,
-                    'author' => $author,
-                    'publisher' => $publisher,
-                    'publication_date' => $publisherMatches[1] ?? '',
-                    'page_count' => $pageCount,
-                    'isbn' => $isbn10,
-                    'isbn13' => $isbn13,
-                    'language' => '',
-                    'format' => '',
-                    'series' => $series,
-                    'awards' => '',
-                    'characters' => '',
-                    'settings' => '',
-                    'preview_link' => '',
-                    'cover_url' => $coverUrl,
-                    'rating' => $rating,
-                    'rating_count' => $ratingCount,
-                    'review_count' => $reviewCount,
-                    'maturity_rating' => ''
-                ];
-
-                // Calculate processing time
-                $endTime = microtime(true);
-                $totalTime = round($endTime - $startTime, 2);
-
-                // Update detailed status with final information
-                $detailedStatus['status'] = 'success';
-                $detailedStatus['message'] = 'Successfully extracted data from Goodreads via curl';
-                $detailedStatus['processing_time'] = $totalTime;
-                $detailedStatus['method'] = 'curl_direct';
-
-                // Add detailed status to book data
-                $bookData['_status'] = $detailedStatus;
-
-                return $bookData;
             } else {
                 $detailedStatus['steps'][] = [
                     'name' => 'response_check',
                     'status' => 'error',
-                    'message' => "No book found in response"
-                ];
-
-                // Add a sample of the response for debugging
-                $responseSample = substr($response, 0, 200) . '...';
-                $detailedStatus['steps'][] = [
-                    'name' => 'response_sample',
-                    'status' => 'info',
-                    'message' => "Response sample: " . htmlspecialchars($responseSample)
+                    'message' => "No book data found in response"
                 ];
             }
         } else {
             $detailedStatus['steps'][] = [
-                'name' => 'http_error',
+                'name' => 'response_check',
                 'status' => 'error',
-                'message' => "Failed to fetch Goodreads data. HTTP Code: $httpCode"
+                'message' => "Invalid response from Goodreads (HTTP $httpCode)"
             ];
         }
 
-        // Calculate processing time
-        $endTime = microtime(true);
-        $totalTime = round($endTime - $startTime, 2);
-
-        // Update detailed status with final information
-        $detailedStatus['status'] = 'error';
-        $detailedStatus['message'] = 'Failed to extract data from Goodreads';
-        $detailedStatus['processing_time'] = $totalTime;
-
-        // Create a minimal book data object with just the status
-        $bookData = [
-            '_status' => $detailedStatus
-        ];
-
-        return $bookData;
+        return null;
     } catch (Exception $e) {
-        // Create a detailed status for the exception
-        $detailedStatus = [
-            'status' => 'error',
-            'message' => 'Exception in Goodreads curl fetch: ' . $e->getMessage(),
-            'method' => 'curl_direct',
-            'processing_time' => microtime(true) - $startTime,
-            'steps' => [
-                [
-                    'name' => 'exception',
-                    'status' => 'error',
-                    'message' => $e->getMessage()
-                ],
-                [
-                    'name' => 'stack_trace',
-                    'status' => 'info',
-                    'message' => $e->getTraceAsString()
-                ]
-            ]
-        ];
-
-        // Create a minimal book data object with just the status
-        $bookData = [
-            '_status' => $detailedStatus
-        ];
-
-        return $bookData;
+        error_log("Error in curl fallback: " . $e->getMessage());
+        return null;
     }
 }

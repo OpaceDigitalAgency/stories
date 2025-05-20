@@ -59,7 +59,52 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         }
 
         // First try using the Python script (most reliable method)
-        $pythonScript = __DIR__ . '/../../../../goodreads/goodreads_book_info.py';
+        $pythonScript = __DIR__ . '/goodreads/goodreads_book_info.py';
+
+        // Check if Python dependencies are installed
+        $requirementsFile = __DIR__ . '/goodreads/requirements.txt';
+        if (file_exists($requirementsFile)) {
+            $detailedStatus['steps'][] = [
+                'name' => 'dependency_check',
+                'status' => 'in_progress',
+                'message' => "Checking Python dependencies"
+            ];
+
+            $output = [];
+            $returnCode = 0;
+            exec('pip3 list 2>&1', $output, $returnCode);
+            $installedPackages = implode("\n", $output);
+
+            if (strpos($installedPackages, 'beautifulsoup4') === false) {
+                $detailedStatus['steps'][] = [
+                    'name' => 'dependency_install',
+                    'status' => 'in_progress',
+                    'message' => "Installing required Python packages"
+                ];
+
+                exec('pip3 install -r ' . escapeshellarg($requirementsFile) . ' 2>&1', $output, $returnCode);
+                
+                if ($returnCode === 0) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'dependency_install',
+                        'status' => 'success',
+                        'message' => "Successfully installed Python dependencies"
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'dependency_install',
+                        'status' => 'error',
+                        'message' => "Failed to install Python dependencies: " . implode(" | ", $output)
+                    ];
+                }
+            } else {
+                $detailedStatus['steps'][] = [
+                    'name' => 'dependency_check',
+                    'status' => 'success',
+                    'message' => "Required Python packages already installed"
+                ];
+            }
+        }
 
         $detailedStatus['steps'][] = [
             'name' => 'python_script_check',

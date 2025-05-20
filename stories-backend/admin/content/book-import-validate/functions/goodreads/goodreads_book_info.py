@@ -11,6 +11,18 @@ import re
 import json
 import sys
 
+def clean_text(text):
+    """Clean up text by removing HTML tags, URLs, and extra whitespace."""
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Remove URLs
+    text = re.sub(r'https?://\S+', '', text)
+    # Remove href attributes
+    text = re.sub(r'href="[^"]+"', '', text)
+    # Clean up whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
 def fetch_goodreads_page(url):
     """Fetch a Goodreads book page with proper headers."""
     headers = {
@@ -147,164 +159,164 @@ def extract_book_info(html):
 
     # Extract information from HTML elements
     # Title - try multiple selectors
-    title_elem = soup.select_one("h1.Text__title1")
-    if not title_elem:
-        title_elem = soup.select_one("h1.BookPageTitleSection__title")
-    if not title_elem:
-        title_elem = soup.select_one("h1[data-testid='bookTitle']")
-
-    if title_elem:
-        book_info["title"] = title_elem.text.strip()
-        selectors_info["title"] = {"selector": "Book title element", "value": book_info["title"]}
+    title_selectors = [
+        "h1.Text__title1",
+        "h1.BookPageTitleSection__title",
+        "h1[data-testid='bookTitle']",
+        "h1.Text__title3"
+    ]
+    
+    for selector in title_selectors:
+        title_elem = soup.select_one(selector)
+        if title_elem:
+            book_info["title"] = title_elem.text.strip()
+            selectors_info["title"] = {"selector": selector, "value": book_info["title"]}
+            break
 
     # Author - try multiple selectors
-    author_elem = soup.select_one("span.ContributorLink__name")
-    if not author_elem:
-        author_elem = soup.select_one("span.BookPageTitleSection__authorName")
-    if not author_elem:
-        author_elem = soup.select_one("a[data-testid='authorLink']")
-    if not author_elem:
-        # Try to find any author link
-        author_links = soup.select("a[href*='/author/show/']")
-        if author_links:
-            author_elem = author_links[0]
-
-    if author_elem:
-        book_info["author"] = author_elem.text.strip()
-        selectors_info["author"] = {"selector": "Author element", "value": book_info["author"]}
+    author_selectors = [
+        "span.ContributorLink__name",
+        "span.BookPageTitleSection__authorName",
+        "a[data-testid='authorLink']",
+        "a[href*='/author/show/']"
+    ]
+    
+    for selector in author_selectors:
+        author_elem = soup.select_one(selector)
+        if author_elem:
+            book_info["author"] = author_elem.text.strip()
+            selectors_info["author"] = {"selector": selector, "value": book_info["author"]}
+            break
 
     # Rating
-    rating_elem = soup.select_one("div.RatingStatistics__rating")
-    if rating_elem:
-        book_info["rating"] = rating_elem.text.strip()
-        selectors_info["rating"] = {"selector": "div.RatingStatistics__rating", "value": book_info["rating"]}
+    rating_selectors = [
+        "div.RatingStatistics__rating",
+        "span[data-testid='averageRating']"
+    ]
+    
+    for selector in rating_selectors:
+        rating_elem = soup.select_one(selector)
+        if rating_elem:
+            book_info["rating"] = rating_elem.text.strip()
+            selectors_info["rating"] = {"selector": selector, "value": book_info["rating"]}
+            break
 
     # Description
-    description_elem = soup.select_one("div.DetailsLayoutRightParagraph__widthConstrained")
-    if description_elem:
-        book_info["description"] = description_elem.text.strip()
-        selectors_info["description"] = {
-            "selector": "div.DetailsLayoutRightParagraph__widthConstrained",
-            "value": book_info["description"][:100] + "..." if len(book_info["description"]) > 100 else book_info["description"]
-        }
+    description_selectors = [
+        "div.DetailsLayoutRightParagraph__widthConstrained",
+        "div[data-testid='description']",
+        "div.TruncatedContent div[data-testid='contentContainer']"
+    ]
+    
+    for selector in description_selectors:
+        description_elem = soup.select_one(selector)
+        if description_elem:
+            book_info["description"] = description_elem.text.strip()
+            selectors_info["description"] = {
+                "selector": selector,
+                "value": book_info["description"][:100] + "..." if len(book_info["description"]) > 100 else book_info["description"]
+            }
+            break
 
     # Cover image
-    cover_img = soup.select_one("img.ResponsiveImage")
-    if cover_img and cover_img.get('src'):
-        book_info["cover_image"] = cover_img.get('src')
-        selectors_info["cover_image"] = {"selector": "img.ResponsiveImage", "value": book_info["cover_image"]}
+    cover_selectors = [
+        "img.ResponsiveImage",
+        "img[data-testid='coverImage']"
+    ]
+    
+    for selector in cover_selectors:
+        cover_img = soup.select_one(selector)
+        if cover_img and cover_img.get('src'):
+            book_info["cover_image"] = cover_img.get('src')
+            selectors_info["cover_image"] = {"selector": selector, "value": book_info["cover_image"]}
+            break
 
     # Genres/Categories
-    genre_elements = soup.select("span.BookPageMetadataSection__genreButton")
-    if genre_elements:
-        book_info["genres"] = [genre.text.strip() for genre in genre_elements]
-        selectors_info["genres"] = {"selector": "span.BookPageMetadataSection__genreButton", "value": book_info["genres"]}
+    genre_selectors = [
+        "span.BookPageMetadataSection__genreButton",
+        "a[href*='/genres/']",
+        "div[data-testid='genresList'] a"
+    ]
+    
+    for selector in genre_selectors:
+        genre_elements = soup.select(selector)
+        if genre_elements:
+            book_info["genres"] = [genre.text.strip() for genre in genre_elements]
+            selectors_info["genres"] = {"selector": selector, "value": book_info["genres"]}
+            break
 
-    # Look for book details in different formats
-    # Method 1: Look for feature items (common in newer Goodreads design)
-    feature_items = soup.select("div.FeatureItems div.FeatureItem")
-    if feature_items:
-        for item in feature_items:
-            label = item.select_one("div.FeatureItem__label")
-            value = item.select_one("div.FeatureItem__value")
-
+    # Book Details - try both new and old formats
+    details_found = False
+    
+    # Method 1: New Goodreads design with CollapsableList
+    book_details = soup.select("div.BookDetails div.CollapsableList div.DescListItem")
+    if book_details:
+        details_found = True
+        for item in book_details:
+            # Find the label (dt) and value (dd)
+            label = item.find("dt")
+            value = item.find("dd")
+            
             if label and value:
                 label_text = label.text.strip().lower()
-                value_text = value.text.strip()
-
+                # Look for the actual content in TruncatedContent
+                content_container = value.select_one("div[data-testid='contentContainer']")
+                value_text = content_container.text.strip() if content_container else value.text.strip()
+                
+                # Extract various fields
                 if "isbn" in label_text:
-                    book_info["isbn"] = value_text
-                    selectors_info["isbn"] = {
-                        "selector": "div.FeatureItem:contains('ISBN') div.FeatureItem__value",
-                        "value": value_text
-                    }
+                    # Handle both ISBN-10 and ISBN-13
+                    isbn_match = re.search(r'(\d{10}|\d{13})', value_text)
+                    if isbn_match:
+                        book_info["isbn"] = isbn_match.group(1)
+                        selectors_info["isbn"] = {"selector": "BookDetails CollapsableList ISBN", "value": book_info["isbn"]}
+                elif "format" in label_text:
+                    book_info["format"] = value_text
+                    selectors_info["format"] = {"selector": "BookDetails CollapsableList Format", "value": value_text}
+                elif "published" in label_text:
+                    # Extract date and publisher
+                    pub_match = re.match(r'(.*?)\s+by\s+(.*?)(?:\s*$|\s*\()', value_text)
+                    if pub_match:
+                        book_info["published_date"] = pub_match.group(1).strip()
+                        book_info["publisher"] = pub_match.group(2).strip()
+                        selectors_info["published_date"] = {"selector": "BookDetails CollapsableList Published", "value": book_info["published_date"]}
+                        selectors_info["publisher"] = {"selector": "BookDetails CollapsableList Publisher", "value": book_info["publisher"]}
                 elif "pages" in label_text:
-                    book_info["pages"] = value_text
-                    selectors_info["pages"] = {
-                        "selector": "div.FeatureItem:contains('pages') div.FeatureItem__value",
-                        "value": value_text
-                    }
-                elif "published" in label_text:
-                    book_info["published_date"] = value_text
-                    selectors_info["published_date"] = {
-                        "selector": "div.FeatureItem:contains('Published') div.FeatureItem__value",
-                        "value": value_text
-                    }
-                elif "publisher" in label_text:
-                    # Clean up publisher text
-                    publisher_text = value_text
-                    # Remove any HTML tags
-                    publisher_text = re.sub(r'<[^>]+>', '', publisher_text)
-                    # Remove any URLs
-                    publisher_text = re.sub(r'https?://\S+', '', publisher_text)
-                    # Remove any href attributes
-                    publisher_text = re.sub(r'href="[^"]+"', '', publisher_text)
-                    # Clean up whitespace
-                    publisher_text = re.sub(r'\s+', ' ', publisher_text).strip()
-
-                    book_info["publisher"] = publisher_text
-                    selectors_info["publisher"] = {
-                        "selector": "div.FeatureItem:contains('Publisher') div.FeatureItem__value",
-                        "value": publisher_text
-                    }
+                    pages_match = re.search(r'(\d+)\s*pages', value_text)
+                    if pages_match:
+                        book_info["pages"] = pages_match.group(1)
+                        selectors_info["pages"] = {"selector": "BookDetails CollapsableList Pages", "value": book_info["pages"]}
                 elif "language" in label_text:
                     book_info["language"] = value_text
-                    selectors_info["language"] = {
-                        "selector": "div.FeatureItem:contains('Language') div.FeatureItem__value",
-                        "value": value_text
-                    }
+                    selectors_info["language"] = {"selector": "BookDetails CollapsableList Language", "value": value_text}
 
-    # Method 2: Look for book details in a different format (common in older Goodreads design)
-    book_details = soup.select("div.BookDetails div.BookDetails__list span.BookDetails__label")
-    if book_details:
-        for label_elem in book_details:
-            label_text = label_elem.text.strip().lower()
-            value_elem = label_elem.find_next_sibling("span", class_="BookDetails__value")
+    # Method 2: Feature items (if Method 1 didn't find anything)
+    if not details_found:
+        feature_items = soup.select("div.FeatureItems div.FeatureItem")
+        if feature_items:
+            for item in feature_items:
+                label = item.select_one("div.FeatureItem__label")
+                value = item.select_one("div.FeatureItem__value")
 
-            if value_elem:
-                value_text = value_elem.text.strip()
+                if label and value:
+                    label_text = label.text.strip().lower()
+                    value_text = value.text.strip()
 
-                if "isbn" in label_text:
-                    book_info["isbn"] = value_text
-                    selectors_info["isbn"] = {
-                        "selector": "div.BookDetails__list span.BookDetails__label:contains('ISBN') + span.BookDetails__value",
-                        "value": value_text
-                    }
-                elif "pages" in label_text or "length" in label_text:
-                    book_info["pages"] = value_text
-                    selectors_info["pages"] = {
-                        "selector": "div.BookDetails__list span.BookDetails__label:contains('pages') + span.BookDetails__value",
-                        "value": value_text
-                    }
-                elif "published" in label_text:
-                    book_info["published_date"] = value_text
-                    selectors_info["published_date"] = {
-                        "selector": "div.BookDetails__list span.BookDetails__label:contains('Published') + span.BookDetails__value",
-                        "value": value_text
-                    }
-                elif "publisher" in label_text:
-                    # Clean up publisher text
-                    publisher_text = value_text
-                    # Remove any HTML tags
-                    publisher_text = re.sub(r'<[^>]+>', '', publisher_text)
-                    # Remove any URLs
-                    publisher_text = re.sub(r'https?://\S+', '', publisher_text)
-                    # Remove any href attributes
-                    publisher_text = re.sub(r'href="[^"]+"', '', publisher_text)
-                    # Clean up whitespace
-                    publisher_text = re.sub(r'\s+', ' ', publisher_text).strip()
-
-                    book_info["publisher"] = publisher_text
-                    selectors_info["publisher"] = {
-                        "selector": "div.BookDetails__list span.BookDetails__label:contains('Publisher') + span.BookDetails__value",
-                        "value": publisher_text
-                    }
-                elif "language" in label_text:
-                    book_info["language"] = value_text
-                    selectors_info["language"] = {
-                        "selector": "div.BookDetails__list span.BookDetails__label:contains('Language') + span.BookDetails__value",
-                        "value": value_text
-                    }
+                    if "isbn" in label_text:
+                        book_info["isbn"] = value_text
+                        selectors_info["isbn"] = {"selector": "FeatureItem ISBN", "value": value_text}
+                    elif "pages" in label_text:
+                        book_info["pages"] = value_text
+                        selectors_info["pages"] = {"selector": "FeatureItem Pages", "value": value_text}
+                    elif "published" in label_text:
+                        book_info["published_date"] = value_text
+                        selectors_info["published_date"] = {"selector": "FeatureItem Published", "value": value_text}
+                    elif "publisher" in label_text:
+                        book_info["publisher"] = clean_text(value_text)
+                        selectors_info["publisher"] = {"selector": "FeatureItem Publisher", "value": book_info["publisher"]}
+                    elif "language" in label_text:
+                        book_info["language"] = value_text
+                        selectors_info["language"] = {"selector": "FeatureItem Language", "value": value_text}
 
     # Method 3: Look for data attributes or other patterns
     # Try to find ISBN in any format

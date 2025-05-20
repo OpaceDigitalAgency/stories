@@ -336,14 +336,12 @@ require_once '../includes/header.php';
                         </div>
                         <?php
                         // Render pagination with custom options - force showItemsPerPage to true
-                        renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, 5, [
-                            'pageParam' => 'page',
-                            'perPageParam' => 'per_page',
-                            'validPerPageValues' => [5, 10, 15, 20, 25, 50, 100, $totalReviews],
-                            'perPageLabel' => 'Show',
-                            'showAllLabel' => 'Show All',
-                            'showItemsPerPage' => true, // Force enable the built-in per-page dropdown
-                            'tab' => '' // Ensure no tab parameter is added
+                        renderPagination($totalReviews, $reviewsPerPage, $reviewsPage, visiblePages: 5, options: [
+                          'pageParam'         => 'page',
+                          'perPageParam'      => 'per_page',
+                          'validPerPageValues'=> [5,10,15,20,25,50,100,$totalReviews],
+                          'perPageLabel'      => 'Show',
+                          'showAllLabel'      => 'Show All',
                         ]);
                         ?>
                     </div>

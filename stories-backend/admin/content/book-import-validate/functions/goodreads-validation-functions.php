@@ -152,13 +152,71 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         $options = [
             'timeout' => 30, // Longer timeout for validation
             'maxPages' => 1,
-            'limit' => 1
+            'limit' => 1,
+            'validation_mode' => true, // Flag to indicate we're just validating, not fetching reviews
+            'skip_db_check' => true // Skip database check for reviews
         ];
 
         try {
-            // Use the fetchReviewsByISBN method to get book data
-            // This will automatically find the book URL and extract book details
-            $response = $goodreadsFetcher->fetchReviewsByISBN($isbn, 1, $options);
+            // Determine whether to use ISBN or title/author for search
+            if (!empty($isbn)) {
+                // Use the fetchReviewsByISBN method to get book data
+                $detailedStatus['steps'][] = [
+                    'name' => 'search_method',
+                    'status' => 'info',
+                    'message' => "Searching by ISBN: $isbn"
+                ];
+                $response = $goodreadsFetcher->fetchReviewsByISBN($isbn, 1, $options);
+            } else if (!empty($title) && !empty($author)) {
+                // For validation without ISBN, we need to search by title and author
+                $detailedStatus['steps'][] = [
+                    'name' => 'search_method',
+                    'status' => 'info',
+                    'message' => "Searching by title and author: $title by $author"
+                ];
+
+                // Create a search URL for Goodreads
+                $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($title . " " . $author);
+
+                // Make a request to the search URL
+                $ch = curl_init($searchUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+                $searchResponse = curl_exec($ch);
+                curl_close($ch);
+
+                // Extract the first book URL from the search results
+                $bookUrl = null;
+                if (preg_match('/<a[^>]+href="(\/book\/show\/[^"]+)"[^>]*>/i', $searchResponse, $matches)) {
+                    $bookUrl = 'https://www.goodreads.com' . html_entity_decode($matches[1]);
+                    $detailedStatus['steps'][] = [
+                        'name' => 'book_url',
+                        'status' => 'success',
+                        'message' => "Found book URL: $bookUrl"
+                    ];
+
+                    // Now get the book details using the URL
+                    $bookDetails = $goodreadsFetcher->getBookDetails($bookUrl);
+
+                    if ($bookDetails) {
+                        // Create a response similar to fetchReviewsByISBN
+                        $response = [
+                            [
+                                'source_id' => 1,
+                                'reviewer_name' => 'Goodreads Aggregate',
+                                'book_metadata' => $bookDetails
+                            ]
+                        ];
+                    } else {
+                        throw new Exception("Failed to get book details from URL: $bookUrl");
+                    }
+                } else {
+                    throw new Exception("No book found for title: $title by author: $author");
+                }
+            } else {
+                throw new Exception("No ISBN, title, or author provided for search");
+            }
 
             // Calculate processing time
             $processingTime = microtime(true) - $startTime;

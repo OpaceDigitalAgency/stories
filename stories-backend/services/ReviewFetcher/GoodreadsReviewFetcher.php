@@ -72,8 +72,16 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->startPage = $options['startPage'] ?? 1;
         $this->reviewLimit = $limit;
 
-        // If continuing from last, get existing reviews
-        if ($this->continueFromLast) {
+        // Check if we should skip database checks (for validation mode)
+        $skipDbCheck = $options['skip_db_check'] ?? false;
+
+        // If we're in validation mode, skip database checks
+        if ($skipDbCheck) {
+            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+                "Skipping database checks (validation mode)");
+        }
+        // If continuing from last and not in validation mode, get existing reviews
+        else if ($this->continueFromLast) {
             // Get existing reviews for duplicate checking
             // Get the last GraphQL page token
             $stmt = $this->db->prepare("
@@ -413,8 +421,23 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
 
-        // Make the request to the VPS Headless Browser service
-        $vpsResponse = $this->makeRequest($url);
+        // Make the request to the VPS Headless Browser service with API key in header
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "x-api-key: stories-scraper-api-key-2023"
+        ]);
+
+        $vpsResponse = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 400) {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ VPS Headless Browser API error: HTTP {$httpCode}");
+            $vpsResponse = false;
+        }
 
         if ($vpsResponse !== false) {
             // Parse the response
@@ -654,10 +677,24 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     private function scrapeReviews(string $reviewsUrl, int $limit, array $options = []): array {
         $continueFromLast = $options['continueFromLast'] ?? false;
         $bookId = $options['book_id'] ?? 0;
+        $skipDbCheck = $options['skip_db_check'] ?? false;
+
+        // Create debug directory if it doesn't exist
+        $debugDir = __DIR__ . '/debug';
+        if (!is_dir($debugDir)) {
+            mkdir($debugDir, 0755, true);
+        }
 
         // Get existing reviews for duplicate checking
         $existingReviews = [];
-        if ($continueFromLast && $bookId) {
+
+        // Skip database check if we're in validation mode
+        if ($skipDbCheck) {
+            $this->logToFile($debugDir . '/goodreads-log.txt',
+                "Skipping database check for reviews (validation mode)");
+        }
+        // Otherwise, get existing reviews if continuing from last
+        else if ($continueFromLast && $bookId) {
             $stmt = $this->db->prepare("
                 SELECT r.*, r.metadata as review_metadata
                 FROM reviews r
@@ -667,7 +704,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $stmt->execute([$bookId, $this->sourceId]);
             $existingReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $this->logToFile(__DIR__ . '/debug/goodreads-log.txt',
+            $this->logToFile($debugDir . '/goodreads-log.txt',
                 "Found " . count($existingReviews) . " existing reviews for duplicate checking");
         }
 

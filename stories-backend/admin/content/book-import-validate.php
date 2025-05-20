@@ -340,8 +340,16 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                     // Check if Python script exists
                     $pythonScript = __DIR__ . '/../../../goodreads_book_info.py';
                     if (file_exists($pythonScript)) {
-                        // Build the search URL
-                        $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+                        // Try to build a direct book URL if possible
+                        if (!empty($bookDetails['title']) && !empty($bookDetails['author'])) {
+                            // Format the URL with title and author for better results
+                            $titleSlug = preg_replace('/[^a-z0-9]+/i', '_', strtolower($bookDetails['title']));
+                            $titleSlug = trim($titleSlug, '_');
+                            $searchUrl = "https://www.goodreads.com/book/show/" . urlencode($titleSlug) . "?q=" . urlencode($cleanIsbn);
+                        } else {
+                            // Fallback to search URL
+                            $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+                        }
 
                         // Execute Python script
                         $command = "python3 " . escapeshellarg($pythonScript) . " " . escapeshellarg($searchUrl) . " 2>&1";
@@ -353,11 +361,27 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                         if ($returnCode === 0) {
                             // Look for JSON output in the Python script output
                             $jsonData = null;
+                            $jsonFile = null;
+
+                            // First check if the script created a JSON file
                             foreach ($output as $line) {
-                                if (strpos($line, '{') === 0) {
-                                    $jsonData = json_decode($line, true);
-                                    if ($jsonData) {
+                                if (strpos($line, 'Saved book information to ') !== false) {
+                                    $jsonFile = trim(str_replace('Saved book information to ', '', $line));
+                                    if (file_exists($jsonFile)) {
+                                        $jsonData = json_decode(file_get_contents($jsonFile), true);
                                         break;
+                                    }
+                                }
+                            }
+
+                            // If no file found, look for JSON in the output
+                            if (!$jsonData) {
+                                foreach ($output as $line) {
+                                    if (strpos($line, '{') === 0) {
+                                        $jsonData = json_decode($line, true);
+                                        if ($jsonData) {
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -365,20 +389,31 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                             if ($jsonData) {
                                 $foundInSources[] = 'Goodreads';
 
+                                // Log the full JSON data for debugging
+                                error_log("Goodreads JSON data: " . json_encode($jsonData));
+
                                 // Extract book details from JSON data
                                 $bookData['goodreads'] = [
                                     'title' => $jsonData['title'] ?? '',
                                     'author' => $jsonData['author'] ?? '',
                                     'publisher' => $jsonData['publisher'] ?? '',
-                                    'publication_date' => $jsonData['published_date'] ?? '',
-                                    'page_count' => $jsonData['pages'] ?? '',
+                                    'publication_date' => $jsonData['published_date'] ?? ($jsonData['publication_date'] ?? ''),
+                                    'page_count' => $jsonData['pages'] ?? ($jsonData['page_count'] ?? ''),
                                     'isbn' => $jsonData['isbn'] ?? '',
                                     'isbn13' => $jsonData['isbn13'] ?? '',
                                     'categories' => $jsonData['genres'] ?? [],
                                     'description' => $jsonData['description'] ?? '',
                                     'cover_url' => $jsonData['cover_image'] ?? '',
                                     'series' => $jsonData['series'] ?? '',
+                                    'series_number' => $jsonData['series_number'] ?? '',
                                     'language' => $jsonData['language'] ?? '',
+                                    'format' => $jsonData['format'] ?? '',
+                                    'rating' => $jsonData['rating'] ?? '',
+                                    'rating_count' => $jsonData['rating_count'] ?? '',
+                                    'review_count' => $jsonData['review_count'] ?? '',
+                                    'awards' => $jsonData['awards'] ?? '',
+                                    'characters' => $jsonData['characters'] ?? [],
+                                    'settings' => $jsonData['settings'] ?? [],
                                     'source' => 'Goodreads'
                                 ];
 
@@ -2200,6 +2235,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     ?>">
                                                                         <?php echo htmlspecialchars($data['source']); ?>
                                                                     </span>
+                                                                    <?php if ($source === 'goodreads' && !empty($data['rating'])): ?>
+                                                                    <div class="small mt-1">
+                                                                        <span class="text-warning">
+                                                                            <?php
+                                                                            $rating = floatval($data['rating']);
+                                                                            $fullStars = floor($rating);
+                                                                            $halfStar = $rating - $fullStars >= 0.5;
+
+                                                                            for ($i = 0; $i < $fullStars; $i++) {
+                                                                                echo '<i class="fas fa-star"></i>';
+                                                                            }
+                                                                            if ($halfStar) {
+                                                                                echo '<i class="fas fa-star-half-alt"></i>';
+                                                                            }
+                                                                            ?>
+                                                                        </span>
+                                                                        <span class="text-muted"><?php echo $data['rating']; ?></span>
+                                                                    </div>
+                                                                    <?php endif; ?>
                                                                 </td>
                                                                 <td><?php echo htmlspecialchars($data['title']); ?></td>
                                                                 <td><?php echo htmlspecialchars($data['author']); ?></td>
@@ -2219,6 +2273,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     $series = '';
                                                                     if (!empty($data['series'])) {
                                                                         $series = $data['series'];
+                                                                        if (!empty($data['series_number'])) {
+                                                                            $series .= ' #' . $data['series_number'];
+                                                                        }
                                                                     } else if (!empty($data['categories'])) {
                                                                         foreach ($data['categories'] as $category) {
                                                                             if (stripos($category, 'series') !== false) {
@@ -2239,6 +2296,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     if (empty($data['publisher'])) $missingFields[] = 'Publisher';
                                                                     if (empty($data['language'])) $missingFields[] = 'Language';
                                                                     if (empty($data['categories']) || count($data['categories']) < 2) $missingFields[] = 'Genres';
+
+                                                                    // For Goodreads, check for additional fields
+                                                                    if ($source === 'goodreads') {
+                                                                        if (empty($data['format'])) $missingFields[] = 'Format';
+                                                                        if (empty($data['rating'])) $missingFields[] = 'Rating';
+                                                                        if (empty($data['characters'])) $missingFields[] = 'Characters';
+                                                                    }
 
                                                                     if (!empty($missingFields)) {
                                                                         echo '<span class="text-warning">' . htmlspecialchars(implode(', ', $missingFields)) . '</span>';
@@ -2304,6 +2368,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <?php if (!empty($data['cover_url'])): ?>
                                                                                                 <img src="<?php echo htmlspecialchars($data['cover_url']); ?>" alt="Book Cover" class="img-fluid mb-3" style="max-height: 300px;">
                                                                                             <?php endif; ?>
+
+                                                                                            <?php if ($data['source'] === 'Goodreads' && !empty($data['rating'])): ?>
+                                                                                            <div class="rating-container mb-3">
+                                                                                                <div class="d-flex align-items-center">
+                                                                                                    <div class="rating-stars me-2">
+                                                                                                        <?php
+                                                                                                        $rating = floatval($data['rating']);
+                                                                                                        $fullStars = floor($rating);
+                                                                                                        $halfStar = $rating - $fullStars >= 0.5;
+                                                                                                        $emptyStars = 5 - $fullStars - ($halfStar ? 1 : 0);
+
+                                                                                                        for ($i = 0; $i < $fullStars; $i++) {
+                                                                                                            echo '<i class="fas fa-star text-warning"></i>';
+                                                                                                        }
+                                                                                                        if ($halfStar) {
+                                                                                                            echo '<i class="fas fa-star-half-alt text-warning"></i>';
+                                                                                                        }
+                                                                                                        for ($i = 0; $i < $emptyStars; $i++) {
+                                                                                                            echo '<i class="far fa-star text-warning"></i>';
+                                                                                                        }
+                                                                                                        ?>
+                                                                                                    </div>
+                                                                                                    <div class="rating-value">
+                                                                                                        <strong><?php echo htmlspecialchars($data['rating']); ?>/5</strong>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <?php if (!empty($data['rating_count'])): ?>
+                                                                                                <div class="rating-count small text-muted">
+                                                                                                    Based on <?php echo number_format($data['rating_count']); ?> ratings
+                                                                                                </div>
+                                                                                                <?php endif; ?>
+                                                                                                <?php if (!empty($data['review_count'])): ?>
+                                                                                                <div class="review-count small text-muted">
+                                                                                                    <?php echo number_format($data['review_count']); ?> reviews
+                                                                                                </div>
+                                                                                                <?php endif; ?>
+                                                                                            </div>
+                                                                                            <?php endif; ?>
                                                                                         </div>
                                                                                         <div class="col-md-6">
                                                                                             <h6>Basic Information</h6>
@@ -2314,8 +2416,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <p><strong>Publisher:</strong> <?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : 'N/A'; ?></p>
                                                                                             <p><strong>Publication Date:</strong> <?php echo !empty($data['publication_date']) ? htmlspecialchars($data['publication_date']) : 'N/A'; ?></p>
                                                                                             <p><strong>Page Count:</strong> <?php echo !empty($data['page_count']) ? htmlspecialchars($data['page_count']) : 'N/A'; ?></p>
-                                                                                            <p><strong>Series:</strong> <?php echo !empty($series) ? htmlspecialchars($series) : (!empty($data['series']) ? htmlspecialchars($data['series']) : 'N/A'); ?></p>
+
+                                                                                            <?php if (!empty($data['series']) || !empty($series)): ?>
+                                                                                            <p>
+                                                                                                <strong>Series:</strong>
+                                                                                                <?php
+                                                                                                $seriesText = !empty($data['series']) ? htmlspecialchars($data['series']) : (!empty($series) ? htmlspecialchars($series) : 'N/A');
+                                                                                                echo $seriesText;
+
+                                                                                                if (!empty($data['series_number'])) {
+                                                                                                    echo ' #' . htmlspecialchars($data['series_number']);
+                                                                                                }
+                                                                                                ?>
+                                                                                            </p>
+                                                                                            <?php endif; ?>
+
                                                                                             <p><strong>Language:</strong> <?php echo !empty($data['language']) ? htmlspecialchars($data['language']) : 'N/A'; ?></p>
+
+                                                                                            <?php if (!empty($data['format'])): ?>
+                                                                                            <p><strong>Format:</strong> <?php echo htmlspecialchars($data['format']); ?></p>
+                                                                                            <?php endif; ?>
                                                                                         </div>
                                                                                     </div>
 
@@ -2326,6 +2446,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <?php if (!empty($data['categories'])): ?>
                                                                                                 <p><strong>Categories/Genres:</strong>
                                                                                                     <?php echo htmlspecialchars(implode(', ', $data['categories'])); ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+
+                                                                                            <?php if (!empty($data['characters'])): ?>
+                                                                                                <p><strong>Characters:</strong>
+                                                                                                    <?php
+                                                                                                    if (is_array($data['characters'])) {
+                                                                                                        echo htmlspecialchars(implode(', ', $data['characters']));
+                                                                                                    } else {
+                                                                                                        echo htmlspecialchars($data['characters']);
+                                                                                                    }
+                                                                                                    ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+
+                                                                                            <?php if (!empty($data['settings'])): ?>
+                                                                                                <p><strong>Settings:</strong>
+                                                                                                    <?php
+                                                                                                    if (is_array($data['settings'])) {
+                                                                                                        echo htmlspecialchars(implode(', ', $data['settings']));
+                                                                                                    } else {
+                                                                                                        echo htmlspecialchars($data['settings']);
+                                                                                                    }
+                                                                                                    ?>
+                                                                                                </p>
+                                                                                            <?php endif; ?>
+
+                                                                                            <?php if (!empty($data['awards'])): ?>
+                                                                                                <p><strong>Awards:</strong>
+                                                                                                    <?php echo htmlspecialchars($data['awards']); ?>
                                                                                                 </p>
                                                                                             <?php endif; ?>
 

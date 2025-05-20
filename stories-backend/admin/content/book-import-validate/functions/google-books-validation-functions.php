@@ -18,25 +18,74 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
         // Start timer for performance tracking
         $startTime = microtime(true);
 
-        // Log that we're starting Google Books fetch
-        error_log("Starting Google Books data fetch for ISBN: $isbn");
+        // Initialize status tracking
+        $status = [
+            'status' => 'initializing',
+            'message' => 'Starting Google Books data fetch',
+            'processing_time' => 0,
+            'steps' => []
+        ];
 
-        // Try ISBN search first
-        $url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode($isbn);
+        // Add a unique request ID to prevent caching issues
+        $requestId = uniqid();
 
-        // Make the request
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // Try ISBN search first if we have an ISBN
+        $isbnResults = null;
+        if (!empty($isbn)) {
+            $status['steps'][] = [
+                'name' => 'isbn_search',
+                'status' => 'in_progress',
+                'message' => "Searching by ISBN: $isbn"
+            ];
 
-        $data = json_decode($response, true);
+            $url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode($isbn) . "&random=" . $requestId;
 
-        // If no results, try title and author search
-        if (empty($data['items']) && (!empty($title) || !empty($author))) {
+            // Make the request
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_HEADER, false);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) {
+                $status['steps'][] = [
+                    'name' => 'isbn_search',
+                    'status' => 'error',
+                    'message' => "cURL error: $error"
+                ];
+            } else {
+                $isbnResults = json_decode($response, true);
+
+                if (isset($isbnResults['items']) && !empty($isbnResults['items'])) {
+                    $status['steps'][] = [
+                        'name' => 'isbn_search',
+                        'status' => 'success',
+                        'message' => "Found " . count($isbnResults['items']) . " results by ISBN"
+                    ];
+                } else {
+                    $status['steps'][] = [
+                        'name' => 'isbn_search',
+                        'status' => 'warning',
+                        'message' => "No results found by ISBN"
+                    ];
+                }
+            }
+        }
+
+        // If no results from ISBN search, try title and author search
+        $titleAuthorResults = null;
+        if (empty($isbnResults['items']) && (!empty($title) || !empty($author))) {
+            $status['steps'][] = [
+                'name' => 'title_author_search',
+                'status' => 'in_progress',
+                'message' => "Searching by title/author: $title / $author"
+            ];
+
             $query = '';
             if (!empty($title)) {
                 $query .= "intitle:" . urlencode($title);
@@ -48,20 +97,98 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
                 $query .= "inauthor:" . urlencode($author);
             }
 
-            $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query;
+            $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query . "&random=" . $requestId;
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_HEADER, false);
             $response = curl_exec($ch);
+            $error = curl_error($ch);
             curl_close($ch);
 
-            $data = json_decode($response, true);
+            if ($error) {
+                $status['steps'][] = [
+                    'name' => 'title_author_search',
+                    'status' => 'error',
+                    'message' => "cURL error: $error"
+                ];
+            } else {
+                $titleAuthorResults = json_decode($response, true);
+
+                if (isset($titleAuthorResults['items']) && !empty($titleAuthorResults['items'])) {
+                    $status['steps'][] = [
+                        'name' => 'title_author_search',
+                        'status' => 'success',
+                        'message' => "Found " . count($titleAuthorResults['items']) . " results by title/author"
+                    ];
+                } else {
+                    $status['steps'][] = [
+                        'name' => 'title_author_search',
+                        'status' => 'warning',
+                        'message' => "No results found by title/author"
+                    ];
+                }
+            }
         }
 
+        // Use the results from ISBN search if available, otherwise use title/author search results
+        $data = !empty($isbnResults['items']) ? $isbnResults : $titleAuthorResults;
+
         if (!empty($data['items'])) {
+            $status['steps'][] = [
+                'name' => 'extract_data',
+                'status' => 'in_progress',
+                'message' => "Extracting data from first result"
+            ];
+
             $volumeInfo = $data['items'][0]['volumeInfo'] ?? [];
+
+            // Verify we have the correct book by checking title/author match
+            $foundTitle = $volumeInfo['title'] ?? '';
+            $foundAuthors = $volumeInfo['authors'] ?? [];
+            $foundAuthor = implode(', ', $foundAuthors);
+
+            $titleMatch = false;
+            $authorMatch = false;
+
+            // Check title match (case-insensitive, partial match)
+            if (!empty($title) && !empty($foundTitle)) {
+                if (stripos($foundTitle, $title) !== false || stripos($title, $foundTitle) !== false) {
+                    $titleMatch = true;
+                    $status['steps'][] = [
+                        'name' => 'verify_title',
+                        'status' => 'success',
+                        'message' => "Title match: '$title' ≈ '$foundTitle'"
+                    ];
+                } else {
+                    $status['steps'][] = [
+                        'name' => 'verify_title',
+                        'status' => 'warning',
+                        'message' => "Title mismatch: '$title' ≠ '$foundTitle'"
+                    ];
+                }
+            }
+
+            // Check author match (case-insensitive, partial match)
+            if (!empty($author) && !empty($foundAuthor)) {
+                if (stripos($foundAuthor, $author) !== false || stripos($author, $foundAuthor) !== false) {
+                    $authorMatch = true;
+                    $status['steps'][] = [
+                        'name' => 'verify_author',
+                        'status' => 'success',
+                        'message' => "Author match: '$author' ≈ '$foundAuthor'"
+                    ];
+                } else {
+                    $status['steps'][] = [
+                        'name' => 'verify_author',
+                        'status' => 'warning',
+                        'message' => "Author mismatch: '$author' ≠ '$foundAuthor'"
+                    ];
+                }
+            }
 
             // Extract ISBNs
             $isbn10 = '';
@@ -74,6 +201,20 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
                         $isbn13 = $identifier['identifier'];
                     }
                 }
+
+                $status['steps'][] = [
+                    'name' => 'extract_isbn',
+                    'status' => 'success',
+                    'message' => "Found ISBNs: " . ($isbn10 ? "ISBN-10: $isbn10" : "") .
+                                 ($isbn10 && $isbn13 ? ", " : "") .
+                                 ($isbn13 ? "ISBN-13: $isbn13" : "")
+                ];
+            } else {
+                $status['steps'][] = [
+                    'name' => 'extract_isbn',
+                    'status' => 'warning',
+                    'message' => "No ISBNs found in the result"
+                ];
             }
 
             // Extract categories/genres
@@ -102,16 +243,29 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
                 'maturity_rating' => $volumeInfo['maturityRating'] ?? ''
             ];
 
-            // Log success for debugging
+            // Calculate processing time
             $endTime = microtime(true);
             $totalTime = round($endTime - $startTime, 2);
-            error_log("Successfully extracted Google Books data for ISBN: $isbn in {$totalTime}s");
+
+            // Update status
+            $status['status'] = 'success';
+            $status['message'] = "Successfully extracted Google Books data";
+            $status['processing_time'] = $totalTime;
+
+            // Add status information to the book data
+            $bookData['_status'] = $status;
 
             return $bookData;
         }
 
-        // Log failure for debugging
-        error_log("No book found on Google Books for ISBN: $isbn");
+        // No results found
+        $endTime = microtime(true);
+        $totalTime = round($endTime - $startTime, 2);
+
+        $status['status'] = 'error';
+        $status['message'] = "No book found on Google Books";
+        $status['processing_time'] = $totalTime;
+
         return null;
     } catch (Exception $e) {
         error_log("Error fetching Google Books data: " . $e->getMessage());

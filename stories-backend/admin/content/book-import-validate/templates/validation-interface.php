@@ -111,6 +111,7 @@ $sources = array_keys($sourceData);
 
                                     $details = !empty($sourceData[$source]['message']) ? $sourceData[$source]['message'] : '';
                                     $processingTime = !empty($sourceData[$source]['processing_time']) ? $sourceData[$source]['processing_time'] . 's' : '';
+                                    $steps = !empty($sourceData[$source]['steps']) ? $sourceData[$source]['steps'] : [];
                                 ?>
                                 <tr>
                                     <td><strong><?php echo ucfirst(str_replace('_', ' ', $source)); ?></strong></td>
@@ -122,7 +123,56 @@ $sources = array_keys($sourceData);
                                             <small class="text-muted">(<?php echo $processingTime; ?>)</small>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?php echo htmlspecialchars($details); ?></td>
+                                    <td>
+                                        <?php echo htmlspecialchars($details); ?>
+
+                                        <?php if (!empty($steps)): ?>
+                                            <button class="btn btn-sm btn-outline-secondary mt-1" type="button"
+                                                    data-toggle="collapse" data-target="#steps-<?php echo $source; ?>"
+                                                    aria-expanded="false" aria-controls="steps-<?php echo $source; ?>">
+                                                <i class="fas fa-list"></i> Show Steps
+                                            </button>
+                                            <div class="collapse mt-2" id="steps-<?php echo $source; ?>">
+                                                <div class="card card-body p-2">
+                                                    <ul class="list-group list-group-flush">
+                                                        <?php foreach ($steps as $step): ?>
+                                                            <?php
+                                                                $stepStatusClass = '';
+                                                                switch ($step['status'] ?? 'unknown') {
+                                                                    case 'success':
+                                                                        $stepStatusClass = 'success';
+                                                                        $stepIcon = 'check-circle';
+                                                                        break;
+                                                                    case 'error':
+                                                                        $stepStatusClass = 'danger';
+                                                                        $stepIcon = 'times-circle';
+                                                                        break;
+                                                                    case 'warning':
+                                                                        $stepStatusClass = 'warning';
+                                                                        $stepIcon = 'exclamation-circle';
+                                                                        break;
+                                                                    case 'in_progress':
+                                                                        $stepStatusClass = 'info';
+                                                                        $stepIcon = 'spinner';
+                                                                        break;
+                                                                    default:
+                                                                        $stepStatusClass = 'secondary';
+                                                                        $stepIcon = 'question-circle';
+                                                                }
+                                                            ?>
+                                                            <li class="list-group-item p-1">
+                                                                <span class="text-<?php echo $stepStatusClass; ?>">
+                                                                    <i class="fas fa-<?php echo $stepIcon; ?>"></i>
+                                                                </span>
+                                                                <strong><?php echo ucwords(str_replace('_', ' ', $step['name'] ?? 'unknown')); ?>:</strong>
+                                                                <?php echo htmlspecialchars($step['message'] ?? ''); ?>
+                                                            </li>
+                                                        <?php endforeach; ?>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -156,6 +206,10 @@ $sources = array_keys($sourceData);
                         <button type="button" class="btn btn-info" id="validateAgain">
                             <i class="fas fa-sync-alt"></i> Validate Again
                         </button>
+
+                        <a href="?action=clear_google_books_cache&book_id=<?php echo (int)$book['id']; ?>" class="btn btn-warning">
+                            <i class="fas fa-trash-alt"></i> Clear Google Books Cache
+                        </a>
 
                         <button type="button" class="btn btn-outline-primary" id="exportChanges">
                             <i class="fas fa-file-export"></i> Export Changes

@@ -153,6 +153,95 @@ function clearValidationCacheNew($bookId, $isbn, $title, $db) {
 }
 
 /**
+ * Clear all validation cache entries
+ *
+ * @param PDO $db Database connection
+ * @return bool True if successful, false otherwise
+ */
+function clearAllValidationCache($db) {
+    try {
+        // Check if we have a validation_cache table
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as table_exists
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'validation_cache'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['table_exists'] == 0) {
+            return true; // No cache table, nothing to clear
+        }
+
+        // Delete all cache entries
+        $stmt = $db->prepare("TRUNCATE TABLE validation_cache");
+        $stmt->execute();
+
+        return true;
+    } catch (Exception $e) {
+        error_log("Cache clear all error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Clear validation cache for a specific source
+ *
+ * @param string $source The source name (e.g., 'google_books', 'open_library', 'goodreads')
+ * @param PDO $db Database connection
+ * @return bool True if successful, false otherwise
+ */
+function clearSourceValidationCache($source, $db) {
+    try {
+        // Check if we have a validation_cache table
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as table_exists
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'validation_cache'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['table_exists'] == 0) {
+            return true; // No cache table, nothing to clear
+        }
+
+        // Get all cache entries
+        $stmt = $db->prepare("SELECT cache_key, cache_data FROM validation_cache");
+        $stmt->execute();
+        $cacheEntries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Keys to delete
+        $keysToDelete = [];
+
+        // Loop through cache entries and check if they contain the source
+        foreach ($cacheEntries as $entry) {
+            $cacheData = json_decode($entry['cache_data'], true);
+            if (isset($cacheData['sourceData'][$source])) {
+                $keysToDelete[] = $entry['cache_key'];
+            }
+        }
+
+        if (!empty($keysToDelete)) {
+            // Delete matching cache entries
+            $placeholders = implode(',', array_fill(0, count($keysToDelete), '?'));
+            $stmt = $db->prepare("
+                DELETE FROM validation_cache
+                WHERE cache_key IN ($placeholders)
+            ");
+            $stmt->execute($keysToDelete);
+        }
+
+        return true;
+    } catch (Exception $e) {
+        error_log("Cache clear source error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Get validation history for a book
  *
  * @param int $bookId The book ID

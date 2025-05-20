@@ -115,8 +115,27 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             if ($googleBooksFetcher && $googleBooksFetcher->isConfigured()) {
                 $googleBooksData = fetchGoogleBooksDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($googleBooksData) {
+                    // Check if we have status information
+                    $status = 'success';
+                    $message = 'Successfully fetched data from Google Books';
+                    $processingTime = null;
+
+                    if (isset($googleBooksData['_status'])) {
+                        $statusInfo = $googleBooksData['_status'];
+                        $status = $statusInfo['status'] ?? 'success';
+                        $message = $statusInfo['message'] ?? 'Successfully fetched data from Google Books';
+                        $processingTime = $statusInfo['processing_time'] ?? null;
+                        $steps = $statusInfo['steps'] ?? [];
+
+                        // Remove status info from the data
+                        unset($googleBooksData['_status']);
+                    }
+
                     $sourceData['google_books'] = [
-                        'status' => 'success',
+                        'status' => $status,
+                        'message' => $message,
+                        'processing_time' => $processingTime,
+                        'steps' => $steps ?? [],
                         'data' => $googleBooksData
                     ];
                 } else {

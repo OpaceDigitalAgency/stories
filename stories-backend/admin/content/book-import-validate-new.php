@@ -188,6 +188,43 @@ try {
                 $messageType = 'danger';
             }
             break;
+
+        case 'clear_google_books_cache':
+            // Clear Google Books cache
+            require_once 'book-import-validate/functions/cache-functions.php';
+            if (clearSourceValidationCache('google_books', $db)) {
+                $message = 'Google Books cache cleared successfully.';
+                $messageType = 'success';
+
+                // If a book ID is provided, refresh that book's data
+                if ($bookId) {
+                    // Get book details
+                    $stmt = $db->prepare("
+                        SELECT di.id, di.title, b.*
+                        FROM directory_items di
+                        JOIN books b ON di.id = b.directory_item_id
+                        WHERE di.id = ?
+                    ");
+                    $stmt->execute([$bookId]);
+                    $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($book) {
+                        // Re-validate with fresh data
+                        $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
+                        $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, true);
+
+                        if ($validationResult['status'] === 'success') {
+                            $message .= ' Book data refreshed successfully.';
+                        } else {
+                            $message .= ' Error refreshing book data: ' . $validationResult['message'];
+                        }
+                    }
+                }
+            } else {
+                $message = 'Error clearing Google Books cache.';
+                $messageType = 'danger';
+            }
+            break;
     }
 
     // Get book data if a book ID is provided

@@ -310,13 +310,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             if (!empty($matches[1][0])) {
                 $url = 'https://www.goodreads.com' . html_entity_decode($matches[1][0]);
 
-                // Make sure we're not returning a reviews URL
-                if (strpos($url, '/reviews') !== false) {
-                    $url = str_replace('/reviews', '', $url);
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Found reviews URL, converting to main book URL: {$url}");
-                } else {
-                    $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 5 (any book page link): {$url}");
-                }
+                // Note: We're keeping the /reviews URL if it exists, as it might be needed for review scraping
+                // We'll handle removing it in getBookDetails() when we need the main book page for metadata
+                $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found book URL using Pattern 5 (any book page link): {$url}");
 
                 return $url;
             }
@@ -418,11 +414,12 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             mkdir($debugDir, 0755, true);
         }
 
-        // Make sure we're not using a reviews URL
+        // Make sure we're not using a reviews URL when fetching book details
+        // We only want the main book page for metadata extraction
         if (strpos($bookUrl, '/reviews') !== false) {
             $originalUrl = $bookUrl;
             $bookUrl = str_replace('/reviews', '', $bookUrl);
-            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Found reviews URL, converting to main book URL: {$bookUrl}");
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Found reviews URL '{$originalUrl}', converting to main book URL for metadata extraction: '{$bookUrl}'");
         }
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Fetching book details from URL: {$bookUrl}");

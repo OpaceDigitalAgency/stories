@@ -195,11 +195,12 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                         'message' => "Found book URL: $bookUrl"
                     ];
 
-                    // Make sure we're not using a reviews URL
+                    // Make sure we're not using a reviews URL when fetching book metadata
+                    // We only want the main book page for metadata extraction
                     if (strpos($bookUrl, '/reviews') !== false) {
                         $originalUrl = $bookUrl;
                         $bookUrl = str_replace('/reviews', '', $bookUrl);
-                        error_log("⚠️ Found reviews URL, converting to main book URL: {$bookUrl}");
+                        error_log("⚠️ Found reviews URL '{$originalUrl}', converting to main book URL for metadata extraction: '{$bookUrl}'");
                     }
 
                     // Now get the book details using the URL

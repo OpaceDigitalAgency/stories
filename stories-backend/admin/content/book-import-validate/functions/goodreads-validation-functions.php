@@ -15,9 +15,6 @@
  */
 function fetchGoodreadsDataNew($isbn, $title, $author) {
     try {
-        // Include the PHP-based Goodreads scraper
-        require_once __DIR__ . '/goodreads/goodreads_scraper.php';
-
         // Start timer for performance tracking
         $startTime = microtime(true);
 
@@ -25,7 +22,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         $detailedStatus = [
             'status' => 'initializing',
             'message' => 'Starting Goodreads data fetch',
-            'method' => 'php_scraper',
+            'method' => 'review_fetcher',
             'processing_time' => 0,
             'steps' => []
         ];
@@ -35,6 +32,32 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             'name' => 'initialization',
             'status' => 'success',
             'message' => "Parameters: ISBN: '$isbn', Title: '$title', Author: '$author'"
+        ];
+
+        // Create a GoodreadsReviewFetcher instance
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherFactory.php';
+        $reviewFetcherFactory = new ReviewFetcherFactory();
+        $goodreadsFetcher = $reviewFetcherFactory->getFetcher(1); // 1 is the Goodreads source ID
+
+        if (!$goodreadsFetcher || !$goodreadsFetcher->isConfigured()) {
+            $detailedStatus['steps'][] = [
+                'name' => 'fetcher_initialization',
+                'status' => 'error',
+                'message' => "Failed to initialize Goodreads review fetcher"
+            ];
+
+            $detailedStatus['status'] = 'error';
+            $detailedStatus['message'] = 'Failed to initialize Goodreads review fetcher';
+
+            return [
+                '_status' => $detailedStatus
+            ];
+        }
+
+        $detailedStatus['steps'][] = [
+            'name' => 'fetcher_initialization',
+            'status' => 'success',
+            'message' => "Successfully initialized Goodreads review fetcher"
         ];
 
         // Try to build a direct book URL if possible
@@ -61,59 +84,88 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             ];
         }
 
-        // Use the PHP-based Goodreads scraper
+        // Use the GoodreadsReviewFetcher to find the book
         $detailedStatus['steps'][] = [
-            'name' => 'php_scraper',
+            'name' => 'review_fetcher',
             'status' => 'in_progress',
-            'message' => "Using PHP-based Goodreads scraper"
+            'message' => "Using GoodreadsReviewFetcher to find book"
         ];
 
-        // Call the PHP scraper function
-        $goodreadsStatus = getGoodreadsBookInfo($searchUrl);
+        // Set options for the fetcher
+        $options = [
+            'timeout' => 30, // Longer timeout for validation
+            'maxPages' => 1,
+            'limit' => 1
+        ];
 
-        // Calculate processing time
-        $processingTime = microtime(true) - $startTime;
-        $goodreadsStatus['processing_time'] = round($processingTime, 2);
+        try {
+            // Use the fetchReviewsByISBN method to get book data
+            // This will automatically find the book URL and extract book details
+            $response = $goodreadsFetcher->fetchReviewsByISBN($isbn, 1, $options);
 
-        // Update method
-        $goodreadsStatus['method'] = 'php_scraper';
+            // Calculate processing time
+            $processingTime = microtime(true) - $startTime;
 
-        // Merge steps from the scraper into our detailed status
-        if (isset($goodreadsStatus['steps']) && is_array($goodreadsStatus['steps'])) {
-            foreach ($goodreadsStatus['steps'] as $step) {
-                $detailedStatus['steps'][] = $step;
+            if (empty($response)) {
+                $error = $goodreadsFetcher->getLastError();
+                $detailedStatus['steps'][] = [
+                    'name' => 'review_fetcher',
+                    'status' => 'error',
+                    'message' => "Failed to fetch book data: " . ($error ?: "Unknown error")
+                ];
+
+                $detailedStatus['status'] = 'error';
+                $detailedStatus['message'] = 'Failed to fetch book data from Goodreads';
+                $detailedStatus['processing_time'] = round($processingTime, 2);
+
+                return [
+                    '_status' => $detailedStatus
+                ];
             }
-        }
 
-        // Check if we have book data
-        if (isset($goodreadsStatus['data']) && !empty($goodreadsStatus['data'])) {
-            $jsonData = $goodreadsStatus['data'];
+            // Success - we have book data
+            $detailedStatus['steps'][] = [
+                'name' => 'review_fetcher',
+                'status' => 'success',
+                'message' => "Successfully fetched book data from Goodreads"
+            ];
 
-            // Log the full JSON data for debugging
-            error_log("Goodreads JSON data: " . json_encode($jsonData));
+            // Get the book metadata from the first review
+            $bookMetadata = $response[0]['book_metadata'] ?? [];
 
-            // Extract book details from JSON data
-            // Make sure to clean any HTML tags from all fields
+            if (empty($bookMetadata)) {
+                $detailedStatus['steps'][] = [
+                    'name' => 'data_extraction',
+                    'status' => 'error',
+                    'message' => "No book metadata found in response"
+                ];
+
+                $detailedStatus['status'] = 'error';
+                $detailedStatus['message'] = 'No book metadata found in Goodreads response';
+                $detailedStatus['processing_time'] = round($processingTime, 2);
+
+                return [
+                    '_status' => $detailedStatus
+                ];
+            }
+
+            // Extract book details from metadata
             $bookData = [
-                'title' => strip_tags($jsonData['title'] ?? ''),
-                'author' => strip_tags($jsonData['author'] ?? ''),
-                'publisher' => strip_tags($jsonData['publisher'] ?? ''),
-                'publication_date' => strip_tags($jsonData['published_date'] ?? ($jsonData['publication_date'] ?? '')),
-                'page_count' => strip_tags($jsonData['pages'] ?? ($jsonData['page_count'] ?? '')),
-                'isbn' => strip_tags($jsonData['isbn'] ?? ''),
-                'isbn13' => strip_tags($jsonData['isbn13'] ?? ''),
-                'language' => strip_tags($jsonData['language'] ?? ''),
-                'format' => strip_tags($jsonData['format'] ?? ''),
-                'series' => strip_tags($jsonData['series'] ?? ''),
-                'awards' => strip_tags($jsonData['awards'] ?? ''),
-                'characters' => is_array($jsonData['characters'] ?? null) ? array_map('strip_tags', $jsonData['characters']) : [],
-                'settings' => is_array($jsonData['settings'] ?? null) ? array_map('strip_tags', $jsonData['settings']) : [],
-                'preview_link' => $jsonData['preview_link'] ?? '',
-                'cover_url' => $jsonData['cover_image'] ?? '',
-                'rating' => strip_tags($jsonData['rating'] ?? ''),
-                'rating_count' => strip_tags($jsonData['rating_count'] ?? ''),
-                'review_count' => strip_tags($jsonData['review_count'] ?? ''),
-                'maturity_rating' => strip_tags($jsonData['maturity_rating'] ?? '')
+                'title' => strip_tags($bookMetadata['title'] ?? ''),
+                'author' => strip_tags($bookMetadata['author'] ?? ''),
+                'publisher' => strip_tags($bookMetadata['publisher'] ?? ''),
+                'publication_date' => strip_tags($bookMetadata['publication_date'] ?? ''),
+                'page_count' => strip_tags($bookMetadata['page_count'] ?? ''),
+                'isbn' => strip_tags($bookMetadata['isbn'] ?? $isbn),
+                'isbn13' => strip_tags($bookMetadata['isbn13'] ?? ''),
+                'language' => strip_tags($bookMetadata['language'] ?? ''),
+                'format' => strip_tags($bookMetadata['format'] ?? ''),
+                'series' => strip_tags($bookMetadata['series'] ?? ''),
+                'description' => strip_tags($bookMetadata['description'] ?? ''),
+                'cover_url' => $bookMetadata['cover_url'] ?? '',
+                'rating' => strip_tags($bookMetadata['average_rating'] ?? ''),
+                'rating_count' => strip_tags($bookMetadata['ratings_count'] ?? ''),
+                'review_count' => strip_tags($bookMetadata['reviews_count'] ?? '')
             ];
 
             // Log success for debugging
@@ -121,40 +173,36 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             $totalTime = round($endTime - $startTime, 2);
 
             // Update detailed status with final information
-            $detailedStatus['status'] = $goodreadsStatus['status'] ?? 'success';
-            $detailedStatus['message'] = $goodreadsStatus['message'] ?? 'Successfully extracted data from Goodreads via PHP scraper';
+            $detailedStatus['status'] = 'success';
+            $detailedStatus['message'] = 'Successfully extracted data from Goodreads via ReviewFetcher';
             $detailedStatus['processing_time'] = $totalTime;
 
             // Add detailed status to book data
             $bookData['_status'] = $detailedStatus;
 
             return $bookData;
-        } else {
+        } catch (\Exception $e) {
             $detailedStatus['steps'][] = [
-                'name' => 'php_scraper',
+                'name' => 'review_fetcher',
                 'status' => 'error',
-                'message' => "PHP scraper failed to extract book information"
+                'message' => "Exception: " . $e->getMessage()
+            ];
+
+            $detailedStatus['status'] = 'error';
+            $detailedStatus['message'] = 'Exception while fetching data from Goodreads: ' . $e->getMessage();
+            $detailedStatus['processing_time'] = round(microtime(true) - $startTime, 2);
+
+            return [
+                '_status' => $detailedStatus
             ];
         }
-
-        // Return null with detailed status on Python script failure
-        $detailedStatus['status'] = 'error';
-        $detailedStatus['message'] = 'Failed to extract data from Goodreads';
-        $detailedStatus['method'] = 'python_script';
-
-        // Create empty book data with status
-        $bookData = [
-            '_status' => $detailedStatus
-        ];
-
-        return $bookData;
     } catch (Exception $e) {
         error_log("Error fetching Goodreads data: " . $e->getMessage());
         return [
             '_status' => [
                 'status' => 'error',
                 'message' => 'Exception while fetching Goodreads data: ' . $e->getMessage(),
-                'method' => 'python_script'
+                'method' => 'review_fetcher'
             ]
         ];
     }

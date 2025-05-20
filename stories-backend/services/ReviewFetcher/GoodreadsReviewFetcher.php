@@ -1571,8 +1571,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Use the VPS IP address as the default if environment variable is not set
         $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
-        // Try the API key without the year suffix first, as that's likely what the server is expecting
-        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key';
+        // Use the API key with the year suffix as specified in the server config
+        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
 
         // Log additional debug information
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Debug: Checking if VPS scraper is reachable");

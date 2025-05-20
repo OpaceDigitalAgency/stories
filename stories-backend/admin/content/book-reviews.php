@@ -51,18 +51,18 @@ try {
     // Reviews tab pagination - use standard parameter names
     $reviewsPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $reviewsPerPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
-    
+
     // Ensure reviewsPerPage is a valid value
     if ($reviewsPerPage <= 0) {
         $reviewsPerPage = 10;
     }
-    
+
     // Force debug output
     error_log("REVIEWS PER PAGE: " . $reviewsPerPage);
-    
+
     // Log the parameters for debugging
     error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
-    
+
     // Calculate offsets
     $reviewsOffset = ($reviewsPage - 1) * $reviewsPerPage;
     $reviewsOffset = max(0, $reviewsOffset);
@@ -130,7 +130,7 @@ try {
     if (!in_array($totalReviews, $validPerPageValues)) {
         $validPerPageValues[] = $totalReviews;
     }
-    
+
     // Add the current reviewsPerPage to the valid values if it's not already there
     if (!in_array($reviewsPerPage, $validPerPageValues)) {
         $validPerPageValues[] = $reviewsPerPage;
@@ -328,7 +328,7 @@ require_once '../includes/header.php';
                                     'actions' => ['view', 'edit', 'delete'],
                                     'bulkActions' => ['delete', 'analyze'],
                                     'itemsPerPage' => $reviewsPerPage,
-                                    'currentPage' => $reviewsPerPage,
+                                    'currentPage' => $currentPage,
                                     'totalItems' => $totalReviews,
                                     'htmlFields' => ['book', 'rating', 'source', 'actions'],
                                     'showPagination' => false,
@@ -367,17 +367,17 @@ $(document).ready(function() {
     $('.per-page-select').on('change', function() {
         // Get current URL
         let url = new URL(window.location.href);
-        
+
         // Update per_page parameter
         url.searchParams.set('per_page', $(this).val());
-        
+
         // Reset to page 1 when changing items per page
         url.searchParams.set('page', '1');
-        
+
         // Remove any old parameter names that might be in the URL
         url.searchParams.delete('reviews_per_page');
         url.searchParams.delete('reviews_page');
-        
+
         // Redirect to the new URL
         window.location.href = url.toString();
     });

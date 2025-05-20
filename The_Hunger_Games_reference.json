@@ -1,0 +1,88 @@
+{
+  "title": {
+    "selector": "h1.Text__title1",
+    "example_value": "The Hunger Games",
+    "actual_value": "The Hunger Games"
+  },
+  "author": {
+    "selector": "span.ContributorLink__name",
+    "example_value": "Suzanne Collins",
+    "actual_value": "Suzanne Collins"
+  },
+  "rating": {
+    "selector": "div.RatingStatistics__rating",
+    "example_value": "4.34",
+    "actual_value": "4.34"
+  },
+  "description": {
+    "selector": "div.DetailsLayoutRightParagraph__widthConstrained",
+    "example_value": "Winning means fame and fortune. Losing means certain death. The Hunger Games have begun. . . .In the...",
+    "actual_value": "Winning means fame and fortune. Losing means certain death. The Hunger Games have begun. . . .In the ruins of a place once known as North America lies the nation of Panem, a shining Capitol surrounded by twelve outlying districts. The Capitol is harsh and cruel and keeps the districts in line by forcing them all to send one boy and one girl between the ages of twelve and eighteen to participate in the annual Hunger Games, a fight to the death on live TV.Sixteen-year-old Katniss Everdeen regards it as a death sentence when she steps forward to take her sister's place in the Games. But Katniss has been close to dead before-and survival, for her, is second nature. Without really meaning to, she becomes a contender. But if she is to win, she will have to start making choices that weigh survival against humanity and life against love."
+  },
+  "cover_image": {
+    "selector": "img.ResponsiveImage",
+    "example_value": "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1586722975i/2767052.jpg",
+    "actual_value": "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1586722975i/2767052.jpg"
+  },
+  "genres": {
+    "selector": "span.BookPageMetadataSection__genreButton",
+    "example_value": [
+      "Young Adult",
+      "Dystopia",
+      "Fiction",
+      "Fantasy",
+      "Science Fiction",
+      "Romance",
+      "Adventure"
+    ],
+    "actual_value": [
+      "Young Adult",
+      "Dystopia",
+      "Fiction",
+      "Fantasy",
+      "Science Fiction",
+      "Romance",
+      "Adventure"
+    ]
+  },
+  "pages": {
+    "selector": "JSON data: @type=Book, numberOfPages property",
+    "example_value": 374,
+    "actual_value": 374
+  },
+  "format": {
+    "selector": "JSON data: @type=Book, bookFormat property",
+    "example_value": "Hardcover",
+    "actual_value": "Hardcover"
+  },
+  "language": {
+    "selector": "JSON data: @type=Book, inLanguage property",
+    "example_value": "English",
+    "actual_value": "English"
+  },
+  "series": {
+    "selector": "JSON data: extracted from name property",
+    "example_value": "The Hunger Games",
+    "actual_value": "The Hunger Games"
+  },
+  "series_number": {
+    "selector": "JSON data: extracted from name property",
+    "example_value": 1,
+    "actual_value": 1
+  },
+  "rating_count": {
+    "selector": "JSON data: @type=Book, aggregateRating.ratingCount property",
+    "example_value": 9454707,
+    "actual_value": 9454707
+  },
+  "review_count": {
+    "selector": "JSON data: @type=Book, aggregateRating.reviewCount property",
+    "example_value": 244153,
+    "actual_value": 244153
+  },
+  "awards": {
+    "selector": "JSON data: @type=Book, awards property",
+    "example_value": "Locus Award Best Young Adult Book (2009) and for Illustrated and Art Book (2025), Georgia Peach Book Award (2009), Buxtehuder Bulle (2009), Golden Duck Award Young Adult (Hal Clement Award) (2009), Grand Prix de l&apos;Imaginaire Roman jeunesse \u00e9tranger (2010), Books I Loved Best Yearly (BILBY) Awards Older Readers (2012), West Australian Young Readers&apos; Book Award (WAYRBA) Older Readers (2010), Red House Children&apos;s Book Award Older Readers &amp; Overall (2010), South Carolina Book Award Junior and Young Adult Book (2011), Charlotte Award (2010), Colorado Blue Spruce Young Adult Book Award (2010), Teen Buckeye Book Award (2009), Pennsylvania Young Readers&apos; Choice Award Young Adults (2010), Rhode Island Teen Book Award (2010), Vermont Golden Dome Book Award (2010), Evergreen Teen Book Award (2011), Soaring Eagle Book Award (2009), Milwaukee County Teen Book Award (2010), Sakura Medal Middle School Book (2010), Michigan Library Association Thumbs Up! Award (2009), Florida Teens Read (2009), Deutscher Jugendliteraturpreis Preis der Jugendjury (2010), Iowa High School Book Award (2011), New Mexico Land of Enchantment Award Young Adult (2011), Eliot Rosewater Indiana High School Book Award (2010), The Inky Awards Silver Inky (2009), California Young Readers Medal Young Adult (2011), Lincoln Award (2011), Kinderboekwinkelprijs (2010), Truman Readers Award (2011), CYBILS Award Young Adult Fantasy &amp; Science Fiction (2008), Literaturpreis der Jury der jungen Leser Jugendbuch (2010), The Inky Awards Shortlist Silver Inky (2009), Prix Et-lisez-moi (2011), Gateway Readers Award (2011), Oklahoma Sequoyah Book Award High School and Intermediate (2011), Premio El Templo de las Mil Puertas Mejor novela extranjera perteneciente a saga (2009), Rebecca Caudill Young Readers&apos; Book Award (2011), LovelyBooks Leserpreis Fantasy (2009), LovelyBooks Leserpreis for Bestes Cover/Umschlag (2009), Premi Protagonista Jove Categoria 12-14 anys (2009)",
+    "actual_value": "Locus Award Best Young Adult Book (2009) and for Illustrated and Art Book (2025), Georgia Peach Book Award (2009), Buxtehuder Bulle (2009), Golden Duck Award Young Adult (Hal Clement Award) (2009), Grand Prix de l&apos;Imaginaire Roman jeunesse \u00e9tranger (2010), Books I Loved Best Yearly (BILBY) Awards Older Readers (2012), West Australian Young Readers&apos; Book Award (WAYRBA) Older Readers (2010), Red House Children&apos;s Book Award Older Readers &amp; Overall (2010), South Carolina Book Award Junior and Young Adult Book (2011), Charlotte Award (2010), Colorado Blue Spruce Young Adult Book Award (2010), Teen Buckeye Book Award (2009), Pennsylvania Young Readers&apos; Choice Award Young Adults (2010), Rhode Island Teen Book Award (2010), Vermont Golden Dome Book Award (2010), Evergreen Teen Book Award (2011), Soaring Eagle Book Award (2009), Milwaukee County Teen Book Award (2010), Sakura Medal Middle School Book (2010), Michigan Library Association Thumbs Up! Award (2009), Florida Teens Read (2009), Deutscher Jugendliteraturpreis Preis der Jugendjury (2010), Iowa High School Book Award (2011), New Mexico Land of Enchantment Award Young Adult (2011), Eliot Rosewater Indiana High School Book Award (2010), The Inky Awards Silver Inky (2009), California Young Readers Medal Young Adult (2011), Lincoln Award (2011), Kinderboekwinkelprijs (2010), Truman Readers Award (2011), CYBILS Award Young Adult Fantasy &amp; Science Fiction (2008), Literaturpreis der Jury der jungen Leser Jugendbuch (2010), The Inky Awards Shortlist Silver Inky (2009), Prix Et-lisez-moi (2011), Gateway Readers Award (2011), Oklahoma Sequoyah Book Award High School and Intermediate (2011), Premio El Templo de las Mil Puertas Mejor novela extranjera perteneciente a saga (2009), Rebecca Caudill Young Readers&apos; Book Award (2011), LovelyBooks Leserpreis Fantasy (2009), LovelyBooks Leserpreis for Bestes Cover/Umschlag (2009), Premi Protagonista Jove Categoria 12-14 anys (2009)"
+  }
+}

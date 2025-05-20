@@ -272,7 +272,7 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
         error_log("Open Library API error: " . $e->getMessage());
     }
 
-    // Check Goodreads - Use the ReviewFetcherFactory for more reliable results
+    // Check Goodreads - Use Python script with CSS selectors for more reliable results
     try {
         // Start timer for performance tracking
         $goodreadsStartTime = microtime(true);
@@ -280,13 +280,13 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
         // Log that we're starting Goodreads fetch
         error_log("Starting Goodreads data fetch for ISBN: $cleanIsbn");
 
-        // Use the ReviewFetcherFactory to get Goodreads data
+        // First try using the ReviewFetcherFactory (fastest method)
         if ($goodreadsSourceId) {
             $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
             if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
                 // Set a shorter timeout for validation purposes
                 $options = [
-                    'timeout' => 10,
+                    'timeout' => 5, // Shorter timeout for validation
                     'maxPages' => 1,
                     'limit' => 1
                 ];
@@ -294,21 +294,38 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                 // Use the fetcher to get book data - just fetch 1 review to get book metadata
                 $response = $goodreadsFetcher->fetchReviewsByISBN($cleanIsbn, 1, $options);
 
-                if (!empty($response)) {
+                if (!empty($response) && isset($response[0]['book_metadata'])) {
                     $foundInSources[] = 'Goodreads';
 
                     // Extract book details from the response
+                    $metadata = $response[0]['book_metadata'] ?? [];
+
+                    // Try to extract series information from categories or title
+                    $series = '';
+                    if (!empty($metadata['series'])) {
+                        $series = $metadata['series'];
+                    } else if (!empty($metadata['categories'])) {
+                        foreach ($metadata['categories'] as $category) {
+                            if (stripos($category, 'series') !== false) {
+                                $series = $category;
+                                break;
+                            }
+                        }
+                    }
+
                     $bookData['goodreads'] = [
-                        'title' => $response[0]['book_title'] ?? '',
-                        'author' => $response[0]['book_author'] ?? '',
-                        'publisher' => $response[0]['book_publisher'] ?? '',
-                        'publication_date' => $response[0]['book_publication_date'] ?? '',
-                        'page_count' => $response[0]['book_page_count'] ?? '',
-                        'isbn' => $response[0]['book_isbn'] ?? '',
-                        'isbn13' => $response[0]['book_isbn13'] ?? '',
-                        'categories' => $response[0]['book_categories'] ?? [],
-                        'description' => $response[0]['book_description'] ?? '',
-                        'cover_url' => $response[0]['book_cover_url'] ?? '',
+                        'title' => $metadata['title'] ?? '',
+                        'author' => $metadata['author'] ?? '',
+                        'publisher' => $metadata['publisher'] ?? '',
+                        'publication_date' => $metadata['published_date'] ?? '',
+                        'page_count' => $metadata['page_count'] ?? '',
+                        'isbn' => $metadata['isbn'] ?? '',
+                        'isbn13' => $metadata['isbn13'] ?? '',
+                        'categories' => $metadata['categories'] ?? [],
+                        'description' => $metadata['description'] ?? '',
+                        'cover_url' => $metadata['cover_image'] ?? '',
+                        'series' => $series,
+                        'language' => $metadata['language'] ?? '',
                         'source' => 'Goodreads'
                     ];
 
@@ -317,105 +334,164 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                     $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
                     error_log("Successfully fetched Goodreads data for ISBN: $cleanIsbn in {$goodreadsTime}s");
                 } else {
-                    // If no reviews found, try a fallback to direct search
-                    error_log("No Goodreads data found using ReviewFetcher, trying fallback method");
+                    // If no reviews found, try using Python script with CSS selectors
+                    error_log("No Goodreads data found using ReviewFetcher, trying Python script");
 
-                    // Fallback: Use a direct search approach with a short timeout
-                    $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+                    // Check if Python script exists
+                    $pythonScript = __DIR__ . '/../../../goodreads_book_info.py';
+                    if (file_exists($pythonScript)) {
+                        // Build the search URL
+                        $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
 
-                    $ch = curl_init($searchUrl);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Short timeout for fallback
-                    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
+                        // Execute Python script
+                        $command = "python3 " . escapeshellarg($pythonScript) . " " . escapeshellarg($searchUrl) . " 2>&1";
+                        $output = [];
+                        $returnCode = 0;
+                        exec($command, $output, $returnCode);
 
-                    if ($response && $httpCode == 200) {
-                        // Check if we found a book
-                        if (strpos($response, 'No results') === false &&
-                            (strpos($response, 'class="bookTitle"') !== false ||
-                             strpos($response, 'class="bookCover"') !== false ||
-                             strpos($response, 'data-testid="bookTitle"') !== false)) {
-
-                            $foundInSources[] = 'Goodreads';
-
-                            // Extract book details using regex - updated for current Goodreads HTML structure
-                            preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
-                            if (empty($titleMatches)) {
-                                preg_match('/<a[^>]+data-testid="bookTitle"[^>]*>(.*?)<\/a>/s', $response, $titleMatches);
+                        // Check if Python script executed successfully
+                        if ($returnCode === 0) {
+                            // Look for JSON output in the Python script output
+                            $jsonData = null;
+                            foreach ($output as $line) {
+                                if (strpos($line, '{') === 0) {
+                                    $jsonData = json_decode($line, true);
+                                    if ($jsonData) {
+                                        break;
+                                    }
+                                }
                             }
 
-                            preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
-                            if (empty($authorMatches)) {
-                                preg_match('/<a[^>]+data-testid="authorLink"[^>]*>(.*?)<\/a>/s', $response, $authorMatches);
+                            if ($jsonData) {
+                                $foundInSources[] = 'Goodreads';
+
+                                // Extract book details from JSON data
+                                $bookData['goodreads'] = [
+                                    'title' => $jsonData['title'] ?? '',
+                                    'author' => $jsonData['author'] ?? '',
+                                    'publisher' => $jsonData['publisher'] ?? '',
+                                    'publication_date' => $jsonData['published_date'] ?? '',
+                                    'page_count' => $jsonData['pages'] ?? '',
+                                    'isbn' => $jsonData['isbn'] ?? '',
+                                    'isbn13' => $jsonData['isbn13'] ?? '',
+                                    'categories' => $jsonData['genres'] ?? [],
+                                    'description' => $jsonData['description'] ?? '',
+                                    'cover_url' => $jsonData['cover_image'] ?? '',
+                                    'series' => $jsonData['series'] ?? '',
+                                    'language' => $jsonData['language'] ?? '',
+                                    'source' => 'Goodreads'
+                                ];
+
+                                // Log success for debugging
+                                $goodreadsEndTime = microtime(true);
+                                $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
+                                error_log("Successfully extracted Goodreads data via Python script for ISBN: $cleanIsbn in {$goodreadsTime}s");
+                            } else {
+                                error_log("Python script executed but no valid JSON data found");
                             }
-
-                            preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
-                            preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
-                            preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
-                            preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
-
-                            // Extract cover image - updated for current Goodreads HTML structure
-                            preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
-                            if (empty($coverMatches)) {
-                                preg_match('/<img[^>]+data-testid="bookCover"[^>]+src="([^"]+)"/s', $response, $coverMatches);
-                            }
-
-                            // Extract description - updated for current Goodreads HTML structure
-                            preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
-                            if (empty($descMatches)) {
-                                preg_match('/<div[^>]+data-testid="description"[^>]*>(.*?)<\/div>/s', $response, $descMatches);
-                            }
-
-                            $title = $titleMatches[1] ?? '';
-                            $author = $authorMatches[1] ?? '';
-                            $isbn10 = $isbnMatches[1] ?? '';
-                            $isbn13 = $isbn13Matches[1] ?? '';
-                            $publisher = $publisherMatches[2] ?? '';
-                            $pageCount = $pageCountMatches[1] ?? '';
-                            $coverUrl = $coverMatches[1] ?? '';
-                            $description = $descMatches[1] ?? '';
-
-                            // Clean up extracted data
-                            $title = strip_tags($title);
-                            $author = strip_tags($author);
-                            $publisher = trim(strip_tags($publisher));
-                            $description = strip_tags($description);
-
-                            // Extract genres/categories - updated for current Goodreads HTML structure
-                            $categories = [];
-                            if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
-                                $categories = $genreMatches[1];
-                            }
-                            if (empty($categories) && preg_match_all('/<a[^>]+data-testid="genreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
-                                $categories = $genreMatches[1];
-                            }
-
-                            $bookData['goodreads'] = [
-                                'title' => $title,
-                                'author' => $author,
-                                'publisher' => $publisher,
-                                'publication_date' => $publisherMatches[1] ?? '',
-                                'page_count' => $pageCount,
-                                'isbn' => $isbn10,
-                                'isbn13' => $isbn13,
-                                'categories' => $categories,
-                                'description' => $description,
-                                'cover_url' => $coverUrl,
-                                'source' => 'Goodreads'
-                            ];
-
-                            // Log success for debugging
-                            $goodreadsEndTime = microtime(true);
-                            $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
-                            error_log("Successfully extracted Goodreads data via fallback for ISBN: $cleanIsbn in {$goodreadsTime}s");
                         } else {
-                            error_log("No book found on Goodreads for ISBN: $cleanIsbn");
+                            error_log("Failed to execute Python script: " . implode("\n", $output));
                         }
                     } else {
-                        error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
+                        error_log("Python script not found at: $pythonScript");
+
+                        // Fallback: Use a direct search approach with a short timeout
+                        $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+
+                        $ch = curl_init($searchUrl);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Short timeout for fallback
+                        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+                        $response = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($response && $httpCode == 200) {
+                            // Check if we found a book
+                            if (strpos($response, 'No results') === false &&
+                                (strpos($response, 'class="bookTitle"') !== false ||
+                                 strpos($response, 'class="bookCover"') !== false ||
+                                 strpos($response, 'data-testid="bookTitle"') !== false)) {
+
+                                $foundInSources[] = 'Goodreads';
+
+                                // Extract book details using regex - updated for current Goodreads HTML structure
+                                preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
+                                if (empty($titleMatches)) {
+                                    preg_match('/<a[^>]+data-testid="bookTitle"[^>]*>(.*?)<\/a>/s', $response, $titleMatches);
+                                }
+
+                                preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
+                                if (empty($authorMatches)) {
+                                    preg_match('/<a[^>]+data-testid="authorLink"[^>]*>(.*?)<\/a>/s', $response, $authorMatches);
+                                }
+
+                                preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
+                                preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
+                                preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
+                                preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
+
+                                // Extract cover image - updated for current Goodreads HTML structure
+                                preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
+                                if (empty($coverMatches)) {
+                                    preg_match('/<img[^>]+data-testid="bookCover"[^>]+src="([^"]+)"/s', $response, $coverMatches);
+                                }
+
+                                // Extract description - updated for current Goodreads HTML structure
+                                preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
+                                if (empty($descMatches)) {
+                                    preg_match('/<div[^>]+data-testid="description"[^>]*>(.*?)<\/div>/s', $response, $descMatches);
+                                }
+
+                                $title = $titleMatches[1] ?? '';
+                                $author = $authorMatches[1] ?? '';
+                                $isbn10 = $isbnMatches[1] ?? '';
+                                $isbn13 = $isbn13Matches[1] ?? '';
+                                $publisher = $publisherMatches[2] ?? '';
+                                $pageCount = $pageCountMatches[1] ?? '';
+                                $coverUrl = $coverMatches[1] ?? '';
+                                $description = $descMatches[1] ?? '';
+
+                                // Clean up extracted data
+                                $title = strip_tags($title);
+                                $author = strip_tags($author);
+                                $publisher = trim(strip_tags($publisher));
+                                $description = strip_tags($description);
+
+                                // Extract genres/categories - updated for current Goodreads HTML structure
+                                $categories = [];
+                                if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
+                                    $categories = $genreMatches[1];
+                                }
+                                if (empty($categories) && preg_match_all('/<a[^>]+data-testid="genreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
+                                    $categories = $genreMatches[1];
+                                }
+
+                                $bookData['goodreads'] = [
+                                    'title' => $title,
+                                    'author' => $author,
+                                    'publisher' => $publisher,
+                                    'publication_date' => $publisherMatches[1] ?? '',
+                                    'page_count' => $pageCount,
+                                    'isbn' => $isbn10,
+                                    'isbn13' => $isbn13,
+                                    'categories' => $categories,
+                                    'description' => $description,
+                                    'cover_url' => $coverUrl,
+                                    'source' => 'Goodreads'
+                                ];
+
+                                // Log success for debugging
+                                $goodreadsEndTime = microtime(true);
+                                $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
+                                error_log("Successfully extracted Goodreads data via fallback for ISBN: $cleanIsbn in {$goodreadsTime}s");
+                            } else {
+                                error_log("No book found on Goodreads for ISBN: $cleanIsbn");
+                            }
+                        } else {
+                            error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
+                        }
                     }
                 }
             } else {
@@ -2107,22 +2183,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                             <th>Source</th>
                                                             <th>Title</th>
                                                             <th>Author</th>
-                                                            <th>ISBN-10</th>
-                                                            <th>ISBN-13</th>
+                                                            <th>ISBN</th>
                                                             <th>Publisher</th>
                                                             <th>Series</th>
-                                                            <th>Page Count</th>
+                                                            <th>Missing Data</th>
                                                             <th>Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <?php foreach ($validationResults['data'] as $source => $data): ?>
                                                             <tr>
-                                                                <td><?php echo htmlspecialchars($data['source']); ?></td>
+                                                                <td>
+                                                                    <span class="badge bg-<?php
+                                                                        echo $source === 'goodreads' ? 'success' :
+                                                                            ($source === 'google_books' ? 'primary' : 'info');
+                                                                    ?>">
+                                                                        <?php echo htmlspecialchars($data['source']); ?>
+                                                                    </span>
+                                                                </td>
                                                                 <td><?php echo htmlspecialchars($data['title']); ?></td>
                                                                 <td><?php echo htmlspecialchars($data['author']); ?></td>
-                                                                <td><?php echo !empty($data['isbn']) ? htmlspecialchars($data['isbn']) : '<span class="text-muted">N/A</span>'; ?></td>
-                                                                <td><?php echo !empty($data['isbn13']) ? htmlspecialchars($data['isbn13']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td>
+                                                                    <?php if (!empty($data['isbn13'])): ?>
+                                                                        <span title="ISBN-13"><?php echo htmlspecialchars($data['isbn13']); ?></span>
+                                                                    <?php elseif (!empty($data['isbn'])): ?>
+                                                                        <span title="ISBN-10"><?php echo htmlspecialchars($data['isbn']); ?></span>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
+                                                                    <?php endif; ?>
+                                                                </td>
                                                                 <td><?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : '<span class="text-muted">N/A</span>'; ?></td>
                                                                 <td>
                                                                     <?php
@@ -2141,15 +2230,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     echo !empty($series) ? htmlspecialchars($series) : '<span class="text-muted">N/A</span>';
                                                                     ?>
                                                                 </td>
-                                                                <td><?php echo !empty($data['page_count']) ? htmlspecialchars($data['page_count']) : '<span class="text-muted">N/A</span>'; ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    // Check for missing data
+                                                                    $missingFields = [];
+                                                                    if (empty($data['page_count'])) $missingFields[] = 'Page Count';
+                                                                    if (empty($series)) $missingFields[] = 'Series';
+                                                                    if (empty($data['publisher'])) $missingFields[] = 'Publisher';
+                                                                    if (empty($data['language'])) $missingFields[] = 'Language';
+                                                                    if (empty($data['categories']) || count($data['categories']) < 2) $missingFields[] = 'Genres';
+
+                                                                    if (!empty($missingFields)) {
+                                                                        echo '<span class="text-warning">' . htmlspecialchars(implode(', ', $missingFields)) . '</span>';
+                                                                    } else {
+                                                                        echo '<span class="text-success">Complete</span>';
+                                                                    }
+                                                                    ?>
+                                                                </td>
                                                                 <td>
                                                                     <div class="d-flex flex-nowrap">
                                                                         <?php if (!empty($data['isbn']) || !empty($data['isbn13'])): ?>
                                                                             <form method="post" action="book-import-validate.php" class="me-1">
                                                                                 <input type="hidden" name="action" value="update_isbn">
                                                                                 <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
-                                                                                <input type="hidden" name="isbn" value="<?php echo htmlspecialchars($data['isbn']); ?>">
-                                                                                <input type="hidden" name="isbn13" value="<?php echo htmlspecialchars($data['isbn13']); ?>">
+                                                                                <input type="hidden" name="isbn" value="<?php echo !empty($data['isbn']) ? htmlspecialchars($data['isbn']) : ''; ?>">
+                                                                                <input type="hidden" name="isbn13" value="<?php echo !empty($data['isbn13']) ? htmlspecialchars($data['isbn13']) : ''; ?>">
                                                                                 <button type="submit" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Use this ISBN only">
                                                                                     <i class="fas fa-check"></i> ISBN
                                                                                 </button>
@@ -2209,13 +2314,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                             <p><strong>Publisher:</strong> <?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : 'N/A'; ?></p>
                                                                                             <p><strong>Publication Date:</strong> <?php echo !empty($data['publication_date']) ? htmlspecialchars($data['publication_date']) : 'N/A'; ?></p>
                                                                                             <p><strong>Page Count:</strong> <?php echo !empty($data['page_count']) ? htmlspecialchars($data['page_count']) : 'N/A'; ?></p>
+                                                                                            <p><strong>Series:</strong> <?php echo !empty($series) ? htmlspecialchars($series) : (!empty($data['series']) ? htmlspecialchars($data['series']) : 'N/A'); ?></p>
+                                                                                            <p><strong>Language:</strong> <?php echo !empty($data['language']) ? htmlspecialchars($data['language']) : 'N/A'; ?></p>
                                                                                         </div>
                                                                                     </div>
 
                                                                                     <div class="row mt-3">
                                                                                         <div class="col-12">
                                                                                             <h6>Additional Information</h6>
-                                                                                            <p><strong>Series:</strong> <?php echo !empty($series) ? htmlspecialchars($series) : 'N/A'; ?></p>
 
                                                                                             <?php if (!empty($data['categories'])): ?>
                                                                                                 <p><strong>Categories/Genres:</strong>

@@ -29,6 +29,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $reviewLimit = 100;
     protected $existingReviews = [];
 
+    // Function to check if a review is a duplicate
+    protected $isDuplicateReview = null;
+
     /**
      * Constructor
      *
@@ -670,7 +673,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
                     }
 
                     if (!$isDuplicate($review, $existingReviews, $currentPage)) {
-                        $filteredReviews[] = $review; 
+                        $filteredReviews[] = $review;
                     }
                 }
 

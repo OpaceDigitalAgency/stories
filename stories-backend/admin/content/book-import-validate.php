@@ -2444,7 +2444,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                 </button>
                                                                             </form>
                                                                         <?php else: ?>
-                                                                            <span class="badge bg-secondary me-1">No ISBN</span>
+                                                                            <button type="button" class="btn btn-sm btn-secondary me-1" disabled>
+                                                                                <i class="fas fa-times"></i> No ISBN
+                                                                            </button>
                                                                         <?php endif; ?>
 
                                                                         <button type="button" class="btn btn-sm btn-info me-1 d-flex align-items-center justify-content-center" style="height: 31px; width: 31px;" data-bs-toggle="modal" data-bs-target="#dataModal<?php echo htmlspecialchars($source); ?>" title="View complete book details">

@@ -74,6 +74,7 @@ $sources = array_keys($sourceData);
                             <tr>
                                 <th>Source</th>
                                 <th>Status</th>
+                                <th>Method</th>
                                 <th>Details</th>
                             </tr>
                         </thead>
@@ -111,7 +112,32 @@ $sources = array_keys($sourceData);
 
                                     $details = !empty($sourceData[$source]['message']) ? $sourceData[$source]['message'] : '';
                                     $processingTime = !empty($sourceData[$source]['processing_time']) ? $sourceData[$source]['processing_time'] . 's' : '';
+                                    $method = !empty($sourceData[$source]['method']) ? $sourceData[$source]['method'] : 'unknown';
                                     $steps = !empty($sourceData[$source]['steps']) ? $sourceData[$source]['steps'] : [];
+
+                                    // Format method for display
+                                    $methodDisplay = ucfirst(str_replace('_', ' ', $method));
+                                    $methodIcon = '';
+                                    $methodClass = '';
+
+                                    switch ($method) {
+                                        case 'python_script':
+                                            $methodIcon = 'code';
+                                            $methodClass = 'primary';
+                                            break;
+                                        case 'curl_direct':
+                                        case 'curl_fallback':
+                                            $methodIcon = 'globe';
+                                            $methodClass = 'info';
+                                            break;
+                                        case 'api':
+                                            $methodIcon = 'plug';
+                                            $methodClass = 'success';
+                                            break;
+                                        default:
+                                            $methodIcon = 'question';
+                                            $methodClass = 'secondary';
+                                    }
                                 ?>
                                 <tr>
                                     <td><strong><?php echo ucfirst(str_replace('_', ' ', $source)); ?></strong></td>
@@ -122,6 +148,11 @@ $sources = array_keys($sourceData);
                                         <?php if ($processingTime): ?>
                                             <small class="text-muted">(<?php echo $processingTime; ?>)</small>
                                         <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $methodClass; ?>">
+                                            <i class="fas fa-<?php echo $methodIcon; ?>"></i> <?php echo $methodDisplay; ?>
+                                        </span>
                                     </td>
                                     <td>
                                         <?php echo htmlspecialchars($details); ?>

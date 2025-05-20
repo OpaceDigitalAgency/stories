@@ -18,8 +18,21 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         // Start timer for performance tracking
         $startTime = microtime(true);
 
-        // Log that we're starting Goodreads fetch
-        error_log("Starting Goodreads data fetch for ISBN: $isbn");
+        // Initialize detailed status tracking
+        $detailedStatus = [
+            'status' => 'initializing',
+            'message' => 'Starting Goodreads data fetch',
+            'method' => 'unknown',
+            'processing_time' => 0,
+            'steps' => []
+        ];
+
+        // Add initialization step with detailed parameters
+        $detailedStatus['steps'][] = [
+            'name' => 'initialization',
+            'status' => 'success',
+            'message' => "Parameters: ISBN: '$isbn', Title: '$title', Author: '$author'"
+        ];
 
         // Try to build a direct book URL if possible
         $searchUrl = "";
@@ -28,25 +41,70 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             $titleSlug = preg_replace('/[^a-z0-9]+/i', '_', strtolower($title));
             $titleSlug = trim($titleSlug, '_');
             $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($title . " " . $author);
+
+            $detailedStatus['steps'][] = [
+                'name' => 'url_generation',
+                'status' => 'success',
+                'message' => "Generated URL from title/author: $searchUrl"
+            ];
         } else {
             // Fallback to search URL with ISBN
             $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($isbn);
+
+            $detailedStatus['steps'][] = [
+                'name' => 'url_generation',
+                'status' => 'info',
+                'message' => "Generated URL from ISBN: $searchUrl"
+            ];
         }
 
         // First try using the Python script (most reliable method)
         $pythonScript = $_SERVER['DOCUMENT_ROOT'] . '/../goodreads_book_info.py';
-        error_log("Looking for Python script at: $pythonScript");
+
+        $detailedStatus['steps'][] = [
+            'name' => 'python_script_check',
+            'status' => 'in_progress',
+            'message' => "Looking for Python script at: $pythonScript"
+        ];
+
         if (file_exists($pythonScript)) {
+            $detailedStatus['steps'][] = [
+                'name' => 'python_script_check',
+                'status' => 'success',
+                'message' => "Python script found at: $pythonScript"
+            ];
+
+            // Set method to Python script
+            $detailedStatus['method'] = 'python_script';
+
             // Execute Python script with a longer timeout
             $command = "python3 " . escapeshellarg($pythonScript) . " " . escapeshellarg($searchUrl) . " 2>&1";
             $output = [];
             $returnCode = 0;
 
-            // Log that we're executing the Python script
-            error_log("Executing Python script: $command");
+            $detailedStatus['steps'][] = [
+                'name' => 'python_execution',
+                'status' => 'in_progress',
+                'message' => "Executing command: $command"
+            ];
 
             // Execute with a longer timeout
             exec($command, $output, $returnCode);
+
+            // Update execution status
+            if ($returnCode === 0) {
+                $detailedStatus['steps'][] = [
+                    'name' => 'python_execution',
+                    'status' => 'success',
+                    'message' => "Python script executed successfully"
+                ];
+            } else {
+                $detailedStatus['steps'][] = [
+                    'name' => 'python_execution',
+                    'status' => 'error',
+                    'message' => "Python script execution failed with code: $returnCode"
+                ];
+            }
 
             // Initialize status tracking
             $statusData = null;
@@ -55,6 +113,12 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
             $processingTime = microtime(true) - $startTime;
 
             // First look for structured status output
+            $detailedStatus['steps'][] = [
+                'name' => 'parse_output',
+                'status' => 'in_progress',
+                'message' => "Parsing Python script output (" . count($output) . " lines)"
+            ];
+
             foreach ($output as $line) {
                 if (strpos($line, 'STATUS_JSON: ') === 0) {
                     $statusJson = substr($line, strlen('STATUS_JSON: '));
@@ -62,6 +126,20 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
                     if ($statusData) {
                         // Add processing time to status data
                         $statusData['processing_time'] = round($processingTime, 2);
+
+                        $detailedStatus['steps'][] = [
+                            'name' => 'parse_output',
+                            'status' => 'success',
+                            'message' => "Found structured status output: " . $statusData['status']
+                        ];
+
+                        // Merge Python script steps into our detailed status
+                        if (isset($statusData['steps']) && is_array($statusData['steps'])) {
+                            foreach ($statusData['steps'] as $step) {
+                                $detailedStatus['steps'][] = $step;
+                            }
+                        }
+
                         break;
                     }
                 }
@@ -130,35 +208,67 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
                     $endTime = microtime(true);
                     $totalTime = round($endTime - $startTime, 2);
 
-                    // Add status information if available
-                    if ($statusData) {
-                        $bookData['_status'] = [
-                            'status' => $statusData['status'] ?? 'success',
-                            'message' => $statusData['message'] ?? 'Successfully extracted data',
-                            'processing_time' => $totalTime,
-                            'steps' => $statusData['steps'] ?? []
-                        ];
-                    } else {
-                        $bookData['_status'] = [
-                            'status' => 'success',
-                            'message' => 'Successfully extracted data',
-                            'processing_time' => $totalTime
-                        ];
-                    }
+                    // Update detailed status with final information
+                    $detailedStatus['status'] = $statusData['status'] ?? 'success';
+                    $detailedStatus['message'] = $statusData['message'] ?? 'Successfully extracted data from Goodreads via Python script';
+                    $detailedStatus['processing_time'] = $totalTime;
+                    $detailedStatus['method'] = 'python_script';
+
+                    // Add detailed status to book data
+                    $bookData['_status'] = $detailedStatus;
 
                     return $bookData;
                 } else {
-                    error_log("Python script executed but no valid JSON data found. Output: " . implode("\n", $output));
+                    $detailedStatus['steps'][] = [
+                        'name' => 'parse_output',
+                        'status' => 'error',
+                        'message' => "Python script executed but no valid JSON data found"
+                    ];
+
+                    // Add sample of the output for debugging
+                    $outputSample = array_slice($output, 0, min(5, count($output)));
+                    $detailedStatus['steps'][] = [
+                        'name' => 'output_sample',
+                        'status' => 'info',
+                        'message' => "First few lines of output: " . implode(" | ", $outputSample)
+                    ];
                 }
             } else {
-                error_log("Failed to execute Python script: " . implode("\n", $output));
+                $detailedStatus['steps'][] = [
+                    'name' => 'python_error',
+                    'status' => 'error',
+                    'message' => "Failed to execute Python script with return code: $returnCode"
+                ];
+
+                // Add sample of the error output for debugging
+                if (!empty($output)) {
+                    $errorSample = array_slice($output, 0, min(5, count($output)));
+                    $detailedStatus['steps'][] = [
+                        'name' => 'error_sample',
+                        'status' => 'info',
+                        'message' => "Error output: " . implode(" | ", $errorSample)
+                    ];
+                }
             }
         } else {
-            error_log("Python script not found at: $pythonScript");
+            $detailedStatus['steps'][] = [
+                'name' => 'python_script_check',
+                'status' => 'error',
+                'message' => "Python script not found at: $pythonScript"
+            ];
         }
 
         // Fallback to direct curl request if Python script didn't work
-        return fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl);
+        $detailedStatus['steps'][] = [
+            'name' => 'fallback',
+            'status' => 'in_progress',
+            'message' => "Falling back to direct curl request method"
+        ];
+
+        $detailedStatus['method'] = 'curl_fallback';
+
+        // Pass the detailed status to the curl fallback method
+        return fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $detailedStatus);
     } catch (Exception $e) {
         error_log("Error fetching Goodreads data: " . $e->getMessage());
         return null;
@@ -172,13 +282,40 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
  * @param string $title The book title
  * @param string $author The book author
  * @param string $searchUrl The search URL to use
+ * @param array $detailedStatus Optional detailed status from previous attempts
  * @return array|null Book data or null if not found
  */
-function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
+function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $detailedStatus = null) {
     try {
         $startTime = microtime(true);
 
-        error_log("Trying direct curl request as fallback for Goodreads data");
+        // Initialize detailed status if not provided
+        if (!$detailedStatus) {
+            $detailedStatus = [
+                'status' => 'initializing',
+                'message' => 'Starting Goodreads data fetch via curl',
+                'method' => 'curl_direct',
+                'processing_time' => 0,
+                'steps' => [
+                    [
+                        'name' => 'initialization',
+                        'status' => 'success',
+                        'message' => "Parameters: ISBN: '$isbn', Title: '$title', Author: '$author'"
+                    ],
+                    [
+                        'name' => 'url_generation',
+                        'status' => 'info',
+                        'message' => "Using URL: $searchUrl"
+                    ]
+                ]
+            ];
+        }
+
+        $detailedStatus['steps'][] = [
+            'name' => 'curl_request',
+            'status' => 'in_progress',
+            'message' => "Sending curl request to: $searchUrl"
+        ];
 
         $ch = curl_init($searchUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -187,14 +324,48 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
 
+        if ($error) {
+            $detailedStatus['steps'][] = [
+                'name' => 'curl_request',
+                'status' => 'error',
+                'message' => "cURL error: $error"
+            ];
+        } else {
+            $detailedStatus['steps'][] = [
+                'name' => 'curl_request',
+                'status' => 'success',
+                'message' => "Received response with HTTP code: $httpCode"
+            ];
+        }
+
         if ($response && $httpCode == 200) {
+            $detailedStatus['steps'][] = [
+                'name' => 'response_check',
+                'status' => 'in_progress',
+                'message' => "Checking response for book data"
+            ];
+
             // Check if we found a book
-            if (strpos($response, 'No results') === false &&
+            $bookFound = strpos($response, 'No results') === false &&
                 (strpos($response, 'class="bookTitle"') !== false ||
                  strpos($response, 'class="bookCover"') !== false ||
-                 strpos($response, 'data-testid="bookTitle"') !== false)) {
+                 strpos($response, 'data-testid="bookTitle"') !== false);
+
+            if ($bookFound) {
+                $detailedStatus['steps'][] = [
+                    'name' => 'response_check',
+                    'status' => 'success',
+                    'message' => "Found book data in response"
+                ];
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_title',
+                    'status' => 'in_progress',
+                    'message' => "Extracting title"
+                ];
 
                 // Extract book details using regex - updated for current Goodreads HTML structure
                 preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
@@ -202,20 +373,119 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
                     preg_match('/<a[^>]+data-testid="bookTitle"[^>]*>(.*?)<\/a>/s', $response, $titleMatches);
                 }
 
+                if (!empty($titleMatches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_title',
+                        'status' => 'success',
+                        'message' => "Found title: " . strip_tags($titleMatches[1])
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_title',
+                        'status' => 'error',
+                        'message' => "Failed to extract title"
+                    ];
+                }
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_author',
+                    'status' => 'in_progress',
+                    'message' => "Extracting author"
+                ];
+
                 preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
                 if (empty($authorMatches)) {
                     preg_match('/<a[^>]+data-testid="authorLink"[^>]*>(.*?)<\/a>/s', $response, $authorMatches);
                 }
 
+                if (!empty($authorMatches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_author',
+                        'status' => 'success',
+                        'message' => "Found author: " . strip_tags($authorMatches[1])
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_author',
+                        'status' => 'error',
+                        'message' => "Failed to extract author"
+                    ];
+                }
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_isbn',
+                    'status' => 'in_progress',
+                    'message' => "Extracting ISBN"
+                ];
+
                 preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
                 preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
+
+                if (!empty($isbnMatches) || !empty($isbn13Matches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_isbn',
+                        'status' => 'success',
+                        'message' => "Found ISBNs: " .
+                            (!empty($isbnMatches) ? "ISBN-10: " . $isbnMatches[1] : "") .
+                            (!empty($isbnMatches) && !empty($isbn13Matches) ? ", " : "") .
+                            (!empty($isbn13Matches) ? "ISBN-13: " . $isbn13Matches[1] : "")
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_isbn',
+                        'status' => 'warning',
+                        'message' => "No ISBNs found in response"
+                    ];
+                }
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_publisher',
+                    'status' => 'in_progress',
+                    'message' => "Extracting publisher and publication date"
+                ];
+
                 preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
                 preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
+
+                if (!empty($publisherMatches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_publisher',
+                        'status' => 'success',
+                        'message' => "Found publisher: " . strip_tags($publisherMatches[2] ?? '') .
+                                    ", Year: " . ($publisherMatches[1] ?? '')
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_publisher',
+                        'status' => 'warning',
+                        'message' => "No publisher information found"
+                    ];
+                }
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_cover',
+                    'status' => 'in_progress',
+                    'message' => "Extracting cover image"
+                ];
 
                 // Extract cover image - updated for current Goodreads HTML structure
                 preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
                 if (empty($coverMatches)) {
                     preg_match('/<img[^>]+data-testid="bookCover"[^>]+src="([^"]+)"/s', $response, $coverMatches);
+                }
+
+                if (!empty($coverMatches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_cover',
+                        'status' => 'success',
+                        'message' => "Found cover image URL"
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_cover',
+                        'status' => 'warning',
+                        'message' => "No cover image found"
+                    ];
                 }
 
                 // Extract description - updated for current Goodreads HTML structure
@@ -226,6 +496,14 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
 
                 // Extract series information
                 preg_match('/<a[^>]+href="\/series\/[^"]+"[^>]*>(.*?)<\/a>/s', $response, $seriesMatches);
+
+                if (!empty($seriesMatches)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_series',
+                        'status' => 'success',
+                        'message' => "Found series: " . strip_tags($seriesMatches[1])
+                    ];
+                }
 
                 // Extract rating information
                 preg_match('/<span itemprop="ratingValue">(.*?)<\/span>/s', $response, $ratingMatches);
@@ -252,6 +530,12 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
                 $description = strip_tags($description);
                 $series = strip_tags($series);
 
+                $detailedStatus['steps'][] = [
+                    'name' => 'extract_genres',
+                    'status' => 'in_progress',
+                    'message' => "Extracting genres/categories"
+                ];
+
                 // Extract genres/categories - updated for current Goodreads HTML structure
                 $categories = [];
                 if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
@@ -260,6 +544,26 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
                 if (empty($categories) && preg_match_all('/<a[^>]+data-testid="genreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
                     $categories = $genreMatches[1];
                 }
+
+                if (!empty($categories)) {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_genres',
+                        'status' => 'success',
+                        'message' => "Found " . count($categories) . " genres/categories"
+                    ];
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'extract_genres',
+                        'status' => 'warning',
+                        'message' => "No genres/categories found"
+                    ];
+                }
+
+                $detailedStatus['steps'][] = [
+                    'name' => 'build_data',
+                    'status' => 'success',
+                    'message' => "Building book data object"
+                ];
 
                 $bookData = [
                     'title' => $title,
@@ -283,22 +587,84 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl) {
                     'maturity_rating' => ''
                 ];
 
-                // Log success for debugging
+                // Calculate processing time
                 $endTime = microtime(true);
                 $totalTime = round($endTime - $startTime, 2);
-                error_log("Successfully extracted Goodreads data via direct curl for ISBN: $isbn in {$totalTime}s");
+
+                // Update detailed status with final information
+                $detailedStatus['status'] = 'success';
+                $detailedStatus['message'] = 'Successfully extracted data from Goodreads via curl';
+                $detailedStatus['processing_time'] = $totalTime;
+                $detailedStatus['method'] = 'curl_direct';
+
+                // Add detailed status to book data
+                $bookData['_status'] = $detailedStatus;
 
                 return $bookData;
             } else {
-                error_log("No book found on Goodreads for ISBN: $isbn");
+                $detailedStatus['steps'][] = [
+                    'name' => 'response_check',
+                    'status' => 'error',
+                    'message' => "No book found in response"
+                ];
+
+                // Add a sample of the response for debugging
+                $responseSample = substr($response, 0, 200) . '...';
+                $detailedStatus['steps'][] = [
+                    'name' => 'response_sample',
+                    'status' => 'info',
+                    'message' => "Response sample: " . htmlspecialchars($responseSample)
+                ];
             }
         } else {
-            error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
+            $detailedStatus['steps'][] = [
+                'name' => 'http_error',
+                'status' => 'error',
+                'message' => "Failed to fetch Goodreads data. HTTP Code: $httpCode"
+            ];
         }
 
-        return null;
+        // Calculate processing time
+        $endTime = microtime(true);
+        $totalTime = round($endTime - $startTime, 2);
+
+        // Update detailed status with final information
+        $detailedStatus['status'] = 'error';
+        $detailedStatus['message'] = 'Failed to extract data from Goodreads';
+        $detailedStatus['processing_time'] = $totalTime;
+
+        // Create a minimal book data object with just the status
+        $bookData = [
+            '_status' => $detailedStatus
+        ];
+
+        return $bookData;
     } catch (Exception $e) {
-        error_log("Error in Goodreads curl fetch: " . $e->getMessage());
-        return null;
+        // Create a detailed status for the exception
+        $detailedStatus = [
+            'status' => 'error',
+            'message' => 'Exception in Goodreads curl fetch: ' . $e->getMessage(),
+            'method' => 'curl_direct',
+            'processing_time' => microtime(true) - $startTime,
+            'steps' => [
+                [
+                    'name' => 'exception',
+                    'status' => 'error',
+                    'message' => $e->getMessage()
+                ],
+                [
+                    'name' => 'stack_trace',
+                    'status' => 'info',
+                    'message' => $e->getTraceAsString()
+                ]
+            ]
+        ];
+
+        // Create a minimal book data object with just the status
+        $bookData = [
+            '_status' => $detailedStatus
+        ];
+
+        return $bookData;
     }
 }

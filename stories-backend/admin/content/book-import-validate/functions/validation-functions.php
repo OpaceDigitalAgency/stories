@@ -176,12 +176,16 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
                     $status = 'success';
                     $message = 'Successfully fetched data from Goodreads';
                     $processingTime = null;
+                    $method = 'unknown';
+                    $steps = [];
 
                     if (isset($goodreadsData['_status'])) {
                         $statusInfo = $goodreadsData['_status'];
                         $status = $statusInfo['status'] ?? 'success';
                         $message = $statusInfo['message'] ?? 'Successfully fetched data from Goodreads';
                         $processingTime = $statusInfo['processing_time'] ?? null;
+                        $method = $statusInfo['method'] ?? 'unknown';
+                        $steps = $statusInfo['steps'] ?? [];
 
                         // Remove status info from the data
                         unset($goodreadsData['_status']);
@@ -190,13 +194,23 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
                     $sourceData['goodreads'] = [
                         'status' => $status,
                         'message' => $message,
+                        'method' => $method,
                         'processing_time' => $processingTime,
+                        'steps' => $steps,
                         'data' => $goodreadsData
                     ];
                 } else {
                     $sourceData['goodreads'] = [
                         'status' => 'error',
-                        'message' => 'Failed to fetch data from Goodreads'
+                        'message' => 'Failed to fetch data from Goodreads',
+                        'method' => 'unknown',
+                        'steps' => [
+                            [
+                                'name' => 'fetch_attempt',
+                                'status' => 'error',
+                                'message' => 'No data returned from Goodreads fetch function'
+                            ]
+                        ]
                     ];
                 }
             }

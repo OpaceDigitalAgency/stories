@@ -13,17 +13,17 @@
  * @param string $author The book author
  * @return array|null Book data or null if not found
  */
-function fetchOpenLibraryData($isbn, $title, $author) {
+function fetchOpenLibraryDataNew($isbn, $title, $author) {
     try {
         // Start timer for performance tracking
         $startTime = microtime(true);
-        
+
         // Log that we're starting Open Library fetch
         error_log("Starting Open Library data fetch for ISBN: $isbn");
-        
+
         // Try ISBN search first
         $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($isbn) . "&format=json&jscmd=data";
-        
+
         // Make the request
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -32,10 +32,10 @@ function fetchOpenLibraryData($isbn, $title, $author) {
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
+
         $data = json_decode($response, true);
         $key = "ISBN:$isbn";
-        
+
         // If no results, try title and author search
         if (empty($data[$key]) && (!empty($title) || !empty($author))) {
             $query = '';
@@ -48,21 +48,21 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                 }
                 $query .= "author=" . urlencode($author);
             }
-            
+
             $url = "https://openlibrary.org/search.json?" . $query;
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
             $response = curl_exec($ch);
             curl_close($ch);
-            
+
             $searchData = json_decode($response, true);
-            
+
             if (!empty($searchData['docs'])) {
                 $bookInfo = $searchData['docs'][0];
-                
+
                 // Extract ISBNs
                 $isbn10 = '';
                 $isbn13 = '';
@@ -75,21 +75,21 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                         }
                     }
                 }
-                
+
                 // Extract authors
                 $authors = [];
                 if (!empty($bookInfo['author_name'])) {
                     $authors = $bookInfo['author_name'];
                 }
-                
+
                 $coverUrl = '';
                 if (!empty($bookInfo['cover_i'])) {
                     $coverUrl = "https://covers.openlibrary.org/b/id/" . $bookInfo['cover_i'] . "-M.jpg";
                 }
-                
+
                 // Get Internet Archive ID if available
                 $iaId = !empty($bookInfo['ia']) ? $bookInfo['ia'][0] : '';
-                
+
                 return [
                     'title' => $bookInfo['title'] ?? '',
                     'author' => implode(', ', $authors),
@@ -113,13 +113,13 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                     'internet_archive_id' => $iaId
                 ];
             }
-            
+
             return null;
         }
-        
+
         if (!empty($data[$key])) {
             $bookInfo = $data[$key];
-            
+
             // Extract ISBNs
             $isbn10 = '';
             $isbn13 = '';
@@ -129,7 +129,7 @@ function fetchOpenLibraryData($isbn, $title, $author) {
             if (!empty($bookInfo['identifiers']['isbn_13'])) {
                 $isbn13 = $bookInfo['identifiers']['isbn_13'][0];
             }
-            
+
             // Extract authors
             $authors = [];
             if (!empty($bookInfo['authors'])) {
@@ -137,7 +137,7 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                     $authors[] = $author['name'];
                 }
             }
-            
+
             // Get Internet Archive ID if available
             $iaId = '';
             if (!empty($bookInfo['ebooks']) && !empty($bookInfo['ebooks'][0]['preview_url'])) {
@@ -146,7 +146,7 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                     $iaId = $matches[1];
                 }
             }
-            
+
             return [
                 'title' => $bookInfo['title'] ?? '',
                 'author' => implode(', ', $authors),
@@ -170,7 +170,7 @@ function fetchOpenLibraryData($isbn, $title, $author) {
                 'internet_archive_id' => $iaId
             ];
         }
-        
+
         // Log failure for debugging
         error_log("No book found on Open Library for ISBN: $isbn");
         return null;
@@ -190,15 +190,15 @@ function validateIsbnWithOpenLibrary($isbn) {
     try {
         // Clean ISBN
         $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-        
+
         // Check if ISBN is valid format
         if (strlen($cleanIsbn) !== 10 && strlen($cleanIsbn) !== 13) {
             return false;
         }
-        
+
         // Try ISBN search
         $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($cleanIsbn) . "&format=json";
-        
+
         // Make the request
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -207,14 +207,14 @@ function validateIsbnWithOpenLibrary($isbn) {
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
+
         if ($httpCode !== 200) {
             return false;
         }
-        
+
         $data = json_decode($response, true);
         $key = "ISBN:$cleanIsbn";
-        
+
         // Check if we found the book
         return !empty($data[$key]);
     } catch (Exception $e) {
@@ -243,18 +243,18 @@ function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 5) {
             }
             $query .= "author=" . urlencode($author);
         }
-        
+
         $url = "https://openlibrary.org/search.json?" . $query . "&limit=" . $limit;
-        
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
         $response = curl_exec($ch);
         curl_close($ch);
-        
+
         $data = json_decode($response, true);
-        
+
         $suggestions = [];
         if (!empty($data['docs'])) {
             foreach ($data['docs'] as $doc) {
@@ -270,12 +270,12 @@ function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 5) {
                         }
                     }
                 }
-                
+
                 $coverUrl = '';
                 if (!empty($doc['cover_i'])) {
                     $coverUrl = "https://covers.openlibrary.org/b/id/" . $doc['cover_i'] . "-M.jpg";
                 }
-                
+
                 $suggestions[] = [
                     'title' => $doc['title'] ?? '',
                     'author' => !empty($doc['author_name']) ? implode(', ', $doc['author_name']) : '',
@@ -286,13 +286,13 @@ function searchOpenLibraryByTitleAuthor($title, $author = '', $limit = 5) {
                     'cover_url' => $coverUrl,
                     'preview_link' => !empty($doc['ia']) ? "https://archive.org/details/" . $doc['ia'][0] : ''
                 ];
-                
+
                 if (count($suggestions) >= $limit) {
                     break;
                 }
             }
         }
-        
+
         return $suggestions;
     } catch (Exception $e) {
         error_log("Error searching Open Library by title/author: " . $e->getMessage());

@@ -36,6 +36,9 @@ require_once '../../services/ReviewFetcher/ReviewFetcherFactory.php';
 // Include tag functions
 require_once '../includes/tag-functions.php';
 
+// Include validation functions
+require_once 'book-import-validate/functions/validation-functions.php';
+
 // Set up error handling
 ini_set('display_errors', 1);
 error_reporting(E_ALL);

@@ -106,7 +106,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         if ($googleBooksSourceId) {
             $googleBooksFetcher = $reviewFetcherFactory->getFetcher($googleBooksSourceId);
             if ($googleBooksFetcher && $googleBooksFetcher->isConfigured()) {
-                $googleBooksData = fetchGoogleBooksData($cleanIsbn, $title, $book['author'] ?? '');
+                $googleBooksData = fetchGoogleBooksDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($googleBooksData) {
                     $sourceData['google_books'] = [
                         'status' => 'success',
@@ -125,7 +125,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         if ($openLibrarySourceId) {
             $openLibraryFetcher = $reviewFetcherFactory->getFetcher($openLibrarySourceId);
             if ($openLibraryFetcher && $openLibraryFetcher->isConfigured()) {
-                $openLibraryData = fetchOpenLibraryData($cleanIsbn, $title, $book['author'] ?? '');
+                $openLibraryData = fetchOpenLibraryDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($openLibraryData) {
                     $sourceData['open_library'] = [
                         'status' => 'success',
@@ -144,7 +144,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         if ($goodreadsSourceId) {
             $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
             if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
-                $goodreadsData = fetchGoodreadsData($cleanIsbn, $title, $book['author'] ?? '');
+                $goodreadsData = fetchGoodreadsDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($goodreadsData) {
                     $sourceData['goodreads'] = [
                         'status' => 'success',

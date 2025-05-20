@@ -1,16 +1,25 @@
 <?php
 /**
  * Book Validation Interface Template
- * 
+ *
  * This template displays the main validation interface for comparing book data
  * from multiple sources and applying changes.
  */
 
-// Ensure $book and $sourceData are available
-if (!isset($book) || !isset($sourceData)) {
+// Ensure $book and $validationData are available
+if (!isset($book)) {
     echo '<div class="alert alert-danger">Error: Book data not available</div>';
     return;
 }
+
+// Initialize sourceData if not set
+if (!isset($validationData) || !isset($validationData['sourceData'])) {
+    echo '<div class="alert alert-warning">No validation data available for this book. Please try validating again.</div>';
+    return;
+}
+
+// Set sourceData from validationData
+$sourceData = $validationData['sourceData'] ?? [];
 
 // Define status icons and classes
 $statusIcons = [
@@ -45,7 +54,7 @@ $sources = array_keys($sourceData);
                     $sourceCount = count(array_filter($sources, function($source) use ($sourceData) {
                         return !empty($sourceData[$source]) && $sourceData[$source]['status'] === 'success';
                     }));
-                    
+
                     if ($sourceCount > 0) {
                         echo '<span class="badge bg-success"><i class="fas fa-check"></i> Found in ' . $sourceCount . ' ' . ($sourceCount === 1 ? 'source' : 'sources') . '</span>';
                     } else {
@@ -65,7 +74,7 @@ $sources = array_keys($sourceData);
                         <button type="button" class="btn btn-success" id="applyAllValid">
                             <i class="fas fa-check-double"></i> Apply All Valid
                         </button>
-                        
+
                         <?php foreach ($sources as $source): ?>
                             <?php if (!empty($sourceData[$source]) && $sourceData[$source]['status'] === 'success'): ?>
                                 <button type="button" class="btn btn-primary apply-all-source" data-source="<?php echo htmlspecialchars($source); ?>">
@@ -73,15 +82,15 @@ $sources = array_keys($sourceData);
                                 </button>
                             <?php endif; ?>
                         <?php endforeach; ?>
-                        
+
                         <button type="button" class="btn btn-secondary" id="resetAll">
                             <i class="fas fa-undo"></i> Reset All
                         </button>
-                        
+
                         <button type="button" class="btn btn-info" id="validateAgain">
                             <i class="fas fa-sync-alt"></i> Validate Again
                         </button>
-                        
+
                         <button type="button" class="btn btn-outline-primary" id="exportChanges">
                             <i class="fas fa-file-export"></i> Export Changes
                         </button>
@@ -107,7 +116,7 @@ $sources = array_keys($sourceData);
                     <?php if (!empty($validationHistory)): ?>
                         <?php foreach ($validationHistory as $entry): ?>
                             <div class="history-entry">
-                                <span class="history-timestamp"><?php echo htmlspecialchars($entry['timestamp']); ?></span> - 
+                                <span class="history-timestamp"><?php echo htmlspecialchars($entry['timestamp']); ?></span> -
                                 <span class="history-action"><?php echo htmlspecialchars($entry['action']); ?></span>
                             </div>
                         <?php endforeach; ?>

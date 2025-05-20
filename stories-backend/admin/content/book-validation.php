@@ -106,7 +106,7 @@ require_once '../includes/header.php';
             <div class="card mb-4">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">ISBN & Data Validation</h4>
+                        <h4 class="mb-0">Book Data Validation</h4>
                         <div>
                             <a href="book-import-tool.php" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Import Tool

@@ -154,29 +154,48 @@ try {
     $validationData = null;
 
     if ($bookId) {
-        // Get book details
-        $stmt = $db->prepare("
-            SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, b.*
-            FROM directory_items di
-            JOIN books b ON di.id = b.directory_item_id
-            WHERE di.id = ?
-        ");
-        $stmt->execute([$bookId]);
-        $bookData = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            // Log the book ID for debugging
+            error_log("Attempting to validate book ID: $bookId");
 
-        if ($bookData) {
-            // Get validation data
-            $isbn = $bookData['isbn'] ?? ($bookData['isbn13'] ?? '');
-            $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db);
+            // Get book details
+            $stmt = $db->prepare("
+                SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, b.*
+                FROM directory_items di
+                JOIN books b ON di.id = b.directory_item_id
+                WHERE di.id = ?
+            ");
+            $stmt->execute([$bookId]);
+            $bookData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Set up sources for the template
-            $sources = ['google_books', 'open_library', 'goodreads'];
+            if ($bookData) {
+                error_log("Book found: " . $bookData['title']);
 
-            // Set up validation history
-            $validationHistory = $validationData['history'] ?? [];
+                // Get validation data
+                $isbn = $bookData['isbn'] ?? ($bookData['isbn13'] ?? '');
+                error_log("ISBN for validation: " . ($isbn ?: 'None'));
 
-            // Make book data available as $book for the template
-            $book = $bookData;
+                // Force refresh validation data to ensure we get fresh results
+                $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, true);
+                error_log("Validation status: " . ($validationData['status'] ?? 'unknown'));
+
+                // Set up sources for the template
+                $sources = ['google_books', 'open_library', 'goodreads'];
+
+                // Set up validation history
+                $validationHistory = $validationData['history'] ?? [];
+
+                // Make book data available as $book for the template
+                $book = $bookData;
+            } else {
+                error_log("Book not found for ID: $bookId");
+                $message = "Book not found with ID: $bookId";
+                $messageType = "danger";
+            }
+        } catch (Exception $e) {
+            error_log("Error in book validation: " . $e->getMessage());
+            $message = "Error processing book data: " . $e->getMessage();
+            $messageType = "danger";
         }
     }
 
@@ -198,8 +217,8 @@ try {
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Book Data Enrichment</h5>
-                    <a href="book-import-tool.php" class="btn btn-primary">
-                        <i class="fas fa-arrow-left"></i> Back to Import Tool
+                    <a href="book-validation.php" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Book Validation
                     </a>
                 </div>
                 <div class="card-body">
@@ -207,10 +226,20 @@ try {
                         <!-- Include the validation interface template -->
                         <?php include 'book-import-validate/templates/validation-interface.php'; ?>
                     <?php else: ?>
-                        <div class="alert alert-info">
-                            <p>Select books to validate or enrich data from the ISBN & Data Validation tab.</p>
+                        <div class="alert alert-warning">
+                            <?php if ($bookId): ?>
+                                <p><strong>Error:</strong> Unable to validate book data. This could be due to:</p>
+                                <ul>
+                                    <li>Book not found in the database</li>
+                                    <li>Missing ISBN information</li>
+                                    <li>External API services are unavailable</li>
+                                </ul>
+                                <p>Please try again or check the book details in the admin.</p>
+                            <?php else: ?>
+                                <p>Select books to validate or enrich data from the ISBN & Data Validation tab.</p>
+                            <?php endif; ?>
                             <a href="book-validation.php" class="btn btn-primary mt-2">
-                                <i class="fas fa-list"></i> Go to Book List
+                                <i class="fas fa-list"></i> Return to Book Validation
                             </a>
                         </div>
                     <?php endif; ?>

@@ -48,8 +48,15 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
     ];
 
     try {
+        // Log validation attempt for debugging
+        error_log("Validating book ID: $bookId, ISBN: $isbn, Title: $title, Force refresh: " . ($forceRefresh ? 'Yes' : 'No'));
+
         // Clean ISBN
         $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
+
+        if (empty($cleanIsbn)) {
+            error_log("Warning: Empty ISBN for book ID: $bookId, Title: $title");
+        }
 
         // Check cache first to improve performance (unless force refresh is requested)
         if (!$forceRefresh) {

@@ -2065,6 +2065,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                     }
                 }
             }
+        } else if ($action === 'update_field') {
+            // Update a single field for a book
+            $bookId = isset($_POST['book_id']) ? (int)$_POST['book_id'] : 0;
+            $field = isset($_POST['field']) ? trim($_POST['field']) : '';
+            $value = isset($_POST['value']) ? trim($_POST['value']) : '';
+
+            if ($bookId > 0 && !empty($field)) {
+                try {
+                    // Get the current book data
+                    $stmt = $db->prepare("SELECT * FROM books WHERE directory_item_id = ?");
+                    $stmt->execute([$bookId]);
+                    $currentBook = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$currentBook) {
+                        echo "<p class='error'>Book not found</p>";
+                    } else {
+                        // Handle special fields
+                        if ($field === 'categories') {
+                            // For categories, add as tags
+                            $categories = explode(',', $value);
+
+                            // Get existing tags
+                            $existingTags = getGenreTagsForDirectoryItem($db, $bookId);
+                            $existingTagNames = array_map(function($tag) {
+                                return strtolower($tag['name']);
+                            }, $existingTags);
+
+                            // Add new tags from categories
+                            $addedTags = 0;
+                            foreach ($categories as $category) {
+                                $category = trim($category);
+                                if (empty($category) || in_array(strtolower($category), $existingTagNames)) {
+                                    continue;
+                                }
+
+                                // Check if tag exists
+                                $stmt = $db->prepare("SELECT id FROM tags WHERE LOWER(name) = LOWER(?)");
+                                $stmt->execute([$category]);
+                                $tagId = $stmt->fetchColumn();
+
+                                // If tag doesn't exist, create it
+                                if (!$tagId) {
+                                    $stmt = $db->prepare("INSERT INTO tags (name, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+                                    $stmt->execute([
+                                        $category,
+                                        strtolower(str_replace(' ', '-', $category))
+                                    ]);
+                                    $tagId = $db->lastInsertId();
+                                }
+
+                                // Add tag to directory item
+                                if ($tagId && addTagToDirectoryItem($db, $bookId, $tagId)) {
+                                    $addedTags++;
+                                }
+                            }
+
+                            if ($addedTags > 0) {
+                                echo "<p class='success'>Added {$addedTags} genre tags to the book</p>";
+                            } else {
+                                echo "<p class='info'>No new genre tags to add</p>";
+                            }
+                        } else {
+                            // For regular fields, update the database
+                            $stmt = $db->prepare("UPDATE books SET {$field} = ?, updated_at = NOW() WHERE directory_item_id = ?");
+                            $stmt->execute([$value, $bookId]);
+
+                            echo "<p class='success'>Updated {$field} successfully</p>";
+                        }
+
+                        // Redirect back to the same page to refresh the data
+                        echo "<script>
+                            setTimeout(function() {
+                                window.location.href = 'book-import-validate.php?action=validate_isbn&book_id={$bookId}&isbn=" .
+                                (empty($currentBook['isbn']) ? '' : urlencode($currentBook['isbn'])) . "';
+                            }, 2000);
+                        </script>";
+                    }
+                } catch (Exception $e) {
+                    echo "<p class='error'>Error updating field: " . $e->getMessage() . "</p>";
+                }
+            } else {
+                echo "<p class='error'>Invalid book ID or field name</p>";
+            }
         } else if ($action === 'update_isbn') {
             // Update ISBN for a book
             $bookId = isset($_POST['book_id']) ? (int)$_POST['book_id'] : 0;
@@ -2215,13 +2298,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                 <table class="table table-bordered">
                                                     <thead>
                                                         <tr>
-                                                            <th style="width: 10%;">Source</th>
-                                                            <th style="width: 15%;">Title/Author</th>
-                                                            <th style="width: 10%;">ISBN</th>
-                                                            <th style="width: 10%;">Publication</th>
-                                                            <th style="width: 15%;">Details</th>
-                                                            <th style="width: 15%;">Community</th>
-                                                            <th style="width: 15%;">Metadata</th>
+                                                            <th style="width: 8%;">Source</th>
+                                                            <th style="width: 10%;">Title/Author</th>
+                                                            <th style="width: 8%;">ISBN-10</th>
+                                                            <th style="width: 8%;">ISBN-13</th>
+                                                            <th style="width: 8%;">Publisher</th>
+                                                            <th style="width: 8%;">Publication Date</th>
+                                                            <th style="width: 8%;">Pages</th>
+                                                            <th style="width: 8%;">Series</th>
+                                                            <th style="width: 8%;">Format</th>
+                                                            <th style="width: 8%;">Language</th>
+                                                            <th style="width: 8%;">Genres</th>
                                                             <th style="width: 10%;">Actions</th>
                                                         </tr>
                                                     </thead>
@@ -2268,40 +2355,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     <?php endif; ?>
                                                                 </td>
 
+                                                                <!-- ISBN-10 Column -->
+                                                                <td>
+                                                                    <?php if (!empty($data['isbn'])): ?>
+                                                                        <div><?php echo htmlspecialchars($data['isbn']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="isbn">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['isbn']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this ISBN-10">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <!-- ISBN-13 Column -->
                                                                 <td>
                                                                     <?php if (!empty($data['isbn13'])): ?>
-                                                                        <div><strong>ISBN-13:</strong></div>
                                                                         <div><?php echo htmlspecialchars($data['isbn13']); ?></div>
-                                                                    <?php endif; ?>
-
-                                                                    <?php if (!empty($data['isbn'])): ?>
-                                                                        <div class="mt-1"><strong>ISBN-10:</strong></div>
-                                                                        <div><?php echo htmlspecialchars($data['isbn']); ?></div>
-                                                                    <?php endif; ?>
-
-                                                                    <?php if (empty($data['isbn']) && empty($data['isbn13'])): ?>
-                                                                        <span class="text-muted">No ISBN available</span>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="isbn13">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['isbn13']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this ISBN-13">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
                                                                     <?php endif; ?>
                                                                 </td>
 
+                                                                <!-- Publisher Column -->
                                                                 <td>
                                                                     <?php if (!empty($data['publisher'])): ?>
-                                                                        <div><strong>Publisher:</strong> <?php echo htmlspecialchars($data['publisher']); ?></div>
-                                                                    <?php endif; ?>
-
-                                                                    <?php if (!empty($data['publication_date'])): ?>
-                                                                        <div><strong>Date:</strong> <?php echo htmlspecialchars($data['publication_date']); ?></div>
-                                                                    <?php endif; ?>
-
-                                                                    <?php if (!empty($data['language'])): ?>
-                                                                        <div><strong>Language:</strong> <?php echo htmlspecialchars($data['language']); ?></div>
-                                                                    <?php endif; ?>
-
-                                                                    <?php if (!empty($data['format'])): ?>
-                                                                        <div><strong>Format:</strong> <?php echo htmlspecialchars($data['format']); ?></div>
+                                                                        <div><?php echo htmlspecialchars($data['publisher']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="publisher">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['publisher']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this publisher">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
                                                                     <?php endif; ?>
                                                                 </td>
 
+                                                                <!-- Publication Date Column -->
+                                                                <td>
+                                                                    <?php if (!empty($data['publication_date'])): ?>
+                                                                        <div><?php echo htmlspecialchars($data['publication_date']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="publication_date">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['publication_date']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this publication date">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <!-- Pages Column -->
+                                                                <td>
+                                                                    <?php if (!empty($data['page_count'])): ?>
+                                                                        <div><?php echo htmlspecialchars($data['page_count']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="page_count">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['page_count']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this page count">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <!-- Series Column -->
                                                                 <td>
                                                                     <?php
                                                                     // Try to extract series from categories or title
@@ -2319,18 +2463,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             }
                                                                         }
                                                                     }
+                                                                    ?>
 
-                                                                    if (!empty($series)): ?>
-                                                                        <div><strong>Series:</strong> <?php echo htmlspecialchars($series); ?></div>
+                                                                    <?php if (!empty($series)): ?>
+                                                                        <div><?php echo htmlspecialchars($series); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="series">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($series); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this series">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
                                                                     <?php endif; ?>
+                                                                </td>
 
-                                                                    <?php if (!empty($data['page_count'])): ?>
-                                                                        <div><strong>Pages:</strong> <?php echo htmlspecialchars($data['page_count']); ?></div>
+                                                                <!-- Format Column -->
+                                                                <td>
+                                                                    <?php if (!empty($data['format'])): ?>
+                                                                        <div><?php echo htmlspecialchars($data['format']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="format">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['format']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this format">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
                                                                     <?php endif; ?>
+                                                                </td>
 
+                                                                <!-- Language Column -->
+                                                                <td>
+                                                                    <?php if (!empty($data['language'])): ?>
+                                                                        <div><?php echo htmlspecialchars($data['language']); ?></div>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="language">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars($data['language']); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use this language">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">N/A</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <!-- Genres Column -->
+                                                                <td>
                                                                     <?php if (!empty($data['categories']) && count($data['categories']) > 0): ?>
                                                                         <div>
-                                                                            <strong>Genres:</strong>
                                                                             <?php
                                                                             $displayCategories = array_slice($data['categories'], 0, 3);
                                                                             echo htmlspecialchars(implode(', ', $displayCategories));
@@ -2339,96 +2529,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             }
                                                                             ?>
                                                                         </div>
-                                                                    <?php endif; ?>
-                                                                </td>
-
-                                                                <td>
-                                                                    <?php if ($source === 'goodreads'): ?>
-                                                                        <?php if (!empty($data['rating_count'])): ?>
-                                                                            <div><strong>Ratings:</strong> <?php echo number_format($data['rating_count']); ?></div>
-                                                                        <?php endif; ?>
-
-                                                                        <?php if (!empty($data['review_count'])): ?>
-                                                                            <div><strong>Reviews:</strong> <?php echo number_format($data['review_count']); ?></div>
-                                                                        <?php endif; ?>
-
-                                                                        <?php if (!empty($data['awards'])): ?>
-                                                                            <div>
-                                                                                <strong>Awards:</strong>
-                                                                                <?php
-                                                                                $awardsText = $data['awards'];
-                                                                                if (strlen($awardsText) > 50) {
-                                                                                    echo htmlspecialchars(substr($awardsText, 0, 50)) . '...';
-                                                                                } else {
-                                                                                    echo htmlspecialchars($awardsText);
-                                                                                }
-                                                                                ?>
-                                                                            </div>
-                                                                        <?php endif; ?>
+                                                                        <form method="post" action="book-import-validate.php" class="mt-1">
+                                                                            <input type="hidden" name="action" value="update_field">
+                                                                            <input type="hidden" name="book_id" value="<?php echo $bookDetails['id']; ?>">
+                                                                            <input type="hidden" name="field" value="categories">
+                                                                            <input type="hidden" name="value" value="<?php echo htmlspecialchars(implode(',', $data['categories'])); ?>">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Use these genres">
+                                                                                <i class="fas fa-check"></i> Apply
+                                                                            </button>
+                                                                        </form>
                                                                     <?php else: ?>
-                                                                        <span class="text-muted">Not available</span>
-                                                                    <?php endif; ?>
-                                                                </td>
-
-                                                                <td>
-                                                                    <?php if ($source === 'goodreads'): ?>
-                                                                        <?php if (!empty($data['characters']) && is_array($data['characters']) && count($data['characters']) > 0): ?>
-                                                                            <div>
-                                                                                <strong>Characters:</strong>
-                                                                                <?php
-                                                                                $displayChars = array_slice($data['characters'], 0, 2);
-                                                                                echo htmlspecialchars(implode(', ', $displayChars));
-                                                                                if (count($data['characters']) > 2) {
-                                                                                    echo ' <span class="text-muted">+' . (count($data['characters']) - 2) . ' more</span>';
-                                                                                }
-                                                                                ?>
-                                                                            </div>
-                                                                        <?php endif; ?>
-
-                                                                        <?php if (!empty($data['settings']) && is_array($data['settings']) && count($data['settings']) > 0): ?>
-                                                                            <div>
-                                                                                <strong>Settings:</strong>
-                                                                                <?php
-                                                                                $displaySettings = array_slice($data['settings'], 0, 2);
-                                                                                echo htmlspecialchars(implode(', ', $displaySettings));
-                                                                                if (count($data['settings']) > 2) {
-                                                                                    echo ' <span class="text-muted">+' . (count($data['settings']) - 2) . ' more</span>';
-                                                                                }
-                                                                                ?>
-                                                                            </div>
-                                                                        <?php endif; ?>
-                                                                    <?php else: ?>
-                                                                        <span class="text-muted">Not available</span>
-                                                                    <?php endif; ?>
-
-                                                                    <?php
-                                                                    // Check for missing data
-                                                                    $missingFields = [];
-                                                                    if (empty($data['page_count'])) $missingFields[] = 'Page Count';
-                                                                    if (empty($series)) $missingFields[] = 'Series';
-                                                                    if (empty($data['publisher'])) $missingFields[] = 'Publisher';
-                                                                    if (empty($data['language'])) $missingFields[] = 'Language';
-                                                                    if (empty($data['categories']) || count($data['categories']) < 2) $missingFields[] = 'Genres';
-
-                                                                    // For Goodreads, check for additional fields
-                                                                    if ($source === 'goodreads') {
-                                                                        if (empty($data['format'])) $missingFields[] = 'Format';
-                                                                        if (empty($data['rating'])) $missingFields[] = 'Rating';
-                                                                        if (empty($data['characters'])) $missingFields[] = 'Characters';
-                                                                    }
-
-                                                                    if (!empty($missingFields)): ?>
-                                                                        <div class="mt-2">
-                                                                            <span class="badge bg-warning text-dark">Missing: <?php echo htmlspecialchars(implode(', ', array_slice($missingFields, 0, 2))); ?>
-                                                                            <?php if (count($missingFields) > 2): ?>
-                                                                                +<?php echo count($missingFields) - 2; ?> more
-                                                                            <?php endif; ?>
-                                                                            </span>
-                                                                        </div>
-                                                                    <?php else: ?>
-                                                                        <div class="mt-2">
-                                                                            <span class="badge bg-success">Complete</span>
-                                                                        </div>
+                                                                        <span class="text-muted">N/A</span>
                                                                     <?php endif; ?>
                                                                 </td>
                                                                 <td>
@@ -2444,7 +2555,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                                 </button>
                                                                             </form>
                                                                         <?php else: ?>
-                                                                            <button type="button" class="btn btn-sm btn-secondary me-1" disabled>
+                                                                            <button type="button" class="btn btn-sm btn-secondary me-1 d-flex align-items-center justify-content-center" style="height: 31px; color: white; background-color: #6c757d;" disabled>
                                                                                 <i class="fas fa-times"></i> No ISBN
                                                                             </button>
                                                                         <?php endif; ?>

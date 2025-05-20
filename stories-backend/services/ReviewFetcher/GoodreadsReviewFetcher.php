@@ -598,6 +598,10 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         };
 
         // Store the duplicate check function for use in other methods
+        // Define the property in the class to avoid deprecation warning
+        if (!property_exists($this, 'isDuplicateReview')) {
+            $this->isDuplicateReview = null;
+        }
         $this->isDuplicateReview = $isDuplicate;
 
         // If we have a nextPageToken from previous scrape, add it to options

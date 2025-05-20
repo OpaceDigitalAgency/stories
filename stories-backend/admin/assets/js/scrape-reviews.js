@@ -3,7 +3,7 @@ $(document).ready(function() {
     $(document).on('click', '[data-scrape-reviews]', function(e) {
         e.preventDefault();
         const bookId = $(this).data('book-id');
-        const url = `book-scrape-reviews.php?book_id=${bookId}`;
+        const url = `book-scrape-reviews-modal.php?book_id=${bookId}`;
 
         // Create modal if it doesn't exist
         if (!$('#scrapeReviewsModal').length) {
@@ -18,7 +18,7 @@ $(document).ready(function() {
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <iframe style="width: 100%; height: 600px; border: none;"></iframe>
+                                <iframe style="width: 100%; height: 600px; border: none;" name="scrape-frame"></iframe>
                             </div>
                         </div>
                     </div>
@@ -30,4 +30,12 @@ $(document).ready(function() {
         $('#scrapeReviewsModal iframe').attr('src', url);
         $('#scrapeReviewsModal').modal('show');
     });
+
+    // Function to close modal and refresh page
+    window.closeModal = function() {
+        $('#scrapeReviewsModal').modal('hide');
+        setTimeout(function() {
+            window.location.reload();
+        }, 500);
+    };
 });

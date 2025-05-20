@@ -70,6 +70,15 @@ try {
                 if ($book) {
                     // Force refresh validation data
                     $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
+
+                    // Check if we should skip VPS headless browser
+                    $skipVps = isset($_GET['skip_vps']) && $_GET['skip_vps'] == 1;
+                    if ($skipVps) {
+                        // Set environment variable to skip VPS headless browser
+                        putenv('SKIP_VPS_HEADLESS=true');
+                        error_log("Skipping VPS headless browser for validation (user requested)");
+                    }
+
                     $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, true);
 
                     if ($validationResult['status'] === 'success') {
@@ -252,6 +261,14 @@ try {
                 // Get validation data
                 $isbn = $bookData['isbn'] ?? ($bookData['isbn13'] ?? '');
                 error_log("ISBN for validation: " . ($isbn ?: 'None'));
+
+                // Check if we should skip VPS headless browser
+                $skipVps = isset($_GET['skip_vps']) && $_GET['skip_vps'] == 1;
+                if ($skipVps) {
+                    // Set environment variable to skip VPS headless browser
+                    putenv('SKIP_VPS_HEADLESS=true');
+                    error_log("Skipping VPS headless browser for validation (user requested)");
+                }
 
                 // Force refresh validation data to ensure we get fresh results
                 $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, true);

@@ -42,6 +42,9 @@ $sources = array_keys($sourceData);
                     <button type="button" class="btn btn-light btn-sm" id="refreshValidation">
                         <i class="fas fa-sync-alt"></i> Refresh Data
                     </button>
+                    <a href="?action=validate_book&book_id=<?php echo (int)$book['id']; ?>&skip_vps=1" class="btn btn-warning btn-sm ml-2">
+                        <i class="fas fa-server"></i> Skip VPS Headless Browser
+                    </a>
                 </div>
             </div>
         </div>

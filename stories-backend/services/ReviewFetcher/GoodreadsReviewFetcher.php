@@ -449,23 +449,42 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Book URL being scraped: {$bookUrl}");
 
-        // Make the request to the VPS Headless Browser service with API key in header
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "x-api-key: stories-scraper-api-key-2023"
-        ]);
-
-        $vpsResponse = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode >= 400) {
-            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ VPS Headless Browser API error: HTTP {$httpCode}");
+        // Check if we should skip VPS headless browser (for debugging or if it's known to be down)
+        if (isset($_GET['skip_vps']) || isset($_POST['skip_vps']) || getenv('SKIP_VPS_HEADLESS') === 'true') {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "⚠️ Skipping VPS Headless Browser (forced by parameter)");
             $vpsResponse = false;
+        } else {
+            // Make the request to the VPS Headless Browser service with API key in header
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 second timeout
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "x-api-key: {$apiKey}"
+            ]);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // 10 second connection timeout
+            curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
+
+            // Create a file handle for the verbose information
+            $verbose = fopen($debugDir . '/curl_verbose.log', 'w+');
+            curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
+            $vpsResponse = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            $curlErrno = curl_errno($ch);
+            curl_close($ch);
+
+            // Close the file handle
+            fclose($verbose);
+
+            if ($httpCode >= 400 || $curlErrno > 0) {
+                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ VPS Headless Browser API error: HTTP {$httpCode}, cURL Error: {$curlError} ({$curlErrno})");
+                $this->logToFile($debugDir . '/goodreads-log.txt', "❌ See curl_verbose.log for detailed connection information");
+                $vpsResponse = false;
+            }
         }
 
         if ($vpsResponse !== false) {
@@ -521,6 +540,21 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // If VPS Headless Browser fails, fall back to direct scraping
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Falling back to direct HTML scraping for book details");
+
+        // Log the book URL we're scraping directly
+        $this->logToFile($debugDir . '/goodreads-log.txt', "📚 Direct scraping book URL: {$bookUrl}");
+
+        // Create a more detailed log of the response for debugging
+        if ($response) {
+            $responseLength = strlen($response);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Response received: {$responseLength} bytes");
+
+            // Save a sample of the response for debugging
+            $sampleLength = min(1000, $responseLength);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Response sample: " . substr($response, 0, $sampleLength) . "...");
+        } else {
+            $this->logToFile($debugDir . '/goodreads-log.txt', "❌ No response received from direct scraping");
+        }
 
         // Extract book title
         if (preg_match('/<h1 id="bookTitle"[^>]*>([^<]+)<\/h1>/i', $response, $matches)) {

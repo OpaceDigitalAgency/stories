@@ -60,7 +60,7 @@ function searchBookByTitle($bookId, $title, $db) {
 
         foreach ($allSuggestions as $suggestion) {
             $isbn = !empty($suggestion['isbn13']) ? $suggestion['isbn13'] : $suggestion['isbn'];
-            
+
             if (!empty($isbn) && !isset($seenIsbns[$isbn])) {
                 $seenIsbns[$isbn] = true;
                 $uniqueSuggestions[] = $suggestion;
@@ -75,33 +75,33 @@ function searchBookByTitle($bookId, $title, $db) {
             // Exact title match gets highest priority
             $aExactMatch = strtolower($a['title']) === strtolower($searchTitle);
             $bExactMatch = strtolower($b['title']) === strtolower($searchTitle);
-            
+
             if ($aExactMatch && !$bExactMatch) {
                 return -1;
             } else if (!$aExactMatch && $bExactMatch) {
                 return 1;
             }
-            
+
             // Then check if title contains search term
             $aContains = stripos($a['title'], $searchTitle) !== false;
             $bContains = stripos($b['title'], $searchTitle) !== false;
-            
+
             if ($aContains && !$bContains) {
                 return -1;
             } else if (!$aContains && $bContains) {
                 return 1;
             }
-            
+
             // Finally, sort by whether they have ISBNs
             $aHasIsbn = !empty($a['isbn']) || !empty($a['isbn13']);
             $bHasIsbn = !empty($b['isbn']) || !empty($b['isbn13']);
-            
+
             if ($aHasIsbn && !$bHasIsbn) {
                 return -1;
             } else if (!$aHasIsbn && $bHasIsbn) {
                 return 1;
             }
-            
+
             return 0;
         });
 
@@ -109,8 +109,8 @@ function searchBookByTitle($bookId, $title, $db) {
         $uniqueSuggestions = array_slice($uniqueSuggestions, 0, 5);
 
         $results['status'] = 'success';
-        $results['message'] = count($uniqueSuggestions) > 0 
-            ? 'Found ' . count($uniqueSuggestions) . ' suggestions' 
+        $results['message'] = count($uniqueSuggestions) > 0
+            ? 'Found ' . count($uniqueSuggestions) . ' suggestions'
             : 'No suggestions found';
         $results['suggestions'] = $uniqueSuggestions;
 
@@ -204,14 +204,14 @@ function updateBookFromSuggestion($bookId, $suggestionData, $db) {
         // Clear cache
         $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
         $title = $book['title'] ?? '';
-        clearValidationCache($bookId, $isbn, $title, $db);
+        clearValidationCacheNew($bookId, $isbn, $title, $db);
 
         // Commit transaction
         $db->commit();
 
         $results['status'] = 'success';
-        $results['message'] = count($updatedFields) > 0 
-            ? 'Successfully updated ' . count($updatedFields) . ' fields from suggestion' 
+        $results['message'] = count($updatedFields) > 0
+            ? 'Successfully updated ' . count($updatedFields) . ' fields from suggestion'
             : 'No fields needed updating';
         $results['updated_fields'] = $updatedFields;
 
@@ -236,7 +236,7 @@ function updateBookFromSuggestion($bookId, $suggestionData, $db) {
  */
 function getMissingFields($book) {
     $missingFields = [];
-    
+
     // Define required fields
     $requiredFields = [
         'title' => 'Title',
@@ -249,13 +249,13 @@ function getMissingFields($book) {
         'series' => 'Series',
         'cover_url' => 'Cover Image'
     ];
-    
+
     // Check each field
     foreach ($requiredFields as $field => $label) {
         if (empty($book[$field]) || $book[$field] === 'unknown' || $book[$field] === 'Unknown') {
             $missingFields[] = $label;
         }
     }
-    
+
     return $missingFields;
 }

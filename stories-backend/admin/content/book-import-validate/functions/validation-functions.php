@@ -54,7 +54,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         // Check cache first to improve performance (unless force refresh is requested)
         if (!$forceRefresh) {
             $cacheKey = md5("book_validation_{$bookId}_{$cleanIsbn}");
-            $cachedResults = getValidationCache($cacheKey, $db);
+            $cachedResults = getValidationCacheNew($cacheKey, $db);
 
             if ($cachedResults) {
                 error_log("Using cached validation results for book ID: $bookId, ISBN: $cleanIsbn");
@@ -196,7 +196,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
 
         // Save results to cache
         $cacheKey = md5("book_validation_{$bookId}_{$cleanIsbn}");
-        saveValidationCache($cacheKey, $results, $db);
+        saveValidationCacheNew($cacheKey, $results, $db);
 
         return $results;
     } catch (Exception $e) {

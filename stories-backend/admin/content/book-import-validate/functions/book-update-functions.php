@@ -100,7 +100,7 @@ function updateBookField($bookId, $field, $value, $source, $db) {
         // Clear cache
         $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
         $title = $book['title'] ?? '';
-        clearValidationCache($bookId, $isbn, $title, $db);
+        clearValidationCacheNew($bookId, $isbn, $title, $db);
 
         $results['status'] = 'success';
         $results['message'] = "Successfully updated $field from $source";
@@ -147,7 +147,7 @@ function applyAllValidValues($bookId, $db) {
         // Get validation data
         $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
         $cacheKey = md5("book_validation_{$bookId}_{$isbn}");
-        $validationData = getValidationCache($cacheKey, $db);
+        $validationData = getValidationCacheNew($cacheKey, $db);
 
         if (!$validationData || empty($validationData['sourceData'])) {
             $results['message'] = 'No validation data available';
@@ -242,8 +242,8 @@ function applyAllValidValues($bookId, $db) {
 
         // Update results
         $results['status'] = 'success';
-        $results['message'] = count($updatedFields) > 0 
-            ? 'Successfully updated ' . count($updatedFields) . ' fields' 
+        $results['message'] = count($updatedFields) > 0
+            ? 'Successfully updated ' . count($updatedFields) . ' fields'
             : 'No fields needed updating';
         $results['updated_fields'] = $updatedFields;
 
@@ -294,7 +294,7 @@ function applyAllFromSource($bookId, $source, $db) {
         // Get validation data
         $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
         $cacheKey = md5("book_validation_{$bookId}_{$isbn}");
-        $validationData = getValidationCache($cacheKey, $db);
+        $validationData = getValidationCacheNew($cacheKey, $db);
 
         if (!$validationData || empty($validationData['sourceData'][$source])) {
             $results['message'] = "No validation data available for source: $source";
@@ -355,8 +355,8 @@ function applyAllFromSource($bookId, $source, $db) {
 
         // Update results
         $results['status'] = 'success';
-        $results['message'] = count($updatedFields) > 0 
-            ? "Successfully updated " . count($updatedFields) . " fields from $source" 
+        $results['message'] = count($updatedFields) > 0
+            ? "Successfully updated " . count($updatedFields) . " fields from $source"
             : "No fields needed updating from $source";
         $results['updated_fields'] = $updatedFields;
 

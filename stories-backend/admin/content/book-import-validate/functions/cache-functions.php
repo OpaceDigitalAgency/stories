@@ -12,7 +12,7 @@
  * @param PDO $db Database connection
  * @return array|null Cached validation results or null if not found
  */
-function getValidationCache($cacheKey, $db) {
+function getValidationCacheNew($cacheKey, $db) {
     try {
         // Check if we have a validation_cache table
         $stmt = $db->prepare("
@@ -65,7 +65,7 @@ function getValidationCache($cacheKey, $db) {
  * @param PDO $db Database connection
  * @return bool True if successful, false otherwise
  */
-function saveValidationCache($cacheKey, $data, $db) {
+function saveValidationCacheNew($cacheKey, $data, $db) {
     try {
         // Check if we have a validation_cache table
         $stmt = $db->prepare("
@@ -114,7 +114,7 @@ function saveValidationCache($cacheKey, $data, $db) {
  * @param PDO $db Database connection
  * @return bool True if successful, false otherwise
  */
-function clearValidationCache($bookId, $isbn, $title, $db) {
+function clearValidationCacheNew($bookId, $isbn, $title, $db) {
     try {
         // Check if we have a validation_cache table
         $stmt = $db->prepare("

@@ -15,7 +15,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
     protected $sourceId = 1; // Goodreads source ID
     protected $lastError = null;
     protected $aggregateRating = null; // Store aggregate rating separately
-    protected $useVpsHeadlessBrowser = false; // Whether to use the VPS Headless Browser
+    protected $useVpsHeadlessBrowser = true; // Whether to use the VPS Headless Browser
 
     // GraphQL pagination state
     protected $nextPageToken = null;

@@ -16,7 +16,13 @@ fi
 
 # Install required Python packages
 echo "Installing required Python packages..."
-pip3 install -r requirements.txt
+pip3 install --user -r requirements.txt
+
+# Check if installation was successful
+if [ $? -ne 0 ]; then
+    echo "Failed to install packages with --user flag, trying without sudo..."
+    pip3 install -r requirements.txt
+fi
 
 # Make the Python script executable
 chmod +x goodreads_book_info.py

@@ -395,7 +395,7 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
                                 // Extract book details from JSON data
                                 $bookData['goodreads'] = [
                                     'title' => $jsonData['title'] ?? '',
-                                    'author' => $jsonData['author'] ?? '',
+                                    'author' => strip_tags($jsonData['author'] ?? ''),
                                     'publisher' => $jsonData['publisher'] ?? '',
                                     'publication_date' => $jsonData['published_date'] ?? ($jsonData['publication_date'] ?? ''),
                                     'page_count' => $jsonData['pages'] ?? ($jsonData['page_count'] ?? ''),
@@ -2215,14 +2215,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                 <table class="table table-bordered">
                                                     <thead>
                                                         <tr>
-                                                            <th>Source</th>
-                                                            <th>Title</th>
-                                                            <th>Author</th>
-                                                            <th>ISBN</th>
-                                                            <th>Publisher</th>
-                                                            <th>Series</th>
-                                                            <th>Missing Data</th>
-                                                            <th>Actions</th>
+                                                            <th style="width: 10%;">Source</th>
+                                                            <th style="width: 15%;">Title/Author</th>
+                                                            <th style="width: 10%;">ISBN</th>
+                                                            <th style="width: 10%;">Publication</th>
+                                                            <th style="width: 15%;">Details</th>
+                                                            <th style="width: 15%;">Community</th>
+                                                            <th style="width: 15%;">Metadata</th>
+                                                            <th style="width: 10%;">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -2235,6 +2235,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     ?>">
                                                                         <?php echo htmlspecialchars($data['source']); ?>
                                                                     </span>
+
+                                                                    <?php if (!empty($data['cover_url'])): ?>
+                                                                    <div class="mt-2">
+                                                                        <img src="<?php echo htmlspecialchars($data['cover_url']); ?>" alt="Cover" class="img-thumbnail" style="max-width: 60px;">
+                                                                    </div>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <td>
+                                                                    <div><strong><?php echo htmlspecialchars($data['title']); ?></strong></div>
+                                                                    <div class="text-muted"><?php echo htmlspecialchars($data['author']); ?></div>
+
                                                                     <?php if ($source === 'goodreads' && !empty($data['rating'])): ?>
                                                                     <div class="small mt-1">
                                                                         <span class="text-warning">
@@ -2255,18 +2267,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                     </div>
                                                                     <?php endif; ?>
                                                                 </td>
-                                                                <td><?php echo htmlspecialchars($data['title']); ?></td>
-                                                                <td><?php echo htmlspecialchars($data['author']); ?></td>
+
                                                                 <td>
                                                                     <?php if (!empty($data['isbn13'])): ?>
-                                                                        <span title="ISBN-13"><?php echo htmlspecialchars($data['isbn13']); ?></span>
-                                                                    <?php elseif (!empty($data['isbn'])): ?>
-                                                                        <span title="ISBN-10"><?php echo htmlspecialchars($data['isbn']); ?></span>
-                                                                    <?php else: ?>
-                                                                        <span class="text-muted">N/A</span>
+                                                                        <div><strong>ISBN-13:</strong></div>
+                                                                        <div><?php echo htmlspecialchars($data['isbn13']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['isbn'])): ?>
+                                                                        <div class="mt-1"><strong>ISBN-10:</strong></div>
+                                                                        <div><?php echo htmlspecialchars($data['isbn']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (empty($data['isbn']) && empty($data['isbn13'])): ?>
+                                                                        <span class="text-muted">No ISBN available</span>
                                                                     <?php endif; ?>
                                                                 </td>
-                                                                <td><?php echo !empty($data['publisher']) ? htmlspecialchars($data['publisher']) : '<span class="text-muted">N/A</span>'; ?></td>
+
+                                                                <td>
+                                                                    <?php if (!empty($data['publisher'])): ?>
+                                                                        <div><strong>Publisher:</strong> <?php echo htmlspecialchars($data['publisher']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['publication_date'])): ?>
+                                                                        <div><strong>Date:</strong> <?php echo htmlspecialchars($data['publication_date']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['language'])): ?>
+                                                                        <div><strong>Language:</strong> <?php echo htmlspecialchars($data['language']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['format'])): ?>
+                                                                        <div><strong>Format:</strong> <?php echo htmlspecialchars($data['format']); ?></div>
+                                                                    <?php endif; ?>
+                                                                </td>
+
                                                                 <td>
                                                                     <?php
                                                                     // Try to extract series from categories or title
@@ -2284,10 +2319,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                             }
                                                                         }
                                                                     }
-                                                                    echo !empty($series) ? htmlspecialchars($series) : '<span class="text-muted">N/A</span>';
-                                                                    ?>
+
+                                                                    if (!empty($series)): ?>
+                                                                        <div><strong>Series:</strong> <?php echo htmlspecialchars($series); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['page_count'])): ?>
+                                                                        <div><strong>Pages:</strong> <?php echo htmlspecialchars($data['page_count']); ?></div>
+                                                                    <?php endif; ?>
+
+                                                                    <?php if (!empty($data['categories']) && count($data['categories']) > 0): ?>
+                                                                        <div>
+                                                                            <strong>Genres:</strong>
+                                                                            <?php
+                                                                            $displayCategories = array_slice($data['categories'], 0, 3);
+                                                                            echo htmlspecialchars(implode(', ', $displayCategories));
+                                                                            if (count($data['categories']) > 3) {
+                                                                                echo ' <span class="text-muted">+' . (count($data['categories']) - 3) . ' more</span>';
+                                                                            }
+                                                                            ?>
+                                                                        </div>
+                                                                    <?php endif; ?>
                                                                 </td>
+
                                                                 <td>
+                                                                    <?php if ($source === 'goodreads'): ?>
+                                                                        <?php if (!empty($data['rating_count'])): ?>
+                                                                            <div><strong>Ratings:</strong> <?php echo number_format($data['rating_count']); ?></div>
+                                                                        <?php endif; ?>
+
+                                                                        <?php if (!empty($data['review_count'])): ?>
+                                                                            <div><strong>Reviews:</strong> <?php echo number_format($data['review_count']); ?></div>
+                                                                        <?php endif; ?>
+
+                                                                        <?php if (!empty($data['awards'])): ?>
+                                                                            <div>
+                                                                                <strong>Awards:</strong>
+                                                                                <?php
+                                                                                $awardsText = $data['awards'];
+                                                                                if (strlen($awardsText) > 50) {
+                                                                                    echo htmlspecialchars(substr($awardsText, 0, 50)) . '...';
+                                                                                } else {
+                                                                                    echo htmlspecialchars($awardsText);
+                                                                                }
+                                                                                ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">Not available</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+
+                                                                <td>
+                                                                    <?php if ($source === 'goodreads'): ?>
+                                                                        <?php if (!empty($data['characters']) && is_array($data['characters']) && count($data['characters']) > 0): ?>
+                                                                            <div>
+                                                                                <strong>Characters:</strong>
+                                                                                <?php
+                                                                                $displayChars = array_slice($data['characters'], 0, 2);
+                                                                                echo htmlspecialchars(implode(', ', $displayChars));
+                                                                                if (count($data['characters']) > 2) {
+                                                                                    echo ' <span class="text-muted">+' . (count($data['characters']) - 2) . ' more</span>';
+                                                                                }
+                                                                                ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+
+                                                                        <?php if (!empty($data['settings']) && is_array($data['settings']) && count($data['settings']) > 0): ?>
+                                                                            <div>
+                                                                                <strong>Settings:</strong>
+                                                                                <?php
+                                                                                $displaySettings = array_slice($data['settings'], 0, 2);
+                                                                                echo htmlspecialchars(implode(', ', $displaySettings));
+                                                                                if (count($data['settings']) > 2) {
+                                                                                    echo ' <span class="text-muted">+' . (count($data['settings']) - 2) . ' more</span>';
+                                                                                }
+                                                                                ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    <?php else: ?>
+                                                                        <span class="text-muted">Not available</span>
+                                                                    <?php endif; ?>
+
                                                                     <?php
                                                                     // Check for missing data
                                                                     $missingFields = [];
@@ -2304,12 +2417,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                                         if (empty($data['characters'])) $missingFields[] = 'Characters';
                                                                     }
 
-                                                                    if (!empty($missingFields)) {
-                                                                        echo '<span class="text-warning">' . htmlspecialchars(implode(', ', $missingFields)) . '</span>';
-                                                                    } else {
-                                                                        echo '<span class="text-success">Complete</span>';
-                                                                    }
-                                                                    ?>
+                                                                    if (!empty($missingFields)): ?>
+                                                                        <div class="mt-2">
+                                                                            <span class="badge bg-warning text-dark">Missing: <?php echo htmlspecialchars(implode(', ', array_slice($missingFields, 0, 2))); ?>
+                                                                            <?php if (count($missingFields) > 2): ?>
+                                                                                +<?php echo count($missingFields) - 2; ?> more
+                                                                            <?php endif; ?>
+                                                                            </span>
+                                                                        </div>
+                                                                    <?php else: ?>
+                                                                        <div class="mt-2">
+                                                                            <span class="badge bg-success">Complete</span>
+                                                                        </div>
+                                                                    <?php endif; ?>
                                                                 </td>
                                                                 <td>
                                                                     <div class="d-flex flex-nowrap">

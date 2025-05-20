@@ -367,11 +367,8 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     'message' => "Extracting title"
                 ];
 
-                // Extract book details using regex - updated for current Goodreads HTML structure
-                preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
-                if (empty($titleMatches)) {
-                    preg_match('/<a[^>]+data-testid="bookTitle"[^>]*>(.*?)<\/a>/s', $response, $titleMatches);
-                }
+                // Extract book details using current Goodreads selectors
+                preg_match('/<h1[^>]*class="Text__title1"[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
 
                 if (!empty($titleMatches)) {
                     $detailedStatus['steps'][] = [
@@ -393,10 +390,7 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     'message' => "Extracting author"
                 ];
 
-                preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
-                if (empty($authorMatches)) {
-                    preg_match('/<a[^>]+data-testid="authorLink"[^>]*>(.*?)<\/a>/s', $response, $authorMatches);
-                }
+                preg_match('/<span[^>]*class="ContributorLink__name"[^>]*>(.*?)<\/span>/s', $response, $authorMatches);
 
                 if (!empty($authorMatches)) {
                     $detailedStatus['steps'][] = [
@@ -468,11 +462,8 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     'message' => "Extracting cover image"
                 ];
 
-                // Extract cover image - updated for current Goodreads HTML structure
-                preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
-                if (empty($coverMatches)) {
-                    preg_match('/<img[^>]+data-testid="bookCover"[^>]+src="([^"]+)"/s', $response, $coverMatches);
-                }
+                // Extract cover image using current selector
+                preg_match('/<img[^>]*class="ResponsiveImage"[^>]*src="([^"]+)"/s', $response, $coverMatches);
 
                 if (!empty($coverMatches)) {
                     $detailedStatus['steps'][] = [
@@ -488,16 +479,93 @@ function fetchGoodreadsDataWithCurlNew($isbn, $title, $author, $searchUrl, $deta
                     ];
                 }
 
-                // Extract description - updated for current Goodreads HTML structure
-                preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
-                if (empty($descMatches)) {
-                    preg_match('/<div[^>]+data-testid="description"[^>]*>(.*?)<\/div>/s', $response, $descMatches);
+                // Extract description using current selector
+                preg_match('/<div[^>]*class="DetailsLayoutRightParagraph__widthConstrained"[^>]*>(.*?)<\/div>/s', $response, $descMatches);
+
+                // Extract rating
+                preg_match('/<div[^>]*class="RatingStatistics__rating"[^>]*>(.*?)<\/div>/s', $response, $ratingMatches);
+
+                // Extract genres
+                preg_match_all('/<span[^>]*class="BookPageMetadataSection__genreButton"[^>]*>(.*?)<\/span>/s', $response, $genreMatches);
+
+                // Extract JSON-LD data for additional fields
+                preg_match('/<script type="application\/ld\+json">(.*?)<\/script>/s', $response, $jsonMatches);
+                $jsonData = null;
+                if (!empty($jsonMatches[1])) {
+                    $jsonData = json_decode($jsonMatches[1], true);
+                }
+
+                // Extract data from JSON-LD if available
+                $pages = '';
+                $format = '';
+                $language = '';
+                $ratingCount = '';
+                $reviewCount = '';
+                if ($jsonData && isset($jsonData['@type']) && $jsonData['@type'] === 'Book') {
+                    $pages = $jsonData['numberOfPages'] ?? '';
+                    $format = $jsonData['bookFormat'] ?? '';
+                    $language = $jsonData['inLanguage'] ?? '';
+                    if (isset($jsonData['aggregateRating'])) {
+                        $ratingCount = $jsonData['aggregateRating']['ratingCount'] ?? '';
+                        $reviewCount = $jsonData['aggregateRating']['reviewCount'] ?? '';
+                    }
                 }
 
                 // Extract series information
                 preg_match('/<a[^>]+href="\/series\/[^"]+"[^>]*>(.*?)<\/a>/s', $response, $seriesMatches);
 
-                if (!empty($seriesMatches)) {
+                // Process all the extracted data
+                if (!empty($titleMatches) || !empty($authorMatches) || !empty($coverMatches) ||
+                    !empty($descMatches) || !empty($ratingMatches) || !empty($genreMatches)) {
+                    
+                    $detailedStatus['steps'][] = [
+                        'name' => 'data_extraction',
+                        'status' => 'success',
+                        'message' => "Successfully extracted book data from HTML"
+                    ];
+
+                    // Build book data array
+                    $bookData = [
+                        'title' => strip_tags($titleMatches[1] ?? ''),
+                        'author' => strip_tags($authorMatches[1] ?? ''),
+                        'publisher' => '',  // From JSON-LD
+                        'publication_date' => '', // From JSON-LD
+                        'page_count' => $pages,
+                        'isbn' => '', // From JSON-LD
+                        'isbn13' => '', // From JSON-LD
+                        'language' => $language,
+                        'format' => $format,
+                        'series' => '', // From JSON-LD
+                        'awards' => '', // From JSON-LD
+                        'characters' => [],
+                        'settings' => [],
+                        'preview_link' => '',
+                        'cover_url' => $coverMatches[1] ?? '',
+                        'rating' => strip_tags($ratingMatches[1] ?? ''),
+                        'rating_count' => $ratingCount,
+                        'review_count' => $reviewCount,
+                        'maturity_rating' => '',
+                        'genres' => !empty($genreMatches[1]) ? array_map('strip_tags', $genreMatches[1]) : []
+                    ];
+
+                    // Add status information
+                    $endTime = microtime(true);
+                    $totalTime = round($endTime - $startTime, 2);
+
+                    $detailedStatus['status'] = 'success';
+                    $detailedStatus['message'] = 'Successfully extracted data from Goodreads via curl';
+                    $detailedStatus['processing_time'] = $totalTime;
+                    $detailedStatus['method'] = 'curl_direct';
+
+                    $bookData['_status'] = $detailedStatus;
+
+                    return $bookData;
+                } else {
+                    $detailedStatus['steps'][] = [
+                        'name' => 'data_extraction',
+                        'status' => 'error',
+                        'message' => "Failed to extract required book data from HTML"
+                    ];
                     $detailedStatus['steps'][] = [
                         'name' => 'extract_series',
                         'status' => 'success',

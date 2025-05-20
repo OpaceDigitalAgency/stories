@@ -35,3 +35,6 @@ storiesfromtheweb/
 # Local Netlify folder
 .netlify
 .DS_Store
+
+# Database dumps (may contain sensitive data)
+stories-backend/docs/database/*.sql

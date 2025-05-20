@@ -160,7 +160,10 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             // Calculate processing time
             $processingTime = microtime(true) - $startTime;
 
-            if (empty($response)) {
+            // Debug the response
+            error_log("Goodreads response: " . print_r($response, true));
+
+            if (empty($response) || !is_array($response)) {
                 $error = $goodreadsFetcher->getLastError();
                 $detailedStatus['steps'][] = [
                     'name' => 'review_fetcher',
@@ -177,6 +180,16 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 ];
             }
 
+            // Check if we have a book_metadata object directly in the response
+            if (isset($response['book_metadata'])) {
+                $bookMetadata = $response['book_metadata'];
+                $detailedStatus['steps'][] = [
+                    'name' => 'data_extraction',
+                    'status' => 'success',
+                    'message' => "Found book metadata directly in response"
+                ];
+            }
+
             // Success - we have book data
             $detailedStatus['steps'][] = [
                 'name' => 'review_fetcher',
@@ -184,32 +197,65 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 'message' => "Successfully fetched book data from Goodreads"
             ];
 
-            // Get the book metadata from the first review
-            $bookMetadata = $response[0]['book_metadata'] ?? [];
+            // Get the book metadata from the response
+            if (!isset($bookMetadata)) {
+                // If we didn't find book_metadata directly in the response, check if it's in the first review
+                if (isset($response[0]) && isset($response[0]['book_metadata'])) {
+                    $bookMetadata = $response[0]['book_metadata'] ?? [];
+                    $detailedStatus['steps'][] = [
+                        'name' => 'data_extraction',
+                        'status' => 'success',
+                        'message' => "Found book metadata in first review"
+                    ];
+                } else {
+                    // Try to extract book metadata from the response structure
+                    $bookMetadata = [];
 
-            // Check if this is an error response
-            if (isset($response[0]['reviewer_name']) && $response[0]['reviewer_name'] === 'Error') {
-                $errorMessage = $response[0]['review_text'] ?? 'Unknown error';
-                $detailedStatus['steps'][] = [
-                    'name' => 'data_extraction',
-                    'status' => 'error',
-                    'message' => "Error from Goodreads: " . $errorMessage
-                ];
+                    // Check if this is an error response
+                    if (isset($response[0]['reviewer_name']) && $response[0]['reviewer_name'] === 'Error') {
+                        $errorMessage = $response[0]['review_text'] ?? 'Unknown error';
+                        $detailedStatus['steps'][] = [
+                            'name' => 'data_extraction',
+                            'status' => 'error',
+                            'message' => "Error from Goodreads: $errorMessage"
+                        ];
 
-                $detailedStatus['status'] = 'error';
-                $detailedStatus['message'] = 'Error from Goodreads: ' . $errorMessage;
-                $detailedStatus['processing_time'] = round($processingTime, 2);
+                        $detailedStatus['status'] = 'error';
+                        $detailedStatus['message'] = "Error from Goodreads: $errorMessage";
+                        $detailedStatus['processing_time'] = round($processingTime, 2);
 
-                // Return a minimal set of data with the error status
-                return [
-                    'title' => $bookMetadata['title'] ?? 'Unknown',
-                    'author' => $bookMetadata['author'] ?? 'Unknown',
-                    'isbn' => $bookMetadata['isbn'] ?? $isbn,
-                    'error' => $errorMessage,
-                    '_status' => $detailedStatus
-                ];
+                        // Return a minimal set of data with the error status
+                        return [
+                            'title' => $bookMetadata['title'] ?? 'Unknown',
+                            'author' => $bookMetadata['author'] ?? 'Unknown',
+                            'isbn' => $bookMetadata['isbn'] ?? $isbn,
+                            'error' => $errorMessage,
+                            '_status' => $detailedStatus
+                        ];
+                    }
+
+                    // If we have a book object in the response
+                    if (isset($response['book'])) {
+                        $bookMetadata = $response['book'];
+                        $detailedStatus['steps'][] = [
+                            'name' => 'data_extraction',
+                            'status' => 'success',
+                            'message' => "Found book data in 'book' property"
+                        ];
+                    }
+                    // If we have reviews array with book info
+                    else if (isset($response['reviews']) && !empty($response['reviews'][0]['book_metadata'])) {
+                        $bookMetadata = $response['reviews'][0]['book_metadata'];
+                        $detailedStatus['steps'][] = [
+                            'name' => 'data_extraction',
+                            'status' => 'success',
+                            'message' => "Found book metadata in reviews array"
+                        ];
+                    }
+                }
             }
 
+            // If we still don't have book metadata, log an error
             if (empty($bookMetadata)) {
                 $detailedStatus['steps'][] = [
                     'name' => 'data_extraction',
@@ -221,33 +267,93 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 $detailedStatus['message'] = 'No book metadata found in Goodreads response';
                 $detailedStatus['processing_time'] = round($processingTime, 2);
 
+                // Log the full response for debugging
+                error_log("Full Goodreads response structure: " . json_encode($response));
+
                 return [
                     '_status' => $detailedStatus
                 ];
             }
 
             // Extract book details from metadata
-            $bookData = [
-                'title' => strip_tags($bookMetadata['title'] ?? ''),
-                'author' => strip_tags($bookMetadata['author'] ?? ''),
-                'publisher' => strip_tags($bookMetadata['publisher'] ?? ''),
-                'publication_date' => strip_tags($bookMetadata['publication_date'] ?? ''),
-                'page_count' => strip_tags($bookMetadata['page_count'] ?? ''),
-                'isbn' => strip_tags($bookMetadata['isbn'] ?? $isbn),
-                'isbn13' => strip_tags($bookMetadata['isbn13'] ?? ''),
-                'language' => strip_tags($bookMetadata['language'] ?? ''),
-                'format' => strip_tags($bookMetadata['format'] ?? ''),
-                'series' => strip_tags($bookMetadata['series'] ?? ''),
-                'description' => strip_tags($bookMetadata['description'] ?? ''),
-                'cover_url' => $bookMetadata['cover_url'] ?? '',
-                'rating' => strip_tags($bookMetadata['average_rating'] ?? ''),
-                'rating_count' => strip_tags($bookMetadata['ratings_count'] ?? ''),
-                'review_count' => strip_tags($bookMetadata['reviews_count'] ?? ''),
-                'awards' => $bookMetadata['awards'] ?? [],
-                'characters' => $bookMetadata['characters'] ?? [],
-                'settings' => $bookMetadata['settings'] ?? [],
-                'genres' => $bookMetadata['genres'] ?? []
+            $bookData = [];
+
+            // Helper function to clean HTML tags and trim whitespace
+            $cleanField = function($value) {
+                if (is_string($value)) {
+                    return trim(strip_tags($value));
+                }
+                return $value;
+            };
+
+            // Map fields with proper cleaning
+            $fieldMappings = [
+                'title' => ['title', 'book_title'],
+                'author' => ['author', 'authors', 'book_author'],
+                'publisher' => ['publisher', 'book_publisher'],
+                'publication_date' => ['publication_date', 'published_date', 'publish_date'],
+                'page_count' => ['page_count', 'num_pages', 'pages'],
+                'isbn' => ['isbn', 'isbn10'],
+                'isbn13' => ['isbn13'],
+                'language' => ['language'],
+                'format' => ['format', 'book_format'],
+                'series' => ['series'],
+                'description' => ['description'],
+                'cover_url' => ['cover_url', 'image_url', 'cover_image_url'],
+                'rating' => ['average_rating', 'rating'],
+                'rating_count' => ['ratings_count', 'rating_count'],
+                'review_count' => ['reviews_count', 'review_count'],
+                'awards' => ['awards'],
+                'characters' => ['characters'],
+                'settings' => ['settings'],
+                'genres' => ['genres', 'genre', 'shelves']
             ];
+
+            // Process each field with its possible mappings
+            foreach ($fieldMappings as $outputField => $possibleFields) {
+                foreach ($possibleFields as $field) {
+                    if (isset($bookMetadata[$field]) && !empty($bookMetadata[$field])) {
+                        $bookData[$outputField] = $outputField === 'cover_url' ?
+                            $bookMetadata[$field] : $cleanField($bookMetadata[$field]);
+                        break;
+                    }
+                }
+            }
+
+            // Ensure we have the ISBN if it wasn't found in the metadata
+            if (empty($bookData['isbn']) && !empty($isbn)) {
+                $bookData['isbn'] = $isbn;
+            }
+
+            // Set defaults for missing fields
+            $defaults = [
+                'title' => 'Unknown',
+                'author' => 'Unknown',
+                'publisher' => '',
+                'publication_date' => '',
+                'page_count' => '',
+                'isbn' => $isbn,
+                'isbn13' => '',
+                'language' => '',
+                'format' => '',
+                'series' => '',
+                'description' => '',
+                'cover_url' => '',
+                'rating' => '',
+                'rating_count' => '',
+                'review_count' => '',
+                'awards' => [],
+                'characters' => [],
+                'settings' => [],
+                'genres' => []
+            ];
+
+            // Fill in any missing fields with defaults
+            foreach ($defaults as $field => $defaultValue) {
+                if (!isset($bookData[$field])) {
+                    $bookData[$field] = $defaultValue;
+                }
+            }
 
             // Log success for debugging
             $endTime = microtime(true);

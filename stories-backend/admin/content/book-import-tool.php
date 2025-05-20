@@ -71,7 +71,7 @@ try {
     if (!in_array($currentTab, $validTabs)) {
         $currentTab = 'existing';
     }
-    
+
     // Force the tab parameter to match the current tab
     $_GET['tab'] = $currentTab;
     $pageDescription = 'Import books and scrape reviews from various sources';
@@ -79,35 +79,35 @@ try {
     // Get the page and per_page parameters for each tab
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 10;
-    
+
     // Sources tab pagination
     $sourcesPage = isset($_GET['sources_page']) ? max(1, intval($_GET['sources_page'])) : 1;
     $sourcesPerPage = isset($_GET['sources_per_page']) ? intval($_GET['sources_per_page']) : 10;
-    
+
     // Reviews tab pagination
     $reviewsPage = isset($_GET['reviews_page']) ? max(1, intval($_GET['reviews_page'])) : 1;
     $reviewsPerPage = isset($_GET['reviews_per_page']) ? intval($_GET['reviews_per_page']) : 10;
-    
+
     // ISBN tab pagination
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
-    
+
     // Log the parameters for debugging
     error_log("Page: $page, Per Page: $perPage, Tab: $currentTab");
     error_log("Sources Page: $sourcesPage, Sources Per Page: $sourcesPerPage");
     error_log("Reviews Page: $reviewsPage, Reviews Per Page: $reviewsPerPage");
     error_log("ISBN Page: $isbnPage, ISBN Per Page: $isbnPerPage");
-    
+
     // Calculate offsets for each tab
     $offset = ($page - 1) * $perPage;
     $offset = max(0, $offset); // Ensure offset is not negative
-    
+
     $sourcesOffset = ($sourcesPage - 1) * $sourcesPerPage;
     $sourcesOffset = max(0, $sourcesOffset);
-    
+
     $reviewsOffset = ($reviewsPage - 1) * $reviewsPerPage;
     $reviewsOffset = max(0, $reviewsOffset);
-    
+
     $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
     $isbnOffset = max(0, $isbnOffset);
 
@@ -476,6 +476,9 @@ require_once '../includes/header.php';
                                 <a href="book-validation.php" class="btn btn-outline-primary m-1">
                                     <i class="fas fa-check-circle"></i> ISBN & Data Validation
                                 </a>
+                                <a href="book-import-validate.php" class="btn btn-outline-success m-1">
+                                    <i class="fas fa-database"></i> Book Data Enrichment
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -746,10 +749,10 @@ require_once '../includes/header.php';
                             ?>
                             <?php
                             // Tab parameter is already set at the beginning of the file
-                            
+
                             // Get the total number of sources
                             $sourcesCount = count($reviewSources);
-                            
+
                             // Make sure we have valid values
                             if ($sourcesCount > 0 && $sourcesPerPage > 0) {
                                 // Render pagination for sources table

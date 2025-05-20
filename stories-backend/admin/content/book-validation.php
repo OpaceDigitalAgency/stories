@@ -27,9 +27,12 @@ require_once '../includes/enhanced-table-component.php';
 require_once '../includes/bulk-actions-component.php';
 require_once '../includes/pagination-component.php';
 
+// Include validation functions
+require_once 'book-import-validate/functions/validation-functions.php';
+
 // Set page variables for header
 $pageTitle = 'ISBN & Data Validation';
-$currentPage = 'book-validation';
+$currentPage = 'book-import-tool';
 
 // Process form submissions
 $message = '';
@@ -39,10 +42,10 @@ try {
     // ISBN tab pagination
     $isbnPage = isset($_GET['isbn_page']) ? max(1, intval($_GET['isbn_page'])) : 1;
     $isbnPerPage = isset($_GET['isbn_per_page']) ? intval($_GET['isbn_per_page']) : 10;
-    
+
     // Log the parameters for debugging
     error_log("ISBN Page: $isbnPage, ISBN Per Page: $isbnPerPage");
-    
+
     // Calculate offsets
     $isbnOffset = ($isbnPage - 1) * $isbnPerPage;
     $isbnOffset = max(0, $isbnOffset);
@@ -220,7 +223,7 @@ require_once '../includes/header.php';
                             ?>
                             <?php
                             // Render pagination
-                            renderPagination($totalBooks, $isbnPerPage, $isbnPage, 5, [
+                            renderPagination($totalBooks, $isbnPerPage, $isbnPage, visiblePages: 5, options: [
                                 'pageParam' => 'isbn_page',
                                 'perPageParam' => 'isbn_per_page',
                                 'validPerPageValues' => [10, 25, 50, 100, $totalBooks],

@@ -1,0 +1,169 @@
+/**
+ * Comparison Table Styles
+ * 
+ * Specific styles for the source comparison table.
+ */
+
+/* Table container */
+.table-responsive {
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+/* Table styles */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--gray-300);
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    vertical-align: middle;
+}
+
+.comparison-table thead th {
+    background-color: var(--gray-100);
+    font-weight: 600;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.comparison-table .field-name {
+    font-weight: 600;
+    background-color: var(--gray-50);
+}
+
+/* Field status styles with better contrast */
+.field-match {
+    background-color: #e8f5e9;
+}
+
+.field-new {
+    background-color: #fff3e0;
+}
+
+.field-conflict {
+    background-color: #ffebee;
+}
+
+.field-empty {
+    background-color: #f5f5f5;
+}
+
+/* Hover effect for rows */
+.comparison-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Apply button styles */
+.apply-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.apply-button.btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.apply-button.btn-outline-success:hover:not([disabled]) {
+    color: #fff;
+    background-color: #28a745;
+}
+
+.apply-button.btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+}
+
+.apply-button.btn-outline-warning:hover:not([disabled]) {
+    color: #212529;
+    background-color: #ffc107;
+}
+
+.apply-button.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.apply-button.btn-outline-danger:hover:not([disabled]) {
+    color: #fff;
+    background-color: #dc3545;
+}
+
+.apply-button.btn-outline-secondary {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.apply-button.btn-outline-secondary:hover:not([disabled]) {
+    color: #fff;
+    background-color: #6c757d;
+}
+
+/* Disabled button styles */
+.apply-button[disabled] {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Value formatting */
+.text-muted {
+    color: var(--gray-600) !important;
+}
+
+/* Cover image styles */
+.img-thumbnail {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: contain;
+    border: 1px solid var(--gray-300);
+}
+
+/* Preview link button */
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: var(--primary);
+}
+
+/* Legend styles */
+.legend {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: var(--gray-100);
+    border-radius: 0.25rem;
+}
+
+.legend h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.legend-item .badge {
+    margin-right: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .comparison-table {
+        min-width: 800px; /* Ensure horizontal scrolling on small screens */
+    }
+}

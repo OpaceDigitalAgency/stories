@@ -1,0 +1,222 @@
+/**
+ * Validation Interface Styles
+ * 
+ * Styles for the book validation interface.
+ */
+
+/* Main container */
+.validation-interface {
+    font-family: var(--font-family-sans-serif);
+}
+
+/* Book info section */
+.book-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.book-info h4 {
+    margin: 0;
+    color: var(--gray-800);
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Comparison table */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+.comparison-table th {
+    background-color: var(--light);
+    font-weight: 600;
+    text-align: left;
+}
+
+.comparison-table .field-name {
+    font-weight: 600;
+    width: 150px;
+}
+
+.comparison-table .current-value {
+    width: 200px;
+}
+
+.comparison-table .source-value {
+    width: 200px;
+}
+
+/* Field status styles */
+.field-match {
+    background-color: #e8f5e9;
+}
+
+.field-new {
+    background-color: #fff3e0;
+}
+
+.field-conflict {
+    background-color: #ffebee;
+}
+
+.field-empty {
+    background-color: #f5f5f5;
+}
+
+/* Value and action containers */
+.value-container {
+    margin-bottom: 0.5rem;
+}
+
+.action-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Apply button */
+.apply-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.legend h6 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-text {
+    font-size: 0.875rem;
+}
+
+/* Global actions */
+.global-actions {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+/* Validation history */
+.validation-history {
+    margin-top: 1.5rem;
+}
+
+.history-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-entry {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.history-entry:last-child {
+    border-bottom: none;
+}
+
+.history-timestamp {
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+/* Field editor */
+.field-editor {
+    margin-top: 1.5rem;
+}
+
+.source-values-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.source-value-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.source-value-item:last-child {
+    border-bottom: none;
+}
+
+.source-label {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .comparison-table .field-name,
+    .comparison-table .current-value,
+    .comparison-table .source-value {
+        width: auto;
+    }
+}
+
+/* Loading indicator */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Cover image preview */
+.img-thumbnail {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: contain;
+}

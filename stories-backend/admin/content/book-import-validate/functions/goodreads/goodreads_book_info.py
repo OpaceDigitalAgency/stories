@@ -52,6 +52,57 @@ def extract_book_info(html):
     book_info = {}
     selectors_info = {}  # Store selector information for reference
 
+    # First try to extract direct text matches for key information
+    # Format and pages info - shown directly on the page
+    format_text = soup.find(text=re.compile(r'\d+\s*pages?,\s*\w+'))
+    if format_text:
+        pages_match = re.search(r'(\d+)\s*pages?,\s*(\w+)', format_text)
+        if pages_match:
+            book_info["pages"] = pages_match.group(1)
+            book_info["format"] = pages_match.group(2)
+            selectors_info["pages"] = {"selector": "Direct text match", "value": book_info["pages"]}
+            selectors_info["format"] = {"selector": "Direct text match", "value": book_info["format"]}
+            print(f"Found format/pages info: {format_text}")
+
+    # Publication info
+    pub_text = soup.find(text=re.compile(r'First published|Published'))
+    if pub_text:
+        pub_match = re.search(r'(?:First )?[Pp]ublished\s+(.*?)(?:\s+by\s+(.*?))?(?:\s*$|\s*\()', pub_text)
+        if pub_match:
+            book_info["published_date"] = pub_match.group(1).strip()
+            if pub_match.group(2):
+                book_info["publisher"] = pub_match.group(2).strip()
+            selectors_info["published_date"] = {"selector": "Direct text match", "value": book_info["published_date"]}
+            if book_info.get("publisher"):
+                selectors_info["publisher"] = {"selector": "Direct text match", "value": book_info["publisher"]}
+            print(f"Found publication info: {pub_text}")
+
+    # ISBN info
+    isbn_text = soup.find(text=re.compile(r'ISBN.*\d'))
+    if isbn_text:
+        isbn13_match = re.search(r'(\d{13})', isbn_text)
+        isbn10_match = re.search(r'ISBN10:\s*(\d{10}|\d{9}X)', isbn_text)
+        
+        if isbn13_match:
+            book_info["isbn13"] = isbn13_match.group(1)
+            selectors_info["isbn13"] = {"selector": "Direct text match", "value": book_info["isbn13"]}
+            print(f"Found ISBN13: {book_info['isbn13']}")
+        if isbn10_match:
+            book_info["isbn"] = isbn10_match.group(1)
+            selectors_info["isbn"] = {"selector": "Direct text match", "value": book_info["isbn"]}
+            print(f"Found ISBN10: {book_info['isbn']}")
+
+    # Language
+    lang_text = soup.find(text=re.compile(r'Language'))
+    if lang_text:
+        lang_parent = lang_text.parent
+        if lang_parent:
+            lang_value = lang_parent.find_next_sibling()
+            if lang_value:
+                book_info["language"] = lang_value.text.strip()
+                selectors_info["language"] = {"selector": "Language field", "value": book_info["language"]}
+                print(f"Found language: {book_info['language']}")
+
     # Check if we're on a search results page
     search_results = []
     

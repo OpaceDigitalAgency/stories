@@ -406,7 +406,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Use the VPS IP address as the default if environment variable is not set
         $apiUrl = getenv('HEADLESS_BROWSER_API_URL') ?: 'http://37.27.31.107:3000';
-        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key';
+        $apiKey = getenv('HEADLESS_BROWSER_API_KEY') ?: 'stories-scraper-api-key-2023';
 
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";

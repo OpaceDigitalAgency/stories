@@ -145,6 +145,9 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'message' => "Using GoodreadsReviewFetcher to find book"
         ];
 
+        // Make sure we're using the correct API key
+        putenv('HEADLESS_BROWSER_API_KEY=stories-scraper-api-key-2023');
+
         // Set options for the fetcher
         $options = [
             'timeout' => 30, // Longer timeout for validation

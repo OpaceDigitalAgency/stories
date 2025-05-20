@@ -35,63 +35,57 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'message' => "Parameters: ISBN: '$isbn', Title: '$title', Author: '$author'"
         ];
 
-        // Get the GoodreadsReviewFetcher instance from the global factory
-        // The ReviewFetcherFactory is already included in validation-functions.php
-        global $reviewFetcherFactory;
-        if (!isset($reviewFetcherFactory)) {
-            // If we have a database connection, use it
-            if ($db) {
-                $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
-            } else {
-                // Try multiple possible paths for db-connect.php
-                $possiblePaths = [
-                    __DIR__ . '/../../../../db-connect.php',
-                    __DIR__ . '/../../../../includes/db-connect.php',
-                    __DIR__ . '/../../../../admin/includes/db-connect.php',
-                    __DIR__ . '/../../../includes/db-connect.php',
-                    __DIR__ . '/../../../db-connect.php'
-                ];
+        // Get a database connection
+        if (!$db) {
+            // Try multiple possible paths for db-connect.php
+            $possiblePaths = [
+                __DIR__ . '/../../../../db-connect.php',
+                __DIR__ . '/../../../../includes/db-connect.php',
+                __DIR__ . '/../../../../admin/includes/db-connect.php',
+                __DIR__ . '/../../../includes/db-connect.php',
+                __DIR__ . '/../../../db-connect.php'
+            ];
 
-                $dbConnected = false;
-                foreach ($possiblePaths as $path) {
-                    if (file_exists($path)) {
-                        require_once $path;
-                        global $db;
-                        if (isset($db) && $db instanceof PDO) {
-                            $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($db);
-                            $dbConnected = true;
-                            break;
-                        }
-                    }
-                }
-
-                // If we couldn't connect to the database, create a factory with a null DB connection
-                // or try to create a new PDO connection directly
-                if (!$dbConnected) {
-                    try {
-                        // Try to create a direct database connection
-                        $directDb = new PDO(
-                            'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
-                            'stories_user',
-                            '$tw1cac3*sOt',
-                            [
-                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                            ]
-                        );
-                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory($directDb);
-                    } catch (PDOException $e) {
-                        // If direct connection fails, log the error and create a minimal PDO object
-                        error_log("Database connection error in Goodreads validation: " . $e->getMessage());
-
-                        // Create a minimal factory without trying to use the database
-                        // We'll handle this case in the code below by checking if the fetcher is configured
-                        $reviewFetcherFactory = new \Services\ReviewFetcher\ReviewFetcherFactory(new PDO('sqlite::memory:'));
+            $dbConnected = false;
+            foreach ($possiblePaths as $path) {
+                if (file_exists($path)) {
+                    require_once $path;
+                    global $db;
+                    if (isset($db) && $db instanceof PDO) {
+                        $dbConnected = true;
+                        break;
                     }
                 }
             }
+
+            // If we couldn't connect to the database, try to create a direct connection
+            if (!$dbConnected) {
+                try {
+                    // Try to create a direct database connection
+                    $db = new PDO(
+                        'mysql:host=localhost;dbname=stories_db;charset=utf8mb4',
+                        'stories_user',
+                        '$tw1cac3*sOt',
+                        [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        ]
+                    );
+                } catch (PDOException $e) {
+                    // If direct connection fails, log the error and create a minimal PDO object
+                    error_log("Database connection error in Goodreads validation: " . $e->getMessage());
+                    $db = new PDO('sqlite::memory:');
+                }
+            }
         }
-        $goodreadsFetcher = $reviewFetcherFactory->getFetcher(1); // 1 is the Goodreads source ID
+
+        // Make sure we have the required classes
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherInterface.php';
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/AbstractReviewFetcher.php';
+        require_once __DIR__ . '/../../../../services/ReviewFetcher/GoodreadsReviewFetcher.php';
+
+        // Create a GoodreadsReviewFetcher instance directly
+        $goodreadsFetcher = new \Services\ReviewFetcher\GoodreadsReviewFetcher($db, 1); // 1 is the Goodreads source ID
 
         // Check if we got the correct fetcher type
         if (!$goodreadsFetcher || !$goodreadsFetcher->isConfigured()) {
@@ -109,22 +103,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             ];
         }
 
-        // Check if we got the correct fetcher class
-        if (!($goodreadsFetcher instanceof \Services\ReviewFetcher\GoodreadsReviewFetcher)) {
-            $actualClass = get_class($goodreadsFetcher);
-            $detailedStatus['steps'][] = [
-                'name' => 'fetcher_initialization',
-                'status' => 'error',
-                'message' => "Expected GoodreadsReviewFetcher but got $actualClass"
-            ];
-
-            $detailedStatus['status'] = 'error';
-            $detailedStatus['message'] = "Expected GoodreadsReviewFetcher but got $actualClass";
-
-            return [
-                '_status' => $detailedStatus
-            ];
-        }
+        // We're creating a GoodreadsReviewFetcher directly, so no need to check the class type
 
         $detailedStatus['steps'][] = [
             'name' => 'fetcher_initialization',

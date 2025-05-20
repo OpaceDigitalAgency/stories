@@ -386,7 +386,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param string $bookUrl The book URL
      * @return array|null The book details or null if not found
      */
-    private function getBookDetails(string $bookUrl): ?array {
+    public function getBookDetails(string $bookUrl): ?array {
         // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {

@@ -289,9 +289,19 @@ $sources = array_keys($sourceData);
     <input type="hidden" name="source" id="actionSource" value="">
 </form>
 
+<!-- Notification container -->
+<div class="notification-container"></div>
+
+<!-- JavaScript -->
+<script src="js/ajax-validation.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize validation interface
     initValidationInterface();
+
+    // Initialize AJAX validation
+    if (typeof initAjaxValidation === 'function') {
+        initAjaxValidation();
+    }
 });
 </script>

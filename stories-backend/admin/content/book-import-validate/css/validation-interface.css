@@ -1,6 +1,6 @@
 /**
  * Validation Interface Styles
- * 
+ *
  * Styles for the book validation interface.
  */
 
@@ -197,7 +197,7 @@
 
 /* Loading indicator */
 .loading-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -212,6 +212,32 @@
 .spinner-border {
     width: 3rem;
     height: 3rem;
+}
+
+/* Notification toasts */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 350px;
+}
+
+.notification-toast {
+    margin-bottom: 10px;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+    animation: slide-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* Cover image preview */

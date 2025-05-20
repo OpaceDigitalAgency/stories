@@ -118,11 +118,7 @@ require_once '../includes/header.php';
                     <p>Check and fix incorrect ISBNs, and enrich missing book data from external sources.</p>
 
                     <div class="card mb-4">
-                        <div class="card-header">
-                            <h5>ISBN Validation</h5>
-                        </div>
                         <div class="card-body">
-                            <p>This tool checks ISBNs against external sources like Goodreads, Google Books, and Open Library to verify their accuracy.</p>
 
                             <?php
                             // Prepare table data for ISBN validation
@@ -177,10 +173,8 @@ require_once '../includes/header.php';
                                 $tableData[] = [
                                     'id' => $book['id'],
                                     'title' => htmlspecialchars($book['title']),
-                                    'author' => htmlspecialchars($book['author']),
                                     'isbn' => !empty($isbn) ? htmlspecialchars($isbn) : '<span class="text-danger">Missing</span>',
                                     'status' => '<span class="badge badge-' . $statusClass . '"><i class="fas fa-' . $statusIcon . '"></i> ' . ucfirst($isbnStatus) . '</span>',
-                                    'genre' => $genreDisplay,
                                     'missing_data' => $missingDataDisplay,
                                     'actions' => '<button class="btn btn-sm btn-primary validate-isbn-btn" ' .
                                                'data-book-id="' . $book['id'] . '" ' .
@@ -193,10 +187,8 @@ require_once '../includes/header.php';
                             // Define table columns - include actions in the columns
                             $columns = [
                                 'title' => 'Title',
-                                'author' => 'Author',
                                 'isbn' => 'ISBN',
                                 'status' => 'Status',
-                                'genre' => 'Genre',
                                 'missing_data' => 'Missing Data',
                                 'actions' => 'Actions'
                             ];
@@ -210,12 +202,13 @@ require_once '../includes/header.php';
                                 [
                                     'showCheckboxes' => true,
                                     'showActions' => false, // Don't show the last actions column
+                                    'thumbnailField' => false, // Don't show the image column
                                     'actions' => ['validate', 'edit'],
                                     'bulkActions' => ['validate', 'enrich'],
                                     'itemsPerPage' => $isbnPerPage,
                                     'currentPage' => $isbnPage,
                                     'totalItems' => $totalBooks,
-                                    'htmlFields' => ['isbn', 'status', 'genre', 'missing_data', 'actions'],
+                                    'htmlFields' => ['isbn', 'status', 'missing_data', 'actions'],
                                     'showPagination' => false,
                                     'showItemsPerPage' => false
                                 ]

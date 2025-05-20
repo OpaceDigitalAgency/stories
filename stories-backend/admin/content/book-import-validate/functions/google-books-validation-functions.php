@@ -22,6 +22,7 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
         $status = [
             'status' => 'initializing',
             'message' => 'Starting Google Books data fetch',
+            'method' => 'api',
             'processing_time' => 0,
             'steps' => []
         ];

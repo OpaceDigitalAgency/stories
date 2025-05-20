@@ -327,6 +327,11 @@ try {
     </div>
 </div>
 
+<!-- Include validation JavaScript -->
+<script src="book-import-validate/js/validation.js"></script>
+<script src="book-import-validate/js/field-updater.js"></script>
+<script src="book-import-validate/js/ui-components.js"></script>
+
 <?php
 // Include the footer
 require_once '../includes/footer.php';

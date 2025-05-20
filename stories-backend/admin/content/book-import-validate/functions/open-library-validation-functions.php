@@ -18,6 +18,15 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
         // Start timer for performance tracking
         $startTime = microtime(true);
 
+        // Initialize status tracking
+        $status = [
+            'status' => 'initializing',
+            'message' => 'Starting Open Library data fetch',
+            'method' => 'api',
+            'processing_time' => 0,
+            'steps' => []
+        ];
+
         // Log that we're starting Open Library fetch
         error_log("Starting Open Library data fetch for ISBN: $isbn");
 

@@ -22,7 +22,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         $detailedStatus = [
             'status' => 'initializing',
             'message' => 'Starting Goodreads data fetch',
-            'method' => 'unknown',
+            'method' => 'api',
             'processing_time' => 0,
             'steps' => []
         ];
@@ -59,7 +59,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author) {
         }
 
         // First try using the Python script (most reliable method)
-        $pythonScript = $_SERVER['DOCUMENT_ROOT'] . '/../goodreads_book_info.py';
+        $pythonScript = $_SERVER['DOCUMENT_ROOT'] . '/../../goodreads/goodreads_book_info.py';
 
         $detailedStatus['steps'][] = [
             'name' => 'python_script_check',

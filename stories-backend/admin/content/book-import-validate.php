@@ -99,6 +99,18 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
     // Clean ISBN
     $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
 
+    // Check cache first to improve performance
+    $cacheKey = md5("isbn_validation_{$cleanIsbn}_{$title}");
+    $cachedResults = getValidationCache($cacheKey, $db);
+
+    if ($cachedResults) {
+        error_log("Using cached validation results for ISBN: $cleanIsbn");
+        return $cachedResults;
+    }
+
+    // Set a start time to measure performance
+    $startTime = microtime(true);
+
     // Check format validity first
     if (empty($cleanIsbn)) {
         // If ISBN is empty, don't return an error immediately
@@ -260,84 +272,157 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
         error_log("Open Library API error: " . $e->getMessage());
     }
 
-    // Check Goodreads - Direct search approach
+    // Check Goodreads - Use the ReviewFetcherFactory for more reliable results
     try {
-        // Since Goodreads API is deprecated, we'll use a web search approach
-        $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+        // Start timer for performance tracking
+        $goodreadsStartTime = microtime(true);
 
-        $ch = curl_init($searchUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // Log that we're starting Goodreads fetch
+        error_log("Starting Goodreads data fetch for ISBN: $cleanIsbn");
 
-        if ($response && $httpCode == 200) {
-            // Check if we found a book
-            if (strpos($response, 'No results') === false &&
-                (strpos($response, 'class="bookTitle"') !== false ||
-                 strpos($response, 'class="bookCover"') !== false)) {
-
-                $foundInSources[] = 'Goodreads';
-
-                // Extract book details using regex
-                preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
-                preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
-                preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
-                preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
-                preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
-                preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
-
-                // Extract cover image
-                preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
-
-                // Extract description
-                preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
-
-                $title = $titleMatches[1] ?? '';
-                $author = $authorMatches[1] ?? '';
-                $isbn10 = $isbnMatches[1] ?? '';
-                $isbn13 = $isbn13Matches[1] ?? '';
-                $publisher = $publisherMatches[2] ?? '';
-                $pageCount = $pageCountMatches[1] ?? '';
-                $coverUrl = $coverMatches[1] ?? '';
-                $description = $descMatches[1] ?? '';
-
-                // Clean up extracted data
-                $title = strip_tags($title);
-                $author = strip_tags($author);
-                $publisher = trim(strip_tags($publisher));
-                $description = strip_tags($description);
-
-                // Extract genres/categories
-                $categories = [];
-                if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
-                    $categories = $genreMatches[1];
-                }
-
-                $bookData['goodreads'] = [
-                    'title' => $title,
-                    'author' => $author,
-                    'publisher' => $publisher,
-                    'publication_date' => $publisherMatches[1] ?? '',
-                    'page_count' => $pageCount,
-                    'isbn' => $isbn10,
-                    'isbn13' => $isbn13,
-                    'categories' => $categories,
-                    'description' => $description,
-                    'cover_url' => $coverUrl,
-                    'source' => 'Goodreads'
+        // Use the ReviewFetcherFactory to get Goodreads data
+        if ($goodreadsSourceId) {
+            $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
+            if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
+                // Set a shorter timeout for validation purposes
+                $options = [
+                    'timeout' => 10,
+                    'maxPages' => 1,
+                    'limit' => 1
                 ];
 
-                // Log success for debugging
-                error_log("Successfully extracted Goodreads data for ISBN: $cleanIsbn");
+                // Use the fetcher to get book data - just fetch 1 review to get book metadata
+                $response = $goodreadsFetcher->fetchReviewsByISBN($cleanIsbn, 1, $options);
+
+                if (!empty($response)) {
+                    $foundInSources[] = 'Goodreads';
+
+                    // Extract book details from the response
+                    $bookData['goodreads'] = [
+                        'title' => $response[0]['book_title'] ?? '',
+                        'author' => $response[0]['book_author'] ?? '',
+                        'publisher' => $response[0]['book_publisher'] ?? '',
+                        'publication_date' => $response[0]['book_publication_date'] ?? '',
+                        'page_count' => $response[0]['book_page_count'] ?? '',
+                        'isbn' => $response[0]['book_isbn'] ?? '',
+                        'isbn13' => $response[0]['book_isbn13'] ?? '',
+                        'categories' => $response[0]['book_categories'] ?? [],
+                        'description' => $response[0]['book_description'] ?? '',
+                        'cover_url' => $response[0]['book_cover_url'] ?? '',
+                        'source' => 'Goodreads'
+                    ];
+
+                    // Log success and timing
+                    $goodreadsEndTime = microtime(true);
+                    $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
+                    error_log("Successfully fetched Goodreads data for ISBN: $cleanIsbn in {$goodreadsTime}s");
+                } else {
+                    // If no reviews found, try a fallback to direct search
+                    error_log("No Goodreads data found using ReviewFetcher, trying fallback method");
+
+                    // Fallback: Use a direct search approach with a short timeout
+                    $searchUrl = "https://www.goodreads.com/search?q=" . urlencode($cleanIsbn);
+
+                    $ch = curl_init($searchUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Short timeout for fallback
+                    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($response && $httpCode == 200) {
+                        // Check if we found a book
+                        if (strpos($response, 'No results') === false &&
+                            (strpos($response, 'class="bookTitle"') !== false ||
+                             strpos($response, 'class="bookCover"') !== false ||
+                             strpos($response, 'data-testid="bookTitle"') !== false)) {
+
+                            $foundInSources[] = 'Goodreads';
+
+                            // Extract book details using regex - updated for current Goodreads HTML structure
+                            preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $response, $titleMatches);
+                            if (empty($titleMatches)) {
+                                preg_match('/<a[^>]+data-testid="bookTitle"[^>]*>(.*?)<\/a>/s', $response, $titleMatches);
+                            }
+
+                            preg_match('/<span itemprop="author".*?>(.*?)<\/span>/s', $response, $authorMatches);
+                            if (empty($authorMatches)) {
+                                preg_match('/<a[^>]+data-testid="authorLink"[^>]*>(.*?)<\/a>/s', $response, $authorMatches);
+                            }
+
+                            preg_match('/ISBN.*?([0-9X]{10})/i', $response, $isbnMatches);
+                            preg_match('/ISBN.*?([0-9]{13})/i', $response, $isbn13Matches);
+                            preg_match('/Published.*?(\d{4}).*?by\s+(.*?)(<|\n)/is', $response, $publisherMatches);
+                            preg_match('/(\d+)\s+pages/i', $response, $pageCountMatches);
+
+                            // Extract cover image - updated for current Goodreads HTML structure
+                            preg_match('/<img id="coverImage".*?src="(.*?)"/s', $response, $coverMatches);
+                            if (empty($coverMatches)) {
+                                preg_match('/<img[^>]+data-testid="bookCover"[^>]+src="([^"]+)"/s', $response, $coverMatches);
+                            }
+
+                            // Extract description - updated for current Goodreads HTML structure
+                            preg_match('/<div id="description".*?<span[^>]*>(.*?)<\/span>/s', $response, $descMatches);
+                            if (empty($descMatches)) {
+                                preg_match('/<div[^>]+data-testid="description"[^>]*>(.*?)<\/div>/s', $response, $descMatches);
+                            }
+
+                            $title = $titleMatches[1] ?? '';
+                            $author = $authorMatches[1] ?? '';
+                            $isbn10 = $isbnMatches[1] ?? '';
+                            $isbn13 = $isbn13Matches[1] ?? '';
+                            $publisher = $publisherMatches[2] ?? '';
+                            $pageCount = $pageCountMatches[1] ?? '';
+                            $coverUrl = $coverMatches[1] ?? '';
+                            $description = $descMatches[1] ?? '';
+
+                            // Clean up extracted data
+                            $title = strip_tags($title);
+                            $author = strip_tags($author);
+                            $publisher = trim(strip_tags($publisher));
+                            $description = strip_tags($description);
+
+                            // Extract genres/categories - updated for current Goodreads HTML structure
+                            $categories = [];
+                            if (preg_match_all('/<a class="actionLinkLite bookPageGenreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
+                                $categories = $genreMatches[1];
+                            }
+                            if (empty($categories) && preg_match_all('/<a[^>]+data-testid="genreLink"[^>]*>(.*?)<\/a>/s', $response, $genreMatches)) {
+                                $categories = $genreMatches[1];
+                            }
+
+                            $bookData['goodreads'] = [
+                                'title' => $title,
+                                'author' => $author,
+                                'publisher' => $publisher,
+                                'publication_date' => $publisherMatches[1] ?? '',
+                                'page_count' => $pageCount,
+                                'isbn' => $isbn10,
+                                'isbn13' => $isbn13,
+                                'categories' => $categories,
+                                'description' => $description,
+                                'cover_url' => $coverUrl,
+                                'source' => 'Goodreads'
+                            ];
+
+                            // Log success for debugging
+                            $goodreadsEndTime = microtime(true);
+                            $goodreadsTime = round($goodreadsEndTime - $goodreadsStartTime, 2);
+                            error_log("Successfully extracted Goodreads data via fallback for ISBN: $cleanIsbn in {$goodreadsTime}s");
+                        } else {
+                            error_log("No book found on Goodreads for ISBN: $cleanIsbn");
+                        }
+                    } else {
+                        error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
+                    }
+                }
             } else {
-                error_log("No book found on Goodreads for ISBN: $cleanIsbn");
+                error_log("Goodreads fetcher not configured");
             }
         } else {
-            error_log("Failed to fetch Goodreads data. HTTP Code: $httpCode");
+            error_log("Goodreads source ID not found");
         }
     } catch (Exception $e) {
         // Log error but continue
@@ -392,6 +477,14 @@ function checkISBNAgainstAPIs($isbn, $title, $db) {
         $results['message'] = 'ISBN found in: ' . implode(', ', $foundInSources);
         $results['data'] = $bookData;
     }
+
+    // Calculate and log the total time taken
+    $endTime = microtime(true);
+    $totalTime = round($endTime - $startTime, 2);
+    error_log("ISBN validation for $cleanIsbn completed in {$totalTime}s");
+
+    // Save results to cache
+    saveValidationCache($cacheKey, $results, $db);
 
     return $results;
 }
@@ -1030,6 +1123,93 @@ function calculateTitleSimilarity($title1, $title2) {
     return $similarity;
 }
 
+// Function to get validation results from cache
+function getValidationCache($cacheKey, $db) {
+    try {
+        // Check if we have a validation_cache table
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as table_exists
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'validation_cache'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['table_exists'] == 0) {
+            // Create the cache table if it doesn't exist
+            $db->exec("
+                CREATE TABLE validation_cache (
+                    cache_key VARCHAR(255) PRIMARY KEY,
+                    cache_data LONGTEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+            return null;
+        }
+
+        // Get cache data
+        $stmt = $db->prepare("
+            SELECT cache_data, created_at
+            FROM validation_cache
+            WHERE cache_key = ?
+            AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ");
+        $stmt->execute([$cacheKey]);
+        $cache = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($cache) {
+            return json_decode($cache['cache_data'], true);
+        }
+
+        return null;
+    } catch (Exception $e) {
+        error_log("Cache error: " . $e->getMessage());
+        return null;
+    }
+}
+
+// Function to save validation results to cache
+function saveValidationCache($cacheKey, $data, $db) {
+    try {
+        // Check if we have a validation_cache table
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as table_exists
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'validation_cache'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['table_exists'] == 0) {
+            // Create the cache table if it doesn't exist
+            $db->exec("
+                CREATE TABLE validation_cache (
+                    cache_key VARCHAR(255) PRIMARY KEY,
+                    cache_data LONGTEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+        }
+
+        // Insert or update cache data
+        $stmt = $db->prepare("
+            INSERT INTO validation_cache (cache_key, cache_data, created_at)
+            VALUES (?, ?, NOW())
+            ON DUPLICATE KEY UPDATE
+            cache_data = VALUES(cache_data),
+            created_at = NOW()
+        ");
+        $stmt->execute([$cacheKey, json_encode($data)]);
+
+        return true;
+    } catch (Exception $e) {
+        error_log("Cache save error: " . $e->getMessage());
+        return false;
+    }
+}
+
 // Function to enrich book data from external sources
 function enrichBookData($bookId, $db) {
     $results = [
@@ -1072,6 +1252,7 @@ function enrichBookData($bookId, $db) {
         $sources = $reviewFetcherFactory->getSources();
         $googleBooksSourceId = null;
         $openLibrarySourceId = null;
+        $goodreadsSourceId = null;
 
         // Find source IDs
         foreach ($sources as $source) {
@@ -1080,6 +1261,8 @@ function enrichBookData($bookId, $db) {
                 $googleBooksSourceId = $source['id'];
             } else if ($sourceName === 'open library') {
                 $openLibrarySourceId = $source['id'];
+            } else if ($sourceName === 'goodreads') {
+                $goodreadsSourceId = $source['id'];
             }
         }
 
@@ -1134,6 +1317,43 @@ function enrichBookData($bookId, $db) {
                 } catch (Exception $e) {
                     // Log error but continue
                     error_log("Open Library API error: " . $e->getMessage());
+                }
+            }
+        }
+
+        // Check Goodreads
+        if ($goodreadsSourceId) {
+            $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
+            if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
+                try {
+                    // Set a shorter timeout for validation purposes
+                    $options = [
+                        'timeout' => 10,
+                        'maxPages' => 1,
+                        'limit' => 1
+                    ];
+
+                    // Use the fetcher to get book data - just fetch 1 review to get book metadata
+                    $response = $goodreadsFetcher->fetchReviewsByISBN($isbn, 1, $options);
+
+                    if (!empty($response)) {
+                        $bookData['goodreads'] = [
+                            'title' => $response[0]['book_title'] ?? '',
+                            'author' => $response[0]['book_author'] ?? '',
+                            'publisher' => $response[0]['book_publisher'] ?? '',
+                            'publication_date' => $response[0]['book_publication_date'] ?? '',
+                            'page_count' => $response[0]['book_page_count'] ?? '',
+                            'isbn' => $response[0]['book_isbn'] ?? '',
+                            'isbn13' => $response[0]['book_isbn13'] ?? '',
+                            'categories' => $response[0]['book_categories'] ?? [],
+                            'description' => $response[0]['book_description'] ?? '',
+                            'cover_url' => $response[0]['book_cover_url'] ?? '',
+                            'source' => 'Goodreads'
+                        ];
+                    }
+                } catch (Exception $e) {
+                    // Log error but continue
+                    error_log("Goodreads API error: " . $e->getMessage());
                 }
             }
         }
@@ -1809,6 +2029,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                 </div>
                 <div class="card-body">
                     <div id="logContainer" class="log-container mb-4">
+                        <!-- Loading indicator -->
+                        <div id="validationLoadingIndicator" class="d-none">
+                            <div class="text-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Validating book data across multiple sources...</p>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <?php if (isset($_GET['action']) && $_GET['action'] === 'validate_isbn' && $bookDetails): ?>
 
                             <div class="card mb-4">
@@ -2223,6 +2456,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                                                 </div>
                                             </form>
                                         </div>
+
+                                        <!-- JavaScript to show loading indicator -->
+                                        <script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            // Show loading indicator when validating a book
+                                            const validateButtons = document.querySelectorAll('.validate-isbn-btn');
+                                            validateButtons.forEach(button => {
+                                                button.addEventListener('click', function() {
+                                                    document.getElementById('validationLoadingIndicator').classList.remove('d-none');
+                                                });
+                                            });
+
+                                            // Show loading indicator when submitting forms
+                                            const forms = document.querySelectorAll('form');
+                                            forms.forEach(form => {
+                                                form.addEventListener('submit', function() {
+                                                    if (this.action.includes('book-import-validate.php') &&
+                                                        (this.querySelector('input[name="action"][value="validate_isbns"]') ||
+                                                         this.querySelector('input[name="action"][value="enrich_data"]'))) {
+                                                        document.getElementById('validationLoadingIndicator').classList.remove('d-none');
+                                                    }
+                                                });
+                                            });
+                                        });
+                                        </script>
                                     </div>
                                 </div>
                             <?php endif; ?>

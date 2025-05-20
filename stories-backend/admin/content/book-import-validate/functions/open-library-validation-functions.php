@@ -99,7 +99,7 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                 // Get Internet Archive ID if available
                 $iaId = !empty($bookInfo['ia']) ? $bookInfo['ia'][0] : '';
 
-                return [
+                $bookData = [
                     'title' => $bookInfo['title'] ?? '',
                     'author' => implode(', ', $authors),
                     'publisher' => !empty($bookInfo['publisher']) ? implode(', ', $bookInfo['publisher']) : '',
@@ -121,6 +121,29 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                     'maturity_rating' => '',
                     'internet_archive_id' => $iaId
                 ];
+                
+                // Add status information
+                $endTime = microtime(true);
+                $totalTime = round($endTime - $startTime, 2);
+                
+                $status['status'] = 'success';
+                $status['message'] = 'Successfully extracted data from Open Library search';
+                $status['processing_time'] = $totalTime;
+                $status['steps'] = [
+                    [
+                        'name' => 'search_request',
+                        'status' => 'success',
+                        'message' => "Search request successful for title/author"
+                    ],
+                    [
+                        'name' => 'data_extraction',
+                        'status' => 'success',
+                        'message' => "Successfully extracted book data from search results"
+                    ]
+                ];
+                
+                $bookData['_status'] = $status;
+                return $bookData;
             }
 
             return null;
@@ -156,7 +179,7 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                 }
             }
 
-            return [
+            $bookData = [
                 'title' => $bookInfo['title'] ?? '',
                 'author' => implode(', ', $authors),
                 'publisher' => !empty($bookInfo['publishers']) ? $bookInfo['publishers'][0]['name'] : '',
@@ -178,11 +201,47 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                 'maturity_rating' => '',
                 'internet_archive_id' => $iaId
             ];
+            
+            // Add status information
+            $endTime = microtime(true);
+            $totalTime = round($endTime - $startTime, 2);
+            
+            $status['status'] = 'success';
+            $status['message'] = 'Successfully extracted data from Open Library API';
+            $status['processing_time'] = $totalTime;
+            $status['steps'] = [
+                [
+                    'name' => 'api_request',
+                    'status' => 'success',
+                    'message' => "API request successful for ISBN: $isbn"
+                ],
+                [
+                    'name' => 'data_extraction',
+                    'status' => 'success',
+                    'message' => "Successfully extracted book data from API response"
+                ]
+            ];
+            
+            $bookData['_status'] = $status;
+            return $bookData;
         }
 
         // Log failure for debugging
         error_log("No book found on Open Library for ISBN: $isbn");
-        return null;
+        
+        // Return failure status
+        $status['status'] = 'error';
+        $status['message'] = 'No book found on Open Library';
+        $status['processing_time'] = round(microtime(true) - $startTime, 2);
+        $status['steps'] = [
+            [
+                'name' => 'search_attempt',
+                'status' => 'error',
+                'message' => "No results found for ISBN: $isbn or title/author search"
+            ]
+        ];
+        
+        return ['_status' => $status];
     } catch (Exception $e) {
         error_log("Error fetching Open Library data: " . $e->getMessage());
         return null;

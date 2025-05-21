@@ -627,6 +627,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             }
         }
 
+        // Extract publication date from data-testid attribute (new Goodreads design)
+        if (empty($details['published_date']) && preg_match('/<p[^>]*data-testid="publicationInfo"[^>]*>First published\s+(.*?)<\/p>/is', $response, $matches)) {
+            $details['published_date'] = trim($matches[1]);
+        } else if (empty($details['published_date']) && preg_match('/<p[^>]*data-testid="publicationInfo"[^>]*>([^<]+)<\/p>/is', $response, $matches)) {
+            $details['published_date'] = trim($matches[1]);
+        }
+
         // Extract ISBN
         if (preg_match('/ISBN\s+(\d+X?)/i', $response, $matches)) {
             $details['isbn'] = $matches[1];
@@ -663,6 +670,19 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $details['series'] = trim($matches[1]);
         } else if (preg_match('/<a[^>]*href="\/series\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
             $details['series'] = trim($matches[1]);
+        } else if (preg_match('/<dt[^>]*>Series<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
+            $details['series'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<span[^>]*>Series:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            $details['series'] = trim(strip_tags($matches[1]));
+        } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Series<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
+            // Extract series from the HTML (new Goodreads design)
+            $seriesText = trim(strip_tags($matches[1]));
+            // Clean up series format like "The Worst Witch (#1)"
+            if (preg_match('/^(.*?)\s*\(#\d+\)$/', $seriesText, $seriesMatches)) {
+                $details['series'] = trim($seriesMatches[1]);
+            } else {
+                $details['series'] = $seriesText;
+            }
         }
 
         // Extract genres/shelves
@@ -682,6 +702,30 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract characters (if available)
         if (preg_match('/Characters\s*:?\s*([^<\n]+)/i', $response, $matches)) {
             $details['characters'] = array_map('trim', explode(',', $matches[1]));
+        } else if (preg_match('/<dt[^>]*>Characters<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
+            // Extract character links from the HTML
+            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
+            if (!empty($charMatches[1])) {
+                $details['characters'] = array_map('trim', $charMatches[1]);
+            } else {
+                $details['characters'] = [trim(strip_tags($matches[1]))];
+            }
+        } else if (preg_match('/<span[^>]*>Characters:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
+            // Extract character links from the HTML
+            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
+            if (!empty($charMatches[1])) {
+                $details['characters'] = array_map('trim', $charMatches[1]);
+            } else {
+                $details['characters'] = [trim(strip_tags($matches[1]))];
+            }
+        } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Characters<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
+            // Extract character links from the HTML (new Goodreads design)
+            preg_match_all('/<a[^>]*>([^<]+)<\/a>/i', $matches[1], $charMatches);
+            if (!empty($charMatches[1])) {
+                $details['characters'] = array_map('trim', $charMatches[1]);
+            } else {
+                $details['characters'] = [trim(strip_tags($matches[1]))];
+            }
         }
 
         // Extract settings (if available)

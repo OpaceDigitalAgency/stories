@@ -74,7 +74,10 @@ function formatFieldValue($field, $value) {
 
     switch ($field) {
         case 'publication_date':
-            return date('Y-m-d', strtotime($value));
+            if (is_string($value) && strtotime($value)) {
+                return date('Y-m-d', strtotime($value));
+            }
+            return htmlspecialchars($value);
 
         case 'cover_url':
             return '<img src="' . htmlspecialchars($value) . '" alt="Cover" class="img-thumbnail" style="max-height: 100px;">';
@@ -92,6 +95,7 @@ function formatFieldValue($field, $value) {
         case 'awards':
         case 'characters':
         case 'settings':
+        case 'genres':
             // Handle array or JSON
             if (is_array($value)) {
                 return implode(', ', $value);
@@ -104,6 +108,26 @@ function formatFieldValue($field, $value) {
                 } catch (Exception $e) {
                     // Fall through to default
                 }
+            }
+            return htmlspecialchars($value);
+
+        case 'series':
+            // Handle series which might be an array or a string
+            if (is_array($value)) {
+                return implode(', ', $value);
+            } elseif (is_string($value) && (strpos($value, '[') === 0 || strpos($value, '{') === 0)) {
+                try {
+                    $decoded = json_decode($value, true);
+                    if (is_array($decoded)) {
+                        return implode(', ', $decoded);
+                    }
+                } catch (Exception $e) {
+                    // Fall through to default
+                }
+            }
+            // Clean up series format like "The Worst Witch (#1)"
+            if (is_string($value) && preg_match('/^(.*?)\s*\(#\d+\)$/', $value, $matches)) {
+                return htmlspecialchars($matches[1]);
             }
             return htmlspecialchars($value);
 
@@ -168,6 +192,11 @@ function renderApplyButton($field, $status, $source) {
                                             <span class="badge bg-secondary">[-]</span>
                                         <?php endif; ?>
                                     </div>
+                                    <?php if ($field === 'characters' || $field === 'series' || $field === 'publication_date'): ?>
+                                        <div class="debug-info mt-1">
+                                            <small class="text-muted">Raw value: <?php echo is_array($sourceValue) ? json_encode($sourceValue) : htmlspecialchars($sourceValue ?? 'null'); ?></small>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                             <?php else: ?>
                                 <td class="source-value field-empty">

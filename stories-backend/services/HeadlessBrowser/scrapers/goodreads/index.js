@@ -60,7 +60,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   const envForce = process.env.VPS_BYPASS_CACHE === 'true' || process.env.FORCE_FRESH_DATA === 'true';
   const maxPages = options.maxPages ?? 100;
   const continueFromLast = options.continueFromLast ?? false;
-  const force = typeof options.force === 'boolean' ? options.force : (forceParam || envForce);
+  const force = forceParam || envForce || options.force === true;
 
   // Log force parameter sources for debugging
   logger.info(`Force refresh sources:

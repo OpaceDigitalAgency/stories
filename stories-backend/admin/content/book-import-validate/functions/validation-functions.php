@@ -6,12 +6,6 @@
  * It includes all the modular components for different sources and functionality.
  */
 
-// Include auth check
-require_once __DIR__ . '/../../../../includes/auth-check.php';
-
-// Include database connection
-require_once __DIR__ . '/../../../../includes/db_connect.php';
-
 // Include the review fetcher services (we'll use these for API access)
 require_once __DIR__ . '/../../../../services/ReviewFetcher/ReviewFetcherInterface.php';
 require_once __DIR__ . '/../../../../services/ReviewFetcher/AbstractReviewFetcher.php';

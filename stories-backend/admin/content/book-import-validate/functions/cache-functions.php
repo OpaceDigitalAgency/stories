@@ -5,6 +5,12 @@
  * This file contains functions for caching validation results and managing validation history.
  */
 
+// Include auth check
+require_once __DIR__ . '/../../../../includes/auth-check.php';
+
+// Include database connection
+require_once __DIR__ . '/../../../../includes/db_connect.php';
+
 /**
  * Get validation results from cache
  *

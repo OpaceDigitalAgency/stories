@@ -57,12 +57,22 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   // Parse force parameter from query string if present
   const urlObj = new URL(goodreadsUrl);
   const forceParam = urlObj.searchParams.get('force') === '1';
+  const envForce = process.env.VPS_BYPASS_CACHE === 'true' || process.env.FORCE_FRESH_DATA === 'true';
   
   const {
     maxPages = 100,
     continueFromLast = false,
-    force = forceParam
+    force = forceParam || envForce
   } = options;
+
+  // Log force parameter sources for debugging
+  logger.info(`Force refresh sources:
+    - URL parameter: ${forceParam}
+    - Environment variables: ${envForce}
+    - VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
+    - FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA}
+    - Final force value: ${force}
+  `);
 
   // Initialize steps array for detailed logging
   const steps = [];

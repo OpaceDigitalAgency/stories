@@ -20,22 +20,38 @@ async function checkCache(bookId, options = {}) {
     limit = 50
   } = options;
 
-  // Log cache check parameters
+  // Check environment variables for force refresh
+  const envForce = process.env.VPS_BYPASS_CACHE === 'true' ||
+                   process.env.FORCE_FRESH_DATA === 'true' ||
+                   process.env.SKIP_CACHE === 'true';
+
+  // Combine force flags
+  const shouldForceRefresh = force || envForce;
+
+  // Log cache check parameters with detailed force information
   logger.info(`Cache check for book ${bookId}:
-    - Force refresh: ${force}
+    - Force refresh: ${shouldForceRefresh}
+      * Options force: ${force}
+      * VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
+      * FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA}
+      * SKIP_CACHE: ${process.env.SKIP_CACHE}
     - Continue from last: ${continueFromLast}
     - Required reviews: ${limit}
   `);
 
-  // If force refresh is requested, clear the cache and return null
-  if (force) {
-    logger.info(`Force refresh requested for book ${bookId}`);
-    await clearCache(bookId);
-    return null;
+  // If force refresh is requested from any source, clear the cache first
+  if (shouldForceRefresh) {
+    logger.info(`Force refresh requested for book ${bookId} (triggered by: ${
+      force ? 'force parameter' :
+      process.env.VPS_BYPASS_CACHE === 'true' ? 'VPS_BYPASS_CACHE' :
+      process.env.FORCE_FRESH_DATA === 'true' ? 'FORCE_FRESH_DATA' :
+      'SKIP_CACHE'
+    })`);
+    await cache.clear('goodreads', bookId);
   }
 
-  // Try to get cached data
-  let cachedData = await cache.get('goodreads', bookId);
+  // Try to get cached data with combined force option
+  let cachedData = await cache.get('goodreads', bookId, { force: shouldForceRefresh });
 
   if (cachedData) {
     logger.info(`Cache hit for book ${bookId}:
@@ -69,47 +85,7 @@ async function checkCache(bookId, options = {}) {
  * Clear cache for a specific book
  * @param {string} bookId - Goodreads book ID
  */
-async function clearCache(bookId) {
-  logger.info(`Clearing cache for book ${bookId}`);
-
-  const dbPath = path.resolve(config.cache.dbPath);
-  const db = new sqlite3.Database(dbPath);
-
-  try {
-    // Delete all cache entries for this book using pattern matching
-    const deletePromises = [
-      `goodreads:${bookId}`,
-      `goodreads:${bookId}:%`,
-      `${bookId}`,
-      `${bookId}:%`
-    ].map(pattern => {
-      return new Promise((resolve, reject) => {
-        db.run(
-          'DELETE FROM reviews_cache WHERE source = ? AND identifier LIKE ?',
-          ['goodreads', pattern],
-          function(err) {
-            if (err) {
-              reject(err);
-            } else {
-              logger.info(`Cleared ${this.changes} entries matching ${pattern}`);
-              resolve(this.changes);
-            }
-          }
-        );
-      });
-    });
-
-    const results = await Promise.all(deletePromises);
-    const totalCleared = results.reduce((sum, count) => sum + count, 0);
-    logger.info(`Successfully cleared ${totalCleared} total cache entries for book ${bookId}`);
-
-  } catch (error) {
-    logger.error(`Error clearing cache for ${bookId}: ${error.message}`);
-    throw error;
-  } finally {
-    db.close();
-  }
-}
+// Function removed as we now use cache.clear() directly
 
 /**
  * Save data to cache

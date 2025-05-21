@@ -17,11 +17,7 @@ require_once '../../includes/auth-check.php';
 require_once '../../includes/db_connect.php';
 
 // Include validation functions
-$validationFunctionsPath = __DIR__ . '/functions/validation-functions.php';
-if (!file_exists($validationFunctionsPath)) {
-    die("Error: Validation functions file not found at $validationFunctionsPath");
-}
-require_once $validationFunctionsPath;
+require_once __DIR__ . '/functions/validation-functions.php';
 
 // Check if book ID is provided (from GET or POST)
 $bookId = null;

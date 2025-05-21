@@ -37,6 +37,9 @@ require_once '../includes/tag-functions.php';
 // Include validation functions
 require_once 'book-import-validate/functions/validation-functions.php';
 
+// Include Goodreads display fix
+require_once 'book-import-validate/functions/goodreads-display-fix.php';
+
 // Set up error handling
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -343,6 +346,10 @@ try {
                 // Validate book data
                 $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, $forceRefresh);
                 error_log("Validation status: " . ($validationData['status'] ?? 'unknown'));
+
+                // Apply Goodreads display fix to clean up HTML artifacts
+                $validationData = applyGoodreadsDisplayFix($validationData);
+                error_log("Applied Goodreads display fix to clean HTML artifacts");
 
                 // Set up sources for the template
                 $sources = ['google_books', 'open_library', 'goodreads'];

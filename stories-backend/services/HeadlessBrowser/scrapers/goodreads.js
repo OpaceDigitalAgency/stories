@@ -1,4 +1,4 @@
-const { scrapeGoodreadsReviews: performScrape } = require('./goodreads/index.js');
+const performScrape = require('./goodreads/index.js').scrapeGoodreadsReviews;
 
 // Export the main scraping function
 module.exports = {

@@ -595,32 +595,52 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract average rating
         if (preg_match('/<span itemprop="ratingValue"[^>]*>([^<]+)<\/span>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using itemprop pattern: {$details['average_rating']}");
         } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__rating[^"]*"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using RatingStatistics__rating pattern: {$details['average_rating']}");
         } else if (preg_match('/<div[^>]*data-testid="averageRating"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using data-testid pattern: {$details['average_rating']}");
         } else if (preg_match('/aria-label="Average rating of ([0-9.]+) stars."[^>]*>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using aria-label pattern: {$details['average_rating']}");
+        } else if (preg_match('/<span[^>]*class="RatingStars__RatingsValue[^"]*"[^>]*>([0-9.]+)<\/span>/i', $response, $matches)) {
+            $details['average_rating'] = (float)trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found average rating using RatingStars__RatingsValue pattern: {$details['average_rating']}");
         }
 
         // Extract ratings count
         if (preg_match('/<meta itemprop="ratingCount" content="([^"]+)"/i', $response, $matches)) {
             $details['ratings_count'] = (int)$matches[1];
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using itemprop pattern: {$details['ratings_count']}");
         } else if (preg_match('/<div[^>]*class="[^"]*RatingStatistics__meta[^"]*"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
             $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using RatingStatistics__meta pattern: {$details['ratings_count']}");
         } else if (preg_match('/<div[^>]*data-testid="ratingsCount"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
             $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using data-testid pattern: {$details['ratings_count']}");
         } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>([0-9,.]+) ratings/i', $response, $matches)) {
             $details['ratings_count'] = (int)str_replace([',', '.'], '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using CommunityReviews link pattern: {$details['ratings_count']}");
+        } else if (preg_match('/([0-9,.]+) ratings and ([0-9,.]+) reviews/i', $response, $matches)) {
+            $details['ratings_count'] = (int)str_replace([',', '.'], '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found ratings count using ratings and reviews pattern: {$details['ratings_count']}");
         }
 
         // Extract review count
         if (preg_match('/<meta itemprop="reviewCount" content="([^"]+)"/i', $response, $matches)) {
             $details['review_count'] = (int)$matches[1];
-        } else if (preg_match('/(\d[\d,\.]*) reviews/i', $response, $matches)) {
-            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using itemprop pattern: {$details['review_count']}");
+        } else if (preg_match('/([0-9,.]+) ratings and ([0-9,.]+) reviews/i', $response, $matches)) {
+            $details['review_count'] = (int)str_replace([',', '.'], '', $matches[2]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using ratings and reviews pattern: {$details['review_count']}");
         } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>[0-9,.]+ ratings ([0-9,.]+) reviews<\/a>/i', $response, $matches)) {
             $details['review_count'] = (int)str_replace([',', '.'], '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using CommunityReviews link pattern: {$details['review_count']}");
+        } else if (preg_match('/(\d[\d,\.]*) reviews/i', $response, $matches)) {
+            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found review count using generic reviews pattern: {$details['review_count']}");
         }
 
         // Extract publication info
@@ -681,12 +701,16 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Extract series
         if (preg_match('/Series\s*:?\s*([^<\n]+)/i', $response, $matches)) {
             $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using text pattern: {$details['series']}");
         } else if (preg_match('/<a[^>]*href="\/series\/[^"]+"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
             $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series link pattern: {$details['series']}");
         } else if (preg_match('/<dt[^>]*>Series<\/dt>\s*<dd[^>]*>(.*?)<\/dd>/is', $response, $matches)) {
             $details['series'] = trim(strip_tags($matches[1]));
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using dt/dd pattern: {$details['series']}");
         } else if (preg_match('/<span[^>]*>Series:<\/span>\s*<span[^>]*>(.*?)<\/span>/is', $response, $matches)) {
             $details['series'] = trim(strip_tags($matches[1]));
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using span pattern: {$details['series']}");
         } else if (preg_match('/<div[^>]*class="DescListItem"[^>]*>.*?<dt>Series<\/dt>.*?<dd>(.*?)<\/dd>/is', $response, $matches)) {
             // Extract series from the HTML (new Goodreads design)
             $seriesText = trim(strip_tags($matches[1]));
@@ -696,6 +720,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             } else {
                 $details['series'] = $seriesText;
             }
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using DescListItem pattern: {$details['series']}");
+        } else if (preg_match('/\(([^)]+) #\d+\)/i', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series number pattern: {$details['series']}");
+        } else if (preg_match('/<a[^>]*href="\/series\/\d+[^"]*"[^>]*>([^<]+)<\/a>/i', $response, $matches)) {
+            $details['series'] = trim($matches[1]);
+            $this->logToFile($debugDir . '/goodreads-log.txt', "✅ Found series using series ID link pattern: {$details['series']}");
         }
 
         // Extract genres/shelves
@@ -760,6 +791,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile($debugDir . '/goodreads-log.txt', "- Language: " . ($details['language'] ?? 'N/A'));
         $this->logToFile($debugDir . '/goodreads-log.txt', "- Format: " . ($details['format'] ?? 'N/A'));
         $this->logToFile($debugDir . '/goodreads-log.txt', "- Series: " . ($details['series'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Average Rating: " . ($details['average_rating'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Ratings Count: " . ($details['ratings_count'] ?? 'N/A'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "- Review Count: " . ($details['review_count'] ?? 'N/A'));
 
         return $details;
     }

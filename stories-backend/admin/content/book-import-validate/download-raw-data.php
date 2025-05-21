@@ -61,68 +61,79 @@ try {
     $isbn = $bookData['isbn'] ?? ($bookData['isbn13'] ?? '');
     $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
 
-    // Check if we want raw cache data
-    $raw = isset($_GET['raw']) && $_GET['raw'] === '1';
-
-    if ($raw) {
-        // Get cache data
-        $cacheKey = md5("book_validation_{$bookId}_{$cleanIsbn}");
-        $stmt = $db->prepare("
-            SELECT cache_data
-            FROM validation_cache
-            WHERE cache_key = ?
-        ");
-        $stmt->execute([$cacheKey]);
-        $cache = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$cache) {
-            header('HTTP/1.1 404 Not Found');
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'No validation data found'
-            ]);
-            exit;
-        }
-
-        // Set headers for file download
-        header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="book_' . $bookId . '_raw_data.json"');
-
-        // Output the raw JSON data
-        echo $cache['cache_data'];
-    } else {
-        // Get validation data - but handle errors
-        try {
-            $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
-        } catch (Exception $e) {
-            error_log("Error getting validation data: " . $e->getMessage());
-            $validationData = [
-                'status' => 'error',
-                'message' => 'Error getting validation data: ' . $e->getMessage()
-            ];
-        }
-
-        // Add debug information
-        error_log("Downloading processed data for book ID: $bookId, ISBN: $isbn");
-
-        // Prepare the full data object
-        $fullData = [
-            'book' => $bookData,
-            'validation' => $validationData,
-            'download_time' => date('Y-m-d H:i:s'),
-            'download_info' => [
-                'book_id' => $bookId,
-                'isbn' => $isbn,
-                'title' => $bookData['title'] ?? 'Unknown'
-            ]
+    // Get validation data - but handle errors
+    try {
+        $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
+    } catch (Exception $e) {
+        error_log("Error getting validation data: " . $e->getMessage());
+        $validationData = [
+            'status' => 'error',
+            'message' => 'Error getting validation data: ' . $e->getMessage()
         ];
+    }
 
-        // Set headers for file download
-        header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.json"');
+    // Get cache data
+    $cacheKey = md5("book_validation_{$bookId}_{$cleanIsbn}");
+    $stmt = $db->prepare("
+        SELECT cache_data
+        FROM validation_cache
+        WHERE cache_key = ?
+    ");
+    $stmt->execute([$cacheKey]);
+    $cache = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Output the JSON data
-        echo json_encode($fullData, JSON_PRETTY_PRINT);
+    if (!$cache) {
+        header('HTTP/1.1 404 Not Found');
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'No validation data found'
+        ]);
+        exit;
+    }
+
+    // Create a temporary directory
+    $tempDir = sys_get_temp_dir() . '/book_data_' . uniqid();
+    mkdir($tempDir);
+
+    // Create the processed data file
+    $processedData = [
+        'book' => $bookData,
+        'validation' => $validationData,
+        'download_time' => date('Y-m-d H:i:s'),
+        'download_info' => [
+            'book_id' => $bookId,
+            'isbn' => $isbn,
+            'title' => $bookData['title'] ?? 'Unknown'
+        ]
+    ];
+    file_put_contents($tempDir . '/book_' . $bookId . '_processed_data.json', json_encode($processedData, JSON_PRETTY_PRINT));
+
+    // Create the raw data file
+    file_put_contents($tempDir . '/book_' . $bookId . '_raw_data.json', $cache['cache_data']);
+
+    // Create ZIP archive
+    $zipFile = $tempDir . '/book_' . $bookId . '_data.zip';
+    $zip = new ZipArchive();
+    if ($zip->open($zipFile, ZipArchive::CREATE) === TRUE) {
+        $zip->addFile($tempDir . '/book_' . $bookId . '_processed_data.json', 'book_' . $bookId . '_processed_data.json');
+        $zip->addFile($tempDir . '/book_' . $bookId . '_raw_data.json', 'book_' . $bookId . '_raw_data.json');
+        $zip->close();
+
+        // Set headers for ZIP download
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.zip"');
+        header('Content-Length: ' . filesize($zipFile));
+
+        // Output the ZIP file
+        readfile($zipFile);
+
+        // Clean up
+        unlink($tempDir . '/book_' . $bookId . '_processed_data.json');
+        unlink($tempDir . '/book_' . $bookId . '_raw_data.json');
+        unlink($zipFile);
+        rmdir($tempDir);
+    } else {
+        throw new Exception("Could not create ZIP file");
     }
 
 } catch (Exception $e) {

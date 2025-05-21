@@ -139,10 +139,12 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
     // Extract metadata from HTML with detailed logging
     logger.info('Extracting metadata from page HTML...');
-    const metadata = await page.evaluate((SELECTORS, extractFn) => {
-      // Define extractWithFallbacks in page context
-      function extractWithFallbacks(selectorObj) {
-        const { primary, fallbacks } = selectorObj;
+    const metadata = await page.evaluate((selectors) => {
+      const metadata = {};
+      
+      // Try each selector and its fallbacks
+      for (const [field, selectorObj] of Object.entries(selectors)) {
+        const { primary, fallbacks = [] } = selectorObj;
         let element = document.querySelector(primary);
         
         if (!element && fallbacks) {
@@ -152,15 +154,13 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           }
         }
         
-        return element ? element.textContent.trim() : null;
+        if (element) {
+          metadata[field] = element.textContent.trim();
+        }
       }
       
-      // Make SELECTORS available in page context
-      window.SELECTORS = SELECTORS;
-      
-      // Execute the extraction function
-      return eval('(' + extractFn + ')()');
-    }, SELECTORS, extractBookMetadata.toString());
+      return metadata;
+    }, SELECTORS);
     logger.info('Extracted metadata:', {
       title: metadata.title || 'Not found',
       author: metadata.author || 'Not found',

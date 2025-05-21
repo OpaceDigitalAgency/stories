@@ -148,6 +148,53 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         return element ? element.textContent.trim() : null;
       }
 
+      // Extract book details from the page
+      function extractBookDetails() {
+        // First try to get the book details section
+        const detailsSection = document.querySelector('[data-testid="bookEditionDetails"]') ||
+                              document.querySelector('.BookDetails__list') ||
+                              document.querySelector('.FeatureItems');
+
+        if (!detailsSection) return {};
+
+        const details = {};
+
+        // Process each detail item
+        const detailItems = detailsSection.querySelectorAll('div.FeatureItem, div.BookDetails__item');
+
+        detailItems.forEach(item => {
+          const label = item.querySelector('.FeatureItem__label, .BookDetails__label');
+          const value = item.querySelector('.FeatureItem__value, .BookDetails__value');
+
+          if (!label || !value) return;
+
+          const labelText = label.textContent.trim().toLowerCase();
+          const valueText = value.textContent.trim();
+
+          if (labelText.includes('isbn') && !labelText.includes('13')) {
+            details.isbn = valueText;
+          } else if (labelText.includes('isbn13') || labelText.includes('isbn-13')) {
+            details.isbn13 = valueText;
+          } else if (labelText.includes('publisher')) {
+            details.publisher = valueText;
+          } else if (labelText.includes('language')) {
+            details.language = valueText;
+          } else if (labelText.includes('pages')) {
+            details.pages = valueText;
+          } else if (labelText.includes('published')) {
+            details.publication_date = valueText;
+          } else if (labelText.includes('format')) {
+            details.format = valueText;
+          } else if (labelText.includes('characters')) {
+            details.characters = valueText;
+          } else if (labelText.includes('setting')) {
+            details.settings = valueText;
+          }
+        });
+
+        return details;
+      }
+
       function cleanText(text) {
         if (!text) return '';
         return text.trim().replace(/\s+/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '');
@@ -175,32 +222,32 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           fallbacks: ['.BookPageMetadataSection__genreShelf', '.bookPageGenreLink', 'span.BookPageMetadataSection__genreButton']
         },
         isbn: {
-          primary: '.FeatureItem:contains("ISBN") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("ISBN") + span.BookDetails__value']
+          primary: '[data-testid="bookEditionDetails"] div:nth-child(1)',
+          fallbacks: ['.BookDetails__list div:nth-child(1)', '.FeatureItem div:nth-child(1)']
         },
         isbn13: {
-          primary: '.FeatureItem:contains("ISBN13") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("ISBN13") + span.BookDetails__value']
+          primary: '[data-testid="bookEditionDetails"] div:nth-child(2)',
+          fallbacks: ['.BookDetails__list div:nth-child(2)', '.FeatureItem div:nth-child(2)']
         },
         publisher: {
-          primary: '.FeatureItem:contains("Publisher") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Publisher") + span.BookDetails__value']
+          primary: '[data-testid="bookEditionDetails"] div:nth-child(3)',
+          fallbacks: ['.BookDetails__list div:nth-child(3)', '.FeatureItem div:nth-child(3)']
         },
         language: {
-          primary: '.FeatureItem:contains("Language") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Language") + span.BookDetails__value']
+          primary: '[data-testid="bookEditionDetails"] div:nth-child(4)',
+          fallbacks: ['.BookDetails__list div:nth-child(4)', '.FeatureItem div:nth-child(4)']
         },
         format: {
-          primary: '.FeatureItem:contains("Format") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Format") + span.BookDetails__value']
+          primary: '[data-testid="bookFormat"]',
+          fallbacks: ['.BookDetails__list div:nth-child(5)', '.FeatureItem div:nth-child(5)']
         },
         pages: {
-          primary: '.FeatureItem:contains("Pages") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Pages") + span.BookDetails__value', '.BookDetails__list span.BookDetails__label:contains("Length") + span.BookDetails__value']
+          primary: '[data-testid="pagesFormat"]',
+          fallbacks: ['.BookDetails__list div:nth-child(6)', '.FeatureItem div:nth-child(6)']
         },
         publication_date: {
-          primary: '.FeatureItem:contains("Published") .FeatureItem__value',
-          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Published") + span.BookDetails__value']
+          primary: '[data-testid="publicationInfo"]',
+          fallbacks: ['.BookDetails__list div:nth-child(7)', '.FeatureItem div:nth-child(7)']
         },
         series: {
           primary: '.BookPageTitleSection__series a',
@@ -211,12 +258,12 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           fallbacks: []
         },
         characters: {
-          primary: '.BookDetails__list span.BookDetails__label:contains("Characters") + span.BookDetails__value',
-          fallbacks: []
+          primary: '[data-testid="charactersList"]',
+          fallbacks: ['.BookDetails__list div:nth-child(8)']
         },
         settings: {
-          primary: '.BookDetails__list span.BookDetails__label:contains("Setting") + span.BookDetails__value',
-          fallbacks: []
+          primary: '[data-testid="settingsList"]',
+          fallbacks: ['.BookDetails__list div:nth-child(9)']
         },
         rating_count: {
           primary: '[data-testid="ratingsCount"]',
@@ -254,7 +301,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         cover_image: ''
       };
 
+      // First extract book details using the dedicated function
+      const bookDetails = extractBookDetails();
+
+      // Merge book details into metadata
+      Object.entries(bookDetails).forEach(([key, value]) => {
+        if (value && metadata.hasOwnProperty(key)) {
+          metadata[key] = value;
+        }
+      });
+
+      // Then process each selector for additional data
       for (const [field, selectors] of Object.entries(SELECTORS)) {
+        // Skip fields we already have from bookDetails
+        if (bookDetails[field] && metadata[field]) continue;
+
         if (typeof selectors !== 'object' || typeof selectors.primary !== 'string') {
           console.warn('Invalid selector configuration for field:', field, selectors);
           continue;
@@ -272,10 +333,33 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           case 'genres':
             metadata.genres = value.split(/[,;]/).map(item => cleanText(item)).filter(item => item.length > 0);
             break;
+          case 'isbn':
+          case 'isbn13':
+            // Extract only the ISBN number
+            const isbnMatch = value.match(/(\d+[\dX]+)/i);
+            metadata[field] = isbnMatch ? isbnMatch[1] : '';
+            break;
+          case 'publisher':
+            // Extract publisher name from the element
+            const publisherElement = document.querySelector(selectors.primary) ||
+                                    (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
+            if (publisherElement) {
+              // Try to find the actual publisher text
+              const labelElement = publisherElement.querySelector('.FeatureItem__label, .BookDetails__label');
+              const valueElement = publisherElement.querySelector('.FeatureItem__value, .BookDetails__value');
+
+              if (labelElement && valueElement && labelElement.textContent.toLowerCase().includes('publisher')) {
+                metadata.publisher = cleanText(valueElement.textContent);
+              } else {
+                // If we can't find specific elements, use the whole text
+                metadata.publisher = value;
+              }
+            }
+            break;
           case 'pages':
             // Extract only the number from the pages value
             const pagesMatch = value.match(/(\d+)/);
-            metadata.pages = pagesMatch ? pagesMatch[1] : value;
+            metadata.pages = pagesMatch ? pagesMatch[1] : '';
             break;
           case 'publication_date':
             // Try to parse the date into a standardized format (YYYY-MM-DD)
@@ -310,6 +394,22 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               metadata[field] = countMatch[1].replace(/,/g, '');
             } else {
               metadata[field] = value;
+            }
+            break;
+          case 'characters':
+          case 'settings':
+            // Extract the text content, removing any labels
+            const detailElement = document.querySelector(selectors.primary) ||
+                                 (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
+            if (detailElement) {
+              const labelElement = detailElement.querySelector('.FeatureItem__label, .BookDetails__label');
+              const valueElement = detailElement.querySelector('.FeatureItem__value, .BookDetails__value');
+
+              if (labelElement && valueElement) {
+                metadata[field] = cleanText(valueElement.textContent);
+              } else {
+                metadata[field] = value;
+              }
             }
             break;
           default:

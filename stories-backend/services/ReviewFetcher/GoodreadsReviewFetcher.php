@@ -1094,10 +1094,22 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $maxPages = $options['maxPages'] ?? 20;
         $continueFromLast = $options['continueFromLast'] ?? false;
 
+        // Check force parameter from all sources
+        $forceRefresh = false;
+        if (isset($options['force']) && $options['force']) {
+            $forceRefresh = true;
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Force refresh requested via options parameter");
+        }
+        if (getenv('VPS_BYPASS_CACHE') === 'true' || getenv('FORCE_FRESH_DATA') === 'true') {
+            $forceRefresh = true;
+            $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Force refresh requested via environment variables");
+        }
+
         // First try to use the VPS-based Headless Browser service
         $vpsReviews = $this->fetchReviewsWithHeadlessBrowser($reviewsUrl, $limit, [
             'maxPages' => $maxPages,
-            'continueFromLast' => $continueFromLast
+            'continueFromLast' => $continueFromLast,
+            'force' => $forceRefresh
         ]);
 
         if (!empty($vpsReviews)) {

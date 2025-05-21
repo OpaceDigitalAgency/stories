@@ -14,7 +14,7 @@
  * @param PDO|null $db Database connection (optional)
  * @return array|null Book data or null if not found
  */
-function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
+function fetchGoodreadsDataNew($isbn, $title, $author, $db = null, $options = []) {
     try {
         // Start timer for performance tracking
         $startTime = microtime(true);
@@ -149,24 +149,27 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         // Make sure we're using the correct API key
         putenv('HEADLESS_BROWSER_API_KEY=stories-scraper-api-key-2023');
 
-        // Set options for the fetcher
-        $options = [
+        // Set default options for the fetcher
+        $defaultOptions = [
             'timeout' => 30, // Longer timeout for validation
             'maxPages' => 1,
             'limit' => 1,
             'validation_mode' => true, // Flag to indicate we're just validating, not fetching reviews
             'skip_db_check' => true, // Skip database check for reviews
-            'force' => true, // Force refresh to avoid caching issues
+            'force' => false, // Default to not forcing refresh
             'cache_ttl' => 0 // Don't cache results
         ];
 
-        // Check if we should bypass cache (from environment variable or request parameter)
-        if (getenv('VPS_BYPASS_CACHE') === 'true' ||
-            isset($_GET['bypass_cache']) && $_GET['bypass_cache'] == '1' ||
-            isset($_POST['bypass_cache']) && $_POST['bypass_cache'] == '1') {
-            $options['force'] = true;
-            putenv('VPS_BYPASS_CACHE=true'); // Set environment variable for downstream processes
-            error_log("🔄 Cache bypass enabled, forcing cache refresh");
+        // Merge provided options with defaults
+        $options = array_merge($defaultOptions, $options);
+
+        // Log options for debugging
+        error_log("Goodreads fetch options: " . json_encode($options));
+
+        // Set environment variable based on force option
+        if ($options['force']) {
+            putenv('VPS_BYPASS_CACHE=true');
+            error_log("🔄 Cache bypass enabled via force option");
         }
 
         try {

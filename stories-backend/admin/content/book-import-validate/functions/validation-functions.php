@@ -107,14 +107,73 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             }
         }
 
-        // Initialize source data
+        // Initialize source data and timing
         $sourceData = [];
+        $sourceTiming = [];
+        $totalStartTime = microtime(true);
+
+        // Check Goodreads first since that's what we're debugging
+        if ($goodreadsSourceId) {
+            $goodreadsStartTime = microtime(true);
+            error_log("Starting Goodreads fetch at " . date('H:i:s'));
+            
+            $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
+            if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
+                // Pass force parameter through
+                $options = ['force' => $forceRefresh];
+                $goodreadsData = fetchGoodreadsDataNew($cleanIsbn, $title, $book['author'] ?? '', $db, $options);
+                
+                $goodreadsEndTime = microtime(true);
+                $goodreadsDuration = round($goodreadsEndTime - $goodreadsStartTime, 2);
+                error_log("Completed Goodreads fetch at " . date('H:i:s') . " (took {$goodreadsDuration}s)");
+                $sourceTiming['goodreads'] = $goodreadsDuration;
+                
+                if ($goodreadsData) {
+                    $status = 'success';
+                    $message = 'Successfully fetched data from Goodreads';
+                    $processingTime = null;
+                    $method = 'unknown';
+                    $steps = [];
+
+                    if (isset($goodreadsData['_status'])) {
+                        $statusInfo = $goodreadsData['_status'];
+                        $status = $statusInfo['status'] ?? 'success';
+                        $message = $statusInfo['message'] ?? 'Successfully fetched data from Goodreads';
+                        $processingTime = $statusInfo['processing_time'] ?? null;
+                        $method = $statusInfo['method'] ?? 'unknown';
+                        $steps = $statusInfo['steps'] ?? [];
+
+                        unset($goodreadsData['_status']);
+                    }
+
+                    $sourceData['goodreads'] = [
+                        'status' => $status,
+                        'message' => $message,
+                        'method' => $method,
+                        'processing_time' => $processingTime,
+                        'steps' => $steps,
+                        'data' => $goodreadsData
+                    ];
+                }
+            }
+        }
+
+        // Start Google Books and Open Library fetches in parallel
+        $googleBooksPromise = null;
+        $openLibraryPromise = null;
 
         // Check Google Books
         if ($googleBooksSourceId) {
+            $googleBooksStartTime = microtime(true);
+            error_log("Starting Google Books fetch at " . date('H:i:s'));
             $googleBooksFetcher = $reviewFetcherFactory->getFetcher($googleBooksSourceId);
             if ($googleBooksFetcher && $googleBooksFetcher->isConfigured()) {
                 $googleBooksData = fetchGoogleBooksDataNew($cleanIsbn, $title, $book['author'] ?? '');
+                
+                $googleBooksEndTime = microtime(true);
+                $googleBooksDuration = round($googleBooksEndTime - $googleBooksStartTime, 2);
+                error_log("Completed Google Books fetch at " . date('H:i:s') . " (took {$googleBooksDuration}s)");
+                $sourceTiming['google_books'] = $googleBooksDuration;
                 if ($googleBooksData) {
                     // Check if we have status information
                     $status = 'success';
@@ -151,9 +210,16 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
 
         // Check Open Library
         if ($openLibrarySourceId) {
+            $openLibraryStartTime = microtime(true);
+            error_log("Starting Open Library fetch at " . date('H:i:s'));
             $openLibraryFetcher = $reviewFetcherFactory->getFetcher($openLibrarySourceId);
             if ($openLibraryFetcher && $openLibraryFetcher->isConfigured()) {
                 $openLibraryData = fetchOpenLibraryDataNew($cleanIsbn, $title, $book['author'] ?? '');
+                
+                $openLibraryEndTime = microtime(true);
+                $openLibraryDuration = round($openLibraryEndTime - $openLibraryStartTime, 2);
+                error_log("Completed Open Library fetch at " . date('H:i:s') . " (took {$openLibraryDuration}s)");
+                $sourceTiming['open_library'] = $openLibraryDuration;
                 if ($openLibraryData) {
                     // Check if we have status information
                     $status = 'success';
@@ -192,55 +258,6 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             }
         }
 
-        // Check Goodreads
-        if ($goodreadsSourceId) {
-            $goodreadsFetcher = $reviewFetcherFactory->getFetcher($goodreadsSourceId);
-            if ($goodreadsFetcher && $goodreadsFetcher->isConfigured()) {
-                $goodreadsData = fetchGoodreadsDataNew($cleanIsbn, $title, $book['author'] ?? '');
-                if ($goodreadsData) {
-                    // Check if we have status information
-                    $status = 'success';
-                    $message = 'Successfully fetched data from Goodreads';
-                    $processingTime = null;
-                    $method = 'unknown';
-                    $steps = [];
-
-                    if (isset($goodreadsData['_status'])) {
-                        $statusInfo = $goodreadsData['_status'];
-                        $status = $statusInfo['status'] ?? 'success';
-                        $message = $statusInfo['message'] ?? 'Successfully fetched data from Goodreads';
-                        $processingTime = $statusInfo['processing_time'] ?? null;
-                        $method = $statusInfo['method'] ?? 'unknown';
-                        $steps = $statusInfo['steps'] ?? [];
-
-                        // Remove status info from the data
-                        unset($goodreadsData['_status']);
-                    }
-
-                    $sourceData['goodreads'] = [
-                        'status' => $status,
-                        'message' => $message,
-                        'method' => $method,
-                        'processing_time' => $processingTime,
-                        'steps' => $steps,
-                        'data' => $goodreadsData
-                    ];
-                } else {
-                    $sourceData['goodreads'] = [
-                        'status' => 'error',
-                        'message' => 'Failed to fetch data from Goodreads',
-                        'method' => 'unknown',
-                        'steps' => [
-                            [
-                                'name' => 'fetch_attempt',
-                                'status' => 'error',
-                                'message' => 'No data returned from Goodreads fetch function'
-                            ]
-                        ]
-                    ];
-                }
-            }
-        }
 
         // Get validation history
         $history = getValidationHistory($bookId, $db);
@@ -248,6 +265,12 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
         // Update validation status in the database
         $validationStatus = 'pending';
         $successfulSources = 0;
+
+        // Log total execution time and timing breakdown
+        $totalEndTime = microtime(true);
+        $totalDuration = round($totalEndTime - $totalStartTime, 2);
+        error_log("Total validation time: {$totalDuration}s");
+        error_log("Source timing breakdown: " . json_encode($sourceTiming));
 
         foreach ($sourceData as $source => $data) {
             if ($data['status'] === 'success') {

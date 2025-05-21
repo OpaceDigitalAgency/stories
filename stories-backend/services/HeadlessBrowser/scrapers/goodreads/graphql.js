@@ -76,7 +76,7 @@ function processGraphQLResponse(response) {
   }
 
   const work = response.data.work;
-  
+
   // Extract metadata
   const metadata = {
     title: work.title || work.originalTitle,
@@ -95,6 +95,29 @@ function processGraphQLResponse(response) {
     review_count: work.stats?.reviewsCount
   };
 
+  // Helper function to clean review text
+  function cleanReviewText(text) {
+    if (!text) return '';
+
+    // Replace escaped HTML entities
+    let cleaned = text
+      .replace(/\\u003c/g, '<')
+      .replace(/\\u003e/g, '>')
+      .replace(/\\u0026/g, '&')
+      .replace(/\\u0027/g, "'")
+      .replace(/\\u0022/g, '"')
+      .replace(/\\n/g, ' ')
+      .replace(/\\t/g, ' ');
+
+    // Remove HTML tags
+    cleaned = cleaned.replace(/<[^>]*>/g, ' ');
+
+    // Normalize whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    return cleaned;
+  }
+
   // Extract reviews
   const reviews = work.reviews?.edges?.map(edge => {
     const node = edge.node;
@@ -102,7 +125,7 @@ function processGraphQLResponse(response) {
       reviewer_name: node.user?.name || 'Goodreads User',
       rating: node.rating || 0,
       rating_normalised: (node.rating || 0) / 5,
-      review_text: node.text || '',
+      review_text: cleanReviewText(node.text || ''),
       review_date: node.updatedAt || node.createdAt || new Date().toISOString().split('T')[0],
       metadata: JSON.stringify({
         reviewer_image: node.user?.imageUrl,

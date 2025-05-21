@@ -88,7 +88,7 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     logger.info(`Extracted book ID: ${bookId} from URL: ${url}`);
 
     // Check if we should bypass cache - normalize force parameter to boolean
-    const forceBoolean = force === true || force === 'true' || force === '1' || force === 1;
+    let forceBoolean = force === true || force === 'true' || force === '1' || force === 1;
 
     if (forceBoolean) {
       logger.info(`Force parameter set to ${force} (normalized to true), bypassing cache`);
@@ -126,10 +126,6 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
         logger.info(`Cache hit but continuing scrape (continueFromLast=${continueFromLast}, cachedCount=${cachedCount}, limit=${limit})`);
       }
     }
-
-
-    // Update the forceBoolean value with the latest force parameter
-    forceBoolean = force === 'true' || force === '1' || force === true;
 
     // Log the force parameter for debugging
     logger.info(`Force parameter details:

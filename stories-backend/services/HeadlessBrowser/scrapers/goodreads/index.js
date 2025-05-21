@@ -160,7 +160,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         },
         author: {
           primary: '[data-testid="authorLink"]',
-          fallbacks: ['.BookPageTitleSection__authorLink', '.AuthorLink__name']
+          fallbacks: ['.BookPageTitleSection__authorLink', '.AuthorLink__name', 'span.ContributorLink__name']
         },
         rating: {
           primary: '[data-testid="averageRating"]',
@@ -168,11 +168,67 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         },
         description: {
           primary: '[data-testid="description"] span',
-          fallbacks: []
+          fallbacks: ['.DetailsLayoutRightParagraph__widthConstrained']
         },
         genres: {
-          primary: '.BookPageMetadataSection__genreShelf',
-          fallbacks: ['.bookPageGenreLink']
+          primary: '[data-testid="genresList"] a',
+          fallbacks: ['.BookPageMetadataSection__genreShelf', '.bookPageGenreLink', 'span.BookPageMetadataSection__genreButton']
+        },
+        isbn: {
+          primary: '.FeatureItem:contains("ISBN") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("ISBN") + span.BookDetails__value']
+        },
+        isbn13: {
+          primary: '.FeatureItem:contains("ISBN13") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("ISBN13") + span.BookDetails__value']
+        },
+        publisher: {
+          primary: '.FeatureItem:contains("Publisher") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Publisher") + span.BookDetails__value']
+        },
+        language: {
+          primary: '.FeatureItem:contains("Language") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Language") + span.BookDetails__value']
+        },
+        format: {
+          primary: '.FeatureItem:contains("Format") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Format") + span.BookDetails__value']
+        },
+        pages: {
+          primary: '.FeatureItem:contains("Pages") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Pages") + span.BookDetails__value', '.BookDetails__list span.BookDetails__label:contains("Length") + span.BookDetails__value']
+        },
+        publication_date: {
+          primary: '.FeatureItem:contains("Published") .FeatureItem__value',
+          fallbacks: ['.BookDetails__list span.BookDetails__label:contains("Published") + span.BookDetails__value']
+        },
+        series: {
+          primary: '.BookPageTitleSection__series a',
+          fallbacks: ['.SeriesLink']
+        },
+        awards: {
+          primary: '[href*="ref=nav_brws_gca"]',
+          fallbacks: []
+        },
+        characters: {
+          primary: '.BookDetails__list span.BookDetails__label:contains("Characters") + span.BookDetails__value',
+          fallbacks: []
+        },
+        settings: {
+          primary: '.BookDetails__list span.BookDetails__label:contains("Setting") + span.BookDetails__value',
+          fallbacks: []
+        },
+        rating_count: {
+          primary: '[data-testid="ratingsCount"]',
+          fallbacks: ['.RatingStatistics__meta span:first-child']
+        },
+        review_count: {
+          primary: '[data-testid="reviewsCount"]',
+          fallbacks: ['.RatingStatistics__meta span:last-child']
+        },
+        cover_image: {
+          primary: '[data-testid="bookCover"] img',
+          fallbacks: ['img.ResponsiveImage', '.BookCover__image img']
         }
       };
 
@@ -181,7 +237,21 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         author: '',
         rating: null,
         description: '',
-        genres: []
+        genres: [],
+        isbn: '',
+        isbn13: '',
+        publisher: '',
+        language: '',
+        format: '',
+        pages: '',
+        publication_date: '',
+        series: '',
+        awards: [],
+        characters: '',
+        settings: '',
+        rating_count: '',
+        review_count: '',
+        cover_image: ''
       };
 
       for (const [field, selectors] of Object.entries(SELECTORS)) {
@@ -201,6 +271,46 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             break;
           case 'genres':
             metadata.genres = value.split(/[,;]/).map(item => cleanText(item)).filter(item => item.length > 0);
+            break;
+          case 'pages':
+            // Extract only the number from the pages value
+            const pagesMatch = value.match(/(\d+)/);
+            metadata.pages = pagesMatch ? pagesMatch[1] : value;
+            break;
+          case 'publication_date':
+            // Try to parse the date into a standardized format (YYYY-MM-DD)
+            try {
+              const dateStr = value.replace(/[^\w\s,]/g, ' ').trim();
+              const date = new Date(dateStr);
+              if (!isNaN(date.getTime())) {
+                metadata.publication_date = date.toISOString().split('T')[0];
+              } else {
+                metadata.publication_date = value;
+              }
+            } catch (e) {
+              metadata.publication_date = value;
+            }
+            break;
+          case 'awards':
+            metadata.awards = value.split(/[,;]/).map(item => cleanText(item)).filter(item => item.length > 0);
+            break;
+          case 'cover_image':
+            // For cover image, we need to extract the src attribute
+            const imgElement = document.querySelector(selectors.primary) ||
+                              (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
+            if (imgElement && imgElement.tagName === 'IMG') {
+              metadata.cover_image = imgElement.src;
+            }
+            break;
+          case 'rating_count':
+          case 'review_count':
+            // Extract only the number from the count
+            const countMatch = value.match(/(\d+(?:,\d+)*)/);
+            if (countMatch) {
+              metadata[field] = countMatch[1].replace(/,/g, '');
+            } else {
+              metadata[field] = value;
+            }
             break;
           default:
             metadata[field] = value;

@@ -479,11 +479,18 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
-    
-        // CHATHPT -Propagate force flag to headless-browser request
-        if (!empty($options['force'] ?? false)) {
-            $url .= '&force=1';
-        }
+
+        // Add force parameter if requested
+        $forceValue = (!empty($options['force'] ?? false)) ? "1" : "0";
+        $url .= "&force={$forceValue}";
+
+        // Log the force parameter value for debugging
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Force parameter details in getBookDetails:");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - options['force']: " . (isset($options['force']) ? var_export($options['force'], true) : 'not set'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - forceValue: {$forceValue}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - VPS_BYPASS_CACHE: " . getenv('VPS_BYPASS_CACHE'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - FORCE_FRESH_DATA: " . getenv('FORCE_FRESH_DATA'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - Full request URL: {$url}");
 
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
@@ -1941,13 +1948,9 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Build the request URL with options - use the exact parameter names expected by the Node.js server
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl);
-        
+
         // Add limit parameter (required by Node.js server)
         $url .= "&limit={$limit}";
-
-         // CHATGPT - Append force=true if requested
-        $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
-        $url .= "&force={$forceValue}";
 
         // Log the actual limit being used vs requested
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Using actual limit={$limit} (original requestLimit was {$requestLimit})");
@@ -1968,6 +1971,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
         $url .= "&force={$forceValue}";
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force={$forceValue} parameter");
+
+        // Log the force parameter value for debugging
+        $this->logToFile($debugDir . '/goodreads-log.txt', "🔍 Force parameter details:");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - options['force']: " . (isset($options['force']) ? var_export($options['force'], true) : 'not set'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - forceValue: {$forceValue}");
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - VPS_BYPASS_CACHE: " . getenv('VPS_BYPASS_CACHE'));
+        $this->logToFile($debugDir . '/goodreads-log.txt', "   - FORCE_FRESH_DATA: " . getenv('FORCE_FRESH_DATA'));
 
         // Log all parameters for debugging
         $this->logToFile($debugDir . '/goodreads-log.txt', "📝 Parameters being sent to Node.js server:");

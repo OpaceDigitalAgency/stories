@@ -23,10 +23,10 @@ $response = [
 try {
     // Include database connection - try multiple possible paths
     $possiblePaths = [
-        __DIR__ . '/../../../includes/db-connect.php',  // Main path in admin/includes
-        __DIR__ . '/../../../../includes/db-connect.php',
-        __DIR__ . '/../../../../db-connect.php',
-        __DIR__ . '/../../../db-connect.php'
+        __DIR__ . '/../../../includes/db_connect.php',  // Main path in admin/includes
+        __DIR__ . '/../../../../includes/db_connect.php',
+        __DIR__ . '/../../../../db_connect.php',
+        __DIR__ . '/../../../db_connect.php'
     ];
 
     $dbConnected = false;

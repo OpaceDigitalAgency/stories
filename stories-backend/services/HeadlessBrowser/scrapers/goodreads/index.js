@@ -423,8 +423,14 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           fallbacks: ['table tr td']
         },
         characters: {
-          primary: 'table tr td',
-          fallbacks: []
+          primary: '.BookDetails .DescListItem dt:contains("Characters"), .CollapsableList .DescListItem dt:contains("Characters")',
+          fallbacks: [
+            '.BookDetails__list .BookDetails__item:has(.BookDetails__label:contains("Characters"))',
+            '.TruncatedContent__text--small[data-testid="contentContainer"]',
+            '.WorkDetails .DescListItem:has(dt:contains("Characters"))',
+            'div.DescListItem:has(dt:contains("Characters"))',
+            'table tr:has(td:contains("Characters"))'
+          ]
         },
         settings: {
           primary: 'table tr td',
@@ -627,14 +633,109 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             break;
           case 'characters':
           case 'settings':
-            // Extract the text content, removing any labels
+            // Special handling for characters based on the HTML structure
+            if (field === 'characters') {
+              try {
+                // First try to find the characters container
+                const characterContainer = document.querySelector('.BookDetails .DescListItem:has(dt:contains("Characters")), .CollapsableList .DescListItem:has(dt:contains("Characters"))');
+
+                if (characterContainer) {
+                  // Find the dd element that contains the character links
+                  const ddElement = characterContainer.querySelector('dd');
+
+                  if (ddElement) {
+                    // Find all character links
+                    const characterLinks = ddElement.querySelectorAll('a');
+
+                    if (characterLinks && characterLinks.length > 0) {
+                      // Extract character names from links
+                      const characterNames = Array.from(characterLinks).map(link => {
+                        return link.textContent.trim();
+                      }).filter(name => name.length > 0);
+
+                      // Join with commas
+                      if (characterNames.length > 0) {
+                        metadata.characters = characterNames.join(', ');
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                // Try the new Goodreads layout with TruncatedContent
+                const truncatedContent = document.querySelector('.TruncatedContent__text--small[data-testid="contentContainer"]');
+                if (truncatedContent) {
+                  // Find all character links
+                  const characterLinks = truncatedContent.querySelectorAll('a[href*="/characters/"]');
+
+                  if (characterLinks && characterLinks.length > 0) {
+                    // Extract character names from links
+                    const characterNames = Array.from(characterLinks).map(link => {
+                      return link.textContent.trim();
+                    }).filter(name => name.length > 0);
+
+                    // Join with commas
+                    if (characterNames.length > 0) {
+                      metadata.characters = characterNames.join(', ');
+                      break;
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('Error extracting characters:', e);
+                // Fall through to default extraction
+              }
+            }
+
+            // Default extraction logic for both characters and settings
             const detailElement = document.querySelector(selectors.primary) ||
                                  (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
             if (detailElement) {
+              // For characters, try to extract from the dd element directly
+              if (field === 'characters' && detailElement.tagName === 'DT') {
+                const ddElement = detailElement.nextElementSibling;
+                if (ddElement && ddElement.tagName === 'DD') {
+                  // Find all character links
+                  const characterLinks = ddElement.querySelectorAll('a');
+
+                  if (characterLinks && characterLinks.length > 0) {
+                    // Extract character names from links
+                    const characterNames = Array.from(characterLinks).map(link => {
+                      return link.textContent.trim();
+                    }).filter(name => name.length > 0);
+
+                    // Join with commas
+                    if (characterNames.length > 0) {
+                      metadata.characters = characterNames.join(', ');
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // Try to find label and value elements
               const labelElement = detailElement.querySelector('.FeatureItem__label, .BookDetails__label');
               const valueElement = detailElement.querySelector('.FeatureItem__value, .BookDetails__value');
 
               if (labelElement && valueElement) {
+                // For characters, try to extract links directly
+                if (field === 'characters') {
+                  const characterLinks = valueElement.querySelectorAll('a');
+
+                  if (characterLinks && characterLinks.length > 0) {
+                    // Extract character names from links
+                    const characterNames = Array.from(characterLinks).map(link => {
+                      return link.textContent.trim();
+                    }).filter(name => name.length > 0);
+
+                    // Join with commas
+                    if (characterNames.length > 0) {
+                      metadata.characters = characterNames.join(', ');
+                      break;
+                    }
+                  }
+                }
+
                 // Get both innerHTML and textContent for thorough cleaning
                 let htmlValue = valueElement.innerHTML;
                 let textValue = valueElement.textContent;

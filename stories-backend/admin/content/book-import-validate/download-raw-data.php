@@ -10,12 +10,28 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Include database connection
-$dbPath = __DIR__ . '/../../../../db-connect.php';
-if (!file_exists($dbPath)) {
-    die("Error: Database connection file not found at $dbPath");
+// Include database connection - try multiple possible paths
+$possiblePaths = [
+    __DIR__ . '/../../../includes/db-connect.php',  // Main path in admin/includes
+    __DIR__ . '/../../../../includes/db-connect.php',
+    __DIR__ . '/../../../../db-connect.php',
+    __DIR__ . '/../../../db-connect.php'
+];
+
+$dbConnected = false;
+foreach ($possiblePaths as $dbPath) {
+    if (file_exists($dbPath)) {
+        require_once $dbPath;
+        if (isset($db) && $db instanceof PDO) {
+            $dbConnected = true;
+            break;
+        }
+    }
 }
-require_once $dbPath;
+
+if (!$dbConnected) {
+    die("Error: Database connection file not found. Tried paths: " . implode(", ", $possiblePaths));
+}
 
 // Check if database connection is available
 if (!isset($db) || !($db instanceof PDO)) {

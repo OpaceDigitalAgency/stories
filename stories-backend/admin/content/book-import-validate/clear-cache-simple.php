@@ -1,7 +1,7 @@
 <?php
 /**
  * Simple Cache Clearing Script
- * 
+ *
  * This script provides a simple way to clear the validation cache
  * without relying on complex external services.
  */
@@ -21,12 +21,28 @@ $response = [
 ];
 
 try {
-    // Include database connection
-    $dbPath = __DIR__ . '/../../../../db-connect.php';
-    if (!file_exists($dbPath)) {
-        throw new Exception("Database connection file not found at $dbPath");
+    // Include database connection - try multiple possible paths
+    $possiblePaths = [
+        __DIR__ . '/../../../includes/db-connect.php',  // Main path in admin/includes
+        __DIR__ . '/../../../../includes/db-connect.php',
+        __DIR__ . '/../../../../db-connect.php',
+        __DIR__ . '/../../../db-connect.php'
+    ];
+
+    $dbConnected = false;
+    foreach ($possiblePaths as $dbPath) {
+        if (file_exists($dbPath)) {
+            require_once $dbPath;
+            if (isset($db) && $db instanceof PDO) {
+                $dbConnected = true;
+                break;
+            }
+        }
     }
-    require_once $dbPath;
+
+    if (!$dbConnected) {
+        throw new Exception("Database connection file not found. Tried paths: " . implode(", ", $possiblePaths));
+    }
 
     // Check if database connection is available
     if (!isset($db) || !($db instanceof PDO)) {
@@ -37,7 +53,7 @@ try {
     try {
         $stmt = $db->prepare("DELETE FROM validation_cache WHERE cache_key LIKE '%book_validation_%'");
         $result = $stmt->execute();
-        
+
         if ($result) {
             $count = $stmt->rowCount();
             $response['actions'][] = [
@@ -64,7 +80,7 @@ try {
     try {
         $stmt = $db->prepare("DELETE FROM validation_cache WHERE cache_key LIKE '%goodreads%'");
         $result = $stmt->execute();
-        
+
         if ($result) {
             $count = $stmt->rowCount();
             $response['actions'][] = [
@@ -91,7 +107,7 @@ try {
     putenv('VPS_BYPASS_CACHE=true');
     putenv('FORCE_FRESH_DATA=true');
     putenv('SKIP_CACHE=true');
-    
+
     $response['actions'][] = [
         'name' => 'set_environment_variables',
         'status' => 'success',
@@ -106,7 +122,7 @@ try {
             break;
         }
     }
-    
+
     if ($hasErrors) {
         $response['status'] = 'error';
         $response['message'] = 'Cache clearing completed with errors';

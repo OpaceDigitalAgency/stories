@@ -149,7 +149,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $this->logToFile(__DIR__ . '/debug/goodreads-log.txt', "✅ Found book URL: {$bookUrl}");
 
         // Get book details
-        $bookDetails = $this->getBookDetails($bookUrl);
+        $bookDetails = $this->getBookDetails($bookUrl, $options);
 
         if (empty($bookDetails)) {
             $errorMsg = "Failed to get book details from Goodreads for URL: {$bookUrl}";
@@ -432,7 +432,14 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
      * @param string $bookUrl The book URL
      * @return array|null The book details or null if not found
      */
-    public function getBookDetails(string $bookUrl): ?array {
+    /**
+     * Get book details from Goodreads
+     *
+     * @param string $bookUrl The book URL
+     * @param array  $options Additional options (e.g. ['force' => true])
+     * @return array|null The book details or null if not found
+     */
+    public function getBookDetails(string $bookUrl, array $options = []): ?array {
         // Create debug directory if it doesn't exist
         $debugDir = __DIR__ . '/debug';
         if (!is_dir($debugDir)) {
@@ -472,6 +479,13 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
+        
+        
+        // CHATHPT -Propagate force flag to headless-browser request
+        if (!empty($options['force'] ?? false)) {
+            $url .= '&force=1';
+        }
+
 
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Using VPS Headless Browser API URL: {$apiUrl}");
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔗 Book URL being scraped: {$bookUrl}");
@@ -1928,7 +1942,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
 
         // Build the request URL with options - use the exact parameter names expected by the Node.js server
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($goodreadsUrl);
-
+        
         // Add limit parameter (required by Node.js server)
         $url .= "&limit={$limit}";
 

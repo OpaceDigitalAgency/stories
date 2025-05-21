@@ -31,7 +31,7 @@ module.exports = {
         maxPages,
         continueFromLast,
         skipDbCheck: true,
-        force: true
+        force: force
       });
 
       res.json(reviews);

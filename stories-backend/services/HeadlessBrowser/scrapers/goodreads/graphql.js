@@ -211,6 +211,26 @@ async function makeGraphQLRequest(page, workId, cursor = null) {
       logger.error(`GraphQL request returned error: ${response.message}`);
       logger.error(`Status: ${response.status}, Content-Type: ${response.contentType}`);
       logger.error(`Response preview: ${response.preview}`);
+
+      // If we got HTML instead of JSON, it might be a login page or rate limiting
+      if (response.preview && response.preview.includes('<!DOCTYPE')) {
+        logger.error('Received HTML instead of JSON - might be rate limited or redirected to login page');
+
+        // Try to extract more information about the HTML response
+        try {
+          await page.evaluate(() => {
+            const title = document.title;
+            const h1 = document.querySelector('h1')?.textContent;
+            const body = document.body.textContent.substring(0, 200);
+            console.error(`HTML page title: ${title}`);
+            console.error(`HTML h1: ${h1}`);
+            console.error(`HTML body preview: ${body}`);
+          });
+        } catch (e) {
+          logger.error(`Failed to extract HTML details: ${e.message}`);
+        }
+      }
+
       return null;
     }
 

@@ -12,13 +12,36 @@ const { checkCache, saveToCache } = require('./cache');
  * @returns {string|null} Work ID
  */
 function extractWorkId(html) {
-  const workIdMatch = html.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[a-zA-Z0-9]+/);
-  if (workIdMatch) {
-    const workId = workIdMatch[0].replace('kca://', '');
-    logger.info(`Extracted work ID: ${workId}`);
+  // Method 1: Try to extract from kca:// format
+  const kcaMatch = html.match(/kca:\/\/work\/amzn1\.gr\.work\.v1\.[a-zA-Z0-9]+/);
+  if (kcaMatch) {
+    const workId = kcaMatch[0].replace('kca://', '');
+    logger.info(`Extracted work ID (kca format): ${workId}`);
     return workId;
   }
-  logger.warn('Could not extract work ID from HTML');
+
+  // Method 2: Try to extract from data-work-id attribute
+  const dataWorkIdMatch = html.match(/data-work-id="([^"]+)"/);
+  if (dataWorkIdMatch && dataWorkIdMatch[1]) {
+    logger.info(`Extracted work ID (data-work-id): ${dataWorkIdMatch[1]}`);
+    return dataWorkIdMatch[1];
+  }
+
+  // Method 3: Try to extract from URL pattern
+  const urlWorkIdMatch = html.match(/\/work\/(\d+)/);
+  if (urlWorkIdMatch && urlWorkIdMatch[1]) {
+    logger.info(`Extracted work ID (URL): ${urlWorkIdMatch[1]}`);
+    return urlWorkIdMatch[1];
+  }
+
+  // Method 4: Try to extract from meta tags
+  const metaMatch = html.match(/<meta[^>]*content="[^"]*work\/([^"\/]+)"/);
+  if (metaMatch && metaMatch[1]) {
+    logger.info(`Extracted work ID (meta): ${metaMatch[1]}`);
+    return metaMatch[1];
+  }
+
+  logger.warn('Could not extract work ID from HTML using any method');
   return null;
 }
 
@@ -148,6 +171,38 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         return element ? element.textContent.trim() : null;
       }
 
+      // Helper function to clean field values
+      function cleanFieldValue(value) {
+        if (!value) return '';
+
+        // Remove HTML attributes and tags
+        let cleaned = value.replace(/\s+role="link">/g, '');
+        cleaned = cleaned.replace(/, link, opens in new tab"/g, '');
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+
+        // Remove JSON-like content
+        if (cleaned.startsWith('"') && cleaned.includes('{"@type"')) {
+          try {
+            // Try to extract just the meaningful part from JSON
+            const jsonMatch = cleaned.match(/"name":"([^"]+)"/);
+            if (jsonMatch && jsonMatch[1]) {
+              return jsonMatch[1];
+            }
+          } catch (e) {
+            // If JSON parsing fails, continue with other cleaning
+          }
+        }
+
+        // Remove escaped unicode and other artifacts
+        cleaned = cleaned.replace(/\\u\d+/g, '');
+        cleaned = cleaned.replace(/^[?]ref=.*tabindex=.*>/, '');
+
+        // Clean up whitespace
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+        return cleaned;
+      }
+
       // Extract book details from the page
       function extractBookDetails() {
         const details = {};
@@ -158,7 +213,10 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           const cells = row.querySelectorAll('td');
           if (cells.length >= 2) {
             const label = cells[0].textContent.trim().toLowerCase();
-            const value = cells[1].textContent.trim();
+            let value = cells[1].textContent.trim();
+
+            // Clean the value
+            value = cleanFieldValue(value);
 
             if (label.includes('isbn-10') || (label.includes('isbn') && !label.includes('13'))) {
               details.isbn = value;
@@ -203,7 +261,15 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               if (!label || !value) return;
 
               const labelText = label.textContent.trim().toLowerCase();
-              const valueText = value.textContent.trim();
+              let valueText = value.textContent.trim();
+
+              // Get the HTML content for links that might have attributes
+              if (value.querySelector('a')) {
+                valueText = value.innerHTML;
+              }
+
+              // Clean the value
+              valueText = cleanFieldValue(valueText);
 
               if (labelText.includes('isbn') && !labelText.includes('13')) {
                 details.isbn = valueText;
@@ -223,6 +289,8 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
                 details.characters = valueText;
               } else if (labelText.includes('setting')) {
                 details.settings = valueText;
+              } else if (labelText.includes('series')) {
+                details.series = valueText;
               }
             });
           }
@@ -396,9 +464,24 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           continue;
         }
 
-        const rawValue = extractWithFallbacks(selectors);
+        let rawValue = extractWithFallbacks(selectors);
         if (!rawValue) continue;
-        const value = cleanText(rawValue);
+
+        // For fields that might contain HTML attributes, get the HTML content
+        if (field === 'series' || field === 'characters' || field === 'settings' || field === 'format') {
+          try {
+            const element = document.querySelector(selectors.primary) ||
+                          (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
+            if (element) {
+              rawValue = element.innerHTML;
+            }
+          } catch (e) {
+            // Fallback to text content if there's an error
+          }
+        }
+
+        // Clean the value using both functions
+        const value = cleanFieldValue(cleanText(rawValue));
 
         switch (field) {
           case 'rating':
@@ -471,6 +554,20 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               metadata[field] = value;
             }
             break;
+          case 'series':
+            // Special handling for series to remove link attributes
+            if (value.includes('link, opens in new tab')) {
+              // Try to extract just the series name
+              const seriesMatch = value.match(/The Worst Witch|[^,]+/);
+              if (seriesMatch) {
+                metadata.series = seriesMatch[0].trim();
+              } else {
+                metadata.series = value.replace(/, link, opens in new tab.*$/, '').trim();
+              }
+            } else {
+              metadata.series = value;
+            }
+            break;
           case 'characters':
           case 'settings':
             // Extract the text content, removing any labels
@@ -481,10 +578,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               const valueElement = detailElement.querySelector('.FeatureItem__value, .BookDetails__value');
 
               if (labelElement && valueElement) {
-                metadata[field] = cleanText(valueElement.textContent);
+                let cleanedValue = valueElement.innerHTML;
+                // Clean the value
+                cleanedValue = cleanFieldValue(cleanText(cleanedValue));
+                metadata[field] = cleanedValue;
               } else {
                 metadata[field] = value;
               }
+            } else {
+              // If we couldn't find the element, use the cleaned value
+              metadata[field] = value;
             }
             break;
           default:

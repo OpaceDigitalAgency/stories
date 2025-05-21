@@ -38,6 +38,7 @@ if ($bookId === null) {
 
 // Get book data from database
 try {
+    // Get book details
     $stmt = $db->prepare("
         SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, b.*
         FROM directory_items di
@@ -57,43 +58,72 @@ try {
     }
 
     // Get ISBN
-    $isbn = $bookData['isbn'] ?? '';
+    $isbn = $bookData['isbn'] ?? ($bookData['isbn13'] ?? '');
+    $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
 
-    // Log what we're about to do
-    error_log("About to get validation data for book ID: $bookId, ISBN: $isbn");
+    // Check if we want raw cache data
+    $raw = isset($_GET['raw']) && $_GET['raw'] === '1';
 
-    // Get validation data - but handle errors
-    try {
-        $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
-    } catch (Exception $e) {
-        error_log("Error getting validation data: " . $e->getMessage());
-        $validationData = [
-            'status' => 'error',
-            'message' => 'Error getting validation data: ' . $e->getMessage()
+    if ($raw) {
+        // Get cache data
+        $cacheKey = md5("book_validation_{$bookId}_{$cleanIsbn}");
+        $stmt = $db->prepare("
+            SELECT cache_data
+            FROM validation_cache
+            WHERE cache_key = ?
+        ");
+        $stmt->execute([$cacheKey]);
+        $cache = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cache) {
+            header('HTTP/1.1 404 Not Found');
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'No validation data found'
+            ]);
+            exit;
+        }
+
+        // Set headers for file download
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="book_' . $bookId . '_raw_data.json"');
+
+        // Output the raw JSON data
+        echo $cache['cache_data'];
+    } else {
+        // Get validation data - but handle errors
+        try {
+            $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
+        } catch (Exception $e) {
+            error_log("Error getting validation data: " . $e->getMessage());
+            $validationData = [
+                'status' => 'error',
+                'message' => 'Error getting validation data: ' . $e->getMessage()
+            ];
+        }
+
+        // Add debug information
+        error_log("Downloading processed data for book ID: $bookId, ISBN: $isbn");
+
+        // Prepare the full data object
+        $fullData = [
+            'book' => $bookData,
+            'validation' => $validationData,
+            'download_time' => date('Y-m-d H:i:s'),
+            'download_info' => [
+                'book_id' => $bookId,
+                'isbn' => $isbn,
+                'title' => $bookData['title'] ?? 'Unknown'
+            ]
         ];
+
+        // Set headers for file download
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.json"');
+
+        // Output the JSON data
+        echo json_encode($fullData, JSON_PRETTY_PRINT);
     }
-
-    // Add debug information
-    error_log("Downloading raw data for book ID: $bookId, ISBN: $isbn");
-
-    // Prepare the full data object
-    $fullData = [
-        'book' => $bookData,
-        'validation' => $validationData,
-        'download_time' => date('Y-m-d H:i:s'),
-        'download_info' => [
-            'book_id' => $bookId,
-            'isbn' => $isbn,
-            'title' => $bookData['title'] ?? 'Unknown'
-        ]
-    ];
-
-    // Set headers for file download
-    header('Content-Type: application/json');
-    header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.json"');
-
-    // Output the JSON data
-    echo json_encode($fullData, JSON_PRETTY_PRINT);
 
 } catch (Exception $e) {
     error_log("Error in download-raw-data.php: " . $e->getMessage());

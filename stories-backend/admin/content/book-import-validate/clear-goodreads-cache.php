@@ -7,37 +7,70 @@
  */
 
 // Include database connection
-$dbConnected = false;
+require_once __DIR__ . '/../../../../db-connect.php';
 
-// Try multiple possible paths for db-connect.php
-$possiblePaths = [
-    __DIR__ . '/../../../../db-connect.php',
-    __DIR__ . '/../../../../includes/db-connect.php',
-    __DIR__ . '/../../../includes/db-connect.php',
-    __DIR__ . '/../../../db-connect.php'
-];
+// Check if database connection is available
+if (!isset($db) || !($db instanceof PDO)) {
+    // Try alternative paths
+    $possiblePaths = [
+        __DIR__ . '/../../../../includes/db-connect.php',
+        __DIR__ . '/../../../includes/db-connect.php',
+        __DIR__ . '/../../../db-connect.php'
+    ];
 
-foreach ($possiblePaths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        if (isset($db) && $db instanceof PDO) {
-            $dbConnected = true;
-            break;
+    $dbConnected = false;
+    foreach ($possiblePaths as $path) {
+        if (file_exists($path)) {
+            require_once $path;
+            if (isset($db) && $db instanceof PDO) {
+                $dbConnected = true;
+                break;
+            }
         }
+    }
+
+    if (!$dbConnected) {
+        // Return error if we couldn't connect to the database
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Could not connect to database. Please check the database connection.'
+        ]);
+        exit;
     }
 }
 
-if (!$dbConnected) {
-    // Return error if we couldn't connect to the database
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Could not connect to database'
-    ]);
-    exit;
-}
-
 // Include cache functions
-require_once __DIR__ . '/functions/cache-functions.php';
+$cacheFunctionsPath = __DIR__ . '/functions/cache-functions.php';
+if (file_exists($cacheFunctionsPath)) {
+    require_once $cacheFunctionsPath;
+} else {
+    // If cache functions don't exist, create them
+    if (!function_exists('clearAllValidationCache')) {
+        function clearAllValidationCache($db) {
+            try {
+                $stmt = $db->prepare("DELETE FROM validation_cache WHERE cache_key LIKE '%book_validation_%'");
+                $stmt->execute();
+                return $stmt->rowCount() > 0;
+            } catch (Exception $e) {
+                error_log("Error clearing validation cache: " . $e->getMessage());
+                return false;
+            }
+        }
+    }
+
+    if (!function_exists('clearSourceValidationCache')) {
+        function clearSourceValidationCache($source, $db) {
+            try {
+                $stmt = $db->prepare("DELETE FROM validation_cache WHERE cache_key LIKE :source");
+                $stmt->execute([':source' => "%{$source}%"]);
+                return $stmt->rowCount() > 0;
+            } catch (Exception $e) {
+                error_log("Error clearing source validation cache: " . $e->getMessage());
+                return false;
+            }
+        }
+    }
+}
 
 // Set header for JSON response
 header('Content-Type: application/json');

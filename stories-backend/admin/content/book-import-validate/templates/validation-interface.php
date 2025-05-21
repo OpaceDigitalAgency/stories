@@ -52,6 +52,12 @@ $sources = array_keys($sourceData);
                         <i class="fas fa-trash-alt"></i> Clear All Caches
                     </button>
 
+                    <a href="book-import-validate/download-raw-data.php?book_id=<?php echo (int)$book['id']; ?>"
+                       class="btn btn-info btn-lg ms-2"
+                       download="book_<?php echo (int)$book['id']; ?>_data.json">
+                        <i class="fas fa-download"></i> Download Raw Data
+                    </a>
+
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('clearCacheBtn').addEventListener('click', function() {

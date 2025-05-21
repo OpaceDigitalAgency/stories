@@ -139,78 +139,32 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
     // Extract metadata from HTML with detailed logging
     logger.info('Extracting metadata from page HTML...');
-    const metadata = await page.evaluate((selectors) => {
-      const metadata = {};
-      
-      // Helper function to clean text
-      function cleanText(text) {
-        if (!text) return '';
-        // Remove HTML tags
-        text = text.replace(/<[^>]*>/g, '');
-        // Remove extra whitespace
-        text = text.replace(/\s+/g, ' ');
-        // Remove special characters
-        text = text.replace(/[^\x20-\x7E]/g, '');
-        return text.trim();
-      }
+    // Extract metadata using the proper function from selectors.js
+    const metadata = await page.evaluate(({ SELECTORS, extractBookMetadata }) => {
+      // Make SELECTORS available in page context
+      window.SELECTORS = SELECTORS;
+      return extractBookMetadata();
+    }, { SELECTORS, extractBookMetadata });
+    if (!metadata) {
+      addStep('metadata_extraction', 'error', 'Failed to extract metadata from page');
+      throw new Error('Failed to extract metadata from page');
+    }
 
-      // Helper function to extract date
-      function extractDate(text) {
-        if (!text) return '';
-        const dateMatch = text.match(/(\d{4}(?:-\d{2}-\d{2})?)/);
-        return dateMatch ? dateMatch[1] : '';
+    // Log extracted metadata with raw values for debugging
+    addStep('metadata_extraction', 'success', 'Successfully extracted metadata', {
+      metadata: {
+        ...metadata,
+        _raw: metadata._raw
       }
-      
-      // Try each selector and its fallbacks
-      for (const [field, selectorObj] of Object.entries(selectors)) {
-        const { primary, fallbacks = [] } = selectorObj;
-        let element = document.querySelector(primary);
-        
-        if (!element && fallbacks) {
-          for (const fallback of fallbacks) {
-            element = document.querySelector(fallback);
-            if (element) break;
-          }
-        }
-        
-        if (element) {
-          let value = element.textContent;
-          
-          // Apply field-specific cleaning
-          switch (field) {
-            case 'publication_date':
-              value = extractDate(value);
-              break;
-            case 'rating':
-              value = value.match(/\d+\.?\d*/)?.[0] || '';
-              break;
-            case 'rating_count':
-            case 'review_count':
-              value = value.match(/\d+/)?.[0] || '';
-              break;
-            case 'pages':
-              value = value.match(/\d+/)?.[0] || '';
-              break;
-            default:
-              value = cleanText(value);
-          }
-          
-          metadata[field] = value;
-        }
-      }
-      
-      return metadata;
-    }, SELECTORS);
-    logger.info('Extracted metadata:', {
-      title: metadata.title || 'Not found',
-      author: metadata.author || 'Not found',
-      publisher: metadata.publisher || 'Not found',
-      publication_date: metadata.publication_date || 'Not found',
-      isbn: metadata.isbn || 'Not found',
-      isbn13: metadata.isbn13 || 'Not found',
-      format: metadata.format || 'Not found',
-      pages: metadata.pages || 'Not found'
     });
+
+    // Validate required fields
+    const requiredFields = ['title', 'author'];
+    const missingFields = requiredFields.filter(field => !metadata[field]);
+    if (missingFields.length > 0) {
+      addStep('metadata_validation', 'error', `Missing required fields: ${missingFields.join(', ')}`);
+      throw new Error(`Missing required metadata fields: ${missingFields.join(', ')}`);
+    }
 
     // Extract work ID for GraphQL queries
     addStep('work_id_extraction', 'in_progress', 'Extracting work ID for GraphQL queries');

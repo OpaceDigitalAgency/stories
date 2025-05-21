@@ -26,7 +26,7 @@ const SELECTORS = {
       '.BookDetails [data-testid="publisher"]'
     ]
   },
-  publicationDate: {
+  publication_date: {
     primary: '[data-testid="publicationInfo"]',
     fallbacks: [
       '.FeaturedDetails [data-testid="publicationDate"]',
@@ -44,16 +44,18 @@ const SELECTORS = {
     primary: '[data-testid="averageRating"]',
     fallbacks: [
       '.RatingStatistics__rating',
-      '.RatingStars__average'
+      '.RatingStars__average',
+      '.BookRatingStars [aria-label*="rating"]'
     ]
   },
-  ratingCount: {
+  rating_count: {
     primary: '[data-testid="ratingsCount"]',
     fallbacks: [
-      '.RatingStatistics__meta span'
+      '.RatingStatistics__meta span',
+      '.BookRatingStars [aria-label*="ratings"]'
     ]
   },
-  reviewCount: {
+  review_count: {
     primary: '[data-testid="reviewsCount"]',
     fallbacks: [
       '.ReviewsCount'
@@ -128,112 +130,103 @@ function extractWithFallbacks(selectorObj) {
  * This function runs in the browser context via page.evaluate()
  */
 function extractBookMetadata() {
-  const metadata = {
-    title: '',
-    author: '',
-    publisher: '',
-    publication_date: '',
-    rating: null,
-    rating_count: 0,
-    review_count: 0,
-    format: '',
-    pages: null,
-    isbn: '',
-    isbn13: '',
-    series: '',
-    awards: [],
-    characters: [],
-    settings: [],
-    selectors_used: {},
-    _raw: {} // Store raw values for debugging
-  };
+  try {
+    const metadata = {
+      title: '',
+      author: '',
+      publisher: '',
+      publication_date: '',
+      rating: null,
+      rating_count: 0,
+      review_count: 0,
+      format: '',
+      pages: null,
+      isbn: '',
+      isbn13: '',
+      series: '',
+      awards: [],
+      characters: [],
+      settings: [],
+      _raw: {} // Store raw values for debugging
+    };
 
-  // Extract each field using selectors
-  // SELECTORS is injected into page context
-  for (const [field, selectors] of Object.entries(SELECTORS)) {
-    const value = extractWithFallbacks(selectors);
-    if (value) {
+    // Helper function to clean text
+    function cleanText(text) {
+      if (!text) return '';
+      return text.trim()
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width spaces
+    }
+
+    // Extract each field using selectors
+    for (const [field, selectors] of Object.entries(SELECTORS)) {
+      const rawValue = extractWithFallbacks(selectors);
+      if (!rawValue) continue;
+
       // Store raw value for debugging
-      metadata._raw[field] = value;
+      metadata._raw[field] = rawValue;
+      const value = cleanText(rawValue);
+
       // Handle special cases
       switch (field) {
         case 'rating':
-          metadata.rating = parseFloat(value);
+          const ratingMatch = value.match(/(\d+\.?\d*)/);
+          metadata.rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
           break;
-        case 'ratingCount':
-          // Handle "187,550 ratings" format
-          const ratingMatch = value.match(/([0-9,]+)\s+ratings?/);
-          if (ratingMatch) {
-            metadata.rating_count = parseInt(ratingMatch[1].replace(/,/g, ''));
-          }
+
+        case 'rating_count':
+          const ratingCountMatch = value.match(/([0-9,]+)/);
+          metadata.rating_count = ratingCountMatch ?
+            parseInt(ratingCountMatch[1].replace(/,/g, '')) : 0;
           break;
-        case 'reviewCount':
-          // Handle "16,653 reviews" format
-          const reviewMatch = value.match(/([0-9,]+)\s+reviews?/);
-          if (reviewMatch) {
-            metadata.review_count = parseInt(reviewMatch[1].replace(/,/g, ''));
-          }
+
+        case 'review_count':
+          const reviewCountMatch = value.match(/([0-9,]+)/);
+          metadata.review_count = reviewCountMatch ?
+            parseInt(reviewCountMatch[1].replace(/,/g, '')) : 0;
           break;
+
         case 'pages':
-          const pagesMatch = value.match(/(\d+)\s+pages/);
-          if (pagesMatch) {
-            metadata.pages = parseInt(pagesMatch[1]);
-          }
+          const pagesMatch = value.match(/(\d+)/);
+          metadata.pages = pagesMatch ? parseInt(pagesMatch[1]) : null;
           break;
+
         case 'format':
-          // Extract format (e.g. "Hardcover", "Paperback")
           const formatMatch = value.match(/(Hardcover|Paperback|Kindle Edition|ebook|Audiobook)/i);
-          if (formatMatch) {
-            metadata.format = formatMatch[1];
-          }
+          metadata.format = formatMatch ? formatMatch[1] : '';
           break;
+
         case 'publisher':
-          // Handle both "by Publisher" and direct "Publisher" formats
-          const publisherMatch = value.match(/(?:by\s+)?([^,(]+)(?:\s*\(|$)/);
-          if (publisherMatch) {
-            metadata.publisher = publisherMatch[1].trim();
-          }
+          // Handle "Published by Publisher (Year)" format
+          const publisherMatch = value.match(/(?:Published by\s+)?([^,(]+)(?:\s*\(|$)/i);
+          metadata.publisher = publisherMatch ? cleanText(publisherMatch[1]) : '';
           break;
-        case 'publicationDate':
-          // Handle various date formats
-          const dateMatch = value.match(/(?:published\s+)?([A-Z][a-z]+ \d{1,2}, \d{4}|[A-Z][a-z]+ \d{4}|\d{4}-\d{2}-\d{2})/i);
-          if (dateMatch) {
-            metadata.publication_date = dateMatch[1].trim();
-          }
+
+        case 'publication_date':
+          // Handle various date formats including "First published"
+          const dateMatch = value.match(/(?:First published|Published)\s+(?:in\s+)?([A-Z][a-z]+ \d{1,2},? \d{4}|[A-Z][a-z]+ \d{4}|\d{4}(?:-\d{2}-\d{2})?)/i);
+          metadata.publication_date = dateMatch ? cleanText(dateMatch[1]) : '';
           break;
+
         case 'awards':
-          // Split on commas and semicolons, clean up each award
-          metadata.awards = value.split(/[,;]/)
-            .map(award => award.trim())
-            .filter(award => award.length > 0);
-          break;
         case 'characters':
-          // Split on commas and semicolons, clean up each character
-          metadata.characters = value.split(/[,;]/)
-            .map(char => char.trim())
-            .filter(char => char.length > 0);
-          break;
         case 'settings':
-          // Split on commas and handle parenthetical locations
-          metadata.settings = value.split(',')
-            .map(setting => {
-              const match = setting.match(/([^(]+)(?:\s*\(([^)]+)\))?/);
-              if (match) {
-                const [, location, context] = match;
-                return context ? `${location.trim()} (${context.trim()})` : location.trim();
-              }
-              return setting.trim();
-            })
-            .filter(setting => setting.length > 0);
+          // Split on commas and clean
+          metadata[field] = value.split(/[,;]/)
+            .map(item => cleanText(item))
+            .filter(item => item.length > 0);
           break;
+
         default:
           metadata[field] = value;
       }
-      metadata.selectors_used[field] = selectors.primary;
     }
-  }
 
-  return metadata;
+    return metadata;
+  } catch (error) {
+    console.error('Error extracting metadata:', error);
+    return null;
+  }
 }
 
 module.exports = {

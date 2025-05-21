@@ -42,12 +42,9 @@ $sources = array_keys($sourceData);
                     <form method="get" class="d-inline-block">
                         <input type="hidden" name="action" value="validate_book">
                         <input type="hidden" name="book_id" value="<?php echo (int)$book['id']; ?>">
-                        <div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input" type="checkbox" id="bypassCache" name="bypass_cache" value="1">
-                            <label class="form-check-label text-white" for="bypassCache">Bypass All Caches</label>
-                        </div>
-                        <button type="submit" class="btn btn-light btn-sm ms-2">
-                            <i class="fas fa-sync-alt"></i> Refresh Data
+                        <input type="hidden" name="force" value="1">
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-sync-alt"></i> Force Fresh Data
                         </button>
                     </form>
                 </div>

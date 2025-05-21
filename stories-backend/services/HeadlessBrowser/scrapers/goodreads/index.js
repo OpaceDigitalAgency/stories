@@ -134,11 +134,16 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     // Extract metadata from HTML with detailed logging
     logger.info('Extracting metadata from page HTML...');
     // Extract metadata using the proper function from selectors.js
-    const metadata = await page.evaluate(({ SELECTORS, extractBookMetadata }) => {
-      // Make SELECTORS available in page context
-      window.SELECTORS = SELECTORS;
-      return extractBookMetadata();
-    }, { SELECTORS, extractBookMetadata });
+    const metadata = await page.evaluate((SELECTORS) => {
+    const title = document.querySelector(SELECTORS.title)?.textContent?.trim();
+    const author = document.querySelector(SELECTORS.author)?.textContent?.trim();
+    const rating = document.querySelector(SELECTORS.rating)?.textContent?.trim();
+    const description = document.querySelector(SELECTORS.description)?.textContent?.trim();
+    const genres = Array.from(document.querySelectorAll(SELECTORS.genres)).map(el => el.textContent.trim());
+
+      return { title, author, rating, description, genres };
+    }, SELECTORS);
+
     if (!metadata) {
       addStep('metadata_extraction', 'error', 'Failed to extract metadata from page');
       throw new Error('Failed to extract metadata from page');

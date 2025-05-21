@@ -74,11 +74,27 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     throw new Error(`Invalid Goodreads URL: ${goodreadsUrl}`);
   }
 
-  // Check cache unless force refresh requested
+  // Check cache
   const cachedData = await checkCache(bookId, { force, continueFromLast, limit });
-  if (cachedData && !force && !continueFromLast) {
-    logger.info(`Using cached data for book ${bookId}`);
-    return { ...cachedData, source: 'cache' };
+  
+  // If we have cached data and force refresh is not requested
+  if (cachedData && !force) {
+    // If continuing from last scrape, return cache
+    if (continueFromLast) {
+      logger.info(`Using cached data for continuation (${cachedData.reviews?.length} reviews)`);
+      return { ...cachedData, source: 'cache' };
+    }
+    
+    // If we have enough reviews, return cache
+    const hasEnoughReviews = cachedData.reviews?.length >= limit;
+    if (hasEnoughReviews) {
+      logger.info(`Using cached data (${cachedData.reviews.length} reviews >= limit ${limit})`);
+      return { ...cachedData, source: 'cache' };
+    }
+    
+    logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${limit})`);
+  } else {
+    logger.info(`Not using cache (force: ${force}, cached data: ${!!cachedData})`);
   }
 
   // Initialize browser and navigate to page

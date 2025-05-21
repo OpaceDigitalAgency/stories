@@ -11,6 +11,14 @@ const SELECTORS = {
       '.BookPageTitleSection h1'
     ]
   },
+  series: {
+    primary: '[data-testid="seriesLink"]',
+    fallbacks: [
+      '.BookPageTitleSection__series',
+      '.SeriesLink',
+      '.DescListItem dt:contains("Series") + dd'
+    ]
+  },
   publisher: {
     primary: '[data-testid="publicationInfo"]',
     fallbacks: [
@@ -131,22 +139,38 @@ async function extractBookMetadata(page) {
     pages: null,
     isbn: '',
     isbn13: '',
+    series: '',
     awards: [],
-    selectors_used: {}
+    characters: [],
+    settings: [],
+    selectors_used: {},
+    _raw: {} // Store raw values for debugging
   };
 
   // Extract each field using selectors
   for (const [field, selectors] of Object.entries(SELECTORS)) {
     const value = extractWithFallbacks(page, selectors);
     if (value) {
+      // Store raw value for debugging
+      metadata._raw[field] = value;
       // Handle special cases
       switch (field) {
         case 'rating':
           metadata.rating = parseFloat(value);
           break;
         case 'ratingCount':
+          // Handle "187,550 ratings" format
+          const ratingMatch = value.match(/([0-9,]+)\s+ratings?/);
+          if (ratingMatch) {
+            metadata.rating_count = parseInt(ratingMatch[1].replace(/,/g, ''));
+          }
+          break;
         case 'reviewCount':
-          metadata[field] = parseInt(value.replace(/[^0-9]/g, ''));
+          // Handle "16,653 reviews" format
+          const reviewMatch = value.match(/([0-9,]+)\s+reviews?/);
+          if (reviewMatch) {
+            metadata.review_count = parseInt(reviewMatch[1].replace(/,/g, ''));
+          }
           break;
         case 'pages':
           const pagesMatch = value.match(/(\d+)\s+pages/);
@@ -155,27 +179,50 @@ async function extractBookMetadata(page) {
           }
           break;
         case 'format':
-          const formatMatch = value.match(/,\s*([^,]+)$/);
+          // Extract format (e.g. "Hardcover", "Paperback")
+          const formatMatch = value.match(/(Hardcover|Paperback|Kindle Edition|ebook|Audiobook)/i);
           if (formatMatch) {
-            metadata.format = formatMatch[1].trim();
+            metadata.format = formatMatch[1];
           }
           break;
         case 'publisher':
-          const publisherMatch = value.match(/by\s+([^(]+)/);
+          // Handle both "by Publisher" and direct "Publisher" formats
+          const publisherMatch = value.match(/(?:by\s+)?([^,(]+)(?:\s*\(|$)/);
           if (publisherMatch) {
             metadata.publisher = publisherMatch[1].trim();
           }
           break;
         case 'publicationDate':
-          const dateMatch = value.match(/published\s+([^(]+)/i);
+          // Handle various date formats
+          const dateMatch = value.match(/(?:published\s+)?([A-Z][a-z]+ \d{1,2}, \d{4}|[A-Z][a-z]+ \d{4}|\d{4}-\d{2}-\d{2})/i);
           if (dateMatch) {
             metadata.publication_date = dateMatch[1].trim();
           }
           break;
         case 'awards':
+          // Split on commas and semicolons, clean up each award
+          metadata.awards = value.split(/[,;]/)
+            .map(award => award.trim())
+            .filter(award => award.length > 0);
+          break;
         case 'characters':
+          // Split on commas and semicolons, clean up each character
+          metadata.characters = value.split(/[,;]/)
+            .map(char => char.trim())
+            .filter(char => char.length > 0);
+          break;
         case 'settings':
-          metadata[field] = value.split(',').map(item => item.trim());
+          // Split on commas and handle parenthetical locations
+          metadata.settings = value.split(',')
+            .map(setting => {
+              const match = setting.match(/([^(]+)(?:\s*\(([^)]+)\))?/);
+              if (match) {
+                const [, location, context] = match;
+                return context ? `${location.trim()} (${context.trim()})` : location.trim();
+              }
+              return setting.trim();
+            })
+            .filter(setting => setting.length > 0);
           break;
         default:
           metadata[field] = value;

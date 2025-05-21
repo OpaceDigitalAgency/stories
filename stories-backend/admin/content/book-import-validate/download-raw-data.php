@@ -10,33 +10,11 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Include database connection - try multiple possible paths
-$possiblePaths = [
-    __DIR__ . '/../../../includes/db_connect.php',  // Main path in admin/includes
-    __DIR__ . '/../../../../includes/db_connect.php',
-    __DIR__ . '/../../../../db_connect.php',
-    __DIR__ . '/../../../db_connect.php'
-];
+// Include auth check
+require_once '../../includes/auth-check.php';
 
-$dbConnected = false;
-foreach ($possiblePaths as $dbPath) {
-    if (file_exists($dbPath)) {
-        require_once $dbPath;
-        if (isset($db) && $db instanceof PDO) {
-            $dbConnected = true;
-            break;
-        }
-    }
-}
-
-if (!$dbConnected) {
-    die("Error: Database connection file not found. Tried paths: " . implode(", ", $possiblePaths));
-}
-
-// Check if database connection is available
-if (!isset($db) || !($db instanceof PDO)) {
-    die("Error: Database connection not available");
-}
+// Include database connection
+require_once '../../includes/db_connect.php';
 
 // Include validation functions
 $validationFunctionsPath = __DIR__ . '/functions/validation-functions.php';

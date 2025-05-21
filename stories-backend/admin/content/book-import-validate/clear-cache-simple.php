@@ -20,34 +20,13 @@ $response = [
     'actions' => []
 ];
 
+// Include auth check
+require_once '../../includes/auth-check.php';
+
+// Include database connection
+require_once '../../includes/db_connect.php';
+
 try {
-    // Include database connection - try multiple possible paths
-    $possiblePaths = [
-        __DIR__ . '/../../../includes/db_connect.php',  // Main path in admin/includes
-        __DIR__ . '/../../../../includes/db_connect.php',
-        __DIR__ . '/../../../../db_connect.php',
-        __DIR__ . '/../../../db_connect.php'
-    ];
-
-    $dbConnected = false;
-    foreach ($possiblePaths as $dbPath) {
-        if (file_exists($dbPath)) {
-            require_once $dbPath;
-            if (isset($db) && $db instanceof PDO) {
-                $dbConnected = true;
-                break;
-            }
-        }
-    }
-
-    if (!$dbConnected) {
-        throw new Exception("Database connection file not found. Tried paths: " . implode(", ", $possiblePaths));
-    }
-
-    // Check if database connection is available
-    if (!isset($db) || !($db instanceof PDO)) {
-        throw new Exception("Database connection not available");
-    }
 
     // Clear validation cache from database
     try {

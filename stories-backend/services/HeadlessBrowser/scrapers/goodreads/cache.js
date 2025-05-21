@@ -16,24 +16,26 @@ const config = require('../../config/default');
 async function checkCache(bookId, options = {}) {
   const {
     force = false,
-    continueFromLast = false
+    continueFromLast = false,
+    limit = 50
   } = options;
 
   // Log cache check parameters
-  logger.info(`Checking cache for book ${bookId}:
+  logger.info(`Cache check for book ${bookId}:
     - Force refresh: ${force}
     - Continue from last: ${continueFromLast}
+    - Required reviews: ${limit}
   `);
 
-  // If force refresh is requested, clear the cache first
+  // If force refresh is requested, clear the cache and return null
   if (force) {
+    logger.info(`Force refresh requested for book ${bookId}`);
     await clearCache(bookId);
-    logger.info(`Cache cleared for book ${bookId} (force refresh requested)`);
     return null;
   }
 
   // Try to get cached data
-  const cachedData = await cache.get('goodreads', bookId);
+  let cachedData = await cache.get('goodreads', bookId);
 
   if (cachedData) {
     logger.info(`Cache hit for book ${bookId}:
@@ -49,13 +51,13 @@ async function checkCache(bookId, options = {}) {
     }
 
     // Otherwise, only return if we have enough reviews
-    const hasEnoughReviews = cachedData.reviews?.length >= (options.limit || 50);
+    const hasEnoughReviews = cachedData.reviews?.length >= limit;
     if (hasEnoughReviews) {
-      logger.info(`Using cached data (${cachedData.reviews.length} reviews >= limit ${options.limit})`);
+      logger.info(`Using cached data (${cachedData.reviews.length} reviews >= limit ${limit})`);
       return cachedData;
     }
 
-    logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${options.limit})`);
+    logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${limit})`);
   } else {
     logger.info(`No cached data found for book ${bookId}`);
   }
@@ -74,22 +76,36 @@ async function clearCache(bookId) {
   const db = new sqlite3.Database(dbPath);
 
   try {
-    // Clear all cache entries for this book ID (with any cache key format)
-    await new Promise((resolve, reject) => {
-      db.run('DELETE FROM reviews_cache WHERE source = ? AND identifier LIKE ?',
-        ['goodreads', `${bookId}%`],
-        function(err) {
-          if (err) {
-            reject(err);
-          } else {
-            logger.info(`Cleared ${this.changes} cache entries for book ${bookId}`);
-            resolve(this.changes);
+    // Delete all cache entries for this book using pattern matching
+    const deletePromises = [
+      `goodreads:${bookId}`,
+      `goodreads:${bookId}:%`,
+      `${bookId}`,
+      `${bookId}:%`
+    ].map(pattern => {
+      return new Promise((resolve, reject) => {
+        db.run(
+          'DELETE FROM reviews_cache WHERE source = ? AND identifier LIKE ?',
+          ['goodreads', pattern],
+          function(err) {
+            if (err) {
+              reject(err);
+            } else {
+              logger.info(`Cleared ${this.changes} entries matching ${pattern}`);
+              resolve(this.changes);
+            }
           }
-        }
-      );
+        );
+      });
     });
+
+    const results = await Promise.all(deletePromises);
+    const totalCleared = results.reduce((sum, count) => sum + count, 0);
+    logger.info(`Successfully cleared ${totalCleared} total cache entries for book ${bookId}`);
+
   } catch (error) {
     logger.error(`Error clearing cache for ${bookId}: ${error.message}`);
+    throw error;
   } finally {
     db.close();
   }

@@ -60,13 +60,27 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     force = false
   } = options;
 
-  logger.info(`Starting Goodreads scrape:
-    - URL: ${goodreadsUrl}
-    - Limit: ${limit}
-    - Max pages: ${maxPages}
-    - Continue from last: ${continueFromLast}
-    - Force refresh: ${force}
-  `);
+  // Initialize steps array for detailed logging
+  const steps = [];
+  const addStep = (name, status, message, details = {}) => {
+    steps.push({
+      name,
+      status,
+      message,
+      fetch_url: details.url,
+      response: details.response_length,
+      details
+    });
+    logger.info(`[${name}] ${status}: ${message}`);
+  };
+
+  addStep('scrape_start', 'info', 'Starting Goodreads scrape', {
+    url: goodreadsUrl,
+    limit,
+    maxPages,
+    continueFromLast,
+    force
+  });
 
   // Extract book ID for caching
   const bookId = extractBookId(goodreadsUrl);
@@ -74,27 +88,39 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     throw new Error(`Invalid Goodreads URL: ${goodreadsUrl}`);
   }
 
-  // Check cache
+  // Check cache with detailed logging
+  logger.info(`Checking cache for book ${bookId}`);
   const cachedData = await checkCache(bookId, { force, continueFromLast, limit });
-  
-  // If we have cached data and force refresh is not requested
-  if (cachedData && !force) {
-    // If continuing from last scrape, return cache
-    if (continueFromLast) {
-      logger.info(`Using cached data for continuation (${cachedData.reviews?.length} reviews)`);
-      return { ...cachedData, source: 'cache' };
+
+  // Handle cache result
+  if (cachedData) {
+    logger.info(`Found cached data for book ${bookId}:
+      - Reviews: ${cachedData.reviews?.length || 0}
+      - Last scraped: ${cachedData.lastScrapedAt}
+      - Has more: ${cachedData.hasMoreReviews}
+      - Force refresh: ${force}
+    `);
+
+    if (!force) {
+      // If continuing from last scrape, return cache
+      if (continueFromLast) {
+        logger.info(`Using cached data for continuation - ${cachedData.reviews?.length} reviews available`);
+        return { ...cachedData, source: 'cache' };
+      }
+      
+      // If we have enough reviews, return cache
+      const hasEnoughReviews = cachedData.reviews?.length >= limit;
+      if (hasEnoughReviews) {
+        logger.info(`Using cached data - ${cachedData.reviews.length} reviews >= requested limit ${limit}`);
+        return { ...cachedData, source: 'cache' };
+      }
+      
+      logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${limit}) - proceeding with scrape`);
+    } else {
+      logger.info(`Force refresh requested - ignoring cache and proceeding with scrape`);
     }
-    
-    // If we have enough reviews, return cache
-    const hasEnoughReviews = cachedData.reviews?.length >= limit;
-    if (hasEnoughReviews) {
-      logger.info(`Using cached data (${cachedData.reviews.length} reviews >= limit ${limit})`);
-      return { ...cachedData, source: 'cache' };
-    }
-    
-    logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${limit})`);
   } else {
-    logger.info(`Not using cache (force: ${force}, cached data: ${!!cachedData})`);
+    logger.info(`No cached data found for book ${bookId} - proceeding with scrape`);
   }
 
   // Initialize browser and navigate to page
@@ -106,16 +132,29 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     // Take screenshot for debugging
     await browser.takeScreenshot(page, `goodreads-initial-${bookId}`);
 
-    // Extract metadata from HTML
+    // Extract metadata from HTML with detailed logging
+    logger.info('Extracting metadata from page HTML...');
     const metadata = await page.evaluate(extractBookMetadata);
-    logger.info('Extracted initial metadata:', metadata);
+    logger.info('Extracted metadata:', {
+      title: metadata.title || 'Not found',
+      author: metadata.author || 'Not found',
+      publisher: metadata.publisher || 'Not found',
+      publication_date: metadata.publication_date || 'Not found',
+      isbn: metadata.isbn || 'Not found',
+      isbn13: metadata.isbn13 || 'Not found',
+      format: metadata.format || 'Not found',
+      pages: metadata.pages || 'Not found'
+    });
 
     // Extract work ID for GraphQL queries
+    addStep('work_id_extraction', 'in_progress', 'Extracting work ID for GraphQL queries');
     const html = await page.content();
     const workId = extractWorkId(html);
     if (!workId) {
+      addStep('work_id_extraction', 'error', 'Failed to extract work ID');
       throw new Error('Could not extract work ID');
     }
+    addStep('work_id_extraction', 'success', 'Successfully extracted work ID', { workId });
 
     // Initialize reviews array with cached reviews if continuing
     let reviews = cachedData?.reviews || [];
@@ -126,13 +165,22 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     // Fetch reviews via GraphQL
     while (hasMore && pageCount < maxPages && (continueFromLast || reviews.length < limit)) {
       pageCount++;
-      logger.info(`Fetching GraphQL page ${pageCount}/${maxPages}`);
+      addStep('graphql_request', 'in_progress', `Fetching GraphQL page ${pageCount}/${maxPages}`, {
+        workId,
+        cursor: nextCursor
+      });
 
       const result = await makeGraphQLRequest(page, workId, nextCursor);
       if (!result) {
-        logger.warn('GraphQL request failed');
+        addStep('graphql_request', 'error', 'GraphQL request failed');
         break;
       }
+      
+      addStep('graphql_request', 'success', 'Successfully fetched GraphQL data', {
+        new_reviews: result.reviews.length,
+        has_more: result.hasMore,
+        metadata_updated: Object.keys(result.metadata || {}).length > 0
+      });
 
       // Merge metadata
       Object.assign(metadata, result.metadata);
@@ -174,8 +222,15 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
     };
 
     // Save to cache
+    addStep('cache_save', 'in_progress', 'Saving results to cache');
     await saveToCache(bookId, result);
+    addStep('cache_save', 'success', 'Successfully saved to cache', {
+      reviews_count: result.reviews.length,
+      metadata_fields: Object.keys(result).filter(k => k !== 'reviews').length
+    });
 
+    // Add steps to result
+    result.steps = steps;
     return result;
 
   } catch (error) {

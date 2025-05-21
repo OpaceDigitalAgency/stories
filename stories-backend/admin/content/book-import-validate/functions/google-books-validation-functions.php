@@ -41,6 +41,14 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
 
             $url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode($isbn) . "&random=" . $requestId;
 
+            // Add URL to steps
+            $status['steps'][] = [
+                'name' => 'url_generation',
+                'status' => 'success',
+                'message' => "Generated URL for ISBN search",
+                'fetch_url' => $url
+            ];
+
             // Make the request
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -99,6 +107,14 @@ function fetchGoogleBooksDataNew($isbn, $title, $author) {
             }
 
             $url = "https://www.googleapis.com/books/v1/volumes?q=" . $query . "&random=" . $requestId;
+
+            // Add URL to steps
+            $status['steps'][] = [
+                'name' => 'url_generation',
+                'status' => 'success',
+                'message' => "Generated URL for title/author search",
+                'fetch_url' => $url
+            ];
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

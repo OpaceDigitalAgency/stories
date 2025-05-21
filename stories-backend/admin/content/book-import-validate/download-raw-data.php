@@ -111,8 +111,9 @@ try {
     echo "// PROCESSED DATA\n";
     echo json_encode($processedData, JSON_PRETTY_PRINT);
     echo "\n\n// RAW DATA\n";
-    // Output the raw cache data directly without trying to format it
-    echo $cache['cache_data'];
+    // Decode and re-encode the cache data to ensure proper JSON formatting
+    $rawData = json_decode($cache['cache_data'], true);
+    echo json_encode($rawData, JSON_PRETTY_PRINT);
 
 } catch (Exception $e) {
     error_log("Error in download-raw-data.php: " . $e->getMessage());

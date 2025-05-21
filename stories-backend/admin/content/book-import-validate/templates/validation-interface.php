@@ -39,16 +39,17 @@ $sources = array_keys($sourceData);
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <button type="button" class="btn btn-light btn-sm" id="refreshValidation">
-                        <i class="fas fa-sync-alt"></i> Refresh Data
-                    </button>
-                    <div class="form-check form-switch d-inline-block ms-2">
-                        <input class="form-check-input" type="checkbox" id="bypassCache">
-                        <label class="form-check-label text-white" for="bypassCache">Bypass All Caches</label>
-                    </div>
-                    <a href="?action=validate_book&book_id=<?php echo (int)$book['id']; ?>&skip_vps=1" class="btn btn-warning btn-sm ms-2">
-                        <i class="fas fa-server"></i> Skip VPS Headless Browser
-                    </a>
+                    <form method="get" class="d-inline-block">
+                        <input type="hidden" name="action" value="validate_book">
+                        <input type="hidden" name="book_id" value="<?php echo (int)$book['id']; ?>">
+                        <div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input" type="checkbox" id="bypassCache" name="bypass_cache" value="1">
+                            <label class="form-check-label text-white" for="bypassCache">Bypass All Caches</label>
+                        </div>
+                        <button type="submit" class="btn btn-light btn-sm ms-2">
+                            <i class="fas fa-sync-alt"></i> Refresh Data
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -258,37 +259,7 @@ $sources = array_keys($sourceData);
                     <?php include 'source-comparison-table.php'; ?>
                 </div>
 
-                <div class="global-actions mt-4">
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-success" id="applyAllValid">
-                            <i class="fas fa-check-double"></i> Apply All Valid
-                        </button>
-
-                        <?php foreach ($sources as $source): ?>
-                            <?php if (!empty($sourceData[$source]) && $sourceData[$source]['status'] === 'success'): ?>
-                                <button type="button" class="btn btn-primary apply-all-source" data-source="<?php echo htmlspecialchars($source); ?>">
-                                    <i class="fas fa-cloud-download-alt"></i> Apply All from <?php echo ucfirst(htmlspecialchars($source)); ?>
-                                </button>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-
-                        <button type="button" class="btn btn-secondary" id="resetAll">
-                            <i class="fas fa-undo"></i> Reset All
-                        </button>
-
-                        <button type="button" class="btn btn-info" id="validateAgain">
-                            <i class="fas fa-sync-alt"></i> Validate Again
-                        </button>
-
-                        <a href="?action=clear_google_books_cache&book_id=<?php echo (int)$book['id']; ?>" class="btn btn-warning">
-                            <i class="fas fa-trash-alt"></i> Clear Google Books Cache
-                        </a>
-
-                        <button type="button" class="btn btn-outline-primary" id="exportChanges">
-                            <i class="fas fa-file-export"></i> Export Changes
-                        </button>
-                    </div>
-                </div>
+                <!-- Removed unnecessary buttons -->
             <?php else: ?>
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle"></i> No data found for this book in any of the sources.

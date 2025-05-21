@@ -11,33 +11,6 @@ function initAjaxValidation() {
         button.addEventListener('click', handleApplyButtonClick);
     });
 
-    // Add event listeners for global action buttons
-    document.getElementById('applyAllValid')?.addEventListener('click', handleApplyAllValid);
-
-    document.querySelectorAll('.apply-all-source').forEach(button => {
-        button.addEventListener('click', handleApplyAllSource);
-    });
-
-    document.getElementById('resetAll')?.addEventListener('click', handleResetAll);
-    document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
-    document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
-
-    // Handle both the button and checkbox for bypass cache
-    const bypassCacheElement = document.getElementById('bypassCache');
-    if (bypassCacheElement) {
-        if (bypassCacheElement.type === 'checkbox') {
-            // It's a checkbox in the new interface
-            bypassCacheElement.addEventListener('change', function() {
-                console.log('Bypass cache checkbox changed:', this.checked);
-            });
-        } else {
-            // It's a button in the old interface
-            bypassCacheElement.addEventListener('click', function() {
-                console.log('Bypass cache button clicked');
-            });
-        }
-    }
-
     // Initialize Bootstrap collapse for the steps display
     document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
         button.addEventListener('click', function() {
@@ -186,66 +159,6 @@ function handleApplyAllSource(event) {
         });
 }
 
-// Handle apply all valid button click
-function handleApplyAllValid(event) {
-    // This will still use the form submission for now
-    // We'll implement AJAX for this in a future update
-    const form = document.getElementById('validationActionForm');
-    document.getElementById('actionType').value = 'apply_all_valid';
-    form.submit();
-}
-
-// Handle reset all button click
-function handleResetAll(event) {
-    // This will still use the form submission for now
-    const form = document.getElementById('validationActionForm');
-    document.getElementById('actionType').value = 'reset_all';
-    form.submit();
-}
-
-// Handle validate again button click
-function handleValidateAgain(event) {
-    // This will still use the form submission for now
-    const form = document.getElementById('validationActionForm');
-    document.getElementById('actionType').value = 'validate_again';
-
-    // Check if bypass cache is checked
-    const bypassCache = document.getElementById('bypassCache')?.checked || false;
-
-    // Add bypass_cache parameter to the form
-    let bypassInput = form.querySelector('input[name="bypass_cache"]');
-    if (!bypassInput) {
-        bypassInput = document.createElement('input');
-        bypassInput.type = 'hidden';
-        bypassInput.name = 'bypass_cache';
-        form.appendChild(bypassInput);
-    }
-    bypassInput.value = bypassCache ? '1' : '0';
-
-    form.submit();
-}
-
-// Handle refresh validation button click
-function handleRefreshValidation(event) {
-    // This will still use the form submission for now
-    const form = document.getElementById('validationActionForm');
-    document.getElementById('actionType').value = 'refresh_validation';
-
-    // Check if bypass cache is checked
-    const bypassCache = document.getElementById('bypassCache')?.checked || false;
-
-    // Add bypass_cache parameter to the form
-    let bypassInput = form.querySelector('input[name="bypass_cache"]');
-    if (!bypassInput) {
-        bypassInput = document.createElement('input');
-        bypassInput.type = 'hidden';
-        bypassInput.name = 'bypass_cache';
-        form.appendChild(bypassInput);
-    }
-    bypassInput.value = bypassCache ? '1' : '0';
-
-    form.submit();
-}
 
 // Get the value from a source cell
 function getSourceValue(field, valueContainer) {

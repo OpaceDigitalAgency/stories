@@ -191,7 +191,7 @@ module.exports = {
     }
     return browserInstance;
   },
-  
+
   closeBrowser: async () => {
     if (browserInstance) {
       await browserInstance.close();
@@ -199,11 +199,11 @@ module.exports = {
       logger.info('Browser instance closed');
     }
   },
-  
+
   getNewPage: async (userAgent = null) => {
     const browser = await module.exports.getBrowser();
     const page = await browser.newPage();
-    
+
     // Set a realistic user agent if provided
     if (userAgent) {
       await page.setUserAgent(userAgent);
@@ -213,10 +213,10 @@ module.exports = {
       ];
       await page.setUserAgent(randomUserAgent);
     }
-    
+
     // Set viewport
     await page.setViewport(config.browser.defaultViewport);
-    
+
     return page;
   }
 };
@@ -233,6 +233,49 @@ Once the VPS scraper is operational, update the PHP backend to use it:
 1. Modify `AmazonReviewFetcher.php` and `GoodreadsReviewFetcher.php` to call the VPS API
 2. Implement fallback to existing methods if the VPS API is unavailable
 3. Add caching to reduce API calls
+
+### Force Parameter Implementation
+
+When implementing the VPS scraper, ensure proper handling of the force parameter to bypass cache when needed:
+
+1. **PHP Side**:
+   - Always set `options['force'] = true` when the "Force Fresh Data" button is clicked
+   - Pass environment variables as backup communication channels
+   - Ensure the force parameter is properly passed to the Node.js server
+
+2. **Node.js Side**:
+   - Properly normalize the force parameter to a boolean value
+   - Add detailed logging to track force parameter values
+   - Ensure the normalized force value is passed to all scraper functions
+
+3. **Implementation Example**:
+   ```php
+   // PHP side (GoodreadsReviewFetcher.php)
+   if (isset($_GET['force']) && $_GET['force'] == '1') {
+       $forceValue = "1";
+       // Set environment variables as backup
+       putenv('VPS_BYPASS_CACHE=true');
+       putenv('FORCE_FRESH_DATA=true');
+       putenv('SKIP_CACHE=true');
+
+       // Set the force option to true
+       $options['force'] = true;
+   }
+   ```
+
+   ```javascript
+   // Node.js side (server.js)
+   // Convert the force parameter to a boolean
+   const forceBoolean = force === 'true' || force === '1' || force === true;
+
+   // Log the force parameter for debugging
+   logger.info(`Force parameter: ${forceBoolean}`);
+
+   // Pass the normalized force value to the scraper
+   const reviews = await goodreads.scrapeGoodreadsReviews(url, limit, {
+     force: forceBoolean
+   });
+   ```
 
 ## Monitoring and Maintenance
 

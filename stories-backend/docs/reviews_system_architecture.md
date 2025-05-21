@@ -493,6 +493,19 @@ For sites with JavaScript-heavy interfaces like Goodreads:
 - Handle login flows if necessary
 - Simulate realistic user behavior
 
+### 7. Cache Control and Force Parameter
+
+The system implements a robust caching mechanism with manual override:
+
+- Default caching of review data to reduce API calls and scraping frequency
+- TTL-based cache expiration (7 days by default)
+- "Force Fresh Data" button in the admin interface to bypass cache
+- Force parameter implementation across the entire stack:
+  - PHP: `options['force'] = true` when button is clicked
+  - Environment variables as backup communication channels
+  - Node.js: Proper normalization of force parameter to boolean
+  - Detailed logging throughout the system to track force parameter values
+
 These techniques allow the system to reliably extract review data even from sources with strong anti-scraping measures, while being respectful of the source websites by limiting request frequency and volume.
 
 ## Conclusion

@@ -139,11 +139,11 @@ class NewSourceReviewFetcher extends AbstractReviewFetcher {
     public function __construct(PDO $db, int $sourceId) {
         parent::__construct($db, $sourceId, 'New Source Name');
     }
-    
+
     public function isConfigured(): bool {
         return true;
     }
-    
+
     public function fetchReviewsByISBN(string $isbn, int $limit = 10): array {
         // Implementation here
     }
@@ -158,7 +158,7 @@ Add your new fetcher to the `ReviewFetcherFactory` class:
 // In ReviewFetcherFactory.php
 switch (strtolower($source['name'])) {
     // Existing cases...
-    
+
     case 'new source name':
         $fetcher = new NewSourceReviewFetcher($this->db, $sourceId);
         break;
@@ -174,6 +174,16 @@ switch (strtolower($source['name'])) {
 - Check that the ISBN is correct and exists in the source
 - Verify that the source is properly configured
 - Check for API rate limiting or blocking
+- Try using the "Force Fresh Data" button to bypass cache
+
+#### Force Fresh Data Button Not Working
+
+If the "Force Fresh Data" button isn't bypassing the cache:
+
+- Ensure the force parameter is properly passed from PHP to Node.js
+- Check that `options['force'] = true` is set in GoodreadsReviewFetcher.php
+- Verify that server.js properly normalizes the force parameter
+- Check the logs for force parameter values
 
 #### AI Analysis Not Working
 

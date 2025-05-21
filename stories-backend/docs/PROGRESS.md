@@ -204,6 +204,16 @@
   - Updated architecture documentation to reflect the evolution of our approach
   - Added code examples and configuration templates for the VPS solution
 
+## 2025-05-21
+- Fixed Force Fresh Data button in book validation interface:
+  - Identified issue where force parameter wasn't being properly passed from PHP to Node.js server
+  - Updated GoodreadsReviewFetcher.php to set options['force'] = true when Force Fresh Data button is clicked
+  - Added environment variables (VPS_BYPASS_CACHE, FORCE_FRESH_DATA, SKIP_CACHE) as backup communication channels
+  - Updated server.js to properly normalize the force parameter to a boolean value
+  - Added detailed logging throughout the system to track force parameter values
+  - Updated documentation in KNOWN_ISSUES_AND_FIXES.md to document the issue and solution
+  - This fix ensures that clicking the Force Fresh Data button properly bypasses the cache and fetches fresh data
+
 ## Next Steps
 - Implement the VPS-based review scraping solution:
   - Set up VPS with recommended specifications

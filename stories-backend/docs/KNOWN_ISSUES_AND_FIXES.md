@@ -440,6 +440,46 @@ $db->exec("CREATE TABLE subscribers (
 
 This allows the frontend to fetch the latest data from the API on each request, ensuring that changes made in the admin interface are immediately reflected on the frontend.
 
+## Review System Issues
+
+### Force Fresh Data Button Not Working in Book Validation
+
+**Issue**: The "Force Fresh Data" button in the book validation interface wasn't properly bypassing the cache when clicked.
+
+**Cause**: The force parameter wasn't being properly passed from PHP to the Node.js server. PHP was setting a URL parameter `&force=1`, but wasn't updating the internal `options['force']` value that gets passed to other functions. Additionally, the Node.js server wasn't properly normalizing the force parameter to a boolean value.
+
+**Fix**:
+1. Updated the PHP code in GoodreadsReviewFetcher.php to set the options['force'] value when the Force Fresh Data button is clicked:
+```php
+// Always set force to 1 when the "Force Fresh Data" button is clicked
+if (isset($_GET['force']) && $_GET['force'] == '1') {
+    $forceValue = "1";
+    // Also set environment variables to ensure force refresh
+    putenv('VPS_BYPASS_CACHE=true');
+    putenv('FORCE_FRESH_DATA=true');
+    putenv('SKIP_CACHE=true');
+
+    // Set the force option to true to ensure it's passed to the Node.js server
+    $options['force'] = true;
+}
+```
+
+2. Updated the Node.js server.js file to properly normalize the force parameter:
+```javascript
+// Update the forceBoolean value with the latest force parameter
+forceBoolean = force === 'true' || force === '1' || force === true;
+
+// Log the force parameter for debugging
+logger.info(`Force parameter details:
+  - Raw force parameter: ${force} (type: ${typeof force})
+  - Normalized force parameter: ${forceBoolean}
+  - Environment variables:
+    * VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
+    * FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA}
+    * SKIP_CACHE: ${process.env.SKIP_CACHE}
+`);
+```
+
 ## Media Issues
 
 ### Slow-Loading Images in Admin Interface

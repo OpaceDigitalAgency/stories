@@ -56,30 +56,63 @@ $sources = array_keys($sourceData);
                     document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('clearCacheBtn').addEventListener('click', function() {
                             if (confirm('This will clear all caches for Goodreads data. Continue?')) {
+                                // Store button reference
+                                const button = this;
+
                                 // Show loading indicator
-                                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
-                                this.disabled = true;
+                                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+                                button.disabled = true;
 
                                 // Make AJAX request to clear cache
                                 fetch('book-import-validate/clear-goodreads-cache.php')
-                                    .then(response => response.json())
+                                    .then(response => {
+                                        // Check if response is OK
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! Status: ${response.status}`);
+                                        }
+
+                                        // Try to parse JSON
+                                        try {
+                                            return response.json();
+                                        } catch (e) {
+                                            throw new Error('Invalid JSON response');
+                                        }
+                                    })
                                     .then(data => {
+                                        console.log('Cache clear response:', data);
+
                                         // Show result
                                         if (data.status === 'success' || data.status === 'partial') {
                                             alert('Cache cleared successfully. ' + data.message);
+
+                                            // Show detailed actions if available
+                                            if (data.actions && data.actions.length > 0) {
+                                                console.log('Cache clear actions:', data.actions);
+                                            }
+
                                             // Reload the page to get fresh data
                                             window.location.reload();
                                         } else {
-                                            alert('Error clearing cache: ' + data.message);
-                                            this.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
-                                            this.disabled = false;
+                                            let errorMessage = data.message || 'Unknown error';
+
+                                            // Add action details if available
+                                            if (data.actions && data.actions.length > 0) {
+                                                const errorActions = data.actions.filter(a => a.status === 'error');
+                                                if (errorActions.length > 0) {
+                                                    errorMessage += '\n\nDetails:\n' + errorActions.map(a => `- ${a.message}`).join('\n');
+                                                }
+                                            }
+
+                                            alert('Error clearing cache: ' + errorMessage);
+                                            button.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
+                                            button.disabled = false;
                                         }
                                     })
                                     .catch(error => {
-                                        console.error('Error:', error);
-                                        alert('Error clearing cache: ' + error);
-                                        this.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
-                                        this.disabled = false;
+                                        console.error('Error clearing cache:', error);
+                                        alert('Error clearing cache: ' + error.message);
+                                        button.innerHTML = '<i class="fas fa-trash-alt"></i> Clear All Caches';
+                                        button.disabled = false;
                                     });
                             }
                         });

@@ -480,8 +480,23 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         // Build the request URL
         $url = "{$apiUrl}/scrape/goodreads?url=" . urlencode($bookUrl) . "&limit=1";
 
-        // Add force parameter if requested
-        $forceValue = (!empty($options['force'] ?? false)) ? "1" : "0";
+        // Always set force to 1 when the "Force Fresh Data" button is clicked
+        if (isset($_GET['force']) && $_GET['force'] == '1') {
+            $forceValue = "1";
+            // Also set environment variables to ensure force refresh
+            putenv('VPS_BYPASS_CACHE=true');
+            putenv('FORCE_FRESH_DATA=true');
+            putenv('SKIP_CACHE=true');
+
+            // Set the force option to true to ensure it's passed to the Node.js server
+            $options['force'] = true;
+        }
+        // Otherwise, use the value from options
+        else {
+            $forceValue = ($options['force'] ?? false) ? "1" : "0";
+        }
+
+        // Add force parameter to URL
         $url .= "&force={$forceValue}";
 
         // Log the force parameter value for debugging
@@ -1967,8 +1982,22 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting continueFromLast=0 (not continuing from last scrape)");
         }
 
-        // Add force parameter (always include it with the correct value)
-        $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
+        // Always set force to 1 when the "Force Fresh Data" button is clicked
+        if (isset($_GET['force']) && $_GET['force'] == '1') {
+            $forceValue = "1";
+            // Also set environment variables to ensure force refresh
+            putenv('VPS_BYPASS_CACHE=true');
+            putenv('FORCE_FRESH_DATA=true');
+            putenv('SKIP_CACHE=true');
+
+            // Set the force option to true to ensure it's passed to the Node.js server
+            $options['force'] = true;
+        }
+        // Otherwise, use the value from options
+        else {
+            $forceValue = (isset($options['force']) && $options['force']) ? "1" : "0";
+        }
+
         $url .= "&force={$forceValue}";
         $this->logToFile($debugDir . '/goodreads-log.txt', "🔄 Setting force={$forceValue} parameter");
 

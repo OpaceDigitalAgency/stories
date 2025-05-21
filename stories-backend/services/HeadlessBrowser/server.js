@@ -128,11 +128,24 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     }
 
 
-    // Hard-code force to true to always bypass cache
+    // Update the forceBoolean value with the latest force parameter
+    forceBoolean = force === 'true' || force === '1' || force === true;
+
+    // Log the force parameter for debugging
+    logger.info(`Force parameter details:
+      - Raw force parameter: ${force} (type: ${typeof force})
+      - Normalized force parameter: ${forceBoolean}
+      - Environment variables:
+        * VPS_BYPASS_CACHE: ${process.env.VPS_BYPASS_CACHE}
+        * FORCE_FRESH_DATA: ${process.env.FORCE_FRESH_DATA}
+        * SKIP_CACHE: ${process.env.SKIP_CACHE}
+    `);
+
+    // Pass the normalized force value to ensure consistent handling
     const reviews = await goodreads.scrapeGoodreadsReviews(url, parseInt(limit), {
       maxPages: parseInt(maxPages),
       continueFromLast: continueFromLast === 'true' || continueFromLast === '1',
-      force: true // Hard-coded to true to always bypass cache
+      force: forceBoolean // Pass the normalized boolean value
     });
 
     res.status(200).json(reviews);

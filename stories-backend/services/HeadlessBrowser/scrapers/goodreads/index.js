@@ -150,47 +150,121 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
       // Extract book details from the page
       function extractBookDetails() {
-        // First try to get the book details section
-        const detailsSection = document.querySelector('[data-testid="bookEditionDetails"]') ||
-                              document.querySelector('.BookDetails__list') ||
-                              document.querySelector('.FeatureItems');
-
-        if (!detailsSection) return {};
-
         const details = {};
 
-        // Process each detail item
-        const detailItems = detailsSection.querySelectorAll('div.FeatureItem, div.BookDetails__item');
+        // Method 1: Try to extract from the table in the UI
+        const rows = document.querySelectorAll('table tr');
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 2) {
+            const label = cells[0].textContent.trim().toLowerCase();
+            const value = cells[1].textContent.trim();
 
-        detailItems.forEach(item => {
-          const label = item.querySelector('.FeatureItem__label, .BookDetails__label');
-          const value = item.querySelector('.FeatureItem__value, .BookDetails__value');
-
-          if (!label || !value) return;
-
-          const labelText = label.textContent.trim().toLowerCase();
-          const valueText = value.textContent.trim();
-
-          if (labelText.includes('isbn') && !labelText.includes('13')) {
-            details.isbn = valueText;
-          } else if (labelText.includes('isbn13') || labelText.includes('isbn-13')) {
-            details.isbn13 = valueText;
-          } else if (labelText.includes('publisher')) {
-            details.publisher = valueText;
-          } else if (labelText.includes('language')) {
-            details.language = valueText;
-          } else if (labelText.includes('pages')) {
-            details.pages = valueText;
-          } else if (labelText.includes('published')) {
-            details.publication_date = valueText;
-          } else if (labelText.includes('format')) {
-            details.format = valueText;
-          } else if (labelText.includes('characters')) {
-            details.characters = valueText;
-          } else if (labelText.includes('setting')) {
-            details.settings = valueText;
+            if (label.includes('isbn-10') || (label.includes('isbn') && !label.includes('13'))) {
+              details.isbn = value;
+            } else if (label.includes('isbn-13')) {
+              details.isbn13 = value;
+            } else if (label.includes('publisher')) {
+              details.publisher = value;
+            } else if (label.includes('language')) {
+              details.language = value;
+            } else if (label.includes('pages')) {
+              details.pages = value;
+            } else if (label.includes('published')) {
+              details.publication_date = value;
+            } else if (label.includes('format')) {
+              details.format = value;
+            } else if (label.includes('series')) {
+              details.series = value;
+            } else if (label.includes('characters')) {
+              details.characters = value;
+            } else if (label.includes('setting')) {
+              details.settings = value;
+            } else if (label.includes('author')) {
+              details.author = value;
+            }
           }
         });
+
+        // Method 2: Try to extract from the book details section
+        if (Object.keys(details).length === 0) {
+          const detailsSection = document.querySelector('[data-testid="bookEditionDetails"]') ||
+                                document.querySelector('.BookDetails__list') ||
+                                document.querySelector('.FeatureItems');
+
+          if (detailsSection) {
+            // Process each detail item
+            const detailItems = detailsSection.querySelectorAll('div.FeatureItem, div.BookDetails__item, div');
+
+            detailItems.forEach(item => {
+              const label = item.querySelector('.FeatureItem__label, .BookDetails__label, dt');
+              const value = item.querySelector('.FeatureItem__value, .BookDetails__value, dd');
+
+              if (!label || !value) return;
+
+              const labelText = label.textContent.trim().toLowerCase();
+              const valueText = value.textContent.trim();
+
+              if (labelText.includes('isbn') && !labelText.includes('13')) {
+                details.isbn = valueText;
+              } else if (labelText.includes('isbn13') || labelText.includes('isbn-13')) {
+                details.isbn13 = valueText;
+              } else if (labelText.includes('publisher')) {
+                details.publisher = valueText;
+              } else if (labelText.includes('language')) {
+                details.language = valueText;
+              } else if (labelText.includes('pages')) {
+                details.pages = valueText;
+              } else if (labelText.includes('published')) {
+                details.publication_date = valueText;
+              } else if (labelText.includes('format')) {
+                details.format = valueText;
+              } else if (labelText.includes('characters')) {
+                details.characters = valueText;
+              } else if (labelText.includes('setting')) {
+                details.settings = valueText;
+              }
+            });
+          }
+        }
+
+        // Method 3: Try to extract from structured data in the page
+        try {
+          const scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
+          scriptTags.forEach(script => {
+            try {
+              const jsonData = JSON.parse(script.textContent);
+
+              if (jsonData && jsonData['@type'] === 'Book') {
+                if (jsonData.isbn && !details.isbn) {
+                  details.isbn = jsonData.isbn;
+                }
+                if (jsonData.bookFormat && !details.format) {
+                  details.format = jsonData.bookFormat;
+                }
+                if (jsonData.numberOfPages && !details.pages) {
+                  details.pages = jsonData.numberOfPages.toString();
+                }
+                if (jsonData.inLanguage && !details.language) {
+                  details.language = jsonData.inLanguage;
+                }
+                if (jsonData.publisher && jsonData.publisher.name && !details.publisher) {
+                  details.publisher = jsonData.publisher.name;
+                }
+                if (jsonData.datePublished && !details.publication_date) {
+                  details.publication_date = jsonData.datePublished;
+                }
+                if (jsonData.author && jsonData.author.name && !details.author) {
+                  details.author = jsonData.author.name;
+                }
+              }
+            } catch (e) {
+              // Ignore JSON parse errors
+            }
+          });
+        } catch (e) {
+          // Ignore errors in structured data extraction
+        }
 
         return details;
       }
@@ -203,11 +277,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       const SELECTORS = {
         title: {
           primary: '[data-testid="bookTitle"]',
-          fallbacks: ['h1.BookPageTitleSection__title', '.BookPageTitleSection h1']
+          fallbacks: ['h1.BookPageTitleSection__title', '.BookPageTitleSection h1', 'h1']
         },
         author: {
           primary: '[data-testid="authorLink"]',
-          fallbacks: ['.BookPageTitleSection__authorLink', '.AuthorLink__name', 'span.ContributorLink__name']
+          fallbacks: ['.BookPageTitleSection__authorLink', '.AuthorLink__name', 'span.ContributorLink__name', 'a[href*="/author/show/"]']
         },
         rating: {
           primary: '[data-testid="averageRating"]',
@@ -215,55 +289,56 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         },
         description: {
           primary: '[data-testid="description"] span',
-          fallbacks: ['.DetailsLayoutRightParagraph__widthConstrained']
+          fallbacks: ['.DetailsLayoutRightParagraph__widthConstrained', '.BookPageMetadataSection__description']
         },
         genres: {
           primary: '[data-testid="genresList"] a',
-          fallbacks: ['.BookPageMetadataSection__genreShelf', '.bookPageGenreLink', 'span.BookPageMetadataSection__genreButton']
+          fallbacks: ['.BookPageMetadataSection__genreShelf a', '.bookPageGenreLink', 'span.BookPageMetadataSection__genreButton']
         },
+        // We'll rely on extractBookDetails() for these fields instead of selectors
         isbn: {
-          primary: '[data-testid="bookEditionDetails"] div:nth-child(1)',
-          fallbacks: ['.BookDetails__list div:nth-child(1)', '.FeatureItem div:nth-child(1)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         isbn13: {
-          primary: '[data-testid="bookEditionDetails"] div:nth-child(2)',
-          fallbacks: ['.BookDetails__list div:nth-child(2)', '.FeatureItem div:nth-child(2)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         publisher: {
-          primary: '[data-testid="bookEditionDetails"] div:nth-child(3)',
-          fallbacks: ['.BookDetails__list div:nth-child(3)', '.FeatureItem div:nth-child(3)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         language: {
-          primary: '[data-testid="bookEditionDetails"] div:nth-child(4)',
-          fallbacks: ['.BookDetails__list div:nth-child(4)', '.FeatureItem div:nth-child(4)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         format: {
-          primary: '[data-testid="bookFormat"]',
-          fallbacks: ['.BookDetails__list div:nth-child(5)', '.FeatureItem div:nth-child(5)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         pages: {
-          primary: '[data-testid="pagesFormat"]',
-          fallbacks: ['.BookDetails__list div:nth-child(6)', '.FeatureItem div:nth-child(6)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         publication_date: {
-          primary: '[data-testid="publicationInfo"]',
-          fallbacks: ['.BookDetails__list div:nth-child(7)', '.FeatureItem div:nth-child(7)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         series: {
           primary: '.BookPageTitleSection__series a',
-          fallbacks: ['.SeriesLink']
+          fallbacks: ['.SeriesLink', 'table tr td']
         },
         awards: {
           primary: '[href*="ref=nav_brws_gca"]',
-          fallbacks: []
+          fallbacks: ['table tr td']
         },
         characters: {
-          primary: '[data-testid="charactersList"]',
-          fallbacks: ['.BookDetails__list div:nth-child(8)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         settings: {
-          primary: '[data-testid="settingsList"]',
-          fallbacks: ['.BookDetails__list div:nth-child(9)']
+          primary: 'table tr td',
+          fallbacks: []
         },
         rating_count: {
           primary: '[data-testid="ratingsCount"]',
@@ -275,7 +350,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
         },
         cover_image: {
           primary: '[data-testid="bookCover"] img',
-          fallbacks: ['img.ResponsiveImage', '.BookCover__image img']
+          fallbacks: ['img.ResponsiveImage', '.BookCover__image img', '.BookPage__leftColumn img']
         }
       };
 

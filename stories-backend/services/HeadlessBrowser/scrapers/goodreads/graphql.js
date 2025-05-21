@@ -153,23 +153,66 @@ async function makeGraphQLRequest(page, workId, cursor = null) {
   };
 
   try {
+    // First check if we're still on the book page
+    const url = await page.url();
+    if (!url.includes('goodreads.com/book/')) {
+      logger.error(`Not on a book page: ${url}`);
+      return null;
+    }
+
+    // Add a delay to avoid rate limiting
+    await page.waitForTimeout(1000);
+
+    // Make the GraphQL request with enhanced error handling
     const response = await page.evaluate(
       async ({ query, variables }) => {
-        const response = await fetch('https://www.goodreads.com/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            operationName: 'BookPageQuery',
-            query,
-            variables
-          })
-        });
-        return response.json();
+        try {
+          // Add a user agent and referer to make the request more authentic
+          const response = await fetch('https://www.goodreads.com/graphql', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Referer': window.location.href,
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              operationName: 'BookPageQuery',
+              query,
+              variables
+            }),
+            credentials: 'include' // Include cookies
+          });
+
+          // Check if response is JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            // If not JSON, return an error object
+            const text = await response.text();
+            return {
+              error: true,
+              message: 'Response is not JSON',
+              status: response.status,
+              contentType,
+              preview: text.substring(0, 100)
+            };
+          }
+
+          return await response.json();
+        } catch (err) {
+          return { error: true, message: err.toString() };
+        }
       },
       { query: BOOK_QUERY, variables }
     );
+
+    // Check for error in response
+    if (response && response.error) {
+      logger.error(`GraphQL request returned error: ${response.message}`);
+      logger.error(`Status: ${response.status}, Content-Type: ${response.contentType}`);
+      logger.error(`Response preview: ${response.preview}`);
+      return null;
+    }
 
     return processGraphQLResponse(response);
   } catch (error) {

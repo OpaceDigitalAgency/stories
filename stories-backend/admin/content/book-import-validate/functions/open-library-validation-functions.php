@@ -33,7 +33,21 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
         // Try ISBN search first
         $url = "https://openlibrary.org/api/books?bibkeys=ISBN:" . urlencode($isbn) . "&format=json&jscmd=data";
 
+        // Add step for URL generation
+        $status['steps'][] = [
+            'name' => 'url_generation',
+            'status' => 'success',
+            'message' => "Generated URL: $url",
+            'fetch_url' => $url
+        ];
+
         // Make the request
+        $status['steps'][] = [
+            'name' => 'api_request',
+            'status' => 'in_progress',
+            'message' => "Making request to Open Library API"
+        ];
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -59,6 +73,20 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
             }
 
             $url = "https://openlibrary.org/search.json?" . $query;
+
+            // Add step for fallback URL generation
+            $status['steps'][] = [
+                'name' => 'fallback_url_generation',
+                'status' => 'success',
+                'message' => "Generated fallback URL: $url",
+                'fetch_url' => $url
+            ];
+
+            $status['steps'][] = [
+                'name' => 'fallback_api_request',
+                'status' => 'in_progress',
+                'message' => "Making fallback request to Open Library search API"
+            ];
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -121,11 +149,11 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                     'maturity_rating' => '',
                     'internet_archive_id' => $iaId
                 ];
-                
+
                 // Add status information
                 $endTime = microtime(true);
                 $totalTime = round($endTime - $startTime, 2);
-                
+
                 $status['status'] = 'success';
                 $status['message'] = 'Successfully extracted data from Open Library search';
                 $status['processing_time'] = $totalTime;
@@ -141,7 +169,7 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                         'message' => "Successfully extracted book data from search results"
                     ]
                 ];
-                
+
                 $bookData['_status'] = $status;
                 return $bookData;
             }
@@ -201,11 +229,11 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                 'maturity_rating' => '',
                 'internet_archive_id' => $iaId
             ];
-            
+
             // Add status information
             $endTime = microtime(true);
             $totalTime = round($endTime - $startTime, 2);
-            
+
             $status['status'] = 'success';
             $status['message'] = 'Successfully extracted data from Open Library API';
             $status['processing_time'] = $totalTime;
@@ -221,14 +249,14 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                     'message' => "Successfully extracted book data from API response"
                 ]
             ];
-            
+
             $bookData['_status'] = $status;
             return $bookData;
         }
 
         // Log failure for debugging
         error_log("No book found on Open Library for ISBN: $isbn");
-        
+
         // Return failure status
         $status['status'] = 'error';
         $status['message'] = 'No book found on Open Library';
@@ -240,7 +268,7 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
                 'message' => "No results found for ISBN: $isbn or title/author search"
             ]
         ];
-        
+
         return ['_status' => $status];
     } catch (Exception $e) {
         error_log("Error fetching Open Library data: " . $e->getMessage());

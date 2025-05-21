@@ -91,11 +91,7 @@ try {
         exit;
     }
 
-    // Create a temporary directory
-    $tempDir = sys_get_temp_dir() . '/book_data_' . uniqid();
-    mkdir($tempDir);
-
-    // Create the processed data file
+    // Prepare the processed data
     $processedData = [
         'book' => $bookData,
         'validation' => $validationData,
@@ -106,35 +102,16 @@ try {
             'title' => $bookData['title'] ?? 'Unknown'
         ]
     ];
-    file_put_contents($tempDir . '/book_' . $bookId . '_processed_data.json', json_encode($processedData, JSON_PRETTY_PRINT));
 
-    // Create the raw data file
-    file_put_contents($tempDir . '/book_' . $bookId . '_raw_data.json', $cache['cache_data']);
+    // Set headers for file download
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.json"');
 
-    // Create ZIP archive
-    $zipFile = $tempDir . '/book_' . $bookId . '_data.zip';
-    $zip = new ZipArchive();
-    if ($zip->open($zipFile, ZipArchive::CREATE) === TRUE) {
-        $zip->addFile($tempDir . '/book_' . $bookId . '_processed_data.json', 'book_' . $bookId . '_processed_data.json');
-        $zip->addFile($tempDir . '/book_' . $bookId . '_raw_data.json', 'book_' . $bookId . '_raw_data.json');
-        $zip->close();
-
-        // Set headers for ZIP download
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="book_' . $bookId . '_data.zip"');
-        header('Content-Length: ' . filesize($zipFile));
-
-        // Output the ZIP file
-        readfile($zipFile);
-
-        // Clean up
-        unlink($tempDir . '/book_' . $bookId . '_processed_data.json');
-        unlink($tempDir . '/book_' . $bookId . '_raw_data.json');
-        unlink($zipFile);
-        rmdir($tempDir);
-    } else {
-        throw new Exception("Could not create ZIP file");
-    }
+    // Output both processed and raw data with a separator
+    echo "// PROCESSED DATA\n";
+    echo json_encode($processedData, JSON_PRETTY_PRINT);
+    echo "\n\n// RAW DATA\n";
+    echo $cache['cache_data'];
 
 } catch (Exception $e) {
     error_log("Error in download-raw-data.php: " . $e->getMessage());

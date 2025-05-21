@@ -121,6 +121,5 @@ async function saveToCache(bookId, data) {
 
 module.exports = {
   checkCache,
-  clearCache,
   saveToCache
 };

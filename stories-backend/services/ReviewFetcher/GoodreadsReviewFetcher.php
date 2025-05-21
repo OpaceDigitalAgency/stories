@@ -599,6 +599,8 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $details['average_rating'] = (float)trim($matches[1]);
         } else if (preg_match('/<div[^>]*data-testid="averageRating"[^>]*>([^<]+)<\/div>/i', $response, $matches)) {
             $details['average_rating'] = (float)trim($matches[1]);
+        } else if (preg_match('/aria-label="Average rating of ([0-9.]+) stars."[^>]*>/i', $response, $matches)) {
+            $details['average_rating'] = (float)trim($matches[1]);
         }
 
         // Extract ratings count
@@ -608,6 +610,17 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
         } else if (preg_match('/<div[^>]*data-testid="ratingsCount"[^>]*>.*?(\d+(?:,\d+)*)[^<]*ratings/i', $response, $matches)) {
             $details['ratings_count'] = (int)str_replace(',', '', $matches[1]);
+        } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>([0-9,.]+) ratings/i', $response, $matches)) {
+            $details['ratings_count'] = (int)str_replace([',', '.'], '', $matches[1]);
+        }
+
+        // Extract review count
+        if (preg_match('/<meta itemprop="reviewCount" content="([^"]+)"/i', $response, $matches)) {
+            $details['review_count'] = (int)$matches[1];
+        } else if (preg_match('/(\d[\d,\.]*) reviews/i', $response, $matches)) {
+            $details['review_count'] = (int)str_replace(',', '', $matches[1]);
+        } else if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>[0-9,.]+ ratings ([0-9,.]+) reviews<\/a>/i', $response, $matches)) {
+            $details['review_count'] = (int)str_replace([',', '.'], '', $matches[1]);
         }
 
         // Extract publication info
@@ -1629,7 +1642,7 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
         $ratingCount = 0;
         $reviewCount = 0;
 
-        // Modern pattern: RatingStatistics with aria-label
+        // Modern pattern: RatingStatistics with aria-label (2023 design)
         if (preg_match('/<div[^>]*class="RatingStatistics__rating"[^>]*>([0-9.]+)<\/div>/i', $html, $ratingMatch)) {
             $rating = (float)$ratingMatch[1];
 
@@ -1641,6 +1654,19 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Try to get reviews count
             if (preg_match('/<span[^>]*data-testid="reviewsCount"[^>]*>([^<]+)&nbsp;<!-- -->reviews<\/span>/i', $html, $reviewsMatch)) {
                 $reviewCount = (int)str_replace(',', '', $reviewsMatch[1]);
+            }
+        }
+        // New pattern: RatingStatistics__interactive (2023-2024 design)
+        else if (preg_match('/<a class="RatingStatistics__RatingStatistics__interactive[^"]*"[^>]*href="#CommunityReviews"[^>]*>([^<]*)<\/a>/i', $html, $ratingMatch)) {
+            // Extract ratings and reviews count from the link text
+            if (preg_match('/([0-9,.]+) ratings ([0-9,.]+) reviews/i', $ratingMatch[1], $countMatch)) {
+                $ratingCount = (int)str_replace([',', '.'], '', $countMatch[1]);
+                $reviewCount = (int)str_replace([',', '.'], '', $countMatch[2]);
+            }
+
+            // Extract rating from the RatingStatistics__rating div
+            if (preg_match('/<div class="RatingStatistics__rating"[^>]*>([0-9.]+)<\/div>/i', $html, $ratingValueMatch)) {
+                $rating = (float)$ratingValueMatch[1];
             }
         }
         // Classic pattern: Average rating in meta tag
@@ -1655,6 +1681,16 @@ class GoodreadsReviewFetcher extends AbstractReviewFetcher {
             // Try to get reviews count
             if (preg_match('/<meta itemprop="reviewCount" content="([^"]+)"/i', $html, $reviewsMatch)) {
                 $reviewCount = (int)$reviewsMatch[1];
+            }
+        }
+        // Pattern for aria-label with average rating (2024 design)
+        else if (preg_match('/aria-label="Average rating of ([0-9.]+) stars."[^>]*>/i', $html, $ratingMatch)) {
+            $rating = (float)$ratingMatch[1];
+
+            // Try to get ratings and reviews count from the CommunityReviews link
+            if (preg_match('/<a[^>]*href="#CommunityReviews"[^>]*>([0-9,.]+) ratings ([0-9,.]+) reviews<\/a>/i', $html, $countMatch)) {
+                $ratingCount = (int)str_replace([',', '.'], '', $countMatch[1]);
+                $reviewCount = (int)str_replace([',', '.'], '', $countMatch[2]);
             }
         }
 

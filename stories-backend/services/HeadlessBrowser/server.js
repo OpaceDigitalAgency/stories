@@ -64,8 +64,9 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     const limit = parseInt(req.query.limit || '50', 10);
     const maxPages = parseInt(req.query.maxPages || '20', 10);
     const continueFromLast = req.query.continueFromLast === '1' || req.query.continueFromLast === 'true';
-    const force = req.query.force === '1' || req.query.force === 'true';
-
+    //const force = req.query.force === '1' || req.query.force === 'true';
+    const force = true;
+    
     // Log all parameters for debugging
     logger.info(`Goodreads scraper parameters:
       - url: ${url}

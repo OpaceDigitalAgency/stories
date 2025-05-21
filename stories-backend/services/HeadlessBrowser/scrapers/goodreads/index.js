@@ -105,34 +105,25 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
   const cachedData = await checkCache(bookId, { force, continueFromLast, limit });
 
   // Handle cache result
-  if (cachedData) {
-    logger.info(`Found cached data for book ${bookId}:
-      - Reviews: ${cachedData.reviews?.length || 0}
-      - Last scraped: ${cachedData.lastScrapedAt}
-      - Has more: ${cachedData.hasMoreReviews}
-      - Force refresh: ${force}
-    `);
-
-    if (!force) {
-      // If continuing from last scrape, return cache
-      if (continueFromLast) {
-        logger.info(`Using cached data for continuation - ${cachedData.reviews?.length} reviews available`);
-        return { ...cachedData, source: 'cache' };
-      }
-      
-      // If we have enough reviews, return cache
-      const hasEnoughReviews = cachedData.reviews?.length >= limit;
-      if (hasEnoughReviews) {
-        logger.info(`Using cached data - ${cachedData.reviews.length} reviews >= requested limit ${limit}`);
-        return { ...cachedData, source: 'cache' };
-      }
-      
-      logger.info(`Cache has insufficient reviews (${cachedData.reviews?.length} < ${limit}) - proceeding with scrape`);
-    } else {
-      logger.info(`Force refresh requested - ignoring cache and proceeding with scrape`);
+  if (cachedData && !force) {
+    logger.info(`Using cached data for book ${bookId}`);
+    
+    if (continueFromLast) {
+      logger.info(`Using cached data for continuation`);
+      return { ...cachedData, source: 'cache' };
     }
+
+    const hasEnoughReviews = cachedData.reviews?.length >= limit;
+    if (hasEnoughReviews) {
+      logger.info(`Cached reviews sufficient: ${cachedData.reviews.length} >= ${limit}`);
+      return { ...cachedData, source: 'cache' };
+    }
+
+    logger.info(`Cached reviews insufficient: ${cachedData.reviews?.length} < ${limit}`);
+  } else if (cachedData && force) {
+    logger.info(`Force refresh requested - skipping cache`);
   } else {
-    logger.info(`No cached data found for book ${bookId} - proceeding with scrape`);
+    logger.info(`No cached data found for book ${bookId} - proceeding`);
   }
 
   // Initialize browser and navigate to page

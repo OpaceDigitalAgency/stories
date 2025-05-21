@@ -233,6 +233,12 @@ $sources = array_keys($sourceData);
                                                                     <strong>URL:</strong> <code><?php echo htmlspecialchars($step['fetch_url']); ?></code>
                                                                 </div>
                                                                 <?php endif; ?>
+
+                                                                <?php if (!empty($step['response'])): ?>
+                                                                <div class="mt-1 small">
+                                                                    <strong>Response:</strong> <code><?php echo htmlspecialchars(substr($step['response'], 0, 100) . (strlen($step['response']) > 100 ? '...' : '')); ?></code>
+                                                                </div>
+                                                                <?php endif; ?>
                                                             </li>
                                                         <?php endforeach; ?>
                                                     </ul>

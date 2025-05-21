@@ -142,7 +142,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'name' => 'review_fetcher',
             'status' => 'in_progress',
             'message' => "Using GoodreadsReviewFetcher to find book",
-            'fetch_url' => $searchUrl
+            'fetch_url' => $searchUrl,
+            'timestamp' => date('Y-m-d H:i:s')
         ];
 
         // Make sure we're using the correct API key
@@ -195,7 +196,18 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
                 $searchResponse = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
+
+                // Add search response to detailed status
+                $detailedStatus['steps'][] = [
+                    'name' => 'search_response',
+                    'status' => $httpCode == 200 ? 'success' : 'error',
+                    'message' => "Search response HTTP code: $httpCode",
+                    'fetch_url' => $searchUrl,
+                    'response' => substr($searchResponse, 0, 500),
+                    'timestamp' => date('Y-m-d H:i:s')
+                ];
 
                 // Extract the first book URL from the search results
                 $bookUrl = null;
@@ -205,7 +217,8 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                         'name' => 'book_url',
                         'status' => 'success',
                         'message' => "Found book URL: $bookUrl",
-                        'fetch_url' => $bookUrl
+                        'fetch_url' => $bookUrl,
+                        'timestamp' => date('Y-m-d H:i:s')
                     ];
 
                     // Make sure we're not using a reviews URL when fetching book metadata
@@ -219,9 +232,25 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                     // Now get the book details using the URL
                     // Check if the method exists (it should, since we checked the class type earlier)
                     if (method_exists($goodreadsFetcher, 'getBookDetails')) {
+                        $detailedStatus['steps'][] = [
+                            'name' => 'get_book_details',
+                            'status' => 'in_progress',
+                            'message' => "Fetching book details from URL",
+                            'fetch_url' => $bookUrl,
+                            'timestamp' => date('Y-m-d H:i:s')
+                        ];
+
                         $bookDetails = $goodreadsFetcher->getBookDetails($bookUrl);
 
                         if ($bookDetails) {
+                            $detailedStatus['steps'][] = [
+                                'name' => 'get_book_details',
+                                'status' => 'success',
+                                'message' => "Successfully fetched book details",
+                                'fetch_url' => $bookUrl,
+                                'timestamp' => date('Y-m-d H:i:s')
+                            ];
+
                             // Create a response similar to fetchReviewsByISBN
                             $response = [
                                 [
@@ -230,7 +259,18 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
                                     'book_metadata' => $bookDetails
                                 ]
                             ];
+
+                            // Log the book details for debugging
+                            error_log("Goodreads book details: " . json_encode($bookDetails));
                         } else {
+                            $detailedStatus['steps'][] = [
+                                'name' => 'get_book_details',
+                                'status' => 'error',
+                                'message' => "Failed to get book details from URL",
+                                'fetch_url' => $bookUrl,
+                                'timestamp' => date('Y-m-d H:i:s')
+                            ];
+
                             throw new Exception("Failed to get book details from URL: $bookUrl");
                         }
                     } else {

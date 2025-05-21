@@ -1,0 +1,128 @@
+/**
+ * Book Validation CSS
+ *
+ * Styles for the book validation interface.
+ */
+
+/* Collapse functionality */
+.collapse {
+    display: none;
+}
+
+.collapse.show {
+    display: block;
+}
+
+/* Validation steps styling */
+.list-group-item {
+    padding: 0.5rem 1rem;
+}
+
+.steps-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Status indicators */
+.field-match {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.field-new {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.field-empty {
+    background-color: rgba(108, 117, 125, 0.1);
+}
+
+.field-conflict {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Notification styling */
+.notification-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.loading-message {
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+/* Validation history */
+.history-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-entry {
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.history-timestamp {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* Debug info */
+.debug-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* Source comparison table */
+.comparison-table th,
+.comparison-table td {
+    vertical-align: middle;
+}
+
+.value-container {
+    margin-bottom: 0.5rem;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-text {
+    font-size: 0.85rem;
+}

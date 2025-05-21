@@ -410,6 +410,9 @@ try {
     </div>
 </div>
 
+<!-- Include validation CSS -->
+<link rel="stylesheet" href="book-import-validate/css/validation.css">
+
 <!-- Include validation JavaScript -->
 <script src="book-import-validate/js/validation.js"></script>
 <script src="book-import-validate/js/field-updater.js"></script>

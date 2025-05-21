@@ -22,6 +22,41 @@ function initAjaxValidation() {
     document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
     document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
 
+    // Handle both the button and checkbox for bypass cache
+    const bypassCacheElement = document.getElementById('bypassCache');
+    if (bypassCacheElement) {
+        if (bypassCacheElement.type === 'checkbox') {
+            // It's a checkbox in the new interface
+            bypassCacheElement.addEventListener('change', function() {
+                console.log('Bypass cache checkbox changed:', this.checked);
+            });
+        } else {
+            // It's a button in the old interface
+            bypassCacheElement.addEventListener('click', function() {
+                console.log('Bypass cache button clicked');
+            });
+        }
+    }
+
+    // Initialize Bootstrap collapse for the steps display
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-bs-target');
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                // Toggle the collapse class manually if Bootstrap JS isn't loaded
+                if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
+                    if (targetElement.classList.contains('show')) {
+                        targetElement.classList.remove('show');
+                    } else {
+                        targetElement.classList.add('show');
+                    }
+                }
+            }
+        });
+    });
+
     // Initialize tooltips
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

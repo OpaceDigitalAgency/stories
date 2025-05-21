@@ -30,7 +30,18 @@ function setupEventListeners() {
     document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
     document.getElementById('exportChanges')?.addEventListener('click', handleExportChanges);
     document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
-    document.getElementById('bypassCache')?.addEventListener('click', handleBypassCache);
+
+    // Handle both the button and checkbox for bypass cache
+    const bypassCacheButton = document.getElementById('bypassCache');
+    if (bypassCacheButton) {
+        if (bypassCacheButton.type === 'checkbox') {
+            // It's a checkbox in the new interface
+            bypassCacheButton.addEventListener('change', handleBypassCache);
+        } else {
+            // It's a button in the old interface
+            bypassCacheButton.addEventListener('click', handleBypassCache);
+        }
+    }
 
     // Source-specific apply all buttons
     document.querySelectorAll('.apply-all-source').forEach(button => {
@@ -42,6 +53,29 @@ function setupEventListeners() {
 
     // Manual entry button (when no data found)
     document.getElementById('manualEntry')?.addEventListener('click', handleManualEntry);
+
+    // Initialize Bootstrap collapse for the steps display
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default behavior
+
+            const targetId = this.getAttribute('data-bs-target');
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                console.log('Toggle collapse for', targetId);
+
+                // Toggle the collapse class manually
+                if (targetElement.classList.contains('show')) {
+                    targetElement.classList.remove('show');
+                    this.setAttribute('aria-expanded', 'false');
+                } else {
+                    targetElement.classList.add('show');
+                    this.setAttribute('aria-expanded', 'true');
+                }
+            }
+        });
+    });
 }
 
 // Initialize Bootstrap tooltips
@@ -331,47 +365,53 @@ function handleManualEntry() {
     alert('Manual entry functionality will be implemented in a future update.');
 }
 
-// Handle bypass cache button click
+// Handle bypass cache button or checkbox
 function handleBypassCache() {
-    if (confirm('Are you sure you want to bypass all caches? This will force a fresh load from all sources and may take longer to complete.')) {
-        showLoadingOverlay('Bypassing all caches and fetching fresh data...');
+    // Check if this is a button click (old implementation) or a checkbox (new implementation)
+    const isCheckbox = this.type === 'checkbox';
 
-        // Get the book ID from the hidden form
-        const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
-
-        // Create form data
-        const formData = new FormData();
-        formData.append('action', 'bypass_all_caches');
-        formData.append('book_id', bookId);
-
-        // Add cache-busting parameter to URL
-        const cacheBuster = new Date().getTime();
-        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
-
-        // Send the request
-        fetch(url, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(html => {
-            // Replace the current page content with the new HTML
-            document.documentElement.innerHTML = html;
-
-            // Re-initialize the validation interface
-            initValidationInterface();
-
-            // Show success message
-            showNotification('All caches have been bypassed and fresh data has been fetched.', 'success');
-        })
-        .catch(error => {
-            console.error('Error bypassing caches:', error);
-            showNotification('Error bypassing caches. Please try again.', 'error');
-        })
-        .finally(() => {
-            hideLoadingOverlay();
-        });
+    // If it's a button, show confirmation dialog
+    if (!isCheckbox && !confirm('Are you sure you want to bypass all caches? This will force a fresh load from all sources and may take longer to complete.')) {
+        return;
     }
+
+    showLoadingOverlay('Bypassing all caches and fetching fresh data...');
+
+    // Get the book ID from the hidden form
+    const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
+
+    // Create form data
+    const formData = new FormData();
+    formData.append('action', 'bypass_all_caches');
+    formData.append('book_id', bookId);
+
+    // Add cache-busting parameter to URL
+    const cacheBuster = new Date().getTime();
+    const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
+    // Send the request
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Replace the current page content with the new HTML
+        document.documentElement.innerHTML = html;
+
+        // Re-initialize the validation interface
+        initValidationInterface();
+
+        // Show success message
+        showNotification('All caches have been bypassed and fresh data has been fetched.', 'success');
+    })
+    .catch(error => {
+        console.error('Error bypassing caches:', error);
+        showNotification('Error bypassing caches. Please try again.', 'error');
+    })
+    .finally(() => {
+        hideLoadingOverlay();
+    });
 }
 
 // Update a field with a new value

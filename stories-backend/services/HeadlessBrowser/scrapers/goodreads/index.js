@@ -423,13 +423,15 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           fallbacks: ['table tr td']
         },
         characters: {
-          primary: '.BookDetails .DescListItem dt:contains("Characters"), .CollapsableList .DescListItem dt:contains("Characters")',
+          primary: '.TruncatedContent__text--small[data-testid="contentContainer"]',
           fallbacks: [
-            '.BookDetails__list .BookDetails__item:has(.BookDetails__label:contains("Characters"))',
-            '.TruncatedContent__text--small[data-testid="contentContainer"]',
-            '.WorkDetails .DescListItem:has(dt:contains("Characters"))',
-            'div.DescListItem:has(dt:contains("Characters"))',
-            'table tr:has(td:contains("Characters"))'
+            '.BookDetails .DescListItem dt',
+            '.CollapsableList .DescListItem dt',
+            '.BookDetails__list .BookDetails__item',
+            '.WorkDetails .DescListItem dt',
+            'div.DescListItem dt',
+            'dt',
+            'table tr td'
           ]
         },
         settings: {
@@ -636,8 +638,17 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             // Special handling for characters based on the HTML structure
             if (field === 'characters') {
               try {
-                // First try to find the characters container
-                const characterContainer = document.querySelector('.BookDetails .DescListItem:has(dt:contains("Characters")), .CollapsableList .DescListItem:has(dt:contains("Characters"))');
+                // First try to find the characters container - using standard DOM methods instead of jQuery-like selectors
+                let characterContainer = null;
+
+                // Find all dt elements and check their text content
+                const allDtElements = document.querySelectorAll('.BookDetails .DescListItem dt, .CollapsableList .DescListItem dt, dt');
+                for (const dt of allDtElements) {
+                  if (dt.textContent && dt.textContent.includes('Characters')) {
+                    characterContainer = dt.closest('.DescListItem') || dt.parentElement;
+                    break;
+                  }
+                }
 
                 if (characterContainer) {
                   // Find the dd element that contains the character links
@@ -692,22 +703,40 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
                                  (selectors.fallbacks && selectors.fallbacks.map(sel => document.querySelector(sel)).find(el => el));
             if (detailElement) {
               // For characters, try to extract from the dd element directly
-              if (field === 'characters' && detailElement.tagName === 'DT') {
-                const ddElement = detailElement.nextElementSibling;
-                if (ddElement && ddElement.tagName === 'DD') {
-                  // Find all character links
-                  const characterLinks = ddElement.querySelectorAll('a');
+              if (field === 'characters') {
+                // Try to find character links anywhere in the document
+                const allLinks = document.querySelectorAll('a[href*="/characters/"]');
+                if (allLinks && allLinks.length > 0) {
+                  // Extract character names from links
+                  const characterNames = Array.from(allLinks).map(link => {
+                    return link.textContent.trim();
+                  }).filter(name => name.length > 0);
 
-                  if (characterLinks && characterLinks.length > 0) {
-                    // Extract character names from links
-                    const characterNames = Array.from(characterLinks).map(link => {
-                      return link.textContent.trim();
-                    }).filter(name => name.length > 0);
+                  // Join with commas
+                  if (characterNames.length > 0) {
+                    metadata.characters = characterNames.join(', ');
+                    break;
+                  }
+                }
 
-                    // Join with commas
-                    if (characterNames.length > 0) {
-                      metadata.characters = characterNames.join(', ');
-                      break;
+                // If we found a DT element, try to get its sibling DD
+                if (detailElement && detailElement.tagName === 'DT') {
+                  const ddElement = detailElement.nextElementSibling;
+                  if (ddElement && ddElement.tagName === 'DD') {
+                    // Find all character links
+                    const characterLinks = ddElement.querySelectorAll('a');
+
+                    if (characterLinks && characterLinks.length > 0) {
+                      // Extract character names from links
+                      const characterNames = Array.from(characterLinks).map(link => {
+                        return link.textContent.trim();
+                      }).filter(name => name.length > 0);
+
+                      // Join with commas
+                      if (characterNames.length > 0) {
+                        metadata.characters = characterNames.join(', ');
+                        break;
+                      }
                     }
                   }
                 }

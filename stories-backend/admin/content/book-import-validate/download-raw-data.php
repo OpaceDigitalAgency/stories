@@ -6,14 +6,38 @@
  * It includes all data from all sources (database, Goodreads, Open Library, etc.)
  */
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // Include database connection
-require_once __DIR__ . '/../../../../db-connect.php';
+$dbPath = __DIR__ . '/../../../../db-connect.php';
+if (!file_exists($dbPath)) {
+    die("Error: Database connection file not found at $dbPath");
+}
+require_once $dbPath;
+
+// Check if database connection is available
+if (!isset($db) || !($db instanceof PDO)) {
+    die("Error: Database connection not available");
+}
 
 // Include validation functions
-require_once __DIR__ . '/functions/validation-functions.php';
+$validationFunctionsPath = __DIR__ . '/functions/validation-functions.php';
+if (!file_exists($validationFunctionsPath)) {
+    die("Error: Validation functions file not found at $validationFunctionsPath");
+}
+require_once $validationFunctionsPath;
 
-// Check if book ID is provided
-if (!isset($_GET['book_id']) || !is_numeric($_GET['book_id'])) {
+// Check if book ID is provided (from GET or POST)
+$bookId = null;
+if (isset($_GET['book_id']) && is_numeric($_GET['book_id'])) {
+    $bookId = (int)$_GET['book_id'];
+} elseif (isset($_POST['book_id']) && is_numeric($_POST['book_id'])) {
+    $bookId = (int)$_POST['book_id'];
+}
+
+if ($bookId === null) {
     header('HTTP/1.1 400 Bad Request');
     echo json_encode([
         'status' => 'error',
@@ -21,8 +45,6 @@ if (!isset($_GET['book_id']) || !is_numeric($_GET['book_id'])) {
     ]);
     exit;
 }
-
-$bookId = (int)$_GET['book_id'];
 
 // Get book data from database
 try {
@@ -45,13 +67,22 @@ try {
     // Get ISBN
     $isbn = $bookData['isbn'] ?? '';
 
-    // Get validation data
-    $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
+    // Log what we're about to do
+    error_log("About to get validation data for book ID: $bookId, ISBN: $isbn");
+
+    // Get validation data - but handle errors
+    try {
+        $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, false);
+    } catch (Exception $e) {
+        error_log("Error getting validation data: " . $e->getMessage());
+        $validationData = [
+            'status' => 'error',
+            'message' => 'Error getting validation data: ' . $e->getMessage()
+        ];
+    }
 
     // Add debug information
     error_log("Downloading raw data for book ID: $bookId, ISBN: $isbn");
-    error_log("Book data: " . json_encode($bookData, JSON_PRETTY_PRINT));
-    error_log("Validation data status: " . ($validationData['status'] ?? 'unknown'));
 
     // Prepare the full data object
     $fullData = [
@@ -73,6 +104,7 @@ try {
     echo json_encode($fullData, JSON_PRETTY_PRINT);
 
 } catch (Exception $e) {
+    error_log("Error in download-raw-data.php: " . $e->getMessage());
     header('HTTP/1.1 500 Internal Server Error');
     echo json_encode([
         'status' => 'error',

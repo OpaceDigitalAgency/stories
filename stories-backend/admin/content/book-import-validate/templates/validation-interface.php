@@ -52,11 +52,12 @@ $sources = array_keys($sourceData);
                         <i class="fas fa-trash-alt"></i> Clear All Caches
                     </button>
 
-                    <a href="<?php echo dirname($_SERVER['PHP_SELF']); ?>/book-import-validate/download-raw-data.php?book_id=<?php echo (int)$book['id']; ?>"
-                       class="btn btn-info btn-lg ms-2"
-                       target="_blank">
-                        <i class="fas fa-download"></i> Download Raw Data
-                    </a>
+                    <form method="post" action="book-import-validate/download-raw-data.php" class="d-inline-block">
+                        <input type="hidden" name="book_id" value="<?php echo (int)$book['id']; ?>">
+                        <button type="submit" class="btn btn-info btn-lg ms-2">
+                            <i class="fas fa-download"></i> Download Raw Data
+                        </button>
+                    </form>
 
                     <script>
                     document.addEventListener('DOMContentLoaded', function() {
@@ -70,7 +71,7 @@ $sources = array_keys($sourceData);
                                 button.disabled = true;
 
                                 // Make AJAX request to clear cache
-                                fetch('book-import-validate/clear-goodreads-cache.php')
+                                fetch('book-import-validate/clear-cache-simple.php')
                                     .then(response => {
                                         // Even if the response is not OK, try to parse the JSON
                                         // as it might contain useful error information

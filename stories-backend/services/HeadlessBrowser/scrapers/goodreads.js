@@ -1,6 +1,6 @@
 let scrapeGoodreadsReviews;
 setImmediate(() => {
-  scrapeGoodreadsReviews = require('./index').scrapeGoodreadsReviews;
+  scrapeGoodreadsReviews = require('./goodreads').scrapeGoodreadsReviews;
 });
 
 // Export the main scraping function

@@ -1,8 +1,15 @@
-const { scrapeGoodreadsReviews } = require('./goodreads');
+let scrapeGoodreadsReviews;
+setImmediate(() => {
+  scrapeGoodreadsReviews = require('./index').scrapeGoodreadsReviews;
+});
 
 // Export the main scraping function
 module.exports = {
   async scrapeGoodreadsReviews(req, res) {
+    if (!scrapeGoodreadsReviews) {
+      return res.status(500).json({ error: 'scrapeGoodreadsReviews is not ready due to circular dependency' });
+    }
+
     try {
       const url = req.query.url;
       const limit = parseInt(req.query.limit, 10) || 10;

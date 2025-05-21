@@ -146,13 +146,41 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
                         unset($goodreadsData['_status']);
                     }
 
+                    // Clean up GraphQL response data
+                    if (isset($goodreadsData['data'])) {
+                        $cleanData = $goodreadsData['data'];
+                        // Remove GraphQL-specific fields
+                        unset($cleanData['__typename']);
+                        unset($cleanData['Work']);
+                        unset($cleanData['links']);
+                        unset($cleanData['reviewEditUrl']);
+                        unset($cleanData['featureFlags']);
+                        unset($cleanData['params']);
+                        unset($cleanData['query']);
+                        unset($cleanData['jwtToken']);
+                        unset($cleanData['dataSource']);
+                        unset($cleanData['authContextParams']);
+                        unset($cleanData['userAgentContextParams']);
+                        unset($cleanData['userAgent']);
+                        unset($cleanData['__N_SSP']);
+                        unset($cleanData['page']);
+                        unset($cleanData['buildId']);
+                        unset($cleanData['isFallback']);
+                        unset($cleanData['isExperimentalCompile']);
+                        unset($cleanData['gssp']);
+                        unset($cleanData['locales']);
+                        unset($cleanData['scriptLoader']);
+                    } else {
+                        $cleanData = $goodreadsData;
+                    }
+
                     $sourceData['goodreads'] = [
                         'status' => $status,
                         'message' => $message,
                         'method' => $method,
                         'processing_time' => $processingTime,
                         'steps' => $steps,
-                        'data' => $goodreadsData
+                        'data' => $cleanData
                     ];
                 }
             }

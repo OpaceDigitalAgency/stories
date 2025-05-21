@@ -1,4 +1,4 @@
-const { scrapeGoodreadsReviews } = require('./goodreads/index');
+const { scrapeGoodreadsReviews } = require('./goodreads');
 
 // Export the main scraping function
 module.exports = {

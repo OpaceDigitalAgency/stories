@@ -136,6 +136,7 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
                         'status' => $status,
                         'message' => $message,
                         'processing_time' => $processingTime,
+                        'method' => $statusInfo['method'] ?? 'api',
                         'steps' => $steps ?? [],
                         'data' => $googleBooksData
                     ];
@@ -154,14 +155,38 @@ function validateBookData($bookId, $isbn, $title, $db, $forceRefresh = false) {
             if ($openLibraryFetcher && $openLibraryFetcher->isConfigured()) {
                 $openLibraryData = fetchOpenLibraryDataNew($cleanIsbn, $title, $book['author'] ?? '');
                 if ($openLibraryData) {
+                    // Check if we have status information
+                    $status = 'success';
+                    $message = 'Successfully fetched data from Open Library';
+                    $processingTime = null;
+                    $method = 'api';
+                    $steps = [];
+
+                    if (isset($openLibraryData['_status'])) {
+                        $statusInfo = $openLibraryData['_status'];
+                        $status = $statusInfo['status'] ?? 'success';
+                        $message = $statusInfo['message'] ?? 'Successfully fetched data from Open Library';
+                        $processingTime = $statusInfo['processing_time'] ?? null;
+                        $method = $statusInfo['method'] ?? 'api';
+                        $steps = $statusInfo['steps'] ?? [];
+
+                        // Remove status info from the data
+                        unset($openLibraryData['_status']);
+                    }
+
                     $sourceData['open_library'] = [
-                        'status' => 'success',
+                        'status' => $status,
+                        'message' => $message,
+                        'processing_time' => $processingTime,
+                        'method' => $method,
+                        'steps' => $steps,
                         'data' => $openLibraryData
                     ];
                 } else {
                     $sourceData['open_library'] = [
                         'status' => 'error',
-                        'message' => 'Failed to fetch data from Open Library'
+                        'message' => 'Failed to fetch data from Open Library',
+                        'method' => 'api'
                     ];
                 }
             }

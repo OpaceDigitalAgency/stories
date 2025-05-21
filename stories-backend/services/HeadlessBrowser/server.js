@@ -88,7 +88,7 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
     logger.info(`Extracted book ID: ${bookId} from URL: ${url}`);
 
     // Check if we should bypass cache
-    if (force === 'true' || force === '1') {
+    if (force === 'true' || force === '1' || force === true) {
       logger.info(`Force parameter set to ${force}, bypassing cache`);
 
       // If we have a book ID, clear its cache entry
@@ -110,7 +110,7 @@ app.get('/scrape/goodreads', authenticateApiKey, rateLimiterMiddleware, async (r
           db.close();
         });
       }
-    } else if (!force && bookId) {
+    } else if ((!force || force === 'false' || force === '0') && bookId) {
       // Check if we have cached data
       const cachedData = await cache.get('goodreads', bookId);
       if (cachedData) {
@@ -164,7 +164,7 @@ app.get('/scrape/amazon', authenticateApiKey, rateLimiterMiddleware, async (req,
     logger.info(`Scraping Amazon reviews for ASIN: ${asin}, force=${force}, continueFromLast=${continueFromLast}`);
 
     // Check if we should bypass cache
-    if (force === 'true' || force === '1') {
+    if (force === 'true' || force === '1' || force === true) {
       logger.info(`Force parameter set to ${force}, bypassing cache`);
 
       // Clear cache for this ASIN

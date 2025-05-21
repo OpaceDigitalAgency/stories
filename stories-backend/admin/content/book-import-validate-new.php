@@ -268,6 +268,12 @@ try {
                     // Force the VPS headless browser to bypass its cache
                     putenv('VPS_BYPASS_CACHE=true');
 
+                    // Log the environment variables for debugging
+                    error_log("Environment variables set for cache bypass:");
+                    error_log("FORCE_FRESH_DATA=" . getenv('FORCE_FRESH_DATA'));
+                    error_log("SKIP_CACHE=" . getenv('SKIP_CACHE'));
+                    error_log("VPS_BYPASS_CACHE=" . getenv('VPS_BYPASS_CACHE'));
+
                     // Re-validate with completely fresh data
                     $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, true);
 

@@ -159,6 +159,12 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             'cache_ttl' => 0 // Don't cache results
         ];
 
+        // Check if we should bypass cache (from environment variable)
+        if (getenv('VPS_BYPASS_CACHE') === 'true') {
+            $options['force'] = true;
+            error_log("🔄 VPS_BYPASS_CACHE environment variable set, forcing cache refresh");
+        }
+
         try {
             // Determine whether to use ISBN or title/author for search
             if (!empty($isbn)) {
@@ -359,7 +365,13 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             // Helper function to clean HTML tags and trim whitespace
             $cleanField = function($value) {
                 if (is_string($value)) {
-                    return trim(strip_tags($value));
+                    // First remove any HTML tags
+                    $cleaned = strip_tags($value);
+                    // Then trim whitespace
+                    $cleaned = trim($cleaned);
+                    // Replace multiple spaces with a single space
+                    $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+                    return $cleaned;
                 }
                 return $value;
             };

@@ -68,8 +68,9 @@ try {
                 $book = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($book) {
-                    // Force refresh validation data
+                    // Get validation parameters
                     $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
+                    $forceRefresh = isset($_GET['force']) && $_GET['force'] == '1';
 
                     // Check if we should skip VPS headless browser
                     $skipVps = isset($_GET['skip_vps']) && $_GET['skip_vps'] == 1;
@@ -79,7 +80,10 @@ try {
                         error_log("Skipping VPS headless browser for validation (user requested)");
                     }
 
-                    $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, true);
+                    // Log force parameter
+                    error_log("Force refresh from URL: " . ($forceRefresh ? 'Yes' : 'No'));
+
+                    $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, $forceRefresh);
 
                     if ($validationResult['status'] === 'success') {
                         $message = 'Book data validated successfully.';
@@ -329,15 +333,15 @@ try {
                     error_log("Skipping VPS headless browser for validation (user requested)");
                 }
 
-                // Check if we should bypass cache
-                $bypassCache = isset($_GET['bypass_cache']) && $_GET['bypass_cache'] == '1';
-                if ($bypassCache) {
+                // Get force parameter from URL
+                $forceRefresh = isset($_GET['force']) && $_GET['force'] == '1';
+                if ($forceRefresh) {
                     putenv('VPS_BYPASS_CACHE=true');
-                    error_log("Bypassing cache for validation (user requested)");
+                    error_log("Force refresh requested - bypassing cache");
                 }
 
-                // Force refresh validation data to ensure we get fresh results
-                $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, true);
+                // Validate book data
+                $validationData = validateBookData($bookId, $isbn, $bookData['title'], $db, $forceRefresh);
                 error_log("Validation status: " . ($validationData['status'] ?? 'unknown'));
 
                 // Set up sources for the template

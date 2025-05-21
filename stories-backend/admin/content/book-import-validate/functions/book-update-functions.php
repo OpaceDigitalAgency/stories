@@ -5,12 +5,6 @@
  * This file contains functions for updating book data.
  */
 
-// Include auth check
-require_once __DIR__ . '/../../../../includes/auth-check.php';
-
-// Include database connection
-require_once __DIR__ . '/../../../../includes/db_connect.php';
-
 // Include cache functions
 require_once __DIR__ . '/cache-functions.php';
 

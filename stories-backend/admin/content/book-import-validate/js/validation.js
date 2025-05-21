@@ -30,6 +30,7 @@ function setupEventListeners() {
     document.getElementById('validateAgain')?.addEventListener('click', handleValidateAgain);
     document.getElementById('exportChanges')?.addEventListener('click', handleExportChanges);
     document.getElementById('refreshValidation')?.addEventListener('click', handleRefreshValidation);
+    document.getElementById('bypassCache')?.addEventListener('click', handleBypassCache);
 
     // Source-specific apply all buttons
     document.querySelectorAll('.apply-all-source').forEach(button => {
@@ -330,6 +331,49 @@ function handleManualEntry() {
     alert('Manual entry functionality will be implemented in a future update.');
 }
 
+// Handle bypass cache button click
+function handleBypassCache() {
+    if (confirm('Are you sure you want to bypass all caches? This will force a fresh load from all sources and may take longer to complete.')) {
+        showLoadingOverlay('Bypassing all caches and fetching fresh data...');
+
+        // Get the book ID from the hidden form
+        const bookId = document.querySelector('#validationActionForm input[name="book_id"]').value;
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('action', 'bypass_all_caches');
+        formData.append('book_id', bookId);
+
+        // Add cache-busting parameter to URL
+        const cacheBuster = new Date().getTime();
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + cacheBuster;
+
+        // Send the request
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Replace the current page content with the new HTML
+            document.documentElement.innerHTML = html;
+
+            // Re-initialize the validation interface
+            initValidationInterface();
+
+            // Show success message
+            showNotification('All caches have been bypassed and fresh data has been fetched.', 'success');
+        })
+        .catch(error => {
+            console.error('Error bypassing caches:', error);
+            showNotification('Error bypassing caches. Please try again.', 'error');
+        })
+        .finally(() => {
+            hideLoadingOverlay();
+        });
+    }
+}
+
 // Update a field with a new value
 function updateField(field, value, source) {
     showLoadingOverlay();
@@ -360,19 +404,61 @@ function updateField(field, value, source) {
 }
 
 // Show loading overlay
-function showLoadingOverlay() {
+function showLoadingOverlay(message = 'Loading...') {
     // Create loading overlay if it doesn't exist
-    if (!document.querySelector('.loading-overlay')) {
-        const overlay = document.createElement('div');
+    let overlay = document.querySelector('.loading-overlay');
+
+    if (!overlay) {
+        overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
         overlay.innerHTML = `
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <div class="loading-spinner-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="loading-message mt-3">${message}</div>
             </div>
         `;
         document.body.appendChild(overlay);
     } else {
-        document.querySelector('.loading-overlay').style.display = 'flex';
+        // Update message if overlay already exists
+        const messageEl = overlay.querySelector('.loading-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+        }
+        overlay.style.display = 'flex';
+    }
+
+    // Add CSS to make the overlay centered
+    const style = document.createElement('style');
+    if (!document.querySelector('#loading-overlay-style')) {
+        style.id = 'loading-overlay-style';
+        style.textContent = `
+            .loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+            .loading-spinner-container {
+                background-color: white;
+                padding: 30px;
+                border-radius: 10px;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            }
+            .loading-message {
+                margin-top: 15px;
+                font-weight: bold;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
 

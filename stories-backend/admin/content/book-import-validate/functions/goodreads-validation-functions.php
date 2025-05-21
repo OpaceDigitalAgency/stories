@@ -23,7 +23,7 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
         $detailedStatus = [
             'status' => 'initializing',
             'message' => 'Starting Goodreads data fetch',
-            'method' => 'headless',
+            'method' => 'review_fetcher',
             'processing_time' => 0,
             'steps' => []
         ];
@@ -467,7 +467,15 @@ function fetchGoodreadsDataNew($isbn, $title, $author, $db = null) {
             '_status' => [
                 'status' => 'error',
                 'message' => 'Exception while fetching Goodreads data: ' . $e->getMessage(),
-                'method' => 'review_fetcher'
+                'method' => 'review_fetcher',
+                'processing_time' => 0,
+                'steps' => [
+                    [
+                        'name' => 'initialization',
+                        'status' => 'error',
+                        'message' => 'Exception: ' . $e->getMessage()
+                    ]
+                ]
             ]
         ];
     }

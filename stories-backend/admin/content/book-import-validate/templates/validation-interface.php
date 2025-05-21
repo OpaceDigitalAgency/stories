@@ -42,6 +42,9 @@ $sources = array_keys($sourceData);
                     <button type="button" class="btn btn-light btn-sm" id="refreshValidation">
                         <i class="fas fa-sync-alt"></i> Refresh Data
                     </button>
+                    <button type="button" class="btn btn-danger btn-sm ml-2" id="bypassCache">
+                        <i class="fas fa-bolt"></i> Bypass All Caches
+                    </button>
                     <a href="?action=validate_book&book_id=<?php echo (int)$book['id']; ?>&skip_vps=1" class="btn btn-warning btn-sm ml-2">
                         <i class="fas fa-server"></i> Skip VPS Headless Browser
                     </a>
@@ -127,19 +130,42 @@ $sources = array_keys($sourceData);
                                         case 'python_script':
                                             $methodIcon = 'code';
                                             $methodClass = 'primary';
+                                            $methodDisplay = 'Python Script';
                                             break;
                                         case 'curl_direct':
+                                            $methodIcon = 'globe';
+                                            $methodClass = 'info';
+                                            $methodDisplay = 'Direct Web Request';
+                                            break;
                                         case 'curl_fallback':
                                             $methodIcon = 'globe';
                                             $methodClass = 'info';
+                                            $methodDisplay = 'Fallback Web Request';
                                             break;
                                         case 'api':
                                             $methodIcon = 'plug';
                                             $methodClass = 'success';
+                                            $methodDisplay = 'API Request';
                                             break;
-                                        default:
+                                        case 'headless':
+                                            $methodIcon = 'robot';
+                                            $methodClass = 'primary';
+                                            $methodDisplay = 'Headless Browser';
+                                            break;
+                                        case 'review_fetcher':
+                                            $methodIcon = 'server';
+                                            $methodClass = 'info';
+                                            $methodDisplay = 'Review Fetcher';
+                                            break;
+                                        case 'unknown':
                                             $methodIcon = 'question';
                                             $methodClass = 'secondary';
+                                            $methodDisplay = 'Unknown';
+                                            break;
+                                        default:
+                                            $methodIcon = 'info-circle';
+                                            $methodClass = 'secondary';
+                                            $methodDisplay = ucfirst(str_replace('_', ' ', $method));
                                     }
                                 ?>
                                 <tr>
@@ -162,7 +188,7 @@ $sources = array_keys($sourceData);
 
                                         <?php if (!empty($steps)): ?>
                                             <button class="btn btn-sm btn-outline-secondary mt-1" type="button"
-                                                    data-toggle="collapse" data-target="#steps-<?php echo $source; ?>"
+                                                    data-bs-toggle="collapse" data-bs-target="#steps-<?php echo $source; ?>"
                                                     aria-expanded="false" aria-controls="steps-<?php echo $source; ?>">
                                                 <i class="fas fa-list"></i> Show Steps
                                             </button>
@@ -200,6 +226,12 @@ $sources = array_keys($sourceData);
                                                                 </span>
                                                                 <strong><?php echo ucwords(str_replace('_', ' ', $step['name'] ?? 'unknown')); ?>:</strong>
                                                                 <?php echo htmlspecialchars($step['message'] ?? ''); ?>
+
+                                                                <?php if (!empty($step['fetch_url'])): ?>
+                                                                <div class="mt-1 small">
+                                                                    <strong>URL:</strong> <code><?php echo htmlspecialchars($step['fetch_url']); ?></code>
+                                                                </div>
+                                                                <?php endif; ?>
                                                             </li>
                                                         <?php endforeach; ?>
                                                     </ul>

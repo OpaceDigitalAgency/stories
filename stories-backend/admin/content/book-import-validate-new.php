@@ -234,6 +234,59 @@ try {
                 $messageType = 'danger';
             }
             break;
+
+        case 'bypass_all_caches':
+            // Bypass all caches and force fresh data
+            if ($bookId) {
+                // Get book details
+                $stmt = $db->prepare("
+                    SELECT di.id, di.title, b.*
+                    FROM directory_items di
+                    JOIN books b ON di.id = b.directory_item_id
+                    WHERE di.id = ?
+                ");
+                $stmt->execute([$bookId]);
+                $book = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($book) {
+                    // Clear all caches
+                    require_once 'book-import-validate/functions/cache-functions.php';
+
+                    // Clear PHP validation cache
+                    $isbn = $book['isbn'] ?? ($book['isbn13'] ?? '');
+                    clearValidationCacheNew($bookId, $isbn, $book['title'], $db);
+
+                    // Clear source-specific caches
+                    clearSourceValidationCache('google_books', $db);
+                    clearSourceValidationCache('open_library', $db);
+                    clearSourceValidationCache('goodreads', $db);
+
+                    // Set environment variables to force fresh data
+                    putenv('FORCE_FRESH_DATA=true');
+                    putenv('SKIP_CACHE=true');
+
+                    // Force the VPS headless browser to bypass its cache
+                    putenv('VPS_BYPASS_CACHE=true');
+
+                    // Re-validate with completely fresh data
+                    $validationResult = validateBookData($bookId, $isbn, $book['title'], $db, true);
+
+                    if ($validationResult['status'] === 'success') {
+                        $message = 'All caches bypassed and fresh data fetched successfully.';
+                        $messageType = 'success';
+                    } else {
+                        $message = 'Error fetching fresh data: ' . $validationResult['message'];
+                        $messageType = 'danger';
+                    }
+                } else {
+                    $message = 'Book not found.';
+                    $messageType = 'danger';
+                }
+            } else {
+                $message = 'No book ID provided.';
+                $messageType = 'danger';
+            }
+            break;
     }
 
     // Get book data if a book ID is provided

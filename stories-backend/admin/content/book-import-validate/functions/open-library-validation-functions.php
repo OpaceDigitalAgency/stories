@@ -54,9 +54,67 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
+        // Update step status based on response
+        if ($response === false) {
+            $status['steps'][count($status['steps']) - 1] = [
+                'name' => 'api_request',
+                'status' => 'error',
+                'message' => "cURL error: $curlError",
+                'fetch_url' => $url
+            ];
+
+            // Return error status
+            $status['status'] = 'error';
+            $status['message'] = "Failed to connect to Open Library API: $curlError";
+            $status['processing_time'] = round(microtime(true) - $startTime, 2);
+            return ['_status' => $status];
+        } else if ($httpCode !== 200) {
+            $status['steps'][count($status['steps']) - 1] = [
+                'name' => 'api_request',
+                'status' => 'error',
+                'message' => "HTTP error: $httpCode",
+                'fetch_url' => $url
+            ];
+
+            // Return error status
+            $status['status'] = 'error';
+            $status['message'] = "Open Library API returned HTTP error: $httpCode";
+            $status['processing_time'] = round(microtime(true) - $startTime, 2);
+            return ['_status' => $status];
+        } else {
+            $status['steps'][count($status['steps']) - 1] = [
+                'name' => 'api_request',
+                'status' => 'success',
+                'message' => "API request successful (HTTP 200)",
+                'fetch_url' => $url
+            ];
+        }
+
+        // Try to decode JSON response
         $data = json_decode($response, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            $jsonError = json_last_error_msg();
+            $status['steps'][] = [
+                'name' => 'json_parsing',
+                'status' => 'error',
+                'message' => "JSON parsing error: $jsonError"
+            ];
+
+            // Return error status
+            $status['status'] = 'error';
+            $status['message'] = "Failed to parse Open Library API response: $jsonError";
+            $status['processing_time'] = round(microtime(true) - $startTime, 2);
+            return ['_status' => $status];
+        } else {
+            $status['steps'][] = [
+                'name' => 'json_parsing',
+                'status' => 'success',
+                'message' => "JSON parsed successfully"
+            ];
+        }
         $key = "ISBN:$isbn";
 
         // If no results, try title and author search
@@ -93,9 +151,68 @@ function fetchOpenLibraryDataNew($isbn, $title, $author) {
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
             $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
+            // Update step status based on response
+            if ($response === false) {
+                $status['steps'][count($status['steps']) - 1] = [
+                    'name' => 'fallback_api_request',
+                    'status' => 'error',
+                    'message' => "cURL error: $curlError",
+                    'fetch_url' => $url
+                ];
+
+                // Return error status
+                $status['status'] = 'error';
+                $status['message'] = "Failed to connect to Open Library search API: $curlError";
+                $status['processing_time'] = round(microtime(true) - $startTime, 2);
+                return ['_status' => $status];
+            } else if ($httpCode !== 200) {
+                $status['steps'][count($status['steps']) - 1] = [
+                    'name' => 'fallback_api_request',
+                    'status' => 'error',
+                    'message' => "HTTP error: $httpCode",
+                    'fetch_url' => $url
+                ];
+
+                // Return error status
+                $status['status'] = 'error';
+                $status['message'] = "Open Library search API returned HTTP error: $httpCode";
+                $status['processing_time'] = round(microtime(true) - $startTime, 2);
+                return ['_status' => $status];
+            } else {
+                $status['steps'][count($status['steps']) - 1] = [
+                    'name' => 'fallback_api_request',
+                    'status' => 'success',
+                    'message' => "Search API request successful (HTTP 200)",
+                    'fetch_url' => $url
+                ];
+            }
+
+            // Try to decode JSON response
             $searchData = json_decode($response, true);
+            if ($searchData === null && json_last_error() !== JSON_ERROR_NONE) {
+                $jsonError = json_last_error_msg();
+                $status['steps'][] = [
+                    'name' => 'fallback_json_parsing',
+                    'status' => 'error',
+                    'message' => "JSON parsing error: $jsonError"
+                ];
+
+                // Return error status
+                $status['status'] = 'error';
+                $status['message'] = "Failed to parse Open Library search API response: $jsonError";
+                $status['processing_time'] = round(microtime(true) - $startTime, 2);
+                return ['_status' => $status];
+            } else {
+                $status['steps'][] = [
+                    'name' => 'fallback_json_parsing',
+                    'status' => 'success',
+                    'message' => "Search JSON parsed successfully"
+                ];
+            }
 
             if (!empty($searchData['docs'])) {
                 $bookInfo = $searchData['docs'][0];

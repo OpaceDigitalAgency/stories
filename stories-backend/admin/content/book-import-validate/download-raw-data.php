@@ -39,8 +39,10 @@ if ($bookId === null) {
 // Get book data from database
 try {
     $stmt = $db->prepare("
-        SELECT * FROM books
-        WHERE id = :book_id
+        SELECT di.id, di.title, di.slug, di.review_count, di.average_rating, b.*
+        FROM directory_items di
+        JOIN books b ON di.id = b.directory_item_id
+        WHERE di.id = :book_id
     ");
     $stmt->execute([':book_id' => $bookId]);
     $bookData = $stmt->fetch(PDO::FETCH_ASSOC);

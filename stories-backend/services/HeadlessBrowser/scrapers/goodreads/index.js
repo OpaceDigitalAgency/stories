@@ -54,10 +54,14 @@ function extractBookId(url) {
  * @param {Object} options - Scraping options
  */
 async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
+  // Parse force parameter from query string if present
+  const urlObj = new URL(goodreadsUrl);
+  const forceParam = urlObj.searchParams.get('force') === '1';
+  
   const {
     maxPages = 100,
     continueFromLast = false,
-    force = false
+    force = forceParam
   } = options;
 
   // Initialize steps array for detailed logging
@@ -90,6 +94,7 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
   // Check cache with detailed logging
   logger.info(`Checking cache for book ${bookId}`);
+  logger.info(`Force refresh: ${force}, Force param from URL: ${forceParam}`);
   const cachedData = await checkCache(bookId, { force, continueFromLast, limit });
 
   // Handle cache result
@@ -134,7 +139,28 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
 
     // Extract metadata from HTML with detailed logging
     logger.info('Extracting metadata from page HTML...');
-    const metadata = await page.evaluate(extractBookMetadata);
+    const metadata = await page.evaluate((SELECTORS, extractFn) => {
+      // Define extractWithFallbacks in page context
+      function extractWithFallbacks(selectorObj) {
+        const { primary, fallbacks } = selectorObj;
+        let element = document.querySelector(primary);
+        
+        if (!element && fallbacks) {
+          for (const fallback of fallbacks) {
+            element = document.querySelector(fallback);
+            if (element) break;
+          }
+        }
+        
+        return element ? element.textContent.trim() : null;
+      }
+      
+      // Make SELECTORS available in page context
+      window.SELECTORS = SELECTORS;
+      
+      // Execute the extraction function
+      return eval('(' + extractFn + ')()');
+    }, SELECTORS, extractBookMetadata.toString());
     logger.info('Extracted metadata:', {
       title: metadata.title || 'Not found',
       author: metadata.author || 'Not found',

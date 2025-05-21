@@ -109,13 +109,13 @@ const SELECTORS = {
 /**
  * Extract text content using primary selector and fallbacks
  */
-function extractWithFallbacks(page, selectorObj) {
+function extractWithFallbacks(selectorObj) {
   const { primary, fallbacks } = selectorObj;
-  let element = page.querySelector(primary);
+  let element = document.querySelector(primary);
   
   if (!element && fallbacks) {
     for (const fallback of fallbacks) {
-      element = page.querySelector(fallback);
+      element = document.querySelector(fallback);
       if (element) break;
     }
   }
@@ -125,8 +125,9 @@ function extractWithFallbacks(page, selectorObj) {
 
 /**
  * Extract book metadata from page using selectors
+ * This function runs in the browser context via page.evaluate()
  */
-async function extractBookMetadata(page) {
+function extractBookMetadata() {
   const metadata = {
     title: '',
     author: '',
@@ -148,8 +149,9 @@ async function extractBookMetadata(page) {
   };
 
   // Extract each field using selectors
+  // SELECTORS is injected into page context
   for (const [field, selectors] of Object.entries(SELECTORS)) {
-    const value = extractWithFallbacks(page, selectors);
+    const value = extractWithFallbacks(selectors);
     if (value) {
       // Store raw value for debugging
       metadata._raw[field] = value;

@@ -41,11 +41,14 @@ const cache = {
    * Get cached reviews for a source and identifier
    * @param {string} source - The source (e.g., 'goodreads', 'amazon')
    * @param {string} identifier - The identifier (e.g., URL, ASIN)
+   * @param {Object} options - Additional options
    * @returns {Promise<Object|null>} - Cached data or null if not found/expired
    */
-  get: (source, identifier) => {
+  get: (source, identifier, options = {}) => {
     return new Promise((resolve, reject) => {
-      if (!config.cache.enabled) {
+      // Always return null if cache is disabled or force refresh is requested
+      if (!config.cache.enabled || options.force) {
+        logger.info(`Cache disabled or force refresh requested for ${source}:${identifier}`);
         return resolve(null);
       }
       
@@ -120,6 +123,30 @@ const cache = {
     });
   },
   
+  /**
+   * Clear a specific cache entry
+   * @param {string} source - The source (e.g., 'goodreads', 'amazon')
+   * @param {string} identifier - The identifier (e.g., URL, ASIN)
+   * @returns {Promise<boolean>} - Whether the operation was successful
+   */
+  clear: (source, identifier) => {
+    return new Promise((resolve, reject) => {
+      db.run(
+        'DELETE FROM reviews_cache WHERE source = ? AND identifier = ?',
+        [source, identifier],
+        function(err) {
+          if (err) {
+            logger.error(`Cache clear error for ${source}:${identifier}: ${err.message}`);
+            return resolve(false);
+          }
+          
+          logger.info(`Cleared cache entry for ${source}:${identifier}`);
+          return resolve(true);
+        }
+      );
+    });
+  },
+
   /**
    * Clear expired cache entries
    * @returns {Promise<number>} - Number of entries cleared

@@ -175,16 +175,11 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
       function cleanFieldValue(value) {
         if (!value) return '';
 
-        // Remove HTML attributes and tags
-        let cleaned = value.replace(/\s+role="link">/g, '');
-        cleaned = cleaned.replace(/, link, opens in new tab"/g, '');
-        cleaned = cleaned.replace(/<[^>]*>/g, '');
-
-        // Remove JSON-like content
-        if (cleaned.startsWith('"') && cleaned.includes('{"@type"')) {
+        // First, handle JSON-like content
+        if (typeof value === 'string' && value.startsWith('"') && value.includes('{"@type"')) {
           try {
             // Try to extract just the meaningful part from JSON
-            const jsonMatch = cleaned.match(/"name":"([^"]+)"/);
+            const jsonMatch = value.match(/"name":"([^"]+)"/);
             if (jsonMatch && jsonMatch[1]) {
               return jsonMatch[1];
             }
@@ -193,12 +188,39 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
           }
         }
 
+        // Remove HTML attributes that cause display issues
+        let cleaned = value;
+
+        // Remove role="link" attribute
+        cleaned = cleaned.replace(/\s+role="link"/g, '');
+
+        // Remove ", link, opens in new tab" text completely
+        cleaned = cleaned.replace(/, link, opens in new tab/g, '');
+
+        // Remove other problematic attributes
+        cleaned = cleaned.replace(/\s+data-testid="[^"]*"/g, '');
+        cleaned = cleaned.replace(/\s+class="[^"]*"/g, '');
+        cleaned = cleaned.replace(/\s+id="[^"]*"/g, '');
+        cleaned = cleaned.replace(/\s+style="[^"]*"/g, '');
+        cleaned = cleaned.replace(/\s+tabindex="[^"]*"/g, '');
+
+        // Remove all HTML tags completely
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+
         // Remove escaped unicode and other artifacts
         cleaned = cleaned.replace(/\\u\d+/g, '');
         cleaned = cleaned.replace(/^[?]ref=.*tabindex=.*>/, '');
 
+        // Clean up series format like "The Worst Witch (#1)"
+        if (cleaned.match(/^(.*?)\s*\(#\d+\)$/)) {
+          cleaned = cleaned.replace(/\s*\(#\d+\)$/, '');
+        }
+
         // Clean up whitespace
         cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+        // Remove any remaining quotes at beginning/end
+        cleaned = cleaned.replace(/^["']|["']$/g, '');
 
         return cleaned;
       }
@@ -544,6 +566,31 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               metadata.cover_image = imgElement.src;
             }
             break;
+          case 'format':
+            // Special handling for format field which might contain JSON
+            if (value.includes('{"@type"') || value.includes('"name"')) {
+              try {
+                // Try to extract format name from JSON-like string
+                const formatMatch = value.match(/"name":\s*"([^"]+)"/);
+                if (formatMatch && formatMatch[1]) {
+                  metadata.format = formatMatch[1];
+                } else {
+                  // Try another pattern
+                  const typeMatch = value.match(/"@type":\s*"([^"]+)"/);
+                  if (typeMatch && typeMatch[1]) {
+                    metadata.format = typeMatch[1];
+                  } else {
+                    metadata.format = value;
+                  }
+                }
+              } catch (e) {
+                // If parsing fails, use the cleaned value
+                metadata.format = value;
+              }
+            } else {
+              metadata.format = value;
+            }
+            break;
           case 'rating_count':
           case 'review_count':
             // Extract only the number from the count
@@ -556,16 +603,26 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
             break;
           case 'series':
             // Special handling for series to remove link attributes
-            if (value.includes('link, opens in new tab')) {
+            if (value.includes('link, opens in new tab') || value.includes('role="link"')) {
               // Try to extract just the series name
-              const seriesMatch = value.match(/The Worst Witch|[^,]+/);
+              const seriesMatch = value.match(/([^,]+)/);
               if (seriesMatch) {
                 metadata.series = seriesMatch[0].trim();
               } else {
-                metadata.series = value.replace(/, link, opens in new tab.*$/, '').trim();
+                // Apply multiple cleanups
+                let cleanedSeries = value;
+                cleanedSeries = cleanedSeries.replace(/, link, opens in new tab.*$/, '');
+                cleanedSeries = cleanedSeries.replace(/role="link".*$/, '');
+                cleanedSeries = cleanedSeries.replace(/<[^>]*>/g, '');
+                metadata.series = cleanedSeries.trim();
               }
             } else {
               metadata.series = value;
+            }
+
+            // Remove series number if present
+            if (metadata.series.match(/\(#\d+\)$/)) {
+              metadata.series = metadata.series.replace(/\s*\(#\d+\)$/, '');
             }
             break;
           case 'characters':
@@ -578,10 +635,31 @@ async function scrapeGoodreadsReviews(goodreadsUrl, limit = 50, options = {}) {
               const valueElement = detailElement.querySelector('.FeatureItem__value, .BookDetails__value');
 
               if (labelElement && valueElement) {
-                let cleanedValue = valueElement.innerHTML;
-                // Clean the value
-                cleanedValue = cleanFieldValue(cleanText(cleanedValue));
-                metadata[field] = cleanedValue;
+                // Get both innerHTML and textContent for thorough cleaning
+                let htmlValue = valueElement.innerHTML;
+                let textValue = valueElement.textContent;
+
+                // Clean both values
+                let cleanedHtmlValue = cleanFieldValue(cleanText(htmlValue));
+                let cleanedTextValue = cleanFieldValue(cleanText(textValue));
+
+                // Use the shorter/cleaner version
+                if (cleanedTextValue.length < cleanedHtmlValue.length) {
+                  metadata[field] = cleanedTextValue;
+                } else {
+                  metadata[field] = cleanedHtmlValue;
+                }
+
+                // Additional cleaning for links
+                if (metadata[field].includes('link, opens in new tab') ||
+                    metadata[field].includes('role="link"')) {
+                  // Split by commas and clean each part
+                  const parts = metadata[field].split(',').map(part => {
+                    return cleanFieldValue(part.trim());
+                  }).filter(part => part.length > 0);
+
+                  metadata[field] = parts.join(', ');
+                }
               } else {
                 metadata[field] = value;
               }
